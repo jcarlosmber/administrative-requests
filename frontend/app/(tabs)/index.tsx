@@ -9,12 +9,15 @@ import {
   View,
   ImageBackground,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import { requestService, AdministrativeRequest } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 const COLORS = {
   primary: '#A9301E',
@@ -112,12 +115,52 @@ export default function DashboardScreen() {
   };
 
   const cardWidth = getCardWidth();
+  const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  const fetchDashboardData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // En una implementación real, buscaríamos el perfil en la tabla 'profiles'
+        setUserProfile({ name: user.email?.split('@')[0] || 'Usuario' });
+        
+        const allRequests = await requestService.getAll();
+        // Filtrar por el usuario actual (suponiendo que requestService.getAll() trae todo o tenemos RLS)
+        setRequests(allRequests);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const stats = useMemo(() => {
+    return {
+      total: requests.length,
+      active: requests.filter(r => !['resuelto', 'rechazada'].includes(r.status.toLowerCase())).length
+    };
+  }, [requests]);
+
+  const recentRequestsUI = useMemo(() => {
+    return requests.slice(0, 3).map(req => ({
+      id: req.id,
+      title: req.title,
+      type: req.category,
+      status: req.status.charAt(0).toUpperCase() + req.status.slice(1).replace('_', ' '),
+      date: new Date(req.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+      color: req.status === 'pendiente' ? COLORS.warning : COLORS.success
+    }));
+  }, [requests]);
 
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
         
-        {isDesktop && <Sidebar />}
+        {isDesktop && <Sidebar user={userProfile} />}
 
         <ScrollView 
           style={{ flex: 1 }}
@@ -125,7 +168,7 @@ export default function DashboardScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Header Section */}
-          <HeroSection isDesktop={isDesktop} />
+          <HeroSection isDesktop={isDesktop} user={userProfile} stats={stats} />
 
           <View style={styles.content}>
             {/* Quick Access Section */}
@@ -159,9 +202,12 @@ export default function DashboardScreen() {
             </View>
 
             <View style={styles.requestsContainer}>
-              {RECENT_REQUESTS.map((req) => (
+              {recentRequestsUI.map((req) => (
                 <RequestCard key={req.id} req={req} onPress={() => router.push('/(tabs)/requests')} />
               ))}
+              {recentRequestsUI.length === 0 && (
+                <Text style={{ textAlign: 'center', color: COLORS.muted, marginTop: 20 }}>No tienes solicitudes recientes.</Text>
+              )}
             </View>
 
             {/* Notice / Banner */}
@@ -188,7 +234,7 @@ export default function DashboardScreen() {
   );
 }
 
-function Sidebar() {
+function Sidebar({ user }: any) {
   return (
     <View style={styles.sidebar}>
       <ImageBackground 
@@ -212,8 +258,8 @@ function Sidebar() {
               <Ionicons name="person" size={24} color={COLORS.white} />
             </View>
             <View>
-              <Text style={styles.userName}>James Rodriguez</Text>
-              <Text style={styles.userRole}>Coordinador Administrativo</Text>
+              <Text style={styles.userName}>{user?.name || 'Cargando...'}</Text>
+              <Text style={styles.userRole}>Funcionario</Text>
             </View>
           </View>
         </View>
@@ -222,27 +268,38 @@ function Sidebar() {
   );
 }
 
-function HeroSection({ isDesktop }: { isDesktop: boolean }) {
+function HeroSection({ isDesktop, user, stats }: any) {
+  const router = useRouter();
   return (
     <View style={[styles.hero, isDesktop && styles.heroDesktop]}>
         <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.primaryDark }]} />
         <SafeAreaView style={styles.heroSafe}>
           <View style={[styles.heroTop, { flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start' }]}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.heroKicker}>SECRETARÍA JURÍDICA DISTRITAL</Text>
-              <Text style={styles.heroTitle}>Bienvenido, James</Text>
+              <Text style={styles.heroTitle}>Bienvenido, {user?.name || '...'}</Text>
               <Text style={styles.heroSub}>¿Qué gestión administrativa realizaremos hoy?</Text>
             </View>
-            <View style={styles.statsPanel}>
-              <View style={styles.statItem}>
-                <Text style={styles.statVal}>12</Text>
-                <Text style={styles.statLab}>Trámites</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+              <View style={styles.statsPanel}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statVal}>{stats.total}</Text>
+                  <Text style={styles.statLab}>Trámites</Text>
+                </View>
+                <View style={styles.statDiv} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statVal}>{stats.active}</Text>
+                  <Text style={styles.statLab}>Activos</Text>
+                </View>
               </View>
-              <View style={styles.statDiv} />
-              <View style={styles.statItem}>
-                <Text style={styles.statVal}>2</Text>
-                <Text style={styles.statLab}>Activos</Text>
-              </View>
+
+              <TouchableOpacity 
+                style={styles.logoutBtn} 
+                onPress={() => router.replace('/login')}
+              >
+                <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
+              </TouchableOpacity>
             </View>
           </View>
         </SafeAreaView>
@@ -363,6 +420,7 @@ const styles = StyleSheet.create({
   heroTitle: { color: COLORS.white, fontSize: 28, fontWeight: '900', marginTop: 4 },
   heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4 },
   heroTop: { justifyContent: 'space-between', gap: 20 },
+  logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   statsPanel: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 18, padding: 12, gap: 15, alignItems: 'center' },
   statItem: { alignItems: 'center' },
   statVal: { color: COLORS.white, fontSize: 24, fontWeight: '900' },

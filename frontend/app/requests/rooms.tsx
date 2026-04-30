@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
+import { DependencySelector } from '../../components/DependencySelector';
+import { requestService } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -32,6 +35,17 @@ const ROOMS = [
   { id: '4', name: 'Auditorio Principal', capacity: 50, floor: 'PB', info: 'Salón Principal' },
 ];
 
+const DAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
+const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
+
+const OCCUPIED_SLOTS = [
+  { day: 0, hour: 8 }, { day: 0, hour: 9 }, { day: 0, hour: 14 },
+  { day: 1, hour: 10 }, { day: 1, hour: 11 }, { day: 1, hour: 15 },
+  { day: 2, hour: 7 }, { day: 2, hour: 12 }, { day: 2, hour: 13 },
+  { day: 3, hour: 9 }, { day: 3, hour: 16 }, { day: 3, hour: 17 },
+  { day: 4, hour: 8 }, { day: 4, hour: 11 }, { day: 4, hour: 14 },
+];
+
 export default function RoomsRequestScreen() {
   const router = useRouter();
   
@@ -40,31 +54,128 @@ export default function RoomsRequestScreen() {
   const [title, setTitle] = useState('');
   const [dependency, setDependency] = useState('');
   const [attendees, setAttendees] = useState('4');
-  const [date, setDate] = useState('2026-05-15');
-  const [startTime, setStartTime] = useState('14:00');
-  const [endTime, setEndTime] = useState('15:30');
-  const [services, setServices] = useState({ projector: true, whiteboard: false, coffee: false });
+  
+  // Selection from Cronograma
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [startHour, setStartHour] = useState<number | null>(null);
+  const [endHour, setEndHour] = useState<number | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  
+  const [services, setServices] = useState({ projector: true, laptop: false, coffee: false });
   
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Date Logic
+  const weekDates = useMemo(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMonday + (weekOffset * 7));
+    
+    return Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  }, [weekOffset]);
+
+  const monthYearLabel = useMemo(() => {
+    const first = weekDates[0];
+    return first.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }, [weekDates]);
 
   const progress = useMemo(() => {
     let p = 20;
     if (title) p += 20;
     if (dependency) p += 20;
     if (attendees) p += 20;
-    if (startTime && endTime) p += 20;
+    if (selectedDay !== null && startHour !== null) p += 20;
     return Math.min(p, 100);
-  }, [title, dependency, attendees, startTime, endTime]);
+  }, [title, dependency, attendees, selectedDay, startHour]);
 
-  const handleRegister = () => {
-    setLoading(true);
-    setTimeout(() => {
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await requestService.create({
+        user_id: user?.id || null,
+        title: `Reserva: ${selectedRoom.name} - ${title}`,
+        description: `Reunión para ${dependency} con ${attendees} asistentes. Horario: ${displayDate} ${displayTime}`,
+        category: 'rooms',
+        priority: 'media',
+        metadata: {
+          room: selectedRoom,
+          attendees,
+          date: displayDate,
+          time: displayTime,
+          services,
+          dependency
+        }
+      });
+
       setLoading(false);
       setShowSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Error al reservar sala:', error);
+      setLoading(false);
+    }
   };
+
+  const handleSlotPress = (day: number, hour: number) => {
+    const isOccupied = OCCUPIED_SLOTS.some(s => s.day === day && s.hour === hour);
+    if (isOccupied) return;
+
+    if (selectedDay !== day) {
+      setSelectedDay(day);
+      setStartHour(hour);
+      setEndHour(hour + 1);
+      return;
+    }
+
+    if (startHour === null) {
+      setStartHour(hour);
+      setEndHour(hour + 1);
+    } else {
+      if (hour < startHour) {
+        const slotsInBetween = Array.from({ length: endHour! - hour }, (_, i) => hour + i);
+        const hasOccupied = slotsInBetween.some(h => OCCUPIED_SLOTS.some(s => s.day === day && s.hour === h));
+        if (hasOccupied) {
+          setStartHour(hour);
+          setEndHour(hour + 1);
+        } else {
+          setStartHour(hour);
+        }
+      } else if (hour >= endHour!) {
+        const slotsInBetween = Array.from({ length: (hour + 1) - startHour }, (_, i) => startHour + i);
+        const hasOccupied = slotsInBetween.some(h => OCCUPIED_SLOTS.some(s => s.day === day && s.hour === h));
+        if (hasOccupied) {
+          setStartHour(hour);
+          setEndHour(hour + 1);
+        } else {
+          setEndHour(hour + 1);
+        }
+      } else {
+        setStartHour(hour);
+        setEndHour(hour + 1);
+      }
+    }
+  };
+
+  const displayDate = useMemo(() => {
+    if (selectedDay === null) return '';
+    const dateObj = weekDates[selectedDay];
+    return dateObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' });
+  }, [selectedDay, weekDates]);
+
+  const displayTime = useMemo(() => {
+    if (startHour === null || endHour === null) return '';
+    return `${startHour}:00 - ${endHour}:00`;
+  }, [startHour, endHour]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
@@ -96,13 +207,22 @@ export default function RoomsRequestScreen() {
                     onChangeText={setTitle} 
                     placeholder="Ej. Comité de Gerencia" 
                   />
-                  <Field 
-                    label="Dependencia Solicitante" 
-                    icon="business-outline" 
-                    value={dependency} 
-                    onChangeText={setDependency} 
-                    placeholder="Ej. Secretaría General" 
-                  />
+                  <View style={styles.field}>
+                    <Text style={styles.label}>Dependencia Solicitante</Text>
+                    <TouchableOpacity 
+                      style={styles.inputWrap} 
+                      onPress={() => setShowDeps(true)}
+                    >
+                      <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                      <Text 
+                        style={[styles.input, !dependency && { color: '#94A3B8' }]} 
+                        numberOfLines={1}
+                      >
+                        {dependency || "Seleccionar dependencia"}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                    </TouchableOpacity>
+                  </View>
                 </Card>
 
                 <Card title="Sala y Capacidad" icon="business">
@@ -130,25 +250,96 @@ export default function RoomsRequestScreen() {
                   </View>
                 </Card>
 
-                <Card title="Horario de la Reserva" icon="time">
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 1 }}>
-                      <Field 
-                        label="Fecha" 
-                        icon="calendar-outline" 
-                        value={date} 
-                        onChangeText={setDate} 
-                        placeholder="AAAA-MM-DD" 
-                      />
+                <Card title="Disponibilidad y Horario" icon="calendar">
+                  <View style={styles.calendarNav}>
+                    <Text style={styles.monthLabel}>{monthYearLabel}</Text>
+                    <View style={styles.navBtns}>
+                      <TouchableOpacity onPress={() => setWeekOffset(v => v - 1)} style={styles.navBtn}>
+                        <Ionicons name="chevron-back" size={20} color={COLORS.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setWeekOffset(0)} style={styles.navToday}>
+                        <Text style={styles.todayText}>Hoy</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => setWeekOffset(v => v + 1)} style={styles.navBtn}>
+                        <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+                      </TouchableOpacity>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Field 
-                        label="Inicio" 
-                        icon="time-outline" 
-                        value={startTime} 
-                        onChangeText={setStartTime} 
-                        placeholder="HH:MM" 
-                      />
+                  </View>
+                  
+                  <View style={styles.calendarOuter}>
+                    <ScrollView horizontal={!isDesktop} showsHorizontalScrollIndicator={false}>
+                      <View style={[styles.calendarContainer, isDesktop && { flex: 1 }]}>
+                        {/* Hours Column */}
+                        <View style={styles.hoursCol}>
+                          <View style={{ height: 45 }} /> 
+                          {HOURS.map(h => (
+                            <View key={h} style={styles.hourCell}>
+                              <Text style={styles.hourText}>{h}:00</Text>
+                            </View>
+                          ))}
+                        </View>
+                        
+                        {/* Days Grid */}
+                        {weekDates.map((dateObj, dIdx) => (
+                          <View key={dIdx} style={[styles.dayCol, isDesktop && { flex: 1 }]}>
+                            <View style={styles.dayHeader}>
+                              <Text style={styles.dayHeaderText}>{DAYS_SHORT[dIdx]}</Text>
+                              <Text style={styles.dayHeaderNum}>{dateObj.getDate()}</Text>
+                            </View>
+                            {HOURS.map(h => {
+                              const isOccupied = OCCUPIED_SLOTS.some(s => s.day === dIdx && s.hour === h);
+                              const isSelected = selectedDay === dIdx && startHour !== null && endHour !== null && h >= startHour && h < endHour;
+                              const isStart = isSelected && h === startHour;
+                              const isEnd = isSelected && h === endHour - 1;
+
+                              return (
+                                <TouchableOpacity 
+                                  key={h} 
+                                  disabled={isOccupied}
+                                  onPress={() => handleSlotPress(dIdx, h)}
+                                  activeOpacity={0.7}
+                                  style={[
+                                    styles.slotCell, 
+                                    isOccupied && styles.slotOccupied,
+                                    isSelected && styles.slotSelected,
+                                    isSelected && !isStart && { borderTopWidth: 0 },
+                                    isSelected && !isEnd && { borderBottomWidth: 0 }
+                                  ]}
+                                >
+                                  {isOccupied && <View style={styles.occupiedIndicator} />}
+                                  {isSelected && (
+                                    <View style={[
+                                      styles.selectedIndicator,
+                                      !isStart && { borderTopLeftRadius: 0, borderTopRightRadius: 0 },
+                                      !isEnd && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }
+                                    ]}>
+                                      {isStart && <Ionicons name="time-outline" size={16} color={COLORS.white} />}
+                                    </View>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
+
+                  <View style={styles.selectionSummary}>
+                    <View style={styles.summaryCenter}>
+                      <View style={styles.clockIconBox}>
+                        <Ionicons name="time" size={24} color={COLORS.white} />
+                      </View>
+                      <View>
+                        <Text style={styles.summaryLabel}>Horario Seleccionado</Text>
+                        <Text style={styles.summaryText}>
+                          {selectedDay !== null ? `${displayDate}, ${displayTime}` : "Seleccione su horario en la cuadrícula"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.legendSmall}>
+                      <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line }]} /><Text style={styles.legendText}>Libre</Text></View>
+                      <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: '#E2E8F0' }]} /><Text style={styles.legendText}>Ocupado</Text></View>
                     </View>
                   </View>
                 </Card>
@@ -162,10 +353,10 @@ export default function RoomsRequestScreen() {
                       onPress={() => setServices({...services, projector: !services.projector})} 
                     />
                     <ServiceToggle 
-                      active={services.whiteboard} 
-                      label="Pizarra" 
-                      icon="brush-outline" 
-                      onPress={() => setServices({...services, whiteboard: !services.whiteboard})} 
+                      active={services.laptop} 
+                      label="Laptop" 
+                      icon="laptop-outline" 
+                      onPress={() => setServices({...services, laptop: !services.laptop})} 
                     />
                     <ServiceToggle 
                       active={services.coffee} 
@@ -177,9 +368,9 @@ export default function RoomsRequestScreen() {
                 </Card>
 
                 <TouchableOpacity 
-                  style={[styles.mainBtn, (progress < 80) && { opacity: 0.5 }]} 
+                  style={[styles.mainBtn, (progress < 100) && { opacity: 0.5 }]} 
                   onPress={handleRegister}
-                  disabled={loading || progress < 80}
+                  disabled={loading || progress < 100}
                 >
                   <LinearGradient 
                     colors={[COLORS.primary, COLORS.primaryDark]} 
@@ -197,7 +388,20 @@ export default function RoomsRequestScreen() {
         </View>
       </LinearGradient>
 
-      <SuccessModal visible={showSuccess} room={selectedRoom.name} date={date} time={`${startTime} - ${endTime}`} onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} />
+      <SuccessModal 
+        visible={showSuccess} 
+        room={selectedRoom.name} 
+        date={displayDate} 
+        time={displayTime} 
+        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+      />
+      
+      <DependencySelector 
+        visible={showDeps} 
+        onClose={() => setShowDeps(false)} 
+        onSelect={setDependency} 
+        selectedValue={dependency}
+      />
     </SafeAreaView>
   );
 }
@@ -366,6 +570,38 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
   cardBody: { padding: 20 },
   
+  calendarNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
+  monthLabel: { fontSize: 16, fontWeight: '900', color: COLORS.text, textTransform: 'capitalize' },
+  navBtns: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.bg, borderRadius: 12, padding: 4 },
+  navBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 1 },
+  navToday: { paddingHorizontal: 12, height: 32, justifyContent: 'center' },
+  todayText: { fontSize: 12, fontWeight: '800', color: COLORS.primary },
+
+  calendarOuter: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white },
+  calendarContainer: { flexDirection: 'row' },
+  hoursCol: { width: 55, backgroundColor: COLORS.bg, borderRightWidth: 1, borderRightColor: COLORS.line },
+  hourCell: { height: 45, justifyContent: 'center', alignItems: 'center' },
+  hourText: { fontSize: 11, color: COLORS.muted, fontWeight: '700' },
+  dayCol: { minWidth: 80, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.03)' },
+  dayHeader: { height: 45, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.bg },
+  dayHeaderText: { fontSize: 10, fontWeight: '900', color: COLORS.muted, textTransform: 'uppercase' },
+  dayHeaderNum: { fontSize: 16, fontWeight: '900', color: COLORS.text, marginTop: -2 },
+  slotCell: { height: 45, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.03)', backgroundColor: COLORS.white },
+  slotOccupied: { backgroundColor: '#F1F5F9' },
+  slotSelected: { backgroundColor: COLORS.soft },
+  occupiedIndicator: { flex: 1, margin: 4, borderRadius: 8, backgroundColor: '#CBD5E1', opacity: 0.4 },
+  selectedIndicator: { flex: 1, marginHorizontal: 2, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  
+  selectionSummary: { flexDirection: 'row', alignItems: 'center', marginTop: 20, padding: 20, backgroundColor: COLORS.white, borderRadius: 26, borderWidth: 1.5, borderColor: COLORS.primary, shadowColor: COLORS.primary, shadowOpacity: 0.08, shadowRadius: 15 },
+  summaryCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 15, justifyContent: 'center' },
+  clockIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', shadowColor: COLORS.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  summaryLabel: { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.8 },
+  summaryText: { fontSize: 17, fontWeight: '900', color: COLORS.text, marginTop: 1 },
+  legendSmall: { gap: 10, paddingLeft: 20, borderLeftWidth: 1, borderLeftColor: COLORS.line },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendBox: { width: 14, height: 14, borderRadius: 4 },
+  legendText: { fontSize: 12, color: COLORS.muted, fontWeight: '700' },
+
   roomSelectBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.02)', padding: 15, borderRadius: 20, gap: 15, borderWidth: 1, borderColor: COLORS.line },
   roomIcon: { width: 56, height: 56, borderRadius: 15, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center' },
   roomName: { fontSize: 16, fontWeight: '800', color: COLORS.text },

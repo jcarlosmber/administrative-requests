@@ -7,6 +7,8 @@ import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
+import { requestService } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -50,12 +52,33 @@ export default function ParkingRequestScreen() {
     return Math.min(p, 100);
   }, [name, doc, plate, brand, dependency]);
 
-  const handleRegister = () => {
-    setLoading(true);
-    setTimeout(() => {
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await requestService.create({
+        user_id: user?.id || null,
+        title: `Parqueadero: ${plate}`,
+        description: `Solicitud de cupo para vehículo ${brand} (${color}) - Conductor: ${name}`,
+        category: 'parking',
+        priority: 'media',
+        metadata: {
+          name,
+          doc,
+          dependency,
+          plate,
+          brand,
+          color
+        }
+      });
+
       setLoading(false);
       setShowSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Error al solicitar parqueadero:', error);
+      setLoading(false);
+    }
   };
 
   return (
@@ -150,9 +173,14 @@ export default function ParkingRequestScreen() {
 
                 <View style={styles.warningBox}>
                   <Ionicons name="information-circle" size={22} color="#1E40AF" />
-                  <Text style={styles.warningText}>
-                    La asignación de cupo está sujeta a disponibilidad y validación por parte de Servicios Generales.
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.warningText}>
+                      La asignación de cupo está sujeta a disponibilidad y validación por parte de Servicios Generales.
+                    </Text>
+                    <Text style={[styles.warningText, { marginTop: 5, fontWeight: '800' }]}>
+                      Nota: El parqueadero permanente es exclusivo para funcionarios de planta, directores y asesores.
+                    </Text>
+                  </View>
                 </View>
 
                 <TouchableOpacity 

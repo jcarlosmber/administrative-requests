@@ -7,6 +7,8 @@ import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
+import { requestService } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -55,12 +57,35 @@ export default function TransportRequestScreen() {
     return Math.min(p, 100);
   }, [dependency, origin, destination, pickupTime, reason, requiresReturn, returnTime]);
 
-  const handleRegister = () => {
-    setLoading(true);
-    setTimeout(() => {
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+
+      await requestService.create({
+        user_id: user?.id || null,
+        title: `Transporte: ${origin} -> ${destination}`,
+        description: `Traslado para ${passengers} personas. Motivo: ${reason}`,
+        category: 'transport',
+        priority: 'media',
+        metadata: {
+          dependency,
+          origin,
+          destination,
+          passengers,
+          pickupTime,
+          requiresReturn,
+          returnTime,
+          reason
+        }
+      });
+
       setLoading(false);
       setShowSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Error al solicitar transporte:', error);
+      setLoading(false);
+    }
   };
 
   return (

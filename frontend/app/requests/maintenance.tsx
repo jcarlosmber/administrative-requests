@@ -7,6 +7,8 @@ import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
+import { requestService } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -50,12 +52,32 @@ export default function MaintenanceRequestScreen() {
     return Math.min(p, 100);
   }, [title, dependency, location, room, description]);
 
-  const handleRegister = () => {
-    setLoading(true);
-    setTimeout(() => {
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await requestService.create({
+        user_id: user?.id || null, // Fallback para dev
+        title,
+        description,
+        category: 'maintenance',
+        priority: 'media',
+        metadata: {
+          location,
+          room,
+          dependency
+        }
+      });
+
       setLoading(false);
       setShowSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Error al registrar mantenimiento:', error);
+      setLoading(false);
+      // Aquí se podría mostrar un modal de error
+    }
   };
 
   return (

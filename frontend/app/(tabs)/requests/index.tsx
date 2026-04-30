@@ -14,7 +14,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import { requestService, AdministrativeRequest } from '../../../lib/requestService';
+import { supabase } from '../../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -46,18 +49,64 @@ const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas
 const STATUSES = ['Todos', 'Pendiente', 'En proceso', 'Aprobada', 'Resuelta', 'Rechazada'];
 
 export default function RequestsScreen() {
+  const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [serviceFilter, setServiceFilter] = useState('Todas');
 
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const data = await requestService.getAll();
+      setRequests(data);
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchRequests();
+    
+    // Realtime subscription
+    const subscription = supabase
+      .channel('user_requests_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'administrative_requests' }, () => {
+        fetchRequests();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const stats = useMemo(() => {
+    return {
+      pendientes: requests.filter(r => r.status === 'pendiente').length,
+      aprobadas: requests.filter(r => r.status === 'resuelto').length,
+      enCurso: requests.filter(r => r.status === 'en_progreso').length
+    };
+  }, [requests]);
+
   const filteredData = useMemo(() => {
-    return DATA.filter(item => {
-      const matchesSearch = (item.title + item.cat).toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'Todos' || item.status === statusFilter;
-      const matchesService = serviceFilter === 'Todas' || item.cat === serviceFilter;
+    return requests.filter(item => {
+      const typeLabel = {
+        visitors: 'Visitantes',
+        transport: 'Transporte',
+        maintenance: 'Mantenimiento',
+        rooms: 'Salas',
+        parking: 'Parqueadero'
+      }[item.category] || item.category;
+
+      const matchesSearch = (item.title + typeLabel).toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'Todos' || item.status.toLowerCase() === statusFilter.toLowerCase();
+      const matchesService = serviceFilter === 'Todas' || typeLabel === serviceFilter;
       return matchesSearch && matchesStatus && matchesService;
     });
-  }, [searchQuery, statusFilter, serviceFilter]);
+  }, [requests, searchQuery, statusFilter, serviceFilter]);
 
   return (
     <View style={styles.container}>
@@ -71,7 +120,7 @@ export default function RequestsScreen() {
               <View style={styles.headerContainer}>
                 <HeroSection />
                 <View style={styles.contentPadding}>
-                  <KPISection />
+                  <KPISection stats={stats} />
                   <SearchBar query={searchQuery} setQuery={setSearchQuery} />
                   
                   <FilterRow 
@@ -100,7 +149,7 @@ export default function RequestsScreen() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestCard item={item} />}
+            renderItem={({ item }) => <RequestCard item={mapRequestToUI(item)} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -115,6 +164,39 @@ export default function RequestsScreen() {
     </View>
   );
 }
+
+const mapRequestToUI = (item: AdministrativeRequest) => {
+  const typeLabel = {
+    visitors: 'Visitantes',
+    transport: 'Transporte',
+    maintenance: 'Mantenimiento',
+    rooms: 'Salas',
+    parking: 'Parqueadero'
+  }[item.category] || item.category;
+
+  const typeColor = {
+    visitors: COLORS.primary,
+    transport: COLORS.blue,
+    maintenance: COLORS.success,
+    rooms: '#7209B7',
+    parking: COLORS.accent
+  }[item.category] || COLORS.muted;
+
+  const statusColor = {
+    pendiente: COLORS.warning,
+    resuelto: COLORS.success,
+    en_progreso: COLORS.blue,
+    rechazada: COLORS.primary
+  }[item.status.toLowerCase()] || COLORS.muted;
+
+  return {
+    ...item,
+    cat: typeLabel,
+    status: item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('_', ' '),
+    date: new Date(item.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+    color: statusColor
+  };
+};
 
 function Sidebar() {
   return (
@@ -144,21 +226,21 @@ function HeroSection() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <SafeAreaView style={styles.heroInner}>
+      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
         <Text style={styles.heroKicker}>PANEL DE CONTROL</Text>
         <Text style={styles.heroTitle}>Mis Solicitudes</Text>
         <Text style={styles.heroSub}>Administre y rastree sus requerimientos</Text>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
 
-function KPISection() {
+function KPISection({ stats }: { stats: { pendientes: number, aprobadas: number, enCurso: number } }) {
   return (
     <View style={styles.kpiRow}>
-      <KPICard label="Pendientes" value="3" color={COLORS.warning} icon="time" />
-      <KPICard label="Aprobadas" value="7" color={COLORS.success} icon="checkmark-circle" />
-      <KPICard label="En Curso" value="2" color={COLORS.blue} icon="sync" />
+      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" />
+      <KPICard label="Aprobadas" value={stats.aprobadas.toString()} color={COLORS.success} icon="checkmark-circle" />
+      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.blue} icon="sync" />
     </View>
   );
 }
@@ -275,7 +357,7 @@ const styles = StyleSheet.create({
 
   headerContainer: { paddingBottom: 10 },
   hero: { height: 160, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },
-  heroInner: { flex: 1, padding: 25, justifyContent: 'center' },
+  heroInner: { flex: 1, paddingHorizontal: 25, justifyContent: 'center' },
   heroKicker: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   heroTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', marginTop: 5 },
   heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
@@ -302,8 +384,8 @@ const styles = StyleSheet.create({
   resultsHeader: { marginTop: 25, marginBottom: 5, paddingLeft: 5 },
   resultsTitle: { fontSize: 15, fontWeight: '800', color: COLORS.muted },
 
-  listContent: { paddingHorizontal: 25, paddingBottom: 100 },
-  card: { backgroundColor: COLORS.white, borderRadius: 24, flexDirection: 'row', overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: COLORS.line, 
+  listContent: { paddingBottom: 100 },
+  card: { backgroundColor: COLORS.white, borderRadius: 24, flexDirection: 'row', overflow: 'hidden', marginBottom: 16, marginHorizontal: 25, borderWidth: 1, borderColor: COLORS.line, 
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
       android: { elevation: 3 },

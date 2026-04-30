@@ -6,6 +6,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
+import { DependencySelector } from '../../components/DependencySelector';
+import { requestService } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -50,6 +53,7 @@ export default function VisitorsScreen() {
   // UI State
   const [showPolicy, setShowPolicy] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const progress = useMemo(() => {
@@ -73,12 +77,34 @@ export default function VisitorsScreen() {
   };
   const removeVehicle = (id: string) => vehicles.length > 1 && setVehicles(vehicles.filter(v => v.id !== id));
 
-  const handleRegister = () => {
-    setLoading(true);
-    setTimeout(() => {
+  const handleRegister = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const visitorNames = visitors.map(v => v.name).join(', ');
+      
+      await requestService.create({
+        user_id: user?.id || null,
+        title: `Ingreso: ${visitorNames}`,
+        description: `Visita para ${responsible.name} en ${responsible.dependency}`,
+        category: 'visitors',
+        priority: 'media',
+        metadata: {
+          visitors: visitors.map(v => ({ name: v.name, document: v.document })),
+          hasVehicle,
+          vehicles: hasVehicle ? vehicles.map(vh => ({ plate: vh.plate, brand: vh.brand })) : [],
+          responsible
+        }
+      });
+
       setLoading(false);
       setShowSuccess(true);
-    }, 1500);
+    } catch (error) {
+      console.error('Error al registrar visitantes:', error);
+      setLoading(false);
+    }
   };
 
   return (
@@ -196,14 +222,34 @@ export default function VisitorsScreen() {
                     onChangeText={(txt: string) => setResponsible({ ...responsible, name: txt })} 
                     placeholder="Persona que autoriza" 
                   />
-                  <Field 
-                    label="Dependencia / Teléfono" 
-                    icon="call-outline" 
-                    value={responsible.phone} 
-                    onChangeText={(txt: string) => setResponsible({ ...responsible, phone: txt })} 
-                    placeholder="Extensión o celular"
-                    keyboardType="phone-pad"
-                  />
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Dependencia</Text>
+                      <TouchableOpacity 
+                        style={styles.inputWrap} 
+                        onPress={() => setShowDeps(true)}
+                      >
+                        <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Text 
+                          style={[styles.input, !responsible.dependency && { color: '#94A3B8' }]} 
+                          numberOfLines={1}
+                        >
+                          {responsible.dependency || "Seleccionar"}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Field 
+                        label="Teléfono / Ext" 
+                        icon="call-outline" 
+                        value={responsible.phone} 
+                        onChangeText={(txt: string) => setResponsible({ ...responsible, phone: txt })} 
+                        placeholder="Ej. 1234"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+                  </View>
                 </Card>
 
                 <TouchableOpacity 
@@ -241,6 +287,13 @@ export default function VisitorsScreen() {
 
       <PolicyModal visible={showPolicy} onClose={() => setShowPolicy(false)} />
       <SuccessModal visible={showSuccess} onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} />
+      
+      <DependencySelector 
+        visible={showDeps} 
+        onClose={() => setShowDeps(false)} 
+        onSelect={(val: string) => setResponsible({ ...responsible, dependency: val })} 
+        selectedValue={responsible.dependency}
+      />
     </SafeAreaView>
   );
 }

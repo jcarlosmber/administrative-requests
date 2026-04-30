@@ -17,8 +17,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { supabase } from '../lib/supabase';
 
 const COLORS = {
   primary: '#A9301E',
@@ -28,6 +29,7 @@ const COLORS = {
   heroText: '#FFF8F6',
   heroMuted: '#F7B7AA',
   line: 'rgba(255, 208, 199, 0.18)',
+  success: '#10B981',
 };
 
 const POLICY_URL = 'https://www.secretariajuridica.gov.co/node/376';
@@ -44,9 +46,11 @@ export default function LoginPage() {
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
 
-  const handleLogin = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
     if (!documentId.trim() || !password.trim()) {
-      Alert.alert('Datos incompletos', 'Ingresa tu correo institucional y la contraseña del correo.');
+      Alert.alert('Datos incompletos', 'Ingresa tu correo institucional y la contraseña.');
       return;
     }
 
@@ -55,7 +59,52 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace('/(tabs)');
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: documentId,
+        password: password,
+      });
+
+      if (error) throw error;
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      Alert.alert('Error de acceso', error.message || 'Verifica tus credenciales.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDevLogin = async (type: 'admin' | 'user') => {
+    if (!policyAccepted) {
+      setPolicyAccepted(true);
+    }
+    
+    try {
+      setLoading(true);
+      const credentials = {
+        admin: { email: 'admin@bogota.gov.co', pass: 'admin123' },
+        user: { email: 'funcionario@bogota.gov.co', pass: 'user123' }
+      };
+      
+      const target = credentials[type];
+      const { error } = await supabase.auth.signInWithPassword({
+        email: target.email,
+        password: target.pass,
+      });
+
+      if (error) throw error;
+      
+      if (type === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } catch (error: any) {
+      Alert.alert('Error Dev Login', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -142,6 +191,33 @@ export default function LoginPage() {
                 <Text style={[styles.submitText, { fontSize: isWide ? 18 : 22 }]}>Ingresar al sistema</Text>
                 <Ionicons name="arrow-forward" size={isWide ? 18 : 22} color={COLORS.heroText} />
               </Pressable>
+
+              {/* Dev Shortcuts */}
+              <View style={styles.devSection}>
+                <View style={styles.devHeader}>
+                  <View style={styles.devLine} />
+                  <Text style={styles.devLabel}>MODO DESARROLLO</Text>
+                  <View style={styles.devLine} />
+                </View>
+                <View style={styles.devBtns}>
+                  <Pressable 
+                    style={[styles.devBtn, { borderColor: '#10B981' }]} 
+                    onPress={() => handleDevLogin('user')}
+                    disabled={loading}
+                  >
+                    <Ionicons name="person" size={16} color="#10B981" />
+                    <Text style={[styles.devBtnText, { color: '#10B981' }]}>FUNCIONARIO</Text>
+                  </Pressable>
+                  <Pressable 
+                    style={[styles.devBtn, { borderColor: '#FACC15' }]} 
+                    onPress={() => handleDevLogin('admin')}
+                    disabled={loading}
+                  >
+                    <Ionicons name="shield-half" size={16} color="#FACC15" />
+                    <Text style={[styles.devBtnText, { color: '#FACC15' }]}>ADMIN</Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
 
             <View style={styles.footerBrand}>
@@ -257,6 +333,50 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  
+  /* Dev Styles */
+  devSection: {
+    marginTop: 20,
+    gap: 12,
+  },
+  devHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    opacity: 0.5,
+  },
+  devLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.line,
+  },
+  devLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: COLORS.heroMuted,
+    letterSpacing: 1.5,
+  },
+  devBtns: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  devBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  devBtnText: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
   },
   brandName: {
     color: COLORS.heroText,

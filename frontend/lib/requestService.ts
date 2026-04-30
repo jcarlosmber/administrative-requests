@@ -7,11 +7,12 @@ export interface AdministrativeRequest {
   user_id: string;
   title: string;
   description: string;
-  category: string;
+  category: 'visitors' | 'maintenance' | 'parking' | 'transport' | 'rooms';
   status: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado';
   priority: 'baja' | 'media' | 'alta';
   admin_notes?: string;
   attachments?: string[];
+  metadata?: any; // Para campos específicos de cada módulo
 }
 
 export const requestService = {
