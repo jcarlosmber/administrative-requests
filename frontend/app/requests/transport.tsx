@@ -7,6 +7,7 @@ import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
+import { TimePickerModal } from '../../components/TimePickerModal';
 import { requestService } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
 
@@ -45,6 +46,8 @@ export default function TransportRequestScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [timePickerTarget, setTimePickerTarget] = useState<'pickup' | 'return'>('pickup');
 
   const progress = useMemo(() => {
     let p = 10;
@@ -124,14 +127,68 @@ export default function TransportRequestScreen() {
                       <Ionicons name="chevron-down" size={18} color={COLORS.muted} />
                     </TouchableOpacity>
                   </View>
-                  <Field 
-                    label="Número de Pasajeros" 
-                    icon="people-outline" 
-                    value={passengers} 
-                    onChangeText={setPassengers} 
-                    keyboardType="numeric"
-                    placeholder="Ej. 2" 
-                  />
+                  <View style={styles.field}>
+                    <Text style={styles.label}>Número de Pasajeros</Text>
+                    <View style={[styles.inputWrap, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Ionicons name="people-outline" size={18} color={COLORS.muted} />
+                        <Text style={styles.input}>
+                          {passengers} {parseInt(passengers, 10) === 1 ? 'pasajero' : 'pasajeros'}
+                        </Text>
+                      </View>
+                      
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <TouchableOpacity 
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: COLORS.bg,
+                            borderWidth: 1.5,
+                            borderColor: COLORS.line,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            opacity: parseInt(passengers, 10) <= 1 ? 0.4 : 1
+                          }}
+                          disabled={parseInt(passengers, 10) <= 1}
+                          onPress={() => {
+                            const current = parseInt(passengers, 10) || 1;
+                            if (current > 1) {
+                              setPassengers((current - 1).toString());
+                            }
+                          }}
+                        >
+                          <Ionicons name="remove" size={18} color={COLORS.text} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: COLORS.bg,
+                            borderWidth: 1.5,
+                            borderColor: COLORS.line,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            opacity: parseInt(passengers, 10) >= 4 ? 0.4 : 1
+                          }}
+                          disabled={parseInt(passengers, 10) >= 4}
+                          onPress={() => {
+                            const current = parseInt(passengers, 10) || 1;
+                            if (current < 4) {
+                              setPassengers((current + 1).toString());
+                            }
+                          }}
+                        >
+                          <Ionicons name="add" size={18} color={COLORS.text} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 6, marginLeft: 4 }}>
+                      * Capacidad máxima permitida por vehículo oficial: 4 personas.
+                    </Text>
+                  </View>
                 </Card>
 
                 <Card title="Detalles del Trayecto" icon="map">
@@ -152,13 +209,22 @@ export default function TransportRequestScreen() {
                   
                   <View style={{ flexDirection: 'row', gap: 15 }}>
                     <View style={{ flex: 1 }}>
-                      <Field 
-                        label="Hora de Recogida" 
-                        icon="time-outline" 
-                        value={pickupTime} 
-                        onChangeText={setPickupTime} 
-                        placeholder="HH:MM AM/PM" 
-                      />
+                      <View style={styles.field}>
+                        <Text style={styles.label}>Hora de Recogida</Text>
+                        <TouchableOpacity 
+                          style={styles.inputWrap} 
+                          onPress={() => {
+                            setTimePickerTarget('pickup');
+                            setShowTimePicker(true);
+                          }}
+                        >
+                          <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                          <Text style={[styles.input, !pickupTime && { color: '#94A3B8' }]}>
+                            {pickupTime || "Seleccionar"}
+                          </Text>
+                          <Ionicons name="chevron-down" size={18} color={COLORS.muted} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={styles.field}>
@@ -179,13 +245,22 @@ export default function TransportRequestScreen() {
                   </View>
 
                   {requiresReturn && (
-                    <Field 
-                      label="Hora de Regreso Estimada" 
-                      icon="hourglass-outline" 
-                      value={returnTime} 
-                      onChangeText={setReturnTime} 
-                      placeholder="HH:MM AM/PM" 
-                    />
+                    <View style={styles.field}>
+                      <Text style={styles.label}>Hora de Regreso Estimada</Text>
+                      <TouchableOpacity 
+                        style={styles.inputWrap} 
+                        onPress={() => {
+                          setTimePickerTarget('return');
+                          setShowTimePicker(true);
+                        }}
+                      >
+                        <Ionicons name="hourglass-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Text style={[styles.input, !returnTime && { color: '#94A3B8' }]}>
+                          {returnTime || "Seleccionar hora"}
+                        </Text>
+                        <Ionicons name="chevron-down" size={18} color={COLORS.muted} />
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </Card>
 
@@ -235,13 +310,34 @@ export default function TransportRequestScreen() {
         </View>
       </LinearGradient>
 
-      <SuccessModal visible={showSuccess} onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} />
+      <SuccessModal 
+        visible={showSuccess} 
+        origin={origin}
+        destination={destination}
+        time={pickupTime}
+        passengers={passengers}
+        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+      />
       
       <DependencySelector 
         visible={showDeps} 
         onClose={() => setShowDeps(false)} 
         onSelect={setDependency} 
         selectedValue={dependency}
+      />
+
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onSelect={(time) => {
+          if (timePickerTarget === 'pickup') {
+            setPickupTime(time);
+          } else {
+            setReturnTime(time);
+          }
+        }}
+        selectedValue={timePickerTarget === 'pickup' ? pickupTime : returnTime}
+        title={timePickerTarget === 'pickup' ? 'Hora de Recogida' : 'Hora de Regreso Estimada'}
       />
     </SafeAreaView>
   );
@@ -345,20 +441,42 @@ function Field({ label, icon, multiline, ...props }: any) {
   );
 }
 
-function SuccessModal({ visible, onClose }: any) {
+function SuccessModal({ visible, onClose, origin, destination, time, passengers }: any) {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalBlur}>
-        <View style={[styles.modalPanel, { alignItems: 'center', padding: 40 }]}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-done" size={60} color={COLORS.white} />
+        <View style={[styles.modalPanel, { alignItems: 'center', padding: 35 }]}>
+          <View style={[styles.successIcon, { backgroundColor: '#F59E0B' }]}>
+            <Ionicons name="time" size={60} color={COLORS.white} />
           </View>
-          <Text style={styles.modalTitle}>¡Solicitud Exitosa!</Text>
-          <Text style={[styles.modalText, { textAlign: 'center', marginTop: 10 }]}>
-            Su traslado ha sido programado. Recibirá una notificación con los datos del conductor asignado.
+          <Text style={styles.modalTitle}>¡Solicitud Registrada!</Text>
+          <Text style={{ 
+            fontSize: 13, 
+            color: COLORS.muted, 
+            textAlign: 'center', 
+            marginTop: 8, 
+            marginBottom: 20, 
+            lineHeight: 18,
+            paddingHorizontal: 10
+          }}>
+            Su solicitud de traslado ha quedado registrada y se encuentra pendiente de aprobación. Recibirá una notificación con los datos del vehículo y conductor asignado una vez sea autorizada.
           </Text>
-          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 20 }]} onPress={onClose}>
-            <Text style={styles.modalBtnText}>VOLVER AL MENÚ</Text>
+          
+          <View style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.02)', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.line, gap: 10, marginBottom: 10 }}>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Ruta:</Text> {origin} ➔ {destination}</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Hora:</Text> {time}</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Cupos:</Text> {passengers} {passengers === '1' ? 'Persona' : 'Personas'}</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.line }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase' }}>
+                Pendiente de Aprobación
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 25 }]} onPress={onClose}>
+            <Text style={styles.modalBtnText}>LISTO</Text>
           </TouchableOpacity>
         </View>
       </View>

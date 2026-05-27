@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export const CustomModal = ({visible,title,message,onClose,type='info'}:any) => {
  const icon = type==='success'?'checkmark-circle':type==='error'?'alert-circle':'information-circle';
- const color = type==='success'?'#16A34A':type==='error'?'#A9301E':'#2563EB';
+ const color = type==='success'?'#16A34A':type==='error'?'#E3272A':'#2563EB';
  return (
  <Modal transparent visible={visible} animationType='fade'>
   <View style={s.overlay}>

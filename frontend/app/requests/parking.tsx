@@ -35,6 +35,7 @@ export default function ParkingRequestScreen() {
   const [name, setName] = useState('');
   const [doc, setDoc] = useState('');
   const [dependency, setDependency] = useState('');
+  const [charge, setCharge] = useState('');
   const [plate, setPlate] = useState('');
   const [brand, setBrand] = useState('');
   const [color, setColor] = useState('');
@@ -43,14 +44,15 @@ export default function ParkingRequestScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showGuidelines, setShowGuidelines] = useState(false);
 
   const progress = useMemo(() => {
-    let p = 20;
-    if (name && doc) p += 30;
+    let p = 10;
+    if (name && doc && charge) p += 40;
     if (plate && brand) p += 30;
     if (dependency) p += 20;
     return Math.min(p, 100);
-  }, [name, doc, plate, brand, dependency]);
+  }, [name, doc, charge, plate, brand, dependency]);
 
   const handleRegister = async () => {
     try {
@@ -67,6 +69,7 @@ export default function ParkingRequestScreen() {
           name,
           doc,
           dependency,
+          charge,
           plate,
           brand,
           color
@@ -103,6 +106,31 @@ export default function ParkingRequestScreen() {
               <Hero progress={progress} />
 
               <View style={{ gap: 18 }}>
+                <Card title="Lineamientos de Parqueadero" icon="document-text">
+                  <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20, marginBottom: 12, fontWeight: '500' }}>
+                    Conozca los lineamientos y normas de tránsito vigentes para el uso de los parqueaderos en la Manzana Liévano y Archivo Distrital.
+                  </Text>
+                  <TouchableOpacity 
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      backgroundColor: COLORS.soft,
+                      padding: 14,
+                      borderRadius: 16,
+                      borderWidth: 1,
+                      borderColor: 'rgba(244, 162, 97, 0.3)'
+                    }}
+                    onPress={() => setShowGuidelines(true)}
+                  >
+                    <Ionicons name="book-outline" size={18} color={COLORS.primary} />
+                    <Text style={{ color: COLORS.primary, fontWeight: '800', fontSize: 14 }}>
+                      VER LINEAMIENTOS COMPLETOS
+                    </Text>
+                  </TouchableOpacity>
+                </Card>
+
                 <Card title="Información del Conductor" icon="person">
                   <Field 
                     label="Nombre Completo" 
@@ -110,6 +138,13 @@ export default function ParkingRequestScreen() {
                     value={name} 
                     onChangeText={setName} 
                     placeholder="Ej. Juan Pérez" 
+                  />
+                  <Field 
+                    label="Cargo" 
+                    icon="briefcase-outline" 
+                    value={charge} 
+                    onChangeText={setCharge} 
+                    placeholder="Ej. Profesional Especializado, Director, Asesor" 
                   />
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1 }}>
@@ -204,7 +239,20 @@ export default function ParkingRequestScreen() {
         </View>
       </LinearGradient>
 
-      <SuccessModal visible={showSuccess} onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} />
+      <SuccessModal 
+        visible={showSuccess} 
+        plate={plate}
+        brand={brand}
+        name={name}
+        charge={charge}
+        dependency={dependency}
+        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+      />
+      
+      <GuidelinesModal 
+        visible={showGuidelines} 
+        onClose={() => setShowGuidelines(false)} 
+      />
       
       <DependencySelector 
         visible={showDeps} 
@@ -265,15 +313,22 @@ function Hero({ progress }: { progress: number }) {
         </View>
         <View style={styles.pill}><Text style={styles.pillText}>Acceso Vial</Text></View>
       </View>
-      <View style={styles.barContainer}>
-        <View style={styles.barBg}>
-          <Animated.View style={[styles.barFill, { width: `${progress}%` }]} />
+      <View style={barStyles.barContainer}>
+        <View style={barStyles.barBg}>
+          <Animated.View style={[barStyles.barFill, { width: `${progress}%` }]} />
         </View>
-        <Text style={styles.barLabel}>{progress}% Completado</Text>
+        <Text style={barStyles.barLabel}>{progress}% Completado</Text>
       </View>
     </View>
   );
 }
+
+const barStyles = StyleSheet.create({
+  barContainer: { marginTop: 20 },
+  barBg: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 10, overflow: 'hidden' },
+  barFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 10 },
+  barLabel: { marginTop: 8, fontSize: 12, fontWeight: '700', color: COLORS.muted, textAlign: 'right' }
+});
 
 function Card({ title, icon, right, children }: any) {
   return (
@@ -310,19 +365,186 @@ function Field({ label, icon, ...props }: any) {
   );
 }
 
-function SuccessModal({ visible, onClose }: any) {
+function SuccessModal({ visible, onClose, plate, brand, name, charge, dependency }: any) {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalBlur}>
-        <View style={[styles.modalPanel, { alignItems: 'center', padding: 40 }]}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={60} color={COLORS.white} />
+        <View style={[styles.modalPanel, { alignItems: 'center', padding: 35 }]}>
+          <View style={[styles.successIcon, { backgroundColor: '#F59E0B' }]}>
+            <Ionicons name="time" size={60} color={COLORS.white} />
           </View>
-          <Text style={styles.modalTitle}>¡Solicitud Recibida!</Text>
-          <Text style={[styles.modalText, { textAlign: 'center', marginTop: 10 }]}>
-            Su trámite ha sido ingresado al sistema. En un plazo de 3-5 días hábiles recibirá la respuesta en su correo institucional.
+          <Text style={styles.modalTitle}>¡Solicitud Registrada!</Text>
+          <Text style={{ 
+            fontSize: 13, 
+            color: COLORS.muted, 
+            textAlign: 'center', 
+            marginTop: 8, 
+            marginBottom: 20, 
+            lineHeight: 18,
+            paddingHorizontal: 10
+          }}>
+            Su solicitud de cupo vehicular ha quedado ingresada al sistema para evaluación de disponibilidad física en el sótano administrativo.
           </Text>
-          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 20 }]} onPress={onClose}>
+          
+          <View style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.02)', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.line, gap: 10, marginBottom: 10 }}>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Vehículo:</Text> {brand} ({plate})</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Conductor:</Text> {name}</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Cargo:</Text> {charge}</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Dependencia:</Text> {dependency}</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.line }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase' }}>
+                Pendiente de Aprobación
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 25 }]} onPress={onClose}>
+            <Text style={styles.modalBtnText}>LISTO</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function GuidelinesModal({ visible, onClose }: any) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBlur}>
+        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        <View style={[styles.modalPanel, { maxWidth: 650, maxHeight: '85%', padding: 25 }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: COLORS.line, paddingBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="document-text" size={24} color={COLORS.primary} />
+              <Text style={[styles.modalTitle, { fontSize: 18 }]}>Lineamientos de Parqueadero</Text>
+            </View>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+            <View style={{ gap: 14 }}>
+              <View style={{ backgroundColor: COLORS.soft, padding: 15, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: COLORS.primary, gap: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text }}>Entidad:</Text>
+                <Text style={{ fontSize: 13, color: COLORS.muted, fontWeight: '600' }}>BOGOTÁ, SECRETARÍA JURÍDICA DISTRITAL.</Text>
+                
+                <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text, marginTop: 8 }}>Título:</Text>
+                <Text style={{ fontSize: 13, color: COLORS.muted, fontWeight: '600', lineHeight: 18 }}>
+                  Lineamientos para el uso de parqueadero de vehículos y motocicletas a servidores de la Secretaría Jurídica Distrital en la Manzana Liévano de la Alcaldía Mayor de Bogotá D.C.
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginTop: 5 }}>ANTECEDENTES</Text>
+              <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, fontWeight: '500' }}>
+                • Mediante el Convenio Interadministrativo No. 095-2017 entre la Secretaría General y la Secretaría Jurídica Distrital (SJD), se dispuso el uso de los espacios físicos, incluyendo los parqueaderos. Inicialmente se asignaron 21 parqueaderos en la Manzana Liévano. Tras gestiones de la SJD, el total aumentó a treinta y un (31) parqueaderos para vehículos y trece (13) para motos. Esto permitió a la Dirección de Gestión Corporativa (DGC) modificar la modalidad de asignación a partir de junio de 2019.
+              </Text>
+              <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, fontWeight: '500' }}>
+                • En concordancia con la Alcaldía Mayor de Bogotá D.C., los primeros jueves de cada mes no habrá servicio de parqueadero para vehículos y motos en la Manzana Liévano ni en el Archivo Distrital, por ser el día sin carro para los servidores públicos del distrito.
+              </Text>
+              <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, fontWeight: '500' }}>
+                • El listado de cupos se realizó inicialmente mediante encuesta y luego por solicitudes personales vía correo de los servidores públicos de planta (Carrera, Libre Nombramiento y Provisionales).
+              </Text>
+              
+              <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginTop: 5 }}>NORMAS DE USO Y ACCESO</Text>
+              
+              <View style={{ gap: 12 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>1.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    La Dirección de Gestión Corporativa mantendrá actualizado el listado de servidores autorizados. Este documento lo usa la vigilancia en portería para controlar el ingreso del vehículo o moto, el cual debe ser conducido únicamente por el servidor identificado con carnet de la Entidad, respetando el día de pico y placa del vehículo registrado.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>2.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Al ingresar, la vigilancia entregará una ficha con el número de parqueadero asignado, la cual debe colocarse en un lugar visible en la parte delantera interior del vehículo o moto.
+                  </Text>
+                </View>
+
+                <View style={{ backgroundColor: '#FFFBEB', padding: 12, borderRadius: 12, borderLeftWidth: 3, borderLeftColor: '#F59E0B', marginLeft: 15 }}>
+                  <Text style={{ fontSize: 12, color: '#B45309', fontWeight: '800', lineHeight: 17 }}>
+                    NOTA: En caso de pérdida de la ficha, el usuario no podrá usar el parqueadero hasta realizar la reposición y el trámite correspondiente ante la DGC.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>5.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Al ingresar, la vigilancia revisará el vehículo, el cual debe estar apagado. En el caso de las motos, la persona debe retirarse el casco para su identificación y usarlo de igual manera dentro del parqueadero.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>6.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Los vehículos no pueden permanecer en el parqueadero de un día para otro, salvo por casos excepcionales y con previo conocimiento de la Dirección de Gestión Corporativa.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>7.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    El ingreso se hará exclusivamente con el carnet de la Entidad y los cupos se asignarán según el orden de llegada y ocupación.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>8.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Si al llegar se encuentran agotados los cupos en la Manzana Liévano, los servidores podrán parquear en el parqueadero del Archivo Distrital.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>9.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    En el parqueadero de la Manzana Liévano no se cuenta con parqueaderos de visitantes.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>10.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    El servicio es exclusivo para los/as servidores/as de la SJD; no se permite la transferencia o asignación a un tercero.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>11.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    La asignación del cupo podrá suspenderse por situaciones de causa mayor, lo cual se comunicará oportunamente.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>12.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    El/la servidor/a debe dejar el vehículo en el lugar asignado respetando la señalización y con las máximas medidas de seguridad (carros: en posición de salida, cerrados, vidrios arriba, luces y radio apagados; motos: seguro de dirección y luces apagadas).
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>13.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Se deben acatar las normas y señales de tránsito, como conducir a una velocidad máxima de 10 Km por hora.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>14.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Ante incidentes por colisión o robo dentro de la Manzana Liévano, el afectado avisará al supervisor de la empresa de seguridad, registrando las pruebas para las reclamaciones. La Dirección de Gestión Corporativa de la SJD no se hace responsable de estos u otros incidentes.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+          
+          <TouchableOpacity style={[styles.modalBtn, { marginTop: 20 }]} onPress={onClose}>
             <Text style={styles.modalBtnText}>ENTENDIDO</Text>
           </TouchableOpacity>
         </View>

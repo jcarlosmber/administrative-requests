@@ -22,13 +22,13 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
 
 const COLORS = {
-  primary: '#A9301E',
-  primarySoft: '#F97361',
-  heroDark: '#210706',
-  heroMid: '#3A0D0A',
-  heroText: '#FFF8F6',
-  heroMuted: '#F7B7AA',
-  line: 'rgba(255, 208, 199, 0.18)',
+  primary: '#E3272A', // Rojo Oficial de la Secretaría Jurídica Distrital / Bogotá (Pantone 185c)
+  primarySoft: '#F9D248', // Amarillo Oficial de la Marca Ciudad Bogotá (Pantone Medium Yellow c)
+  heroDark: '#0B0F19', // Slate 950 - Fondo oscuro muy elegante y serio
+  heroMid: '#111827', // Gray 900 - Fondo intermedio elegante
+  heroText: '#F8FAFC', // Slate 50 - Texto principal
+  heroMuted: '#94A3B8', // Slate 400 - Texto secundario
+  line: 'rgba(255, 255, 255, 0.08)',
   success: '#10B981',
 };
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
   };
 
   return (
-    <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#160403']} style={styles.screen}>
+    <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#070A13']} style={styles.screen}>
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
@@ -119,12 +119,12 @@ export default function LoginPage() {
 
           <View style={styles.card}>
             <View style={styles.brand}>
-              <View style={[styles.logoMark, { width: isWide ? 64 : 84, height: isWide ? 64 : 84 }]}>
-                <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.heroText} />
+              <View style={[styles.logoMark, { width: isWide ? 64 : 84, height: isWide ? 64 : 84, backgroundColor: COLORS.primary }]}>
+                <Ionicons name="shield-checkmark" size={isWide ? 32 : 42} color={COLORS.primarySoft} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.brandName, { fontSize: isWide ? 22 : 28 }]}>SASGE</Text>
-                <Text style={styles.brandSubtitle}>Sistema de Administración de Servicios Generales</Text>
+                <Text style={styles.brandSubtitle}>Secretaría Jurídica Distrital</Text>
               </View>
             </View>
 
@@ -314,11 +314,11 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 520,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 24,
+    borderWidth: 1.5,
     borderColor: COLORS.line,
-    backgroundColor: 'rgba(81, 24, 18, 0.78)',
-    padding: 26,
+    backgroundColor: 'rgba(15, 23, 42, 0.82)',
+    padding: 28,
   },
   brand: {
     flexDirection: 'row',
@@ -330,7 +330,6 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 20,
-    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },

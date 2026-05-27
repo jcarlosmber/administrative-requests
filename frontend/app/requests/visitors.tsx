@@ -48,13 +48,32 @@ export default function VisitorsScreen() {
   const [hasVehicle, setHasVehicle] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([{ id: '1', plate: '', brand: '' }]);
   const [responsible, setResponsible] = useState({ name: '', phone: '', dependency: '' });
+  const [fromDate, setFromDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day} 08:00`;
+  });
+  const [toDate, setToDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day} 18:00`;
+  });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  
+  // DatePicker State
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [modalTarget, setModalTarget] = useState<'from' | 'to'>('from');
   
   // UI State
   const [showPolicy, setShowPolicy] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showGuidelines, setShowGuidelines] = useState(false);
 
   const progress = useMemo(() => {
     let p = 10;
@@ -88,14 +107,16 @@ export default function VisitorsScreen() {
       await requestService.create({
         user_id: user?.id || null,
         title: `Ingreso: ${visitorNames}`,
-        description: `Visita para ${responsible.name} en ${responsible.dependency}`,
+        description: `Visita para ${responsible.name} en ${responsible.dependency} desde ${fromDate} hasta ${toDate}`,
         category: 'visitors',
         priority: 'media',
         metadata: {
           visitors: visitors.map(v => ({ name: v.name, document: v.document })),
           hasVehicle,
           vehicles: hasVehicle ? vehicles.map(vh => ({ plate: vh.plate, brand: vh.brand })) : [],
-          responsible
+          responsible,
+          fromDate,
+          toDate
         }
       });
 
@@ -175,6 +196,46 @@ export default function VisitorsScreen() {
                 >
                   {hasVehicle && (
                     <View style={{ gap: 12 }}>
+                      <View style={{ 
+                        flexDirection: 'row', 
+                        gap: 12, 
+                        backgroundColor: '#FFFBEB', 
+                        padding: 15, 
+                        borderRadius: 18, 
+                        borderLeftWidth: 4, 
+                        borderLeftColor: '#F59E0B',
+                        marginBottom: 5
+                      }}>
+                        <Ionicons name="information-circle" size={22} color="#D97706" style={{ marginTop: 2 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 13, color: '#B45309', lineHeight: 18, fontWeight: '800' }}>
+                            Nota de parqueadero para visitantes:
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#B45309', lineHeight: 17, marginTop: 4, fontWeight: '600' }}>
+                            La Secretaría Jurídica no cuenta con espacios para visitantes, no obstante, de presentarse espacios, es viable autorizar el ingreso. El conductor deberá acatar las normas que apliquen (conducir a velocidad máxima de 10 Km/h, apagar el vehículo al ingresar, y retirar el casco en motos).
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity 
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          backgroundColor: '#FFF7ED',
+                          padding: 12,
+                          borderRadius: 14,
+                          borderWidth: 1,
+                          borderColor: 'rgba(244, 162, 97, 0.3)',
+                          marginBottom: 8
+                        }}
+                        onPress={() => setShowGuidelines(true)}
+                      >
+                        <Ionicons name="book-outline" size={16} color="#D97706" />
+                        <Text style={{ color: '#D97706', fontWeight: '800', fontSize: 13 }}>
+                          VER LINEAMIENTOS COMPLETOS DE PARQUEADERO
+                        </Text>
+                      </TouchableOpacity>
                       {vehicles.map((vh, i) => (
                         <View key={vh.id} style={[styles.itemBox, i > 0 && styles.itemDivider]}>
                           <View style={styles.itemHeader}>
@@ -252,6 +313,39 @@ export default function VisitorsScreen() {
                   </View>
                 </Card>
 
+                <Card title="Vigencia del Ingreso" icon="calendar">
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Desde (Fecha y Hora)</Text>
+                      <TouchableOpacity 
+                        style={styles.inputWrap} 
+                        onPress={() => {
+                          setModalTarget('from');
+                          setShowDatePicker(true);
+                        }}
+                      >
+                        <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Text style={styles.input}>{fromDate}</Text>
+                        <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Hasta (Fecha y Hora)</Text>
+                      <TouchableOpacity 
+                        style={styles.inputWrap} 
+                        onPress={() => {
+                          setModalTarget('to');
+                          setShowDatePicker(true);
+                        }}
+                      >
+                        <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Text style={styles.input}>{toDate}</Text>
+                        <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Card>
+
                 <TouchableOpacity 
                   style={styles.termsBox} 
                   onPress={() => setAcceptedTerms(!acceptedTerms)}
@@ -286,13 +380,42 @@ export default function VisitorsScreen() {
       </LinearGradient>
 
       <PolicyModal visible={showPolicy} onClose={() => setShowPolicy(false)} />
-      <SuccessModal visible={showSuccess} onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} />
+      <SuccessModal 
+        visible={showSuccess} 
+        visitors={visitors.filter(v => v.name)}
+        hasVehicle={hasVehicle}
+        vehicles={hasVehicle ? vehicles.filter(vh => vh.plate) : []}
+        responsible={responsible}
+        fromDate={fromDate}
+        toDate={toDate}
+        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+      />
+      
+      <GuidelinesModal 
+        visible={showGuidelines} 
+        onClose={() => setShowGuidelines(false)} 
+      />
       
       <DependencySelector 
         visible={showDeps} 
         onClose={() => setShowDeps(false)} 
         onSelect={(val: string) => setResponsible({ ...responsible, dependency: val })} 
         selectedValue={responsible.dependency}
+      />
+      
+      <DateTimePickerModal 
+        visible={showDatePicker} 
+        onClose={() => setShowDatePicker(false)} 
+        title={modalTarget === 'from' ? 'Vigencia: Desde' : 'Vigencia: Hasta'}
+        value={modalTarget === 'from' ? fromDate : toDate}
+        onSelect={(val: string) => {
+          if (modalTarget === 'from') {
+            setFromDate(val);
+          } else {
+            setToDate(val);
+          }
+          setShowDatePicker(false);
+        }}
       />
     </SafeAreaView>
   );
@@ -416,19 +539,238 @@ function PolicyModal({ visible, onClose }: any) {
   );
 }
 
-function SuccessModal({ visible, onClose }: any) {
+function SuccessModal({ 
+  visible, 
+  onClose, 
+  visitors, 
+  hasVehicle, 
+  vehicles, 
+  responsible, 
+  fromDate, 
+  toDate 
+}: any) {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalBlur}>
-        <View style={[styles.modalPanel, { alignItems: 'center', padding: 40 }]}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-circle" size={60} color={COLORS.white} />
+        <View style={[styles.modalPanel, { alignItems: 'center', padding: 25, maxWidth: 450 }]}>
+          <View style={[styles.successIcon, { backgroundColor: '#F59E0B', marginBottom: 12 }]}>
+            <Ionicons name="time" size={50} color={COLORS.white} />
           </View>
-          <Text style={styles.modalTitle}>¡Registro Completado!</Text>
-          <Text style={[styles.modalText, { textAlign: 'center', marginTop: 10 }]}>
-            El ingreso ha sido registrado. Por favor, espere las indicaciones del personal de seguridad.
+          <Text style={[styles.modalTitle, { fontSize: 20, marginBottom: 5 }]}>¡Solicitud Registrada!</Text>
+          <Text style={{ 
+            fontSize: 12, 
+            color: COLORS.muted, 
+            textAlign: 'center', 
+            marginBottom: 15, 
+            lineHeight: 16,
+            paddingHorizontal: 5
+          }}>
+            La solicitud de acceso ha quedado registrada. Se encuentra pendiente de validación por parte del funcionario anfitrión o recepción.
           </Text>
-          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 20 }]} onPress={onClose}>
+          
+          <ScrollView 
+            style={{ width: '100%', maxHeight: 280, marginBottom: 10 }} 
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ width: '100%', padding: 18, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.02)', borderWidth: 1, borderColor: COLORS.line, gap: 10 }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary, letterSpacing: 0.8, borderBottomWidth: 1, borderBottomColor: COLORS.line, paddingBottom: 6 }}>
+                RESUMEN DE INGRESO
+              </Text>
+              
+              {/* Bloque de Vigencia */}
+              <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Desde:</Text> {fromDate}</Text>
+              <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Hasta:</Text> {toDate}</Text>
+              
+              <View style={{ height: 1, backgroundColor: COLORS.line, marginVertical: 4 }} />
+              
+              {/* Bloque de Anfitrión */}
+              <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Anfitrión:</Text> {responsible.name}</Text>
+              <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Dependencia:</Text> {responsible.dependency}</Text>
+              <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Contacto / Ext:</Text> {responsible.phone || 'N/A'}</Text>
+              
+              <View style={{ height: 1, backgroundColor: COLORS.line, marginVertical: 4 }} />
+              
+              {/* Bloque de Visitantes Desglosados */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.muted }}>VISITANTE(S) REGISTRADO(S):</Text>
+              {visitors && visitors.map((v: any, index: number) => (
+                <View key={v.id || index} style={{ flexDirection: 'row', gap: 6, paddingLeft: 4 }}>
+                  <Text style={{ fontSize: 14, color: COLORS.text, fontWeight: '800' }}>•</Text>
+                  <Text style={{ fontSize: 14, color: COLORS.text, flex: 1 }}>
+                    <Text style={{ fontWeight: '700' }}>{v.name}</Text> (Doc: {v.document || 'N/A'})
+                  </Text>
+                </View>
+              ))}
+              
+              {/* Bloque de Acceso Vehicular */}
+              {hasVehicle && vehicles && vehicles.length > 0 && (
+                <>
+                  <View style={{ height: 1, backgroundColor: COLORS.line, marginVertical: 4 }} />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.muted }}>ACCESO VEHICULAR:</Text>
+                  {vehicles.map((vh: any, index: number) => (
+                    <View key={vh.id || index} style={{ flexDirection: 'row', gap: 6, paddingLeft: 4 }}>
+                      <Ionicons name="car-sport-outline" size={14} color={COLORS.muted} style={{ marginTop: 2 }} />
+                      <Text style={{ fontSize: 14, color: COLORS.text, flex: 1 }}>
+                        Placa: <Text style={{ fontWeight: '800', color: COLORS.text }}>{vh.plate}</Text> ({vh.brand || 'N/A'})
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              )}
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.line }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase' }}>
+                  Pendiente de Aprobación
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+          
+          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 15 }]} onPress={onClose}>
+            <Text style={styles.modalBtnText}>LISTO</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function GuidelinesModal({ visible, onClose }: any) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBlur}>
+        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        <View style={[styles.modalPanel, { maxWidth: 650, maxHeight: '85%', padding: 25 }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: COLORS.line, paddingBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="document-text" size={24} color={COLORS.primary} />
+              <Text style={[styles.modalTitle, { fontSize: 18 }]}>Lineamientos de Parqueadero</Text>
+            </View>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+            <View style={{ gap: 14 }}>
+              <View style={{ backgroundColor: COLORS.soft, padding: 15, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: COLORS.primary, gap: 4 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text }}>Entidad:</Text>
+                <Text style={{ fontSize: 13, color: COLORS.muted, fontWeight: '600' }}>BOGOTÁ, SECRETARÍA JURÍDICA DISTRITAL.</Text>
+                
+                <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text, marginTop: 8 }}>Título:</Text>
+                <Text style={{ fontSize: 13, color: COLORS.muted, fontWeight: '600', lineHeight: 18 }}>
+                  Lineamientos para el uso de parqueadero de vehículos y motocicletas a servidores de la Secretaría Jurídica Distrital en la Manzana Liévano de la Alcaldía Mayor de Bogotá D.C.
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginTop: 5 }}>ANTECEDENTES</Text>
+              <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, fontWeight: '500' }}>
+                • Mediante el Convenio Interadministrativo No. 095-2017 entre la Secretaría General y la Secretaría Jurídica Distrital (SJD), se dispuso el uso de los espacios físicos, incluyendo los parqueaderos. Inicialmente se asignaron 21 parqueaderos en la Manzana Liévano. Tras gestiones de la SJD, el total aumentó a treinta y un (31) parqueaderos para vehículos y trece (13) para motos. Esto permitió a la Dirección de Gestión Corporativa (DGC) modificar la modalidad de asignación a partir de junio de 2019.
+              </Text>
+              <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, fontWeight: '500' }}>
+                • En concordancia con la Alcaldía Mayor de Bogotá D.C., los primeros jueves de cada mes no habrá servicio de parqueadero para vehículos y motos en la Manzana Liévano ni en el Archivo Distrital, por ser el día sin carro para los servidores públicos del distrito.
+              </Text>
+              <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, fontWeight: '500' }}>
+                • El listado de cupos se realizó inicialmente mediante encuesta y luego por solicitudes personales vía correo de los servidores públicos de planta (Carrera, Libre Nombramiento y Provisionales).
+              </Text>
+              
+              <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginTop: 5 }}>NORMAS DE USO Y ACCESO</Text>
+              
+              <View style={{ gap: 12 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>1.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    La Dirección de Gestión Corporativa mantendrá actualizado el listado de servidores autorizados. Este documento lo usa la vigilancia en portería para controlar el ingreso del vehículo o moto, el cual debe ser conducido únicamente por el servidor identificado con carnet de la Entidad, respetando el día de pico y placa del vehículo registrado.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>2.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Al ingresar, la vigilancia entregará una ficha con el número de parqueadero asignado, la cual debe colocarse en un lugar visible en la parte delantera interior del vehículo o moto.
+                  </Text>
+                </View>
+
+                <View style={{ backgroundColor: '#FFFBEB', padding: 12, borderRadius: 12, borderLeftWidth: 3, borderLeftColor: '#F59E0B', marginLeft: 15 }}>
+                  <Text style={{ fontSize: 12, color: '#B45309', fontWeight: '800', lineHeight: 17 }}>
+                    NOTA: En caso de pérdida de la ficha, el usuario no podrá usar el parqueadero hasta realizar la reposición y el trámite correspondiente ante la DGC.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>5.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Al ingresar, la vigilancia revisará el vehículo, el cual debe estar apagado. En el caso de las motos, la persona debe retirarse el casco para su identificación y usarlo de igual manera dentro del parqueadero.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>6.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Los vehículos no pueden permanecer en el parqueadero de un día para otro, salvo por casos excepcionales y con previo conocimiento de la Dirección de Gestión Corporativa.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>7.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    El ingreso se hará exclusivamente con el carnet de la Entidad y los cupos se asignarán según el orden de llegada y ocupación.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>8.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Si al llegar se encuentran agotados los cupos en la Manzana Liévano, los servidores podrán parquear en el parqueadero del Archivo Distrital.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>9.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    En el parqueadero de la Manzana Liévano no se cuenta con parqueaderos de visitantes.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>10.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    El servicio es exclusivo para los/as servidores/as de la SJD; no se permite la transferencia o asignación a un tercero.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>11.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    La asignación del cupo podrá suspenderse por situaciones de causa mayor, lo cual se comunicará oportunamente.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>12.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    El/la servidor/a debe dejar el vehículo en el lugar asignado respetando la señalización y con las máximas medidas de seguridad (carros: en posición de salida, cerrados, vidrios arriba, luces y radio apagados; motos: seguro de dirección y luces apagadas).
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>13.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Se deben acatar las normas y señales de tránsito, como conducir a una velocidad máxima de 10 Km por hora.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.primary }}>14.</Text>
+                  <Text style={{ fontSize: 13, color: COLORS.text, lineHeight: 19, flex: 1, fontWeight: '500' }}>
+                    Ante incidentes por colisión o robo dentro de la Manzana Liévano, el afectado avisará al supervisor de la empresa de seguridad, registrando las pruebas para las reclamaciones. La Dirección de Gestión Corporativa de la SJD no se hace responsable de estos u otros incidentes.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+          
+          <TouchableOpacity style={[styles.modalBtn, { marginTop: 20 }]} onPress={onClose}>
             <Text style={styles.modalBtnText}>ENTENDIDO</Text>
           </TouchableOpacity>
         </View>
@@ -502,3 +844,185 @@ const styles = StyleSheet.create({
   modalBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }
 });
+
+const getNext14Days = () => {
+  const days = [];
+  const locale = 'es-ES';
+  for (let i = 0; i < 14; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const dayName = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString(locale, { weekday: 'short' });
+    const dayNumber = d.getDate();
+    const monthName = d.toLocaleDateString(locale, { month: 'short' });
+    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    days.push({
+      dayName: dayName.charAt(0).toUpperCase() + dayName.slice(1).replace('.', ''),
+      dayNumber,
+      monthName: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
+      dateString
+    });
+  }
+  return days;
+};
+
+function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) {
+  const days = useMemo(() => getNext14Days(), []);
+  
+  // Parsear el valor actual (formato "YYYY-MM-DD HH:MM")
+  const [datePart, timePart] = value.split(' ');
+  const [hourPart, minutePart] = (timePart || '08:00').split(':');
+
+  const [selectedDate, setSelectedDate] = useState(datePart || days[0].dateString);
+  const [selectedHour, setSelectedHour] = useState(hourPart || '08');
+  const [selectedMinute, setSelectedMinute] = useState(minutePart || '00');
+
+  // Actualizar estados internos si cambia el value externo al abrir el modal
+  React.useEffect(() => {
+    if (visible && value) {
+      const [d, t] = value.split(' ');
+      if (d) setSelectedDate(d);
+      if (t) {
+        const [h, m] = t.split(':');
+        if (h) setSelectedHour(h);
+        if (m) setSelectedMinute(m);
+      }
+    }
+  }, [visible, value]);
+
+  const hours = useMemo(() => {
+    const hrs = [];
+    for (let i = 0; i < 24; i++) {
+      hrs.push(String(i).padStart(2, '0'));
+    }
+    return hrs;
+  }, []);
+
+  const minutes = useMemo(() => {
+    return ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
+  }, []);
+
+  const handleConfirm = () => {
+    onSelect(`${selectedDate} ${selectedHour}:${selectedMinute}`);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={styles.modalBlur}>
+        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        <View style={[styles.modalPanel, { maxWidth: 450, padding: 20 }]}>
+          <View style={styles.modalHead}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Indicador de Selección Actual */}
+          <View style={{ backgroundColor: COLORS.soft, borderRadius: 16, padding: 12, marginBottom: 15, alignItems: 'center' }}>
+            <Text style={{ fontSize: 11, color: COLORS.primary, fontWeight: '800', letterSpacing: 1 }}>SELECCIÓN ACTUAL</Text>
+            <Text style={{ fontSize: 18, color: COLORS.text, fontWeight: '900', marginTop: 4 }}>
+              {selectedDate}  |  {selectedHour}:{selectedMinute}
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', height: 260, gap: 10, marginBottom: 20 }}>
+            {/* Columna Fecha */}
+            <View style={{ flex: 2, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>FECHA</Text>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {days.map((d) => {
+                  const isSelected = d.dateString === selectedDate;
+                  return (
+                    <TouchableOpacity 
+                      key={d.dateString}
+                      style={{ 
+                        paddingVertical: 10, 
+                        paddingHorizontal: 8, 
+                        backgroundColor: isSelected ? COLORS.primary : 'transparent',
+                        borderBottomWidth: 1,
+                        borderBottomColor: 'rgba(0,0,0,0.03)',
+                        alignItems: 'center'
+                      }}
+                      onPress={() => setSelectedDate(d.dateString)}
+                    >
+                      <Text style={{ fontSize: 10, color: isSelected ? COLORS.accent : COLORS.muted, fontWeight: '800' }}>
+                        {d.dayName}
+                      </Text>
+                      <Text style={{ fontSize: 14, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900', marginTop: 2 }}>
+                        {d.dayNumber} {d.monthName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Columna Hora */}
+            <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>HORA</Text>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {hours.map((h) => {
+                  const isSelected = h === selectedHour;
+                  return (
+                    <TouchableOpacity 
+                      key={h}
+                      style={{ 
+                        paddingVertical: 12, 
+                        backgroundColor: isSelected ? COLORS.primary : 'transparent',
+                        borderBottomWidth: 1,
+                        borderBottomColor: 'rgba(0,0,0,0.03)',
+                        alignItems: 'center'
+                      }}
+                      onPress={() => setSelectedHour(h)}
+                    >
+                      <Text style={{ fontSize: 16, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900' }}>
+                        {h}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Columna Minuto */}
+            <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>MIN</Text>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {minutes.map((m) => {
+                  const isSelected = m === selectedMinute;
+                  return (
+                    <TouchableOpacity 
+                      key={m}
+                      style={{ 
+                        paddingVertical: 12, 
+                        backgroundColor: isSelected ? COLORS.primary : 'transparent',
+                        borderBottomWidth: 1,
+                        borderBottomColor: 'rgba(0,0,0,0.03)',
+                        alignItems: 'center'
+                      }}
+                      onPress={() => setSelectedMinute(m)}
+                    >
+                      <Text style={{ fontSize: 16, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900' }}>
+                        {m}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+
+          <TouchableOpacity style={styles.modalBtn} onPress={handleConfirm}>
+            <Text style={styles.modalBtnText}>CONFIRMAR SELECCIÓN</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}

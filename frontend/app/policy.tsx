@@ -9,18 +9,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const POLICY_URL = 'https://www.secretariajuridica.gov.co/node/376';
 
 const COLORS = {
-  primary: '#A9301E',
-  primarySoft: '#F97361',
-  heroDark: '#210706',
-  heroMid: '#3A0D0A',
-  heroCard: '#511812',
-  heroText: '#FFF8F6',
-  heroMuted: '#F7B7AA',
+  primary: '#E3272A', // Rojo Oficial Bogotá (Manual 2025)
+  primarySoft: '#F9D248', // Amarillo Oficial Bogotá (Manual 2025)
+  heroDark: '#0B0F19', // Slate 950
+  heroMid: '#111827', // Gray 900
+  heroCard: 'rgba(15, 23, 42, 0.82)',
+  heroText: '#F8FAFC',
+  heroMuted: '#94A3B8',
   ink: '#111827',
   muted: '#64748B',
   line: '#E2E8F0',
   surface: '#FFFFFF',
-  soft: '#FFF8F6',
+  soft: '#F8FAFC',
 };
 
 export default function PolicyPage() {
@@ -44,7 +44,7 @@ export default function PolicyPage() {
     <View style={styles.screen}>
       <StatusBar style="light" />
 
-      <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#160403']} style={styles.hero}>
+      <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#070A13']} style={styles.hero}>
         <SafeAreaView edges={['top']}>
           <View style={styles.header}>
             <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -68,7 +68,7 @@ export default function PolicyPage() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.grid}>
           <View style={styles.contextPanel}>
-            <LinearGradient colors={['rgba(169, 48, 30, 0.95)', 'rgba(33, 7, 6, 0.95)']} style={styles.visualCard}>
+            <LinearGradient colors={['rgba(227, 39, 42, 0.95)', 'rgba(11, 15, 25, 0.95)']} style={styles.visualCard}>
               <View style={styles.visualIcon}>
                 <Ionicons name="lock-closed" size={34} color={COLORS.heroText} />
               </View>

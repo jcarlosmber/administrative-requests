@@ -56,6 +56,61 @@ export default function AdminDashboardScreen() {
   const [requests, setRequests] = React.useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
 
+  // Animaciones para el banner de reportes
+  const bannerHoverAnim = React.useRef(new Animated.Value(0)).current;
+  const bannerFadeAnim = React.useRef(new Animated.Value(0)).current;
+  const bannerSlideAnim = React.useRef(new Animated.Value(25)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(bannerFadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(bannerSlideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 30,
+        delay: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleBannerHoverIn = () => {
+    Animated.spring(bannerHoverAnim, {
+      toValue: 1,
+      friction: 7,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleBannerHoverOut = () => {
+    Animated.spring(bannerHoverAnim, {
+      toValue: 0,
+      friction: 7,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const bannerTranslateY = Animated.add(
+    bannerSlideAnim,
+    bannerHoverAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -5],
+    })
+  );
+
+  const bannerScale = bannerHoverAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.015],
+  });
+
+
   const fetchStats = async () => {
     try {
       setLoading(true);
@@ -158,11 +213,12 @@ export default function AdminDashboardScreen() {
             </View>
 
             <View style={[styles.grid, { justifyContent: isDesktop ? 'flex-start' : 'center' }]}>
-              {kpiStats.map((item) => (
+              {kpiStats.map((item, index) => (
                 <KPICard 
                   key={item.id} 
                   item={item} 
                   width={cardWidth} 
+                  index={index}
                   onPress={() => router.push('/admin/manage')} 
                 />
               ))}
@@ -180,8 +236,8 @@ export default function AdminDashboardScreen() {
             </View>
 
             <View style={styles.activityContainer}>
-              {recentActivity.map((item) => (
-                <ActivityRow key={item.id} item={item} />
+              {recentActivity.map((item, index) => (
+                <ActivityRow key={item.id} item={item} index={index} />
               ))}
               {recentActivity.length === 0 && (
                 <Text style={{ textAlign: 'center', color: COLORS.muted, marginTop: 20 }}>No hay actividad reciente.</Text>
@@ -189,25 +245,36 @@ export default function AdminDashboardScreen() {
             </View>
 
             {/* Reports Banner */}
-            <TouchableOpacity onPress={() => router.push('/admin/reports')}>
-              <LinearGradient
-                colors={['#0F172A', '#1E293B']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.reportsBanner}
-              >
-                <View style={styles.bannerIconBox}>
-                  <Ionicons name="bar-chart" size={28} color={COLORS.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.bannerTitle}>Reportes Consolidados</Text>
-                  <Text style={styles.bannerText}>
-                    Consulte estadísticas de uso por dependencia y tiempos de respuesta.
-                  </Text>
-                </View>
-                <Ionicons name="arrow-forward-circle" size={32} color={COLORS.white} opacity={0.8} />
-              </LinearGradient>
-            </TouchableOpacity>
+            <Pressable 
+              onPress={() => router.push('/admin/reports')}
+              onHoverIn={handleBannerHoverIn}
+              onHoverOut={handleBannerHoverOut}
+              onPressIn={handleBannerHoverIn}
+              onPressOut={handleBannerHoverOut}
+            >
+              <Animated.View style={{ 
+                opacity: bannerFadeAnim,
+                transform: [{ translateY: bannerTranslateY }, { scale: bannerScale }] 
+              }}>
+                <LinearGradient
+                  colors={['#0F172A', '#1E293B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.reportsBanner}
+                >
+                  <View style={styles.bannerIconBox}>
+                    <Ionicons name="bar-chart" size={28} color={COLORS.accent} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bannerTitle}>Reportes Consolidados</Text>
+                    <Text style={styles.bannerText}>
+                      Consulte estadísticas de uso por dependencia y tiempos de respuesta.
+                    </Text>
+                  </View>
+                  <Ionicons name="arrow-forward-circle" size={32} color={COLORS.white} opacity={0.8} />
+                </LinearGradient>
+              </Animated.View>
+            </Pressable>
           </View>
         </ScrollView>
       </View>
@@ -288,10 +355,77 @@ function HeroSection({ isDesktop, efficiency, urgencies }: any) {
   );
 }
 
-function KPICard({ item, width, onPress }: any) {
+function KPICard({ item, width, onPress, index }: any) {
+  const hoverAnim = React.useRef(new Animated.Value(0)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(30)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 35,
+        delay: index * 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleHoverIn = () => {
+    Animated.spring(hoverAnim, {
+      toValue: 1,
+      friction: 7,
+      tension: 45,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleHoverOut = () => {
+    Animated.spring(hoverAnim, {
+      toValue: 0,
+      friction: 7,
+      tension: 45,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const translateY = Animated.add(
+    slideAnim,
+    hoverAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -8],
+    })
+  );
+
+  const scale = hoverAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.03],
+  });
+
   return (
-    <TouchableOpacity onPress={onPress}>
-      <View style={[styles.kpiCard, { width: width }]}>
+    <Pressable
+      onPress={onPress}
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      onPressIn={handleHoverIn}
+      onPressOut={handleHoverOut}
+      style={{ width: width }}
+    >
+      <Animated.View style={[
+        styles.kpiCard, 
+        { 
+          width: '100%',
+          opacity: fadeAnim,
+          transform: [{ translateY }, { scale }],
+        }
+      ]}>
         <LinearGradient
           colors={[`${item.color}10`, `${item.color}05`]}
           style={StyleSheet.absoluteFill}
@@ -312,25 +446,85 @@ function KPICard({ item, width, onPress }: any) {
             <Text style={[styles.trendText, { color: item.color }]}>+12% este mes</Text>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </Animated.View>
+    </Pressable>
   );
 }
 
-function ActivityRow({ item }: any) {
+function ActivityRow({ item, index }: any) {
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(20)).current;
+  const hoverAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: 200 + index * 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 35,
+        delay: 200 + index * 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleHoverIn = () => {
+    Animated.spring(hoverAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleHoverOut = () => {
+    Animated.spring(hoverAnim, {
+      toValue: 0,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const translateX = hoverAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 6],
+  });
+
+  const translateY = slideAnim;
+
   return (
-    <View style={styles.activityRow}>
-      <BlurView intensity={30} tint="light" style={styles.activityGlass}>
-        <View style={[styles.activityDot, { backgroundColor: item.color }]} />
-        <View style={styles.activityBody}>
-          <Text style={styles.activityUser}>{item.user}</Text>
-          <Text style={styles.activityType}>{item.type} • Hace {item.time}</Text>
-        </View>
-        <View style={[styles.statusPill, { borderColor: item.color }]}>
-          <Text style={[styles.statusPillText, { color: item.color }]}>{item.status}</Text>
-        </View>
-      </BlurView>
-    </View>
+    <Pressable
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      onPressIn={handleHoverIn}
+      onPressOut={handleHoverOut}
+    >
+      <Animated.View style={[
+        styles.activityRow, 
+        { 
+          opacity: fadeAnim,
+          transform: [{ translateY }, { translateX }],
+        }
+      ]}>
+        <BlurView intensity={30} tint="light" style={styles.activityGlass}>
+          <View style={[styles.activityDot, { backgroundColor: item.color }]} />
+          <View style={styles.activityBody}>
+            <Text style={styles.activityUser}>{item.user}</Text>
+            <Text style={styles.activityType}>{item.type} • Hace {item.time}</Text>
+          </View>
+          <View style={[styles.statusPill, { borderColor: item.color }]}>
+            <Text style={[styles.statusPillText, { color: item.color }]}>{item.status}</Text>
+          </View>
+        </BlurView>
+      </Animated.View>
+    </Pressable>
   );
 }
 

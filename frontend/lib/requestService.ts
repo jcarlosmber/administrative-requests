@@ -4,7 +4,7 @@ export interface AdministrativeRequest {
   id: string;
   created_at: string;
   updated_at: string;
-  user_id: string;
+  user_id: string | null;
   title: string;
   description: string;
   category: 'visitors' | 'maintenance' | 'parking' | 'transport' | 'rooms';
@@ -67,5 +67,24 @@ export const requestService = {
       .eq('id', id);
     
     if (error) throw error;
+  },
+
+  async getAnalytics(startDate?: string, endDate?: string) {
+    let query = supabase
+      .from('administrative_requests')
+      .select('*, profiles:user_id(id, full_name, email, role, dependency:dependency_id(id, name))')
+      .order('created_at', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('created_at', startDate);
+    }
+    if (endDate) {
+      query = query.lte('created_at', endDate);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    return data as any[];
   }
 };

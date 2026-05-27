@@ -90,3 +90,47 @@ END;
 $$ language 'plpgsql';
 
 CREATE TRIGGER update_requests_modtime BEFORE UPDATE ON public.administrative_requests FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+-- ==========================================
+-- NUEVOS MÓDULOS DE CONDUCTORES Y AJUSTES
+-- ==========================================
+
+-- Tabla de Conductores (Transporte)
+CREATE TABLE IF NOT EXISTS public.drivers (
+    id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tabla de Correos Destino de Secretaría General
+CREATE TABLE IF NOT EXISTS public.service_emails (
+    id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+    service_type TEXT NOT NULL, -- 'maintenance', 'visitors', 'rooms_special', 'parking'
+    email TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS para nuevas tablas
+ALTER TABLE public.drivers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.service_emails ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para Drivers
+CREATE POLICY "Permitir lectura a usuarios autenticados" ON public.drivers
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Permitir gestión completa solo a administradores" ON public.drivers
+    FOR ALL TO authenticated USING (
+        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    );
+
+-- Políticas para Service Emails
+CREATE POLICY "Permitir lectura de correos a usuarios autenticados" ON public.service_emails
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Permitir gestión de correos a administradores" ON public.service_emails
+    FOR ALL TO authenticated USING (
+        EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+    );
+

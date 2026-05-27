@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -10,13 +10,14 @@ import {
   useWindowDimensions, 
   Animated,
   Platform,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
 
@@ -116,12 +117,14 @@ const MOCK_REQUESTS = [
 ];
 
 const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
+const STATUS_OPTIONS = ['Todos', 'Pendiente', 'En Progreso', 'Aprobado', 'Rechazado'];
 
 export default function ManageRequests() {
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState('Todas');
+  const [statusFilter, setStatusFilter] = useState('Todos');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
@@ -137,19 +140,74 @@ export default function ManageRequests() {
     }
   };
 
+  const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado') => {
+    try {
+      setLoading(true);
+      const req = requests.find(r => r.id === id);
+      if (req) {
+        const currentMetadata = req.metadata || {};
+        const currentTimeline = currentMetadata.timeline || [
+          { 
+            title: 'Solicitud Creada', 
+            date: new Date(req.created_at).toLocaleString('es-ES'), 
+            desc: 'Iniciada por el funcionario.' 
+          }
+        ];
+
+        const statusDetails = {
+          pendiente: { title: 'Solicitud Pendiente', desc: 'Requerimiento restablecido a estado pendiente.' },
+          en_progreso: { title: 'Solicitud en Curso', desc: 'Se ha iniciado la atención y procesamiento del requerimiento.' },
+          resuelto: { title: 'Solicitud Aprobada', desc: 'La solicitud ha sido resuelta y aprobada con éxito.' },
+          rechazado: { title: 'Solicitud Rechazada', desc: 'El requerimiento fue declinado por el administrador.' }
+        }[newStatus];
+
+        const newStep = {
+          title: statusDetails.title,
+          date: new Date().toLocaleString('es-ES'),
+          desc: statusDetails.desc
+        };
+
+        const updatedTimeline = [...currentTimeline, newStep];
+        
+        const updates = {
+          status: newStatus,
+          metadata: {
+            ...currentMetadata,
+            timeline: updatedTimeline
+          }
+        };
+
+        await requestService.update(id, updates);
+      } else {
+        await requestService.update(id, { status: newStatus });
+      }
+      await fetchRequests();
+    } catch (error) {
+      console.error('Error al actualizar estado:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar datos cada vez que la pestaña reciba el foco
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, [])
+  );
+
   React.useEffect(() => {
-    fetchRequests();
-    
-    // Realtime subscription
-    const subscription = supabase
-      .channel('admin_requests_changes')
+    // Crear un canal con nombre único para evitar colisiones en la caché global de Supabase
+    const channelName = `admin_requests_changes_${Math.random().toString(36).substr(2, 9)}`;
+    const channel = supabase
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'administrative_requests' }, () => {
         fetchRequests();
       })
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -162,9 +220,17 @@ export default function ManageRequests() {
                            (serviceFilter === 'Mantenimiento' && item.category === 'maintenance') ||
                            (serviceFilter === 'Salas' && item.category === 'rooms') ||
                            (serviceFilter === 'Parqueadero' && item.category === 'parking');
-      return matchesSearch && matchesService;
+      
+      const itemStatus = item.status ? item.status.toLowerCase() : '';
+      const matchesStatus = statusFilter === 'Todos' ||
+                           (statusFilter === 'Pendiente' && itemStatus === 'pendiente') ||
+                           (statusFilter === 'En Progreso' && itemStatus === 'en_progreso') ||
+                           (statusFilter === 'Aprobado' && (itemStatus === 'resuelto' || itemStatus === 'aprobado')) ||
+                           (statusFilter === 'Rechazado' && itemStatus === 'rechazado');
+
+      return matchesSearch && matchesService && matchesStatus;
     });
-  }, [requests, searchQuery, serviceFilter]);
+  }, [requests, searchQuery, serviceFilter, statusFilter]);
 
   const mapRequestToUI = (item: AdministrativeRequest) => {
     const typeLabel = {
@@ -186,41 +252,126 @@ export default function ManageRequests() {
     // Generar metadatos para la UI basados en el JSONB
     let uiMetadata: any[] = [];
     if (item.category === 'visitors' && item.metadata) {
+      const visitorList = item.metadata.visitors?.map((v: any) => `${v.name} (${v.document})`).join(', ') || 'N/A';
+      const hasVeh = item.metadata.hasVehicle;
+      const vehList = hasVeh && item.metadata.vehicles && item.metadata.vehicles.length > 0
+        ? item.metadata.vehicles.map((v: any) => `${v.brand} [${v.plate}]`).join(', ')
+        : 'Ninguno';
+      
       uiMetadata = [
         { label: 'Visitantes', value: `${item.metadata.visitors?.length || 0} personas`, icon: 'people-outline' },
-        { label: 'Vehículo', value: item.metadata.hasVehicle ? 'Sí' : 'No', icon: 'car-outline' },
-        { label: 'Autoriza', value: item.metadata.responsible?.name, icon: 'person-outline' }
+        { label: 'Listado Detallado', value: visitorList, icon: 'list-circle-outline' },
+        { label: 'Vehículo', value: hasVeh ? 'Sí' : 'No', icon: 'car-outline' },
+        ...(hasVeh ? [{ label: 'Detalles Vehículo', value: vehList, icon: 'car-sport-outline' }] : []),
+        { label: 'Autoriza (Funcionario)', value: item.metadata.responsible?.name || 'N/A', icon: 'person-outline' },
+        { label: 'Dep. Funcionario', value: item.metadata.responsible?.dependency || 'N/A', icon: 'briefcase-outline' },
+        { label: 'Tel. Funcionario', value: item.metadata.responsible?.phone || 'N/A', icon: 'call-outline' },
+        { label: 'Desde', value: item.metadata.fromDate || 'N/A', icon: 'calendar-outline' },
+        { label: 'Hasta', value: item.metadata.toDate || 'N/A', icon: 'calendar-outline' }
       ];
     } else if (item.category === 'maintenance' && item.metadata) {
       uiMetadata = [
-        { label: 'Ubicación', value: `${item.metadata.location} - ${item.metadata.room}`, icon: 'location-outline' },
-        { label: 'Detalles', value: item.description, icon: 'document-text-outline' }
+        { label: 'Piso', value: item.metadata.location || 'N/A', icon: 'layers-outline' },
+        { label: 'Sala / Oficina', value: item.metadata.room || 'N/A', icon: 'business-outline' },
+        { label: 'Dependencia', value: item.metadata.dependency || 'N/A', icon: 'briefcase-outline' },
+        { label: 'Asunto', value: item.title || 'N/A', icon: 'alert-circle-outline' },
+        { label: 'Detalles del Reporte', value: item.description || 'N/A', icon: 'document-text-outline' }
       ];
     } else if (item.category === 'rooms' && item.metadata) {
-      uiMetadata = [
-        { label: 'Asistentes', value: `${item.metadata.attendees} personas`, icon: 'people-outline' },
-        { label: 'Horario', value: `${item.metadata.start_time} - ${item.metadata.end_time}`, icon: 'time-outline' }
-      ];
+      if (item.metadata.requires_secretaria_general) {
+        const techReqs = [
+          ...(item.metadata.tech_requirements || []),
+          ...(item.metadata.custom_tech_description ? [item.metadata.custom_tech_description] : [])
+        ].join(', ') || 'Ninguno';
+
+        uiMetadata = [
+          { label: 'Entidad Solicitante', value: item.metadata.entity_name || 'N/A', icon: 'business-outline' },
+          { label: 'Responsable', value: item.metadata.responsible_name || 'N/A', icon: 'person-outline' },
+          { label: 'Cargo Responsable', value: item.metadata.responsible_role || 'N/A', icon: 'ribbon-outline' },
+          { label: 'Teléfono Contacto', value: item.metadata.contact_phone || 'N/A', icon: 'call-outline' },
+          { label: 'Actividad / Evento', value: item.metadata.activity_name || 'N/A', icon: 'bookmark-outline' },
+          { label: 'Descripción Evento', value: item.metadata.activity_description || 'N/A', icon: 'information-circle-outline' },
+          { label: 'Espacio Especial', value: item.metadata.room?.name || 'Auditorio Huitaca', icon: 'ribbon-outline' },
+          { label: 'Asistentes Previstos', value: `${item.metadata.participants_count || '350'} personas`, icon: 'people-outline' },
+          { label: 'Fecha Evento', value: item.metadata.date || 'N/A', icon: 'calendar-outline' },
+          { label: 'Horario Reserva (Montaje)', value: item.metadata.booking_hours || 'N/A', icon: 'time-outline' },
+          { label: 'Horario Evento Real', value: `${item.metadata.event_start_hour || 'N/A'} - ${item.metadata.event_end_hour || 'N/A'}`, icon: 'play-outline' },
+          { label: 'Servicios Logísticos', value: item.metadata.services_description || 'Ninguno', icon: 'cafe-outline' },
+          { label: 'Requisitos Técnicos', value: techReqs, icon: 'construct-outline' },
+          { label: 'Modalidad', value: item.metadata.meeting_type || 'N/A', icon: 'easel-outline' },
+          { label: 'Declaración Misión SJD', value: item.metadata.manifestation_express ? 'Aceptada' : 'No Aceptada', icon: 'shield-checkmark-outline' }
+        ];
+      } else {
+        const activeServices: string[] = [];
+        if (item.metadata.services?.projector) activeServices.push('Proyector');
+        if (item.metadata.services?.laptop) activeServices.push('Computador');
+        if (item.metadata.services?.coffee) activeServices.push('Cafetería');
+        const servicesVal = activeServices.join(', ') || 'Ninguno';
+
+        uiMetadata = [
+          { label: 'Sala / Espacio', value: item.metadata.room?.name || 'Sala Regular', icon: 'easel-outline' },
+          { label: 'Asistentes', value: `${item.metadata.attendees || '4'} personas`, icon: 'people-outline' },
+          { label: 'Fecha Reserva', value: item.metadata.date || 'N/A', icon: 'calendar-outline' },
+          { label: 'Horario', value: item.metadata.time || `${item.metadata.start_time || ''} - ${item.metadata.end_time || ''}`, icon: 'time-outline' },
+          { label: 'Dependencia Solicitante', value: item.metadata.dependency || 'SJD', icon: 'business-outline' },
+          { label: 'Servicios Adicionales', value: servicesVal, icon: 'cafe-outline' }
+        ];
+      }
     } else if (item.category === 'parking' && item.metadata) {
       uiMetadata = [
-        { label: 'Placa', value: item.metadata.plate, icon: 'barcode-outline' },
-        { label: 'Vehículo', value: `${item.metadata.brand} (${item.metadata.color})`, icon: 'car-sport-outline' }
+        { label: 'Placa del Vehículo', value: item.metadata.plate || 'N/A', icon: 'barcode-outline' },
+        { label: 'Vehículo (Marca/Modelo)', value: item.metadata.brand || 'N/A', icon: 'car-sport-outline' },
+        { label: 'Color', value: item.metadata.color || 'N/A', icon: 'color-palette-outline' },
+        { label: 'Conductor', value: item.metadata.name || 'N/A', icon: 'person-outline' },
+        { label: 'Documento Conductor', value: item.metadata.doc || 'N/A', icon: 'card-outline' },
+        { label: 'Dependencia / Área', value: item.metadata.dependency || 'N/A', icon: 'business-outline' }
+      ];
+    } else if (item.category === 'transport' && item.metadata) {
+      uiMetadata = [
+        { label: 'Origen del Traslado', value: item.metadata.origin || 'N/A', icon: 'location-outline' },
+        { label: 'Destino del Traslado', value: item.metadata.destination || 'N/A', icon: 'navigate-outline' },
+        { label: 'Pasajeros', value: `${item.metadata.passengers || '1'} personas`, icon: 'people-outline' },
+        { label: 'Hora de Recogida', value: item.metadata.pickupTime || 'N/A', icon: 'time-outline' },
+        { label: 'Requiere Retorno', value: item.metadata.requiresReturn ? `Sí (Hora: ${item.metadata.returnTime || 'N/A'})` : 'No', icon: 'repeat-outline' },
+        { label: 'Dependencia Solicitante', value: item.metadata.dependency || 'N/A', icon: 'business-outline' },
+        { label: 'Motivo del Traslado', value: item.metadata.reason || 'N/A', icon: 'document-text-outline' }
       ];
     }
+
+    const statusLabel = {
+      pendiente: 'Pendiente',
+      pending: 'Pendiente',
+      en_progreso: 'En Progreso',
+      'en progreso': 'En Progreso',
+      en_curso: 'En Progreso',
+      'en curso': 'En Progreso',
+      in_progress: 'En Progreso',
+      'in progress': 'En Progreso',
+      resuelto: 'Aprobado',
+      resolved: 'Aprobado',
+      aprobado: 'Aprobado',
+      approved: 'Aprobado',
+      rechazado: 'Rechazado',
+      rejected: 'Rechazado'
+    }[item.status.toLowerCase()] || item.status;
 
     return {
       ...item,
       user: 'Usuario Sistema', // Aquí idealmente vendría el nombre del perfil
       type: typeLabel,
       detail: item.title,
-      status: item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('_', ' '),
+      status: statusLabel,
       date: new Date(item.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
       color: typeColor,
       dependency: item.metadata?.dependency || 'SJD',
       priority: item.priority.charAt(0).toUpperCase() + item.priority.slice(1),
       uiMetadata,
-      timeline: [
-        { title: 'Solicitud Creada', date: new Date(item.created_at).toLocaleString(), desc: 'Iniciada por el funcionario.' }
+      timeline: (item.metadata && item.metadata.timeline) || [
+        { 
+          title: 'Solicitud Creada', 
+          date: new Date(item.created_at).toLocaleString('es-ES'), 
+          desc: 'Iniciada por el funcionario.' 
+        }
       ]
     };
   };
@@ -256,6 +407,14 @@ export default function ManageRequests() {
                     onSelect={setServiceFilter} 
                     icon="layers-outline"
                   />
+
+                  <FilterRow 
+                    label="Filtrar Estado" 
+                    data={STATUS_OPTIONS} 
+                    selected={statusFilter} 
+                    onSelect={setStatusFilter} 
+                    icon="options-outline"
+                  />
                   
                   <View style={styles.resultsHeader}>
                     <Text style={styles.resultsTitle}>
@@ -267,7 +426,7 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} />}
+            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -317,22 +476,89 @@ function HeroSection({ isDesktop }: any) {
 function KPISection({ stats }: { stats: { enCurso: number, criticas: number, hoy: number } }) {
   return (
     <View style={styles.kpiRow}>
-      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.info} icon="swap-horizontal" />
-      <KPICard label="Críticas" value={stats.criticas.toString()} color={COLORS.danger} icon="alert-circle" />
-      <KPICard label="Hoy" value={stats.hoy.toString()} color={COLORS.accent} icon="calendar" />
+      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.info} icon="swap-horizontal" index={0} />
+      <KPICard label="Críticas" value={stats.criticas.toString()} color={COLORS.danger} icon="alert-circle" index={1} />
+      <KPICard label="Hoy" value={stats.hoy.toString()} color={COLORS.accent} icon="calendar" index={2} />
     </View>
   );
 }
 
-function KPICard({ label, value, color, icon }: any) {
+function KPICard({ label, value, color, icon, index }: any) {
+  const hoverAnim = React.useRef(new Animated.Value(0)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(20)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 450,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 35,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleHoverIn = () => {
+    Animated.spring(hoverAnim, {
+      toValue: 1,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleHoverOut = () => {
+    Animated.spring(hoverAnim, {
+      toValue: 0,
+      friction: 6,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const translateY = Animated.add(
+    slideAnim,
+    hoverAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, -6],
+    })
+  );
+
+  const scale = hoverAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.025],
+  });
+
   return (
-    <View style={styles.kpiCard}>
-      <View style={[styles.kpiIcon, { backgroundColor: `${color}15` }]}>
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-      <Text style={styles.kpiValue}>{value}</Text>
-      <Text style={styles.kpiLabel}>{label}</Text>
-    </View>
+    <Pressable
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      onPressIn={handleHoverIn}
+      onPressOut={handleHoverOut}
+      style={{ flex: 1 }}
+    >
+      <Animated.View style={[
+        styles.kpiCard,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY }, { scale }],
+        }
+      ]}>
+        <View style={[styles.kpiIcon, { backgroundColor: `${color}15` }]}>
+          <Ionicons name={icon} size={20} color={color} />
+        </View>
+        <Text style={styles.kpiValue}>{value}</Text>
+        <Text style={styles.kpiLabel}>{label}</Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -386,20 +612,69 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestListItem({ item }: any) {
+function RequestListItem({ item, onUpdateStatus }: any) {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
   const [expanded, setExpanded] = useState(false);
+  const [comment, setComment] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
 
   const handleIn = () => Animated.spring(scale, { toValue: 0.99, useNativeDriver: true }).start();
   const handleOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'En Curso': return COLORS.info;
-      case 'Programada': return COLORS.accent;
-      case 'Pendiente': return COLORS.warning;
-      case 'Completada': return COLORS.success;
+    const statusLower = status.toLowerCase().replace(' ', '_');
+    switch (statusLower) {
+      case 'en_progreso':
+      case 'en_curso': 
+      case 'en_proceso': return COLORS.info;
+      case 'programada': return COLORS.accent;
+      case 'pendiente': return COLORS.warning;
+      case 'resuelto':
+      case 'resuelta':
+      case 'completada':
+      case 'aprobada':
+      case 'aprobado': return COLORS.success;
+      case 'rechazado':
+      case 'rechazada': return COLORS.danger;
       default: return item.color;
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!comment.trim() || commentLoading) return;
+    
+    try {
+      setCommentLoading(true);
+      const currentMetadata = item.metadata || {};
+      const currentTimeline = item.timeline || [];
+
+      const newStep = {
+        title: 'Comentario Admin',
+        date: new Date().toLocaleString('es-ES'),
+        desc: comment.trim()
+      };
+
+      const updatedTimeline = [...currentTimeline, newStep];
+      
+      const updates = {
+        metadata: {
+          ...currentMetadata,
+          timeline: updatedTimeline
+        }
+      };
+
+      await requestService.update(item.id, updates);
+      setComment('');
+      
+      if (onUpdateStatus) {
+        onUpdateStatus(item.id, item.status.toLowerCase().replace(' ', '_'));
+      }
+    } catch (err) {
+      console.error('Error al guardar comentario de trazabilidad:', err);
+    } finally {
+      setCommentLoading(false);
     }
   };
 
@@ -453,9 +728,9 @@ function RequestListItem({ item }: any) {
               <View style={styles.metaDivider} />
               
               <Text style={styles.infoTitle}>DATOS TÉCNICOS</Text>
-              <View style={styles.metaGrid}>
-                {item.uiMetadata.map((meta: any, idx: number) => (
-                  <View key={idx} style={styles.metaBox}>
+              <View style={[styles.metaGrid, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16 }]}>
+                {item.uiMetadata && item.uiMetadata.map((meta: any, idx: number) => (
+                  <View key={idx} style={[styles.metaBox, isDesktop && { width: '48%', borderBottomWidth: 1 }]}>
                     <View style={styles.metaHeader}>
                       <Ionicons name={meta.icon} size={14} color={COLORS.accent} />
                       <Text style={styles.metaLabel}>{meta.label}</Text>
@@ -470,9 +745,20 @@ function RequestListItem({ item }: any) {
                   style={styles.updateInput} 
                   placeholder="Añadir comentario o actualización..." 
                   placeholderTextColor={COLORS.muted}
+                  value={comment}
+                  onChangeText={setComment}
+                  editable={!commentLoading}
                 />
-                <TouchableOpacity style={styles.sendUpdateBtn}>
-                  <Ionicons name="send" size={18} color={COLORS.white} />
+                <TouchableOpacity 
+                  style={styles.sendUpdateBtn}
+                  onPress={handleAddComment}
+                  disabled={commentLoading || !comment.trim()}
+                >
+                  {commentLoading ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <Ionicons name="send" size={18} color={COLORS.white} />
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -490,24 +776,63 @@ function RequestListItem({ item }: any) {
               />
             </View>
             <View style={styles.actionButtons}>
-              {item.status === 'Pendiente' && (
-                <TouchableOpacity style={[styles.actionBtn, styles.approveBtn]}>
-                  <Ionicons name="play-outline" size={20} color={COLORS.white} />
+              {/* Botones para solicitudes en estado Pendiente */}
+              {item.status.toLowerCase() === 'pendiente' && (
+                <>
+                  {/* Aprobar Directamente (Check Verde) para todas las categorías */}
+                  <TouchableOpacity 
+                    style={[styles.actionBtn, styles.successBtn]}
+                    onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                  >
+                    <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
+                    <Text style={styles.actionBtnText}>Aprobar</Text>
+                  </TouchableOpacity>
+
+                  {/* Poner en Progreso (Play Azul) para Transporte, Visitantes y Mantenimiento */}
+                  {['transport', 'visitors', 'maintenance'].includes(item.category) && (
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.approveBtn]}
+                      onPress={() => onUpdateStatus(item.id, 'en_progreso')}
+                    >
+                      <Ionicons name="play-outline" size={16} color={COLORS.white} />
+                      <Text style={styles.actionBtnText}>Procesar</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
+              {/* Botones para solicitudes en progreso */}
+              {['en_progreso', 'en progreso'].includes(item.status.toLowerCase()) && (
+                <TouchableOpacity 
+                   style={[styles.actionBtn, styles.successBtn]}
+                   onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                >
+                  <Ionicons name="checkmark-done-outline" size={16} color={COLORS.white} />
+                  <Text style={styles.actionBtnText}>Completar</Text>
                 </TouchableOpacity>
               )}
-              {item.status === 'En Curso' && (
-                <TouchableOpacity style={[styles.actionBtn, styles.successBtn]}>
-                  <Ionicons name="checkmark-done-outline" size={20} color={COLORS.white} />
+
+              {/* Botón para solicitudes programadas (fallback de mock data) */}
+              {item.status.toLowerCase() === 'programada' && (
+                <TouchableOpacity 
+                  style={[styles.actionBtn, styles.infoBtn]}
+                  onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                >
+                  <Ionicons name="car-outline" size={16} color={COLORS.white} />
+                  <Text style={styles.actionBtnText}>Despachar</Text>
                 </TouchableOpacity>
               )}
-              {item.status === 'Programada' && (
-                <TouchableOpacity style={[styles.actionBtn, styles.infoBtn]}>
-                  <Ionicons name="car-outline" size={20} color={COLORS.white} />
+
+              {/* Botón de Rechazo (Equis Roja) para cualquier solicitud activa */}
+              {!['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase()) && (
+                <TouchableOpacity 
+                  style={[styles.actionBtn, styles.rejectBtn]}
+                  onPress={() => onUpdateStatus(item.id, 'rechazado')}
+                >
+                  <Ionicons name="close-outline" size={16} color={COLORS.danger} />
+                  <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>Rechazar</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]}>
-                <Ionicons name="ellipsis-horizontal-outline" size={20} color={COLORS.muted} />
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -605,8 +930,9 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 15, marginTop: 5 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 13, color: COLORS.muted, fontWeight: '600' },
-  actionButtons: { flexDirection: 'row', gap: 10 },
-  actionBtn: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  actionBtn: { height: 38, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6, borderWidth: 1 },
+  actionBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.white },
   rejectBtn: { borderColor: COLORS.line, backgroundColor: `${COLORS.line}20` },
   approveBtn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   successBtn: { backgroundColor: COLORS.success, borderColor: COLORS.success },

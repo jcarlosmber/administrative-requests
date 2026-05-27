@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -9,12 +9,14 @@ import {
   ScrollView, 
   Dimensions, 
   Animated,
-  Platform
+  Platform,
+  Modal,
+  TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { requestService, AdministrativeRequest } from '../../../lib/requestService';
 import { supabase } from '../../../lib/supabase';
@@ -23,8 +25,8 @@ const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
 
 const COLORS = {
-  primary: '#A9301E',
-  primaryDark: '#7D1F13',
+  primary: '#E3272A', // Rojo Oficial Bogotá (Manual 2025)
+  primaryDark: '#B01C20', // Rojo Oscuro
   bg: '#F8FAFC',
   white: '#FFFFFF',
   dark: '#0F172A',
@@ -33,7 +35,7 @@ const COLORS = {
   success: '#10B981',
   warning: '#F59E0B',
   blue: '#3B82F6',
-  accent: '#FACC15'
+  accent: '#F9D248' // Amarillo Oficial Bogotá (Manual 2025)
 };
 
 const DATA = [
@@ -49,11 +51,21 @@ const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas
 const STATUSES = ['Todos', 'Pendiente', 'En proceso', 'Aprobada', 'Resuelta', 'Rechazada'];
 
 export default function RequestsScreen() {
+  const params = useLocalSearchParams();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
-  const [serviceFilter, setServiceFilter] = useState('Todas');
+  const [serviceFilter, setServiceFilter] = useState((params?.service as string) || 'Todas');
+  const [selectedRequest, setSelectedRequest] = useState<AdministrativeRequest | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  // Reactivar el filtro si el parámetro cambia dinámicamente
+  React.useEffect(() => {
+    if (params?.service) {
+      setServiceFilter(params.service as string);
+    }
+  }, [params?.service]);
 
   const fetchRequests = async () => {
     try {
@@ -67,19 +79,25 @@ export default function RequestsScreen() {
     }
   };
 
+  // Cargar datos cada vez que la pestaña reciba el foco
+  useFocusEffect(
+    useCallback(() => {
+      fetchRequests();
+    }, [])
+  );
+
   React.useEffect(() => {
-    fetchRequests();
-    
-    // Realtime subscription
-    const subscription = supabase
-      .channel('user_requests_changes')
+    // Crear un canal con nombre único para evitar colisiones en la caché global de Supabase
+    const channelName = `user_requests_changes_${Math.random().toString(36).substr(2, 9)}`;
+    const channel = supabase
+      .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'administrative_requests' }, () => {
         fetchRequests();
       })
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
 
@@ -102,7 +120,20 @@ export default function RequestsScreen() {
       }[item.category] || item.category;
 
       const matchesSearch = (item.title + typeLabel).toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'Todos' || item.status.toLowerCase() === statusFilter.toLowerCase();
+      const matchesStatus = (() => {
+        if (statusFilter === 'Todos') return true;
+        const statusLower = item.status.toLowerCase();
+        const filterLower = statusFilter.toLowerCase();
+        if (filterLower === 'pendiente') return statusLower === 'pendiente';
+        if (filterLower === 'en proceso') return statusLower === 'en_progreso' || statusLower === 'en proceso';
+        if (filterLower === 'aprobada' || filterLower === 'resuelta' || filterLower === 'resuelto') {
+          return statusLower === 'resuelto' || statusLower === 'aprobado' || statusLower === 'aprobada' || statusLower === 'resuelta';
+        }
+        if (filterLower === 'rechazada' || filterLower === 'rechazado') {
+          return statusLower === 'rechazado' || statusLower === 'rechazada';
+        }
+        return statusLower === filterLower;
+      })();
       const matchesService = serviceFilter === 'Todas' || typeLabel === serviceFilter;
       return matchesSearch && matchesStatus && matchesService;
     });
@@ -147,11 +178,27 @@ export default function RequestsScreen() {
                 </View>
               </View>
             }
-            data={filteredData}
+             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestCard item={mapRequestToUI(item)} />}
+            renderItem={({ item }) => (
+              <RequestCard 
+                item={mapRequestToUI(item)} 
+                onPress={() => {
+                  setSelectedRequest(item);
+                  setModalVisible(true);
+                }} 
+              />
+            )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+          />
+          <DetailModal 
+            visible={modalVisible} 
+            request={selectedRequest} 
+            onClose={() => {
+              setModalVisible(false);
+              setSelectedRequest(null);
+            }} 
           />
         </View>
 
@@ -307,14 +354,14 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestCard({ item }: any) {
+function RequestCard({ item, onPress }: any) {
   const scale = useRef(new Animated.Value(1)).current;
 
   const handleIn = () => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true }).start();
   const handleOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
 
   return (
-    <Pressable onPressIn={handleIn} onPressOut={handleOut}>
+    <Pressable onPressIn={handleIn} onPressOut={handleOut} onPress={onPress}>
       <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
         <View style={[styles.statusIndicator, { backgroundColor: item.color }]} />
         <View style={styles.cardMain}>
@@ -408,4 +455,516 @@ const styles = StyleSheet.create({
   actionLinkText: { fontSize: 13, color: COLORS.primary, fontWeight: '800' },
 
   fab: { position: 'absolute', right: 25, bottom: 25, width: 64, height: 64, borderRadius: 22, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15 }
+});
+
+function DetailModal({ visible, request, onClose }: { visible: boolean; request: AdministrativeRequest | null; onClose: () => void }) {
+  if (!request) return null;
+
+  const mapped = mapRequestToUI(request);
+  const metadata = request.metadata || {};
+
+  const renderMetadataFields = () => {
+    switch (request.category) {
+      case 'visitors':
+        return (
+          <View style={{ gap: 12 }}>
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>FUNCIONARIO RESPONSABLE</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="person-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>{metadata.responsible?.name || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="call-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>{metadata.responsible?.phone || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>{metadata.responsible?.dependency || 'N/A'}</Text>
+              </View>
+            </View>
+
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>VIGENCIA DE LA VISITA</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="calendar-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>
+                  <Text style={{ fontWeight: '700' }}>Desde:</Text> {metadata.fromDate || 'N/A'}
+                </Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="calendar-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>
+                  <Text style={{ fontWeight: '700' }}>Hasta:</Text> {metadata.toDate || 'N/A'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>VISITANTES REGISTRADOS</Text>
+              {metadata.visitors && Array.isArray(metadata.visitors) ? (
+                metadata.visitors.map((visitor: any, index: number) => (
+                  <View key={index} style={modalStyles.visitorBadge}>
+                    <Ionicons name="people-outline" size={18} color={COLORS.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={modalStyles.visitorName}>{visitor.name}</Text>
+                      <Text style={modalStyles.visitorDoc}>Documento: {visitor.document}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={modalStyles.fieldValue}>Ninguno</Text>
+              )}
+            </View>
+
+            {metadata.hasVehicle && metadata.vehicles && Array.isArray(metadata.vehicles) && metadata.vehicles.length > 0 && (
+              <View style={modalStyles.infoBlock}>
+                <Text style={modalStyles.infoSectionTitle}>ACCESO VEHICULAR</Text>
+                {metadata.vehicles.map((vehicle: any, index: number) => (
+                  <View key={index} style={modalStyles.visitorBadge}>
+                    <Ionicons name="car-sport-outline" size={18} color={COLORS.blue} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={modalStyles.visitorName}>Placa: {vehicle.plate}</Text>
+                      <Text style={modalStyles.visitorDoc}>Marca: {vehicle.brand}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        );
+
+      case 'maintenance':
+        return (
+          <View style={{ gap: 12 }}>
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>UBICACIÓN DEL REPORTE</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="location-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>Piso: {metadata.location || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Sala/Oficina: {metadata.room || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="layers-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Dependencia: {metadata.dependency || 'N/A'}</Text>
+              </View>
+            </View>
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>DESCRIPCIÓN DE LA FALLA</Text>
+              <Text style={modalStyles.descriptionText}>{request.description || 'Sin descripción'}</Text>
+            </View>
+          </View>
+        );
+
+      case 'parking':
+        return (
+          <View style={{ gap: 12 }}>
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>DATOS DEL CONDUCTOR</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="person-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>{metadata.name || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="card-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>ID/Cédula: {metadata.doc || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Dependencia: {metadata.dependency || 'N/A'}</Text>
+              </View>
+            </View>
+
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>DATOS DEL VEHÍCULO</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="barcode-outline" size={16} color={COLORS.blue} />
+                <Text style={modalStyles.fieldValue}>Placa: {metadata.plate || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="car-sport-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Marca/Modelo: {metadata.brand || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="color-palette-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Color: {metadata.color || 'N/A'}</Text>
+              </View>
+            </View>
+          </View>
+        );
+
+      case 'transport':
+        return (
+          <View style={{ gap: 12 }}>
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>DETALLES DEL TRAYECTO</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="location-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>Origen: {metadata.origin || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="navigate-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>Destino: {metadata.destination || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Dependencia: {metadata.dependency || 'N/A'}</Text>
+              </View>
+            </View>
+
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>PROGRAMACIÓN</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="time-outline" size={16} color={COLORS.blue} />
+                <Text style={modalStyles.fieldValue}>Hora Recogida: {metadata.pickupTime || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="people-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Pasajeros: {metadata.passengers || '1'}</Text>
+              </View>
+              {metadata.requiresReturn && (
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="repeat-outline" size={16} color={COLORS.success} />
+                  <Text style={modalStyles.fieldValue}>Hora Regreso: {metadata.returnTime || 'N/A'}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>MOTIVO DEL TRASLADO</Text>
+              <Text style={modalStyles.descriptionText}>{metadata.reason || request.description || 'Sin justificación'}</Text>
+            </View>
+          </View>
+        );
+
+      case 'rooms':
+        const isSecretaria = !!metadata.requires_secretaria_general;
+        return (
+          <View style={{ gap: 12 }}>
+            <View style={modalStyles.infoBlock}>
+              <Text style={modalStyles.infoSectionTitle}>RESERVA DE ESPACIO</Text>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="easel-outline" size={16} color={COLORS.primary} />
+                <Text style={modalStyles.fieldValue}>Sala: {metadata.room?.name || 'Sala Regular'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="calendar-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Fecha: {metadata.date || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="time-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Horario: {metadata.time || `${metadata.start_time || ''} - ${metadata.end_time || ''}`}</Text>
+              </View>
+              {!isSecretaria && (
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="people-outline" size={16} color={COLORS.muted} />
+                  <Text style={modalStyles.fieldValue}>Asistentes: {metadata.attendees || 'N/A'}</Text>
+                </View>
+              )}
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="business-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Dependencia: {metadata.dependency || 'N/A'}</Text>
+              </View>
+            </View>
+
+            {isSecretaria && (
+              <View style={modalStyles.infoBlock}>
+                <Text style={modalStyles.infoSectionTitle}>DETALLES DEL EVENTO MAGNO</Text>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="business-outline" size={16} color={COLORS.primary} />
+                  <Text style={modalStyles.fieldValue}>Entidad: {metadata.entity_name || 'N/A'}</Text>
+                </View>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="person-outline" size={16} color={COLORS.muted} />
+                  <Text style={modalStyles.fieldValue}>Responsable: {metadata.responsible_name} ({metadata.responsible_role})</Text>
+                </View>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="call-outline" size={16} color={COLORS.muted} />
+                  <Text style={modalStyles.fieldValue}>Teléfono: {metadata.contact_phone || 'N/A'}</Text>
+                </View>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="people-outline" size={16} color={COLORS.muted} />
+                  <Text style={modalStyles.fieldValue}>Aforo Proyectado: {metadata.participants_count || 'N/A'}</Text>
+                </View>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="play-outline" size={16} color={COLORS.muted} />
+                  <Text style={modalStyles.fieldValue}>Horario Acto: {metadata.event_start_hour} - {metadata.event_end_hour}</Text>
+                </View>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="git-commit-outline" size={16} color={COLORS.muted} />
+                  <Text style={modalStyles.fieldValue}>Modalidad: {metadata.meeting_type || 'N/A'}</Text>
+                </View>
+              </View>
+            )}
+
+            {isSecretaria && metadata.services_description && (
+              <View style={modalStyles.infoBlock}>
+                <Text style={modalStyles.infoSectionTitle}>REQUERIMIENTOS ADICIONALES</Text>
+                <Text style={modalStyles.descriptionText}>{metadata.services_description}</Text>
+              </View>
+            )}
+          </View>
+        );
+
+      default:
+        return (
+          <View style={modalStyles.infoBlock}>
+            <Text style={modalStyles.infoSectionTitle}>DETALLES GENERALES</Text>
+            <Text style={modalStyles.descriptionText}>{request.description || 'Sin detalles'}</Text>
+          </View>
+        );
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.container}>
+          {/* Header */}
+          <View style={modalStyles.header}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={[modalStyles.categoryBadge, { backgroundColor: `${mapped.color}15` }]}>
+                <Ionicons 
+                  name={
+                    request.category === 'visitors' ? 'people' :
+                    request.category === 'transport' ? 'car-sport' :
+                    request.category === 'maintenance' ? 'construct' :
+                    request.category === 'rooms' ? 'easel' :
+                    request.category === 'parking' ? 'car' : 'document-text'
+                  } 
+                  size={20} 
+                  color={mapped.color} 
+                />
+              </View>
+              <View>
+                <Text style={[modalStyles.categoryText, { color: mapped.color }]}>{mapped.cat}</Text>
+                <Text style={modalStyles.dateText}>Creado el {mapped.date}</Text>
+              </View>
+            </View>
+            <Pressable onPress={onClose} style={modalStyles.closeButton}>
+              <Ionicons name="close" size={24} color={COLORS.dark} />
+            </Pressable>
+          </View>
+
+          {/* Body */}
+          <ScrollView style={modalStyles.scrollBody} showsVerticalScrollIndicator={false}>
+            {/* Title & Status */}
+            <View style={modalStyles.titleRow}>
+              <Text style={modalStyles.titleText}>{request.title}</Text>
+              <View style={[modalStyles.statusPill, { backgroundColor: `${mapped.color}10` }]}>
+                <View style={[modalStyles.statusDot, { backgroundColor: mapped.color }]} />
+                <Text style={[modalStyles.statusText, { color: mapped.color }]}>{mapped.status}</Text>
+              </View>
+            </View>
+
+            {/* Custom Metadata Fields */}
+            <View style={modalStyles.fieldsContainer}>
+              {renderMetadataFields()}
+            </View>
+
+            {/* Admin Notes if exist */}
+            {request.admin_notes && (
+              <View style={[modalStyles.infoBlock, { borderColor: COLORS.primary, borderWidth: 1 }]}>
+                <Text style={[modalStyles.infoSectionTitle, { color: COLORS.primary }]}>NOTAS DE ADMINISTRACIÓN</Text>
+                <Text style={modalStyles.descriptionText}>{request.admin_notes}</Text>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Footer / Actions */}
+          <View style={modalStyles.footer}>
+            <TouchableOpacity onPress={onClose} style={modalStyles.primaryBtn}>
+              <LinearGradient 
+                colors={[COLORS.primary, COLORS.primaryDark]} 
+                start={{ x: 0, y: 0 }} 
+                end={{ x: 1, y: 0 }} 
+                style={modalStyles.btnGradient}
+              >
+                <Text style={modalStyles.btnText}>Entendido</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  container: {
+    width: '100%',
+    maxWidth: 550,
+    maxHeight: '85%',
+    backgroundColor: COLORS.white,
+    borderRadius: 28,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
+      android: { elevation: 10 },
+      web: { boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }
+    })
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.line
+  },
+  categoryBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1
+  },
+  dateText: {
+    fontSize: 11,
+    color: COLORS.muted,
+    fontWeight: '600',
+    marginTop: 2
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.bg,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  scrollBody: {
+    padding: 24
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 20
+  },
+  titleText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: COLORS.dark,
+    flex: 1
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    gap: 6,
+    alignSelf: 'flex-start'
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '900',
+    textTransform: 'uppercase'
+  },
+  fieldsContainer: {
+    gap: 16,
+    marginBottom: 24
+  },
+  infoBlock: {
+    backgroundColor: COLORS.bg,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.line
+  },
+  infoSectionTitle: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: COLORS.muted,
+    letterSpacing: 1,
+    marginBottom: 12
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8
+  },
+  fieldValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.dark
+  },
+  descriptionText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: COLORS.dark,
+    fontWeight: '600'
+  },
+  visitorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    marginBottom: 8
+  },
+  visitorName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.dark
+  },
+  visitorDoc: {
+    fontSize: 12,
+    color: COLORS.muted,
+    fontWeight: '600',
+    marginTop: 2
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.line,
+    backgroundColor: COLORS.white
+  },
+  primaryBtn: {
+    height: 56,
+    borderRadius: 18,
+    overflow: 'hidden'
+  },
+  btnGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  btnText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '900'
+  }
 });

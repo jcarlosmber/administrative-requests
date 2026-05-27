@@ -37,6 +37,7 @@ export default function MaintenanceRequestScreen() {
   const [location, setLocation] = useState('');
   const [room, setRoom] = useState('');
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<'baja' | 'media' | 'alta'>('media');
   
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
@@ -63,7 +64,7 @@ export default function MaintenanceRequestScreen() {
         title,
         description,
         category: 'maintenance',
-        priority: 'media',
+        priority,
         metadata: {
           location,
           room,
@@ -149,6 +150,46 @@ export default function MaintenanceRequestScreen() {
                   </View>
                 </Card>
 
+                <Card title="Nivel de Prioridad" icon="alert-circle">
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 5 }}>
+                    {(['baja', 'media', 'alta'] as const).map((p) => {
+                      const isSelected = priority === p;
+                      const config = {
+                        baja: { label: 'Baja', color: '#10B981', bg: '#EBFDF5' },
+                        media: { label: 'Media', color: '#F59E0B', bg: '#FEF3C7' },
+                        alta: { label: 'Alta', color: '#EF4444', bg: '#FEE2E2' }
+                      }[p];
+                      
+                      return (
+                        <TouchableOpacity
+                          key={p}
+                          onPress={() => setPriority(p)}
+                          activeOpacity={0.8}
+                          style={{
+                            flex: 1,
+                            height: 50,
+                            borderRadius: 16,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            borderWidth: 2,
+                            borderColor: isSelected ? config.color : COLORS.line,
+                            backgroundColor: isSelected ? config.bg : COLORS.white,
+                          }}
+                        >
+                          <Text style={{
+                            fontSize: 14,
+                            fontWeight: '800',
+                            color: isSelected ? config.color : COLORS.muted,
+                            textTransform: 'uppercase'
+                          }}>
+                            {config.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </Card>
+
                 <Card title="Descripción del Problema" icon="document-text">
                   <Field 
                     label="Detalles de la Falla" 
@@ -192,7 +233,14 @@ export default function MaintenanceRequestScreen() {
         </View>
       </LinearGradient>
 
-      <SuccessModal visible={showSuccess} onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} />
+      <SuccessModal 
+        visible={showSuccess} 
+        title={title}
+        dependency={dependency}
+        location={location}
+        room={room}
+        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+      />
       
       <DependencySelector 
         visible={showDeps} 
@@ -302,20 +350,42 @@ function Field({ label, icon, multiline, ...props }: any) {
   );
 }
 
-function SuccessModal({ visible, onClose }: any) {
+function SuccessModal({ visible, onClose, title, dependency, location, room }: any) {
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalBlur}>
-        <View style={[styles.modalPanel, { alignItems: 'center', padding: 40 }]}>
-          <View style={styles.successIcon}>
-            <Ionicons name="checkmark-done" size={60} color={COLORS.white} />
+        <View style={[styles.modalPanel, { alignItems: 'center', padding: 35 }]}>
+          <View style={[styles.successIcon, { backgroundColor: '#F59E0B' }]}>
+            <Ionicons name="time" size={60} color={COLORS.white} />
           </View>
-          <Text style={styles.modalTitle}>¡Reporte Enviado!</Text>
-          <Text style={[styles.modalText, { textAlign: 'center', marginTop: 10 }]}>
-            Su solicitud ha sido registrada en el sistema de mantenimiento. Se le notificará cuando un técnico sea asignado.
+          <Text style={styles.modalTitle}>¡Solicitud Registrada!</Text>
+          <Text style={{ 
+            fontSize: 13, 
+            color: COLORS.muted, 
+            textAlign: 'center', 
+            marginTop: 8, 
+            marginBottom: 20, 
+            lineHeight: 18,
+            paddingHorizontal: 10
+          }}>
+            Su requerimiento ha sido registrado en el sistema. Se encuentra en revisión para asignación del personal técnico idóneo.
           </Text>
-          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 20 }]} onPress={onClose}>
-            <Text style={styles.modalBtnText}>VOLVER AL MENÚ</Text>
+          
+          <View style={{ width: '100%', backgroundColor: 'rgba(0,0,0,0.02)', padding: 20, borderRadius: 20, borderWidth: 1, borderColor: COLORS.line, gap: 10, marginBottom: 10 }}>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Reporte:</Text> {title}</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Área:</Text> {dependency}</Text>
+            <Text style={{ fontSize: 16, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Ubicación:</Text> Piso {location} - {room}</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.line }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase' }}>
+                Pendiente de Aprobación
+              </Text>
+            </View>
+          </View>
+          
+          <TouchableOpacity style={[styles.modalBtn, { width: '100%', marginTop: 25 }]} onPress={onClose}>
+            <Text style={styles.modalBtnText}>LISTO</Text>
           </TouchableOpacity>
         </View>
       </View>
