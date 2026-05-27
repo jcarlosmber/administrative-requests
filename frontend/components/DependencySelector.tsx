@@ -107,7 +107,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
 
           {loading ? (
             <View style={{ padding: 40, justifyContent: 'center', alignItems: 'center' }}>
-              <ActivityIndicator size="small" color="#E3272A" />
+              <ActivityIndicator size="small" color="#A9301E" />
               <Text style={{ fontSize: 13, color: '#64748B', marginTop: 10, fontWeight: '600' }}>Cargando dependencias...</Text>
             </View>
           ) : (
@@ -120,7 +120,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
                   onPress={() => { onSelect(item); onClose(); }}
                 >
                   <Text style={[d.tx, selectedValue === item && d.txOn]}>{item}</Text>
-                  {selectedValue === item && <Ionicons name='checkmark-circle' size={20} color='#E3272A' />}
+                  {selectedValue === item && <Ionicons name='checkmark-circle' size={20} color='#A9301E' />}
                 </TouchableOpacity>
               )} 
             />
@@ -142,6 +142,6 @@ const d = StyleSheet.create({
   row: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   rowOn: { backgroundColor: '#FFF5F3' },
   tx: { flex: 1, color: '#334155', fontWeight: '700' },
-  txOn: { color: '#E3272A' }
+  txOn: { color: '#A9301E' }
 });
 

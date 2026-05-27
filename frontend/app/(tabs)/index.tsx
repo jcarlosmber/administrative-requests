@@ -26,10 +26,10 @@ import { VehicleDeleteConfirmModal } from '../../components/VehicleDeleteConfirm
 
 
 const COLORS = {
-  primary: '#E3272A', // Rojo Oficial Bogotá (Manual 2025)
-  primaryDark: '#B01C20', // Rojo Oscuro
-  primarySoft: '#FAB62D', // Acento naranja/rojo suave
-  accent: '#F9D248', // Amarillo Oficial Bogotá (Manual 2025)
+  primary: '#A9301E',
+  primaryDark: '#7D1F13',
+  primarySoft: '#D4422F',
+  accent: '#FACC15',
   dark: '#0F172A',
   white: '#FFFFFF',
   text: '#1E293B',

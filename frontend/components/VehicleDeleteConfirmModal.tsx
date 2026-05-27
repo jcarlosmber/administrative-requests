@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const COLORS = {
-  primary: '#E3272A', // Rojo Oficial Bogotá (Manual 2025)
-  primaryDark: '#B01C20', // Rojo Oscuro
+  primary: '#A9301E',
+  primaryDark: '#7D1F13',
   dark: '#0F172A',
   white: '#FFFFFF',
   text: '#1E293B',

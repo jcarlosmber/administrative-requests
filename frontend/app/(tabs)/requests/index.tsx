@@ -25,8 +25,8 @@ const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
 
 const COLORS = {
-  primary: '#E3272A', // Rojo Oficial Bogotá (Manual 2025)
-  primaryDark: '#B01C20', // Rojo Oscuro
+  primary: '#A9301E',
+  primaryDark: '#7D1F13',
   bg: '#F8FAFC',
   white: '#FFFFFF',
   dark: '#0F172A',
@@ -35,7 +35,7 @@ const COLORS = {
   success: '#10B981',
   warning: '#F59E0B',
   blue: '#3B82F6',
-  accent: '#F9D248' // Amarillo Oficial Bogotá (Manual 2025)
+  accent: '#FACC15'
 };
 
 const DATA = [

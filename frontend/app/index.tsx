@@ -30,14 +30,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const COLORS = {
-  primary: '#E3272A', // Rojo Oficial Bogotá (Manual 2025)
-  primaryDark: '#B01C20', // Rojo Oscuro
-  heroDark: '#0B0F19', // Slate 950 - Fondo oscuro muy elegante y serio
-  heroMid: '#111827', // Gray 900 - Fondo intermedio elegante
-  heroCard: 'rgba(15, 23, 42, 0.82)', // Tarjeta slate traslúcida
-  heroCardSoft: 'rgba(30, 41, 59, 0.7)', // Tarjeta slate soft
-  heroText: '#F8FAFC', // Slate 50 - Texto principal
-  heroMuted: '#94A3B8', // Slate 400 - Texto secundario
+  primary: '#A9301E',
+  primaryDark: '#7F1D12',
+  heroDark: '#210706',
+  heroMid: '#3A0D0A',
+  heroCard: '#511812',
+  heroCardSoft: '#6D241A',
+  heroText: '#FFF8F6',
+  heroMuted: '#F7B7AA',
   ink: '#111827',
   muted: '#64748B',
   line: '#E2E8F0',
@@ -240,7 +240,7 @@ export default function LandingPage() {
       </View>
 
       <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#070A13']} style={styles.heroSection}>
+        <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#160403']} style={styles.heroSection}>
           <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
             <View style={styles.heroContent}>
               <Animated.View style={[styles.heroCopy, introStyle(heroIntro)]}>

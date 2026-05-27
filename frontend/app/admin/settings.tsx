@@ -643,8 +643,8 @@ export default function AdminSettings() {
               <View style={styles.cardList}>
                 {dependencies.map(dep => (
                   <View key={dep.id} style={styles.depCard}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(227, 39, 42, 0.08)' }]}>
-                      <Ionicons name="people-circle" size={24} color="#E3272A" />
+                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(169, 48, 30, 0.08)' }]}>
+                      <Ionicons name="people-circle" size={24} color="#A9301E" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
