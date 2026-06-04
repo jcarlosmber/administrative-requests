@@ -79,7 +79,7 @@ export const requestService = {
       query = query.gte('created_at', startDate);
     }
     if (endDate) {
-      query = query.lte('created_at', endDate);
+      query = query.lt('created_at', endDate);
     }
 
     const { data, error } = await query;
