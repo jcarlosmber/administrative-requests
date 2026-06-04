@@ -10,17 +10,16 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Deploy
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web
+        run: npx expo export --platform web
+
+      - name: Publish
         run: |
-          cd /opt/administrative-requests/frontend
-
-          git pull origin main
-
-          npx expo export --platform web
-
           sudo rm -rf /var/www/administrative-requests/*
           sudo cp -r dist/* /var/www/administrative-requests/
-
           sudo systemctl reload nginx
-
-          echo "Deploy completado"
