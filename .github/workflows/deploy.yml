@@ -1,0 +1,29 @@
+name: Deploy SASGE
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/administrative-requests/frontend
+
+            git pull origin main
+
+            npx expo export --platform web
+
+            sudo rm -rf /var/www/administrative-requests/*
+            sudo cp -r dist/* /var/www/administrative-requests/
+
+            sudo systemctl reload nginx
