@@ -1129,11 +1129,12 @@ function ServiceCard({ item, width, onPress }: any) {
       <Animated.View style={{ transform: [{ scale }] }}>
         <View style={[styles.serviceCard, { width: width }]}>
           <LinearGradient
-            colors={[`${item.color}15`, `${item.color}05`]}
+            colors={['#111827', '#0F172A', `${item.color}35`]}
+            locations={[0, 0.62, 1]}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.cardWatermark}>
-            <Ionicons name={item.icon} size={120} color={`${item.color}10`} />
+            <Ionicons name={item.icon} size={120} color={`${item.color}22`} />
           </View>
           
           <View style={styles.cardInfo}>
@@ -1149,9 +1150,9 @@ function ServiceCard({ item, width, onPress }: any) {
           <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
 
           <View style={styles.cardBottom}>
-            <BlurView intensity={20} tint="light" style={styles.glassButton}>
-              <Text style={[styles.glassButtonText, { color: item.color }]}>Solicitar ahora</Text>
-              <Ionicons name="add-circle" size={18} color={item.color} />
+            <BlurView intensity={18} tint="dark" style={[styles.glassButton, { backgroundColor: item.color, borderColor: item.color }]}>
+              <Text style={styles.glassButtonText}>Solicitar ahora</Text>
+              <Ionicons name="add-circle" size={18} color={COLORS.white} />
             </BlurView>
           </View>
         </View>
@@ -1233,22 +1234,22 @@ const styles = StyleSheet.create({
   viewAllText: { color: COLORS.primary, fontWeight: '800', fontSize: 14 },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 },
-  serviceCard: { height: 260, borderRadius: 32, padding: 24, backgroundColor: COLORS.white, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)',
+  serviceCard: { height: 260, borderRadius: 32, padding: 24, backgroundColor: '#0F172A', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
       android: { elevation: 10 },
-      web: { boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }
+      web: { boxShadow: '0 16px 40px rgba(15,23,42,0.18)' }
     })
   },
   cardWatermark: { position: 'absolute', right: -20, top: -20, transform: [{ rotate: '-15deg' }] },
   cardInfo: { flexDirection: 'row', gap: 15, alignItems: 'center', marginBottom: 20 },
   cardIconCircle: { width: 56, height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 12 },
-  cardTitle: { fontSize: 18, fontWeight: '900', color: COLORS.dark, letterSpacing: -0.3 },
+  cardTitle: { fontSize: 18, fontWeight: '900', color: COLORS.white, letterSpacing: -0.3 },
   cardSub: { fontSize: 13, fontWeight: '800', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
-  cardDesc: { fontSize: 14, color: COLORS.text, lineHeight: 20, opacity: 0.8 },
+  cardDesc: { fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 20, opacity: 1 },
   cardBottom: { marginTop: 'auto' },
-  glassButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' },
-  glassButtonText: { fontSize: 14, fontWeight: '800' },
+  glassButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  glassButtonText: { fontSize: 14, fontWeight: '800', color: COLORS.white },
 
   requestsContainer: { gap: 12 },
   requestCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
