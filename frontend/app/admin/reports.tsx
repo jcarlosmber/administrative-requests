@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -19,6 +19,38 @@ import { BlurView } from 'expo-blur';
 import { requestService } from '../../lib/requestService';
 
 // Paleta de Colores de Diseño Premium
+
+type DateRange = 'month' | 'quarter' | 'all';
+
+type MonthOption = {
+  value: string;
+  label: string;
+  shortLabel: string;
+  startDate: string;
+  endDate: string;
+};
+
+const getMonthValue = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+const buildMonthOption = (date: Date): MonthOption => {
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  const nextMonthStart = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const label = monthStart.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+
+  return {
+    value: getMonthValue(monthStart),
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    shortLabel: monthStart.toLocaleDateString('es-CO', { month: 'short', year: '2-digit' }).replace('.', ''),
+    startDate: monthStart.toISOString(),
+    endDate: nextMonthStart.toISOString(),
+  };
+};
+
+const buildRecentMonthOptions = (count = 18) => {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => buildMonthOption(new Date(now.getFullYear(), now.getMonth() - index, 1)));
+};
+
 const COLORS = {
   primary: '#0F172A',     // Slate 900
   primaryDark: '#020617', // Slate 950
@@ -40,253 +72,70 @@ const COLORS = {
   purpleSoft: '#F5F3FF',  // Violet 50
 };
 
-// Datos ficticios de alta fidelidad para fallback si la BD está vacía
-const FALLBACK_DATA = [
-  {
-    id: 'v1',
-    category: 'visitors',
-    status: 'resuelto',
-    priority: 'media',
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      visitors: [{ name: 'Juan Carlos Pérez', document: '1023456789' }, { name: 'María Liliana Gómez', document: '52345678' }],
-      hasVehicle: true,
-      vehicles: [{ plate: 'KLP890', brand: 'Mazda 3' }],
-      responsible: { name: 'Dr. Alejandro Silva', phone: 'Ext 302', dependency: 'Secretaría Jurídica Distrital' }
-    }
-  },
-  {
-    id: 'v2',
-    category: 'visitors',
-    status: 'resuelto',
-    priority: 'baja',
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      visitors: [{ name: 'Steven Thompson', document: 'PE-982341' }],
-      hasVehicle: false,
-      responsible: { name: 'Ing. Sandra Muñoz', phone: 'Ext 411', dependency: 'Subdirección de Informática' }
-    }
-  },
-  {
-    id: 'v3',
-    category: 'visitors',
-    status: 'pendiente',
-    priority: 'alta',
-    created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      visitors: [{ name: 'Laura Camila Ortiz', document: '1018273645' }],
-      hasVehicle: true,
-      vehicles: [{ plate: 'GHY213', brand: 'Chevrolet Tracker' }],
-      responsible: { name: 'Dra. Pilar Restrepo', phone: 'Ext 105', dependency: 'Oficina Asesora de Planeación' }
-    }
-  },
-  {
-    id: 'm1',
-    category: 'maintenance',
-    status: 'resuelto',
-    priority: 'alta',
-    created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      location: 'Piso 3',
-      room: 'Oficina Asesora Jurídica',
-      dependency: 'Secretaría Jurídica Distrital'
-    }
-  },
-  {
-    id: 'm2',
-    category: 'maintenance',
-    status: 'en_progreso',
-    priority: 'alta',
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      location: 'Piso 1',
-      room: 'Zona de Servidores',
-      dependency: 'Subdirección de Informática'
-    }
-  },
-  {
-    id: 'm3',
-    category: 'maintenance',
-    status: 'pendiente',
-    priority: 'alta',
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      location: 'Piso 2',
-      room: 'Baños de Hombres',
-      dependency: 'Dirección de Gestión Corporativa'
-    }
-  },
-  {
-    id: 'm4',
-    category: 'maintenance',
-    status: 'rechazado',
-    priority: 'baja',
-    created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      location: 'Piso 4',
-      room: 'Cafetería Principal',
-      dependency: 'Oficina Asesora de Planeación'
-    }
-  },
-  {
-    id: 'm5',
-    category: 'maintenance',
-    status: 'pendiente',
-    priority: 'media',
-    created_at: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      location: 'Piso 3',
-      room: 'Oficina 305',
-      dependency: 'Dirección Distrital de Asuntos Penales'
-    }
-  },
-  {
-    id: 'p1',
-    category: 'parking',
-    status: 'resuelto',
-    priority: 'media',
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      name: 'Jorge Eliécer Gaitán',
-      doc: '79432120',
-      dependency: 'Dirección Distrital de Asuntos Penales',
-      plate: 'FTG765',
-      brand: 'Toyota Hilux 2023',
-      color: 'Blanco'
-    }
-  },
-  {
-    id: 'p2',
-    category: 'parking',
-    status: 'pendiente',
-    priority: 'media',
-    created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      name: 'Diana Patricia Castro',
-      doc: '1032411980',
-      dependency: 'Secretaría Jurídica Distrital',
-      plate: 'MKO892',
-      brand: 'Kia Sportage 2024',
-      color: 'Gris Plata'
-    }
-  },
-  {
-    id: 'r1',
-    category: 'rooms',
-    status: 'resuelto',
-    priority: 'media',
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      room: { id: '1', name: 'Sala Innovación', capacity: 12, floor: 'Piso 2', info: 'Ala Norte' },
-      attendees: '10',
-      date: 'lunes, 25 may',
-      time: '8:00 - 10:00',
-      services: { projector: true, laptop: true, coffee: true },
-      dependency: 'Secretaría Jurídica Distrital'
-    }
-  },
-  {
-    id: 'r2',
-    category: 'rooms',
-    status: 'resuelto',
-    priority: 'media',
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      room: { id: '4', name: 'Auditorio Principal', capacity: 50, floor: 'PB', info: 'Salón Principal' },
-      attendees: '45',
-      date: 'martes, 26 may',
-      time: '14:00 - 17:00',
-      services: { projector: true, laptop: false, coffee: true },
-      dependency: 'Dirección de Gestión Corporativa'
-    }
-  },
-  {
-    id: 't1',
-    category: 'transport',
-    status: 'resuelto',
-    priority: 'media',
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      dependency: 'Secretaría Jurídica Distrital',
-      origin: 'Sede Principal SJD',
-      destination: 'Palacio de Justicia',
-      passengers: '3',
-      pickupTime: '08:30 AM',
-      requiresReturn: true,
-      returnTime: '12:30 PM',
-      reason: 'Asistencia a audiencia y radicación de memoriales de defensa distrital'
-    }
-  },
-  {
-    id: 't2',
-    category: 'transport',
-    status: 'pendiente',
-    priority: 'alta',
-    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    metadata: {
-      dependency: 'Oficina Asesora de Planeación',
-      origin: 'Sede Principal SJD',
-      destination: 'Secretaría de Planeación Distrital',
-      passengers: '1',
-      pickupTime: '10:00 AM',
-      requiresReturn: false,
-      reason: 'Entrega de informes consolidados de gestión y empalme'
-    }
-  }
-];
-
 export default function AdminReports() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
   // Estados de control
   const [activeTab, setActiveTab] = useState<'consolidated' | 'visitors' | 'maintenance' | 'parking' | 'rooms' | 'transport'>('consolidated');
-  const [dateRange, setDateRange] = useState<'month' | 'quarter' | 'all'>('month');
+  const [dateRange, setDateRange] = useState<DateRange>('month');
+  const monthOptions = useMemo(() => buildRecentMonthOptions(), []);
+  const [selectedMonth, setSelectedMonth] = useState(() => getMonthValue(new Date()));
   const [dbData, setDbData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDocModal, setShowDocModal] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [dataSource, setDataSource] = useState<'database' | 'empty' | 'error'>('empty');
 
-  // Carga de datos de analítica de Supabase
-  const loadAnalyticsData = async () => {
+  const selectedMonthOption = useMemo(
+    () => monthOptions.find(option => option.value === selectedMonth) || monthOptions[0],
+    [monthOptions, selectedMonth]
+  );
+
+  const reportPeriodLabel = useMemo(() => {
+    if (dateRange === 'month') return selectedMonthOption?.label || 'Mes seleccionado';
+    if (dateRange === 'quarter') return 'Últimos 3 meses';
+    return 'Histórico completo';
+  }, [dateRange, selectedMonthOption]);
+
+  // Carga de datos de analítica de Supabase. El reporte siempre usa este mismo arreglo filtrado desde la BD.
+  const loadAnalyticsData = useCallback(async () => {
     try {
       setLoading(true);
       
       // Calcular filtros de fecha para enviar a la BD
       let startDateStr: string | undefined = undefined;
+      let endDateStr: string | undefined = undefined;
       const now = new Date();
       
-      if (dateRange === 'month') {
-        const firstDayMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        startDateStr = firstDayMonth.toISOString();
+      if (dateRange === 'month' && selectedMonthOption) {
+        startDateStr = selectedMonthOption.startDate;
+        endDateStr = selectedMonthOption.endDate;
       } else if (dateRange === 'quarter') {
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(now.getMonth() - 3);
+        const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
         startDateStr = threeMonthsAgo.toISOString();
       }
 
-      const data = await requestService.getAnalytics(startDateStr);
-      
-      // Si la base de datos no tiene registros o da vacío, cargamos los datos ficticios
-      if (data && data.length > 0) {
-        setDbData(data);
-      } else {
-        setDbData(FALLBACK_DATA);
-      }
+      const data = await requestService.getAnalytics(startDateStr, endDateStr);
+      const rows = data || [];
+      setDbData(rows);
+      setDataSource(rows.length > 0 ? 'database' : 'empty');
+      return rows;
     } catch (error) {
-      console.warn("Error cargando de Supabase, cargando fallbacks premium:", error);
-      setDbData(FALLBACK_DATA);
+      console.warn('Error cargando analítica desde Supabase:', error);
+      setDbData([]);
+      setDataSource('error');
+      return [];
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange, selectedMonthOption]);
 
   useEffect(() => {
     loadAnalyticsData();
-  }, [dateRange]);
+  }, [loadAnalyticsData]);
 
   // Recargar manualmente
   const handleRefresh = async () => {
@@ -471,6 +320,12 @@ export default function AdminReports() {
   }, [dbData]);
 
   // Simulación de descarga del PDF membretado oficial
+  const handleGenerateReport = async () => {
+    await loadAnalyticsData();
+    setShowDocModal(true);
+    triggerPdfGeneration();
+  };
+
   const triggerPdfGeneration = () => {
     setIsGeneratingPdf(true);
     setPdfProgress(0);
@@ -549,11 +404,45 @@ export default function AdminReports() {
                 </TouchableOpacity>
               </View>
               
-              <TouchableOpacity style={styles.downloadDocBtn} onPress={() => { setShowDocModal(true); triggerPdfGeneration(); }}>
+              <TouchableOpacity style={styles.downloadDocBtn} onPress={handleGenerateReport} disabled={loading}>
                 <Ionicons name="document-text-outline" size={18} color={COLORS.white} />
                 <Text style={styles.downloadDocText}>Generar Reporte PDF</Text>
               </TouchableOpacity>
             </View>
+
+            {dateRange === 'month' && (
+              <View style={styles.monthSelectorCard}>
+                <View style={styles.monthSelectorHeader}>
+                  <View>
+                    <Text style={styles.monthSelectorKicker}>MES DEL REPORTE</Text>
+                    <Text style={styles.monthSelectorTitle}>{reportPeriodLabel}</Text>
+                  </View>
+                  <View style={[styles.dbBadge, dataSource === 'error' && styles.dbBadgeError]}>
+                    <Ionicons
+                      name={dataSource === 'database' ? 'server-outline' : dataSource === 'error' ? 'warning-outline' : 'file-tray-outline'}
+                      size={14}
+                      color={dataSource === 'error' ? COLORS.danger : COLORS.accent}
+                    />
+                    <Text style={[styles.dbBadgeText, dataSource === 'error' && styles.dbBadgeTextError]}>
+                      {dataSource === 'database' ? 'Datos de BD' : dataSource === 'error' ? 'Error BD' : 'BD sin registros'}
+                    </Text>
+                  </View>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthOptionsRow}>
+                  {monthOptions.map(option => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[styles.monthOptionBtn, selectedMonth === option.value && styles.monthOptionBtnActive]}
+                      onPress={() => setSelectedMonth(option.value)}
+                    >
+                      <Text style={[styles.monthOptionText, selectedMonth === option.value && styles.monthOptionTextActive]}>
+                        {option.shortLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
             {/* Selector de Módulos (Tabs Horizontales en Móviles) */}
             {!isDesktop && (
@@ -848,9 +737,10 @@ export default function AdminReports() {
                   <View style={styles.docDivider} />
 
                   <View style={styles.reportDocMetaGrid}>
-                    <Text style={styles.reportMetaLabel}>Periodo del Reporte: <Text style={{fontWeight:'400'}}>{dateRange === 'month' ? 'Este Mes' : dateRange === 'quarter' ? 'Último Trimestre' : 'Histórico Completo'}</Text></Text>
+                    <Text style={styles.reportMetaLabel}>Periodo del Reporte: <Text style={{fontWeight:'400'}}>{reportPeriodLabel}</Text></Text>
                     <Text style={styles.reportMetaLabel}>Fecha de Generación: <Text style={{fontWeight:'400'}}>{new Date().toLocaleDateString('es-ES')}</Text></Text>
                     <Text style={styles.reportMetaLabel}>Generado por: <Text style={{fontWeight:'400'}}>Administración del Sistema</Text></Text>
+                    <Text style={styles.reportMetaLabel}>Fuente de Datos: <Text style={{fontWeight:'400'}}>{dataSource === 'database' ? 'Supabase / administrative_requests' : dataSource === 'error' ? 'No disponible por error de consulta' : 'Supabase sin registros para el periodo'}</Text></Text>
                   </View>
 
                   <Text style={styles.reportSectionTitle}>1. RESUMEN EJECUTIVO GENERAL</Text>
@@ -1195,6 +1085,20 @@ const styles = StyleSheet.create({
   
   downloadDocBtn: { height: 44, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primarySoft, paddingHorizontal: 18, borderRadius: 14, shadowOpacity: 0.1, shadowRadius: 5 },
   downloadDocText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
+
+  monthSelectorCard: { backgroundColor: COLORS.white, borderRadius: 22, padding: 18, borderWidth: 1, borderColor: COLORS.line, marginBottom: 22 },
+  monthSelectorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 14, flexWrap: 'wrap' },
+  monthSelectorKicker: { fontSize: 10, fontWeight: '900', color: COLORS.accent, letterSpacing: 1.5 },
+  monthSelectorTitle: { fontSize: 18, fontWeight: '900', color: COLORS.primary, marginTop: 2 },
+  monthOptionsRow: { gap: 10, paddingRight: 8 },
+  monthOptionBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line },
+  monthOptionBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  monthOptionText: { fontSize: 12, fontWeight: '800', color: COLORS.muted, textTransform: 'capitalize' },
+  monthOptionTextActive: { color: COLORS.white },
+  dbBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: COLORS.accentLight, borderWidth: 1, borderColor: '#BFDBFE' },
+  dbBadgeError: { backgroundColor: COLORS.dangerSoft, borderColor: '#FECACA' },
+  dbBadgeText: { fontSize: 11, fontWeight: '900', color: COLORS.accent },
+  dbBadgeTextError: { color: COLORS.danger },
 
   mobileTabsContainer: { paddingBottom: 18, gap: 12 },
   mobTabBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 18, borderRadius: 14, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line },
