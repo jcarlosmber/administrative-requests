@@ -426,7 +426,7 @@ export default function LandingPage() {
           <View style={styles.footerDivider} />
           
           <Text style={styles.footerCredits}>
-            Desarrollado por la Oficina de Tecnologías de la Información
+            Desarrollado por la Oficina de Tecnologías de la Información y la Dirección de Gestión Corporativa
           </Text>
           <Text style={styles.footerCopyright}>
             © 2026 Alcaldía Mayor de Bogotá
