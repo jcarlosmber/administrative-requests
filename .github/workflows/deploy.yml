@@ -7,23 +7,20 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/administrative-requests/frontend
+      - name: Deploy
+        run: |
+          cd /opt/administrative-requests/frontend
 
-            git pull origin main
+          git pull origin main
 
-            npx expo export --platform web
+          npx expo export --platform web
 
-            sudo rm -rf /var/www/administrative-requests/*
-            sudo cp -r dist/* /var/www/administrative-requests/
+          sudo rm -rf /var/www/administrative-requests/*
+          sudo cp -r dist/* /var/www/administrative-requests/
 
-            sudo systemctl reload nginx
+          sudo systemctl reload nginx
+
+          echo "Deploy completado"
