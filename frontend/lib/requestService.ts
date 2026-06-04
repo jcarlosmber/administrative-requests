@@ -70,9 +70,12 @@ export const requestService = {
   },
 
   async getAnalytics(startDate?: string, endDate?: string) {
+    // Usar una consulta directa evita errores 400 de PostgREST cuando la BD no tiene
+    // configurada la relación embebida `administrative_requests.user_id -> profiles.id`.
+    // Los reportes toman los datos operativos desde `administrative_requests.metadata`.
     let query = supabase
       .from('administrative_requests')
-      .select('*, profiles:user_id(id, full_name, email, role, dependency:dependency_id(id, name))')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (startDate) {

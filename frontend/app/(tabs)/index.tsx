@@ -1150,9 +1150,9 @@ function ServiceCard({ item, width, onPress }: any) {
           <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
 
           <View style={styles.cardBottom}>
-            <BlurView intensity={24} tint="dark" style={styles.glassButton}>
-              <Text style={[styles.glassButtonText, { color: item.color }]}>Solicitar ahora</Text>
-              <Ionicons name="add-circle" size={18} color={item.color} />
+            <BlurView intensity={18} tint="dark" style={[styles.glassButton, { backgroundColor: item.color, borderColor: item.color }]}>
+              <Text style={styles.glassButtonText}>Solicitar ahora</Text>
+              <Ionicons name="add-circle" size={18} color={COLORS.white} />
             </BlurView>
           </View>
         </View>
@@ -1249,7 +1249,7 @@ const styles = StyleSheet.create({
   cardDesc: { fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 20, opacity: 1 },
   cardBottom: { marginTop: 'auto' },
   glassButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
-  glassButtonText: { fontSize: 14, fontWeight: '800' },
+  glassButtonText: { fontSize: 14, fontWeight: '800', color: COLORS.white },
 
   requestsContainer: { gap: 12 },
   requestCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
