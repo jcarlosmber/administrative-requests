@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   View, 
   Text, 
@@ -326,6 +327,39 @@ export default function AdminReports() {
     triggerPdfGeneration();
   };
 
+  const handleExportExcel = useCallback(() => {
+    const exportRows = dbData.map(row => ({
+      id: row.id,
+      titulo: row.title || '',
+      categoria: row.category || '',
+      estado: row.status || '',
+      prioridad: row.priority || '',
+      fecha_creacion: row.created_at || '',
+      dependencia: row.metadata?.responsible?.dependency || row.metadata?.dependency || '',
+      descripcion: row.description || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: 'xlsx',
+      type: 'array'
+    });
+
+    const blob = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `reporte_${selectedMonth || 'general'}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [dbData, selectedMonth]);
+
   const triggerPdfGeneration = () => {
     setIsGeneratingPdf(true);
     setPdfProgress(0);
@@ -404,10 +438,16 @@ export default function AdminReports() {
                 </TouchableOpacity>
               </View>
               
-              <TouchableOpacity style={styles.downloadDocBtn} onPress={handleGenerateReport} disabled={loading}>
-                <Ionicons name="document-text-outline" size={18} color={COLORS.white} />
-                <Text style={styles.downloadDocText}>Generar Reporte PDF</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity style={styles.downloadDocBtn} onPress={handleGenerateReport} disabled={loading}>
+                  <Ionicons name="document-text-outline" size={18} color={COLORS.white} />
+                  <Text style={styles.downloadDocText}>Generar Reporte PDF</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.downloadDocBtn, { backgroundColor: COLORS.success }]} onPress={handleExportExcel} disabled={loading}>
+                  <Ionicons name="download-outline" size={18} color={COLORS.white} />
+                  <Text style={styles.downloadDocText}>Exportar Excel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {dateRange === 'month' && (

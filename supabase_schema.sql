@@ -21,12 +21,32 @@ ON CONFLICT (name) DO NOTHING;
 CREATE TABLE IF NOT EXISTS public.profiles (
     id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
     full_name TEXT,
+    first_name TEXT,
+    last_name TEXT,
     email TEXT,
+    username TEXT,
+    phone TEXT,
+    entity TEXT,
     role TEXT DEFAULT 'user' CHECK (role IN ('admin', 'user', 'security')),
     dependency_id uuid REFERENCES public.dependencies(id),
+    is_active BOOLEAN DEFAULT TRUE,
+    start_date DATE,
+    end_date DATE,
+    ldap_enabled BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.profiles
+    ADD COLUMN IF NOT EXISTS first_name TEXT,
+    ADD COLUMN IF NOT EXISTS last_name TEXT,
+    ADD COLUMN IF NOT EXISTS username TEXT,
+    ADD COLUMN IF NOT EXISTS phone TEXT,
+    ADD COLUMN IF NOT EXISTS entity TEXT,
+    ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
+    ADD COLUMN IF NOT EXISTS start_date DATE,
+    ADD COLUMN IF NOT EXISTS end_date DATE,
+    ADD COLUMN IF NOT EXISTS ldap_enabled BOOLEAN DEFAULT FALSE;
 
 -- Tabla de Salas (para el módulo de Rooms)
 CREATE TABLE IF NOT EXISTS public.rooms (

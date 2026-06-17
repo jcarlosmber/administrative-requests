@@ -74,6 +74,7 @@ export default function VisitorsScreen() {
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const progress = useMemo(() => {
     let p = 10;
@@ -98,23 +99,57 @@ export default function VisitorsScreen() {
 
   const handleRegister = async () => {
     try {
+      setErrorMessage('');
+
+      const validVisitors = visitors.map(v => ({
+        name: v.name.trim(),
+        document: v.document.trim()
+      }));
+      const trimmedResponsibleName = responsible.name.trim();
+      const trimmedResponsiblePhone = responsible.phone.trim();
+      const trimmedResponsibleDependency = responsible.dependency.trim();
+
+      if (!validVisitors.every(v => v.name && v.document)) {
+        setErrorMessage('Todos los visitantes deben tener nombre y documento completos.');
+        return;
+      }
+
+      if (!trimmedResponsibleName || !trimmedResponsiblePhone || !trimmedResponsibleDependency) {
+        setErrorMessage('Completa los datos del funcionario responsable antes de continuar.');
+        return;
+      }
+
+      if (new Date(toDate) <= new Date(fromDate)) {
+        setErrorMessage('La fecha final debe ser posterior a la fecha inicial.');
+        return;
+      }
+
+      if (!acceptedTerms) {
+        setErrorMessage('Debes aceptar la autorización de tratamiento de datos para continuar.');
+        return;
+      }
+
       setLoading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
       
-      const visitorNames = visitors.map(v => v.name).join(', ');
+      const visitorNames = validVisitors.map(v => v.name).join(', ');
       
       await requestService.create({
         user_id: user?.id || null,
         title: `Ingreso: ${visitorNames}`,
-        description: `Visita para ${responsible.name} en ${responsible.dependency} desde ${fromDate} hasta ${toDate}`,
+        description: `Visita para ${trimmedResponsibleName} en ${trimmedResponsibleDependency} desde ${fromDate} hasta ${toDate}`,
         category: 'visitors',
         priority: 'media',
         metadata: {
-          visitors: visitors.map(v => ({ name: v.name, document: v.document })),
+          visitors: validVisitors,
           hasVehicle,
-          vehicles: hasVehicle ? vehicles.map(vh => ({ plate: vh.plate, brand: vh.brand })) : [],
-          responsible,
+          vehicles: hasVehicle ? vehicles.map(vh => ({ plate: vh.plate.trim().toUpperCase(), brand: vh.brand.trim() })) : [],
+          responsible: {
+            name: trimmedResponsibleName,
+            phone: trimmedResponsiblePhone,
+            dependency: trimmedResponsibleDependency
+          },
           fromDate,
           toDate
         }
@@ -125,6 +160,7 @@ export default function VisitorsScreen() {
     } catch (error) {
       console.error('Error al registrar visitantes:', error);
       setLoading(false);
+      setErrorMessage('No pudimos registrar el ingreso de visitantes. Intenta nuevamente.');
     }
   };
 
@@ -358,6 +394,13 @@ export default function VisitorsScreen() {
                   </Text>
                 </TouchableOpacity>
 
+                {errorMessage ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
                 <TouchableOpacity 
                   style={[styles.mainBtn, (!acceptedTerms || progress < 40) && { opacity: 0.5 }]} 
                   onPress={handleRegister}
@@ -369,7 +412,7 @@ export default function VisitorsScreen() {
                     end={{ x: 1, y: 0 }} 
                     style={styles.btnGradient}
                   >
-                    <Text style={styles.btnText}>{loading ? 'PROCESANDO...' : 'REGISTRAR INGRESO'}</Text>
+                    <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Registrar Ingreso'}</Text>
                     <Ionicons name="checkmark-circle" size={22} color={COLORS.white} />
                   </LinearGradient>
                 </TouchableOpacity>
@@ -834,6 +877,8 @@ const styles = StyleSheet.create({
   mainBtn: { height: 64, borderRadius: 20, overflow: 'hidden', marginTop: 10 },
   btnGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
   btnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 0.5 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 8 },
+  errorText: { color: '#B91C1C', fontSize: 12, fontWeight: '700', flex: 1 },
   
   modalBlur: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 25 },
   modalPanel: { backgroundColor: COLORS.white, borderRadius: 30, width: '100%', maxWidth: 500, padding: 25, shadowOpacity: 0.2, shadowRadius: 20 },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,9 +45,27 @@ const NOTIFICATIONS = [
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+
+  const toggleRead = (id: string) => {
+    setNotifications(prev =>
+      prev.map(item =>
+        item.id === id ? { ...item, unread: false } : item
+      )
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(item => ({ ...item, unread: false }))
+    );
+  };
 
   const renderItem = ({ item }: { item: typeof NOTIFICATIONS[0] }) => (
-    <TouchableOpacity style={[styles.notificationCard, item.unread && styles.unreadCard]}>
+    <TouchableOpacity
+      style={[styles.notificationCard, item.unread && styles.unreadCard]}
+      onPress={() => toggleRead(item.id)}
+    >
       <View style={[styles.iconContainer, { backgroundColor: item.color + '15' }]}>
         <Ionicons name={item.icon as any} size={22} color={item.color} />
       </View>
@@ -69,13 +87,13 @@ export default function NotificationsScreen() {
           <Ionicons name="chevron-back" size={24} color={COLORS.textDark} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notificaciones</Text>
-        <TouchableOpacity style={styles.markReadBtn}>
+        <TouchableOpacity style={styles.markReadBtn} onPress={markAllAsRead}>
           <Text style={styles.markReadText}>Leer todo</Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={NOTIFICATIONS}
+        data={notifications}
         renderItem={renderItem}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}

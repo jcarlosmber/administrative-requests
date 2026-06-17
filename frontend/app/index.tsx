@@ -264,7 +264,10 @@ export default function LandingPage() {
                     <Ionicons name="arrow-forward" size={20} color={COLORS.heroText} />
                   </AnimatedPressable>
                   {isWide && (
-                    <AnimatedPressable style={styles.secondaryHeroButton}>
+                    <AnimatedPressable
+                      style={styles.secondaryHeroButton}
+                      onPress={() => scrollToSection('services')}
+                    >
                       <Text style={styles.secondaryHeroText}>Ver servicios</Text>
                     </AnimatedPressable>
                   )}
@@ -345,6 +348,7 @@ export default function LandingPage() {
                 key={service.title}
                 containerStyle={styles.featureCardShell}
                 style={styles.featureCard}
+                onPress={goToLogin}
               >
                 <View style={[styles.iconBox, { backgroundColor: `${service.tone}14` }]}>
                   <Ionicons name={service.icon} size={25} color={service.tone} />

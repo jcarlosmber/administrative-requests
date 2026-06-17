@@ -97,6 +97,7 @@ export default function RoomsRequestScreen() {
   const [showDeps, setShowDeps] = useState(false);
   const [showRoomSelector, setShowRoomSelector] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Cargar salas y reglas de negocio al iniciar la pantalla
   useEffect(() => {
@@ -245,36 +246,56 @@ export default function RoomsRequestScreen() {
 
   const handleRegister = async () => {
     try {
+      setErrorMessage('');
+      const isLarge = bookingMode === 'large';
+      const trimmedTitle = title.trim();
+      const trimmedDependency = dependency.trim();
+      const attendeeCount = parseInt(attendees, 10) || 0;
+
+      if (isLarge) {
+        if (!entityName.trim() || !responsibleName.trim() || !responsibleRole.trim() || !contactPhone.trim() || !activityName.trim() || !activityDescription.trim()) {
+          setErrorMessage('Completa todos los datos del evento de gran escala para continuar.');
+          return;
+        }
+      } else {
+        if (!trimmedTitle || !trimmedDependency || attendeeCount <= 0 || selectedDay === null || startHour === null || endHour === null) {
+          setErrorMessage('Completa el nombre de la reunión, la dependencia, la fecha y el horario antes de enviar.');
+          return;
+        }
+        if (attendeeCount > selectedRoom.capacity) {
+          setErrorMessage(`La cantidad de asistentes supera la capacidad máxima de ${selectedRoom.capacity}.`);
+          return;
+        }
+      }
+
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
 
-      const isLarge = bookingMode === 'large';
-      
       const bookingHours = isLarge ? `${bookingStartHour} - ${bookingEndHour}` : '';
       const servicesDescription = isLarge ? selectedServices.join(', ') : '';
 
-      // Las solicitudes magnas o de gran escala siempre son 'pendientes' por revisión de Secretaría General
-      const finalStatus = (autoApprove && !isLarge) ? 'resuelto' : 'pendiente';
+      const finalStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado' =
+        (autoApprove && !isLarge) ? 'resuelto' : 'pendiente';
       const finalPriority: 'baja' | 'media' | 'alta' = isLarge ? 'alta' : 'media';
 
       const requestPayload = {
         user_id: user?.id || null,
-        title: isLarge ? `Evento Magno: ${activityName}` : `Reserva: ${selectedRoom.name} - ${title}`,
+        title: isLarge ? `Evento Magno: ${activityName}` : `Reserva: ${selectedRoom.name} - ${trimmedTitle}`,
         description: isLarge 
-          ? `Solicitud de gran capacidad para ${entityName} organizada por ${responsibleName}. Horario: ${displayDate} de ${bookingHours}`
-          : `Reunión para ${dependency} con ${attendees} asistentes. Horario: ${displayDate} ${displayTime}`,
+          ? `Solicitud de gran capacidad para ${entityName.trim()} organizada por ${responsibleName.trim()}. Horario: ${displayDate} de ${bookingHours}`
+          : `Reunión para ${trimmedDependency} con ${attendeeCount} asistentes. Horario: ${displayDate} ${displayTime}`,
         category: 'rooms' as const,
         status: finalStatus,
         priority: finalPriority,
         metadata: isLarge ? {
           room: selectedRoom,
-          entity_name: entityName,
-          responsible_name: responsibleName,
-          responsible_role: responsibleRole,
-          contact_phone: contactPhone,
-          activity_name: activityName,
-          activity_description: activityDescription,
-          participants_count: attendees,
+          entity_name: entityName.trim(),
+          responsible_name: responsibleName.trim(),
+          responsible_role: responsibleRole.trim(),
+          contact_phone: contactPhone.trim(),
+          activity_name: activityName.trim(),
+          activity_description: activityDescription.trim(),
+          participants_count: attendeeCount,
           date: displayDate,
           booking_hours: bookingHours,
           event_start_hour: eventStartHour,
@@ -287,11 +308,11 @@ export default function RoomsRequestScreen() {
           requires_secretaria_general: true
         } : {
           room: selectedRoom,
-          attendees,
+          attendees: attendeeCount.toString(),
           date: displayDate,
           time: displayTime,
           services,
-          dependency,
+          dependency: trimmedDependency,
           approved_automatically: autoApprove,
           start_hour: startHour,
           end_hour: endHour,
@@ -307,6 +328,7 @@ export default function RoomsRequestScreen() {
     } catch (error) {
       console.error('Error al reservar sala:', error);
       setLoading(false);
+      setErrorMessage('No pudimos enviar la solicitud de sala. Intenta nuevamente.');
     }
   };
 
@@ -806,7 +828,7 @@ export default function RoomsRequestScreen() {
                       end={{ x: 1, y: 0 }} 
                       style={styles.btnGradient}
                     >
-                      <Text style={styles.btnText}>{loading ? 'PROCESANDO...' : 'SOLICITAR AUTORIZACIÓN SG'}</Text>
+                      <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Solicitar Autorización SG'}</Text>
                       <Ionicons name="ribbon-outline" size={22} color={COLORS.white} />
                     </LinearGradient>
                   </TouchableOpacity>
@@ -997,7 +1019,7 @@ export default function RoomsRequestScreen() {
                       end={{ x: 1, y: 0 }} 
                       style={styles.btnGradient}
                     >
-                      <Text style={styles.btnText}>{loading ? 'PROCESANDO...' : 'CONFIRMAR RESERVA'}</Text>
+                      <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Confirmar Reserva'}</Text>
                       <Ionicons name="calendar-outline" size={22} color={COLORS.white} />
                     </LinearGradient>
                   </TouchableOpacity>

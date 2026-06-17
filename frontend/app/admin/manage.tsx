@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
 
@@ -120,6 +120,7 @@ const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas
 const STATUS_OPTIONS = ['Todos', 'Pendiente', 'En Progreso', 'Aprobado', 'Rechazado'];
 
 export default function ManageRequests() {
+  const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string }>();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,7 +212,24 @@ export default function ManageRequests() {
     };
   }, []);
 
+  useEffect(() => {
+    if (params.status) {
+      const statusValue = String(params.status).toLowerCase();
+      if (statusValue === 'pendiente') {
+        setStatusFilter('Pendiente');
+      } else if (statusValue === 'en_progreso' || statusValue === 'en curso') {
+        setStatusFilter('En Progreso');
+      } else if (statusValue === 'resuelto' || statusValue === 'aprobado') {
+        setStatusFilter('Aprobado');
+      } else if (statusValue === 'rechazado') {
+        setStatusFilter('Rechazado');
+      }
+    }
+  }, [params.status]);
+
   const filteredData = useMemo(() => {
+    const today = new Date().toDateString();
+
     return requests.filter(item => {
       const matchesSearch = (item.title + (item.category || '') + (item.description || '')).toLowerCase().includes(searchQuery.toLowerCase());
       const matchesService = serviceFilter === 'Todas' || 
@@ -228,9 +246,12 @@ export default function ManageRequests() {
                            (statusFilter === 'Aprobado' && (itemStatus === 'resuelto' || itemStatus === 'aprobado')) ||
                            (statusFilter === 'Rechazado' && itemStatus === 'rechazado');
 
-      return matchesSearch && matchesService && matchesStatus;
+      const matchesPriority = !params.priority || params.priority === 'all' || item.priority === String(params.priority);
+      const matchesToday = !params.today || new Date(item.created_at).toDateString() === today;
+
+      return matchesSearch && matchesService && matchesStatus && matchesPriority && matchesToday;
     });
-  }, [requests, searchQuery, serviceFilter, statusFilter]);
+  }, [requests, searchQuery, serviceFilter, statusFilter, params.priority, params.today]);
 
   const mapRequestToUI = (item: AdministrativeRequest) => {
     const typeLabel = {
@@ -679,11 +700,10 @@ function RequestListItem({ item, onUpdateStatus }: any) {
   };
 
   return (
-    <Pressable onPressIn={handleIn} onPressOut={handleOut} onPress={() => setExpanded(!expanded)}>
-      <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
-        <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
-        <View style={styles.cardMain}>
-          <View style={styles.cardHeader}>
+    <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+      <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
+      <View style={styles.cardMain}>
+        <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded(!expanded)} activeOpacity={0.9}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.typeRow}>
                 <Text style={[styles.cardCategory, { color: item.color }]}>{item.type}</Text>
@@ -700,7 +720,7 @@ function RequestListItem({ item, onUpdateStatus }: any) {
               <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
               <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
           
           <Text style={styles.cardDetail} numberOfLines={expanded ? 0 : 1}>{item.detail}</Text>
           
@@ -748,11 +768,16 @@ function RequestListItem({ item, onUpdateStatus }: any) {
                   value={comment}
                   onChangeText={setComment}
                   editable={!commentLoading}
+                  multiline
+                  blurOnSubmit={false}
+                  returnKeyType="default"
+                  textAlignVertical="top"
                 />
                 <TouchableOpacity 
                   style={styles.sendUpdateBtn}
                   onPress={handleAddComment}
                   disabled={commentLoading || !comment.trim()}
+                  activeOpacity={0.8}
                 >
                   {commentLoading ? (
                     <ActivityIndicator size="small" color="#FFF" />
@@ -837,7 +862,6 @@ function RequestListItem({ item, onUpdateStatus }: any) {
           </View>
         </View>
       </Animated.View>
-    </Pressable>
   );
 }
 

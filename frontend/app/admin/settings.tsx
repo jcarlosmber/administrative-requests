@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   View, 
   Text, 
@@ -79,6 +80,22 @@ export default function AdminSettings() {
   const [dependencies, setDependencies] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [serviceEmails, setServiceEmails] = useState<ServiceEmail[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [userModalVisible, setUserModalVisible] = useState(false);
+  const [userDraft, setUserDraft] = useState<any>(null);
+  const [ldapBaseDn, setLdapBaseDn] = useState('DC=secjur,DC=gov,DC=co');
+  const [ldapPort, setLdapPort] = useState('636');
+  const [ldapUseSsl, setLdapUseSsl] = useState(true);
+  const [ldapServer, setLdapServer] = useState('ldaps://10.54.80.6');
+  const [ldapFilter, setLdapFilter] = useState('(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))');
+  const [ldapUseBind, setLdapUseBind] = useState(true);
+  const [ldapRootDn, setLdapRootDn] = useState('SECJUR.GOV.CO/Secretaria Juridica/Servicio/SASGE_SJD');
+  const [ldapPassword, setLdapPassword] = useState('');
+  const [ldapUserField, setLdapUserField] = useState('samaccountname');
+  const [ldapSyncField, setLdapSyncField] = useState('objectguid');
+  const [ldapComments, setLdapComments] = useState('Coneccion SSL para Nodo AD 02');
+  const [ldapRelay, setLdapRelay] = useState('10.54.80.102');
   
   const [notifications, setNotifications] = useState(true);
   const [autoApprove, setAutoApprove] = useState(false);
@@ -136,14 +153,24 @@ export default function AdminSettings() {
           setDependencies(INITIAL_DEPENDENCIES);
         }
 
-        // 3. Cargar Conductores y Correos de Servicio
+        // 3. Cargar usuarios del sistema
+        const { data: dbUsers, error: dbUsersError } = await supabase
+          .from('profiles')
+          .select('id, full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled, created_at')
+          .order('full_name');
+
+        if (!dbUsersError) {
+          setUsers(dbUsers || []);
+        }
+
+        // 4. Cargar Conductores y Correos de Servicio
         const dbDrivers = await settingsService.getDrivers();
         setDrivers(dbDrivers);
 
         const dbEmails = await settingsService.getServiceEmails();
         setServiceEmails(dbEmails);
 
-        // 4. Cargar configuraciones del sistema desde localStorage
+        // 5. Cargar configuraciones del sistema desde localStorage
         const savedPush = await safeStorage.getItem('push_notifications');
         const savedAuto = await safeStorage.getItem('auto_approve');
         
@@ -176,8 +203,30 @@ export default function AdminSettings() {
 
         const savedPush = await safeStorage.getItem('push_notifications');
         const savedAuto = await safeStorage.getItem('auto_approve');
+        const savedLdapDn = await safeStorage.getItem('ldap_base_dn');
+        const savedLdapPort = await safeStorage.getItem('ldap_port');
+        const savedLdapSsl = await safeStorage.getItem('ldap_use_ssl');
+        const savedLdapServer = await safeStorage.getItem('ldap_server');
+        const savedLdapFilter = await safeStorage.getItem('ldap_filter');
+        const savedLdapUseBind = await safeStorage.getItem('ldap_use_bind');
+        const savedLdapRootDn = await safeStorage.getItem('ldap_root_dn');
+        const savedLdapUserField = await safeStorage.getItem('ldap_user_field');
+        const savedLdapSyncField = await safeStorage.getItem('ldap_sync_field');
+        const savedLdapComments = await safeStorage.getItem('ldap_comments');
+        const savedLdapRelay = await safeStorage.getItem('ldap_relay');
         if (savedPush !== null) setNotifications(savedPush === 'true');
         if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
+        if (savedLdapDn) setLdapBaseDn(savedLdapDn);
+        if (savedLdapPort) setLdapPort(savedLdapPort);
+        if (savedLdapSsl !== null) setLdapUseSsl(savedLdapSsl === 'true');
+        if (savedLdapServer) setLdapServer(savedLdapServer);
+        if (savedLdapFilter) setLdapFilter(savedLdapFilter);
+        if (savedLdapUseBind !== null) setLdapUseBind(savedLdapUseBind === 'true');
+        if (savedLdapRootDn) setLdapRootDn(savedLdapRootDn);
+        if (savedLdapUserField) setLdapUserField(savedLdapUserField);
+        if (savedLdapSyncField) setLdapSyncField(savedLdapSyncField);
+        if (savedLdapComments) setLdapComments(savedLdapComments);
+        if (savedLdapRelay) setLdapRelay(savedLdapRelay);
       } finally {
         setLoading(false);
       }
@@ -304,6 +353,227 @@ export default function AdminSettings() {
   // ==========================================
   // MANEJADORES PARA CONDUCTORES (DRIVERS)
   // ==========================================
+  const filteredUsers = useMemo(() => {
+    const query = userSearch.trim().toLowerCase();
+    if (!query) return users;
+
+    return users.filter(user =>
+      [
+        user.full_name,
+        user.first_name,
+        user.last_name,
+        user.email,
+        user.username,
+        user.phone,
+        user.role,
+        dependencies.find(dep => dep.id === user.dependency_id)?.name,
+        user.entity
+      ]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(query))
+    );
+  }, [users, userSearch, dependencies]);
+
+  const updateUser = (id: string, field: string, val: any) => {
+    setUsers(users.map(user => user.id === id ? { ...user, [field]: val } : user));
+  };
+
+  const saveUsers = async () => {
+    try {
+      setSaving(true);
+      for (const user of users) {
+        const normalizedFullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+        const payload = {
+          full_name: normalizedFullName || user.full_name || '',
+          first_name: user.first_name || null,
+          last_name: user.last_name || null,
+          email: user.email || '',
+          username: user.username || null,
+          phone: user.phone || null,
+          entity: user.entity || null,
+          role: user.role || 'user',
+          is_active: user.is_active ?? true,
+          dependency_id: user.dependency_id || null,
+          start_date: user.start_date || null,
+          end_date: user.end_date || null,
+          ldap_enabled: user.ldap_enabled ?? false,
+        };
+
+        if (String(user.id).startsWith('temp-')) {
+          const profileId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+          const { error } = await supabase
+            .from('profiles')
+            .insert([{ ...payload, id: profileId }]);
+
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('profiles')
+            .update(payload)
+            .eq('id', user.id);
+
+          if (error) throw error;
+        }
+      }
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.error('Error guardando usuarios:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const exportUsers = useCallback(() => {
+    const exportRows = filteredUsers.map(user => ({
+      nombre: user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' '),
+      email: user.email || '',
+      usuario: user.username || '',
+      telefono: user.phone || '',
+      dependencia: dependencies.find(dep => dep.id === user.dependency_id)?.name || '',
+      entidad: user.entity || '',
+      rol: user.role === 'admin' ? 'Administrador' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
+      activo: user.is_active ? 'Sí' : 'No',
+      inicio: user.start_date || '',
+      vencimiento: user.end_date || '',
+      ldap: user.ldap_enabled ? 'Sí' : 'No'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: 'xlsx',
+      type: 'array'
+    });
+
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'usuarios.xlsx';
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [filteredUsers, dependencies]);
+
+  const addUser = () => {
+    const newUser = {
+      id: `temp-${Date.now()}`,
+      full_name: '',
+      first_name: '',
+      last_name: '',
+      email: '',
+      username: '',
+      phone: '',
+      entity: '',
+      role: 'user',
+      is_active: true,
+      ldap_enabled: false,
+      dependency_id: dependencies[0]?.id || null,
+      start_date: '',
+      end_date: ''
+    };
+    setUserDraft(newUser);
+    setUserModalVisible(true);
+  };
+
+  const openUserEditor = (user: any) => {
+    setUserDraft({
+      ...user,
+      dependency_id: user.dependency_id || dependencies[0]?.id || null,
+      entity: user.entity || '',
+      ldap_enabled: user.ldap_enabled ?? false,
+      is_active: user.is_active ?? true,
+      start_date: user.start_date || '',
+      end_date: user.end_date || ''
+    });
+    setUserModalVisible(true);
+  };
+
+  const closeUserEditor = () => {
+    setUserModalVisible(false);
+    setUserDraft(null);
+  };
+
+  const saveUserDraft = async () => {
+    if (!userDraft) return;
+
+    try {
+      setSaving(true);
+      const normalizedFullName = [userDraft.first_name, userDraft.last_name].filter(Boolean).join(' ').trim();
+      const payload = {
+        full_name: normalizedFullName || userDraft.full_name || '',
+        first_name: userDraft.first_name || null,
+        last_name: userDraft.last_name || null,
+        email: userDraft.email || '',
+        username: userDraft.username || null,
+        phone: userDraft.phone || null,
+        entity: userDraft.entity || null,
+        role: userDraft.role || 'user',
+        is_active: userDraft.is_active ?? true,
+        dependency_id: userDraft.dependency_id || null,
+        start_date: userDraft.start_date || null,
+        end_date: userDraft.end_date || null,
+        ldap_enabled: userDraft.ldap_enabled ?? false,
+      };
+
+      if (String(userDraft.id).startsWith('temp-')) {
+        const profileId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+        const { error } = await supabase
+          .from('profiles')
+          .insert([{ ...payload, id: profileId }]);
+
+        if (error) throw error;
+
+        setUsers([{ ...userDraft, ...payload, id: profileId }, ...users]);
+      } else {
+        const { error } = await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', userDraft.id);
+
+        if (error) throw error;
+
+        setUsers(users.map(user => user.id === userDraft.id ? { ...user, ...payload } : user));
+      }
+
+      closeUserEditor();
+      setShowSuccessModal(true);
+    } catch (err) {
+      console.error('Error guardando usuario:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteUser = async (user: any) => {
+    try {
+      setSaving(true);
+      if (!String(user.id).startsWith('temp-')) {
+        const { error } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', user.id);
+        if (error) throw error;
+      }
+      setUsers(users.filter(item => item.id !== user.id));
+    } catch (err) {
+      console.error('Error eliminando usuario:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleUserStatus = (userId: string, value: boolean) => {
+    setUsers(users.map(user => user.id === userId ? { ...user, is_active: value } : user));
+  };
+
   const updateDriver = (id: string, field: keyof Driver, val: any) => {
     setDrivers(drivers.map(d => d.id === id ? { ...d, [field]: val } : d));
   };
@@ -408,6 +678,17 @@ export default function AdminSettings() {
       // 1. Guardar configuraciones en localStorage (para uso inmediato en el cliente)
       await safeStorage.setItem('push_notifications', notifications.toString());
       await safeStorage.setItem('auto_approve', autoApprove.toString());
+      await safeStorage.setItem('ldap_base_dn', ldapBaseDn);
+      await safeStorage.setItem('ldap_port', ldapPort);
+      await safeStorage.setItem('ldap_use_ssl', ldapUseSsl.toString());
+      await safeStorage.setItem('ldap_server', ldapServer);
+      await safeStorage.setItem('ldap_filter', ldapFilter);
+      await safeStorage.setItem('ldap_use_bind', ldapUseBind.toString());
+      await safeStorage.setItem('ldap_root_dn', ldapRootDn);
+      await safeStorage.setItem('ldap_user_field', ldapUserField);
+      await safeStorage.setItem('ldap_sync_field', ldapSyncField);
+      await safeStorage.setItem('ldap_comments', ldapComments);
+      await safeStorage.setItem('ldap_relay', ldapRelay);
       await safeStorage.setItem('local_rooms', JSON.stringify(rooms));
       await safeStorage.setItem('local_dependencies', JSON.stringify(dependencies));
       await safeStorage.setItem('local_drivers', JSON.stringify(drivers));
@@ -669,6 +950,77 @@ export default function AdminSettings() {
                 </TouchableOpacity>
               </View>
 
+              <SectionHeader title="Usuarios y Roles" kicker="ACCESOS DEL SISTEMA" />
+              <View style={styles.userSectionCard}>
+                <View style={styles.userSectionHeader}>
+                  <TextInput
+                    style={styles.userSearchInput}
+                    value={userSearch}
+                    onChangeText={setUserSearch}
+                    placeholder="Buscar usuario, correo o dependencia"
+                  />
+                  <TouchableOpacity style={styles.exportUsersBtn} onPress={exportUsers}>
+                    <Ionicons name="download-outline" size={18} color={COLORS.white} />
+                    <Text style={styles.exportUsersText}>Excel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.addUserBtn} onPress={addUser}>
+                    <Ionicons name="person-add-outline" size={18} color={COLORS.white} />
+                    <Text style={styles.exportUsersText}>Agregar</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.userTable}>
+                  <View style={styles.userTableHeader}>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9 }]}>Inicio</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9 }]}>Fin</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.7 }]}>Activo</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Acciones</Text>
+                  </View>
+
+                  {filteredUsers.map(user => (
+                    <View key={user.id} style={styles.userTableRow}>
+                      <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
+                        <Text style={styles.userNameText}>{user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
+                        <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
+                      </View>
+                      <View style={[styles.userTableCell, { flex: 1.3 }]}>
+                        <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || 'Sin dependencia'}</Text>
+                      </View>
+                      <View style={[styles.userTableCell, { flex: 0.9 }]}>
+                        <Text style={styles.userMetaText}>{user.start_date || '-'}</Text>
+                      </View>
+                      <View style={[styles.userTableCell, { flex: 0.9 }]}>
+                        <Text style={styles.userMetaText}>{user.end_date || '-'}</Text>
+                      </View>
+                      <View style={[styles.userTableCell, { flex: 0.7 }]}>
+                        <Switch
+                          value={!!user.is_active}
+                          onValueChange={(val) => toggleUserStatus(user.id, val)}
+                          trackColor={{ false: COLORS.line, true: COLORS.success }}
+                          thumbColor={COLORS.white}
+                        />
+                      </View>
+                      <View style={[styles.userTableCell, { flex: 1.3, gap: 6 }]}>
+                        <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
+                          <Text style={styles.userActionBtnText}>Modificar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.userActionBtn, styles.userDeleteBtn]} onPress={() => deleteUser(user)}>
+                          <Text style={[styles.userActionBtnText, { color: COLORS.danger }]}>Borrar</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity style={styles.saveBtn} onPress={saveUsers} disabled={saving}>
+                  <LinearGradient colors={[COLORS.primary, COLORS.primarySoft]} style={styles.saveGradient}>
+                    {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.saveText}>GUARDAR USUARIOS</Text>}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+
               <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
               <View style={styles.cardList}>
                 {drivers.map(drv => (
@@ -782,6 +1134,39 @@ export default function AdminSettings() {
                   onValueChange={setAutoApprove}
                   icon="flash"
                 />
+                <View style={styles.configDivider} />
+                <View style={styles.ldapConfigCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <Ionicons name="business-outline" size={18} color={COLORS.accent} />
+                    <Text style={styles.toggleLabel}>Directorio Activo</Text>
+                  </View>
+                  <View style={{ gap: 10 }}>
+                    <View style={styles.userRow}>
+                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapServer} onChangeText={setLdapServer} placeholder="Servidor" />
+                      <View style={styles.userSwitchRow}>
+                        <Text style={styles.userSwitchLabel}>SSL</Text>
+                        <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                      </View>
+                    </View>
+                    <View style={styles.userRow}>
+                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapPort} onChangeText={setLdapPort} placeholder="Puerto LDAP" keyboardType="number-pad" />
+                      <View style={styles.userSwitchRow}>
+                        <Text style={styles.userSwitchLabel}>Usar bind</Text>
+                        <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
+                      </View>
+                    </View>
+                    <TextInput style={styles.userFieldInput} value={ldapComments} onChangeText={setLdapComments} placeholder="Comentarios" />
+                    <TextInput style={styles.userFieldInput} value={ldapFilter} onChangeText={setLdapFilter} placeholder="Filtro de conexión" multiline />
+                    <TextInput style={styles.userFieldInput} value={ldapBaseDn} onChangeText={setLdapBaseDn} placeholder="BaseDN" />
+                    <TextInput style={styles.userFieldInput} value={ldapRootDn} onChangeText={setLdapRootDn} placeholder="RootDN" />
+                    <TextInput style={styles.userFieldInput} value={ldapPassword} onChangeText={setLdapPassword} placeholder="Contraseña" secureTextEntry />
+                    <View style={styles.userRow}>
+                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapUserField} onChangeText={setLdapUserField} placeholder="Campo de usuario" />
+                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapSyncField} onChangeText={setLdapSyncField} placeholder="Campo de sincronización" />
+                    </View>
+                    <TextInput style={styles.userFieldInput} value={ldapRelay} onChangeText={setLdapRelay} placeholder="Relay correo" />
+                  </View>
+                </View>
               </View>
 
               <TouchableOpacity style={styles.saveBtn} onPress={handleSaveChanges} disabled={saving}>
@@ -806,6 +1191,77 @@ export default function AdminSettings() {
           )}
         </ScrollView>
       </View>
+
+      <Modal
+        visible={userModalVisible && !!userDraft}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeUserEditor}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalContainer, { maxWidth: 560, padding: 20 }]}> 
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.modalTitle}>{userDraft?.id?.toString().startsWith('temp-') ? 'Crear usuario' : 'Editar usuario'}</Text>
+              <TouchableOpacity onPress={closeUserEditor}>
+                <Ionicons name="close" size={22} color={COLORS.muted} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 520 }}>
+              <View style={{ gap: 10 }}>
+                <View style={styles.userRow}>
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.first_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })} placeholder="Nombres" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.last_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })} placeholder="Apellidos" />
+                </View>
+                <TextInput style={styles.userFieldInput} value={userDraft?.email || ''} onChangeText={(val) => setUserDraft({ ...userDraft, email: val })} placeholder="Correo electrónico" keyboardType="email-address" autoCapitalize="none" />
+                <View style={styles.userRow}>
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.username || ''} onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} placeholder="Usuario" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.phone || ''} onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })} placeholder="Teléfono" keyboardType="phone-pad" />
+                </View>
+                <View style={styles.userRow}>
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.entity || ''} onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })} placeholder="Entidad" />
+                  <View style={styles.rolePills}>
+                    {['user', 'admin', 'security'].map(role => (
+                      <TouchableOpacity key={role} style={[styles.rolePill, userDraft?.role === role && styles.rolePillActive]} onPress={() => setUserDraft({ ...userDraft, role })}>
+                        <Text style={[styles.rolePillText, userDraft?.role === role && styles.rolePillTextActive]}>{role === 'admin' ? 'Admin' : role === 'security' ? 'Seguridad' : 'Func.'}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.userRow}>
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.start_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, start_date: val })} placeholder="Fecha inicio (YYYY-MM-DD)" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.end_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, end_date: val })} placeholder="Fecha vencimiento (YYYY-MM-DD)" />
+                </View>
+                <View style={styles.userRow}>
+                  <Text style={styles.userSwitchLabel}>Dependencia</Text>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    {dependencies.map(dep => (
+                      <TouchableOpacity key={dep.id} style={[styles.rolePill, userDraft?.dependency_id === dep.id && styles.rolePillActive]} onPress={() => setUserDraft({ ...userDraft, dependency_id: dep.id })}>
+                        <Text style={[styles.rolePillText, userDraft?.dependency_id === dep.id && styles.rolePillTextActive]}>{dep.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.userActions}>
+                  <View style={styles.userSwitchRow}>
+                    <Text style={styles.userSwitchLabel}>Activo</Text>
+                    <Switch value={!!userDraft?.is_active} onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                  </View>
+                  <View style={styles.userSwitchRow}>
+                    <Text style={styles.userSwitchLabel}>LDAP</Text>
+                    <Switch value={!!userDraft?.ldap_enabled} onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.saveBtn} onPress={saveUserDraft} disabled={saving}>
+                  <LinearGradient colors={[COLORS.primary, COLORS.primarySoft]} style={styles.saveGradient}>
+                    {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.saveText}>{userDraft?.id?.toString().startsWith('temp-') ? 'CREAR USUARIO' : 'ACTUALIZAR USUARIO'}</Text>}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE CONDUCTOR */}
       <Modal
@@ -1104,6 +1560,37 @@ const styles = StyleSheet.create({
 
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 18, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.line, marginTop: 15 },
   addBtnText: { fontSize: 16, fontWeight: '800', color: COLORS.accent },
+
+  userSectionCard: { backgroundColor: COLORS.white, borderRadius: 28, padding: 18, borderWidth: 1, borderColor: COLORS.line, gap: 12 },
+  userSectionHeader: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
+  userSearchInput: { flex: 1, backgroundColor: COLORS.bg, borderRadius: 14, borderWidth: 1, borderColor: COLORS.line, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontWeight: '600', color: COLORS.primary },
+  exportUsersBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.success, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
+  addUserBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.accent, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
+  exportUsersText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
+  userCard: { backgroundColor: COLORS.bg, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: COLORS.line, gap: 10 },
+  userNameInput: { fontSize: 16, fontWeight: '800', color: COLORS.primary, backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1, borderColor: COLORS.line, paddingHorizontal: 12, paddingVertical: 10 },
+  userFieldInput: { fontSize: 14, fontWeight: '600', color: COLORS.text, backgroundColor: COLORS.white, borderRadius: 12, borderWidth: 1, borderColor: COLORS.line, paddingHorizontal: 12, paddingVertical: 10 },
+  userRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  rolePills: { flexDirection: 'row', gap: 6 },
+  rolePill: { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  rolePillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  rolePillText: { fontSize: 11, fontWeight: '800', color: COLORS.muted },
+  rolePillTextActive: { color: COLORS.white },
+  userActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap' },
+  userSwitchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  userSwitchLabel: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  userTable: { borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' },
+  userTableHeader: { flexDirection: 'row', backgroundColor: '#F8FAFC', borderBottomWidth: 1, borderBottomColor: COLORS.line },
+  userTableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.line, paddingVertical: 10, paddingHorizontal: 8, alignItems: 'center' },
+  userTableCell: { paddingHorizontal: 6 },
+  userTableHeaderText: { fontSize: 11, fontWeight: '900', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  userNameText: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  userEmailText: { fontSize: 11, color: COLORS.muted, fontWeight: '600' },
+  userMetaText: { fontSize: 12, color: COLORS.text, fontWeight: '600' },
+  userActionBtn: { backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center' },
+  userActionBtnText: { color: COLORS.white, fontSize: 11, fontWeight: '800' },
+  userDeleteBtn: { backgroundColor: '#FEF2F2' },
+  ldapConfigCard: { padding: 16, backgroundColor: COLORS.bg, gap: 8 },
 
   configCard: { backgroundColor: COLORS.white, borderRadius: 28, padding: 5, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 15, padding: 20 },

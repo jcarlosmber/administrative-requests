@@ -43,6 +43,7 @@ export default function MaintenanceRequestScreen() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const progress = useMemo(() => {
     let p = 20;
@@ -55,20 +56,26 @@ export default function MaintenanceRequestScreen() {
 
   const handleRegister = async () => {
     try {
+      setErrorMessage('');
+      if (!title.trim() || !dependency.trim() || !description.trim() || (!location.trim() && !room.trim())) {
+        setErrorMessage('Completa el asunto, la dependencia, la ubicación y la descripción antes de enviar.');
+        return;
+      }
+
       setLoading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
       
       await requestService.create({
-        user_id: user?.id || null, // Fallback para dev
-        title,
-        description,
+        user_id: user?.id || null,
+        title: title.trim(),
+        description: description.trim(),
         category: 'maintenance',
         priority,
         metadata: {
-          location,
-          room,
-          dependency
+          location: location.trim(),
+          room: room.trim(),
+          dependency: dependency.trim()
         }
       });
 
@@ -77,7 +84,7 @@ export default function MaintenanceRequestScreen() {
     } catch (error) {
       console.error('Error al registrar mantenimiento:', error);
       setLoading(false);
-      // Aquí se podría mostrar un modal de error
+      setErrorMessage('No pudimos enviar el reporte. Intenta nuevamente.');
     }
   };
 
@@ -212,6 +219,13 @@ export default function MaintenanceRequestScreen() {
                   </TouchableOpacity>
                 </Card>
 
+                {errorMessage ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
                 <TouchableOpacity 
                   style={[styles.mainBtn, (progress < 60) && { opacity: 0.5 }]} 
                   onPress={handleRegister}
@@ -223,7 +237,7 @@ export default function MaintenanceRequestScreen() {
                     end={{ x: 1, y: 0 }} 
                     style={styles.btnGradient}
                   >
-                    <Text style={styles.btnText}>{loading ? 'PROCESANDO...' : 'ENVIAR REPORTE'}</Text>
+                    <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Enviar Reporte'}</Text>
                     <Ionicons name="send" size={20} color={COLORS.white} />
                   </LinearGradient>
                 </TouchableOpacity>
@@ -440,6 +454,8 @@ const styles = StyleSheet.create({
   mainBtn: { height: 64, borderRadius: 20, overflow: 'hidden', marginTop: 10 },
   btnGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
   btnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 0.5 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 8 },
+  errorText: { color: '#B91C1C', fontSize: 12, fontWeight: '700', flex: 1 },
   
   modalBlur: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 25 },
   modalPanel: { backgroundColor: COLORS.white, borderRadius: 30, width: '100%', maxWidth: 500, padding: 25, shadowOpacity: 0.2, shadowRadius: 20 },

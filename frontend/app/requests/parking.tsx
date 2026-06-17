@@ -45,6 +45,7 @@ export default function ParkingRequestScreen() {
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const progress = useMemo(() => {
     let p = 10;
@@ -56,23 +57,36 @@ export default function ParkingRequestScreen() {
 
   const handleRegister = async () => {
     try {
+      setErrorMessage('');
+      const trimmedName = name.trim();
+      const trimmedDoc = doc.trim();
+      const trimmedCharge = charge.trim();
+      const trimmedDependency = dependency.trim();
+      const trimmedPlate = plate.trim();
+      const trimmedBrand = brand.trim();
+
+      if (!trimmedName || !trimmedDoc || !trimmedCharge || !trimmedDependency || !trimmedPlate || !trimmedBrand) {
+        setErrorMessage('Completa todos los datos del conductor y del vehículo para continuar.');
+        return;
+      }
+
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
 
       await requestService.create({
         user_id: user?.id || null,
-        title: `Parqueadero: ${plate}`,
-        description: `Solicitud de cupo para vehículo ${brand} (${color}) - Conductor: ${name}`,
+        title: `Parqueadero: ${trimmedPlate}`,
+        description: `Solicitud de cupo para vehículo ${trimmedBrand} (${color.trim() || 'Sin color'}) - Conductor: ${trimmedName}`,
         category: 'parking',
         priority: 'media',
         metadata: {
-          name,
-          doc,
-          dependency,
-          charge,
-          plate,
-          brand,
-          color
+          name: trimmedName,
+          doc: trimmedDoc,
+          dependency: trimmedDependency,
+          charge: trimmedCharge,
+          plate: trimmedPlate,
+          brand: trimmedBrand,
+          color: color.trim()
         }
       });
 
@@ -81,6 +95,7 @@ export default function ParkingRequestScreen() {
     } catch (error) {
       console.error('Error al solicitar parqueadero:', error);
       setLoading(false);
+      setErrorMessage('No pudimos enviar la solicitud de parqueadero. Intenta nuevamente.');
     }
   };
 
@@ -218,6 +233,13 @@ export default function ParkingRequestScreen() {
                   </View>
                 </View>
 
+                {errorMessage ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
                 <TouchableOpacity 
                   style={[styles.mainBtn, (progress < 80) && { opacity: 0.5 }]} 
                   onPress={handleRegister}
@@ -229,7 +251,7 @@ export default function ParkingRequestScreen() {
                     end={{ x: 1, y: 0 }} 
                     style={styles.btnGradient}
                   >
-                    <Text style={styles.btnText}>{loading ? 'PROCESANDO...' : 'SOLICITAR ACCESO'}</Text>
+                    <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Solicitar Acceso'}</Text>
                     <Ionicons name="key" size={20} color={COLORS.white} />
                   </LinearGradient>
                 </TouchableOpacity>
@@ -598,6 +620,8 @@ const styles = StyleSheet.create({
   mainBtn: { height: 64, borderRadius: 20, overflow: 'hidden', marginTop: 10 },
   btnGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
   btnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 0.5 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 8 },
+  errorText: { color: '#B91C1C', fontSize: 12, fontWeight: '700', flex: 1 },
   
   modalBlur: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 25 },
   modalPanel: { backgroundColor: COLORS.white, borderRadius: 30, width: '100%', maxWidth: 500, padding: 25, shadowOpacity: 0.2, shadowRadius: 20 },

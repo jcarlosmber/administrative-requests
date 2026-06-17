@@ -48,6 +48,7 @@ export default function TransportRequestScreen() {
   const [loading, setLoading] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [timePickerTarget, setTimePickerTarget] = useState<'pickup' | 'return'>('pickup');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const progress = useMemo(() => {
     let p = 10;
@@ -62,24 +63,41 @@ export default function TransportRequestScreen() {
 
   const handleRegister = async () => {
     try {
+      setErrorMessage('');
+      const trimmedDependency = dependency.trim();
+      const trimmedOrigin = origin.trim();
+      const trimmedDestination = destination.trim();
+      const trimmedReason = reason.trim();
+      const passengerCount = parseInt(passengers, 10) || 1;
+
+      if (!trimmedDependency || !trimmedOrigin || !trimmedDestination || !pickupTime || !trimmedReason) {
+        setErrorMessage('Completa la dependencia, origen, destino, hora de recogida y motivo de la solicitud.');
+        return;
+      }
+
+      if (requiresReturn && !returnTime) {
+        setErrorMessage('Indica la hora estimada de regreso cuando el traslado lo requiera.');
+        return;
+      }
+
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
 
       await requestService.create({
         user_id: user?.id || null,
-        title: `Transporte: ${origin} -> ${destination}`,
-        description: `Traslado para ${passengers} personas. Motivo: ${reason}`,
+        title: `Transporte: ${trimmedOrigin} -> ${trimmedDestination}`,
+        description: `Traslado para ${passengerCount} personas. Motivo: ${trimmedReason}`,
         category: 'transport',
         priority: 'media',
         metadata: {
-          dependency,
-          origin,
-          destination,
-          passengers,
+          dependency: trimmedDependency,
+          origin: trimmedOrigin,
+          destination: trimmedDestination,
+          passengers: passengerCount.toString(),
           pickupTime,
           requiresReturn,
           returnTime,
-          reason
+          reason: trimmedReason
         }
       });
 
@@ -88,6 +106,7 @@ export default function TransportRequestScreen() {
     } catch (error) {
       console.error('Error al solicitar transporte:', error);
       setLoading(false);
+      setErrorMessage('No pudimos enviar la solicitud de transporte. Intenta nuevamente.');
     }
   };
 
@@ -289,6 +308,13 @@ export default function TransportRequestScreen() {
                   </View>
                 </Card>
 
+                {errorMessage ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                    <Text style={styles.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
                 <TouchableOpacity 
                   style={[styles.mainBtn, (progress < 60) && { opacity: 0.5 }]} 
                   onPress={handleRegister}
@@ -300,7 +326,7 @@ export default function TransportRequestScreen() {
                     end={{ x: 1, y: 0 }} 
                     style={styles.btnGradient}
                   >
-                    <Text style={styles.btnText}>{loading ? 'PROCESANDO...' : 'SOLICITAR TRANSPORTE'}</Text>
+                    <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Solicitar Transporte'}</Text>
                     <Ionicons name="send" size={20} color={COLORS.white} />
                   </LinearGradient>
                 </TouchableOpacity>
@@ -531,6 +557,8 @@ const styles = StyleSheet.create({
   mainBtn: { height: 64, borderRadius: 20, overflow: 'hidden', marginTop: 10 },
   btnGradient: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12 },
   btnText: { color: COLORS.white, fontSize: 17, fontWeight: '900', letterSpacing: 0.5 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 8 },
+  errorText: { color: '#B91C1C', fontSize: 12, fontWeight: '700', flex: 1 },
   
   modalBlur: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 25 },
   modalPanel: { backgroundColor: COLORS.white, borderRadius: 30, width: '100%', maxWidth: 500, padding: 25, shadowOpacity: 0.2, shadowRadius: 20 },

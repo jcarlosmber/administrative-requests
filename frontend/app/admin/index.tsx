@@ -151,6 +151,24 @@ export default function AdminDashboardScreen() {
     ];
   }, [requests]);
 
+  const handleKpiPress = (item: { id: string }) => {
+    const params: Record<string, string> = {};
+
+    if (item.id === 'pending') {
+      params.status = 'pendiente';
+    } else if (item.id === 'total') {
+      params.today = 'true';
+    } else if (item.id === 'alerts') {
+      params.priority = 'alta';
+      params.status = 'pendiente';
+    }
+
+    router.push({
+      pathname: '/admin/manage',
+      params,
+    });
+  };
+
   const recentActivity = React.useMemo(() => {
     return requests.slice(0, 3).map(req => {
       const timeDiff = Math.floor((new Date().getTime() - new Date(req.created_at).getTime()) / (1000 * 60));
@@ -219,7 +237,7 @@ export default function AdminDashboardScreen() {
                   item={item} 
                   width={cardWidth} 
                   index={index}
-                  onPress={() => router.push('/admin/manage')} 
+                  onPress={() => handleKpiPress(item)} 
                 />
               ))}
             </View>

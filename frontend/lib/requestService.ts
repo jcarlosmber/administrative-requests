@@ -15,6 +15,15 @@ export interface AdministrativeRequest {
   metadata?: any; // Para campos específicos de cada módulo
 }
 
+type CreateRequestInput = Omit<AdministrativeRequest, 'id' | 'created_at' | 'updated_at' | 'status'> & {
+  status?: AdministrativeRequest['status'];
+};
+
+const defaultCreatePayload = (request: CreateRequestInput): CreateRequestInput => ({
+  ...request,
+  status: request.status || 'pendiente'
+});
+
 export const requestService = {
   async getAll() {
     const { data, error } = await supabase
@@ -37,10 +46,11 @@ export const requestService = {
     return data as AdministrativeRequest;
   },
 
-  async create(request: Omit<AdministrativeRequest, 'id' | 'created_at' | 'updated_at' | 'status'>) {
+  async create(request: CreateRequestInput) {
+    const payload = defaultCreatePayload(request);
     const { data, error } = await supabase
       .from('administrative_requests')
-      .insert([request])
+      .insert([payload])
       .select()
       .single();
     
