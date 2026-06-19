@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +39,23 @@ export default function ParkingRequestScreen() {
   const [plate, setPlate] = useState('');
   const [brand, setBrand] = useState('');
   const [color, setColor] = useState('');
+
+  // Efecto para auto-completar nombre y dependencia desde LDAP
+  useEffect(() => {
+    const fetchUserLdapData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          if (user.name) setName(user.name);
+          if (user.dependency) setDependency(user.dependency);
+        }
+      } catch (err) {
+        console.error('Error fetching user for parking prefill:', err);
+      }
+    };
+    fetchUserLdapData();
+  }, []);
+
   
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);

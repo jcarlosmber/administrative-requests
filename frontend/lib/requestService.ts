@@ -1,4 +1,6 @@
-import { supabase } from './supabase';
+import { appStorage } from './supabase';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface AdministrativeRequest {
   id: string;
@@ -12,92 +14,103 @@ export interface AdministrativeRequest {
   priority: 'baja' | 'media' | 'alta';
   admin_notes?: string;
   attachments?: string[];
-  metadata?: any; // Para campos específicos de cada módulo
+  metadata?: any;
 }
 
 type CreateRequestInput = Omit<AdministrativeRequest, 'id' | 'created_at' | 'updated_at' | 'status'> & {
   status?: AdministrativeRequest['status'];
 };
 
-const defaultCreatePayload = (request: CreateRequestInput): CreateRequestInput => ({
-  ...request,
-  status: request.status || 'pendiente'
-});
+const getHeaders = async () => {
+  const token = await appStorage.getItem('auth_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : '',
+  };
+};
 
 export const requestService = {
   async getAll() {
-    const { data, error } = await supabase
-      .from('administrative_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data as AdministrativeRequest[];
+    const res = await fetch(`${API_URL}/api/requests`, {
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al obtener solicitudes');
+    }
+    return await res.json() as AdministrativeRequest[];
   },
 
   async getById(id: string) {
-    const { data, error } = await supabase
-      .from('administrative_requests')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error) throw error;
-    return data as AdministrativeRequest;
+    const res = await fetch(`${API_URL}/api/requests`, {
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al obtener la solicitud');
+    }
+    const data = await res.json() as AdministrativeRequest[];
+    const request = data.find(r => r.id === id);
+    if (!request) throw new Error('Solicitud no encontrada');
+    return request;
   },
 
   async create(request: CreateRequestInput) {
-    const payload = defaultCreatePayload(request);
-    const { data, error } = await supabase
-      .from('administrative_requests')
-      .insert([payload])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data as AdministrativeRequest;
+    const res = await fetch(`${API_URL}/api/requests`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al crear solicitud');
+    }
+    return await res.json() as AdministrativeRequest;
   },
 
   async update(id: string, updates: Partial<AdministrativeRequest>) {
-    const { data, error } = await supabase
-      .from('administrative_requests')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data as AdministrativeRequest;
+    const res = await fetch(`${API_URL}/api/requests/${id}`, {
+      method: 'PUT',
+      headers: await getHeaders(),
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al actualizar solicitud');
+    }
+    return await res.json() as AdministrativeRequest;
   },
 
   async delete(id: string) {
-    const { error } = await supabase
-      .from('administrative_requests')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
+    const res = await fetch(`${API_URL}/api/requests/${id}`, {
+      method: 'DELETE',
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al eliminar solicitud');
+    }
   },
 
   async getAnalytics(startDate?: string, endDate?: string) {
-    // Usar una consulta directa evita errores 400 de PostgREST cuando la BD no tiene
-    // configurada la relación embebida `administrative_requests.user_id -> profiles.id`.
-    // Los reportes toman los datos operativos desde `administrative_requests.metadata`.
-    let query = supabase
-      .from('administrative_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
+    let url = `${API_URL}/api/requests`;
+    const res = await fetch(url, {
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al obtener analíticas');
+    }
+    let data = await res.json() as any[];
 
     if (startDate) {
-      query = query.gte('created_at', startDate);
+      const start = new Date(startDate).getTime();
+      data = data.filter(d => new Date(d.created_at).getTime() >= start);
     }
     if (endDate) {
-      query = query.lt('created_at', endDate);
+      const end = new Date(endDate).getTime();
+      data = data.filter(d => new Date(d.created_at).getTime() < end);
     }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-    return data as any[];
+    return data;
   }
 };

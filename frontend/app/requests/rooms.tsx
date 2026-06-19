@@ -143,6 +143,16 @@ export default function RoomsRequestScreen() {
       } catch (err) {
         console.warn('Cargando con valores por defecto debido a error:', err);
       }
+
+      // Pre-llenar dependencia desde LDAP
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.dependency) {
+          setDependency(user.dependency);
+        }
+      } catch (err) {
+        console.warn('Error fetching user for rooms prefill:', err);
+      }
     };
 
     loadRoomsAndRules();
@@ -1113,7 +1123,7 @@ function Sidebar() {
             Reserva de salas de juntas y espacios colaborativos para el desarrollo de actividades institucionales.
           </Text>
           <View style={styles.sideBadge}>
-            <Text style={styles.badgeText}>BOGOTÁ UNIDA</Text>
+            <Text style={styles.badgeText}>BOGOTÁ MI CIUDAD MI CASA</Text>
           </View>
         </View>
       </ImageBackground>

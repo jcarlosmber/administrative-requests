@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +38,22 @@ export default function MaintenanceRequestScreen() {
   const [room, setRoom] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'baja' | 'media' | 'alta'>('media');
+
+  // Efecto para auto-completar dependencia desde LDAP
+  useEffect(() => {
+    const fetchUserLdapData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.dependency) {
+          setDependency(user.dependency);
+        }
+      } catch (err) {
+        console.error('Error fetching user for maintenance prefill:', err);
+      }
+    };
+    fetchUserLdapData();
+  }, []);
+
   
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);

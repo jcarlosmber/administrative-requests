@@ -115,9 +115,9 @@ export default function DashboardScreen() {
   const isTablet = width >= 768 && width < 1024;
 
   const getCardWidth = () => {
-    if (isDesktop) return (width - 450) / 3; // Sidebar (380) + padding
-    if (isTablet) return (width - 60) / 2;
-    return width - 40;
+    if (isDesktop) return (width - 380 - 70 - 40) / 3; // Sidebar (380) + padding (70) + gaps (40)
+    if (isTablet) return (width - 70 - 20) / 2;       // Padding (70) + gap (20)
+    return width - 70;                                // Solo restamos el padding (70)
   };
 
   const cardWidth = getCardWidth();
@@ -136,8 +136,11 @@ export default function DashboardScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // En una implementación real, buscaríamos el perfil en la tabla 'profiles'
-        setUserProfile({ name: user.email?.split('@')[0] || 'Usuario' });
+        // Usar el nombre completo y la dependencia de LDAP si están disponibles
+        setUserProfile({
+          name: user.name || user.email?.split('@')[0] || 'Usuario',
+          dependency: user.dependency || ''
+        });
       } else {
         setUserProfile({ name: 'Usuario' });
       }
@@ -414,7 +417,7 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            <View style={[styles.grid, { justifyContent: isDesktop ? 'flex-start' : 'center' }]}>
+            <View style={[styles.grid, { justifyContent: 'center' }]}>
               {SERVICES.map((item) => (
                 <ServiceCard 
                   key={item.id} 
@@ -1058,7 +1061,7 @@ function Sidebar({ user }: any) {
             </View>
             <View>
               <Text style={styles.userName}>{user?.name || 'Cargando...'}</Text>
-              <Text style={styles.userRole}>Funcionario</Text>
+              <Text style={styles.userRole}>Funcionario {user?.dependency ? `• ${user.dependency}` : ''}</Text>
             </View>
           </View>
         </View>
@@ -1127,14 +1130,14 @@ function ServiceCard({ item, width, onPress }: any) {
       onHoverOut={handleOut}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
-        <View style={[styles.serviceCard, { width: width }]}>
+        <View style={[styles.serviceCardLight, { width: width }]}>
           <LinearGradient
-            colors={['#111827', '#0F172A', `${item.color}35`]}
-            locations={[0, 0.62, 1]}
+            colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
+            locations={[0, 0.7, 1]}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.cardWatermark}>
-            <Ionicons name={item.icon} size={120} color={`${item.color}22`} />
+            <Ionicons name={item.icon} size={120} color={`${item.color}10`} />
           </View>
           
           <View style={styles.cardInfo}>
@@ -1142,18 +1145,18 @@ function ServiceCard({ item, width, onPress }: any) {
               <Ionicons name={item.icon} size={28} color={COLORS.white} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{item.title}</Text>
+              <Text style={styles.cardTitleLight}>{item.title}</Text>
               <Text style={[styles.cardSub, { color: item.color, opacity: 1 }]}>{item.subtitle}</Text>
             </View>
           </View>
 
-          <Text style={styles.cardDesc} numberOfLines={2}>{item.desc}</Text>
+          <Text style={styles.cardDescLight} numberOfLines={2}>{item.desc}</Text>
 
           <View style={styles.cardBottom}>
-            <BlurView intensity={18} tint="dark" style={[styles.glassButton, { backgroundColor: item.color, borderColor: item.color }]}>
-              <Text style={styles.glassButtonText}>Solicitar ahora</Text>
+            <View style={[styles.glassButtonLight, { borderColor: item.color, backgroundColor: item.color }]}>
+              <Text style={[styles.glassButtonTextLight, { color: COLORS.white }]}>Solicitar ahora</Text>
               <Ionicons name="add-circle" size={18} color={COLORS.white} />
-            </BlurView>
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -1241,15 +1244,26 @@ const styles = StyleSheet.create({
       web: { boxShadow: '0 16px 40px rgba(15,23,42,0.18)' }
     })
   },
+  serviceCardLight: { height: 260, borderRadius: 32, padding: 24, backgroundColor: COLORS.white, overflow: 'hidden', borderWidth: 2, borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.06, shadowRadius: 20 },
+      android: { elevation: 4 },
+      web: { boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }
+    })
+  },
   cardWatermark: { position: 'absolute', right: -20, top: -20, transform: [{ rotate: '-15deg' }] },
   cardInfo: { flexDirection: 'row', gap: 15, alignItems: 'center', marginBottom: 20 },
   cardIconCircle: { width: 56, height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 12 },
   cardTitle: { fontSize: 18, fontWeight: '900', color: COLORS.white, letterSpacing: -0.3 },
+  cardTitleLight: { fontSize: 18, fontWeight: '900', color: COLORS.dark, letterSpacing: -0.3 },
   cardSub: { fontSize: 13, fontWeight: '800', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
   cardDesc: { fontSize: 14, color: 'rgba(255,255,255,0.78)', lineHeight: 20, opacity: 1 },
+  cardDescLight: { fontSize: 14, color: COLORS.muted, lineHeight: 20 },
   cardBottom: { marginTop: 'auto' },
   glassButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
   glassButtonText: { fontSize: 14, fontWeight: '800', color: COLORS.white },
+  glassButtonLight: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12, borderRadius: 16, borderWidth: 1.5, borderStyle: 'solid' },
+  glassButtonTextLight: { fontSize: 14, fontWeight: '800' },
 
   requestsContainer: { gap: 12 },
   requestCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },

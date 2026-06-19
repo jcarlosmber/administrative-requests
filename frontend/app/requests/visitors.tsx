@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +48,26 @@ export default function VisitorsScreen() {
   const [hasVehicle, setHasVehicle] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([{ id: '1', plate: '', brand: '' }]);
   const [responsible, setResponsible] = useState({ name: '', phone: '', dependency: '' });
+
+  // Efecto para auto-completar responsable desde LDAP
+  useEffect(() => {
+    const fetchUserLdapData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setResponsible({
+            name: user.name || '',
+            phone: '',
+            dependency: user.dependency || ''
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching user for visitors prefill:', err);
+      }
+    };
+    fetchUserLdapData();
+  }, []);
+
   const [fromDate, setFromDate] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -483,7 +503,7 @@ function Sidebar() {
             Sistema centralizado para el control y seguridad de las instalaciones institucionales.
           </Text>
           <View style={styles.sideBadge}>
-            <Text style={styles.badgeText}>BOGOTÁ UNIDA</Text>
+            <Text style={styles.badgeText}>BOGOTÁ MI CIUDAD MI CASA</Text>
           </View>
         </View>
       </ImageBackground>

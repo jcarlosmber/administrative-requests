@@ -1,4 +1,6 @@
-import { supabase } from './supabase';
+import { appStorage } from './supabase';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface UserVehicle {
   id: string;
@@ -7,57 +9,67 @@ export interface UserVehicle {
   brand: string;
   model?: string;
   color?: string;
+  name?: string;
+  doc?: string;
+  dependency?: string;
   created_at: string;
   updated_at: string;
 }
 
+const getHeaders = async () => {
+  const token = await appStorage.getItem('auth_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : '',
+  };
+};
+
 export const vehicleService = {
   async getAll() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuario no autenticado');
-
-    const { data, error } = await supabase
-      .from('user_vehicles')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data as UserVehicle[];
+    const res = await fetch(`${API_URL}/api/vehicles`, {
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al obtener vehículos');
+    }
+    return await res.json() as UserVehicle[];
   },
 
   async create(vehicle: Omit<UserVehicle, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Usuario no autenticado');
-
-    const { data, error } = await supabase
-      .from('user_vehicles')
-      .insert([{ ...vehicle, user_id: user.id }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data as UserVehicle;
+    const res = await fetch(`${API_URL}/api/vehicles`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify(vehicle),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al registrar vehículo');
+    }
+    return await res.json() as UserVehicle;
   },
 
   async update(id: string, updates: Partial<Omit<UserVehicle, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) {
-    const { data, error } = await supabase
-      .from('user_vehicles')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data as UserVehicle;
+    const res = await fetch(`${API_URL}/api/vehicles/${id}`, {
+      method: 'PUT',
+      headers: await getHeaders(),
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al actualizar vehículo');
+    }
+    return await res.json() as UserVehicle;
   },
 
   async delete(id: string) {
-    const { error } = await supabase
-      .from('user_vehicles')
-      .delete()
-      .eq('id', id);
-    
-    if (error) throw error;
+    const res = await fetch(`${API_URL}/api/vehicles/${id}`, {
+      method: 'DELETE',
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al eliminar vehículo');
+    }
   }
 };
