@@ -10,6 +10,13 @@ const LDAP_USER_SEARCH_BASE = process.env.LDAP_USER_SEARCH_BASE || 'OU=Secretari
 // Usuarios de prueba para simulación en desarrollo (cuando no hay acceso a las IPs de intranet)
 const SIMULATED_USERS = [
   {
+    username: 'jcmartinezb',
+    email: 'jcmartinezb@secretariajuridica.gov.co',
+    name: 'Juan Carlos Martínez',
+    dependency: 'Subdirección de Informática',
+    password: 'passwordLdap123'
+  },
+  {
     username: 'jgarcia',
     email: 'jgarcia@secjur.gov.co',
     name: 'Juan García',

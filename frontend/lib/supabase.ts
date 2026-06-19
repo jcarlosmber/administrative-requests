@@ -98,17 +98,103 @@ class SupabaseClientEmulated {
   auth = new SupabaseAuthEmulated();
 
   from(tableName: string) {
+    // Mapear tabla 'profiles' a 'users', y 'service_emails' a 'service-emails'
+    let route = tableName;
+    if (tableName === 'profiles') {
+      route = 'users';
+    } else if (tableName === 'service_emails') {
+      route = 'service-emails';
+    }
+
+    const state = {
+      method: 'GET',
+      body: null as any,
+      filters: {} as Record<string, any>,
+      isSingle: false
+    };
+
     const chain: any = {
-      select: (cols?: any) => chain,
-      insert: (vals: any) => chain,
-      update: (vals: any) => chain,
-      delete: () => chain,
-      eq: (col: any, val: any) => chain,
-      order: (col: any, options?: any) => chain,
-      single: () => chain,
-      then: (onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) => {
-        const result = { data: null, error: new Error(`Emulador local de Supabase: Tabla '${tableName}' no soportada por el SDK.`) };
-        return Promise.resolve(result).then(onfulfilled, onrejected);
+      select: (cols?: any) => {
+        state.method = 'GET';
+        return chain;
+      },
+      insert: (vals: any) => {
+        state.method = 'POST';
+        // El SDK de Supabase a veces recibe arrays para insertar
+        state.body = Array.isArray(vals) ? (vals.length === 1 ? vals[0] : vals) : vals;
+        return chain;
+      },
+      update: (vals: any) => {
+        state.method = 'PUT';
+        state.body = vals;
+        return chain;
+      },
+      delete: () => {
+        state.method = 'DELETE';
+        return chain;
+      },
+      eq: (col: string, val: any) => {
+        state.filters[col] = val;
+        return chain;
+      },
+      order: (col: any, options?: any) => {
+        return chain;
+      },
+      single: () => {
+        state.isSingle = true;
+        return chain;
+      },
+      then: async (onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) => {
+        try {
+          const token = await appStorage.getItem('auth_token');
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          let url = `${API_URL}/api/${route}`;
+          
+          // Si es PUT o DELETE y tenemos un filtro de id, lo añadimos al path
+          if ((state.method === 'PUT' || state.method === 'DELETE') && state.filters.id) {
+            url += `/${state.filters.id}`;
+          } else if (state.method === 'GET' && Object.keys(state.filters).length > 0) {
+            // Opcionalmente agregar query params para GET si los hay
+            const params = new URLSearchParams();
+            Object.entries(state.filters).forEach(([k, v]) => params.append(k, String(v)));
+            url += `?${params.toString()}`;
+          }
+
+          const fetchOptions: RequestInit = {
+            method: state.method,
+            headers
+          };
+
+          if (state.method !== 'GET' && state.method !== 'HEAD' && state.body) {
+            fetchOptions.body = JSON.stringify(state.body);
+          }
+
+          const response = await fetch(url, fetchOptions);
+          if (!response.ok) {
+            const errBody = await response.json().catch(() => ({}));
+            throw new Error(errBody.error || `HTTP error ${response.status}`);
+          }
+
+          const data = await response.json();
+          let finalData = data;
+          
+          // Si se solicitó single y la respuesta es un array, tomar el primer elemento
+          if (state.isSingle && Array.isArray(data)) {
+            finalData = data.length > 0 ? data[0] : null;
+          }
+
+          const result = { data: finalData, error: null };
+          return Promise.resolve(result).then(onfulfilled, onrejected);
+        } catch (e: any) {
+          const result = { data: null, error: e };
+          return Promise.resolve(result).then(onfulfilled, onrejected);
+        }
       }
     };
     return chain;

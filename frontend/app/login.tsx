@@ -84,7 +84,7 @@ export default function LoginPage() {
       setLoading(true);
       const credentials = {
         admin: { email: 'admin@bogota.gov.co', pass: 'admin123' },
-        user: { email: 'funcionario@bogota.gov.co', pass: 'user123' }
+        user: { email: 'jcmartinezb@secretariajuridica.gov.co', pass: 'passwordLdap123' }
       };
       
       const target = credentials[type];

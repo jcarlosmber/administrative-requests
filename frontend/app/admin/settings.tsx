@@ -72,6 +72,14 @@ const safeStorage = {
   }
 };
 
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export default function AdminSettings() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -134,7 +142,7 @@ export default function AdminSettings() {
         if (dbError) throw dbError;
         
         if (dbRooms && dbRooms.length > 0) {
-          setRooms(dbRooms.map(r => ({ ...r, capacity: r.capacity.toString() })));
+          setRooms(dbRooms.map((r: any) => ({ ...r, capacity: r.capacity.toString() })));
         } else {
           setRooms(INITIAL_ROOMS);
         }
@@ -402,7 +410,7 @@ export default function AdminSettings() {
         if (String(user.id).startsWith('temp-')) {
           const profileId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
             ? crypto.randomUUID()
-            : `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+            : generateUUID();
 
           const { error } = await supabase
             .from('profiles')
@@ -523,7 +531,7 @@ export default function AdminSettings() {
       if (String(userDraft.id).startsWith('temp-')) {
         const profileId = typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
-          : `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+          : generateUUID();
 
         const { error } = await supabase
           .from('profiles')
@@ -768,7 +776,7 @@ export default function AdminSettings() {
         .order('name');
       
       if (dbRooms && dbRooms.length > 0) {
-        setRooms(dbRooms.map(r => ({ ...r, capacity: r.capacity.toString() })));
+        setRooms(dbRooms.map((r: any) => ({ ...r, capacity: r.capacity.toString() })));
       }
 
       // Recargar dependencias reales desde Supabase si es posible
