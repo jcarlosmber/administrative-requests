@@ -1,6 +1,14 @@
 import 'react-native-url-polyfill/auto';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+let API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
+if (typeof window !== 'undefined' && window.location) {
+  const hostname = window.location.hostname;
+  if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    // Si estamos en producción/pruebas y accedemos por IP, apunta al puerto 3000 de esa IP
+    API_URL = `http://${hostname}:3000`;
+  }
+}
 
 // Almacenamiento adaptativo para web y dispositivos móviles en memoria
 const isWeb = typeof window !== 'undefined' && window.localStorage;
