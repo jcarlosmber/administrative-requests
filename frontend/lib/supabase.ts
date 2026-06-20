@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto';
 
-let API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+export let API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 if (typeof window !== 'undefined' && window.location) {
   const hostname = window.location.hostname;

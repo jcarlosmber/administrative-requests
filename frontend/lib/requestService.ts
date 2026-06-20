@@ -1,6 +1,4 @@
-import { appStorage } from './supabase';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+import { appStorage, API_URL } from './supabase';
 
 export interface AdministrativeRequest {
   id: string;
