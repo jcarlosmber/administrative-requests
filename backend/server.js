@@ -762,7 +762,7 @@ app.delete('/api/users/:id', authenticateToken, handleProfilesDelete);
 app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 
 // Inicialización
-app.listen(PORT, () => {
-  console.log(`Servidor API local corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor API local corriendo en http://0.0.0.0:${PORT}`);
 });
 
