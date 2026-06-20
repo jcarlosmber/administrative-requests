@@ -1,8 +1,8 @@
 const ldap = require('ldapjs');
 require('dotenv').config();
 
-const LDAP_HOST = process.env.LDAP_HOST || '10.54.8.5';
-const LDAP_FALLBACK_HOST = process.env.LDAP_FALLBACK_HOST || '10.54.8.6';
+const LDAP_HOST = process.env.LDAP_HOST || '10.54.80.5';
+const LDAP_FALLBACK_HOST = process.env.LDAP_FALLBACK_HOST || '10.54.80.6';
 const LDAP_PORT = parseInt(process.env.LDAP_PORT || '389', 10);
 const LDAP_BASE_DN = process.env.LDAP_BASE_DN || 'DC=SECJUR,DC=GOV,DC=CO';
 const LDAP_USER_SEARCH_BASE = process.env.LDAP_USER_SEARCH_BASE || 'OU=Secretaria Juridica,DC=SECJUR,DC=GOV,DC=CO';
