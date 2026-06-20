@@ -322,7 +322,7 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     
     // Obtener información del usuario para enviar el correo de notificación
     const createdRequest = result.rows[0];
-    const userResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
+    const userResult = await pool.query('SELECT COALESCE(full_name, name) AS name, email FROM users WHERE id = $1', [req.user.id]);
     if (userResult.rows.length > 0) {
       emailService.sendRequestCreatedNotification(userResult.rows[0], createdRequest);
     }
@@ -384,7 +384,7 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
 
     // Obtener información del usuario para enviar el correo de actualización
     if (updatedRequest) {
-      const userResult = await pool.query('SELECT name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+      const userResult = await pool.query('SELECT COALESCE(full_name, name) AS name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
       if (userResult.rows.length > 0) {
         emailService.sendRequestUpdatedNotification(userResult.rows[0], updatedRequest);
       }
