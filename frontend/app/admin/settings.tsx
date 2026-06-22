@@ -981,8 +981,9 @@ export default function AdminSettings() {
                   <View style={styles.userTableHeader}>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9 }]}>Inicio</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9 }]}>Fin</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Rol</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Inicio</Text>
+                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Fin</Text>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.7 }]}>Activo</Text>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Acciones</Text>
                   </View>
@@ -996,10 +997,17 @@ export default function AdminSettings() {
                       <View style={[styles.userTableCell, { flex: 1.3 }]}>
                         <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || 'Sin dependencia'}</Text>
                       </View>
-                      <View style={[styles.userTableCell, { flex: 0.9 }]}>
+                      <View style={[styles.userTableCell, { flex: 0.8 }]}>
+                        <View style={{ backgroundColor: user.role === 'admin' ? '#FEF08A' : user.role === 'security' ? '#BFDBFE' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: user.role === 'admin' ? '#854D0E' : user.role === 'security' ? '#1E40AF' : '#475569' }}>
+                            {user.role === 'admin' ? 'Admin' : user.role === 'security' ? 'Seguridad' : 'Func.'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.userTableCell, { flex: 0.8 }]}>
                         <Text style={styles.userMetaText}>{user.start_date || '-'}</Text>
                       </View>
-                      <View style={[styles.userTableCell, { flex: 0.9 }]}>
+                      <View style={[styles.userTableCell, { flex: 0.8 }]}>
                         <Text style={styles.userMetaText}>{user.end_date || '-'}</Text>
                       </View>
                       <View style={[styles.userTableCell, { flex: 0.7 }]}>

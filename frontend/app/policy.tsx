@@ -56,8 +56,8 @@ export default function PolicyPage() {
               <View style={styles.logoMark}>
                 <Ionicons name="shield-checkmark" size={22} color={COLORS.heroText} />
               </View>
-              <View>
-                <Text style={styles.brandName}>SASGE</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.brandName, { fontSize: 13 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
                 <Text style={styles.brandSub}>Tratamiento de datos</Text>
               </View>
             </View>
@@ -74,7 +74,7 @@ export default function PolicyPage() {
               </View>
               <Text style={styles.visualTitle}>Protección de su información</Text>
               <Text style={styles.visualText}>
-                SASGE garantiza el manejo seguro y transparente de sus datos personales bajo el marco legal vigente.
+                El Sistema de Administración de Servicios Generales 2.0 garantiza el manejo seguro y transparente de sus datos personales bajo el marco legal vigente.
               </Text>
             </LinearGradient>
 

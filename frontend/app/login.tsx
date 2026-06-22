@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -47,10 +47,24 @@ export default function LoginPage() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorTitle, setErrorTitle] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const showError = (title: string, message: string) => {
+    setErrorTitle(title);
+    setErrorMessage(message);
+    setErrorModalVisible(true);
+  };
 
   const handleLogin = async () => {
-    if (!documentId.trim() || !password.trim()) {
-      Alert.alert('Datos incompletos', 'Ingresa tu correo institucional y la contraseña.');
+    if (!documentId.trim()) {
+      showError('Datos incompletos', 'Por favor, ingresa tu usuario o correo institucional.');
+      return;
+    }
+
+    if (!password.trim()) {
+      showError('Datos incompletos', 'Por favor, ingresa tu contraseña.');
       return;
     }
 
@@ -69,43 +83,18 @@ export default function LoginPage() {
       if (error) throw error;
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Error de acceso', error.message || 'Verifica tus credenciales.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDevLogin = async (type: 'admin' | 'user') => {
-    if (!policyAccepted) {
-      setPolicyAccepted(true);
-    }
-    
-    try {
-      setLoading(true);
-      const credentials = {
-        admin: { email: 'admin@bogota.gov.co', pass: 'admin123' },
-        user: { email: 'jcmartinezb@secretariajuridica.gov.co', pass: 'passwordLdap123' }
-      };
-      
-      const target = credentials[type];
-      const { error } = await supabase.auth.signInWithPassword({
-        email: target.email,
-        password: target.pass,
-      });
-
-      if (error) throw error;
-      
-      if (type === 'admin') {
-        router.replace('/admin');
-      } else {
-        router.replace('/(tabs)');
+      let msg = error.message || 'Verifica tus credenciales.';
+      if (msg.includes('Invalid login credentials')) {
+        msg = 'Usuario no encontrado o contraseña incorrecta.';
+      } else if (msg.includes('Email not confirmed')) {
+        msg = 'Por favor verifica tu correo electrónico antes de iniciar sesión.';
       }
-    } catch (error: any) {
-      Alert.alert('Error Dev Login', error.message);
+      showError('Error de acceso', msg);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#160403']} style={styles.screen}>
@@ -122,9 +111,9 @@ export default function LoginPage() {
               <View style={[styles.logoMark, { width: isWide ? 64 : 84, height: isWide ? 64 : 84 }]}>
                 <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.heroText} />
               </View>
-              <View>
-                <Text style={[styles.brandName, { fontSize: isWide ? 22 : 28 }]}>SASGE</Text>
-                <Text style={styles.brandSubtitle}>Sistema de Administración de Servicios Generales</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.brandName, { fontSize: isWide ? 15 : 18 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
+                <Text style={styles.brandSubtitle}>Secretaría Jurídica Distrital</Text>
               </View>
             </View>
 
@@ -175,7 +164,7 @@ export default function LoginPage() {
                   <Text style={styles.optionText}>Recordarme</Text>
                 </Pressable>
 
-                <Pressable onPress={() => Alert.alert('Recuperar acceso', 'Contacta al administrador del sistema SASGE.')}>
+                <Pressable onPress={() => showError('Recuperar acceso', 'Contacta al administrador del Sistema de Administración de Servicios Generales 2.0.')}>
                   <Text style={styles.recoverText}>¿Olvidaste tu contraseña?</Text>
                 </Pressable>
               </View>
@@ -187,37 +176,16 @@ export default function LoginPage() {
                 </Text>
               </Pressable>
 
-              <Pressable style={styles.submitButton} onPress={handleLogin}>
-                <Text style={[styles.submitText, { fontSize: isWide ? 18 : 22 }]}>Ingresar al sistema</Text>
-                <Ionicons name="arrow-forward" size={isWide ? 18 : 22} color={COLORS.heroText} />
+              <Pressable style={styles.submitButton} onPress={handleLogin} disabled={loading}>
+                {loading ? (
+                  <ActivityIndicator size="small" color={COLORS.heroText} />
+                ) : (
+                  <>
+                    <Text style={[styles.submitText, { fontSize: isWide ? 18 : 22 }]}>Ingresar al sistema</Text>
+                    <Ionicons name="arrow-forward" size={isWide ? 18 : 22} color={COLORS.heroText} />
+                  </>
+                )}
               </Pressable>
-
-              {/* Dev Shortcuts */}
-              <View style={styles.devSection}>
-                <View style={styles.devHeader}>
-                  <View style={styles.devLine} />
-                  <Text style={styles.devLabel}>MODO DESARROLLO</Text>
-                  <View style={styles.devLine} />
-                </View>
-                <View style={styles.devBtns}>
-                  <Pressable 
-                    style={[styles.devBtn, { borderColor: '#10B981' }]} 
-                    onPress={() => handleDevLogin('user')}
-                    disabled={loading}
-                  >
-                    <Ionicons name="person" size={16} color="#10B981" />
-                    <Text style={[styles.devBtnText, { color: '#10B981' }]}>FUNCIONARIO</Text>
-                  </Pressable>
-                  <Pressable 
-                    style={[styles.devBtn, { borderColor: '#FACC15' }]} 
-                    onPress={() => handleDevLogin('admin')}
-                    disabled={loading}
-                  >
-                    <Ionicons name="shield-half" size={16} color="#FACC15" />
-                    <Text style={[styles.devBtnText, { color: '#FACC15' }]}>ADMIN</Text>
-                  </Pressable>
-                </View>
-              </View>
             </View>
 
             <View style={styles.footerBrand}>
@@ -246,7 +214,7 @@ export default function LoginPage() {
                     1. Gestión de trámites administrativos internos.{"\n"}
                     2. Control de acceso a instalaciones físicas.{"\n"}
                     3. Reportes institucionales y seguimiento de servicios generales.{"\n"}
-                    4. Notificaciones relacionadas con el sistema SASGE.{"\n\n"}
+                    4. Notificaciones relacionadas con el Sistema de Administración de Servicios Generales 2.0.{"\n\n"}
                     El titular de los datos tiene derecho a conocer, actualizar, rectificar y suprimir su información personal en cualquier momento.{"\n\n"}
                     Para más información, puede consultar el documento oficial aquí:
                   </Text>
@@ -274,6 +242,36 @@ export default function LoginPage() {
                     }}
                   >
                     <Text style={styles.acceptBtnText}>Aceptar y Continuar</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Modal de Errores */}
+          <Modal
+            visible={errorModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setErrorModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={[styles.modalContent, { maxWidth: 400 }]}>
+                <View style={styles.modalHeader}>
+                  <Ionicons name="alert-circle" size={28} color={COLORS.primary} />
+                  <Text style={styles.modalTitle}>{errorTitle}</Text>
+                </View>
+                
+                <View style={styles.modalBody}>
+                  <Text style={styles.policyText}>{errorMessage}</Text>
+                </View>
+
+                <View style={styles.modalFooter}>
+                  <Pressable 
+                    style={styles.acceptBtn} 
+                    onPress={() => setErrorModalVisible(false)}
+                  >
+                    <Text style={styles.acceptBtnText}>Entendido</Text>
                   </Pressable>
                 </View>
               </View>
@@ -335,49 +333,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  
-  /* Dev Styles */
-  devSection: {
-    marginTop: 20,
-    gap: 12,
-  },
-  devHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    opacity: 0.5,
-  },
-  devLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.line,
-  },
-  devLabel: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: COLORS.heroMuted,
-    letterSpacing: 1.5,
-  },
-  devBtns: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  devBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  devBtnText: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
   brandName: {
     color: COLORS.heroText,
     fontSize: 28,

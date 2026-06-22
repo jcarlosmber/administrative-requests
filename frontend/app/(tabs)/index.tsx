@@ -1049,7 +1049,7 @@ function Sidebar({ user }: any) {
             <Ionicons name="business" size={54} color={COLORS.white} />
           </View>
           <Text style={styles.sideTitle}>Portal del Funcionario</Text>
-          <Text style={styles.sideSub}>SASGE - Sistema de Gestión</Text>
+          <Text style={[styles.sideSub, { fontSize: 13 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
           <View style={styles.sideDivider} />
           <Text style={styles.sideDesc}>
             Centralización de trámites y servicios administrativos para los colaboradores de la Secretaría Jurídica Distrital.

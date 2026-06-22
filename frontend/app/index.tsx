@@ -215,8 +215,8 @@ export default function LandingPage() {
                   <Ionicons name="business" size={20} color={COLORS.heroText} />
                 </View>
                 <View>
-                  <Text style={styles.logoText}>SASGE</Text>
-                  <Text style={styles.logoSubtext}>Sistema de Administración de Servicios Generales</Text>
+                  <Text style={[styles.logoText, { fontSize: 13 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
+                  <Text style={styles.logoSubtext}>Secretaría Jurídica Distrital</Text>
                 </View>
               </View>
 
@@ -246,13 +246,13 @@ export default function LandingPage() {
               <Animated.View style={[styles.heroCopy, introStyle(heroIntro)]}>
                 <View style={styles.heroBadge}>
                   <View style={styles.badgeDot} />
-                  <Text style={styles.heroBadgeText}>SASGE</Text>
+                  <Text style={styles.heroBadgeText}>Sistema de Administración de Servicios Generales 2.0</Text>
                 </View>
 
                 <Text style={styles.heroTitle}>
                   Gestiona tus solicitudes con <Text style={styles.heroTitleAccent}>claridad total</Text>
                 </Text>
-                <Text style={styles.systemName}>Sistema de Administración de Servicios Generales</Text>
+                <Text style={styles.systemName}>Sistema de Administración de Servicios Generales 2.0</Text>
                 <Text style={styles.heroSubtitle}>
                   Transporte, infraestructura, salas, parqueadero y requerimientos internos para la
                   Secretaría Jurídica Distrital, desde un solo lugar.

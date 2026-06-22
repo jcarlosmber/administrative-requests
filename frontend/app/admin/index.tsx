@@ -313,7 +313,7 @@ function Sidebar() {
             <Ionicons name="shield-checkmark" size={54} color={COLORS.white} />
           </View>
           <Text style={styles.sideTitle}>Panel de Control</Text>
-          <Text style={styles.sideSub}>SASGE Admin - Bogotá</Text>
+          <Text style={[styles.sideSub, { fontSize: 13 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
           <View style={styles.sideDivider} />
           <Text style={styles.sideDesc}>
             Módulo de supervisión y gestión de servicios generales de la Secretaría Jurídica Distrital.
