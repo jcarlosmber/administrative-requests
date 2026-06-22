@@ -75,13 +75,19 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: documentId,
         password: password,
       });
 
       if (error) throw error;
-      router.replace('/(tabs)');
+      
+      // Auto-redirect admins to the admin panel
+      if (data?.user?.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error: any) {
       let msg = error.message || 'Verifica tus credenciales.';
       if (msg.includes('Invalid login credentials')) {
