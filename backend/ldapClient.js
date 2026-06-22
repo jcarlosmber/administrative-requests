@@ -15,20 +15,6 @@ const SIMULATED_USERS = [
     name: 'Juan Carlos Martínez',
     dependency: 'Subdirección de Informática',
     password: 'passwordLdap123'
-  },
-  {
-    username: 'jgarcia',
-    email: 'jgarcia@secjur.gov.co',
-    name: 'Juan García',
-    dependency: 'Subdirección de Informática',
-    password: 'passwordLdap123'
-  },
-  {
-    username: 'mrodriguez',
-    email: 'mrodriguez@secjur.gov.co',
-    name: 'María Rodríguez',
-    dependency: 'Dirección de Gestión Corporativa',
-    password: 'passwordLdap123'
   }
 ];
 

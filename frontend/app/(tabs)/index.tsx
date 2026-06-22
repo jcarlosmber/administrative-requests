@@ -139,7 +139,8 @@ export default function DashboardScreen() {
         // Usar el nombre completo y la dependencia de LDAP si están disponibles
         setUserProfile({
           name: user.name || user.email?.split('@')[0] || 'Usuario',
-          dependency: user.dependency || ''
+          dependency: user.dependency || '',
+          role: user.role
         });
       } else {
         setUserProfile({ name: 'Usuario' });
@@ -1095,6 +1096,15 @@ function HeroSection({ isDesktop, user, stats }: any) {
                   <Text style={styles.statLab}>Activos</Text>
                 </View>
               </View>
+
+              {user?.role === 'admin' && (
+                <TouchableOpacity 
+                  style={[styles.logoutBtn, { backgroundColor: '#FACC15', borderColor: '#F59E0B' }]} 
+                  onPress={() => router.push('/admin')}
+                >
+                  <Ionicons name="settings" size={22} color="#0F172A" />
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity 
                 style={styles.logoutBtn} 
