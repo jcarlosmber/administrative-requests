@@ -361,6 +361,13 @@ function HeroSection({ isDesktop, efficiency, urgencies }: any) {
               </View>
 
               <TouchableOpacity 
+                style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+                onPress={() => router.replace('/(tabs)')}
+              >
+                <Ionicons name="home" size={22} color={COLORS.white} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
                 style={styles.logoutBtn} 
                 onPress={() => router.replace('/login')}
               >
