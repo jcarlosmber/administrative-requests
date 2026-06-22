@@ -114,8 +114,13 @@ export default function AdminDashboardScreen() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const data = await requestService.getAll();
-      setRequests(data);
+      const { data } = await supabase.auth.getUser();
+      if (!data?.user) {
+        router.replace('/login');
+        return;
+      }
+      const reqData = await requestService.getAll();
+      setRequests(reqData);
     } catch (error) {
       console.error('Error fetching admin stats:', error);
     } finally {
@@ -126,7 +131,7 @@ export default function AdminDashboardScreen() {
   React.useEffect(() => {
     fetchStats();
 
-    const subscription = supabase
+    const channel = supabase
       .channel('admin_dashboard_stats')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'administrative_requests' }, () => {
         fetchStats();
@@ -134,7 +139,7 @@ export default function AdminDashboardScreen() {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, []);
 

@@ -143,7 +143,8 @@ export default function DashboardScreen() {
           role: user.role
         });
       } else {
-        setUserProfile({ name: 'Usuario' });
+        router.replace('/login');
+        return;
       }
       
       const allRequests = await requestService.getAll();
