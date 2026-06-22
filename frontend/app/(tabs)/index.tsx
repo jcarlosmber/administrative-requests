@@ -1108,7 +1108,10 @@ function HeroSection({ isDesktop, user, stats }: any) {
 
               <TouchableOpacity 
                 style={styles.logoutBtn} 
-                onPress={() => router.replace('/login')}
+                onPress={async () => {
+                  await supabase.auth.signOut();
+                  router.replace('/login');
+                }}
               >
                 <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
               </TouchableOpacity>
