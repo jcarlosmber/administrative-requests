@@ -99,6 +99,7 @@ export default function AdminSettings() {
   const [ldapServer, setLdapServer] = useState('ldaps://10.54.80.6');
   const [ldapFilter, setLdapFilter] = useState('(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))');
   const [ldapUseBind, setLdapUseBind] = useState(true);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [ldapRootDn, setLdapRootDn] = useState('SECJUR.GOV.CO/Secretaria Juridica/Servicio/SASGE_SJD');
   const [ldapPassword, setLdapPassword] = useState('');
   const [ldapUserField, setLdapUserField] = useState('samaccountname');
@@ -262,6 +263,7 @@ export default function AdminSettings() {
 
   const openDeleteConfirmation = (room: any) => {
     setRoomToDelete(room);
+    setDeleteConfirmationText('');
     setShowDeleteModal(true);
   };
 
@@ -318,6 +320,7 @@ export default function AdminSettings() {
 
   const openDeleteDepConfirmation = (dep: any) => {
     setDependencyToDelete(dep);
+    setDeleteConfirmationText('');
     setShowDepDeleteModal(true);
   };
 
@@ -599,6 +602,7 @@ export default function AdminSettings() {
 
   const openDriverDeleteConfirmation = (driver: Driver) => {
     setDriverToDelete(driver);
+    setDeleteConfirmationText('');
     setShowDriverDeleteModal(true);
   };
 
@@ -830,96 +834,65 @@ export default function AdminSettings() {
               <SectionHeader title="Gestión de Espacios" kicker="INFRAESTRUCTURA" />
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {rooms.map(room => (
-                  <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%', minHeight: 140 }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(114, 9, 183, 0.08)', width: 64, height: 64, borderRadius: 20 }]}>
+                  <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%' }]}>
+                    <View style={[styles.roomIconBox, { backgroundColor: '#F3E8FF', width: 64, height: 64, borderRadius: 16 }]}>
                       <Ionicons name="business" size={32} color="#7209B7" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <TextInput
-                        style={styles.roomNameInput}
-                        value={room.name}
-                        onChangeText={(val) => updateRoom(room.id, 'name', val)}
-                        placeholder="Nombre de la sala"
-                      />
-                      <View style={styles.roomMetaRow}>
-                        <View style={styles.miniField}>
-                          <Ionicons name="people" size={14} color="#7209B7" />
+                      {/* Title Row */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <TextInput
+                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 20, color: '#0F172A', flex: 1 }]}
+                          value={room.name}
+                          onChangeText={(val) => updateRoom(room.id, 'name', val)}
+                          placeholder="Nombre de la sala"
+                          placeholderTextColor="#94A3B8"
+                        />
+                        <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
+                          <Ionicons name="ellipsis-horizontal" size={24} color="#64748B" />
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* First Row of Pills */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                        {/* Capacity */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#7209B7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
+                          <Ionicons name="people" size={16} color="#FFF" />
                           <TextInput
-                            style={styles.miniInput}
+                            style={{ fontSize: 14, fontWeight: '700', color: '#FFF', minWidth: 20, padding: 0 }}
                             value={room.capacity}
                             onChangeText={(val) => updateRoom(room.id, 'capacity', val)}
                             keyboardType="numeric"
                           />
-                          <Text style={styles.miniLabel}>cap.</Text>
-                        </View>
-                        <View style={styles.miniField}>
-                          <Ionicons name="layers" size={14} color="#7209B7" />
-                          <TextInput
-                            style={styles.miniInput}
-                            value={room.floor}
-                            onChangeText={(val) => updateRoom(room.id, 'floor', val)}
-                            placeholder="Piso"
-                          />
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF' }}>personas</Text>
                         </View>
                         
-                        {/* Píldora interactiva para alternar tipo de sala (Estándar vs Especial) */}
-                        {room.info === 'Especial' ? (
-                          <TouchableOpacity 
-                            onPress={() => {
-                              updateRoom(room.id, 'info', 'Estándar');
-                            }}
-                            style={{ borderRadius: 10, overflow: 'hidden', marginLeft: 5 }}
-                          >
-                            <LinearGradient
-                              colors={['#3B82F6', '#1D4ED8']}
-                              start={{ x: 0, y: 0 }}
-                              end={{ x: 1, y: 1 }}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingHorizontal: 10,
-                                paddingVertical: 4,
-                              }}
-                            >
-                              <Ionicons name="ribbon" size={12} color="#FFF" />
-                              <Text style={{ fontSize: 10, fontWeight: '900', color: '#FFF', letterSpacing: 0.5 }}>
-                                Especial
-                              </Text>
-                            </LinearGradient>
-                          </TouchableOpacity>
-                        ) : (
-                          <TouchableOpacity 
-                            onPress={() => {
-                              updateRoom(room.id, 'info', 'Especial');
-                            }}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 4,
-                              marginLeft: 5,
-                              backgroundColor: '#F1F5F9',
-                              paddingHorizontal: 10,
-                              paddingVertical: 4,
-                              borderRadius: 10,
-                              borderWidth: 1,
-                              borderColor: '#E2E8F0'
-                            }}
-                          >
-                            <Ionicons name="business-outline" size={12} color={COLORS.muted} />
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: COLORS.muted }}>
-                              Estándar
-                            </Text>
-                          </TouchableOpacity>
-                        )}
+                        {/* Floor */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
+                          <Ionicons name="location" size={16} color="#475569" />
+                          <TextInput
+                            style={{ fontSize: 14, fontWeight: '600', color: '#1E293B', minWidth: 40, padding: 0 }}
+                            value={room.floor}
+                            onChangeText={(val) => updateRoom(room.id, 'floor', val)}
+                            placeholder="Ubicación"
+                            placeholderTextColor="#94A3B8"
+                          />
+                        </View>
+                      </View>
+
+                      {/* Second Row of Pills */}
+                      <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                        <TouchableOpacity 
+                          onPress={() => updateRoom(room.id, 'info', room.info === 'Especial' ? 'Estándar' : 'Especial')}
+                          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}
+                        >
+                          <Ionicons name="document-text-outline" size={16} color="#475569" />
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E293B' }}>
+                            {room.info === 'Especial' ? 'Especial' : 'Estándar'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <TouchableOpacity 
-                      style={[styles.deleteBtn, { backgroundColor: '#FEF2F2' }]}
-                      onPress={() => openDeleteConfirmation(room)}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                    </TouchableOpacity>
                   </View>
                 ))}
                 
@@ -1299,6 +1272,20 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Esta acción eliminará al conductor "{driverToDelete?.name}" de la base de datos de transporte. Esta operación no se puede deshacer.
             </Text>
+            
+            <View style={{ width: '100%', marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, textAlign: 'center' }}>
+                Escribe "eliminar" para confirmar:
+              </Text>
+              <TextInput
+                style={[styles.userFieldInput, { textAlign: 'center' }]}
+                value={deleteConfirmationText}
+                onChangeText={setDeleteConfirmationText}
+                placeholder="eliminar"
+                autoCapitalize="none"
+              />
+            </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 
@@ -1311,9 +1298,9 @@ export default function AdminSettings() {
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton]} 
+                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
                 onPress={confirmDeleteDriver}
-                disabled={saving}
+                disabled={saving || deleteConfirmationText !== 'eliminar'}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
@@ -1343,6 +1330,20 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Esta acción eliminará físicamente la sala "{roomToDelete?.name}" de la plataforma de administración. Esta operación no se puede deshacer.
             </Text>
+            
+            <View style={{ width: '100%', marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, textAlign: 'center' }}>
+                Escribe "eliminar" para confirmar:
+              </Text>
+              <TextInput
+                style={[styles.userFieldInput, { textAlign: 'center' }]}
+                value={deleteConfirmationText}
+                onChangeText={setDeleteConfirmationText}
+                placeholder="eliminar"
+                autoCapitalize="none"
+              />
+            </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 
@@ -1355,9 +1356,9 @@ export default function AdminSettings() {
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton]} 
+                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
                 onPress={confirmDeleteRoom}
-                disabled={saving}
+                disabled={saving || deleteConfirmationText !== 'eliminar'}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
@@ -1387,6 +1388,20 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Esta acción eliminará la dependencia "{dependencyToDelete?.name}" de la lista del sistema. Esta operación no se puede deshacer.
             </Text>
+            
+            <View style={{ width: '100%', marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, textAlign: 'center' }}>
+                Escribe "eliminar" para confirmar:
+              </Text>
+              <TextInput
+                style={[styles.userFieldInput, { textAlign: 'center' }]}
+                value={deleteConfirmationText}
+                onChangeText={setDeleteConfirmationText}
+                placeholder="eliminar"
+                autoCapitalize="none"
+              />
+            </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.cancelButton]} 
@@ -1399,9 +1414,9 @@ export default function AdminSettings() {
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton]} 
+                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
                 onPress={confirmDeleteDependency}
-                disabled={saving}
+                disabled={saving || deleteConfirmationText !== 'eliminar'}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
@@ -1561,19 +1576,17 @@ const styles = StyleSheet.create({
   cardList: { gap: 12 },
   roomCard: { 
     backgroundColor: COLORS.white, 
-    borderRadius: 24, 
-    padding: 25, 
+    borderRadius: 20, 
+    padding: 20, 
     flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 18, 
-    borderWidth: 1, 
-    borderColor: COLORS.line,
-    borderLeftWidth: 8,
-    borderLeftColor: '#7209B7',
+    alignItems: 'flex-start', 
+    gap: 16, 
+    borderWidth: 1.5, 
+    borderColor: '#7209B7',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
-      android: { elevation: 2 },
-      web: { boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)' }
+      ios: { shadowColor: '#7209B7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+      android: { elevation: 3 },
+      web: { boxShadow: '0 4px 15px rgba(114, 9, 183, 0.08)' }
     })
   },
   depCard: { 
