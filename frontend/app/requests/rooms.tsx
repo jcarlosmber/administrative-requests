@@ -111,7 +111,7 @@ export default function RoomsRequestScreen() {
         
         if (dbRooms && dbRooms.length > 0) {
           // Clasificar como especial si info === 'Especial' o capacidad es masiva
-          const formattedRooms = dbRooms.map(r => ({
+          const formattedRooms = dbRooms.map((r: any) => ({
             ...r,
             isLargeScale: r.info === 'Especial' || r.capacity >= 100
           }));
