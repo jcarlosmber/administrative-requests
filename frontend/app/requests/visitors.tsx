@@ -74,7 +74,7 @@ export default function VisitorsScreen() {
     if (params?.templateId) {
       const fetchTemplate = async () => {
         try {
-          const { data } = await requestService.getById(params.templateId as string);
+          const data = await requestService.getById(params.templateId as string);
           if (data && data.metadata) {
             if (data.metadata.visitors && data.metadata.visitors.length > 0) {
               setVisitors(data.metadata.visitors);

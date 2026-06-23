@@ -197,7 +197,7 @@ export default function AdminDashboardScreen() {
 
       return {
         id: req.id,
-        user: 'Usuario Sistema', // Opcional: Cargar perfiles
+        user: (req as any).user_name || 'Funcionario',
         type: typeLabel,
         status: req.status.charAt(0).toUpperCase() + req.status.slice(1).replace('_', ' '),
         time: timeStr,

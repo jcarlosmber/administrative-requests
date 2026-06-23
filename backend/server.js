@@ -309,9 +309,9 @@ app.get('/api/requests', authenticateToken, async (req, res) => {
   try {
     let result;
     if (req.user.role === 'admin') {
-      result = await pool.query('SELECT * FROM administrative_requests ORDER BY created_at DESC');
+      result = await pool.query('SELECT ar.*, u.name as user_name FROM administrative_requests ar LEFT JOIN users u ON ar.user_id = u.id ORDER BY ar.created_at DESC');
     } else {
-      result = await pool.query('SELECT * FROM administrative_requests WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+      result = await pool.query('SELECT ar.*, u.name as user_name FROM administrative_requests ar LEFT JOIN users u ON ar.user_id = u.id WHERE ar.user_id = $1 ORDER BY ar.created_at DESC', [req.user.id]);
     }
     res.json(result.rows);
   } catch (err) {

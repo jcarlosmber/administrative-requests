@@ -378,7 +378,7 @@ export default function ManageRequests() {
 
     return {
       ...item,
-      user: 'Usuario Sistema', // Aquí idealmente vendría el nombre del perfil
+      user: (item as any).user_name || 'Funcionario',
       type: typeLabel,
       detail: item.title,
       status: statusLabel,
