@@ -1107,7 +1107,7 @@ export default function AdminSettings() {
                   { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7' },
                   { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261' }
                 ] as const).map(({ type, title, icon, color }) => {
-                  const emails = serviceEmails.filter(e => e.service_type === type);
+                  const emails = (serviceEmails || []).filter(e => e && e.service_type === type);
                   return (
                     <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%' }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
