@@ -7,16 +7,23 @@ export default function AdminLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.5)',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.4)',
+        tabBarActiveBackgroundColor: 'rgba(255, 255, 255, 0.15)',
+        tabBarItemStyle: {
+          borderRadius: 14,
+          marginHorizontal: 10,
+          marginVertical: 6,
+          paddingVertical: 2,
+        },
         tabBarStyle: {
-          backgroundColor: '#023E8A',
+          backgroundColor: 'rgb(2, 16, 36)',
           borderTopWidth: 0,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 72,
+          paddingBottom: 0,
+          paddingTop: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '700',
         },
         headerShown: false,
