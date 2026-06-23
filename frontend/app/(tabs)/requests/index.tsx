@@ -47,7 +47,7 @@ const DATA = [
   { id: '6', title: 'Registro Visitantes - Grupo X', cat: 'Visitantes', status: 'Pendiente', date: 'Mañana', color: COLORS.warning },
 ];
 
-const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero', 'Infraestructura'];
+const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
 const STATUSES = ['Todos', 'Pendiente', 'En proceso', 'Aprobada', 'Resuelta', 'Rechazada'];
 
 export default function RequestsScreen() {
