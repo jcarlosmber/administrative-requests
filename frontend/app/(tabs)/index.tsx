@@ -749,18 +749,18 @@ export default function DashboardScreen() {
             )}
 
             {/* Parqueadero Activo Section */}
-            {activeParkings.length > 0 && (
-              <View style={{ marginTop: 35 }}>
-                <View style={styles.sectionHeader}>
-                  <View>
-                    <Text style={styles.sectionKicker}>ACCESO</Text>
-                    <Text style={styles.sectionTitle}>Parqueadero Activo</Text>
-                  </View>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Parqueadero' } })}>
-                    <Text style={styles.viewAllText}>Ver todos</Text>
-                  </Pressable>
+            <View style={{ marginTop: 35 }}>
+              <View style={styles.sectionHeader}>
+                <View>
+                  <Text style={styles.sectionKicker}>ACCESO</Text>
+                  <Text style={styles.sectionTitle}>Parqueadero Activo</Text>
                 </View>
+                <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Parqueadero' } })}>
+                  <Text style={styles.viewAllText}>Ver todos</Text>
+                </Pressable>
+              </View>
 
+              {activeParkings.length > 0 ? (
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false} 
@@ -823,8 +823,31 @@ export default function DashboardScreen() {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-              </View>
-            )}
+              ) : (
+                <TouchableOpacity 
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/requests/parking')}
+                  style={{
+                    backgroundColor: COLORS.white,
+                    borderRadius: 24,
+                    padding: 24,
+                    borderWidth: 1.5,
+                    borderStyle: 'dashed',
+                    borderColor: COLORS.line,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: 140
+                  }}>
+                  <Ionicons name="car-outline" size={32} color={COLORS.muted} style={{ marginBottom: 8 }} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: COLORS.muted, textAlign: 'center' }}>
+                    No tienes vehículos registrados para el ingreso.
+                  </Text>
+                  <Text style={{ fontSize: 12, color: COLORS.primary, textAlign: 'center', marginTop: 8, fontWeight: 'bold' }}>
+                    Toca aquí para solicitar cupo de parqueadero
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
 
             {/* Stats / Requests Summary Section */}
@@ -1524,6 +1547,18 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
 
           {/* Footer / Actions */}
           <View style={modalStyles.footer}>
+            {request.category === 'visitors' && (
+              <TouchableOpacity 
+                onPress={() => {
+                  onClose();
+                  const router = require('expo-router').useRouter();
+                  router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
+                }} 
+                style={[modalStyles.primaryBtn, { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, marginRight: 10 }]}
+              >
+                <Text style={[modalStyles.btnText, { color: COLORS.dark }]}>Usar como plantilla</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={onClose} style={modalStyles.primaryBtn}>
               <LinearGradient 
                 colors={[COLORS.primary, COLORS.primaryDark]} 

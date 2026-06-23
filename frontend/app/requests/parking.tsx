@@ -40,29 +40,36 @@ export default function ParkingRequestScreen() {
   const [brand, setBrand] = useState('');
   const [color, setColor] = useState('');
 
-  // Efecto para auto-completar nombre y dependencia desde LDAP
-  useEffect(() => {
-    const fetchUserLdapData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          if (user.name) setName(user.name);
-          if (user.dependency) setDependency(user.dependency);
-        }
-      } catch (err) {
-        console.error('Error fetching user for parking prefill:', err);
-      }
-    };
-    fetchUserLdapData();
-  }, []);
-
-  
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [myVehicles, setMyVehicles] = useState<any[]>([]);
+
+  // Efecto para auto-completar nombre y dependencia desde LDAP, y cargar vehículos
+  useEffect(() => {
+    const fetchUserLdapDataAndVehicles = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          if (user.name) setName(user.name);
+          if (user.dependency) setDependency(user.dependency);
+          
+          // Obtener las solicitudes de parqueadero del usuario
+          const { data: allReqs } = await requestService.getAll();
+          if (allReqs) {
+            const parks = allReqs.filter(r => r.category === 'parking');
+            setMyVehicles(parks);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching user for parking prefill:', err);
+      }
+    };
+    fetchUserLdapDataAndVehicles();
+  }, []);
 
   const progress = useMemo(() => {
     let p = 10;
@@ -138,6 +145,40 @@ export default function ParkingRequestScreen() {
               <Hero progress={progress} />
 
               <View style={{ gap: 18 }}>
+                {myVehicles.length > 0 && (
+                  <Card title="Tus Solicitudes de Parqueadero" icon="car">
+                    {myVehicles.map((v, index) => (
+                      <View key={v.id || index} style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        padding: 12, 
+                        backgroundColor: COLORS.bg, 
+                        borderRadius: 12, 
+                        marginBottom: 8,
+                        borderWidth: 1,
+                        borderColor: COLORS.line
+                      }}>
+                        <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                          <Ionicons name="car" size={24} color={COLORS.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontWeight: 'bold', color: COLORS.text }}>
+                            Placa: {v.metadata?.plate || 'S/N'}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                            {v.metadata?.brand || 'Sin marca'} • {v.metadata?.color || 'Sin color'}
+                          </Text>
+                        </View>
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(244, 162, 97, 0.1)' }}>
+                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: COLORS.primaryDark }}>
+                            EN SISTEMA
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </Card>
+                )}
+
                 <Card title="Lineamientos de Parqueadero" icon="document-text">
                   <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20, marginBottom: 12, fontWeight: '500' }}>
                     Conozca los lineamientos y normas de tránsito vigentes para el uso de los parqueaderos en la Manzana Liévano y Archivo Distrital.

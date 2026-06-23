@@ -836,6 +836,18 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
 
           {/* Footer / Actions */}
           <View style={modalStyles.footer}>
+            {request.category === 'visitors' && (
+              <TouchableOpacity 
+                onPress={() => {
+                  onClose();
+                  const router = require('expo-router').useRouter();
+                  router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
+                }} 
+                style={[modalStyles.primaryBtn, { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, marginRight: 10 }]}
+              >
+                <Text style={[modalStyles.btnText, { color: COLORS.dark }]}>Usar como plantilla</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={onClose} style={modalStyles.primaryBtn}>
               <LinearGradient 
                 colors={[COLORS.primary, COLORS.primaryDark]} 

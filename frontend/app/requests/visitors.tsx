@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
@@ -42,6 +42,7 @@ interface Vehicle {
 
 export default function VisitorsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   
   // Form State
   const [visitors, setVisitors] = useState<Visitor[]>([{ id: '1', name: '', document: '' }]);
@@ -67,6 +68,36 @@ export default function VisitorsScreen() {
     };
     fetchUserLdapData();
   }, []);
+
+  // Efecto para cargar datos de plantilla si existe
+  useEffect(() => {
+    if (params?.templateId) {
+      const fetchTemplate = async () => {
+        try {
+          const { data } = await requestService.getById(params.templateId as string);
+          if (data && data.metadata) {
+            if (data.metadata.visitors && data.metadata.visitors.length > 0) {
+              setVisitors(data.metadata.visitors);
+            }
+            if (data.metadata.vehicles && data.metadata.vehicles.length > 0) {
+              setVehicles(data.metadata.vehicles);
+              setHasVehicle(true);
+            }
+            if (data.metadata.responsible) {
+              // Merge con los datos actuales para no borrar el usuario si falta algo en la plantilla
+              setResponsible(prev => ({
+                ...prev,
+                ...data.metadata.responsible
+              }));
+            }
+          }
+        } catch (err) {
+          console.error('Error loading template:', err);
+        }
+      };
+      fetchTemplate();
+    }
+  }, [params?.templateId]);
 
   const [fromDate, setFromDate] = useState(() => {
     const now = new Date();
