@@ -135,12 +135,20 @@ export default function AdminSettings() {
     rooms_special: '',
     parking: ''
   });
+  
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
 
   // Load configuration, rooms, dependencies, drivers and service emails
   useEffect(() => {
     const loadConfigAndData = async () => {
       try {
         setLoading(true);
+        
+        // 0. Cargar el usuario actual
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          setCurrentUserEmail(user.email);
+        }
         
         // 1. Cargar Salas desde Supabase
         const { data: dbRooms, error: dbError } = await supabase
@@ -874,7 +882,7 @@ export default function AdminSettings() {
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {rooms.map(room => (
                   <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                    <TouchableOpacity onPress={() => openEditModal(room, 'room')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
                       {/* Icon */}
                       <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#7209B7', justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="business" size={20} color="#FFF" />
@@ -904,7 +912,7 @@ export default function AdminSettings() {
                           </View>
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
 
                     {/* Footer */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
@@ -934,7 +942,7 @@ export default function AdminSettings() {
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {dependencies.map(dep => (
                   <View key={dep.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                    <TouchableOpacity onPress={() => openEditModal(dep, 'dependency')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
                       <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#A9301E', justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="people-circle" size={20} color="#FFF" />
                       </View>
@@ -943,7 +951,7 @@ export default function AdminSettings() {
                           {dep.name || 'Sin nombre'}
                         </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
                     
                     {/* Footer */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
@@ -1051,7 +1059,7 @@ export default function AdminSettings() {
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {drivers.map(drv => (
                   <View key={drv.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                    <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
                       <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="car-sport" size={20} color="#FFF" />
                       </View>
@@ -1066,7 +1074,7 @@ export default function AdminSettings() {
                           </Text>
                         </View>
                       </View>
-                    </View>
+                    </TouchableOpacity>
 
                     {/* Footer */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
@@ -1170,8 +1178,9 @@ export default function AdminSettings() {
                   icon="flash"
                 />
                 <View style={styles.configDivider} />
-                <View style={styles.ldapConfigCard}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                {currentUserEmail === 'admin@sasge.com' && (
+                  <View style={styles.ldapConfigCard}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                     <Ionicons name="business-outline" size={18} color={COLORS.accent} />
                     <Text style={styles.toggleLabel}>Directorio Activo</Text>
                   </View>
@@ -1202,6 +1211,7 @@ export default function AdminSettings() {
                     <TextInput style={styles.userFieldInput} value={ldapRelay} onChangeText={setLdapRelay} placeholder="Relay correo" />
                   </View>
                 </View>
+                )}
               </View>
 
               <TouchableOpacity style={styles.saveBtn} onPress={handleSaveChanges} disabled={saving}>
@@ -1235,63 +1245,72 @@ export default function AdminSettings() {
       >
         <View style={styles.modalOverlay}>
           <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContainer, { maxWidth: 560, padding: 20 }]}> 
+          <View style={[styles.modalContainer, { maxWidth: 560, padding: 20, backgroundColor: COLORS.primary, borderWidth: 1, borderColor: COLORS.primarySoft }]}> 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={styles.modalTitle}>{userDraft?.id?.toString().startsWith('temp-') ? 'Crear usuario' : 'Editar usuario'}</Text>
-              <TouchableOpacity onPress={closeUserEditor}>
-                <Ionicons name="close" size={22} color={COLORS.muted} />
-              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: COLORS.white }]}>{userDraft?.id?.toString().startsWith('temp-') ? 'Crear usuario' : 'Editar usuario'}</Text>
             </View>
             <ScrollView style={{ maxHeight: 520 }}>
               <View style={{ gap: 10 }}>
                 <View style={styles.userRow}>
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.first_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })} placeholder="Nombres" />
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.last_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })} placeholder="Apellidos" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.first_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })} placeholder="Nombres" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.last_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })} placeholder="Apellidos" />
                 </View>
-                <TextInput style={styles.userFieldInput} value={userDraft?.email || ''} onChangeText={(val) => setUserDraft({ ...userDraft, email: val })} placeholder="Correo electrónico" keyboardType="email-address" autoCapitalize="none" />
+                <TextInput style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.email || ''} onChangeText={(val) => setUserDraft({ ...userDraft, email: val })} placeholder="Correo electrónico" keyboardType="email-address" autoCapitalize="none" />
                 <View style={styles.userRow}>
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.username || ''} onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} placeholder="Usuario" />
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.phone || ''} onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })} placeholder="Teléfono" keyboardType="phone-pad" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.username || ''} onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} placeholder="Usuario" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.phone || ''} onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })} placeholder="Teléfono" keyboardType="phone-pad" />
                 </View>
                 <View style={styles.userRow}>
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.entity || ''} onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })} placeholder="Entidad" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.entity || ''} onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })} placeholder="Entidad" />
                   <View style={styles.rolePills}>
                     {['user', 'admin', 'security'].map(role => (
-                      <TouchableOpacity key={role} style={[styles.rolePill, userDraft?.role === role && styles.rolePillActive]} onPress={() => setUserDraft({ ...userDraft, role })}>
-                        <Text style={[styles.rolePillText, userDraft?.role === role && styles.rolePillTextActive]}>{role === 'admin' ? 'Admin' : role === 'security' ? 'Seguridad' : 'Func.'}</Text>
+                      <TouchableOpacity key={role} style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, userDraft?.role === role && { backgroundColor: COLORS.white }]} onPress={() => setUserDraft({ ...userDraft, role })}>
+                        <Text style={[styles.rolePillText, { color: COLORS.line }, userDraft?.role === role && { color: COLORS.primary }]}>{role === 'admin' ? 'Admin' : role === 'security' ? 'Seguridad' : 'Func.'}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <View style={styles.userRow}>
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.start_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, start_date: val })} placeholder="Fecha inicio (YYYY-MM-DD)" />
-                  <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={userDraft?.end_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, end_date: val })} placeholder="Fecha vencimiento (YYYY-MM-DD)" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.start_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, start_date: val })} placeholder="Fecha inicio (YYYY-MM-DD)" />
+                  <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.end_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, end_date: val })} placeholder="Fecha vencimiento (YYYY-MM-DD)" />
                 </View>
                 <View style={styles.userRow}>
-                  <Text style={styles.userSwitchLabel}>Dependencia</Text>
+                  <Text style={[styles.userSwitchLabel, { color: COLORS.line }]}>Dependencia</Text>
                   <View style={{ flex: 1, gap: 6 }}>
                     {dependencies.map(dep => (
-                      <TouchableOpacity key={dep.id} style={[styles.rolePill, userDraft?.dependency_id === dep.id && styles.rolePillActive]} onPress={() => setUserDraft({ ...userDraft, dependency_id: dep.id })}>
-                        <Text style={[styles.rolePillText, userDraft?.dependency_id === dep.id && styles.rolePillTextActive]}>{dep.name}</Text>
+                      <TouchableOpacity key={dep.id} style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, userDraft?.dependency_id === dep.id && { backgroundColor: COLORS.white }]} onPress={() => setUserDraft({ ...userDraft, dependency_id: dep.id })}>
+                        <Text style={[styles.rolePillText, { color: COLORS.line }, userDraft?.dependency_id === dep.id && { color: COLORS.primary }]}>{dep.name}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <View style={styles.userActions}>
                   <View style={styles.userSwitchRow}>
-                    <Text style={styles.userSwitchLabel}>Activo</Text>
+                    <Text style={[styles.userSwitchLabel, { color: COLORS.line }]}>Activo</Text>
                     <Switch value={!!userDraft?.is_active} onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
                   </View>
                   <View style={styles.userSwitchRow}>
-                    <Text style={styles.userSwitchLabel}>LDAP</Text>
+                    <Text style={[styles.userSwitchLabel, { color: COLORS.line }]}>LDAP</Text>
                     <Switch value={!!userDraft?.ldap_enabled} onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
                   </View>
                 </View>
-                <TouchableOpacity style={styles.saveBtn} onPress={saveUserDraft} disabled={saving}>
-                  <LinearGradient colors={[COLORS.primary, COLORS.primarySoft]} style={styles.saveGradient}>
-                    {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.saveText}>{userDraft?.id?.toString().startsWith('temp-') ? 'CREAR USUARIO' : 'ACTUALIZAR USUARIO'}</Text>}
-                  </LinearGradient>
-                </TouchableOpacity>
+
+                <View style={[styles.modalActions, { marginTop: 16 }]}>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
+                    onPress={closeUserEditor}
+                  >
+                    <Text style={[styles.cancelButtonText, { color: COLORS.line }]}>CANCELAR</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1.5, backgroundColor: COLORS.accent }, saving && { opacity: 0.5 }]} 
+                    onPress={saveUserDraft}
+                    disabled={saving}
+                  >
+                    {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.confirmDeleteButtonText}>{userDraft?.id?.toString().startsWith('temp-') ? 'CREAR USUARIO' : 'ACTUALIZAR USUARIO'}</Text>}
+                  </TouchableOpacity>
+                </View>
+
               </View>
             </ScrollView>
           </View>
@@ -1481,24 +1500,22 @@ export default function AdminSettings() {
       >
         <View style={styles.modalOverlay}>
           <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContainer, { maxWidth: 450 }]}>
+          <View style={[styles.modalContainer, { maxWidth: 450, backgroundColor: COLORS.primary, borderWidth: 1, borderColor: COLORS.primarySoft }]}>
             
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={styles.modalTitle}>
+              <Text style={[styles.modalTitle, { color: COLORS.white }]}>
                 {editType === 'room' ? 'Editar Espacio' : editType === 'dependency' ? 'Editar Dependencia' : 'Editar Conductor'}
               </Text>
-              <TouchableOpacity onPress={closeEditModal}>
-                <Ionicons name="close" size={24} color={COLORS.muted} />
-              </TouchableOpacity>
             </View>
 
             <View style={{ gap: 16, width: '100%', marginBottom: 24 }}>
               {editType === 'room' && (
                 <>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Nombre del Espacio</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Nombre del Espacio</Text>
                     <TextInput
-                      style={styles.userFieldInput}
+                      style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
+                      placeholderTextColor={COLORS.muted}
                       value={editDraft?.name || ''}
                       onChangeText={val => setEditDraft({ ...editDraft, name: val })}
                       placeholder="Ej: Sala de Innovación..."
@@ -1506,9 +1523,10 @@ export default function AdminSettings() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Capacidad (pers.)</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Capacidad (pers.)</Text>
                       <TextInput
-                        style={styles.userFieldInput}
+                        style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
+                        placeholderTextColor={COLORS.muted}
                         value={editDraft?.capacity?.toString() || ''}
                         onChangeText={val => setEditDraft({ ...editDraft, capacity: val })}
                         keyboardType="numeric"
@@ -1516,9 +1534,10 @@ export default function AdminSettings() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Ubicación</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Ubicación</Text>
                       <TextInput
-                        style={styles.userFieldInput}
+                        style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
+                        placeholderTextColor={COLORS.muted}
                         value={editDraft?.floor || ''}
                         onChangeText={val => setEditDraft({ ...editDraft, floor: val })}
                         placeholder="Ej: Piso 1"
@@ -1526,19 +1545,19 @@ export default function AdminSettings() {
                     </View>
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Tipo de Sala</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Tipo de Sala</Text>
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                       <TouchableOpacity 
-                        style={[styles.rolePill, editDraft?.info === 'Estándar' && styles.rolePillActive]} 
+                        style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, editDraft?.info === 'Estándar' && { backgroundColor: COLORS.white }]} 
                         onPress={() => setEditDraft({ ...editDraft, info: 'Estándar' })}
                       >
-                        <Text style={[styles.rolePillText, editDraft?.info === 'Estándar' && styles.rolePillTextActive]}>Estándar</Text>
+                        <Text style={[styles.rolePillText, { color: COLORS.line }, editDraft?.info === 'Estándar' && { color: COLORS.primary }]}>Estándar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
-                        style={[styles.rolePill, editDraft?.info === 'Especial' && styles.rolePillActive]} 
+                        style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, editDraft?.info === 'Especial' && { backgroundColor: COLORS.white }]} 
                         onPress={() => setEditDraft({ ...editDraft, info: 'Especial' })}
                       >
-                        <Text style={[styles.rolePillText, editDraft?.info === 'Especial' && styles.rolePillTextActive]}>Especial</Text>
+                        <Text style={[styles.rolePillText, { color: COLORS.line }, editDraft?.info === 'Especial' && { color: COLORS.primary }]}>Especial</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1547,9 +1566,10 @@ export default function AdminSettings() {
 
               {editType === 'dependency' && (
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Nombre de la Dependencia</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Nombre de la Dependencia</Text>
                   <TextInput
-                    style={styles.userFieldInput}
+                    style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
+                    placeholderTextColor={COLORS.muted}
                     value={editDraft?.name || ''}
                     onChangeText={val => setEditDraft({ ...editDraft, name: val })}
                     placeholder="Ej: Dirección de Asuntos Penales..."
@@ -1560,18 +1580,20 @@ export default function AdminSettings() {
               {editType === 'driver' && (
                 <>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Nombre del Conductor</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Nombre del Conductor</Text>
                     <TextInput
-                      style={styles.userFieldInput}
+                      style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
+                      placeholderTextColor={COLORS.muted}
                       value={editDraft?.name || ''}
                       onChangeText={val => setEditDraft({ ...editDraft, name: val })}
                       placeholder="Ej: Juan Pérez"
                     />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Teléfono</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Teléfono</Text>
                     <TextInput
-                      style={styles.userFieldInput}
+                      style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
+                      placeholderTextColor={COLORS.muted}
                       value={editDraft?.phone || ''}
                       onChangeText={val => setEditDraft({ ...editDraft, phone: val })}
                       keyboardType="phone-pad"
@@ -1584,10 +1606,10 @@ export default function AdminSettings() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton, { flex: 1 }]} 
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
                 onPress={closeEditModal}
               >
-                <Text style={styles.cancelButtonText}>CANCELAR</Text>
+                <Text style={[styles.cancelButtonText, { color: COLORS.line }]}>CANCELAR</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1.5, backgroundColor: COLORS.accent }, (!hasEditChanges || !editDraft?.name?.trim()) && { opacity: 0.5 }]} 
