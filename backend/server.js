@@ -291,6 +291,19 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 
 // --- ENDPOINTS DE SOLICITUDES ADMINISTRATIVAS ---
 
+// Obtener disponibilidad de salas (todas las reservas de salas no rechazadas, sin exponer datos sensibles)
+app.get('/api/requests/rooms/availability', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, metadata, status FROM administrative_requests WHERE category = 'rooms' AND status != 'rechazado'"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener disponibilidad de salas.' });
+  }
+});
+
 // Obtener todas las solicitudes del usuario actual (o todas si es admin)
 app.get('/api/requests', authenticateToken, async (req, res) => {
   try {

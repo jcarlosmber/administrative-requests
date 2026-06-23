@@ -182,13 +182,7 @@ export default function RoomsRequestScreen() {
   useEffect(() => {
     const fetchReservations = async () => {
       try {
-        const { data, error } = await supabase
-          .from('administrative_requests')
-          .select('*')
-          .eq('category', 'rooms')
-          .neq('status', 'rechazado');
-
-        if (error) throw error;
+        const data = await requestService.getRoomAvailability();
 
         if (data) {
           const slots: { day: number; hour: number }[] = [];

@@ -66,6 +66,17 @@ export const requestService = {
     return await res.json() as AdministrativeRequest;
   },
 
+  async getRoomAvailability() {
+    const res = await fetch(`${API_URL}/api/requests/rooms/availability`, {
+      headers: await getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al obtener disponibilidad de salas');
+    }
+    return await res.json() as { id: string; metadata: any; status: string }[];
+  },
+
   async update(id: string, updates: Partial<AdministrativeRequest>) {
     const res = await fetch(`${API_URL}/api/requests/${id}`, {
       method: 'PUT',
