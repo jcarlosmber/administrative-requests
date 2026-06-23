@@ -73,7 +73,7 @@ export default function RoomsRequestScreen() {
   const [eventEndHour, setEventEndHour] = useState('16:00');
   
   // Servicios y requerimientos técnicos
-  const [selectedServices, setSelectedServices] = useState<string[]>(['Cafetería / Coffee Break', 'Servicio de Brigadistas']);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedTech, setSelectedTech] = useState<string[]>([]);
   const [customTechDescription, setCustomTechDescription] = useState('');
   
@@ -90,7 +90,7 @@ export default function RoomsRequestScreen() {
   const [endHour, setEndHour] = useState<number | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   
-  const [services, setServices] = useState({ projector: true, laptop: false, coffee: false });
+  const [services, setServices] = useState({ projector: false, laptop: false, coffee: false });
   
   // UI State
   const [showSuccess, setShowSuccess] = useState(false);
@@ -213,12 +213,16 @@ export default function RoomsRequestScreen() {
                 weekDates.forEach((wDate, wIdx) => {
                   const wDateStr = wDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }).toLowerCase();
                   if (reqDateStr.includes(wDateStr) || wDateStr.includes(reqDateStr)) {
-                    const timeStr = String(meta.time || '');
+                    const timeStr = String(meta.time || meta.booking_hours || '');
                     const timeMatch = timeStr.match(/(\d+):00\s*-\s*(\d+):00/);
                     if (timeMatch) {
                       const sH = parseInt(timeMatch[1]);
                       const eH = parseInt(timeMatch[2]);
                       for (let h = sH; h < eH; h++) {
+                        slots.push({ day: wIdx, hour: h });
+                      }
+                    } else if (meta.start_hour !== undefined && meta.end_hour !== undefined) {
+                      for (let h = meta.start_hour; h < meta.end_hour; h++) {
                         slots.push({ day: wIdx, hour: h });
                       }
                     }
@@ -315,7 +319,10 @@ export default function RoomsRequestScreen() {
           custom_tech_description: customTechDescription,
           meeting_type: meetingType,
           manifestation_express: manifestationAccepted,
-          requires_secretaria_general: true
+          requires_secretaria_general: true,
+          date_iso: selectedDay !== null ? weekDates[selectedDay].toISOString().split('T')[0] : null,
+          start_hour: parseInt(bookingStartHour.split(':')[0]) || 0,
+          end_hour: parseInt(bookingEndHour.split(':')[0]) || 0
         } : {
           room: selectedRoom,
           attendees: attendeeCount.toString(),
