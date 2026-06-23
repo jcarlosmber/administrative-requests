@@ -1091,7 +1091,7 @@ function RankProgress({ name, count, max, color, index }: any) {
 
 function StateWidget({ label, count, color, icon, bg }: any) {
   return (
-    <View style={[styles.stateWidget, { borderColor: color }]}>
+    <View style={[styles.stateWidget, { borderLeftColor: color }]}>
       <View style={[styles.stateIconCircle, { backgroundColor: bg }]}>
         <Ionicons name={icon} size={22} color={color} />
       </View>
@@ -1196,10 +1196,10 @@ const styles = StyleSheet.create({
   rankCount: { fontSize: 12, fontWeight: '800', color: COLORS.muted },
 
   statesRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginTop: 18 },
-  stateWidget: { flex: 1, minWidth: 105, borderLeftWidth: 4, padding: 14, backgroundColor: COLORS.bg, borderRadius: 14, borderWidth: 1, borderColor: COLORS.line, alignItems: 'center' },
+  stateWidget: { flex: 1, minWidth: 105, borderLeftWidth: 4, padding: 14, backgroundColor: COLORS.primary, borderRadius: 14, borderWidth: 1, borderColor: COLORS.primarySoft, alignItems: 'center' },
   stateIconCircle: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  stateCount: { fontSize: 20, fontWeight: '900', color: COLORS.primary },
-  stateLabel: { fontSize: 10, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
+  stateCount: { fontSize: 20, fontWeight: '900', color: COLORS.white },
+  stateLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 
   dangerAlertBox: { flexDirection: 'row', gap: 14, backgroundColor: COLORS.dangerSoft, padding: 18, borderRadius: 24, borderLeftWidth: 6, borderLeftColor: COLORS.danger, borderWidth: 1, borderColor: COLORS.line },
   dangerAlertTitle: { fontSize: 15, fontWeight: '900', color: COLORS.danger },

@@ -410,7 +410,12 @@ export default function DashboardScreen() {
           {/* Header Section */}
           <HeroSection isDesktop={isDesktop} user={userProfile} stats={stats} />
 
-          <View style={styles.content}>
+          <ImageBackground 
+            source={{ uri: 'data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1.2" fill="%2364748B" fill-opacity="0.2"/></svg>' }}
+            resizeMode="repeat"
+            style={{ flex: 1 }}
+          >
+            <View style={styles.content}>
             {/* Quick Access Section */}
             <View style={styles.sectionHeader}>
               <View>
@@ -420,11 +425,12 @@ export default function DashboardScreen() {
             </View>
 
             <View style={[styles.grid, { justifyContent: 'center' }]}>
-              {SERVICES.map((item) => (
+              {SERVICES.map((item, index) => (
                 <ServiceCard 
                   key={item.id} 
                   item={item} 
                   width={cardWidth} 
+                  index={index}
                   onPress={() => router.push(item.route)} 
                 />
               ))}
@@ -1016,6 +1022,7 @@ export default function DashboardScreen() {
               </View>
             </LinearGradient>
           </View>
+          </ImageBackground>
         </ScrollView>
       </View>
 
@@ -1123,8 +1130,28 @@ function HeroSection({ isDesktop, user, stats }: any) {
   );
 }
 
-function ServiceCard({ item, width, onPress }: any) {
+function ServiceCard({ item, width, onPress, index = 0 }: any) {
   const scale = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 35,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [index]);
 
   const handleIn = () => {
     Animated.spring(scale, { toValue: 1.05, useNativeDriver: true }).start();
@@ -1143,7 +1170,7 @@ function ServiceCard({ item, width, onPress }: any) {
       onHoverIn={handleIn}
       onHoverOut={handleOut}
     >
-      <Animated.View style={{ transform: [{ scale }] }}>
+      <Animated.View style={{ transform: [{ scale }, { translateY: slideAnim }], opacity: fadeAnim }}>
         <View style={[styles.serviceCardLight, { width: width }]}>
           <LinearGradient
             colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
