@@ -836,62 +836,66 @@ export default function AdminSettings() {
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {rooms.map(room => (
                   <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%' }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: '#F3E8FF', width: 64, height: 64, borderRadius: 16 }]}>
-                      <Ionicons name="business" size={32} color="#7209B7" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      {/* Title Row */}
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                      {/* Icon */}
+                      <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#7209B7', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="business" size={20} color="#FFF" />
+                      </View>
+                      
+                      {/* Title & Info */}
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <TextInput
-                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 20, color: '#0F172A', flex: 1 }]}
+                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}
                           value={room.name}
                           onChangeText={(val) => updateRoom(room.id, 'name', val)}
                           placeholder="Nombre de la sala"
                           placeholderTextColor="#94A3B8"
                         />
-                        <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={[styles.deleteBtn, { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2' }]}>
-                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                        </TouchableOpacity>
-                      </View>
-
-                      {/* First Row of Pills */}
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                        {/* Capacity */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#7209B7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
-                          <Ionicons name="people" size={16} color="#FFF" />
-                          <TextInput
-                            style={{ fontSize: 14, fontWeight: '700', color: '#FFF', width: 28, padding: 0, textAlign: 'center' }}
-                            value={room.capacity}
-                            onChangeText={(val) => updateRoom(room.id, 'capacity', val)}
-                            keyboardType="numeric"
-                            maxLength={4}
-                          />
-                          <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF' }}>personas</Text>
-                        </View>
                         
-                        {/* Floor */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
-                          <Ionicons name="location" size={16} color="#475569" />
-                          <TextInput
-                            style={{ fontSize: 14, fontWeight: '600', color: '#1E293B', minWidth: 40, padding: 0 }}
-                            value={room.floor}
-                            onChangeText={(val) => updateRoom(room.id, 'floor', val)}
-                            placeholder="Ubicación"
-                            placeholderTextColor="#94A3B8"
-                          />
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name="people" size={14} color="#64748B" />
+                            <TextInput
+                              style={{ fontSize: 12, fontWeight: '700', color: '#64748B', width: 24, padding: 0, textAlign: 'center' }}
+                              value={room.capacity}
+                              onChangeText={(val) => updateRoom(room.id, 'capacity', val)}
+                              keyboardType="numeric"
+                              maxLength={4}
+                            />
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>pers.</Text>
+                          </View>
+                          
+                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center' }} />
+                          
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Ionicons name="location" size={14} color="#64748B" />
+                            <TextInput
+                              style={{ fontSize: 12, fontWeight: '600', color: '#64748B', minWidth: 40, padding: 0 }}
+                              value={room.floor}
+                              onChangeText={(val) => updateRoom(room.id, 'floor', val)}
+                              placeholder="Ubicación"
+                              placeholderTextColor="#94A3B8"
+                            />
+                          </View>
                         </View>
                       </View>
+                    </View>
 
-                      {/* Second Row of Pills */}
-                      <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                    {/* Footer */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
+                        ESPACIO {room.info === 'Especial' ? 'ESPECIAL' : 'ESTÁNDAR'}
+                      </Text>
+                      
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                         <TouchableOpacity 
                           onPress={() => updateRoom(room.id, 'info', room.info === 'Especial' ? 'Estándar' : 'Especial')}
-                          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}
+                          style={{ padding: 4 }}
                         >
-                          <Ionicons name="document-text-outline" size={16} color="#475569" />
-                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E293B' }}>
-                            {room.info === 'Especial' ? 'Especial' : 'Estándar'}
-                          </Text>
+                          <Ionicons name="swap-horizontal" size={16} color="#64748B" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
+                          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -907,23 +911,30 @@ export default function AdminSettings() {
               <SectionHeader title="Gestión de Dependencias" kicker="ORGANIZACIÓN" />
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {dependencies.map(dep => (
-                  <View key={dep.id} style={[styles.depCard, { borderColor: '#A9301E' }, isDesktop && { width: '48%' }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: '#FDECEB', width: 64, height: 64, borderRadius: 16 }]}>
-                      <Ionicons name="people-circle" size={32} color="#A9301E" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View key={dep.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#A9301E', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="people-circle" size={20} color="#FFF" />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0, justifyContent: 'center', height: 44 }}>
                         <TextInput
-                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 20, color: '#0F172A', flex: 1 }]}
+                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B' }]}
                           value={dep.name}
                           onChangeText={(val) => updateDependency(dep.id, val)}
                           placeholder="Nombre de la dependencia"
                           placeholderTextColor="#94A3B8"
                         />
-                        <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={[styles.deleteBtn, { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2' }]}>
-                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                        </TouchableOpacity>
                       </View>
+                    </View>
+                    
+                    {/* Footer */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
+                        REGISTRO ACTIVO
+                      </Text>
+                      <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={{ padding: 4 }}>
+                        <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ))}
@@ -1016,30 +1027,23 @@ export default function AdminSettings() {
               <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {drivers.map(drv => (
-                  <View key={drv.id} style={[styles.depCard, { borderColor: '#3B82F6' }, isDesktop && { width: '48%' }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: '#EFF6FF', width: 64, height: 64, borderRadius: 16 }]}>
-                      <Ionicons name="car-sport" size={32} color="#3B82F6" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View key={drv.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="car-sport" size={20} color="#FFF" />
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
                         <TextInput
-                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 20, color: '#0F172A', flex: 1 }]}
+                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}
                           value={drv.name}
                           onChangeText={(val) => updateDriver(drv.id, 'name', val)}
                           placeholder="Nombre del conductor"
                           placeholderTextColor="#94A3B8"
                         />
-                        <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={[styles.deleteBtn, { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2' }]}>
-                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-                        </TouchableOpacity>
-                      </View>
-                      
-                      {/* Phone Pill */}
-                      <View style={{ flexDirection: 'row', marginTop: 10 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
-                          <Ionicons name="call" size={16} color="#475569" />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <Ionicons name="call" size={14} color="#64748B" />
                           <TextInput
-                            style={{ fontSize: 14, fontWeight: '600', color: '#1E293B', minWidth: 80, padding: 0 }}
+                            style={{ fontSize: 12, fontWeight: '600', color: '#64748B', minWidth: 80, padding: 0 }}
                             value={drv.phone}
                             onChangeText={(val) => updateDriver(drv.id, 'phone', val)}
                             placeholder="Teléfono"
@@ -1048,6 +1052,16 @@ export default function AdminSettings() {
                           />
                         </View>
                       </View>
+                    </View>
+
+                    {/* Footer */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
+                        REGISTRO ACTIVO
+                      </Text>
+                      <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={{ padding: 4 }}>
+                        <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ))}
@@ -1625,31 +1639,30 @@ const styles = StyleSheet.create({
   cardList: { gap: 12 },
   roomCard: { 
     backgroundColor: COLORS.white, 
-    borderRadius: 20, 
-    padding: 20, 
-    flexDirection: 'row', 
-    alignItems: 'flex-start', 
-    gap: 16, 
-    borderWidth: 1.5, 
-    borderColor: '#7209B7',
+    borderRadius: 28, 
+    paddingTop: 24,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'column',
+    borderWidth: 0, 
     ...Platform.select({
-      ios: { shadowColor: '#7209B7', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
-      android: { elevation: 3 },
-      web: { boxShadow: '0 4px 15px rgba(114, 9, 183, 0.08)' }
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20 },
+      android: { elevation: 4 },
+      web: { boxShadow: '0 10px 25px rgba(0, 0, 0, 0.05)' }
     })
   },
   depCard: { 
     backgroundColor: COLORS.white, 
-    borderRadius: 20, 
-    padding: 20, 
-    flexDirection: 'row', 
-    alignItems: 'flex-start', 
-    gap: 16, 
-    borderWidth: 1.5, 
+    borderRadius: 28, 
+    paddingTop: 24,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'column', 
+    borderWidth: 0, 
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
-      android: { elevation: 3 },
-      web: { boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)' }
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20 },
+      android: { elevation: 4 },
+      web: { boxShadow: '0 10px 25px rgba(0, 0, 0, 0.05)' }
     })
   },
   roomIconBox: { width: 54, height: 54, borderRadius: 16, backgroundColor: `${COLORS.accent}15`, justifyContent: 'center', alignItems: 'center' },
