@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import * as DocumentPicker from 'expo-document-picker';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
 import { requestService } from '../../lib/requestService';
@@ -38,6 +39,24 @@ export default function MaintenanceRequestScreen() {
   const [room, setRoom] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'baja' | 'media' | 'alta'>('media');
+  const [attachment, setAttachment] = useState<{ name: string; uri: string } | null>(null);
+
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setAttachment({
+          name: result.assets[0].name,
+          uri: result.assets[0].uri
+        });
+      }
+    } catch (err) {
+      console.error('Error al seleccionar documento:', err);
+    }
+  };
 
   // Efecto para auto-completar dependencia desde LDAP
   useEffect(() => {
@@ -88,6 +107,7 @@ export default function MaintenanceRequestScreen() {
         description: description.trim(),
         category: 'maintenance',
         priority,
+        attachments: attachment ? [attachment.name] : [],
         metadata: {
           location: location.trim(),
           room: room.trim(),
@@ -226,12 +246,24 @@ export default function MaintenanceRequestScreen() {
                 </Card>
 
                 <Card title="Evidencia" icon="camera">
-                  <TouchableOpacity style={styles.uploadBox}>
-                    <View style={styles.uploadIcon}>
-                      <Ionicons name="cloud-upload-outline" size={32} color={COLORS.primary} />
-                    </View>
-                    <Text style={styles.uploadText}>Subir Evidencia Fotográfica</Text>
-                    <Text style={styles.uploadSub}>Capture una imagen del daño para agilizar el proceso</Text>
+                  <TouchableOpacity style={styles.uploadBox} onPress={handlePickDocument}>
+                    {attachment ? (
+                      <>
+                        <View style={[styles.uploadIcon, { backgroundColor: COLORS.success }]}>
+                          <Ionicons name="checkmark" size={32} color={COLORS.white} />
+                        </View>
+                        <Text style={styles.uploadText}>{attachment.name}</Text>
+                        <Text style={styles.uploadSub}>Toca para cambiar la evidencia</Text>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.uploadIcon}>
+                          <Ionicons name="cloud-upload-outline" size={32} color={COLORS.primary} />
+                        </View>
+                        <Text style={styles.uploadText}>Subir Evidencia Fotográfica</Text>
+                        <Text style={styles.uploadSub}>Capture una imagen del daño para agilizar el proceso</Text>
+                      </>
+                    )}
                   </TouchableOpacity>
                 </Card>
 

@@ -322,9 +322,12 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     
     // Obtener información del usuario para enviar el correo de notificación
     const createdRequest = result.rows[0];
-    const userResult = await pool.query('SELECT COALESCE(full_name, name) AS name, email FROM users WHERE id = $1', [req.user.id]);
+    const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [req.user.id]);
     if (userResult.rows.length > 0) {
-      emailService.sendRequestCreatedNotification(userResult.rows[0], createdRequest);
+      const u = userResult.rows[0];
+      const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
+      u.name = displayName;
+      emailService.sendRequestCreatedNotification(u, createdRequest);
     }
 
     res.status(201).json(createdRequest);
@@ -384,9 +387,12 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
 
     // Obtener información del usuario para enviar el correo de actualización
     if (updatedRequest) {
-      const userResult = await pool.query('SELECT COALESCE(full_name, name) AS name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+      const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
       if (userResult.rows.length > 0) {
-        emailService.sendRequestUpdatedNotification(userResult.rows[0], updatedRequest);
+        const u = userResult.rows[0];
+        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
+        u.name = displayName;
+        emailService.sendRequestUpdatedNotification(u, updatedRequest);
       }
     }
 

@@ -116,14 +116,14 @@ function getHtmlTemplate(title, bodyContent) {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Sistema de Administración de Servicios Generales 2.0</h1>
+          <h1>Sistema de Administración de Servicios Generales (SASGE)</h1>
         </div>
         <div class="content">
           <h2 style="margin-top: 0; color: #0F172A;">${title}</h2>
           ${bodyContent}
         </div>
         <div class="footer">
-          Este es un correo automático generado por el Sistema de Administración de Servicios Generales 2.0.<br>
+          Este es un correo automático generado por el Sistema de Administración de Servicios Generales (SASGE).<br>
           Alcaldía Mayor de Bogotá - Secretaría Jurídica Distrital.
         </div>
       </div>
@@ -132,19 +132,31 @@ function getHtmlTemplate(title, bodyContent) {
   `;
 }
 
+const CATEGORIES = {
+  'visitors': 'Ingreso Visitantes',
+  'transport': 'Transporte Institucional',
+  'maintenance': 'Mantenimientos Locativos',
+  'rooms': 'Reserva de Salas',
+  'parking': 'Parqueadero Institucional'
+};
+
 /**
  * Envía correo al funcionario confirmando la creación de su solicitud
  */
 async function sendRequestCreatedNotification(user, request) {
-  const subject = `Sistema de Administración de Servicios Generales 2.0: Solicitud registrada exitosamente - ${request.title}`;
+  const subject = `SASGE: Solicitud registrada exitosamente - ${request.title}`;
   
   const statusBadge = `<span class="badge badge-pendiente">Pendiente</span>`;
+  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
+  
+  // Si el nombre parece ser un username (ej. jcmartinezb), lo ponemos en mayúscula inicial si es posible o usamos uno por defecto
+  const userName = user.name || user.full_name || 'Funcionario';
   
   const htmlContent = getHtmlTemplate(
     'Confirmación de Solicitud',
     `
-      <p>Hola, <span class="highlight">${user.name}</span>.</p>
-      <p>Tu solicitud de la categoría <span class="highlight">${request.category.toUpperCase()}</span> ha sido radicada correctamente en el Sistema de Administración de Servicios Generales 2.0.</p>
+      <p>Hola, <span class="highlight">${userName}</span>.</p>
+      <p>Tu solicitud de la categoría <span class="highlight">${categoryName.toUpperCase()}</span> ha sido radicada correctamente en el Sistema de Administración de Servicios Generales (SASGE).</p>
       
       <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
         <strong>Detalles de la Solicitud:</strong><br>
@@ -176,7 +188,7 @@ async function sendRequestCreatedNotification(user, request) {
  * Envía correo al funcionario notificando la actualización de su solicitud
  */
 async function sendRequestUpdatedNotification(user, request) {
-  const subject = `Sistema de Administración de Servicios Generales 2.0: Tu solicitud ha sido actualizada - Status: ${request.status.toUpperCase()}`;
+  const subject = `SASGE: Tu solicitud ha sido actualizada - Estado: ${request.status.toUpperCase()}`;
   
   const statusBadge = `<span class="badge badge-${request.status}">${request.status.toUpperCase()}</span>`;
   
@@ -190,10 +202,12 @@ async function sendRequestUpdatedNotification(user, request) {
     `;
   }
 
+  const userName = user.name || user.full_name || 'Funcionario';
+
   const htmlContent = getHtmlTemplate(
     'Actualización de Estado',
     `
-      <p>Hola, <span class="highlight">${user.name}</span>.</p>
+      <p>Hola, <span class="highlight">${userName}</span>.</p>
       <p>Te informamos que tu solicitud ha cambiado de estado.</p>
       
       <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
