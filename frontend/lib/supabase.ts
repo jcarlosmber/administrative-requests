@@ -115,7 +115,9 @@ class SupabaseClientEmulated {
 
     const chain: any = {
       select: (cols?: any) => {
-        state.method = 'GET';
+        if (!['POST', 'PUT', 'DELETE'].includes(state.method)) {
+          state.method = 'GET';
+        }
         return chain;
       },
       insert: (vals: any) => {
@@ -187,6 +189,9 @@ class SupabaseClientEmulated {
           // Si se solicitó single y la respuesta es un array, tomar el primer elemento
           if (state.isSingle && Array.isArray(data)) {
             finalData = data.length > 0 ? data[0] : null;
+          } else if (!state.isSingle && !Array.isArray(data) && data && typeof data === 'object') {
+            // El SDK de Supabase siempre retorna un array en insert/update sin .single()
+            finalData = [data];
           }
 
           const result = { data: finalData, error: null };

@@ -38,6 +38,35 @@ const DEFAULT_ROOMS = [
   { id: '6', name: 'Salón de Actos Distrital', capacity: 150, floor: 'Piso 2', info: 'Sede Central - Secretaría General', isLargeScale: true }
 ];
 
+const RoomManualInfo = ({ roomName }: { roomName: string }) => {
+  const isBarule = roomName?.toLowerCase().includes('barulé') || roomName?.toLowerCase().includes('barule');
+  const isHuitaca = roomName?.toLowerCase().includes('huitaca');
+
+  if (!isBarule && !isHuitaca) return null;
+
+  return (
+    <View style={{ marginTop: 15, backgroundColor: '#F0F9FF', borderRadius: 10, padding: 15, borderWidth: 1, borderColor: '#BAE6FD' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <Ionicons name="information-circle" size={24} color="#0284C7" />
+        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0369A1', marginLeft: 8 }}>
+          {isBarule ? 'MANUAL DE AULAS BARULÉ' : 'REQUISITOS AUDITORIO HUITACA'}
+        </Text>
+      </View>
+      <View style={{ maxHeight: 200 }}>
+        <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
+          <Text style={{ fontSize: 12, color: '#0C4A6E', lineHeight: 18, textAlign: 'justify' }}>
+            {isBarule ? (
+              <>El aula múltiple en su interior cuenta equipos de proyección y sonido.{'\n'}En caso de requerir estación de café la misma debe ser solicitada por medio del aplicativo GLPI por parte del gestor de la dependencia.{'\n'}Las Aulas Barulé cuentan con un aforo restringido debido a los protocolos de Bioseguridad del COVID-19; estos aforos se relacionan a continuación:{'\n'}Aulas Barulé 1 y 2: Máximo 40 personas.{'\n'}Aulas Barulé 4: Máximo 20 personas.{'\n'}Para los usuarios de la secretaria general que requieran el préstamo de portátil en las aulas deben solicitarlo por lo menos con un día de anterioridad por el correo: oticsoporte@alcaldiabogota.gov.co indicando hora, fecha, y funcionario responsable del préstamo del equipo, las demás entidades del distrito u organización deben traer sus propios equipos. Así mismo debe solicitar soporte para conectar a usuarios externos al wifi de la secretaria general ya que NO CONTAMOS con las contraseñas de dichas redes{'\n'}La entidad externa solicitante debe traer el portátil y con salida HDMI para la proyección.{'\n'}En las aulas múltiples está prohibido pegar o fijar cartulinas, carteles, entre otros, en los módulos, paredes y muros de las instalaciones, además distribuir, consumir alimentos y fumar adentro de este espacio.{'\n'}En caso de entregarse algún refrigerio y/o bebidas calientes la entidad o dependencias podrán ubicarse en las áreas aledañas a las aulas. Adicionalmente, deben suministrar los insumos de cafetería y aseo que se requieran para el evento.{'\n'}Como medida de seguridad para el ingreso a las instalaciones de la Alcaldía Mayor de Bogotá, debe ser por la carrera 8 No. 10-65, las entidades o dependencias deben enviar correo electrónico antes de las 4:00 PM con un día de anterioridad al evento, con la relación de los asistentes y personal logístico; debe incluir nombres y apellidos y numero de cedula al correo: subdireccionadministrativa@alcaldiabogota.gov.co{'\n'}Deben ubicar una persona en la entra principal con el listado de los asistentes para realizar el registro.{'\n'}Para el ingreso a la Alcaldía Mayor UNICAMENTE se podrá hacer presentando la cedula de ciudadanía.{'\n'}Las Aulas son específicamente para reuniones, no es un espacio para realizar eventos musicales, teatro, entre otros que permitan incomodar con las reuniones que están conjuntas.{'\n'}Persona o entidad que no utilice las aulas el día asignado para realizar la reunión debe notificar con anterioridad, de lo contrario no se le podrá asignar aulas para siguientes actividades.{'\n\n'}NOTA: La secretaria general entregará formalmente el inventario, las aulas Múltiple Finalizado el evento deberá restituirlo en las mismas condiciones en que fue recibido. Este despacho estará atento a resolver cualquier duda que se presente al respecto.</>
+            ) : (
+              <>El personal logístico y técnico de la entidad solicitante es responsable de realizar, antes del evento, las pruebas de imágenes, videos y presentaciones, con el fin de garantizar el adecuado desarrollo del evento. Asimismo, deberá traer todo el material en una memoria USB y designar a una persona responsable de la proyección, quien será la encargada de recibir la explicación sobre el uso del sistema para la presentación y proyección de diapositivas, videos y demás elementos audiovisuales durante el evento.{'\n\n'}PARA EVENTOS DE ENTIDADES DISTINTAS A LA SECRETARÍA GENERAL: Las entidades distintas a la Secretaría General deberán proveer por su propia cuenta el personal de servicios generales e insumos necesarios para la limpieza de la totalidad de las instalaciones prestadas para el evento.{'\n\n'}AUDITORIO HUITACA:{'\n\n'}A continuación se citan los requisitos logísticos de carácter OBLIGATORIO para la realización del evento solicitado:{'\n\n'}Aforo de 100 a 199 personas: 13 personas en aparato logístico.{'\n'}4 personas brigadistas certificados por Bomberos con equipo contra incendios (extintores).{'\n'}2 a 4 personas para el registro de ingreso de asistentes.{'\n'}1 personal Médico o Paramédico o Auxiliar de Enfermería.{'\n'}2 personas de personal de aseo con insumos mínimo.{'\n'}2 acomodadores para los asistentes, si lo requiere el evento.{'\n\n'}Aforo de 200 a 375 personas: 25 personas en aparato logístico.{'\n'}6 personas brigadistas con equipo certificados por Bomberos.{'\n'}8 a 10 personas para el registro de ingreso de asistentes.{'\n'}Un puesto de salud (MEC) mínimo 3 personas compuestas entre Medico o Paramédico y Auxiliares de Enfermería.{'\n'}Personal de aseo con insumos mínimo 4.{'\n'}6 Acomodadores para los asistentes.{'\n\n'}Aforo de 376 a 500 personas: 30 personas en aparato logístico{'\n'}8 personas brigadistas con equipo certificados por Bomberos.{'\n'}10 a 14 personas para el registro de ingreso de asistentes.{'\n'}Un puesto de salud (MEC) mínimo 5 personas compuestas entre Medico o Paramédico y Auxiliares de Enfermería.{'\n'}Personal de aseo con insumos mínimo 4.{'\n'}Personal logístico de Acomodadores y Orientadores para los asistentes mínimo 8{'\n\n'}El cuerpo logístico debe estar compuesto por coordinador, registro, acomodadores, puesto de salud y brigadistas con equipo certificado por bomberos. En caso de eventos con asistencia de público infantil, el aparato logístico deberá incrementarse en un 20% de acuerdo con el aforo del evento, también instalar un Puesto Medico de Salud con Médico Pediatra y 2 Auxiliares de Enfermería. El listado de dichas personas deberá ser enviado a los correos subdireccionadministrativa@alcaldiabogota.gov.co y a eventoshuitaca@alcaldiabogota.gov.co.{'\n'}La entidad solicitante deberá acreditar que cuenta con una póliza de responsabilidad civil extracontractual vigente a la fecha del evento y con un límite asegurado igual o superior a 200SMMLV, donde conste la fecha, evento a realizar y el cubrimiento al Auditorio Huitaca ubicado en la Secretaría General de la Alcaldía Mayor de Bogotá D.C. Dicha póliza deberá ser enviada con por lo menos un día de anticipación; de lo contrario el evento será cancelado.{'\n'}El ingreso al auditorio Huitaca de los invitados se hará UNICAMENTE por la entrada ubicada en la calle 10 entre carreras 8 y 9. Sera necesario que cada invitado presente su Cedula de Ciudadanía física y que este registrado en el listado enviado con anterioridad.{'\n'}La apertura de puertas al auditorio Huitaca y el ingreso de los invitados se hará UNICAMENTE cuando el cuerpo logístico y de brigadistas se encuentre en su posición asignada; por lo que recomendamos que el mismo se cite con por lo menos 1:30 horas de antelación al inicio del evento.{'\n'}El auditorio Huitaca no cuenta con los equipos ni con el personal para realizar transmisiones en vivo; dichas actividades, en caso de ser necesarias, deberán ser apoyadas por el personal logístico y técnico de la entidad solicitante. De igual forma, el auditorio no dispone de personal para la proyección audiovisual durante el evento, por lo que esta responsabilidad recae en el organizador, quien conoce el minuto a minuto y los requerimientos específicos de la programación.{'\n'}Se deberá coordinar una visita previa a la realización del evento con por lo menos una semana de anticipación. La misma deberá ser coordinada por la entidad solicitante por medio de correo electrónico.{'\n\n'}De acuerdo a lineamientos de préstamo de espacios se deberá radicar una lista de asistentes al evento con (dos) 2 días de anticipación al evento y ser enviado por correo electrónico a subdireccionadministrativa@alcaldiabogota.gov.co y a eventoshuitaca@alcaldiabogota.gov.co con nombres, apellidos y número de cédula. Una vez enviado el listado no se aceptarán modificaciones de última hora.{'\n'}De igual manera, se deberá remitir mediante el mismo correo electrónico la relación del personal que apoyará logística del el evento, con la siguiente información:{'\n'}-Nombre completo.{'\n'}-Número de cédula.{'\n'}-Listado de los equipos a utilizar en las actividades programadas.{'\n\n'}NOTA: La Secretaría General entregará formalmente el inventario del Auditorio Huitaca; finalizado el evento deberá restituirlo en las mismas condiciones en que fue recibido. Este despacho estará atento a resolver cualquier duda que se presente al respecto.</>
+            )}
+          </Text>
+        </ScrollView>
+      </View>
+    </View>
+  );
+};
+
 const DAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
 
@@ -567,6 +596,8 @@ export default function RoomsRequestScreen() {
                       </TouchableOpacity>
                     </View>
                     
+                    <RoomManualInfo roomName={selectedRoom.name} />
+                    
                     <View style={{ marginTop: 15 }}>
                       <Field 
                         label="Número de Participantes" 
@@ -887,6 +918,9 @@ export default function RoomsRequestScreen() {
                         <Text style={styles.changeBtnText}>Cambiar</Text>
                       </TouchableOpacity>
                     </View>
+                    
+                    <RoomManualInfo roomName={selectedRoom.name} />
+
                     <View style={{ marginTop: 15 }}>
                       <Field 
                         label="Número de Asistentes" 
