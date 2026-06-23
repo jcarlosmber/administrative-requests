@@ -147,8 +147,10 @@ export default function RoomsRequestScreen() {
       // Pre-llenar dependencia desde LDAP
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user && user.dependency) {
-          setDependency(user.dependency);
+        if (user) {
+          if (user.dependency) setDependency(user.dependency);
+          if (user.name) setResponsibleName(user.name);
+          setEntityName('Secretaría Jurídica Distrital');
         }
       } catch (err) {
         console.warn('Error fetching user for rooms prefill:', err);

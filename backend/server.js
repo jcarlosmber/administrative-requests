@@ -278,7 +278,7 @@ app.post('/api/auth/login', async (req, res) => {
 // Obtener información del usuario logueado
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, email, name, role FROM users WHERE id = $1', [req.user.id]);
+    const result = await pool.query('SELECT id, email, name, role, dependency, username, ldap_enabled FROM users WHERE id = $1', [req.user.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
     }
