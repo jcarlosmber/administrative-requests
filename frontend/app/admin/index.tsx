@@ -449,7 +449,7 @@ function KPICard({ item, width, onPress, index }: any) {
       onHoverOut={handleHoverOut}
       onPressIn={handleHoverIn}
       onPressOut={handleHoverOut}
-      style={{ width: width }}
+      style={[{ flex: 1, minWidth: 250 }]}
     >
       <Animated.View style={[
         styles.kpiCard, 
@@ -544,6 +544,8 @@ function ActivityRow({ item, index }: any) {
         { 
           opacity: fadeAnim,
           transform: [{ translateY }, { translateX }],
+          backgroundColor: `${item.color}0D`,
+          borderColor: `${item.color}30`,
         }
       ]}>
         <BlurView intensity={30} tint="light" style={styles.activityGlass}>

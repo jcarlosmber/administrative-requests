@@ -529,35 +529,35 @@ export default function AdminReports() {
                 {activeTab === 'consolidated' && (
                   <View style={{ gap: 25 }}>
                     
-                    {/* Sección Superior: KPIs y Gráfico Circular en un solo bloque o filas según pantalla */}
+                    {/* Sección Superior: 3 columnas en desktop */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
                       
-                      {/* Lado Izquierdo: Círculo de Progreso / Donut de Efectividad */}
-                      <View style={[styles.card, { flex: 1.2, alignItems: 'center', justifyContent: 'center', paddingVertical: 35 }]}>
+                      {/* Columna 1: Círculo de Progreso / Donut de Efectividad */}
+                      <View style={[styles.card, { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 35 }]}>
                         <Text style={[styles.cardTitle, { textAlign: 'center', marginBottom: 5 }]}>Efectividad General</Text>
                         <Text style={[styles.cardSubtitle, { textAlign: 'center', marginBottom: 25 }]}>Porcentaje total de casos resueltos</Text>
                         
                         <CircularProgress percent={stats.effectiveness} color={COLORS.success} />
                       </View>
 
-                      {/* Lado Derecho: KPIs Clásicos */}
-                      <View style={{ flex: 2, gap: 15, justifyContent: 'space-between' }}>
+                      {/* Columna 2: Distribución por Categoría de Solicitudes */}
+                      <View style={[styles.card, { flex: 1 }]}>
+                        <Text style={styles.cardTitle}>Solicitudes por Módulo</Text>
+                        <Text style={styles.cardSubtitle}>Volumen de requerimientos operativos</Text>
+                        <View style={{ gap: 20, marginTop: 25 }}>
+                          <CategoryProgress label="Control de Acceso" count={stats.catCounts.visitors} total={stats.total} color={COLORS.danger} />
+                          <CategoryProgress label="Mantenimiento" count={stats.catCounts.maintenance} total={stats.total} color={COLORS.success} />
+                          <CategoryProgress label="Parqueadero" count={stats.catCounts.parking} total={stats.total} color={COLORS.warning} />
+                          <CategoryProgress label="Salas de Juntas" count={stats.catCounts.rooms} total={stats.total} color={COLORS.purple} />
+                          <CategoryProgress label="Transporte" count={stats.catCounts.transport} total={stats.total} color={COLORS.accent} />
+                        </View>
+                      </View>
+
+                      {/* Columna 3: KPIs Clásicos */}
+                      <View style={{ flex: 1, gap: 15, justifyContent: 'space-between' }}>
                         <KPICard label="Efectividad Distrital" value={`${stats.effectiveness}%`} color={COLORS.success} icon="trending-up" trend="+2.4% este período" />
                         <KPICard label="Pendientes de Atención" value={stats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Requieren acción" />
                         <KPICard label="Total Requerimientos" value={stats.total.toString()} color={COLORS.accent} icon="folder-open" trend="Registrados en sistema" />
-                      </View>
-                    </View>
-
-                    {/* Distribución por Categoría de Solicitudes con BARRAS GRUESAS Y ANIMADAS */}
-                    <View style={styles.card}>
-                      <Text style={styles.cardTitle}>Solicitudes por Módulo Operativo</Text>
-                      <Text style={styles.cardSubtitle}>Distribución y volumen de requerimientos administrativos</Text>
-                      <View style={{ gap: 20, marginTop: 25 }}>
-                        <CategoryProgress label="Control de Acceso / Visitantes" count={stats.catCounts.visitors} total={stats.total} color={COLORS.danger} />
-                        <CategoryProgress label="Mantenimiento e Infraestructura" count={stats.catCounts.maintenance} total={stats.total} color={COLORS.success} />
-                        <CategoryProgress label="Asignación de Parqueadero" count={stats.catCounts.parking} total={stats.total} color={COLORS.warning} />
-                        <CategoryProgress label="Reserva de Salas de Juntas" count={stats.catCounts.rooms} total={stats.total} color={COLORS.purple} />
-                        <CategoryProgress label="Servicios de Transporte Oficial" count={stats.catCounts.transport} total={stats.total} color={COLORS.accent} />
                       </View>
                     </View>
 

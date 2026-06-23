@@ -737,7 +737,7 @@ function RequestListItem({ item, onUpdateStatus }: any) {
   };
 
   return (
-    <Animated.View style={[styles.card, isDesktop && { flex: 1, marginHorizontal: 0 }, { transform: [{ scale }] }]}>
+    <Animated.View style={[styles.card, isDesktop && { flex: 1, marginHorizontal: 0 }, { transform: [{ scale }], backgroundColor: `${getStatusColor(item.status)}0D`, borderColor: `${getStatusColor(item.status)}25` }]}>
       <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
       <View style={styles.cardMain}>
         <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded(!expanded)} activeOpacity={0.9}>
@@ -926,10 +926,10 @@ const styles = StyleSheet.create({
 
   contentPadding: { paddingHorizontal: 25 },
   kpiRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  kpiCard: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.line },
+  kpiCard: { flex: 1, backgroundColor: COLORS.primary, borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.primarySoft },
   kpiIcon: { justifyContent: 'center', alignItems: 'center' },
-  kpiValue: { fontSize: 32, fontWeight: '900', color: COLORS.primary },
-  kpiLabel: { fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
+  kpiValue: { fontSize: 32, fontWeight: '900', color: COLORS.white },
+  kpiLabel: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderRadius: 18, paddingHorizontal: 16, height: 56, marginTop: 20, borderWidth: 1, borderColor: COLORS.line },
   searchInput: { flex: 1, paddingHorizontal: 12, fontSize: 15, color: COLORS.primary, fontWeight: '600' },

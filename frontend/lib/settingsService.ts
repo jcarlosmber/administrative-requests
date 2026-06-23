@@ -158,10 +158,16 @@ export const settingsService = {
       console.warn('Usando respaldo local para correos debido a error:', err);
     }
 
-    // Fallback offline-first
     if (Platform.OS === 'web') {
       const local = localStorage.getItem('local_service_emails');
-      if (local) return JSON.parse(local);
+      if (local) {
+        try {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(Boolean) as ServiceEmail[];
+          }
+        } catch(e) {}
+      }
       localStorage.setItem('local_service_emails', JSON.stringify(INITIAL_EMAILS));
     }
     return INITIAL_EMAILS;
@@ -206,7 +212,7 @@ export const settingsService = {
     } finally {
       if (Platform.OS === 'web') {
         const emails = await this.getServiceEmails();
-        const updated = emails.filter(e => e.id !== id);
+        const updated = (emails || []).filter(e => e && e.id !== id);
         localStorage.setItem('local_service_emails', JSON.stringify(updated));
       }
     }
