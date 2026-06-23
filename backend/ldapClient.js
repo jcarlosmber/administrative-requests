@@ -49,10 +49,19 @@ function searchUser(client, usernameOrEmail) {
       let userEntry = null;
 
       res.on('searchEntry', (entry) => {
-        userEntry = entry.object;
-        console.log('\n--- RAW LDAP ENTRY DEBUG ---');
+        const obj = {};
+        const attrs = (entry.pojo && entry.pojo.attributes) || entry.attributes || [];
+        attrs.forEach(attr => {
+          const type = attr.type;
+          const values = attr.values || attr.vals || [];
+          if (values.length > 0) {
+            obj[type] = values[0];
+          }
+        });
+        userEntry = obj;
+        console.log('\n--- LDAP PARSED ENTRY ---');
         console.log(userEntry);
-        console.log('----------------------------\n');
+        console.log('-------------------------\n');
       });
 
       res.on('error', (err) => {
