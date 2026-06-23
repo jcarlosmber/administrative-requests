@@ -73,14 +73,14 @@ export default function VisitorsScreen() {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day} 08:00`;
+    return `${year}-${month}-${day}`;
   });
   const [toDate, setToDate] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day} 18:00`;
+    return `${year}-${month}-${day}`;
   });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   
@@ -372,7 +372,7 @@ export default function VisitorsScreen() {
                 <Card title="Vigencia del Ingreso" icon="calendar">
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.label}>Desde (Fecha y Hora)</Text>
+                      <Text style={styles.label}>Desde (Fecha)</Text>
                       <TouchableOpacity 
                         style={styles.inputWrap} 
                         onPress={() => {
@@ -380,13 +380,13 @@ export default function VisitorsScreen() {
                           setShowDatePicker(true);
                         }}
                       >
-                        <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Ionicons name="calendar-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text style={styles.input}>{fromDate}</Text>
                         <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
                       </TouchableOpacity>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.label}>Hasta (Fecha y Hora)</Text>
+                      <Text style={styles.label}>Hasta (Fecha)</Text>
                       <TouchableOpacity 
                         style={styles.inputWrap} 
                         onPress={() => {
@@ -394,7 +394,7 @@ export default function VisitorsScreen() {
                           setShowDatePicker(true);
                         }}
                       >
-                        <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Ionicons name="calendar-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text style={styles.input}>{toDate}</Text>
                         <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
                       </TouchableOpacity>
@@ -933,48 +933,24 @@ const getNext14Days = () => {
 function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) {
   const days = useMemo(() => getNext14Days(), []);
   
-  // Parsear el valor actual (formato "YYYY-MM-DD HH:MM")
-  const [datePart, timePart] = value.split(' ');
-  const [hourPart, minutePart] = (timePart || '08:00').split(':');
-
-  const [selectedDate, setSelectedDate] = useState(datePart || days[0].dateString);
-  const [selectedHour, setSelectedHour] = useState(hourPart || '08');
-  const [selectedMinute, setSelectedMinute] = useState(minutePart || '00');
+  const [selectedDate, setSelectedDate] = useState(value || days[0].dateString);
 
   // Actualizar estados internos si cambia el value externo al abrir el modal
   React.useEffect(() => {
     if (visible && value) {
-      const [d, t] = value.split(' ');
-      if (d) setSelectedDate(d);
-      if (t) {
-        const [h, m] = t.split(':');
-        if (h) setSelectedHour(h);
-        if (m) setSelectedMinute(m);
-      }
+      setSelectedDate(value);
     }
   }, [visible, value]);
 
-  const hours = useMemo(() => {
-    const hrs = [];
-    for (let i = 0; i < 24; i++) {
-      hrs.push(String(i).padStart(2, '0'));
-    }
-    return hrs;
-  }, []);
-
-  const minutes = useMemo(() => {
-    return ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
-  }, []);
-
   const handleConfirm = () => {
-    onSelect(`${selectedDate} ${selectedHour}:${selectedMinute}`);
+    onSelect(selectedDate);
   };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalBlur}>
         <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        <View style={[styles.modalPanel, { maxWidth: 450, padding: 20 }]}>
+        <View style={[styles.modalPanel, { maxWidth: 350, padding: 20 }]}>
           <View style={styles.modalHead}>
             <Text style={styles.modalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose}>
@@ -986,13 +962,13 @@ function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) 
           <View style={{ backgroundColor: COLORS.soft, borderRadius: 16, padding: 12, marginBottom: 15, alignItems: 'center' }}>
             <Text style={{ fontSize: 11, color: COLORS.primary, fontWeight: '800', letterSpacing: 1 }}>SELECCIÓN ACTUAL</Text>
             <Text style={{ fontSize: 18, color: COLORS.text, fontWeight: '900', marginTop: 4 }}>
-              {selectedDate}  |  {selectedHour}:{selectedMinute}
+              {selectedDate}
             </Text>
           </View>
 
           <View style={{ flexDirection: 'row', height: 260, gap: 10, marginBottom: 20 }}>
             {/* Columna Fecha */}
-            <View style={{ flex: 2, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
+            <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
               <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
                 <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>FECHA</Text>
               </View>
@@ -1017,64 +993,6 @@ function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) 
                       </Text>
                       <Text style={{ fontSize: 14, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900', marginTop: 2 }}>
                         {d.dayNumber} {d.monthName}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Columna Hora */}
-            <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
-              <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>HORA</Text>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {hours.map((h) => {
-                  const isSelected = h === selectedHour;
-                  return (
-                    <TouchableOpacity 
-                      key={h}
-                      style={{ 
-                        paddingVertical: 12, 
-                        backgroundColor: isSelected ? COLORS.primary : 'transparent',
-                        borderBottomWidth: 1,
-                        borderBottomColor: 'rgba(0,0,0,0.03)',
-                        alignItems: 'center'
-                      }}
-                      onPress={() => setSelectedHour(h)}
-                    >
-                      <Text style={{ fontSize: 16, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900' }}>
-                        {h}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Columna Minuto */}
-            <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
-              <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>MIN</Text>
-              </View>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {minutes.map((m) => {
-                  const isSelected = m === selectedMinute;
-                  return (
-                    <TouchableOpacity 
-                      key={m}
-                      style={{ 
-                        paddingVertical: 12, 
-                        backgroundColor: isSelected ? COLORS.primary : 'transparent',
-                        borderBottomWidth: 1,
-                        borderBottomColor: 'rgba(0,0,0,0.03)',
-                        alignItems: 'center'
-                      }}
-                      onPress={() => setSelectedMinute(m)}
-                    >
-                      <Text style={{ fontSize: 16, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900' }}>
-                        {m}
                       </Text>
                     </TouchableOpacity>
                   );
