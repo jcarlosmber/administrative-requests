@@ -139,8 +139,8 @@ export default function VisitorsScreen() {
         return;
       }
 
-      if (new Date(toDate) <= new Date(fromDate)) {
-        setErrorMessage('La fecha final debe ser posterior a la fecha inicial.');
+      if (new Date(toDate) < new Date(fromDate)) {
+        setErrorMessage('La fecha final no puede ser anterior a la fecha inicial.');
         return;
       }
 
