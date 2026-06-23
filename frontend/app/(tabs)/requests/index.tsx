@@ -518,6 +518,7 @@ const styles = StyleSheet.create({
 });
 
 function DetailModal({ visible, request, onClose }: { visible: boolean; request: AdministrativeRequest | null; onClose: () => void }) {
+  const router = useRouter();
   if (!request) return null;
 
   const mapped = mapRequestToUI(request);
@@ -836,28 +837,30 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
 
           {/* Footer / Actions */}
           <View style={modalStyles.footer}>
-            {request.category === 'visitors' && (
-              <TouchableOpacity 
-                onPress={() => {
-                  onClose();
-                  const router = require('expo-router').useRouter();
-                  router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
-                }} 
-                style={[modalStyles.primaryBtn, { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, marginRight: 10 }]}
-              >
-                <Text style={[modalStyles.btnText, { color: COLORS.dark }]}>Usar como plantilla</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {request.category === 'visitors' && (
+                <TouchableOpacity 
+                  onPress={() => {
+                    onClose();
+                    router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
+                  }} 
+                  style={[modalStyles.primaryBtn, { flex: 1, backgroundColor: '#FFF1F2', borderWidth: 1.5, borderColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }]}
+                >
+                  <Ionicons name="copy-outline" size={20} color={COLORS.primaryDark} style={{ position: 'absolute', left: 16 }} />
+                  <Text style={[modalStyles.btnText, { color: COLORS.primaryDark }]}>Plantilla</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={onClose} style={[modalStyles.primaryBtn, { flex: request.category === 'visitors' ? 1 : undefined }]}>
+                <LinearGradient 
+                  colors={[COLORS.primary, COLORS.primaryDark]} 
+                  start={{ x: 0, y: 0 }} 
+                  end={{ x: 1, y: 0 }} 
+                  style={modalStyles.btnGradient}
+                >
+                  <Text style={modalStyles.btnText}>Entendido</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={onClose} style={modalStyles.primaryBtn}>
-              <LinearGradient 
-                colors={[COLORS.primary, COLORS.primaryDark]} 
-                start={{ x: 0, y: 0 }} 
-                end={{ x: 1, y: 0 }} 
-                style={modalStyles.btnGradient}
-              >
-                <Text style={modalStyles.btnText}>Entendido</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
