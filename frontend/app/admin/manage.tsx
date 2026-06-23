@@ -885,9 +885,6 @@ function RequestListItem({ item, onUpdateStatus }: any) {
                       <Text style={styles.actionBtnText}>Despachar</Text>
                     </TouchableOpacity>
                   )}
-                </>
-              )}
-                  
                   {/* Botón de Rechazo (Equis Roja) para cualquier solicitud activa */}
                   {!['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase()) && (
                     <TouchableOpacity 
