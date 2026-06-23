@@ -285,22 +285,82 @@ function HeroSection() {
 function KPISection({ stats }: { stats: { pendientes: number, aprobadas: number, enCurso: number } }) {
   return (
     <View style={styles.kpiRow}>
-      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" />
-      <KPICard label="Aprobadas" value={stats.aprobadas.toString()} color={COLORS.success} icon="checkmark-circle" />
-      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.blue} icon="sync" />
+      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" bg="#78350f" index={0} />
+      <KPICard label="Aprobadas" value={stats.aprobadas.toString()} color={COLORS.success} icon="checkmark-circle" bg="#064e3b" index={1} />
+      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.blue} icon="sync" bg="#1e3a8a" index={2} />
     </View>
   );
 }
 
-function KPICard({ label, value, color, icon }: any) {
+function KPICard({ label, value, color, icon, bg, index = 0 }: any) {
+  const hoverAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 35,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const handleHoverIn = () => {
+    Animated.spring(hoverAnim, { toValue: 1, friction: 6, tension: 40, useNativeDriver: true }).start();
+  };
+  const handleHoverOut = () => {
+    Animated.spring(hoverAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true }).start();
+  };
+
+  const translateY = Animated.add(
+    slideAnim,
+    hoverAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -6] })
+  );
+  const scale = hoverAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] });
+
   return (
-    <View style={styles.kpiCard}>
-      <View style={[styles.kpiIcon, { backgroundColor: `${color}15` }]}>
-        <Ionicons name={icon} size={20} color={color} />
-      </View>
-      <Text style={styles.kpiValue}>{value}</Text>
-      <Text style={styles.kpiLabel}>{label}</Text>
-    </View>
+    <Pressable
+      onHoverIn={handleHoverIn}
+      onHoverOut={handleHoverOut}
+      onPressIn={handleHoverIn}
+      onPressOut={handleHoverOut}
+      style={{ flex: 1 }}
+    >
+      <Animated.View style={[
+        styles.kpiCard,
+        {
+          backgroundColor: bg,
+          opacity: fadeAnim,
+          transform: [{ translateY }, { scale }],
+          borderTopWidth: 4,
+          borderTopColor: color,
+        }
+      ]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <View>
+            <Text style={styles.kpiValue}>{value}</Text>
+            <Text style={styles.kpiLabel}>{label}</Text>
+          </View>
+          <View style={[styles.kpiIcon, { backgroundColor: `${color}25`, width: 50, height: 50, borderRadius: 25 }]}>
+            <Ionicons name={icon} size={24} color={color} />
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, width: '100%', gap: 4 }}>
+          <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.5)" />
+          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: '600' }}>Actualizado ahora</Text>
+        </View>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -411,10 +471,10 @@ const styles = StyleSheet.create({
 
   contentPadding: { paddingHorizontal: 25 },
   kpiRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  kpiCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: COLORS.line },
+  kpiCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.line },
   kpiIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  kpiValue: { fontSize: 24, fontWeight: '900', color: COLORS.dark },
-  kpiLabel: { fontSize: 11, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
+  kpiValue: { fontSize: 32, fontWeight: '900', color: COLORS.white },
+  kpiLabel: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.7)', marginTop: 2 },
 
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderRadius: 18, paddingHorizontal: 16, height: 56, marginTop: 20, borderWidth: 1, borderColor: COLORS.line },
   searchInput: { flex: 1, paddingHorizontal: 12, fontSize: 15, color: COLORS.dark, fontWeight: '600' },

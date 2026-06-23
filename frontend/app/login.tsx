@@ -174,7 +174,7 @@ export default function LoginPage() {
                   <Text style={styles.optionText}>Recordarme</Text>
                 </Pressable>
 
-                <Pressable onPress={() => showError('Recuperar acceso', 'Contacta al administrador del Sistema de Administración de Servicios Generales 2.0.')}>
+                <Pressable onPress={() => showError('Recuperación de Contraseña', 'Tu contraseña está sincronizada con tu correo institucional (Gmail) y el acceso a tu PC de la entidad (Directorio Activo).\n\nPara cambiarla o recuperarla, debes realizar el proceso de recuperación de tu cuenta de correo o cambiarla desde tu equipo de cómputo.')}>
                   <Text style={styles.recoverText}>¿Olvidaste tu contraseña?</Text>
                 </Pressable>
               </View>

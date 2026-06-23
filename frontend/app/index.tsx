@@ -59,27 +59,33 @@ const navLinks = [
 
 const services = [
   {
-    icon: 'car',
-    title: 'Transporte institucional',
-    description: 'Solicita recorridos, consulta disponibilidad y recibe confirmación del servicio.',
+    icon: 'people-circle',
+    title: 'Ingreso Visitantes',
+    description: 'Gestione el ingreso de personal externo con seguridad y control de acceso.',
     tone: COLORS.primary,
   },
   {
-    icon: 'business',
-    title: 'Mantenimientos locativos',
-    description: 'Reporta daños, reserva espacios y centraliza novedades operativas.',
+    icon: 'car-sport',
+    title: 'Transporte Institucional',
+    description: 'Solicite traslados para misiones oficiales y recorridos de la entidad.',
+    tone: '#0077B6',
+  },
+  {
+    icon: 'construct',
+    title: 'Mantenimiento',
+    description: 'Reporte fallas locativas en infraestructura y servicios generales.',
     tone: COLORS.teal,
   },
   {
     icon: 'calendar',
-    title: 'Reserva de salas',
-    description: 'Agenda espacios de reunión y consulta disponibilidad antes de enviar la solicitud.',
+    title: 'Reserva de Salas',
+    description: 'Reserve salas de juntas, auditorios y espacios institucionales.',
     tone: COLORS.violet,
   },
   {
-    icon: 'car-sport',
-    title: 'Parqueadero institucional',
-    description: 'Radica solicitudes de parqueadero y revisa su estado desde el mismo portal.',
+    icon: 'navigate-circle',
+    title: 'Parqueadero',
+    description: 'Solicite cupos de parqueadero institucional (sujeto a disponibilidad).',
     tone: COLORS.amber,
   },
 ] as const;
