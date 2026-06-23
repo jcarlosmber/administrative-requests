@@ -50,6 +50,9 @@ function searchUser(client, usernameOrEmail) {
 
       res.on('searchEntry', (entry) => {
         userEntry = entry.object;
+        console.log('\n--- RAW LDAP ENTRY DEBUG ---');
+        console.log(userEntry);
+        console.log('----------------------------\n');
       });
 
       res.on('error', (err) => {
