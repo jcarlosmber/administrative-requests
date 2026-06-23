@@ -898,7 +898,7 @@ export default function AdminSettings() {
                   </View>
                 ))}
                 
-                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%', minHeight: 140 }]} onPress={addRoom}>
+                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addRoom}>
                   <Ionicons name="add" size={24} color={COLORS.muted} />
                   <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Espacio</Text>
                 </TouchableOpacity>
@@ -928,7 +928,7 @@ export default function AdminSettings() {
                   </View>
                 ))}
                 
-                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%', minHeight: 140 }]} onPress={addDependency}>
+                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDependency}>
                   <Ionicons name="add" size={24} color={COLORS.muted} />
                   <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Dependencia</Text>
                 </TouchableOpacity>
@@ -1052,14 +1052,14 @@ export default function AdminSettings() {
                   </View>
                 ))}
                 
-                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%', minHeight: 140 }]} onPress={addDriver}>
+                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDriver}>
                   <Ionicons name="add" size={24} color={COLORS.muted} />
                   <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Conductor</Text>
                 </TouchableOpacity>
               </View>
 
               <SectionHeader title="Correos de Secretaría General" kicker="NOTIFICACIONES DE SERVICIO" />
-              <View style={[isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 20 } : { gap: 15 }]}>
+              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {([
                   { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F' },
                   { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946' },
@@ -1068,7 +1068,7 @@ export default function AdminSettings() {
                 ] as const).map(({ type, title, icon, color }) => {
                   const emails = serviceEmails.filter(e => e.service_type === type);
                   return (
-                    <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%', minHeight: 140 }]}>
+                    <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%' }]}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                         <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
                           <Ionicons name={icon as any} size={24} color={color} />
@@ -1615,7 +1615,7 @@ const styles = StyleSheet.create({
   heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
 
   contentPadding: { paddingHorizontal: 25 },
-  sectionHeader: { marginTop: 35, marginBottom: 20 },
+  sectionHeader: { marginTop: 40, marginBottom: 20 },
   sectionKicker: { fontSize: 11, fontWeight: '900', color: COLORS.accent, letterSpacing: 1.5 },
   sectionTitle: { fontSize: 24, fontWeight: '900', color: COLORS.primary, marginTop: 4 },
 
@@ -1660,10 +1660,10 @@ const styles = StyleSheet.create({
   miniLabel: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
   deleteBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center' },
 
-  addCardBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 18, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.line, marginTop: 15 },
+  addCardBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 18, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.line },
   addCardText: { fontSize: 16, fontWeight: '800', color: COLORS.accent },
 
-  userSectionCard: { backgroundColor: COLORS.white, borderRadius: 28, padding: 18, borderWidth: 1, borderColor: COLORS.line, gap: 12 },
+  userSectionCard: { backgroundColor: COLORS.white, borderRadius: 28, padding: 20, borderWidth: 1, borderColor: COLORS.line, gap: 12 },
   userSectionHeader: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
   userSearchInput: { flex: 1, backgroundColor: COLORS.bg, borderRadius: 14, borderWidth: 1, borderColor: COLORS.line, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontWeight: '600', color: COLORS.primary },
   exportUsersBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.success, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
