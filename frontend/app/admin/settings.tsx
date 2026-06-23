@@ -123,6 +123,11 @@ export default function AdminSettings() {
   const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
   const [showDriverDeleteModal, setShowDriverDeleteModal] = useState(false);
 
+  // Edit Modal States
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editDraft, setEditDraft] = useState<any>(null);
+  const [editType, setEditType] = useState<'room'|'dependency'|'driver'|null>(null);
+
   // Inputs para añadir correos en tiempo real
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({
     maintenance: '',
@@ -601,6 +606,39 @@ export default function AdminSettings() {
     setItemToCreate(null);
   };
 
+  const openEditModal = (item: any, type: 'room'|'dependency'|'driver') => {
+    setEditDraft({ ...item });
+    setEditType(type);
+    setEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setEditDraft(null);
+    setEditType(null);
+  };
+
+  const saveEditDraft = () => {
+    if (!editDraft) return;
+    if (editType === 'room') {
+      setRooms(rooms.map(r => r.id === editDraft.id ? editDraft : r));
+    } else if (editType === 'dependency') {
+      setDependencies(dependencies.map(d => d.id === editDraft.id ? editDraft : d));
+    } else if (editType === 'driver') {
+      setDrivers(drivers.map(d => d.id === editDraft.id ? editDraft : d));
+    }
+    closeEditModal();
+  };
+
+  const hasEditChanges = useMemo(() => {
+    if (!editDraft) return false;
+    let original = null;
+    if (editType === 'room') original = rooms.find(r => r.id === editDraft.id);
+    else if (editType === 'dependency') original = dependencies.find(d => d.id === editDraft.id);
+    else if (editType === 'driver') original = drivers.find(d => d.id === editDraft.id);
+    return JSON.stringify(original) !== JSON.stringify(editDraft);
+  }, [editDraft, rooms, dependencies, drivers, editType]);
+
   const openDriverDeleteConfirmation = (driver: Driver) => {
     setDriverToDelete(driver);
     setDeleteConfirmationText('');
@@ -844,38 +882,25 @@ export default function AdminSettings() {
                       
                       {/* Title & Info */}
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <TextInput
-                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}
-                          value={room.name}
-                          onChangeText={(val) => updateRoom(room.id, 'name', val)}
-                          placeholder="Nombre de la sala"
-                          placeholderTextColor="#94A3B8"
-                        />
+                        <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
+                          {room.name || 'Sin nombre'}
+                        </Text>
                         
                         <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Ionicons name="people" size={14} color="#64748B" />
-                            <TextInput
-                              style={{ fontSize: 12, fontWeight: '700', color: '#64748B', width: 24, padding: 0, textAlign: 'center' }}
-                              value={room.capacity}
-                              onChangeText={(val) => updateRoom(room.id, 'capacity', val)}
-                              keyboardType="numeric"
-                              maxLength={4}
-                            />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>pers.</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>
+                              {room.capacity || '0'} pers.
+                            </Text>
                           </View>
                           
                           <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center' }} />
                           
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                             <Ionicons name="location" size={14} color="#64748B" />
-                            <TextInput
-                              style={{ fontSize: 12, fontWeight: '600', color: '#64748B', minWidth: 40, padding: 0 }}
-                              value={room.floor}
-                              onChangeText={(val) => updateRoom(room.id, 'floor', val)}
-                              placeholder="Ubicación"
-                              placeholderTextColor="#94A3B8"
-                            />
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                              {room.floor || 'Sin ubicación'}
+                            </Text>
                           </View>
                         </View>
                       </View>
@@ -888,11 +913,8 @@ export default function AdminSettings() {
                       </Text>
                       
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <TouchableOpacity 
-                          onPress={() => updateRoom(room.id, 'info', room.info === 'Especial' ? 'Estándar' : 'Especial')}
-                          style={{ padding: 4 }}
-                        >
-                          <Ionicons name="swap-horizontal" size={16} color="#64748B" />
+                        <TouchableOpacity onPress={() => openEditModal(room, 'room')} style={{ padding: 4 }}>
+                          <Ionicons name="pencil" size={16} color="#3B82F6" />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
                           <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
@@ -917,13 +939,9 @@ export default function AdminSettings() {
                         <Ionicons name="people-circle" size={20} color="#FFF" />
                       </View>
                       <View style={{ flex: 1, minWidth: 0, justifyContent: 'center', height: 44 }}>
-                        <TextInput
-                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B' }]}
-                          value={dep.name}
-                          onChangeText={(val) => updateDependency(dep.id, val)}
-                          placeholder="Nombre de la dependencia"
-                          placeholderTextColor="#94A3B8"
-                        />
+                        <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B' }]}>
+                          {dep.name || 'Sin nombre'}
+                        </Text>
                       </View>
                     </View>
                     
@@ -932,9 +950,14 @@ export default function AdminSettings() {
                       <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
                         REGISTRO ACTIVO
                       </Text>
-                      <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={{ padding: 4 }}>
-                        <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <TouchableOpacity onPress={() => openEditModal(dep, 'dependency')} style={{ padding: 4 }}>
+                          <Ionicons name="pencil" size={16} color="#3B82F6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={{ padding: 4 }}>
+                          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -1033,23 +1056,14 @@ export default function AdminSettings() {
                         <Ionicons name="car-sport" size={20} color="#FFF" />
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <TextInput
-                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}
-                          value={drv.name}
-                          onChangeText={(val) => updateDriver(drv.id, 'name', val)}
-                          placeholder="Nombre del conductor"
-                          placeholderTextColor="#94A3B8"
-                        />
+                        <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
+                          {drv.name || 'Sin nombre'}
+                        </Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                           <Ionicons name="call" size={14} color="#64748B" />
-                          <TextInput
-                            style={{ fontSize: 12, fontWeight: '600', color: '#64748B', minWidth: 80, padding: 0 }}
-                            value={drv.phone}
-                            onChangeText={(val) => updateDriver(drv.id, 'phone', val)}
-                            placeholder="Teléfono"
-                            placeholderTextColor="#94A3B8"
-                            keyboardType="phone-pad"
-                          />
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                            {drv.phone || 'Sin teléfono'}
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -1059,9 +1073,14 @@ export default function AdminSettings() {
                       <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
                         REGISTRO ACTIVO
                       </Text>
-                      <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={{ padding: 4 }}>
-                        <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} style={{ padding: 4 }}>
+                          <Ionicons name="pencil" size={16} color="#3B82F6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={{ padding: 4 }}>
+                          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 ))}
@@ -1447,6 +1466,135 @@ export default function AdminSettings() {
                 ) : (
                   <Text style={styles.confirmDeleteButtonText}>Confirmar</Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL UNIVERSAL PARA EDITAR CARTAS (SALAS, DEPENDENCIAS, CONDUCTORES) */}
+      <Modal
+        visible={editModalVisible && !!editDraft}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeEditModal}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalContainer, { maxWidth: 450 }]}>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={styles.modalTitle}>
+                {editType === 'room' ? 'Editar Espacio' : editType === 'dependency' ? 'Editar Dependencia' : 'Editar Conductor'}
+              </Text>
+              <TouchableOpacity onPress={closeEditModal}>
+                <Ionicons name="close" size={24} color={COLORS.muted} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 16, width: '100%', marginBottom: 24 }}>
+              {editType === 'room' && (
+                <>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Nombre del Espacio</Text>
+                    <TextInput
+                      style={styles.userFieldInput}
+                      value={editDraft?.name || ''}
+                      onChangeText={val => setEditDraft({ ...editDraft, name: val })}
+                      placeholder="Ej: Sala de Innovación..."
+                    />
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Capacidad (pers.)</Text>
+                      <TextInput
+                        style={styles.userFieldInput}
+                        value={editDraft?.capacity?.toString() || ''}
+                        onChangeText={val => setEditDraft({ ...editDraft, capacity: val })}
+                        keyboardType="numeric"
+                        placeholder="0"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Ubicación</Text>
+                      <TextInput
+                        style={styles.userFieldInput}
+                        value={editDraft?.floor || ''}
+                        onChangeText={val => setEditDraft({ ...editDraft, floor: val })}
+                        placeholder="Ej: Piso 1"
+                      />
+                    </View>
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Tipo de Sala</Text>
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <TouchableOpacity 
+                        style={[styles.rolePill, editDraft?.info === 'Estándar' && styles.rolePillActive]} 
+                        onPress={() => setEditDraft({ ...editDraft, info: 'Estándar' })}
+                      >
+                        <Text style={[styles.rolePillText, editDraft?.info === 'Estándar' && styles.rolePillTextActive]}>Estándar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.rolePill, editDraft?.info === 'Especial' && styles.rolePillActive]} 
+                        onPress={() => setEditDraft({ ...editDraft, info: 'Especial' })}
+                      >
+                        <Text style={[styles.rolePillText, editDraft?.info === 'Especial' && styles.rolePillTextActive]}>Especial</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {editType === 'dependency' && (
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Nombre de la Dependencia</Text>
+                  <TextInput
+                    style={styles.userFieldInput}
+                    value={editDraft?.name || ''}
+                    onChangeText={val => setEditDraft({ ...editDraft, name: val })}
+                    placeholder="Ej: Dirección de Asuntos Penales..."
+                  />
+                </View>
+              )}
+
+              {editType === 'driver' && (
+                <>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Nombre del Conductor</Text>
+                    <TextInput
+                      style={styles.userFieldInput}
+                      value={editDraft?.name || ''}
+                      onChangeText={val => setEditDraft({ ...editDraft, name: val })}
+                      placeholder="Ej: Juan Pérez"
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginBottom: 8 }}>Teléfono</Text>
+                    <TextInput
+                      style={styles.userFieldInput}
+                      value={editDraft?.phone || ''}
+                      onChangeText={val => setEditDraft({ ...editDraft, phone: val })}
+                      keyboardType="phone-pad"
+                      placeholder="3000000000"
+                    />
+                  </View>
+                </>
+              )}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton, { flex: 1 }]} 
+                onPress={closeEditModal}
+              >
+                <Text style={styles.cancelButtonText}>CANCELAR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1.5, backgroundColor: COLORS.accent }, (!hasEditChanges || !editDraft?.name?.trim()) && { opacity: 0.5 }]} 
+                onPress={saveEditDraft}
+                disabled={!hasEditChanges || !editDraft?.name?.trim()}
+              >
+                <Text style={styles.confirmDeleteButtonText}>ACTUALIZAR</Text>
               </TouchableOpacity>
             </View>
           </View>
