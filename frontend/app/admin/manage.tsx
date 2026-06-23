@@ -602,7 +602,7 @@ function KPICard({ label, value, color, icon, index }: any) {
           borderTopColor: color,
         }
       ]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <View>
             <Text style={styles.kpiValue}>{value}</Text>
             <Text style={styles.kpiLabel}>{label}</Text>
@@ -611,7 +611,10 @@ function KPICard({ label, value, color, icon, index }: any) {
             <Ionicons name={icon} size={24} color={color} />
           </View>
         </View>
-        <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 10, fontWeight: '600' }}>Actualizado ahora</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, width: '100%', gap: 4 }}>
+          <Ionicons name="time-outline" size={12} color={COLORS.muted} />
+          <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '600' }}>Actualizado ahora</Text>
+        </View>
       </Animated.View>
     </Pressable>
   );
@@ -919,13 +922,14 @@ const styles = StyleSheet.create({
   heroKicker: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   heroTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', marginTop: 5 },
   heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
+  logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
   contentPadding: { paddingHorizontal: 25 },
   kpiRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  kpiCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: COLORS.line },
-  kpiIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  kpiValue: { fontSize: 24, fontWeight: '900', color: COLORS.primary },
-  kpiLabel: { fontSize: 11, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
+  kpiCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.line },
+  kpiIcon: { justifyContent: 'center', alignItems: 'center' },
+  kpiValue: { fontSize: 32, fontWeight: '900', color: COLORS.primary },
+  kpiLabel: { fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
 
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white, borderRadius: 18, paddingHorizontal: 16, height: 56, marginTop: 20, borderWidth: 1, borderColor: COLORS.line },
   searchInput: { flex: 1, paddingHorizontal: 12, fontSize: 15, color: COLORS.primary, fontWeight: '600' },
