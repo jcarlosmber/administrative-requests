@@ -599,19 +599,29 @@ export default function AdminSettings() {
     setShowCreateModal(true);
   };
 
-  const confirmCreate = () => {
-    if (itemToCreate === 'room') {
-      const newRoom = { id: `temp-${Date.now()}`, name: 'Nueva Sala', capacity: '10', floor: 'Piso 1', info: 'Estándar', isNew: true };
-      setRooms([...rooms, newRoom]);
-    } else if (itemToCreate === 'dependency') {
-      const newDep = { id: `temp-${Date.now()}`, name: 'Nueva Dependencia', isNew: true };
-      setDependencies([...dependencies, newDep]);
-    } else if (itemToCreate === 'driver') {
-      const newDriver: Driver = { id: `temp-${Date.now()}`, name: 'Nuevo Conductor', phone: '3000000000', is_active: true };
-      setDrivers([...drivers, newDriver]);
+  const confirmCreate = async () => {
+    try {
+      setSaving(true);
+      if (itemToCreate === 'room') {
+        const { data, error } = await supabase.from('rooms').insert([{ name: 'Nueva Sala', capacity: 10, floor: 'Piso 1', info: 'Estándar' }]).select();
+        if (error) throw error;
+        setRooms([...rooms, data[0]]);
+      } else if (itemToCreate === 'dependency') {
+        const { data, error } = await supabase.from('dependencies').insert([{ name: 'Nueva Dependencia' }]).select();
+        if (error) throw error;
+        setDependencies([...dependencies, data[0]]);
+      } else if (itemToCreate === 'driver') {
+        const newDriverPayload = { name: 'Nuevo Conductor', phone: '3000000000', is_active: true };
+        const created = await settingsService.createDriver(newDriverPayload);
+        setDrivers([...drivers, created]);
+      }
+      setShowCreateModal(false);
+      setItemToCreate(null);
+    } catch (err) {
+      console.error('Error al crear item:', err);
+    } finally {
+      setSaving(false);
     }
-    setShowCreateModal(false);
-    setItemToCreate(null);
   };
 
   const openEditModal = (item: any, type: 'room'|'dependency'|'driver') => {
@@ -626,16 +636,29 @@ export default function AdminSettings() {
     setEditType(null);
   };
 
-  const saveEditDraft = () => {
+  const saveEditDraft = async () => {
     if (!editDraft) return;
-    if (editType === 'room') {
-      setRooms(rooms.map(r => r.id === editDraft.id ? editDraft : r));
-    } else if (editType === 'dependency') {
-      setDependencies(dependencies.map(d => d.id === editDraft.id ? editDraft : d));
-    } else if (editType === 'driver') {
-      setDrivers(drivers.map(d => d.id === editDraft.id ? editDraft : d));
+    try {
+      setSaving(true);
+      if (editType === 'room') {
+        const { error } = await supabase.from('rooms').update({ name: editDraft.name, capacity: parseInt(editDraft.capacity) || 0, floor: editDraft.floor, info: editDraft.info }).eq('id', editDraft.id);
+        if (error) throw error;
+        setRooms(rooms.map(r => r.id === editDraft.id ? editDraft : r));
+      } else if (editType === 'dependency') {
+        const { error } = await supabase.from('dependencies').update({ name: editDraft.name }).eq('id', editDraft.id);
+        if (error) throw error;
+        setDependencies(dependencies.map(d => d.id === editDraft.id ? editDraft : d));
+      } else if (editType === 'driver') {
+        const payload = { name: editDraft.name, phone: editDraft.phone, is_active: editDraft.is_active };
+        await settingsService.updateDriver(editDraft.id, payload);
+        setDrivers(drivers.map(d => d.id === editDraft.id ? editDraft : d));
+      }
+      closeEditModal();
+    } catch (err) {
+      console.error('Error al editar item:', err);
+    } finally {
+      setSaving(false);
     }
-    closeEditModal();
   };
 
   const hasEditChanges = useMemo(() => {
@@ -731,131 +754,38 @@ export default function AdminSettings() {
     }
   };
 
-  const handleSaveChanges = async () => {
-    try {
-      setSaving(true);
-
-      // 1. Guardar configuraciones en localStorage (para uso inmediato en el cliente)
-      await safeStorage.setItem('push_notifications', notifications.toString());
-      await safeStorage.setItem('auto_approve', autoApprove.toString());
-      await safeStorage.setItem('ldap_base_dn', ldapBaseDn);
-      await safeStorage.setItem('ldap_port', ldapPort);
-      await safeStorage.setItem('ldap_use_ssl', ldapUseSsl.toString());
-      await safeStorage.setItem('ldap_server', ldapServer);
-      await safeStorage.setItem('ldap_filter', ldapFilter);
-      await safeStorage.setItem('ldap_use_bind', ldapUseBind.toString());
-      await safeStorage.setItem('ldap_root_dn', ldapRootDn);
-      await safeStorage.setItem('ldap_user_field', ldapUserField);
-      await safeStorage.setItem('ldap_sync_field', ldapSyncField);
-      await safeStorage.setItem('ldap_comments', ldapComments);
-      await safeStorage.setItem('ldap_relay', ldapRelay);
-      await safeStorage.setItem('local_rooms', JSON.stringify(rooms));
-      await safeStorage.setItem('local_dependencies', JSON.stringify(dependencies));
-      await safeStorage.setItem('local_drivers', JSON.stringify(drivers));
-      await safeStorage.setItem('local_service_emails', JSON.stringify(serviceEmails));
-
-      // 2. Guardar/actualizar salas en la base de datos de Supabase
-      for (const room of rooms) {
-        const isTemp = room.id.toString().startsWith('temp-');
-        
-        const roomData = {
-          name: room.name,
-          capacity: parseInt(room.capacity) || 0,
-          floor: room.floor,
-          info: room.info === 'Especial' ? 'Especial' : 'Estándar'
-        };
-
-        if (isTemp) {
-          // Insertar nueva sala en Supabase
-          const { error } = await supabase
-            .from('rooms')
-            .insert([roomData]);
-          if (error) console.error('Error al insertar sala en Supabase:', error);
-        } else {
-          // Actualizar sala existente en Supabase
-          const { error } = await supabase
-            .from('rooms')
-            .update(roomData)
-            .eq('id', room.id);
-          if (error) console.error('Error al actualizar sala en Supabase:', error);
+  useEffect(() => {
+    if (loading) return; // Skip saving on mount
+    const timer = setTimeout(() => {
+      const saveConfig = async () => {
+        try {
+          await safeStorage.setItem('push_notifications', notifications.toString());
+          await safeStorage.setItem('auto_approve', autoApprove.toString());
+          await safeStorage.setItem('ldap_base_dn', ldapBaseDn);
+          await safeStorage.setItem('ldap_port', ldapPort);
+          await safeStorage.setItem('ldap_use_ssl', ldapUseSsl.toString());
+          await safeStorage.setItem('ldap_server', ldapServer);
+          await safeStorage.setItem('ldap_filter', ldapFilter);
+          await safeStorage.setItem('ldap_use_bind', ldapUseBind.toString());
+          await safeStorage.setItem('ldap_root_dn', ldapRootDn);
+          await safeStorage.setItem('ldap_user_field', ldapUserField);
+          await safeStorage.setItem('ldap_sync_field', ldapSyncField);
+          await safeStorage.setItem('ldap_comments', ldapComments);
+          await safeStorage.setItem('ldap_relay', ldapRelay);
+        } catch (e) {
+          console.error(e);
         }
-      }
+      };
+      saveConfig();
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [
+    notifications, autoApprove, ldapBaseDn, ldapPort, ldapUseSsl, ldapServer, 
+    ldapFilter, ldapUseBind, ldapRootDn, ldapUserField, ldapSyncField, 
+    ldapComments, ldapRelay, loading
+  ]);
 
-      // 3. Guardar/actualizar dependencias en la base de datos de Supabase
-      for (const dep of dependencies) {
-        const isTemp = dep.id.toString().startsWith('temp-');
-        
-        const depData = {
-          name: dep.name
-        };
 
-        if (isTemp) {
-          // Insertar nueva dependencia en Supabase
-          const { error } = await supabase
-            .from('dependencies')
-            .insert([depData]);
-          if (error) console.error('Error al insertar dependencia en Supabase:', error);
-        } else {
-          // Actualizar dependencia existente en Supabase
-          const { error } = await supabase
-            .from('dependencies')
-            .update(depData)
-            .eq('id', dep.id);
-          if (error) console.error('Error al actualizar dependencia en Supabase:', error);
-        }
-      }
-
-      // 4. Guardar/actualizar conductores en Supabase
-      for (const drv of drivers) {
-        const isTemp = drv.id.toString().startsWith('temp-');
-        const driverData = {
-          name: drv.name,
-          phone: drv.phone,
-          is_active: drv.is_active
-        };
-
-        if (isTemp) {
-          await settingsService.createDriver(driverData);
-        } else {
-          await settingsService.updateDriver(drv.id, driverData);
-        }
-      }
-
-      // 5. Recargar salas reales desde Supabase si es posible
-      const { data: dbRooms } = await supabase
-        .from('rooms')
-        .select('*')
-        .order('name');
-      
-      if (dbRooms && dbRooms.length > 0) {
-        setRooms(dbRooms.map((r: any) => ({ ...r, capacity: r.capacity.toString() })));
-      }
-
-      // Recargar dependencias reales desde Supabase si es posible
-      const { data: dbDeps } = await supabase
-        .from('dependencies')
-        .select('*')
-        .order('name');
-      
-      if (dbDeps && dbDeps.length > 0) {
-        setDependencies(dbDeps);
-      }
-
-      // Recargar conductores y correos reales
-      const freshDrivers = await settingsService.getDrivers();
-      setDrivers(freshDrivers);
-
-      const freshEmails = await settingsService.getServiceEmails();
-      setServiceEmails(freshEmails);
-
-      setShowSuccessModal(true);
-    } catch (err) {
-      console.warn('Cambios guardados localmente:', err);
-      setShowSuccessModal(true);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -1214,23 +1144,7 @@ export default function AdminSettings() {
                 )}
               </View>
 
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveChanges} disabled={saving}>
-                <LinearGradient
-                  colors={[COLORS.primary, COLORS.primarySoft]}
-                  style={styles.saveGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color={COLORS.white} />
-                  ) : (
-                    <>
-                      <Text style={styles.saveText}>GUARDAR CAMBIOS</Text>
-                      <Ionicons name="save-outline" size={20} color={COLORS.white} />
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
+              {/* Removed handleSaveChanges button for auto-save feature */}
 
             </View>
           )}

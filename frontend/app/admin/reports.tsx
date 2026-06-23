@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   Modal,
   Animated,
-  Easing
+  Easing,
+  TextInput
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ import { supabase } from '../../lib/supabase';
 
 // Paleta de Colores de Diseño Premium
 
-type DateRange = 'month' | 'quarter' | 'all';
+type DateRange = 'month' | 'quarter' | 'all' | 'custom';
 
 type MonthOption = {
   value: string;
@@ -82,6 +83,8 @@ export default function AdminReports() {
   // Estados de control
   const [activeTab, setActiveTab] = useState<'consolidated' | 'visitors' | 'maintenance' | 'parking' | 'rooms' | 'transport'>('consolidated');
   const [dateRange, setDateRange] = useState<DateRange>('month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const monthOptions = useMemo(() => buildRecentMonthOptions(), []);
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthValue(new Date()));
   const [dbData, setDbData] = useState<any[]>([]);
@@ -100,8 +103,9 @@ export default function AdminReports() {
   const reportPeriodLabel = useMemo(() => {
     if (dateRange === 'month') return selectedMonthOption?.label || 'Mes seleccionado';
     if (dateRange === 'quarter') return 'Últimos 3 meses';
+    if (dateRange === 'custom') return `Personalizado: ${customStartDate || 'Inicio'} al ${customEndDate || 'Fin'}`;
     return 'Histórico completo';
-  }, [dateRange, selectedMonthOption]);
+  }, [dateRange, selectedMonthOption, customStartDate, customEndDate]);
 
   // Carga de datos de analítica de Supabase. El reporte siempre usa este mismo arreglo filtrado desde la BD.
   const loadAnalyticsData = useCallback(async () => {
@@ -119,6 +123,13 @@ export default function AdminReports() {
       } else if (dateRange === 'quarter') {
         const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
         startDateStr = threeMonthsAgo.toISOString();
+      } else if (dateRange === 'custom' && customStartDate && customEndDate) {
+        try {
+          startDateStr = new Date(customStartDate + 'T00:00:00').toISOString();
+          endDateStr = new Date(customEndDate + 'T23:59:59').toISOString();
+        } catch (e) {
+          console.warn('Fechas personalizadas invalidas', e);
+        }
       }
 
       const data = await requestService.getAnalytics(startDateStr, endDateStr);
@@ -457,6 +468,12 @@ export default function AdminReports() {
                 >
                   <Text style={[styles.rangeText, dateRange === 'all' && styles.rangeTextActive]}>Histórico</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.rangeBtn, dateRange === 'custom' && styles.rangeBtnActive]} 
+                  onPress={() => setDateRange('custom')}
+                >
+                  <Text style={[styles.rangeText, dateRange === 'custom' && styles.rangeTextActive]}>Personalizado</Text>
+                </TouchableOpacity>
               </View>
               
               <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -502,6 +519,38 @@ export default function AdminReports() {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+              </View>
+            )}
+
+            {dateRange === 'custom' && (
+              <View style={styles.monthSelectorCard}>
+                <View style={styles.monthSelectorHeader}>
+                  <View>
+                    <Text style={styles.monthSelectorKicker}>PERIODO PERSONALIZADO</Text>
+                    <Text style={styles.monthSelectorTitle}>Seleccionar Rango</Text>
+                  </View>
+                  <TouchableOpacity style={[styles.downloadDocBtn, { backgroundColor: COLORS.accent, height: 38 }]} onPress={handleRefresh}>
+                    <Ionicons name="filter" size={16} color={COLORS.white} />
+                    <Text style={[styles.downloadDocText, { fontSize: 12 }]}>Aplicar Filtro</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                  <TextInput 
+                    style={{ flex: 1, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, padding: 12, borderRadius: 10, color: COLORS.text }}
+                    placeholder="Fecha Inicio (YYYY-MM-DD)"
+                    placeholderTextColor={COLORS.muted}
+                    value={customStartDate}
+                    onChangeText={setCustomStartDate}
+                  />
+                  <Text style={{ fontWeight: '800', color: COLORS.muted }}>-</Text>
+                  <TextInput 
+                    style={{ flex: 1, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, padding: 12, borderRadius: 10, color: COLORS.text }}
+                    placeholder="Fecha Fin (YYYY-MM-DD)"
+                    placeholderTextColor={COLORS.muted}
+                    value={customEndDate}
+                    onChangeText={setCustomEndDate}
+                  />
+                </View>
               </View>
             )}
 
@@ -829,12 +878,6 @@ export default function AdminReports() {
                   <Text style={styles.reportParagraph}>
                     El área de mantenimiento reporta un volumen total de **{maintenanceStats.total}** solicitudes registradas. La distribución operativa muestra **{maintenanceStats.pending}** solicitudes pendientes de revisión técnica y **{maintenanceStats.inProgress}** solicitudes en ejecución.
                   </Text>
-                  
-                  <View style={styles.firmaBox}>
-                    <View style={styles.firmaLinea} />
-                    <Text style={styles.firmaTexto}>Firma Responsable Administrativo</Text>
-                    <Text style={styles.firmaSub}>Subdirección de Gestión Corporativa - SJD</Text>
-                  </View>
                 </ScrollView>
 
                 {/* Acciones de descarga */}
@@ -1105,9 +1148,9 @@ function TableRow({ label, count, inProg, resolved }: any) {
   return (
     <View style={styles.reportTableRow}>
       <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{label}</Text>
-      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>{count}</Text>
-      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>{inProg}</Text>
-      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center' }]}>{resolved}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{count}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{inProg}</Text>
+      <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{resolved}</Text>
     </View>
   );
 }

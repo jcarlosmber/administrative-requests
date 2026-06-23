@@ -34,10 +34,28 @@ if (process.env.SMTP_HOST) {
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'solge@secretariajuridica.gov.co';
 
+const CATEGORIES = {
+  'visitors': 'Ingreso Visitantes',
+  'transport': 'Transporte Institucional',
+  'maintenance': 'Mantenimientos Locativos',
+  'rooms': 'Reserva de Salas',
+  'parking': 'Parqueadero Institucional'
+};
+
+const CATEGORY_COLORS = {
+  'visitors': ['#E63946', '#B91C1C'],
+  'transport': ['#0077B6', '#023E8A'],
+  'maintenance': ['#2A9D8F', '#1F7A6E'],
+  'rooms': ['#7209B7', '#4A0677'],
+  'parking': ['#F4A261', '#E76F51']
+};
+
 /**
  * Plantilla base de diseño premium para los correos
  */
-function getHtmlTemplate(title, bodyContent) {
+function getHtmlTemplate(title, bodyContent, category = null) {
+  const [primary, dark] = CATEGORY_COLORS[category?.toLowerCase()] || ['#0077B6', '#023E8A'];
+  
   return `
     <!DOCTYPE html>
     <html>
@@ -61,7 +79,7 @@ function getHtmlTemplate(title, bodyContent) {
           border: 1px solid #E2E8F0;
         }
         .header {
-          background: linear-gradient(135deg, #023E8A 0%, #0077B6 100%);
+          background: linear-gradient(135deg, ${dark} 0%, ${primary} 100%);
           padding: 30px;
           text-align: center;
         }
@@ -88,7 +106,7 @@ function getHtmlTemplate(title, bodyContent) {
           display: inline-block;
           padding: 12px 24px;
           margin-top: 20px;
-          background-color: #0077B6;
+          background-color: ${primary};
           color: #FFFFFF !important;
           text-decoration: none;
           border-radius: 8px;
@@ -97,7 +115,7 @@ function getHtmlTemplate(title, bodyContent) {
         }
         .highlight {
           font-weight: bold;
-          color: #023E8A;
+          color: ${dark};
         }
         .badge {
           display: inline-block;
@@ -132,13 +150,59 @@ function getHtmlTemplate(title, bodyContent) {
   `;
 }
 
-const CATEGORIES = {
-  'visitors': 'Ingreso Visitantes',
-  'transport': 'Transporte Institucional',
-  'maintenance': 'Mantenimientos Locativos',
-  'rooms': 'Reserva de Salas',
-  'parking': 'Parqueadero Institucional'
-};
+function formatMetadataForEmail(request) {
+  const meta = request.metadata;
+  if (!meta) return '';
+
+  let details = '';
+  const append = (label, value) => {
+    if (value) details += `<br><span class="highlight">${label}:</span> ${value}`;
+  };
+
+  switch (request.category?.toLowerCase()) {
+    case 'visitors':
+      append('Responsable', meta.responsible?.name);
+      append('Dependencia', meta.responsible?.dependency);
+      append('Desde', meta.fromDate);
+      append('Hasta', meta.toDate);
+      if (meta.visitors) append('Visitantes', meta.visitors.length + ' persona(s)');
+      if (meta.vehicles) append('Vehículos', meta.vehicles.length + ' vehículo(s)');
+      break;
+    case 'parking':
+      append('Funcionario', meta.name);
+      append('Dependencia', meta.dependency);
+      append('Placa', meta.plate);
+      append('Vehículo', (meta.brand || '') + (meta.color ? ' - ' + meta.color : ''));
+      break;
+    case 'rooms':
+      append('Sede', meta.location);
+      append('Sala', meta.room);
+      append('Fecha', meta.date);
+      append('Horario', (meta.startTime || '') + (meta.endTime ? ' a ' + meta.endTime : ''));
+      append('Asistentes', meta.capacity + ' persona(s)');
+      append('Organizador', meta.responsibleName);
+      break;
+    case 'transport':
+      append('Origen', meta.origin);
+      append('Destino', meta.destination);
+      append('Fecha', meta.date);
+      append('Hora de Recogida', meta.pickupTime);
+      append('Pasajeros', meta.passengers + ' persona(s)');
+      append('Motivo', meta.reason);
+      if (meta.requiresReturn) append('Retorno', 'Sí, a las ' + meta.returnTime);
+      break;
+    case 'maintenance':
+      append('Ubicación Exacta', meta.locationDetail);
+      append('Elemento', meta.element);
+      append('Prioridad', meta.urgency?.toUpperCase());
+      break;
+  }
+  
+  if (!details) return '';
+  return `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
+            <strong>Información Específica del Requerimiento:</strong>${details}
+          </div>`;
+}
 
 /**
  * Envía correo al funcionario confirmando la creación de su solicitud
@@ -151,6 +215,7 @@ async function sendRequestCreatedNotification(user, request) {
   
   // Si el nombre parece ser un username (ej. jcmartinezb), lo ponemos en mayúscula inicial si es posible o usamos uno por defecto
   const userName = user.name || user.full_name || 'Funcionario';
+  const metadataHtml = formatMetadataForEmail(request);
   
   const htmlContent = getHtmlTemplate(
     'Confirmación de Solicitud',
@@ -165,10 +230,12 @@ async function sendRequestCreatedNotification(user, request) {
         <span class="highlight">Prioridad:</span> ${request.priority.toUpperCase()}<br>
         <span class="highlight">Estado Inicial:</span> ${statusBadge}<br>
         <span class="highlight">Fecha:</span> ${new Date(request.created_at).toLocaleString('es-CO')}
+        ${metadataHtml}
       </div>
       
       <p>El equipo de servicios generales revisará tu requerimiento y te notificará por este medio sobre cualquier actualización.</p>
-    `
+    `,
+    request.category
   );
 
   try {
@@ -203,6 +270,7 @@ async function sendRequestUpdatedNotification(user, request) {
   }
 
   const userName = user.name || user.full_name || 'Funcionario';
+  const metadataHtml = formatMetadataForEmail(request);
 
   const htmlContent = getHtmlTemplate(
     'Actualización de Estado',
@@ -215,12 +283,14 @@ async function sendRequestUpdatedNotification(user, request) {
         <span class="highlight">Título:</span> ${request.title}<br>
         <span class="highlight">Nuevo Estado:</span> ${statusBadge}<br>
         <span class="highlight">Última Actualización:</span> ${new Date(request.updated_at).toLocaleString('es-CO')}
+        ${metadataHtml}
       </div>
       
       ${adminNotesSection}
       
       <p>Puedes ingresar al sistema en cualquier momento para ver más detalles.</p>
-    `
+    `,
+    request.category
   );
 
   try {
