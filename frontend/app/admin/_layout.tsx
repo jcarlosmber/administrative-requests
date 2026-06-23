@@ -6,12 +6,11 @@ export default function AdminLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#0F172A',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.5)',
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: '#E2E8F0',
+          backgroundColor: '#023E8A',
+          borderTopWidth: 0,
           height: 64,
           paddingBottom: 8,
           paddingTop: 8,

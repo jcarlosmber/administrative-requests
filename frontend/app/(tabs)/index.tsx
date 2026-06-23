@@ -911,9 +911,9 @@ function Sidebar({ user }: any) {
             <View style={styles.avatarMini}>
               <Ionicons name="person" size={24} color={COLORS.white} />
             </View>
-            <View>
-              <Text style={styles.userName}>{user?.name || 'Cargando...'}</Text>
-              <Text style={styles.userRole}>Funcionario {user?.dependency ? `• ${user.dependency}` : ''}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.userName} numberOfLines={1}>{user?.name || 'Cargando...'}</Text>
+              <Text style={styles.userRole} numberOfLines={1}>Funcionario {user?.dependency ? `• ${user.dependency}` : ''}</Text>
             </View>
           </View>
         </View>
