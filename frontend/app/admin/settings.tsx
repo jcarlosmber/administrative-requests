@@ -100,6 +100,8 @@ export default function AdminSettings() {
   const [ldapFilter, setLdapFilter] = useState('(&(objectClass=user)(objectCategory=person)(!(userAccountControl:1.2.840.113556.1.4.803:=2)))');
   const [ldapUseBind, setLdapUseBind] = useState(true);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [itemToCreate, setItemToCreate] = useState<'room'|'dependency'|'driver'|null>(null);
   const [ldapRootDn, setLdapRootDn] = useState('SECJUR.GOV.CO/Secretaria Juridica/Servicio/SASGE_SJD');
   const [ldapPassword, setLdapPassword] = useState('');
   const [ldapUserField, setLdapUserField] = useState('samaccountname');
@@ -250,15 +252,8 @@ export default function AdminSettings() {
   };
 
   const addRoom = () => {
-    const newRoom = {
-      id: `temp-${Date.now()}`,
-      name: 'Nueva Sala',
-      capacity: '10',
-      floor: 'Piso 1',
-      info: 'Estándar',
-      isNew: true
-    };
-    setRooms([...rooms, newRoom]);
+    setItemToCreate('room');
+    setShowCreateModal(true);
   };
 
   const openDeleteConfirmation = (room: any) => {
@@ -310,12 +305,8 @@ export default function AdminSettings() {
   };
 
   const addDependency = () => {
-    const newDep = {
-      id: `temp-${Date.now()}`,
-      name: 'Nueva Dependencia',
-      isNew: true
-    };
-    setDependencies([...dependencies, newDep]);
+    setItemToCreate('dependency');
+    setShowCreateModal(true);
   };
 
   const openDeleteDepConfirmation = (dep: any) => {
@@ -591,13 +582,23 @@ export default function AdminSettings() {
   };
 
   const addDriver = () => {
-    const newDriver: Driver = {
-      id: `temp-${Date.now()}`,
-      name: 'Nuevo Conductor',
-      phone: '3000000000',
-      is_active: true
-    };
-    setDrivers([...drivers, newDriver]);
+    setItemToCreate('driver');
+    setShowCreateModal(true);
+  };
+
+  const confirmCreate = () => {
+    if (itemToCreate === 'room') {
+      const newRoom = { id: `temp-${Date.now()}`, name: 'Nueva Sala', capacity: '10', floor: 'Piso 1', info: 'Estándar', isNew: true };
+      setRooms([...rooms, newRoom]);
+    } else if (itemToCreate === 'dependency') {
+      const newDep = { id: `temp-${Date.now()}`, name: 'Nueva Dependencia', isNew: true };
+      setDependencies([...dependencies, newDep]);
+    } else if (itemToCreate === 'driver') {
+      const newDriver: Driver = { id: `temp-${Date.now()}`, name: 'Nuevo Conductor', phone: '3000000000', is_active: true };
+      setDrivers([...drivers, newDriver]);
+    }
+    setShowCreateModal(false);
+    setItemToCreate(null);
   };
 
   const openDriverDeleteConfirmation = (driver: Driver) => {
@@ -848,8 +849,8 @@ export default function AdminSettings() {
                           placeholder="Nombre de la sala"
                           placeholderTextColor="#94A3B8"
                         />
-                        <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
-                          <Ionicons name="ellipsis-horizontal" size={24} color="#64748B" />
+                        <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={[styles.deleteBtn, { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2' }]}>
+                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
                         </TouchableOpacity>
                       </View>
 
@@ -859,10 +860,11 @@ export default function AdminSettings() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#7209B7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
                           <Ionicons name="people" size={16} color="#FFF" />
                           <TextInput
-                            style={{ fontSize: 14, fontWeight: '700', color: '#FFF', minWidth: 20, padding: 0 }}
+                            style={{ fontSize: 14, fontWeight: '700', color: '#FFF', width: 28, padding: 0, textAlign: 'center' }}
                             value={room.capacity}
                             onChangeText={(val) => updateRoom(room.id, 'capacity', val)}
                             keyboardType="numeric"
+                            maxLength={4}
                           />
                           <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF' }}>personas</Text>
                         </View>
@@ -905,24 +907,24 @@ export default function AdminSettings() {
               <SectionHeader title="Gestión de Dependencias" kicker="ORGANIZACIÓN" />
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {dependencies.map(dep => (
-                  <View key={dep.id} style={[styles.depCard, isDesktop && { width: '48%', minHeight: 140 }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(169, 48, 30, 0.08)', width: 64, height: 64, borderRadius: 20 }]}>
+                  <View key={dep.id} style={[styles.depCard, { borderColor: '#A9301E' }, isDesktop && { width: '48%' }]}>
+                    <View style={[styles.roomIconBox, { backgroundColor: '#FDECEB', width: 64, height: 64, borderRadius: 16 }]}>
                       <Ionicons name="people-circle" size={32} color="#A9301E" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <TextInput
-                        style={styles.roomNameInput}
-                        value={dep.name}
-                        onChangeText={(val) => updateDependency(dep.id, val)}
-                        placeholder="Nombre de la dependencia"
-                      />
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <TextInput
+                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 20, color: '#0F172A', flex: 1 }]}
+                          value={dep.name}
+                          onChangeText={(val) => updateDependency(dep.id, val)}
+                          placeholder="Nombre de la dependencia"
+                          placeholderTextColor="#94A3B8"
+                        />
+                        <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={[styles.deleteBtn, { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2' }]}>
+                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <TouchableOpacity 
-                      style={[styles.deleteBtn, { backgroundColor: '#FEF2F2' }]}
-                      onPress={() => openDeleteDepConfirmation(dep)}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                    </TouchableOpacity>
                   </View>
                 ))}
                 
@@ -1014,31 +1016,39 @@ export default function AdminSettings() {
               <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
               <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {drivers.map(drv => (
-                  <View key={drv.id} style={[styles.depCard, { borderLeftColor: '#3B82F6' }, isDesktop && { width: '48%', minHeight: 140 }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.08)', width: 64, height: 64, borderRadius: 20 }]}>
+                  <View key={drv.id} style={[styles.depCard, { borderColor: '#3B82F6' }, isDesktop && { width: '48%' }]}>
+                    <View style={[styles.roomIconBox, { backgroundColor: '#EFF6FF', width: 64, height: 64, borderRadius: 16 }]}>
                       <Ionicons name="car-sport" size={32} color="#3B82F6" />
                     </View>
-                    <View style={{ flex: 1, gap: 6 }}>
-                      <TextInput
-                        style={styles.roomNameInput}
-                        value={drv.name}
-                        onChangeText={(val) => updateDriver(drv.id, 'name', val)}
-                        placeholder="Nombre del conductor"
-                      />
-                      <TextInput
-                        style={[styles.roomNameInput, { fontSize: 14, fontWeight: '600' }]}
-                        value={drv.phone}
-                        onChangeText={(val) => updateDriver(drv.id, 'phone', val)}
-                        placeholder="Teléfono (ej. 3101234567)"
-                        keyboardType="phone-pad"
-                      />
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <TextInput
+                          style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 20, color: '#0F172A', flex: 1 }]}
+                          value={drv.name}
+                          onChangeText={(val) => updateDriver(drv.id, 'name', val)}
+                          placeholder="Nombre del conductor"
+                          placeholderTextColor="#94A3B8"
+                        />
+                        <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={[styles.deleteBtn, { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF2F2' }]}>
+                          <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      {/* Phone Pill */}
+                      <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 }}>
+                          <Ionicons name="call" size={16} color="#475569" />
+                          <TextInput
+                            style={{ fontSize: 14, fontWeight: '600', color: '#1E293B', minWidth: 80, padding: 0 }}
+                            value={drv.phone}
+                            onChangeText={(val) => updateDriver(drv.id, 'phone', val)}
+                            placeholder="Teléfono"
+                            placeholderTextColor="#94A3B8"
+                            keyboardType="phone-pad"
+                          />
+                        </View>
+                      </View>
                     </View>
-                    <TouchableOpacity 
-                      style={[styles.deleteBtn, { backgroundColor: '#FEF2F2' }]}
-                      onPress={() => openDriverDeleteConfirmation(drv)}
-                    >
-                      <Ionicons name="trash-outline" size={20} color={COLORS.danger} />
-                    </TouchableOpacity>
                   </View>
                 ))}
                 
@@ -1429,6 +1439,45 @@ export default function AdminSettings() {
         </View>
       </Modal>
 
+      {/* MODAL DE CONFIRMACIÓN DE CREACIÓN */}
+      <Modal
+        visible={showCreateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.accent}15` }]}>
+              <Ionicons name="add-circle" size={40} color={COLORS.accent} />
+            </View>
+            <Text style={styles.modalTitle}>
+              {itemToCreate === 'room' ? '¿Agregar nuevo espacio?' : 
+               itemToCreate === 'dependency' ? '¿Agregar nueva dependencia?' : 
+               '¿Agregar nuevo conductor?'}
+            </Text>
+            <Text style={styles.modalDescription}>
+              Se agregará un nuevo registro a la lista. Recuerda llenar sus datos y presionar Guardar Cambios para confirmar de manera definitiva.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setShowCreateModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.successButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+                onPress={confirmCreate}
+              >
+                <Text style={styles.successButtonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* MODAL DE ÉXITO AL GUARDAR */}
       <Modal
         visible={showSuccessModal}
@@ -1591,18 +1640,15 @@ const styles = StyleSheet.create({
   },
   depCard: { 
     backgroundColor: COLORS.white, 
-    borderRadius: 24, 
-    padding: 25, 
+    borderRadius: 20, 
+    padding: 20, 
     flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 18, 
-    borderWidth: 1, 
-    borderColor: COLORS.line,
-    borderLeftWidth: 8,
-    borderLeftColor: '#A9301E',
+    alignItems: 'flex-start', 
+    gap: 16, 
+    borderWidth: 1.5, 
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
-      android: { elevation: 2 },
+      android: { elevation: 3 },
       web: { boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)' }
     })
   },
