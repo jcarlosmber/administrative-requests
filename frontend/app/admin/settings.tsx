@@ -930,11 +930,11 @@ export default function AdminSettings() {
               </View>
 
               <SectionHeader title="Gestión de Dependencias" kicker="ORGANIZACIÓN" />
-              <View style={styles.cardList}>
+              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {dependencies.map(dep => (
-                  <View key={dep.id} style={styles.depCard}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(169, 48, 30, 0.08)' }]}>
-                      <Ionicons name="people-circle" size={24} color="#A9301E" />
+                  <View key={dep.id} style={[styles.depCard, isDesktop && { width: '48%', minHeight: 140 }]}>
+                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(169, 48, 30, 0.08)', width: 64, height: 64, borderRadius: 20 }]}>
+                      <Ionicons name="people-circle" size={32} color="#A9301E" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
@@ -953,9 +953,9 @@ export default function AdminSettings() {
                   </View>
                 ))}
                 
-                <TouchableOpacity style={styles.addBtn} onPress={addDependency}>
-                  <Ionicons name="add-circle" size={20} color={COLORS.accent} />
-                  <Text style={styles.addBtnText}>Añadir nueva dependencia</Text>
+                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%', minHeight: 140 }]} onPress={addDependency}>
+                  <Ionicons name="add" size={24} color={COLORS.muted} />
+                  <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Dependencia</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1039,11 +1039,11 @@ export default function AdminSettings() {
               </View>
 
               <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
-              <View style={styles.cardList}>
+              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {drivers.map(drv => (
-                  <View key={drv.id} style={[styles.depCard, { borderLeftColor: '#3B82F6' }]}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.08)' }]}>
-                      <Ionicons name="car-sport" size={24} color="#3B82F6" />
+                  <View key={drv.id} style={[styles.depCard, { borderLeftColor: '#3B82F6' }, isDesktop && { width: '48%', minHeight: 140 }]}>
+                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.08)', width: 64, height: 64, borderRadius: 20 }]}>
+                      <Ionicons name="car-sport" size={32} color="#3B82F6" />
                     </View>
                     <View style={{ flex: 1, gap: 6 }}>
                       <TextInput
@@ -1069,14 +1069,14 @@ export default function AdminSettings() {
                   </View>
                 ))}
                 
-                <TouchableOpacity style={styles.addBtn} onPress={addDriver}>
-                  <Ionicons name="add-circle" size={20} color={COLORS.accent} />
-                  <Text style={styles.addBtnText}>Añadir nuevo conductor</Text>
+                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%', minHeight: 140 }]} onPress={addDriver}>
+                  <Ionicons name="add" size={24} color={COLORS.muted} />
+                  <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Conductor</Text>
                 </TouchableOpacity>
               </View>
 
               <SectionHeader title="Correos de Secretaría General" kicker="NOTIFICACIONES DE SERVICIO" />
-              <View style={{ gap: 15 }}>
+              <View style={[isDesktop ? { flexDirection: 'row', flexWrap: 'wrap', gap: 20 } : { gap: 15 }]}>
                 {([
                   { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F' },
                   { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946' },
@@ -1085,10 +1085,12 @@ export default function AdminSettings() {
                 ] as const).map(({ type, title, icon, color }) => {
                   const emails = serviceEmails.filter(e => e.service_type === type);
                   return (
-                    <View key={type} style={{ backgroundColor: COLORS.white, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: COLORS.line }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                        <Ionicons name={icon as any} size={18} color={color} />
-                        <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.primary }}>
+                    <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%', minHeight: 140 }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                        <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name={icon as any} size={24} color={color} />
+                        </View>
+                        <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
                           {title}
                         </Text>
                       </View>
@@ -1113,7 +1115,7 @@ export default function AdminSettings() {
                       </View>
 
                       {/* Campo de agregar nuevo correo */}
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 5 }}>
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 'auto' }}>
                         <TextInput
                           style={[styles.roomNameInput, { flex: 1, fontSize: 13, height: 40, paddingVertical: 4 }]}
                           value={emailInputs[type] || ''}
@@ -1577,13 +1579,13 @@ const styles = StyleSheet.create({
   depCard: { 
     backgroundColor: COLORS.white, 
     borderRadius: 24, 
-    padding: 20, 
+    padding: 25, 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 15, 
+    gap: 18, 
     borderWidth: 1, 
     borderColor: COLORS.line,
-    borderLeftWidth: 6,
+    borderLeftWidth: 8,
     borderLeftColor: '#A9301E',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
