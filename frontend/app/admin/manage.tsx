@@ -414,6 +414,9 @@ export default function ManageRequests() {
 
         <View style={{ flex: 1 }}>
           <FlatList
+            key={isDesktop ? 'desktop-cols' : 'mobile-cols'}
+            numColumns={isDesktop ? 2 : 1}
+            columnWrapperStyle={isDesktop ? { paddingHorizontal: 25, gap: 20 } : undefined}
             ListHeaderComponent={
               <View style={styles.headerContainer}>
                 <HeroSection isDesktop={isDesktop} />
@@ -477,6 +480,8 @@ function Sidebar() {
 }
 
 function HeroSection({ isDesktop }: any) {
+  const router = useRouter();
+
   return (
     <View style={styles.hero}>
       <LinearGradient 
@@ -486,9 +491,31 @@ function HeroSection({ isDesktop }: any) {
         end={{ x: 1, y: 1 }}
       />
       <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
-        <Text style={styles.heroKicker}>PANEL DE ADMINISTRACIÓN</Text>
-        <Text style={styles.heroTitle}>Control y Seguimiento</Text>
-        <Text style={styles.heroSub}>Monitoree el progreso de cada requerimiento</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.heroKicker}>PANEL DE ADMINISTRACIÓN</Text>
+            <Text style={styles.heroTitle}>Control y Seguimiento</Text>
+            <Text style={styles.heroSub}>Monitoree el progreso de cada requerimiento</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity 
+              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+              onPress={() => router.replace('/(tabs)')}
+            >
+              <Ionicons name="home" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.logoutBtn} 
+              onPress={async () => {
+                await supabase.auth.signOut();
+                router.replace('/login');
+              }}
+            >
+              <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -571,13 +598,20 @@ function KPICard({ label, value, color, icon, index }: any) {
         {
           opacity: fadeAnim,
           transform: [{ translateY }, { scale }],
+          borderTopWidth: 4,
+          borderTopColor: color,
         }
       ]}>
-        <View style={[styles.kpiIcon, { backgroundColor: `${color}15` }]}>
-          <Ionicons name={icon} size={20} color={color} />
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.kpiValue}>{value}</Text>
+            <Text style={styles.kpiLabel}>{label}</Text>
+          </View>
+          <View style={[styles.kpiIcon, { backgroundColor: `${color}15`, width: 50, height: 50, borderRadius: 25 }]}>
+            <Ionicons name={icon} size={24} color={color} />
+          </View>
         </View>
-        <Text style={styles.kpiValue}>{value}</Text>
-        <Text style={styles.kpiLabel}>{label}</Text>
+        <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 10, fontWeight: '600' }}>Actualizado ahora</Text>
       </Animated.View>
     </Pressable>
   );
@@ -700,7 +734,7 @@ function RequestListItem({ item, onUpdateStatus }: any) {
   };
 
   return (
-    <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+    <Animated.View style={[styles.card, isDesktop && { flex: 1, marginHorizontal: 0 }, { transform: [{ scale }] }]}>
       <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
       <View style={styles.cardMain}>
         <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded(!expanded)} activeOpacity={0.9}>
@@ -793,70 +827,78 @@ function RequestListItem({ item, onUpdateStatus }: any) {
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
               <Text style={styles.metaText}>{item.date}</Text>
-              <Ionicons 
-                name={expanded ? "chevron-up" : "chevron-down"} 
-                size={14} 
-                color={COLORS.muted} 
-                style={{ marginLeft: 10 }} 
-              />
             </View>
-            <View style={styles.actionButtons}>
-              {/* Botones para solicitudes en estado Pendiente */}
-              {item.status.toLowerCase() === 'pendiente' && (
-                <>
-                  {/* Aprobar Directamente (Check Verde) para todas las categorías */}
-                  <TouchableOpacity 
-                    style={[styles.actionBtn, styles.successBtn]}
-                    onPress={() => onUpdateStatus(item.id, 'resuelto')}
-                  >
-                    <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
-                    <Text style={styles.actionBtnText}>Aprobar</Text>
-                  </TouchableOpacity>
+            <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10 }]}>
+              <TouchableOpacity 
+                style={[styles.actionBtn, { borderColor: COLORS.line, backgroundColor: 'transparent', height: 32 }]}
+                onPress={() => setExpanded(!expanded)}
+              >
+                <Text style={[styles.actionBtnText, { color: COLORS.primary }]}>{expanded ? 'Ocultar' : 'Ampliar'}</Text>
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.primary} />
+              </TouchableOpacity>
 
-                  {/* Poner en Progreso (Play Azul) para Transporte, Visitantes y Mantenimiento */}
-                  {['transport', 'visitors', 'maintenance'].includes(item.category) && (
+              {expanded && (
+                <>
+                  {/* Botones para solicitudes en estado Pendiente */}
+                  {item.status.toLowerCase() === 'pendiente' && (
+                    <>
+                      {/* Aprobar Directamente (Check Verde) para todas las categorías */}
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, styles.successBtn]}
+                        onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                      >
+                        <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
+                        <Text style={styles.actionBtnText}>Aprobar</Text>
+                      </TouchableOpacity>
+
+                      {/* Poner en Progreso (Play Azul) para Transporte, Visitantes y Mantenimiento */}
+                      {['transport', 'visitors', 'maintenance'].includes(item.category) && (
+                        <TouchableOpacity 
+                          style={[styles.actionBtn, styles.approveBtn]}
+                          onPress={() => onUpdateStatus(item.id, 'en_progreso')}
+                        >
+                          <Ionicons name="play-outline" size={16} color={COLORS.white} />
+                          <Text style={styles.actionBtnText}>Procesar</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
+                  )}
+
+                  {/* Botones para solicitudes en progreso */}
+                  {['en_progreso', 'en progreso'].includes(item.status.toLowerCase()) && (
                     <TouchableOpacity 
-                      style={[styles.actionBtn, styles.approveBtn]}
-                      onPress={() => onUpdateStatus(item.id, 'en_progreso')}
+                       style={[styles.actionBtn, styles.successBtn]}
+                       onPress={() => onUpdateStatus(item.id, 'resuelto')}
                     >
-                      <Ionicons name="play-outline" size={16} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Procesar</Text>
+                      <Ionicons name="checkmark-done-outline" size={16} color={COLORS.white} />
+                      <Text style={styles.actionBtnText}>Completar</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Botón para solicitudes programadas (fallback de mock data) */}
+                  {item.status.toLowerCase() === 'programada' && (
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.infoBtn]}
+                      onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                    >
+                      <Ionicons name="car-outline" size={16} color={COLORS.white} />
+                      <Text style={styles.actionBtnText}>Despachar</Text>
                     </TouchableOpacity>
                   )}
                 </>
               )}
-
-              {/* Botones para solicitudes en progreso */}
-              {['en_progreso', 'en progreso'].includes(item.status.toLowerCase()) && (
-                <TouchableOpacity 
-                   style={[styles.actionBtn, styles.successBtn]}
-                   onPress={() => onUpdateStatus(item.id, 'resuelto')}
-                >
-                  <Ionicons name="checkmark-done-outline" size={16} color={COLORS.white} />
-                  <Text style={styles.actionBtnText}>Completar</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Botón para solicitudes programadas (fallback de mock data) */}
-              {item.status.toLowerCase() === 'programada' && (
-                <TouchableOpacity 
-                  style={[styles.actionBtn, styles.infoBtn]}
-                  onPress={() => onUpdateStatus(item.id, 'resuelto')}
-                >
-                  <Ionicons name="car-outline" size={16} color={COLORS.white} />
-                  <Text style={styles.actionBtnText}>Despachar</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Botón de Rechazo (Equis Roja) para cualquier solicitud activa */}
-              {!['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase()) && (
-                <TouchableOpacity 
-                  style={[styles.actionBtn, styles.rejectBtn]}
-                  onPress={() => onUpdateStatus(item.id, 'rechazado')}
-                >
-                  <Ionicons name="close-outline" size={16} color={COLORS.danger} />
-                  <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>Rechazar</Text>
-                </TouchableOpacity>
+                  
+                  {/* Botón de Rechazo (Equis Roja) para cualquier solicitud activa */}
+                  {!['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase()) && (
+                    <TouchableOpacity 
+                      style={[styles.actionBtn, styles.rejectBtn]}
+                      onPress={() => onUpdateStatus(item.id, 'rechazado')}
+                    >
+                      <Ionicons name="close-outline" size={16} color={COLORS.danger} />
+                      <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>Rechazar</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
           </View>

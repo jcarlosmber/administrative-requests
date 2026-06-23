@@ -13,11 +13,12 @@ import {
   Animated,
   Easing
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { requestService } from '../../lib/requestService';
+import { supabase } from '../../lib/supabase';
 
 // Paleta de Colores de Diseño Premium
 
@@ -76,6 +77,7 @@ const COLORS = {
 export default function AdminReports() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const router = useRouter();
 
   // Estados de control
   const [activeTab, setActiveTab] = useState<'consolidated' | 'visitors' | 'maintenance' | 'parking' | 'rooms' | 'transport'>('consolidated');
@@ -406,9 +408,28 @@ export default function AdminReports() {
                   <Text style={styles.heroTitle}>Analítica & Reportes</Text>
                   <Text style={styles.heroSub}>Consola interactiva de monitoreo de servicios administrativos</Text>
                 </View>
-                <TouchableOpacity style={styles.refreshBtn} onPress={handleRefresh} disabled={loading}>
-                  <Ionicons name="refresh" size={20} color={COLORS.white} />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity style={styles.refreshBtn} onPress={handleRefresh} disabled={loading}>
+                    <Ionicons name="refresh" size={20} color={COLORS.white} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+                    onPress={() => router.replace('/(tabs)')}
+                  >
+                    <Ionicons name="home" size={22} color="#FFFFFF" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.logoutBtn} 
+                    onPress={async () => {
+                      await supabase.auth.signOut();
+                      router.replace('/login');
+                    }}
+                  >
+                    <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </View>
@@ -1278,6 +1299,8 @@ const styles = StyleSheet.create({
   firmaLinea: { width: 180, height: 1, backgroundColor: COLORS.muted },
   firmaTexto: { fontSize: 11, fontWeight: '800', color: COLORS.primary, marginTop: 6 },
   firmaSub: { fontSize: 10, color: COLORS.muted, marginTop: 2 },
+  heroSub: { fontSize: 15, color: '#94A3B8', marginTop: 8 },
+  logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
   reportDocFooter: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 15, marginTop: 10 },
   cancelReportBtn: { height: 42, paddingHorizontal: 20, borderRadius: 10, justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line },

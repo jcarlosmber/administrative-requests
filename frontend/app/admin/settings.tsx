@@ -14,6 +14,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -1461,6 +1462,8 @@ function Sidebar() {
 }
 
 function HeroSection({ isDesktop }: any) {
+  const router = useRouter();
+
   return (
     <View style={styles.hero}>
       <LinearGradient 
@@ -1470,9 +1473,31 @@ function HeroSection({ isDesktop }: any) {
         end={{ x: 1, y: 1 }}
       />
       <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
-        <Text style={styles.heroKicker}>AJUSTES DE SISTEMA</Text>
-        <Text style={styles.heroTitle}>Configuración General</Text>
-        <Text style={styles.heroSub}>Administre los recursos y reglas del portal</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={styles.heroKicker}>AJUSTES DE SISTEMA</Text>
+            <Text style={styles.heroTitle}>Configuración General</Text>
+            <Text style={styles.heroSub}>Administre los recursos y reglas del portal</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity 
+              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+              onPress={() => router.replace('/(tabs)')}
+            >
+              <Ionicons name="home" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.logoutBtn} 
+              onPress={async () => {
+                await supabase.auth.signOut();
+                router.replace('/login');
+              }}
+            >
+              <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -1613,6 +1638,7 @@ const styles = StyleSheet.create({
   toggleIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.bg, justifyContent: 'center', alignItems: 'center' },
   toggleLabel: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
   toggleDesc: { fontSize: 12, color: COLORS.muted, marginTop: 2, fontWeight: '500' },
+  logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   configDivider: { height: 1, backgroundColor: COLORS.line, marginHorizontal: 20 },
 
   saveBtn: { marginTop: 40, borderRadius: 20, overflow: 'hidden', 

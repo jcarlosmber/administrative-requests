@@ -57,22 +57,7 @@ export default function LoginPage() {
     setErrorModalVisible(true);
   };
 
-  const handleLogin = async () => {
-    if (!documentId.trim()) {
-      showError('Datos incompletos', 'Por favor, ingresa tu usuario o correo institucional.');
-      return;
-    }
-
-    if (!password.trim()) {
-      showError('Datos incompletos', 'Por favor, ingresa tu contraseña.');
-      return;
-    }
-
-    if (!policyAccepted) {
-      setShowPolicyModal(true);
-      return;
-    }
-
+  const executeLogin = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -99,6 +84,25 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleLogin = async () => {
+    if (!documentId.trim()) {
+      showError('Datos incompletos', 'Por favor, ingresa tu usuario o correo institucional.');
+      return;
+    }
+
+    if (!password.trim()) {
+      showError('Datos incompletos', 'Por favor, ingresa tu contraseña.');
+      return;
+    }
+
+    if (!policyAccepted) {
+      setShowPolicyModal(true);
+      return;
+    }
+
+    await executeLogin();
   };
 
 
@@ -245,6 +249,7 @@ export default function LoginPage() {
                     onPress={() => {
                       setPolicyAccepted(true);
                       setShowPolicyModal(false);
+                      executeLogin();
                     }}
                   >
                     <Text style={styles.acceptBtnText}>Aceptar y Continuar</Text>
