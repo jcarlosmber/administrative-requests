@@ -790,7 +790,7 @@ export default function AdminReports() {
                 </View>
 
                 {/* Cuerpo del Reporte Formateado */}
-                <ScrollView style={styles.reportDocBody} showsVerticalScrollIndicator={false}>
+                <ScrollView style={styles.reportDocBody} showsVerticalScrollIndicator={true}>
                   <Text style={styles.reportDocTitle}>
                     REPORTE CONSOLIDADO DE GESTIÓN OPERATIVA Y SERVICIOS ADMINISTRATIVOS
                   </Text>
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
   },
 
   modalBlurContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalPanel: { backgroundColor: COLORS.white, borderRadius: 28, width: '100%', maxWidth: 650, height: '85%', padding: 25, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10, overflow: 'hidden' },
+  modalPanel: { backgroundColor: COLORS.white, borderRadius: 28, width: '95%', maxWidth: 900, height: '90%', padding: 25, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10, overflow: 'hidden' },
   
   pdfGeneratingBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   pdfGeneratingTitle: { fontSize: 18, fontWeight: '900', color: COLORS.primary, marginTop: 15 },

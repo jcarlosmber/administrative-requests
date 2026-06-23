@@ -828,11 +828,11 @@ export default function AdminSettings() {
             <View style={styles.contentPadding}>
               
               <SectionHeader title="Gestión de Espacios" kicker="INFRAESTRUCTURA" />
-              <View style={styles.cardList}>
+              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                 {rooms.map(room => (
-                  <View key={room.id} style={styles.roomCard}>
-                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(114, 9, 183, 0.08)' }]}>
-                      <Ionicons name="business" size={24} color="#7209B7" />
+                  <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%', minHeight: 140 }]}>
+                    <View style={[styles.roomIconBox, { backgroundColor: 'rgba(114, 9, 183, 0.08)', width: 64, height: 64, borderRadius: 20 }]}>
+                      <Ionicons name="business" size={32} color="#7209B7" />
                     </View>
                     <View style={{ flex: 1 }}>
                       <TextInput
@@ -923,9 +923,9 @@ export default function AdminSettings() {
                   </View>
                 ))}
                 
-                <TouchableOpacity style={styles.addBtn} onPress={addRoom}>
-                  <Ionicons name="add-circle" size={20} color={COLORS.accent} />
-                  <Text style={styles.addBtnText}>Añadir nuevo espacio</Text>
+                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%', minHeight: 140 }]} onPress={addRoom}>
+                  <Ionicons name="add" size={24} color={COLORS.muted} />
+                  <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Espacio</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1560,13 +1560,13 @@ const styles = StyleSheet.create({
   roomCard: { 
     backgroundColor: COLORS.white, 
     borderRadius: 24, 
-    padding: 20, 
+    padding: 25, 
     flexDirection: 'row', 
     alignItems: 'center', 
-    gap: 15, 
+    gap: 18, 
     borderWidth: 1, 
     borderColor: COLORS.line,
-    borderLeftWidth: 6,
+    borderLeftWidth: 8,
     borderLeftColor: '#7209B7',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
@@ -1599,8 +1599,8 @@ const styles = StyleSheet.create({
   miniLabel: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
   deleteBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center' },
 
-  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 18, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.line, marginTop: 15 },
-  addBtnText: { fontSize: 16, fontWeight: '800', color: COLORS.accent },
+  addCardBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 18, borderRadius: 20, borderStyle: 'dashed', borderWidth: 2, borderColor: COLORS.line, marginTop: 15 },
+  addCardText: { fontSize: 16, fontWeight: '800', color: COLORS.accent },
 
   userSectionCard: { backgroundColor: COLORS.white, borderRadius: 28, padding: 18, borderWidth: 1, borderColor: COLORS.line, gap: 12 },
   userSectionHeader: { flexDirection: 'row', gap: 10, alignItems: 'center', flexWrap: 'wrap' },

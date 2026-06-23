@@ -401,7 +401,7 @@ export default function ManageRequests() {
     const today = new Date().toDateString();
     return {
       enCurso: requests.filter(r => r.status === 'en_progreso').length,
-      criticas: requests.filter(r => r.priority === 'alta').length,
+      pendientes: requests.filter(r => r.status === 'pendiente').length,
       hoy: requests.filter(r => new Date(r.created_at).toDateString() === today).length
     };
   }, [requests]);
@@ -521,11 +521,11 @@ function HeroSection({ isDesktop }: any) {
   );
 }
 
-function KPISection({ stats }: { stats: { enCurso: number, criticas: number, hoy: number } }) {
+function KPISection({ stats }: { stats: { enCurso: number, pendientes: number, hoy: number } }) {
   return (
     <View style={styles.kpiRow}>
       <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.info} icon="swap-horizontal" index={0} />
-      <KPICard label="Críticas" value={stats.criticas.toString()} color={COLORS.danger} icon="alert-circle" index={1} />
+      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" index={1} />
       <KPICard label="Hoy" value={stats.hoy.toString()} color={COLORS.accent} icon="calendar" index={2} />
     </View>
   );
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
 
   contentPadding: { paddingHorizontal: 25 },
   kpiRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
-  kpiCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.line },
+  kpiCard: { flex: 1, backgroundColor: '#F1F5F9', borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.line },
   kpiIcon: { justifyContent: 'center', alignItems: 'center' },
   kpiValue: { fontSize: 32, fontWeight: '900', color: COLORS.primary },
   kpiLabel: { fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
