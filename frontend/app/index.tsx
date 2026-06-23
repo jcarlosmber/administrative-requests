@@ -92,7 +92,7 @@ const services = [
 
 const benefits = [
   { label: 'Trazabilidad', value: '100%' },
-  { label: 'Servicios', value: '4' },
+  { label: 'Servicios', value: '5' },
   { label: 'Seguimiento', value: '24/7' },
 ];
 
