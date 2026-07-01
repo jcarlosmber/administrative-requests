@@ -65,10 +65,17 @@ class SupabaseAuthEmulated {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await res.json();
       if (!res.ok) {
-        return { data: { user: null, session: null }, error: new Error(data.error || 'Error de inicio de sesión') };
+        let errorMsg = 'Error de inicio de sesión';
+        try {
+          const data = await res.json();
+          errorMsg = data.error || errorMsg;
+        } catch(e) {
+          errorMsg = `Error del servidor (${res.status})`;
+        }
+        return { data: { user: null, session: null }, error: new Error(errorMsg) };
       }
+      const data = await res.json();
       await appStorage.setItem('auth_token', data.token);
       return { data: { user: data.user, session: { access_token: data.token } }, error: null };
     } catch (e: any) {
@@ -84,10 +91,17 @@ class SupabaseAuthEmulated {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name })
       });
-      const data = await res.json();
       if (!res.ok) {
-        return { data: { user: null, session: null }, error: new Error(data.error || 'Error de registro') };
+        let errorMsg = 'Error de registro';
+        try {
+          const data = await res.json();
+          errorMsg = data.error || errorMsg;
+        } catch(e) {
+          errorMsg = `Error del servidor (${res.status})`;
+        }
+        return { data: { user: null, session: null }, error: new Error(errorMsg) };
       }
+      const data = await res.json();
       await appStorage.setItem('auth_token', data.token);
       return { data: { user: data.user, session: { access_token: data.token } }, error: null };
     } catch (e: any) {

@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: COLORS.heroDark,
+    color: '#000000',
     flex: 1,
   },
   modalBody: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   policyText: {
     fontSize: 14,
-    color: COLORS.heroMid,
+    color: '#000000',
     lineHeight: 22,
   },
   externalLink: {
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cancelBtnText: {
-    color: COLORS.heroMid,
+    color: '#000000',
     fontWeight: '700',
   },
   acceptBtn: {
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   acceptBtnText: {
-    color: COLORS.heroText,
+    color: '#FFFFFF',
     fontWeight: '900',
   },
 });
