@@ -24,8 +24,10 @@ import { supabase } from '../lib/supabase';
 const COLORS = {
   primary: '#BE1F2D', // Rojo BOGOTÁ
   primarySoft: '#D94553',
-  heroDark: '#F8FAFC', // Fondo principal
-  heroMid: '#F1F5F9', // Fondo secundario
+  bgDark: '#210706', // Fondo principal original
+  bgMid: '#3A0D0A', // Fondo secundario original
+  heroDark: '#F8FAFC',
+  heroMid: '#F1F5F9',
   heroText: '#0F2133', // Texto principal oscuro
   heroMuted: '#64748B', // Texto secundario / gris azulado
   line: '#E2E8F0', // Líneas y bordes
@@ -108,19 +110,19 @@ export default function LoginPage() {
 
 
   return (
-    <View style={styles.screen}>
-      <StatusBar style="dark" />
+    <LinearGradient colors={[COLORS.bgDark, COLORS.bgMid, '#160403']} style={styles.screen}>
+      <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={20} color={COLORS.heroText} />
-            <Text style={styles.backText}>Volver</Text>
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+            <Text style={[styles.backText, { color: '#FFFFFF' }]}>Volver</Text>
           </Pressable>
 
           <View style={styles.card}>
             <View style={styles.brand}>
               <View style={[styles.logoMark, { width: isWide ? 64 : 84, height: isWide ? 64 : 84 }]}>
-                <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.heroText} />
+                <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.brandName, { fontSize: isWide ? 15 : 18 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
@@ -200,7 +202,7 @@ export default function LoginPage() {
             </View>
 
             <View style={styles.footerBrand}>
-              <Image source={require('../assets/alcaldia-mayor-bogota.png')} style={styles.footerLogo} resizeMode="contain" />
+              <Image source={require('../assets/logos/SJD negro y amarillo.png')} style={styles.footerLogo} resizeMode="contain" />
             </View>
           </View>
 
@@ -291,14 +293,13 @@ export default function LoginPage() {
           </Modal>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.heroDark,
   },
   safeArea: {
     flex: 1,
@@ -346,9 +347,11 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 20,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   brandName: {
