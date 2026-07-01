@@ -22,14 +22,15 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
 
 const COLORS = {
-  primary: '#A9301E',
-  primarySoft: '#F97361',
-  heroDark: '#210706',
-  heroMid: '#3A0D0A',
-  heroText: '#FFF8F6',
-  heroMuted: '#F7B7AA',
-  line: 'rgba(255, 208, 199, 0.18)',
+  primary: '#BE1F2D', // Rojo BOGOTÁ
+  primarySoft: '#D94553',
+  heroDark: '#F8FAFC', // Fondo principal
+  heroMid: '#F1F5F9', // Fondo secundario
+  heroText: '#0F2133', // Texto principal oscuro
+  heroMuted: '#64748B', // Texto secundario / gris azulado
+  line: '#E2E8F0', // Líneas y bordes
   success: '#10B981',
+  white: '#FFFFFF',
 };
 
 const POLICY_URL = 'https://www.secretariajuridica.gov.co/node/376';
@@ -107,8 +108,8 @@ export default function LoginPage() {
 
 
   return (
-    <LinearGradient colors={[COLORS.heroDark, COLORS.heroMid, '#160403']} style={styles.screen}>
-      <StatusBar style="light" />
+    <View style={styles.screen}>
+      <StatusBar style="dark" />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -141,7 +142,7 @@ export default function LoginPage() {
                     value={documentId}
                     onChangeText={setDocumentId}
                     placeholder="usuario@secretariajuridica.gov.co"
-                    placeholderTextColor="rgba(247, 183, 170, 0.58)"
+                    placeholderTextColor={COLORS.heroMuted}
                     style={styles.input}
                     autoCapitalize="none"
                   />
@@ -156,7 +157,7 @@ export default function LoginPage() {
                     value={password}
                     onChangeText={setPassword}
                     placeholder="Misma contraseña del correo"
-                    placeholderTextColor="rgba(247, 183, 170, 0.58)"
+                    placeholderTextColor={COLORS.heroMuted}
                     style={styles.input}
                     secureTextEntry={!showPassword}
                   />
@@ -169,7 +170,7 @@ export default function LoginPage() {
               <View style={styles.optionsRow}>
                 <Pressable style={styles.rememberControl} onPress={() => setRememberMe((value) => !value)}>
                   <View style={[styles.checkbox, rememberMe && styles.checkboxActive]}>
-                    {rememberMe && <Ionicons name="checkmark" size={14} color={COLORS.heroDark} />}
+                    {rememberMe && <Ionicons name="checkmark" size={14} color={COLORS.white} />}
                   </View>
                   <Text style={styles.optionText}>Recordarme</Text>
                 </Pressable>
@@ -180,8 +181,8 @@ export default function LoginPage() {
               </View>
 
               <Pressable style={styles.policyLink} onPress={() => setShowPolicyModal(true)}>
-                <Ionicons name={policyAccepted ? "checkbox" : "shield-checkmark-outline"} size={17} color={policyAccepted ? COLORS.primarySoft : "#FFD0C7"} />
-                <Text style={[styles.policyLinkText, policyAccepted && { color: COLORS.primarySoft }]}>
+                <Ionicons name={policyAccepted ? "checkbox" : "shield-checkmark-outline"} size={17} color={policyAccepted ? COLORS.primary : COLORS.heroMuted} />
+                <Text style={[styles.policyLinkText, policyAccepted && { color: COLORS.primary }]}>
                   {policyAccepted ? "Política aceptada" : "Ver política de tratamiento de datos personales"}
                 </Text>
               </Pressable>
@@ -191,8 +192,8 @@ export default function LoginPage() {
                   <ActivityIndicator size="small" color={COLORS.heroText} />
                 ) : (
                   <>
-                    <Text style={[styles.submitText, { fontSize: isWide ? 18 : 22 }]}>Ingresar al sistema</Text>
-                    <Ionicons name="arrow-forward" size={isWide ? 18 : 22} color={COLORS.heroText} />
+                    <Text style={[styles.submitText, { fontSize: isWide ? 18 : 20 }]}>Ingresar al sistema</Text>
+                    <Ionicons name="arrow-forward" size={isWide ? 18 : 20} color={COLORS.white} />
                   </>
                 )}
               </Pressable>
@@ -290,13 +291,14 @@ export default function LoginPage() {
           </Modal>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    backgroundColor: COLORS.heroDark,
   },
   safeArea: {
     flex: 1,
@@ -326,8 +328,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: COLORS.line,
-    backgroundColor: 'rgba(81, 24, 18, 0.78)',
+    backgroundColor: COLORS.white,
     padding: 26,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 3,
   },
   brand: {
     flexDirection: 'row',
@@ -382,7 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.line,
-    backgroundColor: 'rgba(255, 208, 199, 0.08)',
+    backgroundColor: COLORS.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -415,8 +422,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxActive: {
-    backgroundColor: COLORS.primarySoft,
-    borderColor: COLORS.primarySoft,
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   optionText: {
     color: COLORS.heroMuted,
@@ -424,7 +431,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   recoverText: {
-    color: '#FFD0C7',
+    color: COLORS.primary,
     fontSize: 13,
     fontWeight: '900',
   },
@@ -433,7 +440,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.line,
-    backgroundColor: 'rgba(255, 208, 199, 0.06)',
+    backgroundColor: COLORS.heroMid,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -441,7 +448,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   policyLinkText: {
-    color: '#FFD0C7',
+    color: COLORS.heroMuted,
     fontSize: 13,
     fontWeight: '900',
     textAlign: 'center',
@@ -449,7 +456,7 @@ const styles = StyleSheet.create({
   submitButton: {
     minHeight: 58,
     borderRadius: 999,
-    backgroundColor: COLORS.primarySoft,
+    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -457,8 +464,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   submitText: {
-    color: COLORS.heroText,
-    fontSize: 22,
+    color: COLORS.white,
+    fontSize: 18,
     fontWeight: '900',
   },
   footerBrand: {
@@ -480,7 +487,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: COLORS.heroText,
+    backgroundColor: COLORS.white,
     borderRadius: 24,
     padding: 24,
     maxHeight: '80%',
