@@ -18,16 +18,16 @@ export interface ServiceEmail {
 
 // Valores iniciales por defecto en caso de desconexión o primer inicio
 const INITIAL_DRIVERS: Driver[] = [
-  { id: '1', name: 'Carlos Mendoza', phone: '3104567890', is_active: true },
-  { id: '2', name: 'Alfonso Guerrero', phone: '3157890123', is_active: true },
-  { id: '3', name: 'Martha Lucia Gómez', phone: '3203456789', is_active: true }
+  { id: '11111111-2222-3333-4444-666666666661', name: 'Carlos Mendoza', phone: '3104567890', is_active: true },
+  { id: '11111111-2222-3333-4444-666666666662', name: 'Alfonso Guerrero', phone: '3157890123', is_active: true },
+  { id: '11111111-2222-3333-4444-666666666663', name: 'Martha Lucia Gómez', phone: '3203456789', is_active: true }
 ];
 
 const INITIAL_EMAILS: ServiceEmail[] = [
-  { id: '1', service_type: 'maintenance', email: 'mantenimiento.sg@SJD.gov.co' },
-  { id: '2', service_type: 'visitors', email: 'visitantes.sg@SJD.gov.co' },
-  { id: '3', service_type: 'rooms_special', email: 'eventos.sg@SJD.gov.co' },
-  { id: '4', service_type: 'parking', email: 'porteria.sg@SJD.gov.co' }
+  { id: '11111111-2222-3333-4444-777777777771', service_type: 'maintenance', email: 'mantenimiento.sg@SJD.gov.co' },
+  { id: '11111111-2222-3333-4444-777777777772', service_type: 'visitors', email: 'visitantes.sg@SJD.gov.co' },
+  { id: '11111111-2222-3333-4444-777777777773', service_type: 'rooms_special', email: 'eventos.sg@SJD.gov.co' },
+  { id: '11111111-2222-3333-4444-777777777774', service_type: 'parking', email: 'porteria.sg@SJD.gov.co' }
 ];
 
 export const settingsService = {

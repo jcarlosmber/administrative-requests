@@ -36,21 +36,21 @@ const COLORS = {
 };
 
 const INITIAL_ROOMS = [
-  { id: '1', name: 'Sala Innovación', capacity: '12', floor: 'Piso 2' },
-  { id: '2', name: 'Sala de Juntas B', capacity: '8', floor: 'Piso 1' },
-  { id: '3', name: 'Focus Room 4', capacity: '2', floor: 'Piso 3' },
-  { id: '4', name: 'Auditorio Principal', capacity: '50', floor: 'PB' },
+  { id: '11111111-1111-1111-1111-111111111111', name: 'Sala Innovación', capacity: '12', floor: 'Piso 2' },
+  { id: '22222222-2222-2222-2222-222222222222', name: 'Sala de Juntas B', capacity: '8', floor: 'Piso 1' },
+  { id: '33333333-3333-3333-3333-333333333333', name: 'Focus Room 4', capacity: '2', floor: 'Piso 3' },
+  { id: '44444444-4444-4444-4444-444444444444', name: 'Auditorio Principal', capacity: '50', floor: 'PB' },
 ];
 
 const INITIAL_DEPENDENCIES = [
-  { id: 'dep-1', name: 'Secretaría Jurídica Distrital' },
-  { id: 'dep-2', name: 'Dirección de Gestión Corporativa' },
-  { id: 'dep-3', name: 'Dirección Distrital de Defensa Judicial' },
-  { id: 'dep-4', name: 'Subdirección de Informática (Oficina TIC)' },
-  { id: 'dep-5', name: 'Oficina Asesora de Planeación' },
-  { id: 'dep-6', name: 'Oficina de Control Interno' },
-  { id: 'dep-7', name: 'Subsecretaría Jurídica' },
-  { id: 'dep-8', name: 'Dirección Distrital de Asuntos Penales' }
+  { id: '11111111-2222-3333-4444-555555555551', name: 'Secretaría Jurídica Distrital' },
+  { id: '11111111-2222-3333-4444-555555555552', name: 'Dirección de Gestión Corporativa' },
+  { id: '11111111-2222-3333-4444-555555555553', name: 'Dirección Distrital de Defensa Judicial' },
+  { id: '11111111-2222-3333-4444-555555555554', name: 'Subdirección de Informática (Oficina TIC)' },
+  { id: '11111111-2222-3333-4444-555555555555', name: 'Oficina Asesora de Planeación' },
+  { id: '11111111-2222-3333-4444-555555555556', name: 'Oficina de Control Interno' },
+  { id: '11111111-2222-3333-4444-555555555557', name: 'Subsecretaría Jurídica' },
+  { id: '11111111-2222-3333-4444-555555555558', name: 'Dirección Distrital de Asuntos Penales' }
 ];
 
 const safeStorage = {
