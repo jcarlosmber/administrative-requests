@@ -243,7 +243,7 @@ export const settingsService = {
 
   async updateSystemSetting(key: string, value: any): Promise<any> {
     try {
-      const token = await appStorage.getItem('token');
+      const token = await appStorage.getItem('auth_token');
       const res = await fetch(`${API_URL}/api/settings/${key}`, {
         method: 'POST',
         headers: {
