@@ -15,6 +15,16 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Workaround para WAF: Si recibimos POST pero con X-HTTP-Method-Override,
+// cambiamos internamente el req.method para engañar a Express y al WAF.
+app.use((req, res, next) => {
+  const methodOverride = req.headers['x-http-method-override'];
+  if (req.method === 'POST' && methodOverride) {
+    req.method = methodOverride.toUpperCase();
+  }
+  next();
+});
+
 // Middleware para manejar errores de JSON malformado en el body
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
