@@ -1224,59 +1224,10 @@ export default function AdminSettings() {
                 <View style={{ gap: 10 }}>
                   <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Información Institucional</Text>
                   <View style={styles.userRow}>
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.entity || ''} onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })} placeholder="Entidad (ej. SJD)" />
                     <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.username || ''} onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} placeholder="Nombre de usuario (Login)" autoCapitalize="none" />
-                  </View>
-                  <View style={{ gap: 8 }}>
-                    <Text style={{ color: COLORS.line, fontSize: 12, fontWeight: '600' }}>Dependencia Asignada</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {dependencies.map(dep => (
-                        <TouchableOpacity key={dep.id} style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, userDraft?.dependency_id === dep.id && { backgroundColor: COLORS.white }]} onPress={() => setUserDraft({ ...userDraft, dependency_id: dep.id })}>
-                          <Text style={[styles.rolePillText, { color: COLORS.line }, userDraft?.dependency_id === dep.id && { color: COLORS.primary }]}>{dep.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  <View style={{ gap: 8, marginTop: 4 }}>
-                    <Text style={{ color: COLORS.line, fontSize: 12, fontWeight: '600' }}>Rol del Sistema</Text>
-                    <View style={styles.rolePills}>
-                      {['user', 'admin', 'security'].map(role => (
-                        <TouchableOpacity key={role} style={[styles.rolePill, { backgroundColor: COLORS.primarySoft, paddingHorizontal: 16, paddingVertical: 8 }, userDraft?.role === role && { backgroundColor: COLORS.white }]} onPress={() => setUserDraft({ ...userDraft, role })}>
-                          <Text style={[styles.rolePillText, { color: COLORS.line }, userDraft?.role === role && { color: COLORS.primary }]}>{role === 'admin' ? 'Administrador' : role === 'security' ? 'Seguridad' : 'Funcionario'}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
                   </View>
                 </View>
 
-                {/* Vigencia y Acceso */}
-                <View style={{ gap: 10 }}>
-                  <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Vigencia y Acceso</Text>
-                  <View style={styles.userRow}>
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.start_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, start_date: val })} placeholder="Fecha de inicio (YYYY-MM-DD)" />
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.end_date || ''} onChangeText={(val) => setUserDraft({ ...userDraft, end_date: val })} placeholder="Fecha de vencimiento (YYYY-MM-DD)" />
-                  </View>
-                  
-                  <View style={{ backgroundColor: COLORS.primarySoft, borderRadius: 14, padding: 16, marginTop: 8, gap: 16, borderWidth: 1, borderColor: COLORS.primaryDark }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View>
-                        <Text style={{ color: COLORS.white, fontSize: 14, fontWeight: '700' }}>Usuario Activo</Text>
-                        <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 2 }}>Permitir que el usuario ingrese al sistema.</Text>
-                      </View>
-                      <Switch value={!!userDraft?.is_active} onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
-                    </View>
-                    
-                    <View style={{ height: 1, backgroundColor: COLORS.primaryDark }} />
-                    
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View style={{ flex: 1, paddingRight: 15 }}>
-                        <Text style={{ color: COLORS.white, fontSize: 14, fontWeight: '700' }}>Autenticación LDAP (Directorio Activo)</Text>
-                        <Text style={{ color: COLORS.muted, fontSize: 12, marginTop: 2, lineHeight: 18 }}>Habilita el inicio de sesión utilizando las mismas credenciales (usuario y contraseña) del computador institucional de la Secretaría.</Text>
-                      </View>
-                      <Switch value={!!userDraft?.ldap_enabled} onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
-                    </View>
-                  </View>
-                </View>
 
                 <View style={[styles.modalActions, { marginTop: 20 }]}>
                   <TouchableOpacity 
