@@ -940,9 +940,6 @@ export default function AdminSettings() {
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Rol</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Inicio</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Fin</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.7 }]}>Activo</Text>
                     <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Acciones</Text>
                   </View>
 
@@ -961,20 +958,6 @@ export default function AdminSettings() {
                             {user.role === 'admin' ? 'Admin' : user.role === 'security' ? 'Seguridad' : 'Func.'}
                           </Text>
                         </View>
-                      </View>
-                      <View style={[styles.userTableCell, { flex: 0.8 }]}>
-                        <Text style={styles.userMetaText}>{user.start_date || '-'}</Text>
-                      </View>
-                      <View style={[styles.userTableCell, { flex: 0.8 }]}>
-                        <Text style={styles.userMetaText}>{user.end_date || '-'}</Text>
-                      </View>
-                      <View style={[styles.userTableCell, { flex: 0.7 }]}>
-                        <Switch
-                          value={!!user.is_active}
-                          onValueChange={(val) => toggleUserStatus(user.id, val)}
-                          trackColor={{ false: COLORS.line, true: COLORS.success }}
-                          thumbColor={COLORS.white}
-                        />
                       </View>
                       <View style={[styles.userTableCell, { flex: 1.3, gap: 6 }]}>
                         <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
