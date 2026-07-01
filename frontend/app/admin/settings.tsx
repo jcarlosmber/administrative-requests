@@ -114,6 +114,7 @@ export default function AdminSettings() {
   
   const [notifications, setNotifications] = useState(true);
   const [autoApprove, setAutoApprove] = useState(false);
+  const [autoApproveVisitors, setAutoApproveVisitors] = useState(false);
   const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -206,9 +207,11 @@ export default function AdminSettings() {
         // 5. Cargar configuraciones del sistema desde localStorage
         const savedPush = await safeStorage.getItem('push_notifications');
         const savedAuto = await safeStorage.getItem('auto_approve');
+        const savedAutoVisitors = await safeStorage.getItem('auto_approve_visitors');
         
         if (savedPush !== null) setNotifications(savedPush === 'true');
         if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
+        if (savedAutoVisitors !== null) setAutoApproveVisitors(savedAutoVisitors === 'true');
 
         // 6. Cargar configuración global del sistema (Evaluación)
         const dbEvalCategories = await settingsService.getSystemSetting('eval_categories');
@@ -242,6 +245,7 @@ export default function AdminSettings() {
 
         const savedPush = await safeStorage.getItem('push_notifications');
         const savedAuto = await safeStorage.getItem('auto_approve');
+        const savedAutoVisitors = await safeStorage.getItem('auto_approve_visitors');
         const savedLdapDn = await safeStorage.getItem('ldap_base_dn');
         const savedLdapPort = await safeStorage.getItem('ldap_port');
         const savedLdapSsl = await safeStorage.getItem('ldap_use_ssl');
@@ -255,6 +259,7 @@ export default function AdminSettings() {
         const savedLdapRelay = await safeStorage.getItem('ldap_relay');
         if (savedPush !== null) setNotifications(savedPush === 'true');
         if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
+        if (savedAutoVisitors !== null) setAutoApproveVisitors(savedAutoVisitors === 'true');
         if (savedLdapDn) setLdapBaseDn(savedLdapDn);
         if (savedLdapPort) setLdapPort(savedLdapPort);
         if (savedLdapSsl !== null) setLdapUseSsl(savedLdapSsl === 'true');
@@ -815,6 +820,7 @@ export default function AdminSettings() {
         try {
           await safeStorage.setItem('push_notifications', notifications.toString());
           await safeStorage.setItem('auto_approve', autoApprove.toString());
+          await safeStorage.setItem('auto_approve_visitors', autoApproveVisitors.toString());
           await safeStorage.setItem('ldap_base_dn', ldapBaseDn);
           await safeStorage.setItem('ldap_port', ldapPort);
           await safeStorage.setItem('ldap_use_ssl', ldapUseSsl.toString());
@@ -834,7 +840,7 @@ export default function AdminSettings() {
     }, 1000);
     return () => clearTimeout(timer);
   }, [
-    notifications, autoApprove, ldapBaseDn, ldapPort, ldapUseSsl, ldapServer, 
+    notifications, autoApprove, autoApproveVisitors, ldapBaseDn, ldapPort, ldapUseSsl, ldapServer, 
     ldapFilter, ldapUseBind, ldapRootDn, ldapUserField, ldapSyncField, 
     ldapComments, ldapRelay, loading
   ]);
@@ -1163,10 +1169,18 @@ export default function AdminSettings() {
                 />
                 <View style={styles.configDivider} />
                 <ConfigToggle 
-                  label="Aprobación Automática" 
-                  desc="Aprobar solicitudes de salas si hay disponibilidad inmediata."
+                  label="Aprobación Automática Salas" 
+                  desc="Aprobar solicitudes de salas estandar si hay disponibilidad inmediata."
                   value={autoApprove}
                   onValueChange={setAutoApprove}
+                  icon="flash"
+                />
+                <View style={styles.configDivider} />
+                <ConfigToggle 
+                  label="Aprobación Automática Visitantes" 
+                  desc="Aprobar solicitudes de visitantes de forma automática."
+                  value={autoApproveVisitors}
+                  onValueChange={setAutoApproveVisitors}
                   icon="flash"
                 />
                 <View style={styles.configDivider} />
