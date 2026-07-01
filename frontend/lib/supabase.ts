@@ -194,6 +194,16 @@ class SupabaseClientEmulated {
             headers
           };
 
+          // Workaround: WAF blocks PUT/DELETE requests, so we send them as POST
+          // and use the X-HTTP-Method-Override header for the backend to translate.
+          if (state.method === 'PUT' || state.method === 'DELETE') {
+            fetchOptions.headers = {
+              ...fetchOptions.headers,
+              'X-HTTP-Method-Override': state.method
+            };
+            fetchOptions.method = 'POST';
+          }
+
           if (state.method !== 'GET' && state.method !== 'HEAD' && state.body) {
             fetchOptions.body = JSON.stringify(state.body);
           }
