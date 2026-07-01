@@ -122,7 +122,7 @@ export default function LoginPage() {
           <View style={styles.card}>
             <View style={styles.brand}>
               <View style={[styles.logoMark, { width: isWide ? 64 : 84, height: isWide ? 64 : 84 }]}>
-                <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.primary} />
+                <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.white} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.brandName, { fontSize: isWide ? 15 : 18 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
@@ -347,11 +347,9 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 20,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.line,
   },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   brandName: {

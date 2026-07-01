@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, appStorage, API_URL } from './supabase';
 import { Platform } from 'react-native';
 
 export interface Driver {
@@ -215,6 +215,56 @@ export const settingsService = {
         const updated = (emails || []).filter(e => e && e.id !== id);
         localStorage.setItem('local_service_emails', JSON.stringify(updated));
       }
+    }
+  },
+
+  // ==========================================
+  // CONFIGURACIÓN GLOBAL DEL SISTEMA
+  // ==========================================
+  async getSystemSetting(key: string): Promise<any> {
+    try {
+      const res = await fetch(`${API_URL}/api/settings/${key}`);
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        throw new Error('Error al obtener configuración');
+      }
+      return await res.json();
+    } catch (err) {
+      console.warn(`Usando configuración local para ${key} debido a error:`, err);
+      if (Platform.OS === 'web') {
+        const local = localStorage.getItem(`sys_set_${key}`);
+        if (local) return JSON.parse(local);
+      }
+      // Defaults fallbacks
+      if (key === 'eval_categories') return ['visitors', 'transport', 'maintenance', 'rooms', 'parking'];
+      return null;
+    }
+  },
+
+  async updateSystemSetting(key: string, value: any): Promise<any> {
+    try {
+      const token = await appStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/settings/${key}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ value })
+      });
+      if (!res.ok) throw new Error('Error al actualizar configuración');
+      
+      const updatedValue = await res.json();
+      if (Platform.OS === 'web') {
+        localStorage.setItem(`sys_set_${key}`, JSON.stringify(updatedValue));
+      }
+      return updatedValue;
+    } catch (err) {
+      console.error('Error al actualizar setting:', err);
+      if (Platform.OS === 'web') {
+        localStorage.setItem(`sys_set_${key}`, JSON.stringify(value));
+      }
+      return value;
     }
   }
 };

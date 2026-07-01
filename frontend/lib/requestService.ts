@@ -90,6 +90,23 @@ export const requestService = {
     return await res.json() as AdministrativeRequest;
   },
 
+  async evaluateRequest(id: string, evaluation: { rating: number; comment?: string }) {
+    const token = await AsyncStorage.getItem('token');
+    const res = await fetch(`${API_URL}/api/requests/${id}/evaluate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(evaluation)
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Failed to evaluate request');
+    }
+    return res.json();
+  },
+
   async delete(id: string) {
     const res = await fetch(`${API_URL}/api/requests/${id}`, {
       method: 'DELETE',

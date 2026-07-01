@@ -111,6 +111,7 @@ export default function AdminSettings() {
   
   const [notifications, setNotifications] = useState(true);
   const [autoApprove, setAutoApprove] = useState(false);
+  const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
@@ -201,6 +202,12 @@ export default function AdminSettings() {
         
         if (savedPush !== null) setNotifications(savedPush === 'true');
         if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
+
+        // 6. Cargar configuración global del sistema (Evaluación)
+        const dbEvalCategories = await settingsService.getSystemSetting('eval_categories');
+        if (dbEvalCategories) {
+          setEvalCategories(dbEvalCategories);
+        }
 
       } catch (err) {
         console.warn('Cargando con almacenamiento de respaldo local:', err);
@@ -1088,6 +1095,37 @@ export default function AdminSettings() {
                     </View>
                   );
                 })}
+              </View>
+
+              <SectionHeader title="Evaluación de Servicios" kicker="CONTROL DE CALIDAD" />
+              <View style={styles.configCard}>
+                {[
+                  { id: 'maintenance', label: 'Mantenimiento Locativo' },
+                  { id: 'visitors', label: 'Control de Visitantes' },
+                  { id: 'rooms', label: 'Reserva de Salas' },
+                  { id: 'parking', label: 'Cupo de Parqueadero' },
+                  { id: 'transport', label: 'Transporte Oficial' }
+                ].map((item, index, arr) => (
+                  <React.Fragment key={item.id}>
+                    <ConfigToggle 
+                      label={item.label} 
+                      desc={`Solicitar evaluación obligatoria al completar servicios de ${item.label.toLowerCase()}.`}
+                      value={evalCategories.includes(item.id)}
+                      onValueChange={async (val: boolean) => {
+                        let newArr = [...evalCategories];
+                        if (val) {
+                          if (!newArr.includes(item.id)) newArr.push(item.id);
+                        } else {
+                          newArr = newArr.filter(c => c !== item.id);
+                        }
+                        setEvalCategories(newArr);
+                        await settingsService.updateSystemSetting('eval_categories', newArr);
+                      }}
+                      icon="star"
+                    />
+                    {index < arr.length - 1 && <View style={styles.configDivider} />}
+                  </React.Fragment>
+                ))}
               </View>
 
               <SectionHeader title="Preferencias del Sistema" kicker="CONFIGURACIÓN" />

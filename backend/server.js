@@ -66,6 +66,11 @@ const initDatabase = async () => {
           email TEXT NOT NULL,
           created_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS public.system_settings (
+          key TEXT PRIMARY KEY,
+          value JSONB NOT NULL
+      );
     `);
 
     // 2. Modificaciones a la tabla users para estar alineada con profiles
@@ -113,6 +118,16 @@ const initDatabase = async () => {
       `);
     }
 
+    // Asegurar configuración de evaluación inicial
+    const settingsCheck = await pool.query("SELECT COUNT(*) FROM public.system_settings WHERE key = 'eval_categories'");
+    if (parseInt(settingsCheck.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO public.system_settings (key, value) VALUES 
+        ('eval_categories', '["visitors", "transport", "maintenance", "rooms", "parking"]')
+        ON CONFLICT (key) DO NOTHING;
+      `);
+    }
+
     console.log('Base de datos inicializada y migrada exitosamente.');
   } catch (err) {
     console.error('Error al inicializar la base de datos:', err);
@@ -139,6 +154,42 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+// --- ENDPOINTS DE CONFIGURACIÓN DEL SISTEMA ---
+app.get('/api/settings/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const result = await pool.query('SELECT value FROM public.system_settings WHERE key = $1', [key]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Configuración no encontrada.' });
+    }
+    res.json(result.rows[0].value);
+  } catch (err) {
+    console.error('Error obteniendo configuración:', err);
+    res.status(500).json({ error: 'Error del servidor.' });
+  }
+});
+
+app.put('/api/settings/:key', authenticateToken, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+    
+    // Solo admins pueden modificar configuración general
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permisos insuficientes.' });
+    }
+
+    const result = await pool.query(
+      'INSERT INTO public.system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value RETURNING *',
+      [key, JSON.stringify(value)]
+    );
+    res.json(result.rows[0].value);
+  } catch (err) {
+    console.error('Error actualizando configuración:', err);
+    res.status(500).json({ error: 'Error del servidor.' });
+  }
+});
 
 // --- ENDPOINTS DE AUTENTICACIÓN ---
 
@@ -413,6 +464,54 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar la solicitud.' });
+  }
+});
+
+// Evaluar una solicitud
+app.post('/api/requests/:id/evaluate', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { rating, comment } = req.body;
+
+  if (rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'La calificación debe estar entre 1 y 5.' });
+  }
+
+  try {
+    const checkResult = await pool.query('SELECT * FROM administrative_requests WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    }
+
+    const request = checkResult.rows[0];
+
+    if (request.user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'No tienes permisos para evaluar esta solicitud.' });
+    }
+
+    if (request.status !== 'resuelto') {
+      return res.status(400).json({ error: 'Solo se pueden evaluar solicitudes en estado resuelto.' });
+    }
+
+    if (request.metadata && request.metadata.evaluation) {
+      return res.status(400).json({ error: 'Esta solicitud ya ha sido evaluada.' });
+    }
+
+    const metadata = request.metadata || {};
+    metadata.evaluation = {
+      rating,
+      comment: comment || '',
+      date: new Date().toISOString()
+    };
+
+    const updateResult = await pool.query(
+      'UPDATE administrative_requests SET metadata = $1 WHERE id = $2 RETURNING *',
+      [metadata, id]
+    );
+
+    res.json(updateResult.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar la evaluación.' });
   }
 });
 

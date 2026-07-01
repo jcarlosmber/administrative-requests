@@ -797,6 +797,28 @@ function RequestListItem({ item, onUpdateStatus }: any) {
                 ))}
               </View>
 
+              {item.metadata?.evaluation && (
+                <>
+                  <View style={styles.metaDivider} />
+                  <Text style={styles.infoTitle}>EVALUACIÓN DEL SERVICIO</Text>
+                  <View style={{ backgroundColor: '#F0FDF4', padding: 15, borderRadius: 12, borderColor: COLORS.success, borderWidth: 1, marginBottom: 15 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <Text style={{ fontWeight: '800', color: COLORS.dark }}>Calificación:</Text>
+                      <View style={{ flexDirection: 'row' }}>
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <Ionicons key={star} name={item.metadata.evaluation.rating >= star ? 'star' : 'star-outline'} size={16} color={COLORS.accent} />
+                        ))}
+                      </View>
+                    </View>
+                    {item.metadata.evaluation.comment ? (
+                      <Text style={{ fontStyle: 'italic', color: COLORS.dark }}>"{item.metadata.evaluation.comment}"</Text>
+                    ) : (
+                      <Text style={{ color: COLORS.muted }}>Sin comentarios.</Text>
+                    )}
+                  </View>
+                </>
+              )}
+
               <View style={styles.updateAction}>
                 <TextInput 
                   style={styles.updateInput} 

@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { requestService, AdministrativeRequest } from '../../../lib/requestService';
+import { settingsService } from '../../../lib/settingsService';
 import { supabase } from '../../../lib/supabase';
 
 const { width } = Dimensions.get('window');
@@ -59,6 +60,7 @@ export default function RequestsScreen() {
   const [serviceFilter, setServiceFilter] = useState((params?.service as string) || 'Todas');
   const [selectedRequest, setSelectedRequest] = useState<AdministrativeRequest | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
 
   // Reactivar el filtro si el parámetro cambia dinámicamente
   React.useEffect(() => {
@@ -72,6 +74,8 @@ export default function RequestsScreen() {
       setLoading(true);
       const data = await requestService.getAll();
       setRequests(data);
+      const cats = await settingsService.getSystemSetting('eval_categories');
+      if (cats) setEvalCategories(cats);
     } catch (error) {
       console.error('Error fetching requests:', error);
     } finally {
@@ -111,13 +115,14 @@ export default function RequestsScreen() {
 
   const filteredData = useMemo(() => {
     return requests.filter(item => {
-      const typeLabel = {
+      const labelMap: Record<string, string> = {
         visitors: 'Visitantes',
         transport: 'Transporte',
         maintenance: 'Mantenimiento',
         rooms: 'Salas',
         parking: 'Parqueadero'
-      }[item.category] || item.category;
+      };
+      const typeLabel = labelMap[item.category] || item.category;
 
       const matchesSearch = (item.title + typeLabel).toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = (() => {
@@ -180,21 +185,22 @@ export default function RequestsScreen() {
             }
              data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => (
-              <RequestCard 
-                item={mapRequestToUI(item)} 
-                onPress={() => {
+            renderItem={({ item }) => <RequestCard 
+                    item={mapRequestToUI(item)} 
+                    evalCategories={evalCategories}
+                    onPress={() => {
                   setSelectedRequest(item);
                   setModalVisible(true);
                 }} 
               />
-            )}
+            }
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
           <DetailModal 
             visible={modalVisible} 
             request={selectedRequest} 
+            evalCategories={evalCategories}
             onClose={() => {
               setModalVisible(false);
               setSelectedRequest(null);
@@ -213,28 +219,28 @@ export default function RequestsScreen() {
 }
 
 const mapRequestToUI = (item: AdministrativeRequest) => {
-  const typeLabel = {
+  const typeLabel = ({
     visitors: 'Visitantes',
     transport: 'Transporte',
     maintenance: 'Mantenimiento',
     rooms: 'Salas',
     parking: 'Parqueadero'
-  }[item.category] || item.category;
+  } as Record<string, string>)[item.category] || item.category;
 
-  const typeColor = {
+  const typeColor = ({
     visitors: COLORS.primary,
     transport: COLORS.blue,
     maintenance: COLORS.success,
     rooms: '#7209B7',
     parking: COLORS.accent
-  }[item.category] || COLORS.muted;
+  } as Record<string, string>)[item.category] || COLORS.muted;
 
-  const statusColor = {
+  const statusColor = ({
     pendiente: COLORS.warning,
     resuelto: COLORS.success,
     en_progreso: COLORS.blue,
     rechazada: COLORS.primary
-  }[item.status.toLowerCase()] || COLORS.muted;
+  } as Record<string, string>)[item.status.toLowerCase()] || COLORS.muted;
 
   return {
     ...item,
@@ -414,11 +420,13 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestCard({ item, onPress }: any) {
+function RequestCard({ item, evalCategories, onPress }: any) {
   const scale = useRef(new Animated.Value(1)).current;
 
   const handleIn = () => Animated.spring(scale, { toValue: 0.98, useNativeDriver: true }).start();
   const handleOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+
+  const needsEval = item.status.toLowerCase() === 'resuelto' && (!item.metadata || !item.metadata.evaluation) && evalCategories.includes(item.category);
 
   return (
     <Pressable onPressIn={handleIn} onPressOut={handleOut} onPress={onPress}>
@@ -429,6 +437,11 @@ function RequestCard({ item, onPress }: any) {
             <View style={styles.cardHeaderLeft}>
               <Text style={[styles.cardCategory, { color: item.color }]}>{item.cat}</Text>
               <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+              {needsEval && (
+                <Text style={{fontSize: 11, color: COLORS.warning, fontWeight: '800', marginTop: 4, display: 'flex', alignItems: 'center'}}>
+                  <Ionicons name="alert-circle" size={12} /> PENDIENTE DE EVALUAR
+                </Text>
+              )}
             </View>
             <View style={[styles.statusPill, { backgroundColor: `${item.color}10` }]}>
               <View style={[styles.statusDot, { backgroundColor: item.color }]} />
@@ -517,12 +530,25 @@ const styles = StyleSheet.create({
   fab: { position: 'absolute', right: 25, bottom: 25, width: 64, height: 64, borderRadius: 22, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15 }
 });
 
-function DetailModal({ visible, request, onClose }: { visible: boolean; request: AdministrativeRequest | null; onClose: () => void }) {
+function DetailModal({ visible, request, evalCategories, onClose }: { visible: boolean; request: AdministrativeRequest | null; evalCategories: string[]; onClose: () => void }) {
   const router = useRouter();
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setRating(0);
+      setComment('');
+      setSubmitting(false);
+    }
+  }, [visible, request]);
+
   if (!request) return null;
 
   const mapped = mapRequestToUI(request);
   const metadata = request.metadata || {};
+  const needsEval = request.status === 'resuelto' && !metadata.evaluation && evalCategories.includes(request.category);
 
   const renderMetadataFields = () => {
     switch (request.category) {
@@ -823,6 +849,43 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
 
             {/* Custom Metadata Fields */}
             <View style={modalStyles.fieldsContainer}>
+              {needsEval && (
+                <View style={[modalStyles.infoBlock, { borderColor: COLORS.warning, borderWidth: 1.5, backgroundColor: '#FFFBEB' }]}>
+                  <Text style={[modalStyles.infoSectionTitle, { color: COLORS.warning }]}>EVALUACIÓN REQUERIDA</Text>
+                  <Text style={{fontSize: 14, marginBottom: 15, fontWeight: '700', color: COLORS.dark}}>Por favor califica el servicio para continuar.</Text>
+                  
+                  <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
+                    {[1,2,3,4,5].map(star => (
+                      <Pressable key={star} onPress={() => setRating(star)}>
+                        <Ionicons name={rating >= star ? 'star' : 'star-outline'} size={32} color={COLORS.accent} />
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  <TextInput
+                    style={{ backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, minHeight: 80, textAlignVertical: 'top' }}
+                    placeholder="Opcional: Déjanos un comentario sobre el servicio..."
+                    multiline
+                    value={comment}
+                    onChangeText={setComment}
+                  />
+                </View>
+              )}
+
+              {request.status === 'resuelto' && metadata.evaluation && (
+                <View style={[modalStyles.infoBlock, { borderColor: COLORS.success, borderWidth: 1, backgroundColor: '#F0FDF4' }]}>
+                  <Text style={[modalStyles.infoSectionTitle, { color: COLORS.success }]}>TU EVALUACIÓN</Text>
+                  <View style={{ flexDirection: 'row', gap: 5, marginBottom: 10 }}>
+                    {[1,2,3,4,5].map(star => (
+                      <Ionicons key={star} name={metadata.evaluation.rating >= star ? 'star' : 'star-outline'} size={18} color={COLORS.accent} />
+                    ))}
+                  </View>
+                  {metadata.evaluation.comment ? (
+                    <Text style={{fontSize: 14, fontStyle: 'italic', color: COLORS.dark, fontWeight: '600'}}>"{metadata.evaluation.comment}"</Text>
+                  ) : null}
+                </View>
+              )}
+
               {renderMetadataFields()}
             </View>
 
@@ -838,28 +901,57 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
           {/* Footer / Actions */}
           <View style={modalStyles.footer}>
             <View style={{ flexDirection: 'row', gap: 12 }}>
-              {request.category === 'visitors' && (
+              {needsEval ? (
                 <TouchableOpacity 
-                  onPress={() => {
-                    onClose();
-                    router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
+                  disabled={rating === 0 || submitting}
+                  onPress={async () => {
+                    setSubmitting(true);
+                    try {
+                      await requestService.evaluateRequest(request.id, { rating, comment });
+                      onClose();
+                    } catch(e) {
+                      console.error(e);
+                    } finally {
+                      setSubmitting(false);
+                    }
                   }} 
-                  style={[modalStyles.primaryBtn, { flex: 1, backgroundColor: '#FFF1F2', borderWidth: 1.5, borderColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }]}
+                  style={[modalStyles.primaryBtn, { flex: 1, opacity: rating === 0 || submitting ? 0.5 : 1 }]}
                 >
-                  <Ionicons name="copy-outline" size={20} color={COLORS.primaryDark} style={{ position: 'absolute', left: 16 }} />
-                  <Text style={[modalStyles.btnText, { color: COLORS.primaryDark }]}>Plantilla</Text>
+                  <LinearGradient 
+                    colors={[COLORS.warning, '#B45309']} 
+                    start={{ x: 0, y: 0 }} 
+                    end={{ x: 1, y: 0 }} 
+                    style={modalStyles.btnGradient}
+                  >
+                    <Text style={modalStyles.btnText}>{submitting ? 'Enviando...' : 'Enviar Evaluación'}</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
+              ) : (
+                <>
+                  {request.category === 'visitors' && (
+                    <TouchableOpacity 
+                      onPress={() => {
+                        onClose();
+                        router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
+                      }} 
+                      style={[modalStyles.primaryBtn, { flex: 1, backgroundColor: '#FFF1F2', borderWidth: 1.5, borderColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }]}
+                    >
+                      <Ionicons name="copy-outline" size={20} color={COLORS.primaryDark} style={{ position: 'absolute', left: 16 }} />
+                      <Text style={[modalStyles.btnText, { color: COLORS.primaryDark }]}>Plantilla</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={onClose} style={[modalStyles.primaryBtn, { flex: request.category === 'visitors' ? 1 : undefined }]}>
+                    <LinearGradient 
+                      colors={[COLORS.primary, COLORS.primaryDark]} 
+                      start={{ x: 0, y: 0 }} 
+                      end={{ x: 1, y: 0 }} 
+                      style={modalStyles.btnGradient}
+                    >
+                      <Text style={modalStyles.btnText}>Entendido</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
               )}
-              <TouchableOpacity onPress={onClose} style={[modalStyles.primaryBtn, { flex: request.category === 'visitors' ? 1 : undefined }]}>
-                <LinearGradient 
-                  colors={[COLORS.primary, COLORS.primaryDark]} 
-                  start={{ x: 0, y: 0 }} 
-                  end={{ x: 1, y: 0 }} 
-                  style={modalStyles.btnGradient}
-                >
-                  <Text style={modalStyles.btnText}>Entendido</Text>
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
