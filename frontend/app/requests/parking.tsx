@@ -58,7 +58,7 @@ export default function ParkingRequestScreen() {
           if (user.dependency) setDependency(user.dependency);
           
           // Obtener las solicitudes de parqueadero del usuario
-          const { data: allReqs } = await requestService.getAll();
+          const allReqs = await requestService.getAll();
           if (allReqs) {
             const parks = allReqs.filter(r => r.category === 'parking');
             setMyVehicles(parks);

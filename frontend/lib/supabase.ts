@@ -4,9 +4,16 @@ export let API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 if (typeof window !== 'undefined' && window.location) {
   const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
   if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
-    // Si estamos en producción/pruebas y accedemos por IP, apunta al puerto 3000 de esa IP
-    API_URL = `http://${hostname}:3000`;
+    if (protocol === 'https:') {
+      // En producción (HTTPS), el API suele estar servido a través del mismo proxy
+      API_URL = `https://${hostname}`;
+    } else {
+      // Si estamos en pruebas locales (HTTP) por IP, apunta al puerto 3000 de esa IP
+      API_URL = `http://${hostname}:3000`;
+    }
   }
 }
 
