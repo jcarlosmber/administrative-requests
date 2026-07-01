@@ -128,6 +128,8 @@ export default function AdminSettings() {
   const [showDriverDeleteModal, setShowDriverDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [showUserDeleteModal, setShowUserDeleteModal] = useState(false);
+  const [showEvalConfirmModal, setShowEvalConfirmModal] = useState(false);
+  const [pendingEvalToggle, setPendingEvalToggle] = useState<{id: string, label: string, newValue: boolean} | null>(null);
 
   // Edit Modal States
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -619,6 +621,27 @@ export default function AdminSettings() {
 
   const toggleUserStatus = (userId: string, value: boolean) => {
     setUsers(users.map(user => user.id === userId ? { ...user, is_active: value } : user));
+  };
+
+  const confirmEvalToggle = async () => {
+    if (!pendingEvalToggle) return;
+    try {
+      setSaving(true);
+      let newArr = [...evalCategories];
+      if (pendingEvalToggle.newValue) {
+        if (!newArr.includes(pendingEvalToggle.id)) newArr.push(pendingEvalToggle.id);
+      } else {
+        newArr = newArr.filter(c => c !== pendingEvalToggle.id);
+      }
+      setEvalCategories(newArr);
+      await settingsService.updateSystemSetting('eval_categories', newArr);
+      setShowEvalConfirmModal(false);
+      setPendingEvalToggle(null);
+    } catch (err) {
+      console.error('Error al actualizar configuración:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateDriver = (id: string, field: keyof Driver, val: any) => {
@@ -1118,15 +1141,9 @@ export default function AdminSettings() {
                       label={item.label} 
                       desc={`Solicitar evaluación obligatoria al completar servicios de ${item.label.toLowerCase()}.`}
                       value={evalCategories.includes(item.id)}
-                      onValueChange={async (val: boolean) => {
-                        let newArr = [...evalCategories];
-                        if (val) {
-                          if (!newArr.includes(item.id)) newArr.push(item.id);
-                        } else {
-                          newArr = newArr.filter(c => c !== item.id);
-                        }
-                        setEvalCategories(newArr);
-                        await settingsService.updateSystemSetting('eval_categories', newArr);
+                      onValueChange={(val: boolean) => {
+                        setPendingEvalToggle({ id: item.id, label: item.label, newValue: val });
+                        setShowEvalConfirmModal(true);
                       }}
                       icon="star"
                     />
@@ -1434,6 +1451,51 @@ export default function AdminSettings() {
                 style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
                 onPress={confirmDeleteDependency}
                 disabled={saving || deleteConfirmationText !== 'eliminar'}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Text style={styles.confirmDeleteButtonText}>Confirmar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE CONFIRMACIÓN DE EVALUACIÓN DE SERVICIO */}
+      <Modal
+        visible={showEvalConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEvalConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.accent}15` }]}>
+              <Ionicons name="star" size={32} color={COLORS.accent} />
+            </View>
+            <Text style={styles.modalTitle}>{pendingEvalToggle?.newValue ? '¿Activar' : '¿Desactivar'} Evaluación?</Text>
+            <Text style={styles.modalDescription}>
+              ¿Estás seguro que deseas {pendingEvalToggle?.newValue ? 'activar' : 'desactivar'} la evaluación obligatoria para el servicio de "{pendingEvalToggle?.label}"?
+            </Text>
+
+            <View style={[styles.modalActions, { marginTop: 10 }]}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
+                onPress={() => {
+                  setShowEvalConfirmModal(false);
+                  setPendingEvalToggle(null);
+                }}
+                disabled={saving}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+                onPress={confirmEvalToggle}
+                disabled={saving}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color={COLORS.white} />
