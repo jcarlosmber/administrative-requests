@@ -509,8 +509,18 @@ export default function AdminSettings() {
   };
 
   const openUserEditor = (user: any) => {
+    let fn = user.first_name;
+    let ln = user.last_name;
+    if (!fn && !ln && user.full_name) {
+      const parts = user.full_name.trim().split(' ');
+      fn = parts[0] || '';
+      ln = parts.slice(1).join(' ') || '';
+    }
+
     setUserDraft({
       ...user,
+      first_name: fn || '',
+      last_name: ln || '',
       dependency_id: user.dependency_id || dependencies[0]?.id || null,
       entity: user.entity || '',
       ldap_enabled: user.ldap_enabled ?? false,
