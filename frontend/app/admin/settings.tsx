@@ -126,6 +126,8 @@ export default function AdminSettings() {
   const [showDepDeleteModal, setShowDepDeleteModal] = useState(false);
   const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
   const [showDriverDeleteModal, setShowDriverDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [showUserDeleteModal, setShowUserDeleteModal] = useState(false);
 
   // Edit Modal States
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -578,17 +580,26 @@ export default function AdminSettings() {
     }
   };
 
-  const deleteUser = async (user: any) => {
+  const openUserDeleteConfirmation = (user: any) => {
+    setUserToDelete(user);
+    setDeleteConfirmationText('');
+    setShowUserDeleteModal(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
     try {
       setSaving(true);
-      if (!String(user.id).startsWith('temp-')) {
+      if (!String(userToDelete.id).startsWith('temp-')) {
         const { error } = await supabase
           .from('profiles')
           .delete()
           .eq('id', user.id);
         if (error) throw error;
       }
-      setUsers(users.filter(item => item.id !== user.id));
+      setUsers(users.filter(item => item.id !== userToDelete.id));
+      setShowUserDeleteModal(false);
+      setUserToDelete(null);
     } catch (err) {
       console.error('Error eliminando usuario:', err);
     } finally {
@@ -963,7 +974,7 @@ export default function AdminSettings() {
                         <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
                           <Text style={styles.userActionBtnText}>Modificar</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.userActionBtn, styles.userDeleteBtn]} onPress={() => deleteUser(user)}>
+                        <TouchableOpacity style={[styles.userActionBtn, styles.userDeleteBtn]} onPress={() => openUserDeleteConfirmation(user)}>
                           <Text style={[styles.userActionBtnText, { color: COLORS.danger }]}>Borrar</Text>
                         </TouchableOpacity>
                       </View>
@@ -1211,7 +1222,24 @@ export default function AdminSettings() {
                   </View>
                 </View>
 
-
+                {/* Rol del Sistema */}
+                <View style={{ gap: 10 }}>
+                  <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Rol del Sistema</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity 
+                      onPress={() => setUserDraft({ ...userDraft, role: 'user' })}
+                      style={[styles.userFieldInput, { flex: 1, backgroundColor: userDraft?.role === 'user' ? COLORS.accent : COLORS.primarySoft, borderColor: userDraft?.role === 'user' ? COLORS.accent : COLORS.primaryDark, justifyContent: 'center', alignItems: 'center' }]}
+                    >
+                      <Text style={{ color: COLORS.white, fontWeight: '600' }}>Usuario</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => setUserDraft({ ...userDraft, role: 'admin' })}
+                      style={[styles.userFieldInput, { flex: 1, backgroundColor: userDraft?.role === 'admin' ? COLORS.accent : COLORS.primarySoft, borderColor: userDraft?.role === 'admin' ? COLORS.accent : COLORS.primaryDark, justifyContent: 'center', alignItems: 'center' }]}
+                    >
+                      <Text style={{ color: COLORS.white, fontWeight: '600' }}>Administrador</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
                 <View style={[styles.modalActions, { marginTop: 20 }]}>
                   <TouchableOpacity 
                     style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
