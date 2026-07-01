@@ -604,7 +604,7 @@ export default function AdminSettings() {
         const { error } = await supabase
           .from('profiles')
           .delete()
-          .eq('id', user.id);
+          .eq('id', userToDelete.id);
         if (error) throw error;
       }
       setUsers(users.filter(item => item.id !== userToDelete.id));
