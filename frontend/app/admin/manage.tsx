@@ -851,7 +851,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                       {/* Poner en Progreso (Play Azul) para Transporte y Mantenimiento - Primero */}
                       {['transport', 'maintenance'].includes(item.category) && (
                         <TouchableOpacity 
-                          style={[styles.actionBtn, styles.approveBtn]}
+                          style={[styles.actionBtn, styles.processBtn]}
                           onPress={() => onUpdateStatus(item.id, 'en_progreso')}
                         >
                           <Ionicons name="play-outline" size={16} color={COLORS.white} />
@@ -1007,6 +1007,7 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.white },
   rejectBtn: { backgroundColor: COLORS.danger, borderColor: COLORS.danger },
   approveBtn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  processBtn: { backgroundColor: '#FF8C00', borderColor: '#FF8C00' },
   successBtn: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   infoBtn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
 });
