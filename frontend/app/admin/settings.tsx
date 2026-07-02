@@ -143,6 +143,7 @@ export default function AdminSettings() {
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({
     maintenance: '',
     visitors: '',
+    rooms: '',
     rooms_special: '',
     parking: ''
   });
@@ -789,7 +790,7 @@ export default function AdminSettings() {
   // ==========================================
   // MANEJADORES PARA CORREOS (SERVICE EMAILS)
   // ==========================================
-  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'rooms_special' | 'parking') => {
+  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'parking') => {
     const emailVal = emailInputs[type]?.trim();
     if (!emailVal) return;
 
@@ -1099,6 +1100,7 @@ export default function AdminSettings() {
                 {([
                   { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F' },
                   { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946' },
+                  { type: 'rooms', title: 'Salas Estándar', icon: 'business', color: '#4361EE' },
                   { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7' },
                   { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261' }
                 ] as const).map(({ type, title, icon, color }) => {

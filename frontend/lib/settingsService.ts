@@ -11,7 +11,7 @@ export interface Driver {
 
 export interface ServiceEmail {
   id: string;
-  service_type: 'maintenance' | 'visitors' | 'rooms_special' | 'parking';
+  service_type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'parking';
   email: string;
   created_at?: string;
 }
