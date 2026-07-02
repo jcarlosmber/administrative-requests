@@ -1,7 +1,10 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { TouchableOpacity, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RootLayout() {
+  const router = useRouter();
   return (
     <>
       <Stack
@@ -13,6 +16,20 @@ export default function RootLayout() {
           headerTitleStyle: {
             fontWeight: 'bold',
           },
+          headerLeft: () => (
+            <TouchableOpacity 
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }} 
+              style={{ marginLeft: Platform.OS === 'web' ? 16 : 8, marginRight: 16 }}
+            >
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+          )
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
