@@ -705,32 +705,12 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
     
     try {
       setCommentLoading(true);
-      const currentMetadata = item.metadata || {};
-      const currentTimeline = item.timeline || [];
-
-      const newStep = {
-        title: 'Comentario Admin',
-        date: new Date().toLocaleString('es-ES'),
-        desc: comment.trim()
-      };
-
-      const updatedTimeline = [...currentTimeline, newStep];
-      
-      const updates = {
-        metadata: {
-          ...currentMetadata,
-          timeline: updatedTimeline
-        }
-      };
-
-      await requestService.update(item.id, updates);
+      const updatedReq = await requestService.addComment(item.id, comment.trim());
+      onUpdate(updatedReq);
       setComment('');
-      
-      if (onRefresh) {
-        onRefresh();
-      }
-    } catch (err) {
-      console.error('Error al guardar comentario de trazabilidad:', err);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      console.error('Error al guardar comentario:', err);
     } finally {
       setCommentLoading(false);
     }

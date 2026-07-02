@@ -478,6 +478,42 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/requests/:id/comment', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { text, author } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: 'El comentario es requerido.' });
+  }
+
+  try {
+    const checkResult = await pool.query('SELECT metadata FROM administrative_requests WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    }
+
+    const currentMetadata = checkResult.rows[0].metadata || {};
+    const newComment = {
+      title: 'Comentario Admin',
+      date: new Date().toLocaleString('es-ES'),
+      desc: text
+    };
+
+    const updatedTimeline = [...(currentMetadata.timeline || []), newComment];
+    currentMetadata.timeline = updatedTimeline;
+
+    const updateResult = await pool.query(
+      'UPDATE administrative_requests SET metadata = $1::jsonb WHERE id = $2 RETURNING *',
+      [JSON.stringify(currentMetadata), id]
+    );
+
+    res.json(updateResult.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al agregar el comentario.' });
+  }
+});
+
 // Evaluar una solicitud
 app.post('/api/requests/:id/evaluate', authenticateToken, async (req, res) => {
   const { id } = req.params;
