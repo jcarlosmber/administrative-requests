@@ -957,8 +957,12 @@ export default function RoomsRequestScreen() {
                     </View>
                     
                     <View style={styles.calendarOuter}>
-                      <ScrollView horizontal={!isDesktop} showsHorizontalScrollIndicator={false}>
-                        <View style={[styles.calendarContainer, isDesktop && { flex: 1 }]}>
+                      <ScrollView 
+                        horizontal={!isDesktop} 
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={!isDesktop && { minWidth: '100%' }}
+                      >
+                        <View style={[styles.calendarContainer, { flex: 1 }]}>
                           {/* Hours Column */}
                           <View style={styles.hoursCol}>
                             <View style={{ height: 45 }} /> 
@@ -971,7 +975,7 @@ export default function RoomsRequestScreen() {
                           
                           {/* Days Grid */}
                           {weekDates.map((dateObj, dIdx) => (
-                            <View key={dIdx} style={[styles.dayCol, isDesktop && { flex: 1 }]}>
+                            <View key={dIdx} style={[styles.dayCol, { flex: 1 }]}>
                               <View style={styles.dayHeader}>
                                 <Text style={styles.dayHeaderText}>{DAYS_SHORT[dIdx]}</Text>
                                 <Text style={styles.dayHeaderNum}>{dateObj.getDate()}</Text>
