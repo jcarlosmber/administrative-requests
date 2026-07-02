@@ -916,8 +916,8 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                       style={[styles.actionBtn, styles.rejectBtn]}
                       onPress={() => onUpdateStatus(item.id, 'rechazado')}
                     >
-                      <Ionicons name="close-outline" size={16} color={COLORS.danger} />
-                      <Text style={[styles.actionBtnText, { color: COLORS.danger }]}>Rechazar</Text>
+                      <Ionicons name="close-outline" size={16} color={COLORS.white} />
+                      <Text style={[styles.actionBtnText, { color: COLORS.white }]}>Rechazar</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -1022,7 +1022,7 @@ const styles = StyleSheet.create({
   actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   actionBtn: { height: 38, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6, borderWidth: 1 },
   actionBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.white },
-  rejectBtn: { borderColor: COLORS.line, backgroundColor: `${COLORS.line}20` },
+  rejectBtn: { backgroundColor: COLORS.danger, borderColor: COLORS.danger },
   approveBtn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   successBtn: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   infoBtn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
