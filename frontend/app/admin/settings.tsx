@@ -131,6 +131,8 @@ export default function AdminSettings() {
   const [showUserDeleteModal, setShowUserDeleteModal] = useState(false);
   const [showEvalConfirmModal, setShowEvalConfirmModal] = useState(false);
   const [pendingEvalToggle, setPendingEvalToggle] = useState<{id: string, label: string, newValue: boolean} | null>(null);
+  const [showSystemConfirmModal, setShowSystemConfirmModal] = useState(false);
+  const [pendingSystemToggle, setPendingSystemToggle] = useState<{key: 'autoApprove' | 'autoApproveVisitors', label: string, desc: string, newValue: boolean} | null>(null);
 
   // Edit Modal States
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -626,6 +628,26 @@ export default function AdminSettings() {
 
   const toggleUserStatus = (userId: string, value: boolean) => {
     setUsers(users.map(user => user.id === userId ? { ...user, is_active: value } : user));
+  };
+
+  const confirmSystemToggle = async () => {
+    if (!pendingSystemToggle) return;
+    try {
+      setSaving(true);
+      if (pendingSystemToggle.key === 'autoApprove') {
+        setAutoApprove(pendingSystemToggle.newValue);
+        await safeStorage.setItem('auto_approve', pendingSystemToggle.newValue.toString());
+      } else if (pendingSystemToggle.key === 'autoApproveVisitors') {
+        setAutoApproveVisitors(pendingSystemToggle.newValue);
+        await safeStorage.setItem('auto_approve_visitors', pendingSystemToggle.newValue.toString());
+      }
+      setShowSystemConfirmModal(false);
+      setPendingSystemToggle(null);
+    } catch (err) {
+      console.error('Error:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const confirmEvalToggle = async () => {
@@ -1172,7 +1194,15 @@ export default function AdminSettings() {
                   label="Aprobación Automática Salas" 
                   desc="Aprobar solicitudes de salas estandar si hay disponibilidad inmediata."
                   value={autoApprove}
-                  onValueChange={setAutoApprove}
+                  onValueChange={(val: boolean) => {
+                    setPendingSystemToggle({
+                      key: 'autoApprove',
+                      label: 'Aprobación Automática Salas',
+                      desc: 'aprobar las solicitudes de salas estándar de forma automática',
+                      newValue: val
+                    });
+                    setShowSystemConfirmModal(true);
+                  }}
                   icon="flash"
                 />
                 <View style={styles.configDivider} />
@@ -1180,7 +1210,15 @@ export default function AdminSettings() {
                   label="Aprobación Automática Visitantes" 
                   desc="Aprobar solicitudes de visitantes de forma automática."
                   value={autoApproveVisitors}
-                  onValueChange={setAutoApproveVisitors}
+                  onValueChange={(val: boolean) => {
+                    setPendingSystemToggle({
+                      key: 'autoApproveVisitors',
+                      label: 'Aprobación Automática Visitantes',
+                      desc: 'aprobar las solicitudes de control de visitantes de forma automática',
+                      newValue: val
+                    });
+                    setShowSystemConfirmModal(true);
+                  }}
                   icon="flash"
                 />
                 <View style={styles.configDivider} />
@@ -1509,6 +1547,53 @@ export default function AdminSettings() {
               <TouchableOpacity 
                 style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]} 
                 onPress={confirmEvalToggle}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Text style={styles.confirmDeleteButtonText}>Confirmar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE CONFIRMACIÓN DE SISTEMA (Aprobación Automática) */}
+      <Modal
+        visible={showSystemConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSystemConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.accent}15` }]}>
+              <Ionicons name="flash" size={32} color={COLORS.accent} />
+            </View>
+            <Text style={styles.modalTitle}>{pendingSystemToggle?.newValue ? '¿Activar' : '¿Desactivar'} {pendingSystemToggle?.label}?</Text>
+            <Text style={styles.modalDescription}>
+              ¿Estás seguro que deseas {pendingSystemToggle?.newValue ? 'activar' : 'desactivar'} esta función?
+              {"\n\n"}
+              Esto hará que el sistema empiece a {pendingSystemToggle?.desc}.
+            </Text>
+
+            <View style={[styles.modalActions, { marginTop: 10 }]}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
+                onPress={() => {
+                  setShowSystemConfirmModal(false);
+                  setPendingSystemToggle(null);
+                }}
+                disabled={saving}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+                onPress={confirmSystemToggle}
                 disabled={saving}
               >
                 {saving ? (
