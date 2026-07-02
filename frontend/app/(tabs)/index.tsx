@@ -1122,8 +1122,8 @@ const styles = StyleSheet.create({
   userName: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
   userRole: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
 
-  hero: { height: 140, width: '100%' },
-  heroDesktop: { height: 160, borderBottomRightRadius: 40, overflow: 'hidden' },
+  hero: { minHeight: 160, width: '100%', paddingVertical: 15 },
+  heroDesktop: { height: 160, paddingVertical: 0, borderBottomRightRadius: 40, overflow: 'hidden' },
   heroBg: { flex: 1 },
   heroSafe: { flex: 1, paddingHorizontal: 35, justifyContent: 'center' },
   heroKicker: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },

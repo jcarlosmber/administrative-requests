@@ -939,7 +939,7 @@ const styles = StyleSheet.create({
   sideDesc: { color: 'rgba(255,255,255,0.8)', fontSize: 16, lineHeight: 24 },
 
   headerContainer: { paddingBottom: 10 },
-  hero: { height: 160, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },
+  hero: { minHeight: 160, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },
   heroInner: { flex: 1, paddingHorizontal: 25, justifyContent: 'center' },
   heroKicker: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
   heroTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', marginTop: 5 },

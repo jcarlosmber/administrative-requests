@@ -1171,7 +1171,7 @@ const styles = StyleSheet.create({
   sideTabLabelActive: { color: COLORS.primary, fontWeight: '900' },
 
   scrollContent: { paddingBottom: 60 },
-  hero: { height: 150, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40, borderBottomLeftRadius: 40, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 15, elevation: 5 },
+  hero: { minHeight: 150, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40, borderBottomLeftRadius: 40, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 15, elevation: 5 },
   heroInner: { flex: 1, paddingHorizontal: 30, justifyContent: 'center' },
   heroKicker: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '900', letterSpacing: 2 },
   heroTitle: { color: COLORS.white, fontSize: 28, fontWeight: '900', marginTop: 3 },
