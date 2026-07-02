@@ -435,6 +435,7 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
 
     let query;
     let params;
+    const metaParam = metadata !== undefined ? JSON.stringify(metadata) : null;
 
     if (req.user.role === 'admin') {
       query = `UPDATE administrative_requests 
@@ -443,17 +444,17 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
                    priority = COALESCE($3, priority), 
                    status = COALESCE($4, status), 
                    admin_notes = COALESCE($5, admin_notes),
-                   metadata = COALESCE($6, metadata)
+                   metadata = COALESCE($6::jsonb, metadata)
                WHERE id = $7 RETURNING *`;
-      params = [title, description, priority, status, admin_notes, metadata, id];
+      params = [title, description, priority, status, admin_notes, metaParam, id];
     } else {
       query = `UPDATE administrative_requests 
                SET title = COALESCE($1, title), 
                    description = COALESCE($2, description), 
                    priority = COALESCE($3, priority),
-                   metadata = COALESCE($4, metadata)
+                   metadata = COALESCE($4::jsonb, metadata)
                WHERE id = $5 AND status = 'pendiente' RETURNING *`;
-      params = [title, description, priority, metadata, id];
+      params = [title, description, priority, metaParam, id];
     }
 
     const updateResult = await pool.query(query, params);

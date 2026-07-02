@@ -855,11 +855,11 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
             </View>
             <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10 }]}>
               <TouchableOpacity 
-                style={[styles.actionBtn, { borderColor: COLORS.line, backgroundColor: 'transparent', height: 32 }]}
+                style={[styles.actionBtn, { borderColor: COLORS.text, backgroundColor: COLORS.text, height: 32 }]}
                 onPress={() => setExpanded(!expanded)}
               >
-                <Text style={[styles.actionBtnText, { color: COLORS.primary }]}>{expanded ? 'Ocultar' : 'Ampliar'}</Text>
-                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.primary} />
+                <Text style={[styles.actionBtnText, { color: COLORS.white }]}>{expanded ? 'Ocultar' : 'Ampliar'}</Text>
+                <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.white} />
               </TouchableOpacity>
 
               {expanded && (
