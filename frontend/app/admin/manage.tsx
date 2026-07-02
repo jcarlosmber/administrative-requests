@@ -120,7 +120,7 @@ const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas
 const STATUS_OPTIONS = ['Todos', 'Pendiente', 'En Progreso', 'Aprobado', 'Rechazado'];
 
 export default function ManageRequests() {
-  const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string }>();
+  const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string; id?: string }>();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -450,7 +450,7 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} />}
+            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} initiallyExpanded={params.id === item.id} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -670,11 +670,11 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestListItem({ item, onUpdateStatus }: any) {
+function RequestListItem({ item, onUpdateStatus, initiallyExpanded = false }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
   const [comment, setComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -803,7 +803,7 @@ function RequestListItem({ item, onUpdateStatus }: any) {
                   <Text style={styles.infoTitle}>EVALUACIÓN DEL SERVICIO</Text>
                   <View style={{ backgroundColor: '#F0FDF4', padding: 15, borderRadius: 12, borderColor: COLORS.success, borderWidth: 1, marginBottom: 15 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Text style={{ fontWeight: '800', color: COLORS.dark }}>Calificación:</Text>
+                      <Text style={{ fontWeight: '800', color: COLORS.text }}>Calificación:</Text>
                       <View style={{ flexDirection: 'row' }}>
                         {[1, 2, 3, 4, 5].map(star => (
                           <Ionicons key={star} name={item.metadata.evaluation.rating >= star ? 'star' : 'star-outline'} size={16} color={COLORS.accent} />
@@ -811,7 +811,7 @@ function RequestListItem({ item, onUpdateStatus }: any) {
                       </View>
                     </View>
                     {item.metadata.evaluation.comment ? (
-                      <Text style={{ fontStyle: 'italic', color: COLORS.dark }}>"{item.metadata.evaluation.comment}"</Text>
+                      <Text style={{ fontStyle: 'italic', color: COLORS.text }}>"{item.metadata.evaluation.comment}"</Text>
                     ) : (
                       <Text style={{ color: COLORS.muted }}>Sin comentarios.</Text>
                     )}

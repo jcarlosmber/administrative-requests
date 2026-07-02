@@ -485,6 +485,7 @@ function KPICard({ item, width, onPress, index }: any) {
 }
 
 function ActivityRow({ item, index }: any) {
+  const router = useRouter();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
   const slideAnim = React.useRef(new Animated.Value(20)).current;
   const hoverAnim = React.useRef(new Animated.Value(0)).current;
@@ -538,6 +539,7 @@ function ActivityRow({ item, index }: any) {
       onHoverOut={handleHoverOut}
       onPressIn={handleHoverIn}
       onPressOut={handleHoverOut}
+      onPress={() => router.push(`/admin/manage?id=${item.id}`)}
     >
       <Animated.View style={[
         styles.activityRow, 
