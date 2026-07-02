@@ -145,7 +145,8 @@ export default function RoomsRequestScreen() {
             isLargeScale: r.info === 'Especial' || r.capacity >= 100
           }));
           setRoomsList(formattedRooms);
-          setSelectedRoom(formattedRooms[0]);
+          const firstStandard = formattedRooms.find((r: any) => !r.isLargeScale) || formattedRooms[0];
+          setSelectedRoom(firstStandard);
         } else {
           // Fallback con localStorage si Supabase está vacío
           if (Platform.OS === 'web') {
@@ -157,7 +158,8 @@ export default function RoomsRequestScreen() {
                 isLargeScale: r.info === 'Especial' || (parseInt(r.capacity) || 0) >= 100
               }));
               setRoomsList(formatted);
-              setSelectedRoom(formatted[0]);
+              const firstStandard = formatted.find((r: any) => !r.isLargeScale) || formatted[0];
+              setSelectedRoom(firstStandard);
             }
           }
         }
