@@ -117,13 +117,9 @@ export const requestService = {
   },
 
   async evaluateRequest(id: string, evaluation: { rating: number; comment?: string }) {
-    const token = await AsyncStorage.getItem('token');
     const res = await fetch(`${API_URL}/api/requests/${id}/evaluate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
+      headers: await getHeaders(),
       body: JSON.stringify(evaluation)
     });
     if (!res.ok) {
