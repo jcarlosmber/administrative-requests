@@ -986,21 +986,28 @@ export default function RoomsRequestScreen() {
                                 const isStart = isSelected && h === startHour;
                                 const isEnd = isSelected && h === endHour - 1;
 
+                                const slotDate = new Date(dateObj);
+                                slotDate.setHours(h, 0, 0, 0);
+                                const isPast = slotDate < new Date();
+                                const isDisabled = isOccupied || isPast;
+
                                 return (
                                   <TouchableOpacity 
                                     key={h} 
-                                    disabled={isOccupied}
+                                    disabled={isDisabled}
                                     onPress={() => handleSlotPress(dIdx, h)}
                                     activeOpacity={0.7}
                                     style={[
                                       styles.slotCell, 
                                       isOccupied && styles.slotOccupied,
+                                      isPast && !isOccupied && { backgroundColor: '#F8FAFC', opacity: 0.6 },
                                       isSelected && styles.slotSelected,
                                       isSelected && !isStart && { borderTopWidth: 0 },
                                       isSelected && !isEnd && { borderBottomWidth: 0 }
                                     ]}
                                   >
                                     {isOccupied && <View style={styles.occupiedIndicator} />}
+                                    {isPast && !isOccupied && <Ionicons name="close-circle-outline" size={14} color="#CBD5E1" style={{ position: 'absolute', opacity: 0.5 }} />}
                                     {isSelected && (
                                       <View style={[
                                         styles.selectedIndicator,
