@@ -743,7 +743,9 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
         <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded(!expanded)} activeOpacity={0.9}>
             <View style={styles.cardHeaderLeft}>
               <View style={styles.typeRow}>
-                <Text style={[styles.cardCategory, { color: item.color }]}>{item.type}</Text>
+                <View style={{ backgroundColor: item.color, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                  <Text style={[styles.cardCategory, { color: COLORS.white }]}>{item.type}</Text>
+                </View>
                 <View style={[styles.priorityPill, { backgroundColor: item.priority === 'Alta' ? `${COLORS.danger}15` : `${COLORS.warning}15` }]}>
                   <Text style={[styles.priorityText, { color: item.priority === 'Alta' ? COLORS.danger : COLORS.warning }]}>
                     {item.priority}
