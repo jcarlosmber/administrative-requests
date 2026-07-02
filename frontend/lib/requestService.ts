@@ -103,6 +103,19 @@ export const requestService = {
     return await res.json() as AdministrativeRequest;
   },
 
+  async updateStatus(id: string, status: string) {
+    const res = await fetch(`${API_URL}/api/requests/${id}/status`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Error al actualizar el estado');
+    }
+    return await res.json() as AdministrativeRequest;
+  },
+
   async evaluateRequest(id: string, evaluation: { rating: number; comment?: string }) {
     const token = await AsyncStorage.getItem('token');
     const res = await fetch(`${API_URL}/api/requests/${id}/evaluate`, {

@@ -144,47 +144,10 @@ export default function ManageRequests() {
   const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado') => {
     try {
       setLoading(true);
-      const req = requests.find(r => r.id === id);
-      if (req) {
-        const currentMetadata = req.metadata || {};
-        const currentTimeline = currentMetadata.timeline || [
-          { 
-            title: 'Solicitud Creada', 
-            date: new Date(req.created_at).toLocaleString('es-ES'), 
-            desc: 'Iniciada por el funcionario.' 
-          }
-        ];
-
-        const statusDetails = {
-          pendiente: { title: 'Solicitud Pendiente', desc: 'Requerimiento restablecido a estado pendiente.' },
-          en_progreso: { title: 'Solicitud en Curso', desc: 'Se ha iniciado la atención y procesamiento del requerimiento.' },
-          resuelto: { title: 'Solicitud Aprobada', desc: 'La solicitud ha sido resuelta y aprobada con éxito.' },
-          rechazado: { title: 'Solicitud Rechazada', desc: 'El requerimiento fue declinado por el administrador.' }
-        }[newStatus];
-
-        const newStep = {
-          title: statusDetails.title,
-          date: new Date().toLocaleString('es-ES'),
-          desc: statusDetails.desc
-        };
-
-        const updatedTimeline = [...currentTimeline, newStep];
-        
-        const updates = {
-          status: newStatus,
-          metadata: {
-            ...currentMetadata,
-            timeline: updatedTimeline
-          }
-        };
-
-        await requestService.update(id, updates);
-      } else {
-        await requestService.update(id, { status: newStatus });
-      }
+      await requestService.updateStatus(id, newStatus);
       await fetchRequests();
-    } catch (error) {
-      console.error('Error al actualizar estado:', error);
+    } catch (err: any) {
+      console.error('Error al actualizar estado:', err);
     } finally {
       setLoading(false);
     }
