@@ -860,13 +860,15 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                       )}
 
                       {/* Aprobar Directamente (Check Verde) para todas las categorías - Segundo o Único */}
-                      <TouchableOpacity 
-                        style={[styles.actionBtn, styles.successBtn]}
-                        onPress={() => onUpdateStatus(item.id, 'resuelto')}
-                      >
-                        <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
-                        <Text style={styles.actionBtnText}>Aprobar</Text>
-                      </TouchableOpacity>
+                      {!['transport', 'maintenance'].includes(item.category) && (
+                        <TouchableOpacity 
+                          style={[styles.actionBtn, styles.successBtn]}
+                          onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                        >
+                          <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
+                          <Text style={styles.actionBtnText}>Aprobar</Text>
+                        </TouchableOpacity>
+                      )}
                     </>
                   )}
 
@@ -877,7 +879,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                        onPress={() => onUpdateStatus(item.id, 'resuelto')}
                     >
                       <Ionicons name="checkmark-done-outline" size={16} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Completar</Text>
+                      <Text style={styles.actionBtnText}>Finalizar</Text>
                     </TouchableOpacity>
                   )}
 
