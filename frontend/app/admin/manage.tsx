@@ -450,7 +450,7 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} initiallyExpanded={params.id === item.id} />}
+            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -670,7 +670,7 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestListItem({ item, onUpdateStatus, initiallyExpanded = false }: any) {
+function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
@@ -726,8 +726,8 @@ function RequestListItem({ item, onUpdateStatus, initiallyExpanded = false }: an
       await requestService.update(item.id, updates);
       setComment('');
       
-      if (onUpdateStatus) {
-        onUpdateStatus(item.id, item.status.toLowerCase().replace(' ', '_'));
+      if (onRefresh) {
+        onRefresh();
       }
     } catch (err) {
       console.error('Error al guardar comentario de trazabilidad:', err);
@@ -867,17 +867,8 @@ function RequestListItem({ item, onUpdateStatus, initiallyExpanded = false }: an
                   {/* Botones para solicitudes en estado Pendiente */}
                   {item.status.toLowerCase() === 'pendiente' && (
                     <>
-                      {/* Aprobar Directamente (Check Verde) para todas las categorías */}
-                      <TouchableOpacity 
-                        style={[styles.actionBtn, styles.successBtn]}
-                        onPress={() => onUpdateStatus(item.id, 'resuelto')}
-                      >
-                        <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
-                        <Text style={styles.actionBtnText}>Aprobar</Text>
-                      </TouchableOpacity>
-
-                      {/* Poner en Progreso (Play Azul) para Transporte, Visitantes y Mantenimiento */}
-                      {['transport', 'visitors', 'maintenance'].includes(item.category) && (
+                      {/* Poner en Progreso (Play Azul) para Transporte y Mantenimiento - Primero */}
+                      {['transport', 'maintenance'].includes(item.category) && (
                         <TouchableOpacity 
                           style={[styles.actionBtn, styles.approveBtn]}
                           onPress={() => onUpdateStatus(item.id, 'en_progreso')}
@@ -886,6 +877,15 @@ function RequestListItem({ item, onUpdateStatus, initiallyExpanded = false }: an
                           <Text style={styles.actionBtnText}>Procesar</Text>
                         </TouchableOpacity>
                       )}
+
+                      {/* Aprobar Directamente (Check Verde) para todas las categorías - Segundo o Único */}
+                      <TouchableOpacity 
+                        style={[styles.actionBtn, styles.successBtn]}
+                        onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                      >
+                        <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
+                        <Text style={styles.actionBtnText}>Aprobar</Text>
+                      </TouchableOpacity>
                     </>
                   )}
 
