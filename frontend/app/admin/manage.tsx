@@ -705,8 +705,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
     
     try {
       setCommentLoading(true);
-      const updatedReq = await requestService.addComment(item.id, comment.trim());
-      onUpdate(updatedReq);
+      await requestService.addComment(item.id, comment.trim());
       setComment('');
       if (onRefresh) onRefresh();
     } catch (err: any) {
