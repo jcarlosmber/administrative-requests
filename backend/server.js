@@ -446,7 +446,7 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
                    admin_notes = COALESCE($5, admin_notes),
                    metadata = COALESCE($6::jsonb, metadata)
                WHERE id = $7 RETURNING *`;
-      params = [title, description, priority, status, admin_notes, metaParam, id];
+      params = [title ?? null, description ?? null, priority ?? null, status ?? null, admin_notes ?? null, metaParam ?? null, id];
     } else {
       query = `UPDATE administrative_requests 
                SET title = COALESCE($1, title), 
@@ -454,7 +454,7 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
                    priority = COALESCE($3, priority),
                    metadata = COALESCE($4::jsonb, metadata)
                WHERE id = $5 AND status = 'pendiente' RETURNING *`;
-      params = [title, description, priority, metaParam, id];
+      params = [title ?? null, description ?? null, priority ?? null, metaParam ?? null, id];
     }
 
     const updateResult = await pool.query(query, params);
