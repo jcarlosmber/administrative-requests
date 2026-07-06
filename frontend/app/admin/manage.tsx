@@ -126,6 +126,7 @@ export default function ManageRequests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState('Todas');
   const [statusFilter, setStatusFilter] = useState('Todos');
+  const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
@@ -146,6 +147,11 @@ export default function ManageRequests() {
       setLoading(true);
       await requestService.updateStatus(id, newStatus);
       await fetchRequests();
+      let actionName = 'procesada';
+      if (newStatus === 'resuelto') actionName = 'aprobada / finalizada';
+      if (newStatus === 'rechazado') actionName = 'rechazada';
+      if (newStatus === 'en_progreso') actionName = 'pasada a en curso';
+      setSuccessModal({ visible: true, message: `La solicitud fue ${actionName} exitosamente.` });
     } catch (err: any) {
       console.error('Error al actualizar estado:', err);
     } finally {
@@ -413,12 +419,34 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} />}
+            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
         </View>
       </View>
+
+      <Modal
+        visible={successModal.visible}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIconBox}>
+              <Ionicons name="checkmark-circle" size={45} color={COLORS.success} />
+            </View>
+            <Text style={styles.modalTitle}>¡Acción exitosa!</Text>
+            <Text style={styles.modalMessage}>{successModal.message}</Text>
+            <TouchableOpacity 
+              style={styles.modalBtn} 
+              onPress={() => setSuccessModal({ visible: false, message: '' })}
+            >
+              <Text style={styles.modalBtnText}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -633,7 +661,7 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false }: any) {
+function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
@@ -671,6 +699,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
       await requestService.addComment(item.id, comment.trim());
       setComment('');
       if (onRefresh) onRefresh();
+      if (onSuccessAction) onSuccessAction('Comentario añadido exitosamente.');
     } catch (err: any) {
       console.error('Error al guardar comentario:', err);
     } finally {
@@ -973,4 +1002,12 @@ const styles = StyleSheet.create({
   processBtn: { backgroundColor: '#FF8C00', borderColor: '#FF8C00' },
   successBtn: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   infoBtn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 340, backgroundColor: COLORS.white, borderRadius: 24, padding: 25, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: { width: 0, height: 5 }, shadowRadius: 15 },
+  modalIconBox: { width: 70, height: 70, borderRadius: 35, backgroundColor: `${COLORS.success}15`, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginBottom: 8, textAlign: 'center' },
+  modalMessage: { fontSize: 14, color: COLORS.muted, textAlign: 'center', marginBottom: 25, lineHeight: 20, fontWeight: '500' },
+  modalBtn: { backgroundColor: COLORS.primary, width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  modalBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
 });
