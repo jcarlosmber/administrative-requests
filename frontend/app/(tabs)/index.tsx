@@ -234,6 +234,14 @@ export default function DashboardScreen() {
     }));
   }, [requests]);
 
+  const pendingEvaluations = useMemo(() => {
+    const evalCategories = ['visitors', 'transport', 'maintenance', 'rooms', 'parking'];
+    return requests.filter(req => {
+      const needsEval = req.status.toLowerCase() === 'resuelto' && (!req.metadata || !req.metadata.evaluation) && evalCategories.includes(req.category);
+      return needsEval;
+    });
+  }, [requests]);
+
   const upcomingRoomBookings = useMemo(() => {
     // 1. Filtrar solicitudes de salas activas (que no estén rechazadas de forma negativa)
     const roomReqs = requests.filter(r => 
@@ -416,6 +424,67 @@ export default function DashboardScreen() {
             style={{ flex: 1 }}
           >
             <View style={styles.content}>
+            {/* Pendientes de Evaluar Section */}
+            {pendingEvaluations.length > 0 && (
+              <View style={{ marginBottom: 35 }}>
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text style={[styles.sectionKicker, { color: COLORS.warning }]}>REQUIEREN TU ATENCIÓN</Text>
+                    <Text style={styles.sectionTitle}>Pendientes por Evaluar</Text>
+                  </View>
+                  <Pressable onPress={() => router.push('/(tabs)/requests')}>
+                    <Text style={styles.viewAllText}>Evaluar ahora</Text>
+                  </Pressable>
+                </View>
+
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={{ gap: 16, paddingRight: 35, paddingBottom: 5 }}
+                >
+                  {pendingEvaluations.map((req) => (
+                    <TouchableOpacity 
+                      key={req.id}
+                      activeOpacity={0.9}
+                      onPress={() => router.push('/(tabs)/requests')}
+                      style={{
+                        width: isDesktop ? 280 : 250,
+                        backgroundColor: COLORS.white,
+                        borderRadius: 24,
+                        padding: 18,
+                        borderWidth: 1.5,
+                        borderColor: 'rgba(239, 137, 34, 0.2)',
+                        shadowColor: COLORS.warning,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 10,
+                        elevation: 3
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#FFF4E6', justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="star-outline" size={20} color={COLORS.warning} />
+                        </View>
+                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: `${COLORS.warning}12`, borderStyle: 'solid', borderWidth: 1, borderColor: `${COLORS.warning}25` }}>
+                          <Text style={{ fontSize: 9, fontWeight: '900', color: COLORS.warning, textTransform: 'uppercase' }}>
+                            SIN EVALUAR
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.dark }} numberOfLines={1}>
+                        {req.title}
+                      </Text>
+                      <View style={{ gap: 6, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.line }}>
+                        <Text style={{ fontSize: 13, fontWeight: '500', color: COLORS.muted }}>
+                          Califica este servicio para ayudarnos a mejorar.
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             {/* Quick Access Section */}
             <View style={styles.sectionHeader}>
               <View>
