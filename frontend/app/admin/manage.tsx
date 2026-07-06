@@ -118,7 +118,7 @@ const MOCK_REQUESTS = [
 
 const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
 const STATUS_OPTIONS = ['Todos', 'Pendiente', 'En Progreso', 'Aprobado', 'Rechazado'];
-const TIME_OPTIONS = ['Todos', 'Hoy', 'Últimos 7 días', 'Este mes'];
+const TIME_OPTIONS = ['Todos', 'Hoy', 'Últimos 7 días', 'Este mes', 'Personalizado'];
 
 export default function ManageRequests() {
   const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string; id?: string }>();
@@ -128,6 +128,8 @@ export default function ManageRequests() {
   const [serviceFilter, setServiceFilter] = useState('Todas');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [timeFilter, setTimeFilter] = useState('Todos');
+  const [customDates, setCustomDates] = useState({ start: '', end: '' });
+  const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -232,11 +234,15 @@ export default function ManageRequests() {
         matchesTime = diffDays <= 7;
       } else if (timeFilter === 'Este mes') {
         matchesTime = itemDate.getMonth() === todayDate.getMonth() && itemDate.getFullYear() === todayDate.getFullYear();
+      } else if (timeFilter === 'Personalizado' && customDates.start && customDates.end) {
+        const start = new Date(customDates.start + 'T00:00:00');
+        const end = new Date(customDates.end + 'T23:59:59');
+        matchesTime = itemDate >= start && itemDate <= end;
       }
 
       return matchesSearch && matchesService && matchesStatus && matchesPriority && matchesToday && matchesTime;
     });
-  }, [requests, searchQuery, serviceFilter, statusFilter, timeFilter, params.priority, params.today]);
+  }, [requests, searchQuery, serviceFilter, statusFilter, timeFilter, customDates, params.priority, params.today]);
 
   const mapRequestToUI = (item: AdministrativeRequest) => {
     const typeLabel = {
@@ -429,7 +435,13 @@ export default function ManageRequests() {
                     label="Filtrar Fecha" 
                     data={TIME_OPTIONS} 
                     selected={timeFilter} 
-                    onSelect={setTimeFilter} 
+                    onSelect={(val: string) => {
+                      if (val === 'Personalizado') {
+                        setShowCustomDateModal(true);
+                      } else {
+                        setTimeFilter(val);
+                      }
+                    }} 
                     icon="calendar-outline"
                   />
                   
@@ -468,6 +480,53 @@ export default function ManageRequests() {
             >
               <Text style={styles.modalBtnText}>Aceptar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showCustomDateModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.accent}15` }]}>
+              <Ionicons name="calendar" size={35} color={COLORS.accent} />
+            </View>
+            <Text style={styles.modalTitle}>Rango de Fechas</Text>
+            <Text style={styles.modalMessage}>Ingresa la fecha de inicio y fin (AAAA-MM-DD)</Text>
+            
+            <View style={{ width: '100%', gap: 10, marginBottom: 20 }}>
+              <TextInput
+                style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                placeholder="Inicio (Ej. 2026-07-01)"
+                placeholderTextColor={COLORS.muted}
+                value={customDates.start}
+                onChangeText={(t) => setCustomDates(prev => ({ ...prev, start: t }))}
+              />
+              <TextInput
+                style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                placeholder="Fin (Ej. 2026-07-31)"
+                placeholderTextColor={COLORS.muted}
+                value={customDates.end}
+                onChangeText={(t) => setCustomDates(prev => ({ ...prev, end: t }))}
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]} 
+                onPress={() => setShowCustomDateModal(false)}
+              >
+                <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { flex: 1 }]} 
+                onPress={() => {
+                  setTimeFilter('Personalizado');
+                  setShowCustomDateModal(false);
+                }}
+              >
+                <Text style={styles.modalBtnText}>Aplicar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
