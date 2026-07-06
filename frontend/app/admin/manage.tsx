@@ -118,6 +118,7 @@ const MOCK_REQUESTS = [
 
 const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
 const STATUS_OPTIONS = ['Todos', 'Pendiente', 'En Progreso', 'Aprobado', 'Rechazado'];
+const TIME_OPTIONS = ['Todos', 'Hoy', 'Últimos 7 días', 'Este mes'];
 
 export default function ManageRequests() {
   const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string; id?: string }>();
@@ -126,6 +127,7 @@ export default function ManageRequests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState('Todas');
   const [statusFilter, setStatusFilter] = useState('Todos');
+  const [timeFilter, setTimeFilter] = useState('Todos');
   const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -218,9 +220,23 @@ export default function ManageRequests() {
       const matchesPriority = !params.priority || params.priority === 'all' || item.priority === String(params.priority);
       const matchesToday = !params.today || new Date(item.created_at).toDateString() === today;
 
-      return matchesSearch && matchesService && matchesStatus && matchesPriority && matchesToday;
+      const itemDate = new Date(item.created_at);
+      const todayDate = new Date();
+      let matchesTime = true;
+      
+      if (timeFilter === 'Hoy') {
+        matchesTime = itemDate.toDateString() === todayDate.toDateString();
+      } else if (timeFilter === 'Últimos 7 días') {
+        const diffTime = Math.abs(todayDate.getTime() - itemDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        matchesTime = diffDays <= 7;
+      } else if (timeFilter === 'Este mes') {
+        matchesTime = itemDate.getMonth() === todayDate.getMonth() && itemDate.getFullYear() === todayDate.getFullYear();
+      }
+
+      return matchesSearch && matchesService && matchesStatus && matchesPriority && matchesToday && matchesTime;
     });
-  }, [requests, searchQuery, serviceFilter, statusFilter, params.priority, params.today]);
+  }, [requests, searchQuery, serviceFilter, statusFilter, timeFilter, params.priority, params.today]);
 
   const mapRequestToUI = (item: AdministrativeRequest) => {
     const typeLabel = {
@@ -407,6 +423,14 @@ export default function ManageRequests() {
                     selected={statusFilter} 
                     onSelect={setStatusFilter} 
                     icon="options-outline"
+                  />
+
+                  <FilterRow 
+                    label="Filtrar Fecha" 
+                    data={TIME_OPTIONS} 
+                    selected={timeFilter} 
+                    onSelect={setTimeFilter} 
+                    icon="calendar-outline"
                   />
                   
                   <View style={styles.resultsHeader}>
