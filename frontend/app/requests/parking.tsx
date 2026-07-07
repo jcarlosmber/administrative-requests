@@ -331,7 +331,7 @@ export default function ParkingRequestScreen() {
         name={name}
         charge={charge}
         dependency={dependency}
-        onClose={() => { setIsSuccessModalVisible(false); router.replace('/(tabs)'); }} 
+        onClose={() => { setIsSuccessModalVisible(false); router.replace('/dashboard'); }} 
       />
       
       <ConfirmActionModal

@@ -434,7 +434,7 @@ export default function DashboardScreen() {
                     <Text style={[styles.sectionKicker, { color: COLORS.warning }]}>REQUIEREN TU ATENCIÓN</Text>
                     <Text style={styles.sectionTitle}>Pendientes por Evaluar</Text>
                   </View>
-                  <Pressable onPress={() => router.push('/(tabs)/requests')}>
+                  <Pressable onPress={() => router.push('/dashboard/requests')}>
                     <Text style={styles.viewAllText}>Evaluar ahora</Text>
                   </Pressable>
                 </View>
@@ -515,7 +515,7 @@ export default function DashboardScreen() {
                     <Text style={styles.sectionKicker}>AGENDA</Text>
                     <Text style={styles.sectionTitle}>Próximas Reservas de Salas</Text>
                   </View>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Salas' } })}>
+                  <Pressable onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Salas' } })}>
                     <Text style={styles.viewAllText}>Ver todas</Text>
                   </Pressable>
                 </View>
@@ -593,7 +593,7 @@ export default function DashboardScreen() {
                     <Text style={styles.sectionKicker}>ALERTAS</Text>
                     <Text style={styles.sectionTitle}>Mantenimientos Pendientes</Text>
                   </View>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Mantenimiento' } })}>
+                  <Pressable onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Mantenimiento' } })}>
                     <Text style={styles.viewAllText}>Ver todos</Text>
                   </Pressable>
                 </View>
@@ -671,7 +671,7 @@ export default function DashboardScreen() {
                     <Text style={styles.sectionKicker}>INGRESO</Text>
                     <Text style={styles.sectionTitle}>Visitantes Activos</Text>
                   </View>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Visitantes' } })}>
+                  <Pressable onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Visitantes' } })}>
                     <Text style={styles.viewAllText}>Ver todos</Text>
                   </Pressable>
                 </View>
@@ -749,7 +749,7 @@ export default function DashboardScreen() {
                     <Text style={styles.sectionKicker}>VIAJES</Text>
                     <Text style={styles.sectionTitle}>Transporte Activo</Text>
                   </View>
-                  <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Transporte' } })}>
+                  <Pressable onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Transporte' } })}>
                     <Text style={styles.viewAllText}>Ver todos</Text>
                   </Pressable>
                 </View>
@@ -826,7 +826,7 @@ export default function DashboardScreen() {
                   <Text style={styles.sectionKicker}>ACCESO</Text>
                   <Text style={styles.sectionTitle}>Parqueadero Activo</Text>
                 </View>
-                <Pressable onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Parqueadero' } })}>
+                <Pressable onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Parqueadero' } })}>
                   <Text style={styles.viewAllText}>Ver todos</Text>
                 </Pressable>
               </View>
@@ -927,14 +927,14 @@ export default function DashboardScreen() {
                 <Text style={styles.sectionKicker}>SEGUIMIENTO</Text>
                 <Text style={styles.sectionTitle}>Solicitudes Recientes</Text>
               </View>
-              <Pressable onPress={() => router.push('/(tabs)/requests')}>
+              <Pressable onPress={() => router.push('/dashboard/requests')}>
                 <Text style={styles.viewAllText}>Ver todas</Text>
               </Pressable>
             </View>
 
             <View style={styles.requestsContainer}>
               {recentRequestsUI.map((req) => (
-                <RequestCard key={req.id} req={req} onPress={() => router.push('/(tabs)/requests')} />
+                <RequestCard key={req.id} req={req} onPress={() => router.push('/dashboard/requests')} />
               ))}
               {recentRequestsUI.length === 0 && (
                 <Text style={{ textAlign: 'center', color: COLORS.muted, marginTop: 20 }}>No tienes solicitudes recientes.</Text>

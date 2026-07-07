@@ -74,7 +74,7 @@ export default function LoginPage() {
       if (data?.user?.role === 'admin') {
         router.replace('/admin');
       } else {
-        router.replace('/(tabs)');
+        router.replace('/dashboard');
       }
     } catch (error: any) {
       let msg = error.message || 'Verifica tus credenciales.';

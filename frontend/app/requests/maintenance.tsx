@@ -301,7 +301,7 @@ export default function MaintenanceRequestScreen() {
         dependency={dependency}
         location={location}
         room={room}
-        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+        onClose={() => { setShowSuccess(false); router.replace('/dashboard'); }} 
       />
       
       <DependencySelector 

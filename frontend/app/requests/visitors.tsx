@@ -482,7 +482,7 @@ export default function VisitorsScreen() {
         responsible={responsible}
         fromDate={fromDate}
         toDate={toDate}
-        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+        onClose={() => { setShowSuccess(false); router.replace('/dashboard'); }} 
       />
       
       <GuidelinesModal 

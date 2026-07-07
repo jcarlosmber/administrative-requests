@@ -358,7 +358,7 @@ export default function TransportRequestScreen() {
         destination={destination}
         time={pickupTime}
         passengers={passengers}
-        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+        onClose={() => { setShowSuccess(false); router.replace('/dashboard'); }} 
       />
       
       <DependencySelector 

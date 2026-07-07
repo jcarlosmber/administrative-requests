@@ -22,7 +22,7 @@ export default function RootLayout() {
                 if (router.canGoBack()) {
                   router.back();
                 } else {
-                  router.replace('/(tabs)');
+                  router.replace('/dashboard');
                 }
               }} 
               style={{ marginLeft: Platform.OS === 'web' ? 16 : 8, marginRight: 16 }}

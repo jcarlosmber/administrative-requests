@@ -18,9 +18,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 const isWide = width >= 768;
@@ -167,6 +168,15 @@ export default function LandingPage() {
   const previewIntro = useRef(new Animated.Value(0)).current;
   const servicesIntro = useRef(new Animated.Value(0)).current;
   const [sectionOffsets, setSectionOffsets] = useState({ services: 0, flow: 0, support: 0 });
+  const [hasSession, setHasSession] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then((response: any) => {
+      setHasSession(!!response.data?.session);
+      setIsChecking(false);
+    });
+  }, []);
 
   const goToLogin = () => router.push('/login');
   const scrollToSection = (target: keyof typeof sectionOffsets) => {
@@ -208,6 +218,9 @@ export default function LandingPage() {
     ],
   });
 
+  if (isChecking) return null;
+  if (hasSession) return <Redirect href="/dashboard" />;
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -221,7 +234,7 @@ export default function LandingPage() {
                   <Ionicons name="business" size={20} color={COLORS.heroText} />
                 </View>
                 <View>
-                  <Text style={[styles.logoText, { fontSize: 13 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
+                  <Text style={[styles.logoText, { fontSize: 13 }]}>Servicios Generales 2.0</Text>
                   <Text style={styles.logoSubtext}>Secretaría Jurídica Distrital</Text>
                 </View>
               </View>

@@ -1108,7 +1108,7 @@ export default function RoomsRequestScreen() {
         customTechDescription={customTechDescription}
         eventTime={bookingMode === 'large' ? `${eventStartHour} - ${eventEndHour}` : ''}
         standardServices={bookingMode === 'standard' ? services : null}
-        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+        onClose={() => { setShowSuccess(false); router.replace('/dashboard'); }} 
       />
       
       <DependencySelector 
@@ -1202,7 +1202,7 @@ function MobileHeader() {
           paddingVertical: 8, 
           borderRadius: 12 
         }}
-        onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Salas' } })}
+        onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Salas' } })}
       >
         <Ionicons name="calendar-outline" size={16} color={COLORS.primary} />
         <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>Mis Reservas</Text>
@@ -1234,7 +1234,7 @@ function Hero({ progress }: { progress: number }) {
               borderWidth: 1,
               borderColor: COLORS.primaryLight
             }}
-            onPress={() => router.push({ pathname: '/(tabs)/requests', params: { service: 'Salas' } })}
+            onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Salas' } })}
           >
             <Ionicons name="calendar-outline" size={14} color={COLORS.primary} />
             <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>Mis Reservas</Text>
