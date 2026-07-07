@@ -23,6 +23,7 @@ import { supabase } from '../../lib/supabase';
 import { vehicleService, UserVehicle } from '../../lib/vehicleService';
 import { VehicleFormModal } from '../../components/VehicleFormModal';
 import { VehicleDeleteConfirmModal } from '../../components/VehicleDeleteConfirmModal';
+import EvaluationModal from '../../components/EvaluationModal';
 
 
 const COLORS = {
@@ -123,6 +124,7 @@ export default function DashboardScreen() {
   const cardWidth = getCardWidth();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [evaluationModal, setEvaluationModal] = useState<{ visible: boolean, requestId: string | null }>({ visible: false, requestId: null });
 
   // Estados de Vehículos Registrados
   const [vehicles, setVehicles] = useState<UserVehicle[]>([]);
@@ -446,7 +448,7 @@ export default function DashboardScreen() {
                     <TouchableOpacity 
                       key={req.id}
                       activeOpacity={0.9}
-                      onPress={() => router.push('/(tabs)/requests')}
+                      onPress={() => setEvaluationModal({ visible: true, requestId: req.id })}
                       style={{
                         width: isDesktop ? 280 : 250,
                         backgroundColor: COLORS.white,
@@ -974,6 +976,14 @@ export default function DashboardScreen() {
         onClose={() => {
           setIsDetailModalVisible(false);
           setSelectedRequest(null);
+        }}
+      />
+      <EvaluationModal
+        visible={evaluationModal.visible}
+        requestId={evaluationModal.requestId}
+        onClose={() => setEvaluationModal({ visible: false, requestId: null })}
+        onSuccess={() => {
+          fetchDashboardData();
         }}
       />
     </View>
