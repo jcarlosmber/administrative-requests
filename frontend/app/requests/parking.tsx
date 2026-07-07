@@ -7,8 +7,10 @@ import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
-import { requestService } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
+import { requestService } from '../../lib/requestService';
+import { vehicleService } from '../../lib/vehicleService';
+import ConfirmActionModal from '../../components/ConfirmActionModal';
 
 const { width } = Dimensions.get('window');
 const isDesktop = width >= 1024;
@@ -41,7 +43,9 @@ export default function ParkingRequestScreen() {
   const [color, setColor] = useState('');
 
   // UI State
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
+  const [createdRequestId, setCreatedRequestId] = useState<string | null>(null);
   const [showDeps, setShowDeps] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showGuidelines, setShowGuidelines] = useState(false);
@@ -115,7 +119,8 @@ export default function ParkingRequestScreen() {
       });
 
       setLoading(false);
-      setShowSuccess(true);
+      setIsSuccessModalVisible(true);
+      setIsConfirmModalVisible(false);
     } catch (error) {
       console.error('Error al solicitar parqueadero:', error);
       setLoading(false);
@@ -300,7 +305,7 @@ export default function ParkingRequestScreen() {
 
                 <TouchableOpacity 
                   style={[styles.mainBtn, (progress < 80) && { opacity: 0.5 }]} 
-                  onPress={handleRegister}
+                  onPress={() => setIsConfirmModalVisible(true)}
                   disabled={loading || progress < 80}
                 >
                   <LinearGradient 
@@ -320,15 +325,24 @@ export default function ParkingRequestScreen() {
       </LinearGradient>
 
       <SuccessModal 
-        visible={showSuccess} 
+        visible={isSuccessModalVisible} 
         plate={plate}
         brand={brand}
         name={name}
         charge={charge}
         dependency={dependency}
-        onClose={() => { setShowSuccess(false); router.replace('/(tabs)'); }} 
+        onClose={() => { setIsSuccessModalVisible(false); router.replace('/(tabs)'); }} 
       />
       
+      <ConfirmActionModal
+        visible={isConfirmModalVisible}
+        onClose={() => setIsConfirmModalVisible(false)}
+        onConfirm={handleRegister}
+        title="Confirmar Solicitud"
+        message="¿Está seguro de enviar esta solicitud de parqueadero?"
+        confirmText="Enviar"
+      />
+
       <GuidelinesModal 
         visible={showGuidelines} 
         onClose={() => setShowGuidelines(false)} 

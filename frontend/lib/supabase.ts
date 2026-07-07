@@ -18,20 +18,19 @@ if (typeof window !== 'undefined' && window.location) {
 }
 
 // Almacenamiento adaptativo para web y dispositivos móviles en memoria
-const isWeb = typeof window !== 'undefined' && window.localStorage;
 const memoryStorage: Record<string, string> = {};
 
 export const appStorage = {
   getItem: async (key: string) => {
-    if (isWeb) return window.localStorage.getItem(key);
+    if (typeof window !== 'undefined' && window.localStorage) return window.localStorage.getItem(key);
     return memoryStorage[key] || null;
   },
   setItem: async (key: string, value: string) => {
-    if (isWeb) window.localStorage.setItem(key, value);
+    if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem(key, value);
     else memoryStorage[key] = value;
   },
   removeItem: async (key: string) => {
-    if (isWeb) window.localStorage.removeItem(key);
+    if (typeof window !== 'undefined' && window.localStorage) window.localStorage.removeItem(key);
     else delete memoryStorage[key];
   }
 };

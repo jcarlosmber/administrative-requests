@@ -50,7 +50,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
         if (error) throw error;
 
         if (data && data.length > 0) {
-          setDeps(data.map(x => x.name));
+          setDeps(data.map((x: any) => x.name));
         } else {
           // Fallback a localStorage
           const local = await safeStorage.getItem('local_dependencies');

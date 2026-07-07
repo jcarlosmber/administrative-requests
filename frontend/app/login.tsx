@@ -125,7 +125,7 @@ export default function LoginPage() {
                 <Ionicons name="business" size={isWide ? 32 : 42} color={COLORS.white} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.brandName, { fontSize: isWide ? 15 : 18 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
+                <Text style={[styles.brandName, { fontSize: isWide ? 16 : 22 }]}>Servicios Generales 2.0</Text>
                 <Text style={styles.brandSubtitle}>Secretaría Jurídica Distrital</Text>
               </View>
             </View>
@@ -143,7 +143,7 @@ export default function LoginPage() {
                   <TextInput
                     value={documentId}
                     onChangeText={setDocumentId}
-                    placeholder="usuario@secretariajuridica.gov.co"
+                    placeholder="usuario o correo institucional"
                     placeholderTextColor={COLORS.heroMuted}
                     style={styles.input}
                     autoCapitalize="none"

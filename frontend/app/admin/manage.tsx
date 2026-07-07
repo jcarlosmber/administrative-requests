@@ -11,7 +11,8 @@ import {
   Animated,
   Platform,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -131,8 +132,17 @@ export default function ManageRequests() {
   const [customDates, setCustomDates] = useState({ start: '', end: '' });
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
+  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; reqId: string; newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado'; actionName: string } | null>(null);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+
+  const askConfirmation = (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado') => {
+    let actionName = 'procesar';
+    if (newStatus === 'resuelto') actionName = 'aprobar / finalizar';
+    if (newStatus === 'rechazado') actionName = 'rechazar';
+    if (newStatus === 'en_progreso') actionName = 'poner en progreso';
+    setConfirmModal({ visible: true, reqId: id, newStatus, actionName });
+  };
 
   const fetchRequests = async () => {
     try {
@@ -252,6 +262,8 @@ export default function ManageRequests() {
       rooms: 'Salas',
       parking: 'Parqueadero'
     }[item.category] || item.category;
+
+    let detail = item.description;
 
     const typeColor = {
       visitors: '#E63946',
@@ -455,7 +467,7 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={updateStatus} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} />}
+            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={askConfirmation} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -530,6 +542,47 @@ export default function ManageRequests() {
           </View>
         </View>
       </Modal>
+      {/* Modal de Confirmación */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={!!confirmModal?.visible}
+        onRequestClose={() => setConfirmModal(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.warning}15` }]}>
+                <Ionicons name="help-circle" size={35} color={COLORS.warning} />
+              </View>
+            </View>
+            <Text style={styles.modalTitle}>Confirmar acción</Text>
+            <Text style={styles.modalMessage}>
+              ¿Estás seguro de que deseas {confirmModal?.actionName} esta solicitud?
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20 }}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]}
+                onPress={() => setConfirmModal(null)}
+              >
+                <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.primary }]}
+                onPress={() => {
+                  if (confirmModal) {
+                    updateStatus(confirmModal.reqId, confirmModal.newStatus);
+                    setConfirmModal(null);
+                  }
+                }}
+              >
+                <Text style={styles.modalBtnText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -1088,6 +1141,7 @@ const styles = StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { width: '100%', maxWidth: 340, backgroundColor: COLORS.white, borderRadius: 24, padding: 25, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: { width: 0, height: 5 }, shadowRadius: 15 },
+  modalHeader: { width: '100%', alignItems: 'center' },
   modalIconBox: { width: 70, height: 70, borderRadius: 35, backgroundColor: `${COLORS.success}15`, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
   modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginBottom: 8, textAlign: 'center' },
   modalMessage: { fontSize: 14, color: COLORS.muted, textAlign: 'center', marginBottom: 25, lineHeight: 20, fontWeight: '500' },

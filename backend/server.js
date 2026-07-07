@@ -243,11 +243,12 @@ app.post('/api/auth/login', async (req, res) => {
 
   try {
     const emailLower = email.trim().toLowerCase();
+    const simpleUsername = emailLower.split('@')[0];
     
     // Buscar si el usuario existe localmente (por correo o por usuario de red) de manera insensible a mayúsculas/minúsculas
     const result = await pool.query(
-      'SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2', 
-      [emailLower, emailLower]
+      "SELECT * FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2 OR SPLIT_PART(LOWER(email), '@', 1) = $3 LIMIT 1", 
+      [emailLower, emailLower, simpleUsername]
     );
 
     let user = result.rows[0];
@@ -552,7 +553,19 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       [status, JSON.stringify(currentMetadata), id]
     );
 
-    res.json(updateResult.rows[0]);
+    const updatedRequest = updateResult.rows[0];
+
+    if (updatedRequest) {
+      const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+      if (userResult.rows.length > 0) {
+        const u = userResult.rows[0];
+        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
+        u.name = displayName;
+        emailService.sendRequestUpdatedNotification(u, updatedRequest);
+      }
+    }
+
+    res.json(updatedRequest);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar el estado.' });
