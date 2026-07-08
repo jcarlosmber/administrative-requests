@@ -470,6 +470,36 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
         u.name = displayName;
         emailService.sendRequestUpdatedNotification(u, updatedRequest);
       }
+
+      // Send email to admins based on category and status
+      let notifyAdmin = false;
+      let serviceEmailCategory = updatedRequest.category?.toLowerCase() || '';
+
+      if (serviceEmailCategory === 'visitors' && status === 'resuelto') notifyAdmin = true;
+      if (serviceEmailCategory === 'parking' && status === 'resuelto') notifyAdmin = true;
+      if (serviceEmailCategory === 'maintenance' && status === 'en_progreso') notifyAdmin = true;
+      if (serviceEmailCategory === 'transport' && status === 'en_progreso') notifyAdmin = true;
+
+      if (serviceEmailCategory === 'rooms') {
+        const isLargeScale = updatedRequest.metadata?.info === 'Especial' || (parseInt(updatedRequest.metadata?.capacity) || 0) >= 100;
+        if (isLargeScale && status === 'en_progreso') {
+          notifyAdmin = true;
+          serviceEmailCategory = 'rooms_special';
+        } else if (!isLargeScale && status === 'resuelto') {
+          notifyAdmin = true;
+        }
+      }
+
+      if (notifyAdmin) {
+        try {
+          const serviceEmailsRes = await pool.query('SELECT email FROM service_emails WHERE service_type = $1', [serviceEmailCategory]);
+          for (const row of serviceEmailsRes.rows) {
+            emailService.sendAdminServiceNotification(row.email, updatedRequest, status);
+          }
+        } catch (adminEmailErr) {
+          console.error('Error enviando correo a admins:', adminEmailErr);
+        }
+      }
     }
 
     res.json(updatedRequest);

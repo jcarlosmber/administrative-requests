@@ -281,8 +281,10 @@ async function sendRequestUpdatedNotification(user, request) {
       <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
         <strong>Detalles de la Solicitud:</strong><br>
         <span class="highlight">Título:</span> ${request.title}<br>
+        <span class="highlight">Descripción:</span> ${request.description}<br>
+        <span class="highlight">Prioridad:</span> ${request.priority ? request.priority.toUpperCase() : 'NORMAL'}<br>
         <span class="highlight">Nuevo Estado:</span> ${statusBadge}<br>
-        <span class="highlight">Última Actualización:</span> ${new Date(request.updated_at).toLocaleString('es-CO')}
+        <span class="highlight">Última Actualización:</span> ${new Date(request.updated_at || new Date()).toLocaleString('es-CO')}
         ${metadataHtml}
       </div>
       
@@ -306,7 +308,56 @@ async function sendRequestUpdatedNotification(user, request) {
   }
 }
 
+/**
+ * Envía correo al equipo administrador (service_emails) informando que deben gestionar un servicio
+ */
+async function sendAdminServiceNotification(adminEmail, request, triggerStatus) {
+  const isApprovedTrigger = triggerStatus === 'resuelto';
+  const actionText = isApprovedTrigger 
+    ? 'Una solicitud ha sido aprobada y se requiere la ejecución del servicio correspondiente.'
+    : 'Una solicitud requiere ser procesada y coordinada (En Progreso).';
+    
+  const subject = `SASGE: Alerta de Servicio - ${request.title}`;
+  const statusBadge = `<span class="badge badge-${request.status}">${request.status.toUpperCase()}</span>`;
+  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
+  const metadataHtml = formatMetadataForEmail(request);
+
+  const htmlContent = getHtmlTemplate(
+    'Alerta para Equipo Administrador',
+    `
+      <p>Hola, <strong>Equipo de ${categoryName.toUpperCase()}</strong>.</p>
+      <p>${actionText}</p>
+      
+      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <strong>Detalles de la Solicitud:</strong><br>
+        <span class="highlight">Título:</span> ${request.title}<br>
+        <span class="highlight">Descripción:</span> ${request.description}<br>
+        <span class="highlight">Prioridad:</span> ${request.priority ? request.priority.toUpperCase() : 'NORMAL'}<br>
+        <span class="highlight">Estado Actual:</span> ${statusBadge}<br>
+        <span class="highlight">Última Actualización:</span> ${new Date(request.updated_at || new Date()).toLocaleString('es-CO')}
+        ${metadataHtml}
+      </div>
+      
+      <p>Por favor, revisa el panel de administrador en SASGE para más detalles y coordinar la logística necesaria.</p>
+    `,
+    request.category
+  );
+
+  try {
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: adminEmail,
+      subject: subject,
+      html: htmlContent
+    });
+    console.log(`Correo administrativo enviado a: ${adminEmail}`);
+  } catch (error) {
+    console.error('Error al enviar correo administrativo:', error);
+  }
+}
+
 module.exports = {
   sendRequestCreatedNotification,
-  sendRequestUpdatedNotification
+  sendRequestUpdatedNotification,
+  sendAdminServiceNotification
 };
