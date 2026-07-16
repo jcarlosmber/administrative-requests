@@ -1,10 +1,14 @@
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { TouchableOpacity, Platform } from 'react-native';
+import { TouchableOpacity, Platform, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import { ChatbotModal } from '../components/ChatbotModal';
 
 export default function RootLayout() {
   const router = useRouter();
+  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
+
   return (
     <>
       <Stack
@@ -37,6 +41,10 @@ export default function RootLayout() {
         <Stack.Screen name="policy" options={{ headerShown: false }} />
         <Stack.Screen name="dashboard" options={{ headerShown: false }} />
         <Stack.Screen name="admin" options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="faq" 
+          options={{ headerShown: false }} 
+        />
         <Stack.Screen 
           name="requests/new" 
           options={{ 
@@ -81,6 +89,34 @@ export default function RootLayout() {
         />
       </Stack>
       <StatusBar style="auto" />
+
+      {/* Floating Chatbot Button */}
+      <TouchableOpacity
+        onPress={() => setIsChatbotVisible(true)}
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          right: 24,
+          backgroundColor: '#3b82f6',
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          justifyContent: 'center',
+          alignItems: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          elevation: 5,
+        }}
+      >
+        <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      <ChatbotModal 
+        visible={isChatbotVisible} 
+        onClose={() => setIsChatbotVisible(false)} 
+      />
     </>
   );
 }

@@ -1014,6 +1014,32 @@ const handleProfilesDelete = async (req, res) => {
 app.delete('/api/users/:id', authenticateToken, handleProfilesDelete);
 app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 
+// --- ENDPOINTS PARA CHATBOT ---
+app.post('/api/chatbot', authenticateToken, async (req, res) => {
+  const { message } = req.body;
+  if (!message) {
+    return res.status(400).json({ error: 'Mensaje requerido.' });
+  }
+  
+  const lowerMessage = message.toLowerCase();
+  let reply = 'Lo siento, no entiendo tu pregunta. ¿Puedes reformularla?';
+  
+  if (lowerMessage.includes('contraseña') || lowerMessage.includes('password') || lowerMessage.includes('clave')) {
+    reply = 'Para restablecer tu contraseña, contacta al administrador del sistema.';
+  } else if (lowerMessage.includes('horario') || lowerMessage.includes('hora')) {
+    reply = 'El horario de atención para solicitudes administrativas es de Lunes a Viernes de 8:00 AM a 5:00 PM.';
+  } else if (lowerMessage.includes('contacto') || lowerMessage.includes('soporte')) {
+    reply = 'Puedes contactar a soporte a través del módulo de "Solicitudes" o enviando un correo al área de TI.';
+  } else if (lowerMessage.includes('hola') || lowerMessage.includes('saludos')) {
+    reply = '¡Hola! Soy tu asistente virtual. ¿En qué te puedo ayudar hoy?';
+  }
+  
+  // Simular un pequeño retraso para emular procesamiento
+  setTimeout(() => {
+    res.json({ reply });
+  }, 1000);
+});
+
 // Inicialización
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor API local corriendo en http://0.0.0.0:${PORT}`);
