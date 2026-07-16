@@ -57,6 +57,16 @@ class SupabaseAuthEmulated {
     }
   }
 
+  async getSession() {
+    try {
+      const token = await appStorage.getItem('auth_token');
+      if (!token) return { data: { session: null }, error: null };
+      return { data: { session: { access_token: token } }, error: null };
+    } catch (e: any) {
+      return { data: { session: null }, error: e };
+    }
+  }
+
   async signInWithPassword({ email, password }: any) {
     try {
       const res = await fetch(`${API_URL}/api/auth/login`, {
