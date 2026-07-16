@@ -48,6 +48,9 @@ class SupabaseAuthEmulated {
         }
       });
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          await appStorage.removeItem('auth_token');
+        }
         return { data: { user: null }, error: new Error('Sesión no válida') };
       }
       const data = await res.json();
