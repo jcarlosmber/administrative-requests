@@ -1062,7 +1062,7 @@ app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
       roomsText = roomsResult.rows.map(r => `- ${r.name} (Capacidad: ${r.capacity} personas, Piso: ${r.floor}. Info extra: ${r.info || 'N/A'})`).join('\n');
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     
     const systemContext = `Eres el Asistente Virtual experto del Nuevo SASGE (Sistema de Solicitudes Administrativas). 
 Tu objetivo es ayudar a los funcionarios a resolver dudas sobre cómo realizar solicitudes y cómo funciona el sistema.
