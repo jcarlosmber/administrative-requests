@@ -1064,7 +1064,7 @@ app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
 
     const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     
-    const systemContext = `Eres el Asistente Virtual experto del Nuevo SASGE (Sistema de Solicitudes Administrativas). 
+    const systemContext = `Eres el Asistente Virtual experto de SASGE 2.0 (Sistema de Solicitudes Administrativas). 
 Tu objetivo es ayudar a los funcionarios a resolver dudas sobre cómo realizar solicitudes y cómo funciona el sistema.
 
 INFORMACIÓN DEL SISTEMA:
@@ -1092,7 +1092,10 @@ INSTRUCCIONES FINALES:
 - Háblale al usuario por su nombre. Eres su asistente amigable.
 - Responde de forma corta, muy clara y concisa. No des respuestas gigantes ni redundantes.
 - Usa listas o viñetas (Markdown) si debes explicar pasos o listar salas.
-- Si no sabes algo, no inventes. Diles que contacten a los "servidores del proceso de gestión administrativa" o que lo hagan dentro del horario de atención.`;
+- Si no sabes algo, no inventes. Diles que contacten a los "servidores del proceso de gestión administrativa" o que lo hagan dentro del horario de atención.
+  
+${require('./chatbotKnowledge')}
+`;
 
     const prompt = `${systemContext}\n\nMensaje del usuario: ${message}`;
 

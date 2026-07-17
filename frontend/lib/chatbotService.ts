@@ -9,7 +9,7 @@ const getHeaders = async () => {
 };
 
 export const chatbotService = {
-  async sendMessage(message: string): Promise<string> {
+  async sendMessage(message: string, retries = 2): Promise<string> {
     try {
       const res = await fetch(`${API_URL}/api/chatbot`, {
         method: 'POST',
@@ -18,14 +18,23 @@ export const chatbotService = {
       });
 
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Error al comunicarse con el chatbot');
+        let errorMsg = 'Error al comunicarse con el chatbot';
+        try {
+          const err = await res.json();
+          errorMsg = err.error || errorMsg;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await res.json();
       return data.reply;
     } catch (error: any) {
-      console.error('ChatbotService error:', error);
+      if (retries > 0) {
+        console.warn(`ChatbotService falló, reintentando... (Quedan ${retries} intentos)`);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Esperar 1.5s antes de reintentar
+        return this.sendMessage(message, retries - 1);
+      }
+      console.error('ChatbotService error definitivo:', error);
       return 'Ocurrió un error al intentar conectarse. Por favor, intenta de nuevo más tarde.';
     }
   }

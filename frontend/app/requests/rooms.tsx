@@ -1000,7 +1000,7 @@ export default function RoomsRequestScreen() {
                                     style={[
                                       styles.slotCell, 
                                       isOccupied && styles.slotOccupied,
-                                      isPast && !isOccupied && { backgroundColor: '#F8FAFC', opacity: 0.6 },
+                                      isPast && !isOccupied && { backgroundColor: '#E2E8F0', opacity: 0.8 },
                                       isSelected && styles.slotSelected,
                                       isSelected && !isStart && { borderTopWidth: 0 },
                                       isSelected && !isEnd && { borderBottomWidth: 0 }
@@ -1040,7 +1040,7 @@ export default function RoomsRequestScreen() {
                       </View>
                       <View style={styles.legendSmall}>
                         <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line }]} /><Text style={styles.legendText}>Libre</Text></View>
-                        <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: '#E2E8F0' }]} /><Text style={styles.legendText}>Ocupado</Text></View>
+                        <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: '#94A3B8' }]} /><Text style={styles.legendText}>Ocupado</Text></View>
                       </View>
                     </View>
                   </Card>
@@ -1550,9 +1550,9 @@ const styles = StyleSheet.create({
   dayHeaderText: { fontSize: 10, fontWeight: '900', color: COLORS.muted, textTransform: 'uppercase' },
   dayHeaderNum: { fontSize: 16, fontWeight: '900', color: COLORS.text, marginTop: -2 },
   slotCell: { height: 45, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.09)', backgroundColor: COLORS.white },
-  slotOccupied: { backgroundColor: '#F1F5F9' },
+  slotOccupied: { backgroundColor: '#E2E8F0' },
   slotSelected: { backgroundColor: COLORS.soft },
-  occupiedIndicator: { flex: 1, margin: 4, borderRadius: 8, backgroundColor: '#CBD5E1', opacity: 0.4 },
+  occupiedIndicator: { flex: 1, margin: 4, borderRadius: 8, backgroundColor: '#94A3B8', opacity: 0.9 },
   selectedIndicator: { flex: 1, marginHorizontal: 2, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
   
   selectionSummary: { flexDirection: 'row', alignItems: 'center', marginTop: 20, padding: 20, backgroundColor: COLORS.white, borderRadius: 26, borderWidth: 1.5, borderColor: COLORS.primary, shadowColor: COLORS.primary, shadowOpacity: 0.08, shadowRadius: 15 },
