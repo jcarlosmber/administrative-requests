@@ -165,6 +165,22 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+const optionalAuthenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return next();
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (!err) {
+      req.user = user;
+    }
+    next();
+  });
+};
+
 // --- ENDPOINTS DE CONFIGURACIÓN DEL SISTEMA ---
 app.get('/api/settings/:key', async (req, res) => {
   try {
@@ -1018,7 +1034,7 @@ app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
 
-app.post('/api/chatbot', authenticateToken, async (req, res) => {
+app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
   const { message } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'Mensaje requerido.' });
