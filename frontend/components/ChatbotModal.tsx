@@ -10,7 +10,8 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
-  Animated
+  Animated,
+  Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { chatbotService } from '../lib/chatbotService';
@@ -40,7 +41,6 @@ const TypingIndicator = () => {
   return <Text style={{ marginLeft: 8, color: '#6b7280', fontSize: 14, fontStyle: 'italic' }}>Escribiendo{dots}</Text>;
 };
 
-// Función para parsear texto con formato básico (negrita y cursiva)
 const renderFormattedText = (text: string, isUser: boolean) => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return (
@@ -58,6 +58,7 @@ const renderFormattedText = (text: string, isUser: boolean) => {
 };
 
 export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) => {
+  const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: '1', 
@@ -78,6 +79,13 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     "¿Qué tipos de solicitudes puedo realizar?",
     "¿Cuánto tiempo tarda en aprobarse una solicitud?",
   ];
+
+  // Cuando el modal general se cierra externamente, reiniciamos el estado minimizado
+  useEffect(() => {
+    if (!visible) {
+      setIsMinimized(false);
+    }
+  }, [visible]);
 
   const handleClearChat = () => {
     setMessages([
@@ -103,7 +111,6 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     };
 
     setMessages(prev => {
-      // Remove quick replies from the last message when a new message is sent
       const updatedPrev = prev.map(msg => ({ ...msg, quickReplies: undefined }));
       return [...updatedPrev, userMsg];
     });
@@ -117,8 +124,6 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
         text: replyText,
         isUser: false,
         timestamp: new Date(),
-        // Ejemplo simulado: Si la respuesta menciona 'solicitud', mostrar botones de quick reply.
-        // En una app real, el backend proporcionaría esto.
         quickReplies: replyText.toLowerCase().includes('solicitud') ? ['Aprobar', 'Rechazar', 'Más info'] : undefined
       };
       setMessages(prev => [...prev, botMsg]);
@@ -162,7 +167,6 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
         {renderFormattedText(item.text, item.isUser)}
       </View>
       
-      {/* Timestamps and Feedback */}
       <View style={{ 
         flexDirection: 'row', 
         alignItems: 'center', 
@@ -183,7 +187,6 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
         <Text style={{ fontSize: 11, color: '#9ca3af' }}>{formatTime(item.timestamp)}</Text>
       </View>
 
-      {/* Quick Replies for Bot Messages */}
       {!item.isUser && item.quickReplies && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
           {item.quickReplies.map((qr, idx) => (
@@ -208,18 +211,43 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     </View>
   );
 
+  // Si está minimizado pero "visible" es true, mostramos solo la burbuja
+  if (visible && isMinimized) {
+    return (
+      <View style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 9999 }} pointerEvents="box-none">
+        <TouchableOpacity 
+          onPress={() => setIsMinimized(false)}
+          style={{ backgroundColor: '#3b82f6', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 }}
+        >
+          <Ionicons name="chatbubbles" size={32} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Validamos si es visible para mostrar o no el Modal principal
+  if (!visible) return null;
+
   return (
     <Modal
-      visible={visible}
+      visible={visible && !isMinimized}
       animationType="fade"
       transparent={true}
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView 
-        style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }} 
+        style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.15)', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 16, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={{ width: '92%', maxHeight: '85%', backgroundColor: '#f9fafb', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 }}>
+        {/* Fondo táctil para cerrar el chat o minimizarlo si tocan fuera */}
+        <TouchableOpacity 
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          activeOpacity={1}
+          onPress={() => setIsMinimized(true)}
+        />
+
+        {/* Contenedor del Chat (Alineado inferior derecho, altura predeterminada) */}
+        <View style={{ width: Platform.OS === 'web' || Dimensions.get('window').width > 500 ? 400 : '100%', height: 600, maxHeight: '85%', backgroundColor: '#f9fafb', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 }}>
           
           {/* Header */}
           <View style={{
@@ -241,11 +269,14 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity onPress={handleClearChat} style={{ padding: 8, marginRight: 8 }}>
+              <TouchableOpacity onPress={handleClearChat} style={{ padding: 8 }}>
                 <Ionicons name="trash-outline" size={22} color="#ef4444" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={{ padding: 8, backgroundColor: '#f3f4f6', borderRadius: 12 }}>
-                <Ionicons name="close" size={22} color="#6b7280" />
+              <TouchableOpacity onPress={() => setIsMinimized(true)} style={{ padding: 8 }}>
+                <Ionicons name="remove-outline" size={26} color="#6b7280" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onClose} style={{ padding: 8 }}>
+                <Ionicons name="close" size={26} color="#6b7280" />
               </TouchableOpacity>
             </View>
           </View>

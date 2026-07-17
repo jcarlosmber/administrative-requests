@@ -1015,29 +1015,80 @@ app.delete('/api/users/:id', authenticateToken, handleProfilesDelete);
 app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 
 // --- ENDPOINTS PARA CHATBOT ---
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
+
 app.post('/api/chatbot', authenticateToken, async (req, res) => {
   const { message } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'Mensaje requerido.' });
   }
-  
-  const lowerMessage = message.toLowerCase();
-  let reply = 'Lo siento, no entiendo tu pregunta. ¿Puedes reformularla?';
-  
-  if (lowerMessage.includes('contraseña') || lowerMessage.includes('password') || lowerMessage.includes('clave')) {
-    reply = 'Para restablecer tu contraseña, contacta al administrador del sistema.';
-  } else if (lowerMessage.includes('horario') || lowerMessage.includes('hora')) {
-    reply = 'El horario de atención para solicitudes administrativas es de Lunes a Viernes de 8:00 AM a 5:00 PM.';
-  } else if (lowerMessage.includes('contacto') || lowerMessage.includes('soporte')) {
-    reply = 'Puedes contactar a soporte a través del módulo de "Solicitudes" o enviando un correo al área de TI.';
-  } else if (lowerMessage.includes('hola') || lowerMessage.includes('saludos')) {
-    reply = '¡Hola! Soy tu asistente virtual. ¿En qué te puedo ayudar hoy?';
-  }
-  
-  // Simular un pequeño retraso para emular procesamiento
-  setTimeout(() => {
+
+  try {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({ reply: '¡Hola! Para que pueda darte respuestas reales con IA, por favor configura la variable **GEMINI_API_KEY** en el archivo `.env` del servidor.' });
+    }
+
+    // 1. Obtener datos del usuario en tiempo real
+    let userInfoText = "Información del usuario no disponible.";
+    if (req.user && req.user.id) {
+      const userResult = await pool.query('SELECT name, email, role, dependency FROM users WHERE id = $1', [req.user.id]);
+      if (userResult.rows.length > 0) {
+        const u = userResult.rows[0];
+        userInfoText = `Nombre: ${u.name || 'Desconocido'}, Correo: ${u.email}, Rol: ${u.role}, Dependencia: ${u.dependency || 'No asignada'}.`;
+      }
+    }
+
+    // 2. Obtener lista de salas disponibles desde la base de datos
+    let roomsText = "No hay salas registradas actualmente en el sistema.";
+    const roomsResult = await pool.query('SELECT name, capacity, floor, info FROM rooms');
+    if (roomsResult.rows.length > 0) {
+      roomsText = roomsResult.rows.map(r => `- ${r.name} (Capacidad: ${r.capacity} personas, Piso: ${r.floor}. Info extra: ${r.info || 'N/A'})`).join('\n');
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const systemContext = `Eres el Asistente Virtual experto del Nuevo SASGE (Sistema de Solicitudes Administrativas). 
+Tu objetivo es ayudar a los funcionarios a resolver dudas sobre cómo realizar solicitudes y cómo funciona el sistema.
+
+INFORMACIÓN DEL SISTEMA:
+- Catálogo de Servicios: Reserva de salas, Transporte institucional, Mantenimiento locativo, Ingreso de visitantes, Asignación de parqueaderos y Gestión de préstamos de equipos asociados a reservas de salas.
+- Horarios de atención/respuesta: Lunes a Viernes de 7:00 AM a 4:30 PM.
+- Soporte/Administradores: Servidores del proceso de gestión administrativa.
+
+DATOS EN TIEMPO REAL (Úsalos para dar respuestas precisas y personalizadas):
+---
+[Usuario Actual con el que estás hablando]
+${userInfoText}
+
+[Salas Existentes en el Sistema para Reservas]
+${roomsText}
+---
+
+FLUJOS DE LOS SERVICIOS (Úsalos para explicar el proceso a los usuarios):
+1. Reserva de salas: El usuario registra la solicitud (fecha, hora, sede, asistentes). El Gestor Administrativo la revisa y aprueba/rechaza. Si se aprueba, se bloquea en el calendario institucional automáticamente.
+2. Ingreso de visitantes: El funcionario registra datos del visitante (identidad, motivo, fecha). El Gestor valida y autoriza. Seguridad recibe la autorización para permitir el ingreso.
+3. Transporte institucional: Se registra con origen, destino, fecha y justificación. Tras revisión de Gestión Administrativa, se asigna vehículo y conductor, notificando a todos.
+4. Mantenimiento locativo: Se registra el requerimiento, ubicación y prioridad. Gestión Administrativa lo evalúa y aprueba, y la Secretaría General se encarga de ejecutarlo.
+5. Asignación de parqueaderos: Se registra solicitud, se validan los requisitos y el perfil. Gestión Administrativa evalúa y asigna los cupos.
+
+INSTRUCCIONES FINALES:
+- Háblale al usuario por su nombre. Eres su asistente amigable.
+- Responde de forma corta, muy clara y concisa. No des respuestas gigantes ni redundantes.
+- Usa listas o viñetas (Markdown) si debes explicar pasos o listar salas.
+- Si no sabes algo, no inventes. Diles que contacten a los "servidores del proceso de gestión administrativa" o que lo hagan dentro del horario de atención.`;
+
+    const prompt = `${systemContext}\n\nMensaje del usuario: ${message}`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const reply = response.text();
+
     res.json({ reply });
-  }, 1000);
+  } catch (error) {
+    console.error('Error con Gemini:', error);
+    res.status(500).json({ error: 'Lo siento, tuve un problema interno al comunicarme con la IA.' });
+  }
 });
 
 // Inicialización
