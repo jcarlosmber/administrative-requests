@@ -70,11 +70,19 @@ const RoomManualInfo = ({ roomName }: { roomName: string }) => {
 const DAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 6); // 6 AM to 8 PM
 
+const cleanTitle = (title?: string) => {
+  if (!title) return 'Ocupado';
+  let cleaned = title.replace(/^Reserva:\s*.*?-\s*/i, '');
+  cleaned = cleaned.replace(/^Reserva:\s*/i, '');
+  cleaned = cleaned.replace(/^Evento Magno:\s*/i, '');
+  return cleaned.trim() || 'Ocupado';
+};
+
 export default function RoomsRequestScreen() {
   const router = useRouter();
   
   // Slots ocupados en tiempo real (limpio por defecto)
-  const [occupiedSlots, setOccupiedSlots] = useState<{ day: number; hour: number }[]>([]);
+  const [occupiedSlots, setOccupiedSlots] = useState<{ day: number; hour: number; title?: string }[]>([]);
   
   // Selector de Modo: 'standard' | 'large'
   const [bookingMode, setBookingMode] = useState<'standard' | 'large'>('standard');
@@ -218,7 +226,7 @@ export default function RoomsRequestScreen() {
         const data = await requestService.getRoomAvailability();
 
         if (data) {
-          const slots: { day: number; hour: number }[] = [];
+          const slots: { day: number; hour: number; title?: string }[] = [];
           const weekIsoDates = weekDates.map(d => d.toISOString().split('T')[0]);
 
           data.forEach((req: any) => {
@@ -231,7 +239,7 @@ export default function RoomsRequestScreen() {
                 const dayIndex = weekIsoDates.indexOf(meta.date_iso);
                 if (dayIndex !== -1 && meta.start_hour !== undefined && meta.end_hour !== undefined) {
                   for (let h = meta.start_hour; h < meta.end_hour; h++) {
-                    slots.push({ day: dayIndex, hour: h });
+                    slots.push({ day: dayIndex, hour: h, title: req.title });
                   }
                 }
               } else {
@@ -246,11 +254,11 @@ export default function RoomsRequestScreen() {
                       const sH = parseInt(timeMatch[1]);
                       const eH = parseInt(timeMatch[2]);
                       for (let h = sH; h < eH; h++) {
-                        slots.push({ day: wIdx, hour: h });
+                        slots.push({ day: wIdx, hour: h, title: req.title });
                       }
                     } else if (meta.start_hour !== undefined && meta.end_hour !== undefined) {
                       for (let h = meta.start_hour; h < meta.end_hour; h++) {
-                        slots.push({ day: wIdx, hour: h });
+                        slots.push({ day: wIdx, hour: h, title: req.title });
                       }
                     }
                   }
@@ -981,7 +989,8 @@ export default function RoomsRequestScreen() {
                                 <Text style={styles.dayHeaderNum}>{dateObj.getDate()}</Text>
                               </View>
                               {HOURS.map(h => {
-                                const isOccupied = occupiedSlots.some(s => s.day === dIdx && s.hour === h);
+                                const occupiedSlot = occupiedSlots.find(s => s.day === dIdx && s.hour === h);
+                                const isOccupied = !!occupiedSlot;
                                 const isSelected = selectedDay === dIdx && startHour !== null && endHour !== null && h >= startHour && h < endHour;
                                 const isStart = isSelected && h === startHour;
                                 const isEnd = isSelected && h === endHour - 1;
@@ -1000,21 +1009,25 @@ export default function RoomsRequestScreen() {
                                     style={[
                                       styles.slotCell, 
                                       isOccupied && styles.slotOccupied,
-                                      isPast && !isOccupied && { backgroundColor: '#F1F5F9', opacity: 0.7 },
+                                      isPast && !isOccupied && { backgroundColor: '#E2E8F0' },
                                       isSelected && styles.slotSelected,
                                       isSelected && !isStart && { borderTopWidth: 0 },
                                       isSelected && !isEnd && { borderBottomWidth: 0 }
                                     ]}
                                   >
-                                    {isOccupied && <View style={styles.occupiedIndicator} />}
-                                    {isPast && !isOccupied && <Ionicons name="time-outline" size={14} color="#94A3B8" style={{ position: 'absolute', opacity: 0.4 }} />}
+                                    {isOccupied && (
+                                      <View style={styles.occupiedIndicator}>
+                                        <Text numberOfLines={2} style={styles.occupiedText}>
+                                          {cleanTitle(occupiedSlot?.title)}
+                                        </Text>
+                                      </View>
+                                    )}
+                                    {isPast && !isOccupied && <Ionicons name="time-outline" size={14} color="#64748B" style={{ position: 'absolute', opacity: 0.6 }} />}
                                     {isSelected && (
-                                      <View style={[
-                                        styles.selectedIndicator,
-                                        !isStart && { borderTopLeftRadius: 0, borderTopRightRadius: 0 },
-                                        !isEnd && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }
-                                      ]}>
-                                        {isStart && <Ionicons name="time-outline" size={16} color={COLORS.white} />}
+                                      <View style={styles.selectedIndicator}>
+                                        <Text numberOfLines={2} style={styles.selectedText}>
+                                          {title.trim() || 'Seleccionado'}
+                                        </Text>
                                       </View>
                                     )}
                                   </TouchableOpacity>
@@ -1552,8 +1565,10 @@ const styles = StyleSheet.create({
   slotCell: { height: 45, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.09)', backgroundColor: COLORS.white },
   slotOccupied: { backgroundColor: '#FFF1F2' },
   slotSelected: { backgroundColor: COLORS.soft },
-  occupiedIndicator: { flex: 1, margin: 4, borderRadius: 8, backgroundColor: '#FDA4AF', opacity: 0.9 },
-  selectedIndicator: { flex: 1, marginHorizontal: 2, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
+  occupiedIndicator: { flex: 1, margin: 2, borderRadius: 8, backgroundColor: '#FDA4AF', opacity: 0.9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
+  selectedIndicator: { flex: 1, margin: 2, borderRadius: 8, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
+  selectedText: { color: COLORS.white, fontSize: 8, fontWeight: '800', textAlign: 'center', lineHeight: 10 },
+  occupiedText: { color: '#9F1239', fontSize: 8, fontWeight: '800', textAlign: 'center', lineHeight: 10 },
   
   selectionSummary: { flexDirection: 'row', alignItems: 'center', marginTop: 20, padding: 20, backgroundColor: COLORS.white, borderRadius: 26, borderWidth: 1.5, borderColor: COLORS.primary, shadowColor: COLORS.primary, shadowOpacity: 0.08, shadowRadius: 15 },
   summaryCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 15, justifyContent: 'center' },

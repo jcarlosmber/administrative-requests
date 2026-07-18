@@ -373,7 +373,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 app.get('/api/requests/rooms/availability', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, metadata, status FROM administrative_requests WHERE category = 'rooms' AND status != 'rechazado'"
+      "SELECT id, title, metadata, status FROM administrative_requests WHERE category = 'rooms' AND status != 'rechazado'"
     );
     res.json(result.rows);
   } catch (err) {

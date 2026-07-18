@@ -385,6 +385,18 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
               value={inputText}
               onChangeText={setInputText}
               multiline
+              blurOnSubmit={false}
+              onSubmitEditing={() => {
+                if (Platform.OS !== 'web') {
+                  handleSend();
+                }
+              }}
+              onKeyPress={(e: any) => {
+                if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
             />
             <TouchableOpacity 
               onPress={() => handleSend()}
