@@ -1031,8 +1031,8 @@ app.delete('/api/users/:id', authenticateToken, handleProfilesDelete);
 app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 
 // --- ENDPOINTS PARA CHATBOT ---
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'dummy_key');
+const Groq = require("groq-sdk");
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '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' });
 
 app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
   const { message } = req.body;
@@ -1041,8 +1041,8 @@ app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
   }
 
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.json({ reply: '¡Hola! Para que pueda darte respuestas reales con IA, por favor configura la variable **GEMINI_API_KEY** en el archivo `.env` del servidor.' });
+    if (!groq.apiKey) {
+      return res.json({ reply: '¡Hola! Para que pueda darte respuestas reales con IA, por favor configura la variable **GROQ_API_KEY** en el archivo `.env` del servidor.' });
     }
 
     // 1. Obtener datos del usuario en tiempo real
@@ -1062,7 +1062,7 @@ app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
       roomsText = roomsResult.rows.map(r => `- ${r.name} (Capacidad: ${r.capacity} personas, Piso: ${r.floor}. Info extra: ${r.info || 'N/A'})`).join('\n');
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
     
     const systemContext = `Eres el Asistente Virtual experto de SASGE 2.0 (Sistema de Solicitudes Administrativas). 
 Tu objetivo es ayudar a los funcionarios a resolver dudas sobre cómo realizar solicitudes y cómo funciona el sistema.
@@ -1097,15 +1097,22 @@ INSTRUCCIONES FINALES:
 ${require('./chatbotKnowledge')}
 `;
 
-    const prompt = `${systemContext}\n\nMensaje del usuario: ${message}`;
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: systemContext },
+        { role: "user", content: message }
+      ],
+      model: "llama3-70b-8192",
+    });
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const reply = response.text();
+    const reply = chatCompletion.choices[0]?.message?.content || "";
 
     res.json({ reply });
   } catch (error) {
-    console.error('Error con Gemini:', error);
+    console.error('Error con Groq:', error);
+    if (error.status === 429 || (error.message && error.message.includes('429'))) {
+      return res.status(429).json({ error: 'El Asistente está recibiendo demasiadas consultas muy rápido. Por favor, espera aproximadamente un minuto antes de volver a preguntar.' });
+    }
     res.status(500).json({ error: `Lo siento, tuve un problema interno al comunicarme con la IA. Error real: ${error.message}` });
   }
 });
