@@ -7,7 +7,6 @@ import { ChatbotModal } from '../components/ChatbotModal';
 
 export default function RootLayout() {
   const router = useRouter();
-  const [isChatbotVisible, setIsChatbotVisible] = useState(false);
 
   return (
     <>
@@ -95,36 +94,7 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
 
-      {/* Floating Chatbot Button */}
-      {!isChatbotVisible && (
-        <TouchableOpacity
-          onPress={() => setIsChatbotVisible(true)}
-          style={{
-            position: 'absolute',
-            bottom: 24,
-            right: 24,
-            backgroundColor: '#3b82f6',
-            width: 60,
-            height: 60,
-            borderRadius: 30,
-            justifyContent: 'center',
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 5,
-            zIndex: 9999,
-          }}
-        >
-          <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
-        </TouchableOpacity>
-      )}
-
-      <ChatbotModal 
-        visible={isChatbotVisible} 
-        onClose={() => setIsChatbotVisible(false)} 
-      />
+      <ChatbotModal />
     </>
   );
 }

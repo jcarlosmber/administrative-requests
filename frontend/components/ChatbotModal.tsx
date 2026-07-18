@@ -59,11 +59,11 @@ const renderFormattedText = (text: string, isUser: boolean) => {
   );
 };
 
-export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) => {
+export const ChatbotModal: React.FC = () => {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isSmallScreen = screenWidth < 500 || screenHeight < 650;
   
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: '1', 
@@ -150,13 +150,6 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     })
   ).current;
 
-  // Cuando el modal general se cierra externamente, reiniciamos el estado minimizado
-  useEffect(() => {
-    if (!visible) {
-      setIsMinimized(false);
-      pan.setValue({ x: 0, y: 0 });
-    }
-  }, [visible]);
 
   const handleClearChat = () => {
     setMessages([
@@ -282,8 +275,8 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     </View>
   );
 
-  // Si está minimizado pero "visible" es true, mostramos solo la burbuja
-  if (visible && isMinimized) {
+  // Si está minimizado, mostramos solo la burbuja
+  if (isMinimized) {
     return (
       <Animated.View 
         style={{ 
@@ -306,15 +299,12 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     );
   }
 
-  // Validamos si es visible para mostrar o no el Modal principal
-  if (!visible) return null;
-
   return (
     <Modal
-      visible={visible && !isMinimized}
+      visible={!isMinimized}
       animationType="fade"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={() => setIsMinimized(true)}
     >
       <KeyboardAvoidingView 
         style={{ 
@@ -379,7 +369,7 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
               <TouchableOpacity onPress={() => setIsMinimized(true)} style={{ padding: 8 }}>
                 <Ionicons name="remove-outline" size={26} color="#6b7280" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={{ padding: 8 }}>
+              <TouchableOpacity onPress={() => setIsMinimized(true)} style={{ padding: 8 }}>
                 <Ionicons name="close" size={26} color="#6b7280" />
               </TouchableOpacity>
             </View>
