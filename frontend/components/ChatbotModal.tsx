@@ -188,7 +188,7 @@ export const ChatbotModal: React.FC = () => {
         text: replyText,
         isUser: false,
         timestamp: new Date(),
-        quickReplies: replyText.toLowerCase().includes('solicitud') ? ['Aprobar', 'Rechazar', 'Más info'] : undefined
+        quickReplies: replyText.toLowerCase().includes('solicitud') ? ['Más info'] : undefined
       };
       setMessages(prev => [...prev, botMsg]);
     } catch (error) {
