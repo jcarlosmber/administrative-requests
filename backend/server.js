@@ -1032,7 +1032,7 @@ app.delete('/api/profiles/:id', authenticateToken, handleProfilesDelete);
 
 // --- ENDPOINTS PARA CHATBOT ---
 const Groq = require("groq-sdk");
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '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' });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
   const { message } = req.body;
