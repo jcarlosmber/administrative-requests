@@ -291,7 +291,7 @@ export const ChatbotModal: React.FC = () => {
       >
         <TouchableOpacity 
           onPress={() => setIsMinimized(false)}
-          style={{ backgroundColor: '#3b82f6', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 }}
+          style={{ backgroundColor: '#3b82f6', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8, opacity: 0.7 }}
         >
           <Ionicons name="chatbubbles" size={32} color="#fff" />
         </TouchableOpacity>
