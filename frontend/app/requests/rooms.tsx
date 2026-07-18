@@ -278,6 +278,13 @@ export default function RoomsRequestScreen() {
     fetchReservations();
   }, [selectedRoom, weekOffset, weekDates]);
 
+  // Limpiar selección cuando se cambia de semana
+  useEffect(() => {
+    setSelectedDay(null);
+    setStartHour(null);
+    setEndHour(null);
+  }, [weekOffset]);
+
   const progress = useMemo(() => {
     let p = 20;
     if (title) p += 20;
@@ -916,22 +923,7 @@ export default function RoomsRequestScreen() {
                   </Card>
 
                   <Card title="Sala y Capacidad" icon="business">
-                    <View style={styles.roomSelectBox}>
-                      <View style={styles.roomIcon}>
-                        <Ionicons name="easel-outline" size={30} color={COLORS.primary} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.roomName}>{selectedRoom.name}</Text>
-                        <Text style={styles.roomDetails}>{selectedRoom.floor} • Capacidad: {selectedRoom.capacity} pers.</Text>
-                      </View>
-                      <TouchableOpacity style={styles.changeBtn} onPress={() => setShowRoomSelector(true)}>
-                        <Text style={styles.changeBtnText}>Cambiar</Text>
-                      </TouchableOpacity>
-                    </View>
-                    
-                    <RoomManualInfo roomName={selectedRoom.name} />
-
-                    <View style={{ marginTop: 15 }}>
+                    <View style={{ marginBottom: 15 }}>
                       <Field 
                         label="Número de Asistentes" 
                         icon="people-outline" 
@@ -946,6 +938,21 @@ export default function RoomsRequestScreen() {
                         </Text>
                       )}
                     </View>
+
+                    <View style={styles.roomSelectBox}>
+                      <View style={styles.roomIcon}>
+                        <Ionicons name="easel-outline" size={30} color={COLORS.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.roomName}>{selectedRoom.name}</Text>
+                        <Text style={styles.roomDetails}>{selectedRoom.floor} • Capacidad: {selectedRoom.capacity} pers.</Text>
+                      </View>
+                      <TouchableOpacity style={styles.changeBtn} onPress={() => setShowRoomSelector(true)}>
+                        <Text style={styles.changeBtnText}>Cambiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                    
+                    <RoomManualInfo roomName={selectedRoom.name} />
                   </Card>
 
                   <Card title="Disponibilidad y Horario" icon="calendar">
@@ -1022,7 +1029,11 @@ export default function RoomsRequestScreen() {
                                         </Text>
                                       </View>
                                     )}
-                                    {isPast && !isOccupied && <Ionicons name="time-outline" size={14} color="#64748B" style={{ position: 'absolute', opacity: 0.6 }} />}
+                                    {isPast && !isOccupied && (
+                                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
+                                        <View style={{ width: '60%', height: 1.5, backgroundColor: '#94A3B8', transform: [{ rotate: '-25deg' }], opacity: 0.5 }} />
+                                      </View>
+                                    )}
                                     {isSelected && (
                                       <View style={styles.selectedIndicator}>
                                         <Text numberOfLines={2} style={styles.selectedText}>
@@ -1133,7 +1144,11 @@ export default function RoomsRequestScreen() {
 
       <RoomSelectorModal
         visible={showRoomSelector}
-        rooms={roomsList.filter(r => bookingMode === 'large' ? r.isLargeScale : !r.isLargeScale)}
+        rooms={roomsList.filter(r => {
+          const modeMatch = bookingMode === 'large' ? r.isLargeScale : !r.isLargeScale;
+          const entered = parseInt(attendees, 10) || 0;
+          return modeMatch && r.capacity >= entered;
+        })}
         selectedRoom={selectedRoom}
         onSelect={(room: any) => {
           setSelectedRoom(room);
@@ -1496,7 +1511,23 @@ function RoomSelectorModal({ visible, onClose, rooms, selectedRoom, onSelect }: 
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.text }}>{room.name}</Text>
-                      <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{room.floor} • Capacidad: {room.capacity} pers.</Text>
+                      <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{room.floor}</Text>
+                    </View>
+                    <View style={{ 
+                      backgroundColor: isSelected ? COLORS.white : COLORS.soft, 
+                      paddingHorizontal: 10, 
+                      paddingVertical: 6, 
+                      borderRadius: 10,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      borderWidth: isSelected ? 1 : 0,
+                      borderColor: COLORS.primaryLight
+                    }}>
+                      <Ionicons name="people" size={14} color={COLORS.primary} />
+                      <Text style={{ fontSize: 12, fontWeight: '850', color: COLORS.primary }}>
+                        {room.capacity} pers.
+                      </Text>
                     </View>
                     {isSelected && (
                       <Ionicons name="checkmark-circle" size={24} color={COLORS.primary} />
@@ -1567,8 +1598,8 @@ const styles = StyleSheet.create({
   slotSelected: { backgroundColor: COLORS.soft },
   occupiedIndicator: { flex: 1, margin: 2, borderRadius: 8, backgroundColor: '#FDA4AF', opacity: 0.9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
   selectedIndicator: { flex: 1, margin: 2, borderRadius: 8, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
-  selectedText: { color: COLORS.white, fontSize: 8, fontWeight: '800', textAlign: 'center', lineHeight: 10 },
-  occupiedText: { color: '#9F1239', fontSize: 8, fontWeight: '800', textAlign: 'center', lineHeight: 10 },
+  selectedText: { color: COLORS.white, fontSize: 10, fontWeight: '800', textAlign: 'center', lineHeight: 12 },
+  occupiedText: { color: '#9F1239', fontSize: 10, fontWeight: '800', textAlign: 'center', lineHeight: 12 },
   
   selectionSummary: { flexDirection: 'row', alignItems: 'center', marginTop: 20, padding: 20, backgroundColor: COLORS.white, borderRadius: 26, borderWidth: 1.5, borderColor: COLORS.primary, shadowColor: COLORS.primary, shadowOpacity: 0.08, shadowRadius: 15 },
   summaryCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 15, justifyContent: 'center' },
