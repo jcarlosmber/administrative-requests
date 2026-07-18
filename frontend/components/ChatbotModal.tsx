@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   ScrollView,
   Animated,
-  Dimensions
+  Dimensions,
+  PanResponder
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { chatbotService } from '../lib/chatbotService';
@@ -80,10 +81,32 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     "¿Cuánto tiempo tarda en aprobarse una solicitud?",
   ];
 
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderGrant: () => {
+        translateY.extractOffset();
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dy: translateY }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: () => {
+        translateY.flattenOffset();
+      },
+    })
+  ).current;
+
   // Cuando el modal general se cierra externamente, reiniciamos el estado minimizado
   useEffect(() => {
     if (!visible) {
       setIsMinimized(false);
+      translateY.setValue(0);
     }
   }, [visible]);
 
@@ -214,14 +237,24 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
   // Si está minimizado pero "visible" es true, mostramos solo la burbuja
   if (visible && isMinimized) {
     return (
-      <View style={{ position: 'absolute', bottom: 24, right: 24, zIndex: 9999 }} pointerEvents="box-none">
+      <Animated.View 
+        style={{ 
+          position: 'absolute', 
+          bottom: 24, 
+          right: 24, 
+          zIndex: 9999,
+          transform: [{ translateY }]
+        }} 
+        pointerEvents="box-none"
+        {...panResponder.panHandlers}
+      >
         <TouchableOpacity 
           onPress={() => setIsMinimized(false)}
           style={{ backgroundColor: '#3b82f6', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 }}
         >
           <Ionicons name="chatbubbles" size={32} color="#fff" />
         </TouchableOpacity>
-      </View>
+      </Animated.View>
     );
   }
 

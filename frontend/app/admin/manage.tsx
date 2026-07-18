@@ -1118,7 +1118,7 @@ const styles = StyleSheet.create({
   metaBox: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.02)' },
   metaHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   metaLabel: { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase' },
-  metaValue: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  metaValue: { fontSize: 14, fontWeight: '700', color: COLORS.primary, flex: 1, textAlign: 'right', marginLeft: 15 },
 
   updateAction: { flexDirection: 'row', gap: 10, marginTop: 20, backgroundColor: COLORS.white, borderRadius: 14, padding: 8, borderWidth: 1, borderColor: COLORS.line },
   updateInput: { flex: 1, fontSize: 13, color: COLORS.primary, paddingHorizontal: 10 },

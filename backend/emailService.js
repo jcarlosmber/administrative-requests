@@ -128,6 +128,7 @@ function getHtmlTemplate(title, bodyContent, category = null) {
         .badge-pendiente { background-color: #FEF3C7; color: #D97706; }
         .badge-en_progreso { background-color: #DBEAFE; color: #2563EB; }
         .badge-resuelto { background-color: #D1FAE5; color: #059669; }
+        .badge-aprobado { background-color: #D1FAE5; color: #059669; }
         .badge-rechazado { background-color: #FEE2E2; color: #DC2626; }
       </style>
     </head>
@@ -174,14 +175,39 @@ function formatMetadataForEmail(request) {
       append('Placa', meta.plate);
       append('Vehículo', (meta.brand || '') + (meta.color ? ' - ' + meta.color : ''));
       break;
-    case 'rooms':
-      append('Sede', meta.location);
-      append('Sala', meta.room);
-      append('Fecha', meta.date);
-      append('Horario', (meta.startTime || '') + (meta.endTime ? ' a ' + meta.endTime : ''));
-      append('Asistentes', meta.capacity + ' persona(s)');
-      append('Organizador', meta.responsibleName);
+    case 'rooms': {
+      const roomObj = meta.room;
+      const roomName = (roomObj && typeof roomObj === 'object') ? roomObj.name : roomObj;
+      append('Sala', roomName);
+      
+      const formattedDate = meta.date ? `<u>${meta.date}</u>` : null;
+      append('Fecha', formattedDate);
+      
+      const timeVal = meta.time || meta.booking_hours || ((meta.startTime || '') + (meta.endTime ? ' a ' + meta.endTime : ''));
+      const formattedTime = timeVal ? `<u>${timeVal}</u>` : null;
+      append('Horario', formattedTime);
+      
+      const organizerVal = meta.responsible_name || meta.responsibleName;
+      append('Organizador', organizerVal);
+      
+      let servicesList = [];
+      if (meta.services_description) {
+        servicesList.push(meta.services_description);
+      }
+      if (meta.services && typeof meta.services === 'object') {
+        const stdServices = [];
+        if (meta.services.projector) stdServices.push('Proyector');
+        if (meta.services.laptop) stdServices.push('Laptop/Portátil');
+        if (meta.services.coffee) stdServices.push('Estación de café');
+        if (stdServices.length > 0) {
+          servicesList.push(stdServices.join(', '));
+        }
+      }
+      if (servicesList.length > 0) {
+        append('Servicios Adicionales', servicesList.join(', '));
+      }
       break;
+    }
     case 'transport':
       append('Origen', meta.origin);
       append('Destino', meta.destination);
@@ -208,9 +234,14 @@ function formatMetadataForEmail(request) {
  * Envía correo al funcionario confirmando la creación de su solicitud
  */
 async function sendRequestCreatedNotification(user, request) {
+  let displayStatus = request.status;
+  if (request.category?.toLowerCase() === 'rooms' && request.status === 'resuelto') {
+    displayStatus = 'aprobado';
+  }
+
   const subject = `SASGE: Solicitud registrada exitosamente - ${request.title}`;
   
-  const statusBadge = `<span class="badge badge-pendiente">Pendiente</span>`;
+  const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
   const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
   
   // Si el nombre parece ser un username (ej. jcmartinezb), lo ponemos en mayúscula inicial si es posible o usamos uno por defecto
@@ -255,9 +286,14 @@ async function sendRequestCreatedNotification(user, request) {
  * Envía correo al funcionario notificando la actualización de su solicitud
  */
 async function sendRequestUpdatedNotification(user, request) {
-  const subject = `SASGE: Tu solicitud ha sido actualizada - Estado: ${request.status.toUpperCase()}`;
+  let displayStatus = request.status;
+  if (request.category?.toLowerCase() === 'rooms' && request.status === 'resuelto') {
+    displayStatus = 'aprobado';
+  }
+
+  const subject = `SASGE: Tu solicitud ha sido actualizada - Estado: ${displayStatus.toUpperCase()}`;
   
-  const statusBadge = `<span class="badge badge-${request.status}">${request.status.toUpperCase()}</span>`;
+  const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
   
   let adminNotesSection = '';
   if (request.admin_notes) {
@@ -313,12 +349,18 @@ async function sendRequestUpdatedNotification(user, request) {
  */
 async function sendAdminServiceNotification(adminEmail, request, triggerStatus) {
   const isApprovedTrigger = triggerStatus === 'resuelto';
+  
+  let displayStatus = request.status;
+  if (request.category?.toLowerCase() === 'rooms' && request.status === 'resuelto') {
+    displayStatus = 'aprobado';
+  }
+
   const actionText = isApprovedTrigger 
     ? 'Una solicitud ha sido aprobada y se requiere la ejecución del servicio correspondiente.'
     : 'Una solicitud requiere ser procesada y coordinada (En Progreso).';
     
   const subject = `SASGE: Alerta de Servicio - ${request.title}`;
-  const statusBadge = `<span class="badge badge-${request.status}">${request.status.toUpperCase()}</span>`;
+  const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
   const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
   const metadataHtml = formatMetadataForEmail(request);
 

@@ -1106,7 +1106,7 @@ ${require('./chatbotKnowledge')}
     res.json({ reply });
   } catch (error) {
     console.error('Error con Gemini:', error);
-    res.status(500).json({ error: 'Lo siento, tuve un problema interno al comunicarme con la IA.' });
+    res.status(500).json({ error: `Lo siento, tuve un problema interno al comunicarme con la IA. Error real: ${error.message}` });
   }
 });
 

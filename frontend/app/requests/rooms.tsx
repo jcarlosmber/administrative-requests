@@ -1026,19 +1026,19 @@ export default function RoomsRequestScreen() {
                       </ScrollView>
                     </View>
 
-                    <View style={styles.selectionSummary}>
-                      <View style={styles.summaryCenter}>
+                    <View style={[styles.selectionSummary, !isDesktop && { flexDirection: 'column', gap: 15, alignItems: 'flex-start' }]}>
+                      <View style={[styles.summaryCenter, !isDesktop && { justifyContent: 'flex-start', width: '100%' }]}>
                         <View style={styles.clockIconBox}>
                           <Ionicons name="time" size={24} color={COLORS.white} />
                         </View>
-                        <View>
+                        <View style={{ flex: 1 }}>
                           <Text style={styles.summaryLabel}>Horario Seleccionado</Text>
-                          <Text style={styles.summaryText}>
+                          <Text style={styles.summaryText} numberOfLines={2} adjustsFontSizeToFit>
                             {selectedDay !== null ? `${displayDate}, ${displayTime}` : "Seleccione su horario en la cuadrícula"}
                           </Text>
                         </View>
                       </View>
-                      <View style={styles.legendSmall}>
+                      <View style={[styles.legendSmall, !isDesktop && { borderLeftWidth: 0, paddingLeft: 0, flexDirection: 'row', width: '100%', justifyContent: 'space-around', borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 12 }]}>
                         <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line }]} /><Text style={styles.legendText}>Libre</Text></View>
                         <View style={styles.legendItem}><View style={[styles.legendBox, { backgroundColor: '#94A3B8' }]} /><Text style={styles.legendText}>Ocupado</Text></View>
                       </View>

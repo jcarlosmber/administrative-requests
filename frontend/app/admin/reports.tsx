@@ -603,7 +603,7 @@ export default function AdminReports() {
                       </View>
 
                       {/* Columna 3: KPIs Clásicos */}
-                      <View style={{ flex: 1, gap: 15, justifyContent: 'space-between' }}>
+                      <View style={[{ gap: 15 }, isDesktop ? { flex: 1, justifyContent: 'space-between' } : { flex: undefined }]}>
                         <KPICard label="Efectividad Distrital" value={`${stats.effectiveness}%`} color={COLORS.success} icon="trending-up" trend="+2.4% este período" />
                         <KPICard label="Pendientes de Atención" value={stats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Requieren acción" />
                         <KPICard label="Total Requerimientos" value={stats.total.toString()} color={COLORS.accent} icon="folder-open" trend="Registrados en sistema" />
@@ -1086,19 +1086,19 @@ function TabButton({ id, label, icon, activeTab, setActiveTab }: any) {
 
 function KPICard({ label, value, color, icon, trend }: any) {
   return (
-    <View style={styles.kpiCard}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+    <View style={[styles.kpiCard, { flex: undefined }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 8 }}>
         <View style={[styles.kpiIcon, { backgroundColor: `${color}10` }]}>
           <Ionicons name={icon} size={20} color={color} />
         </View>
         {trend && (
-          <View style={styles.trendBadge}>
-            <Text style={styles.trendText}>{trend}</Text>
+          <View style={[styles.trendBadge, { flexShrink: 1 }]}>
+            <Text style={styles.trendText} numberOfLines={1} adjustsFontSizeToFit>{trend}</Text>
           </View>
         )}
       </View>
-      <Text style={styles.kpiValue}>{value}</Text>
-      <Text style={styles.kpiLabel}>{label}</Text>
+      <Text style={styles.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
+      <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
     </View>
   );
 }

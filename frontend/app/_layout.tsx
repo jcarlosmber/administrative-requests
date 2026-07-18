@@ -49,35 +49,40 @@ export default function RootLayout() {
           name="requests/new" 
           options={{ 
             presentation: 'modal',
-            title: 'Mantenimiento'
+            title: 'Mantenimiento',
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="requests/parking" 
           options={{ 
             presentation: 'modal',
-            title: 'Parqueadero'
+            title: 'Parqueadero',
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="requests/transport" 
           options={{ 
             presentation: 'modal',
-            title: 'Transporte'
+            title: 'Transporte',
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="requests/visitors" 
           options={{ 
             presentation: 'modal',
-            title: 'Visitantes'
+            title: 'Visitantes',
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="requests/rooms" 
           options={{ 
             presentation: 'modal',
-            title: 'Reserva de Salas'
+            title: 'Reserva de Salas',
+            headerShown: false
           }} 
         />
         <Stack.Screen 
