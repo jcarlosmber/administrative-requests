@@ -12,7 +12,8 @@ import {
   ScrollView,
   Animated,
   Dimensions,
-  PanResponder
+  PanResponder,
+  useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { chatbotService } from '../lib/chatbotService';
@@ -59,6 +60,9 @@ const renderFormattedText = (text: string, isUser: boolean) => {
 };
 
 export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) => {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isSmallScreen = screenWidth < 500 || screenHeight < 650;
+  
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -81,23 +85,67 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
     "¿Cuánto tiempo tarda en aprobarse una solicitud?",
   ];
 
-  const translateY = useRef(new Animated.Value(0)).current;
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dy) > 5;
+        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
       },
       onPanResponderGrant: () => {
-        translateY.extractOffset();
+        pan.extractOffset();
       },
       onPanResponderMove: Animated.event(
-        [null, { dy: translateY }],
+        [null, { dx: pan.x, dy: pan.y }],
         { useNativeDriver: false }
       ),
-      onPanResponderRelease: () => {
-        translateY.flattenOffset();
+      onPanResponderRelease: (e, gestureState) => {
+        pan.flattenOffset();
+        const { width, height } = Dimensions.get('window');
+        
+        // Coordenadas actuales
+        const currentX = (pan.x as any)._value;
+        const currentY = (pan.y as any)._value;
+
+        // Límites de pantalla (burbuja de 64x64 posicionada en bottom:24, right:24)
+        const maxLeft = -(width - 64 - 32); 
+        const maxUp = -(height - 64 - 100); 
+        const maxDown = 10;
+        const maxRight = 10;
+
+        let targetX = currentX;
+        let targetY = currentY;
+
+        // Snap al borde izquierdo o derecho más cercano
+        const middleX = maxLeft / 2;
+        if (currentX < middleX) {
+          targetX = maxLeft;
+        } else {
+          targetX = 0;
+        }
+
+        // Limitar posición en Y
+        if (currentY < maxUp) {
+          targetY = maxUp;
+        } else if (currentY > maxDown) {
+          targetY = 0;
+        }
+
+        Animated.parallel([
+          Animated.spring(pan.x, {
+            toValue: targetX,
+            useNativeDriver: false,
+            tension: 40,
+            friction: 6,
+          }),
+          Animated.spring(pan.y, {
+            toValue: targetY,
+            useNativeDriver: false,
+            tension: 40,
+            friction: 6,
+          }),
+        ]).start();
       },
     })
   ).current;
@@ -106,7 +154,7 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
   useEffect(() => {
     if (!visible) {
       setIsMinimized(false);
-      translateY.setValue(0);
+      pan.setValue({ x: 0, y: 0 });
     }
   }, [visible]);
 
@@ -243,7 +291,7 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
           bottom: 24, 
           right: 24, 
           zIndex: 9999,
-          transform: [{ translateY }]
+          transform: [{ translateX: pan.x }, { translateY: pan.y }]
         }} 
         pointerEvents="box-none"
         {...panResponder.panHandlers}
@@ -269,7 +317,16 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView 
-        style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.15)', justifyContent: 'flex-end', alignItems: 'flex-end', padding: 16, paddingBottom: Platform.OS === 'ios' ? 40 : 24 }} 
+        style={{ 
+          flex: 1, 
+          backgroundColor: 'rgba(0, 0, 0, 0.15)', 
+          justifyContent: 'flex-end', 
+          alignItems: isSmallScreen ? 'stretch' : 'flex-end', 
+          padding: isSmallScreen ? 0 : 16, 
+          paddingBottom: isSmallScreen 
+            ? (Platform.OS === 'ios' ? 34 : 0) 
+            : (Platform.OS === 'ios' ? 40 : 24) 
+        }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Fondo táctil para cerrar el chat o minimizarlo si tocan fuera */}
@@ -279,8 +336,22 @@ export const ChatbotModal: React.FC<ChatbotModalProps> = ({ visible, onClose }) 
           onPress={() => setIsMinimized(true)}
         />
 
-        {/* Contenedor del Chat (Alineado inferior derecho, altura predeterminada) */}
-        <View style={{ width: Platform.OS === 'web' || Dimensions.get('window').width > 500 ? 400 : '100%', height: 600, maxHeight: '85%', backgroundColor: '#f9fafb', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8 }}>
+        {/* Contenedor del Chat (Alineado inferior derecho, adaptable a responsive) */}
+        <View style={{ 
+          width: isSmallScreen ? '100%' : 400, 
+          height: isSmallScreen ? '100%' : 600, 
+          maxHeight: isSmallScreen ? '100%' : '85%', 
+          backgroundColor: '#f9fafb', 
+          borderRadius: isSmallScreen ? 0 : 24, 
+          borderTopLeftRadius: isSmallScreen ? 20 : 24,
+          borderTopRightRadius: isSmallScreen ? 20 : 24,
+          overflow: 'hidden', 
+          shadowColor: '#000', 
+          shadowOffset: { width: 0, height: 4 }, 
+          shadowOpacity: 0.3, 
+          shadowRadius: 5, 
+          elevation: 8 
+        }}>
           
           {/* Header */}
           <View style={{

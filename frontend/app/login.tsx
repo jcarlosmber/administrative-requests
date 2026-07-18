@@ -114,7 +114,7 @@ export default function LoginPage() {
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.content}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Pressable style={styles.backButton} onPress={() => router.replace('/')}>
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
             <Text style={[styles.backText, { color: '#FFFFFF' }]}>Volver</Text>
           </Pressable>

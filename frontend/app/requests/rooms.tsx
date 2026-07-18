@@ -1520,7 +1520,7 @@ function RoomSelectorModal({ visible, onClose, rooms, selectedRoom, onSelect }: 
                       borderColor: COLORS.primaryLight
                     }}>
                       <Ionicons name="people" size={14} color={COLORS.primary} />
-                      <Text style={{ fontSize: 12, fontWeight: '850', color: COLORS.primary }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
                         {room.capacity} pers.
                       </Text>
                     </View>
