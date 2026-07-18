@@ -345,14 +345,14 @@ function HeroSection({ isDesktop, efficiency, urgencies }: any) {
     <View style={[styles.hero, isDesktop && styles.heroDesktop]}>
         <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.primaryDark }]} />
         <SafeAreaView style={styles.heroSafe}>
-          <View style={[styles.heroTop, { flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start' }]}>
-            <View style={{ flex: 1 }}>
+          <View style={[styles.heroTop, { flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }]}>
+            <View style={{ flex: 1, width: '100%' }}>
               <Text style={styles.heroKicker}>SISTEMA DE ADMINISTRACIÓN</Text>
-              <Text style={styles.heroTitle}>Control de Gestión</Text>
-              <Text style={styles.heroSub}>Supervisando la operación administrativa</Text>
+              <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Control de Gestión</Text>
+              <Text style={styles.heroSub} numberOfLines={2}>Supervisando la operación administrativa</Text>
             </View>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: isDesktop ? 15 : 10, alignSelf: isDesktop ? 'auto' : 'stretch', justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: isDesktop ? 0 : 15 }}>
               <View style={styles.statsPanel}>
                 <View style={styles.statItem}>
                   <Text style={styles.statVal}>{efficiency}%</Text>

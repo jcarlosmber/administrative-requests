@@ -413,13 +413,13 @@ export default function AdminReports() {
               end={{ x: 1, y: 1 }}
             />
             <View style={[styles.heroInner, !isDesktop && { paddingTop: 35 }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
+              <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.heroKicker}>SECRETARÍA JURÍDICA DISTRITAL</Text>
-                  <Text style={styles.heroTitle}>Analítica & Reportes</Text>
-                  <Text style={styles.heroSub}>Consola interactiva de monitoreo de servicios administrativos</Text>
+                  <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Analítica & Reportes</Text>
+                  <Text style={styles.heroSub} numberOfLines={2}>Consola interactiva de monitoreo de servicios administrativos</Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
                   <TouchableOpacity style={styles.refreshBtn} onPress={handleRefresh} disabled={loading}>
                     <Ionicons name="refresh" size={20} color={COLORS.white} />
                   </TouchableOpacity>

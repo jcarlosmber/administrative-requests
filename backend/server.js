@@ -1102,7 +1102,7 @@ ${require('./chatbotKnowledge')}
         { role: "system", content: systemContext },
         { role: "user", content: message }
       ],
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
     });
 
     const reply = chatCompletion.choices[0]?.message?.content || "";

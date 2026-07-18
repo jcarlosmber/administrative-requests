@@ -1841,13 +1841,13 @@ function HeroSection({ isDesktop }: any) {
         end={{ x: 1, y: 1 }}
       />
       <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View>
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
+          <View style={{ flex: 1 }}>
             <Text style={styles.heroKicker}>AJUSTES DE SISTEMA</Text>
-            <Text style={styles.heroTitle}>Configuración General</Text>
-            <Text style={styles.heroSub}>Administre los recursos y reglas del portal</Text>
+            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Configuración General</Text>
+            <Text style={styles.heroSub} numberOfLines={2}>Administre los recursos y reglas del portal</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
             <TouchableOpacity 
               style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
               onPress={() => router.replace('/dashboard')}
