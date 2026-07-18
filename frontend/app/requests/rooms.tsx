@@ -1029,11 +1029,6 @@ export default function RoomsRequestScreen() {
                                         </Text>
                                       </View>
                                     )}
-                                    {isPast && !isOccupied && (
-                                      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' }}>
-                                        <View style={{ width: '60%', height: 1.5, backgroundColor: '#94A3B8', transform: [{ rotate: '-25deg' }], opacity: 0.5 }} />
-                                      </View>
-                                    )}
                                     {isSelected && (
                                       <View style={styles.selectedIndicator}>
                                         <Text numberOfLines={2} style={styles.selectedText}>
@@ -1589,11 +1584,11 @@ const styles = StyleSheet.create({
   hoursCol: { width: 55, backgroundColor: COLORS.bg, borderRightWidth: 1, borderRightColor: COLORS.line },
   hourCell: { height: 45, justifyContent: 'center', alignItems: 'center' },
   hourText: { fontSize: 11, color: COLORS.muted, fontWeight: '700' },
-  dayCol: { minWidth: 80, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.09)' },
-  dayHeader: { height: 45, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.bg },
+  dayCol: { minWidth: 80 },
+  dayHeader: { height: 45, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.bg, borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.09)' },
   dayHeaderText: { fontSize: 10, fontWeight: '900', color: COLORS.muted, textTransform: 'uppercase' },
   dayHeaderNum: { fontSize: 16, fontWeight: '900', color: COLORS.text, marginTop: -2 },
-  slotCell: { height: 45, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.09)', backgroundColor: COLORS.white },
+  slotCell: { height: 45, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.09)', borderLeftWidth: 1, borderLeftColor: 'rgba(0,0,0,0.09)', backgroundColor: COLORS.white },
   slotOccupied: { backgroundColor: '#FFF1F2' },
   slotSelected: { backgroundColor: COLORS.soft },
   occupiedIndicator: { flex: 1, margin: 2, borderRadius: 8, backgroundColor: '#FDA4AF', opacity: 0.9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
