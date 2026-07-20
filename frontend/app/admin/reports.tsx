@@ -94,6 +94,8 @@ export default function AdminReports() {
   const [pdfProgress, setPdfProgress] = useState(0);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [dataSource, setDataSource] = useState<'database' | 'empty' | 'error'>('empty');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [modalTarget, setModalTarget] = useState<'from' | 'to'>('from');
 
   const selectedMonthOption = useMemo(
     () => monthOptions.find(option => option.value === selectedMonth) || monthOptions[0],
@@ -535,21 +537,27 @@ export default function AdminReports() {
                   </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-                  <TextInput 
-                    style={{ flex: 1, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, padding: 12, borderRadius: 10, color: COLORS.text }}
-                    placeholder="Fecha Inicio (YYYY-MM-DD)"
-                    placeholderTextColor={COLORS.muted}
-                    value={customStartDate}
-                    onChangeText={setCustomStartDate}
-                  />
+                  <TouchableOpacity 
+                    style={{ flex: 1, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, padding: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => {
+                      setModalTarget('from');
+                      setShowDatePicker(true);
+                    }}
+                  >
+                    <Ionicons name="calendar-outline" size={16} color={COLORS.muted} style={{ marginRight: 8 }} />
+                    <Text style={{ color: customStartDate ? COLORS.text : COLORS.muted, flex: 1 }}>{customStartDate || 'Fecha Inicio (YYYY-MM-DD)'}</Text>
+                  </TouchableOpacity>
                   <Text style={{ fontWeight: '800', color: COLORS.muted }}>-</Text>
-                  <TextInput 
-                    style={{ flex: 1, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, padding: 12, borderRadius: 10, color: COLORS.text }}
-                    placeholder="Fecha Fin (YYYY-MM-DD)"
-                    placeholderTextColor={COLORS.muted}
-                    value={customEndDate}
-                    onChangeText={setCustomEndDate}
-                  />
+                  <TouchableOpacity 
+                    style={{ flex: 1, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, padding: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => {
+                      setModalTarget('to');
+                      setShowDatePicker(true);
+                    }}
+                  >
+                    <Ionicons name="calendar-outline" size={16} color={COLORS.muted} style={{ marginRight: 8 }} />
+                    <Text style={{ color: customEndDate ? COLORS.text : COLORS.muted, flex: 1 }}>{customEndDate || 'Fecha Fin (YYYY-MM-DD)'}</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -803,6 +811,21 @@ export default function AdminReports() {
           </View>
         </ScrollView>
       </View>
+
+      <DateTimePickerModal 
+        visible={showDatePicker} 
+        onClose={() => setShowDatePicker(false)} 
+        title={modalTarget === 'from' ? 'Fecha Inicio' : 'Fecha Fin'}
+        value={modalTarget === 'from' ? customStartDate : customEndDate}
+        onSelect={(val: string) => {
+          if (modalTarget === 'from') {
+            setCustomStartDate(val);
+          } else {
+            setCustomEndDate(val);
+          }
+          setShowDatePicker(false);
+        }}
+      />
 
       {/* --- MODAL INTERACTIVO DE PREVISUALIZACIÓN DE REPORTE INSTITUCIONAL (PREMIUM) --- */}
       <Modal visible={showDocModal} transparent animationType="slide" onRequestClose={() => setShowDocModal(false)}>
@@ -1350,3 +1373,83 @@ const styles = StyleSheet.create({
   printReportBtn: { height: 42, paddingHorizontal: 20, backgroundColor: COLORS.primary, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   printReportText: { fontSize: 13, fontWeight: '800', color: COLORS.white }
 });
+
+const getReportPickerDays = () => {
+  const days = [];
+  const locale = 'es-CO';
+  for (let i = 0; i <= 365; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dayName = i === 0 ? 'Hoy' : d.toLocaleDateString(locale, { weekday: 'short' });
+    const dayNumber = d.getDate();
+    const monthName = d.toLocaleDateString(locale, { month: 'short' });
+    const dateString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    days.push({
+      dayName: dayName.charAt(0).toUpperCase() + dayName.slice(1).replace('.', ''),
+      dayNumber,
+      monthName: monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', ''),
+      dateString
+    });
+  }
+  return days;
+};
+
+function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) {
+  const days = useMemo(() => getReportPickerDays(), []);
+  const [selectedDate, setSelectedDate] = useState(value || days[0].dateString);
+
+  React.useEffect(() => {
+    if (visible && value) {
+      setSelectedDate(value);
+    }
+  }, [visible, value]);
+
+  const handleConfirm = () => {
+    onSelect(selectedDate);
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 25 }}>
+        <BlurView intensity={20} style={StyleSheet.absoluteFill} />
+        <View style={{ backgroundColor: COLORS.white, borderRadius: 30, width: '100%', maxWidth: 350, padding: 20, shadowOpacity: 0.2, shadowRadius: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: COLORS.text }}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={{ backgroundColor: COLORS.bg, borderRadius: 16, padding: 12, marginBottom: 15, alignItems: 'center' }}>
+            <Text style={{ fontSize: 11, color: COLORS.accent, fontWeight: '800', letterSpacing: 1 }}>SELECCIÓN ACTUAL</Text>
+            <Text style={{ fontSize: 18, color: COLORS.text, fontWeight: '900', marginTop: 4 }}>{selectedDate}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', height: 260, gap: 10, marginBottom: 20 }}>
+            <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
+              <View style={{ backgroundColor: COLORS.line, padding: 8, alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>FECHA</Text>
+              </View>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {days.map((d) => {
+                  const isSelected = d.dateString === selectedDate;
+                  return (
+                    <TouchableOpacity 
+                      key={d.dateString}
+                      style={{ paddingVertical: 10, paddingHorizontal: 8, backgroundColor: isSelected ? COLORS.accent : 'transparent', borderBottomWidth: 1, borderBottomColor: COLORS.line, alignItems: 'center' }}
+                      onPress={() => setSelectedDate(d.dateString)}
+                    >
+                      <Text style={{ fontSize: 10, color: isSelected ? COLORS.white : COLORS.muted, fontWeight: '800' }}>{d.dayName}</Text>
+                      <Text style={{ fontSize: 14, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900', marginTop: 2 }}>{d.dayNumber} {d.monthName}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+          <TouchableOpacity style={{ backgroundColor: COLORS.accent, height: 54, borderRadius: 15, justifyContent: 'center', alignItems: 'center' }} onPress={handleConfirm}>
+            <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 16 }}>CONFIRMAR</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}

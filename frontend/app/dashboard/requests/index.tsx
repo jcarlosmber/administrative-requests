@@ -11,7 +11,8 @@ import {
   Animated,
   Platform,
   Modal,
-  TouchableOpacity
+  TouchableOpacity,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -643,6 +644,24 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
               <Text style={modalStyles.infoSectionTitle}>DESCRIPCIÓN DE LA FALLA</Text>
               <Text style={modalStyles.descriptionText}>{request.description || 'Sin descripción'}</Text>
             </View>
+
+            {request.attachments && request.attachments.length > 0 && (
+              <View style={modalStyles.infoBlock}>
+                <Text style={modalStyles.infoSectionTitle}>EVIDENCIA ADJUNTA</Text>
+                {request.attachments.map((attach: string, idx: number) => (
+                  <View key={idx} style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
+                    <Image 
+                      source={{ uri: attach.startsWith('http') || attach.startsWith('file') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop' }} 
+                      style={{ width: '100%', height: 180 }} 
+                      resizeMode="cover" 
+                    />
+                    <View style={{ padding: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.dark }}>{attach.split('/').pop() || attach}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         );
 

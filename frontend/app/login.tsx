@@ -63,8 +63,14 @@ export default function LoginPage() {
   const executeLogin = async () => {
     try {
       setLoading(true);
+
+      let finalEmail = documentId.trim();
+      if (finalEmail && !finalEmail.includes('@')) {
+        finalEmail = `${finalEmail}@secretariajuridica.gov.co`;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: documentId,
+        email: finalEmail,
         password: password,
       });
 

@@ -224,6 +224,18 @@ function formatMetadataForEmail(request) {
       break;
   }
   
+  if (request.attachments && Array.isArray(request.attachments) && request.attachments.length > 0) {
+    let imagesHtml = '<div style="margin-top: 15px;"><strong>Evidencia Fotográfica:</strong><br>';
+    request.attachments.forEach(attach => {
+      const src = (attach.startsWith('http') || attach.startsWith('data')) 
+        ? attach 
+        : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+      imagesHtml += `<img src="${src}" alt="Evidencia" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #E2E8F0;" /><br>`;
+    });
+    imagesHtml += '</div>';
+    details += imagesHtml;
+  }
+  
   if (!details) return '';
   return `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
             <strong>Información Específica del Requerimiento:</strong>${details}

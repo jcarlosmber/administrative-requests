@@ -12,7 +12,8 @@ import {
   Platform,
   TouchableOpacity,
   ActivityIndicator,
-  Modal
+  Modal,
+  Image
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -905,6 +906,27 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                   </View>
                 ))}
               </View>
+
+              {item.attachments && item.attachments.length > 0 && (
+                <>
+                  <View style={styles.metaDivider} />
+                  <Text style={styles.infoTitle}>EVIDENCIA ADJUNTA</Text>
+                  <View style={{ gap: 12 }}>
+                    {item.attachments.map((attach: string, idx: number) => (
+                      <View key={idx} style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
+                        <Image 
+                          source={{ uri: attach.startsWith('http') || attach.startsWith('file') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop' }} 
+                          style={{ width: '100%', height: 180 }} 
+                          resizeMode="cover" 
+                        />
+                        <View style={{ padding: 10 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.text }}>{attach.split('/').pop() || attach}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
 
               {item.metadata?.evaluation && (
                 <>
