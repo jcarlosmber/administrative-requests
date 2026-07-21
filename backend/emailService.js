@@ -260,12 +260,10 @@ function formatMetadataForEmail(request) {
   if (!details) return { html: '', attachments: [] };
   return { 
     html: `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
-      ${details}
-    </div>`,
+            <strong>Información Específica del Requerimiento:</strong>${details}
+          </div>`,
     attachments: emailAttachments
   };
-            <strong>Información Específica del Requerimiento:</strong>${details}
-          </div>`;
 }
 
 /**
