@@ -602,7 +602,19 @@ export default function ManageRequests() {
                     try {
                       const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true });
                       if (!result.canceled && result.assets && result.assets.length > 0) {
-                        setConfirmModal({ ...confirmModal, finalImage: result.assets[0].uri });
+                        const fileUri = result.assets[0].uri;
+                        
+                        try {
+                          const response = await fetch(fileUri);
+                          const blob = await response.blob();
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setConfirmModal({ ...confirmModal, finalImage: reader.result as string });
+                          };
+                          reader.readAsDataURL(blob);
+                        } catch (e) {
+                          setConfirmModal({ ...confirmModal, finalImage: fileUri });
+                        }
                       }
                     } catch (err) {
                       console.log('Error selecting final image', err);

@@ -48,10 +48,27 @@ export default function MaintenanceRequestScreen() {
         copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setAttachment({
-          name: result.assets[0].name,
-          uri: result.assets[0].uri
-        });
+        const fileUri = result.assets[0].uri;
+        const fileName = result.assets[0].name;
+        
+        try {
+          const response = await fetch(fileUri);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setAttachment({
+              name: fileName,
+              uri: reader.result as string
+            });
+          };
+          reader.readAsDataURL(blob);
+        } catch (readError) {
+          console.error('Error reading file to base64:', readError);
+          setAttachment({
+            name: fileName,
+            uri: fileUri
+          });
+        }
       }
     } catch (err) {
       console.error('Error al seleccionar documento:', err);

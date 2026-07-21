@@ -153,11 +153,26 @@ function getHtmlTemplate(title, bodyContent, category = null) {
 
 function formatMetadataForEmail(request) {
   const meta = request.metadata;
-  if (!meta) return '';
+  if (!meta) return { html: '', attachments: [] };
 
   let details = '';
+  const emailAttachments = [];
   const append = (label, value) => {
     if (value) details += `<br><span class="highlight">${label}:</span> ${value}`;
+  };
+
+  const processImage = (attach, type) => {
+    if (attach && attach.startsWith('data:image')) {
+      const cid = `img_${Math.random().toString(36).substring(7)}`;
+      const base64Data = attach.split(';base64,').pop();
+      emailAttachments.push({
+        filename: `${type}_${cid}.jpg`,
+        content: Buffer.from(base64Data, 'base64'),
+        cid: cid
+      });
+      return `cid:${cid}`;
+    }
+    return attach && attach.startsWith('http') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
   };
 
   switch (request.category?.toLowerCase()) {
@@ -227,9 +242,7 @@ function formatMetadataForEmail(request) {
   if (request.attachments && Array.isArray(request.attachments) && request.attachments.length > 0) {
     let imagesHtml = '<div style="margin-top: 15px;"><strong>Evidencia Fotográfica Inicial:</strong><br>';
     request.attachments.forEach(attach => {
-      const src = (attach.startsWith('http') || attach.startsWith('data') || attach.startsWith('blob') || attach.startsWith('file')) 
-        ? attach 
-        : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+      const src = processImage(attach, 'evidencia');
       imagesHtml += `<img src="${src}" alt="Evidencia Inicial" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #E2E8F0;" /><br>`;
     });
     imagesHtml += '</div>';
@@ -238,16 +251,19 @@ function formatMetadataForEmail(request) {
 
   if (meta.finalImage) {
     let finalHtml = '<div style="margin-top: 15px; border-top: 1px solid #E2E8F0; padding-top: 15px;"><strong>Evidencia de Trabajo Finalizado:</strong><br>';
-    const src = (meta.finalImage.startsWith('http') || meta.finalImage.startsWith('data') || meta.finalImage.startsWith('blob') || meta.finalImage.startsWith('file')) 
-      ? meta.finalImage 
-      : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+    const src = processImage(meta.finalImage, 'final');
     finalHtml += `<img src="${src}" alt="Evidencia Final" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #10B981;" /><br>`;
     finalHtml += '</div>';
     details += finalHtml;
   }
   
-  if (!details) return '';
-  return `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
+  if (!details) return { html: '', attachments: [] };
+  return { 
+    html: `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #E2E8F0;">
+      ${details}
+    </div>`,
+    attachments: emailAttachments
+  };
             <strong>Información Específica del Requerimiento:</strong>${details}
           </div>`;
 }
@@ -268,7 +284,7 @@ async function sendRequestCreatedNotification(user, request) {
   
   // Si el nombre parece ser un username (ej. jcmartinezb), lo ponemos en mayúscula inicial si es posible o usamos uno por defecto
   const userName = user.name || user.full_name || 'Funcionario';
-  const metadataHtml = formatMetadataForEmail(request);
+  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
   
   const htmlContent = getHtmlTemplate(
     'Confirmación de Solicitud',
@@ -296,7 +312,8 @@ async function sendRequestCreatedNotification(user, request) {
       from: FROM_EMAIL,
       to: user.email,
       subject: subject,
-      html: htmlContent
+      html: htmlContent,
+      attachments: emailAttachments
     });
     console.log(`Correo de creación enviado a: ${user.email}`);
   } catch (error) {
@@ -328,7 +345,7 @@ async function sendRequestUpdatedNotification(user, request) {
   }
 
   const userName = user.name || user.full_name || 'Funcionario';
-  const metadataHtml = formatMetadataForEmail(request);
+  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
 
   const htmlContent = getHtmlTemplate(
     'Actualización de Estado',
@@ -358,7 +375,8 @@ async function sendRequestUpdatedNotification(user, request) {
       from: FROM_EMAIL,
       to: user.email,
       subject: subject,
-      html: htmlContent
+      html: htmlContent,
+      attachments: emailAttachments
     });
     console.log(`Correo de actualización enviado a: ${user.email}`);
   } catch (error) {
@@ -384,7 +402,7 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
   const subject = `SASGE: Alerta de Servicio - ${request.title}`;
   const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
   const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
-  const metadataHtml = formatMetadataForEmail(request);
+  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
 
   const htmlContent = getHtmlTemplate(
     'Alerta para Equipo Administrador',
@@ -412,7 +430,8 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
       from: FROM_EMAIL,
       to: adminEmail,
       subject: subject,
-      html: htmlContent
+      html: htmlContent,
+      attachments: emailAttachments
     });
     console.log(`Correo administrativo enviado a: ${adminEmail}`);
   } catch (error) {
