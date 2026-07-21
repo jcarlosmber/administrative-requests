@@ -669,6 +669,24 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
                 })}
               </View>
             )}
+
+            {request.metadata && request.metadata.finalImage && (
+              <View style={modalStyles.infoBlock}>
+                <Text style={modalStyles.infoSectionTitle}>EVIDENCIA DE FINALIZACIÓN</Text>
+                <View style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
+                  <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(request.metadata.finalImage)}>
+                    <Image 
+                      source={{ uri: request.metadata.finalImage }} 
+                      style={{ width: '100%', height: 160 }} 
+                      resizeMode="cover" 
+                    />
+                  </TouchableOpacity>
+                  <View style={{ padding: 10 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.dark }}>Foto Final</Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         );
 
@@ -1003,7 +1021,7 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
             {viewerImage && (
               <Image 
                 source={{ uri: viewerImage }} 
-                style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').width * 1.5 }} 
+                style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').height }} 
                 resizeMode="contain" 
               />
             )}

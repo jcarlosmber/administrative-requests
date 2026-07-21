@@ -673,7 +673,7 @@ export default function ManageRequests() {
             {viewerImage && (
               <Image 
                 source={{ uri: viewerImage }} 
-                style={{ width: width, height: width * 1.5 }} 
+                style={{ width: width, height: Dimensions.get('window').height }} 
                 resizeMode="contain" 
               />
             )}
@@ -1026,6 +1026,27 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                       </View>
                       );
                     })}
+                  </View>
+                </>
+              )}
+              
+              {item.metadata?.finalImage && (
+                <>
+                  <View style={styles.metaDivider} />
+                  <Text style={styles.infoTitle}>EVIDENCIA DE FINALIZACIÓN</Text>
+                  <View style={{ gap: 12 }}>
+                    <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
+                      <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(item.metadata.finalImage)}>
+                        <Image 
+                          source={{ uri: item.metadata.finalImage }} 
+                          style={{ width: '100%', height: 160 }} 
+                          resizeMode="cover" 
+                        />
+                      </TouchableOpacity>
+                      <View style={{ padding: 10 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.text }}>Foto Final</Text>
+                      </View>
+                    </View>
                   </View>
                 </>
               )}
