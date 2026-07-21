@@ -107,7 +107,7 @@ export default function MaintenanceRequestScreen() {
         description: description.trim(),
         category: 'maintenance',
         priority,
-        attachments: attachment ? [attachment.name] : [],
+        attachments: attachment ? [attachment.uri] : [],
         metadata: {
           location: location.trim(),
           room: room.trim(),

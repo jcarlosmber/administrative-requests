@@ -915,8 +915,8 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                     {item.attachments.map((attach: string, idx: number) => (
                       <View key={idx} style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
                         <Image 
-                          source={{ uri: attach.startsWith('http') || attach.startsWith('file') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop' }} 
-                          style={{ width: '100%', height: 180 }} 
+                          source={{ uri: attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop' }} 
+                          style={{ width: '100%', height: 160 }} 
                           resizeMode="cover" 
                         />
                         <View style={{ padding: 10 }}>
