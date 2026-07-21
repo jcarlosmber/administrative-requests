@@ -564,7 +564,7 @@ app.post('/api/requests/:id/comment', authenticateToken, async (req, res) => {
 // Actualizar estado de una solicitud (Admin only) evadiendo falsos positivos de WAF
 app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body;
+  const { status, finalImage } = req.body;
 
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Solo administradores pueden cambiar el estado.' });
@@ -590,6 +590,10 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       date: new Date().toLocaleString('es-ES'),
       desc: statusDetails.desc
     };
+
+    if (finalImage) {
+      currentMetadata.finalImage = finalImage;
+    }
 
     const updatedTimeline = [...(currentMetadata.timeline || []), newStep];
     currentMetadata.timeline = updatedTimeline;

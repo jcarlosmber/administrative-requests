@@ -225,15 +225,25 @@ function formatMetadataForEmail(request) {
   }
   
   if (request.attachments && Array.isArray(request.attachments) && request.attachments.length > 0) {
-    let imagesHtml = '<div style="margin-top: 15px;"><strong>Evidencia Fotográfica:</strong><br>';
+    let imagesHtml = '<div style="margin-top: 15px;"><strong>Evidencia Fotográfica Inicial:</strong><br>';
     request.attachments.forEach(attach => {
-      const src = (attach.startsWith('http') || attach.startsWith('data')) 
+      const src = (attach.startsWith('http') || attach.startsWith('data') || attach.startsWith('blob') || attach.startsWith('file')) 
         ? attach 
         : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
-      imagesHtml += `<img src="${src}" alt="Evidencia" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #E2E8F0;" /><br>`;
+      imagesHtml += `<img src="${src}" alt="Evidencia Inicial" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #E2E8F0;" /><br>`;
     });
     imagesHtml += '</div>';
     details += imagesHtml;
+  }
+
+  if (meta.finalImage) {
+    let finalHtml = '<div style="margin-top: 15px; border-top: 1px solid #E2E8F0; padding-top: 15px;"><strong>Evidencia de Trabajo Finalizado:</strong><br>';
+    const src = (meta.finalImage.startsWith('http') || meta.finalImage.startsWith('data') || meta.finalImage.startsWith('blob') || meta.finalImage.startsWith('file')) 
+      ? meta.finalImage 
+      : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+    finalHtml += `<img src="${src}" alt="Evidencia Final" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; border: 1px solid #10B981;" /><br>`;
+    finalHtml += '</div>';
+    details += finalHtml;
   }
   
   if (!details) return '';

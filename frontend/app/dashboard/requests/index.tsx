@@ -536,12 +536,14 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (visible) {
       setRating(0);
       setComment('');
       setSubmitting(false);
+      setViewerImage(null);
     }
   }, [visible, request]);
 
@@ -648,18 +650,23 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
             {request.attachments && request.attachments.length > 0 && (
               <View style={modalStyles.infoBlock}>
                 <Text style={modalStyles.infoSectionTitle}>EVIDENCIA ADJUNTA</Text>
-                {request.attachments.map((attach: string, idx: number) => (
-                  <View key={idx} style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
-                    <Image 
-                      source={{ uri: attach.startsWith('http') || attach.startsWith('file') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop' }} 
-                      style={{ width: '100%', height: 180 }} 
-                      resizeMode="cover" 
-                    />
-                    <View style={{ padding: 10 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.dark }}>{attach.split('/').pop() || attach}</Text>
+                {request.attachments.map((attach: string, idx: number) => {
+                  const finalUri = attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+                  return (
+                    <View key={idx} style={{ marginTop: 8, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
+                      <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(finalUri)}>
+                        <Image 
+                          source={{ uri: finalUri }} 
+                          style={{ width: '100%', height: 160 }} 
+                          resizeMode="cover" 
+                        />
+                      </TouchableOpacity>
+                      <View style={{ padding: 10 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.dark }}>{attach.split('/').pop() || attach}</Text>
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
           </View>
@@ -975,6 +982,34 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
           </View>
         </View>
       </View>
+
+      {/* Visor de Imágenes a Pantalla Completa */}
+      <Modal visible={viewerImage !== null} transparent={true} animationType="fade" onRequestClose={() => setViewerImage(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity 
+            style={{ position: 'absolute', top: 50, right: 30, zIndex: 10, padding: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20 }} 
+            onPress={() => setViewerImage(null)}
+          >
+            <Ionicons name="close" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+            maximumZoomScale={3} 
+            minimumZoomScale={1}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            style={{ width: '100%', height: '100%' }}
+          >
+            {viewerImage && (
+              <Image 
+                source={{ uri: viewerImage }} 
+                style={{ width: Dimensions.get('window').width, height: Dimensions.get('window').width * 1.5 }} 
+                resizeMode="contain" 
+              />
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </Modal>
   );
 }

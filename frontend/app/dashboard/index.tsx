@@ -379,10 +379,10 @@ export default function DashboardScreen() {
   }, [requests]);
 
   const activeParkings = useMemo(() => {
-    // 1. Filtrar solicitudes de parqueadero activas (pendientes o en progreso)
+    // 1. Filtrar solicitudes de parqueadero activas (pendientes, en progreso, o aprobadas)
     const parkingReqs = requests.filter(r => 
       ['parking', 'parqueadero'].includes(r.category.toLowerCase()) && 
-      ['pendiente', 'pending', 'en_progreso', 'in_progress'].includes(r.status.toLowerCase())
+      ['pendiente', 'pending', 'en_progreso', 'in_progress', 'resuelto', 'resolved', 'aprobado'].includes(r.status.toLowerCase())
     );
 
     // 2. Mapearlas a un formato visual limpio
@@ -390,9 +390,10 @@ export default function DashboardScreen() {
       const meta = req.metadata || {};
       const statusLower = req.status.toLowerCase();
       const isProgress = ['en_progreso', 'in_progress', 'en uso'].includes(statusLower);
+      const isResolved = ['resuelto', 'resolved', 'aprobado'].includes(statusLower);
       
-      const statusLabel = isProgress ? 'En Uso' : 'Asignando';
-      const statusColor = isProgress ? '#3B82F6' : COLORS.warning;
+      const statusLabel = isResolved ? 'Aprobado' : (isProgress ? 'En Uso' : 'Asignando');
+      const statusColor = isResolved ? COLORS.success : (isProgress ? '#3B82F6' : COLORS.warning);
 
       return {
         id: req.id,

@@ -22,6 +22,8 @@ import { BlurView } from 'expo-blur';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
+import * as DocumentPicker from 'expo-document-picker';
+import { settingsService, ServiceEmail } from '../../lib/settingsService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -133,16 +135,22 @@ export default function ManageRequests() {
   const [customDates, setCustomDates] = useState({ start: '', end: '' });
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
-  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; reqId: string; newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado'; actionName: string } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; reqId: string; newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado'; actionName: string; category?: string; finalImage?: string | null; item?: AdministrativeRequest } | null>(null);
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
+  const [serviceEmails, setServiceEmails] = useState<ServiceEmail[]>([]);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
-  const askConfirmation = (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado') => {
+  useEffect(() => {
+    settingsService.getServiceEmails().then(setServiceEmails).catch(console.error);
+  }, []);
+
+  const askConfirmation = (item: AdministrativeRequest, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado') => {
     let actionName = 'procesar';
     if (newStatus === 'resuelto') actionName = 'aprobar / finalizar';
     if (newStatus === 'rechazado') actionName = 'rechazar';
     if (newStatus === 'en_progreso') actionName = 'poner en progreso';
-    setConfirmModal({ visible: true, reqId: id, newStatus, actionName });
+    setConfirmModal({ visible: true, reqId: item.id, newStatus, actionName, category: item.category, finalImage: null, item });
   };
 
   const fetchRequests = async () => {
@@ -157,10 +165,10 @@ export default function ManageRequests() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado') => {
+  const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado', finalImage?: string | null) => {
     try {
       setLoading(true);
-      await requestService.updateStatus(id, newStatus);
+      await requestService.updateStatus(id, newStatus, finalImage || undefined);
       await fetchRequests();
       let actionName = 'procesada';
       if (newStatus === 'resuelto') actionName = 'aprobada / finalizada';
@@ -468,7 +476,7 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={askConfirmation} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} />}
+            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={askConfirmation} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} setViewerImage={setViewerImage} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -561,6 +569,54 @@ export default function ManageRequests() {
             <Text style={styles.modalMessage}>
               ¿Estás seguro de que deseas {confirmModal?.actionName} esta solicitud?
             </Text>
+
+            {(() => {
+              if (!confirmModal || !confirmModal.category || confirmModal.category === 'transport') return null;
+              if (confirmModal.newStatus !== 'en_progreso' && confirmModal.newStatus !== 'resuelto') return null;
+              if (confirmModal.item?.status.toLowerCase() !== 'pendiente') return null;
+              
+              let serviceKey = confirmModal.category;
+              if (confirmModal.category === 'rooms' && confirmModal.item?.metadata?.requires_secretaria_general) {
+                serviceKey = 'rooms_special';
+              }
+              const emailObj = serviceEmails.find(e => e.service_type === serviceKey);
+              if (emailObj) {
+                return (
+                  <View style={{ marginTop: 15, padding: 12, backgroundColor: '#EFF6FF', borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                    <Text style={{ fontSize: 13, color: '#1E3A8A', fontWeight: '500' }}>
+                      Esta solicitud será enviada a la Secretaría General al correo <Text style={{ fontWeight: 'bold' }}>{emailObj.email}</Text> para la gestión correspondiente.
+                    </Text>
+                  </View>
+                );
+              }
+              return null;
+            })()}
+
+
+            {confirmModal?.category === 'maintenance' && confirmModal?.newStatus === 'resuelto' && (
+              <View style={{ width: '100%', marginTop: 15, padding: 15, backgroundColor: COLORS.bg, borderRadius: 12 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 10 }}>Foto Final Obligatoria</Text>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10 }}
+                  onPress={async () => {
+                    try {
+                      const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true });
+                      if (!result.canceled && result.assets && result.assets.length > 0) {
+                        setConfirmModal({ ...confirmModal, finalImage: result.assets[0].uri });
+                      }
+                    } catch (err) {
+                      console.log('Error selecting final image', err);
+                    }
+                  }}
+                >
+                  <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
+                  <Text style={{ fontSize: 13, color: COLORS.primary, fontWeight: '600' }}>
+                    {confirmModal.finalImage ? 'Foto Seleccionada (Cambiar)' : 'Tomar / Adjuntar Foto'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20 }}>
               <TouchableOpacity 
                 style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]}
@@ -569,10 +625,11 @@ export default function ManageRequests() {
                 <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.primary }]}
+                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.primary, opacity: (confirmModal?.category === 'maintenance' && confirmModal?.newStatus === 'resuelto' && !confirmModal?.finalImage) ? 0.5 : 1 }]}
+                disabled={confirmModal?.category === 'maintenance' && confirmModal?.newStatus === 'resuelto' && !confirmModal?.finalImage}
                 onPress={() => {
                   if (confirmModal) {
-                    updateStatus(confirmModal.reqId, confirmModal.newStatus);
+                    updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage);
                     setConfirmModal(null);
                   }
                 }}
@@ -581,6 +638,34 @@ export default function ManageRequests() {
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Visor de Imágenes a Pantalla Completa */}
+      <Modal visible={viewerImage !== null} transparent={true} animationType="fade" onRequestClose={() => setViewerImage(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity 
+            style={{ position: 'absolute', top: 50, right: 30, zIndex: 10, padding: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20 }} 
+            onPress={() => setViewerImage(null)}
+          >
+            <Ionicons name="close" size={28} color="#FFF" />
+          </TouchableOpacity>
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+            maximumZoomScale={3} 
+            minimumZoomScale={1}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            style={{ width: '100%', height: '100%' }}
+          >
+            {viewerImage && (
+              <Image 
+                source={{ uri: viewerImage }} 
+                style={{ width: width, height: width * 1.5 }} 
+                resizeMode="contain" 
+              />
+            )}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -798,7 +883,7 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction }: any) {
+function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
@@ -912,18 +997,23 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                   <View style={styles.metaDivider} />
                   <Text style={styles.infoTitle}>EVIDENCIA ADJUNTA</Text>
                   <View style={{ gap: 12 }}>
-                    {item.attachments.map((attach: string, idx: number) => (
-                      <View key={idx} style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
-                        <Image 
-                          source={{ uri: attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop' }} 
-                          style={{ width: '100%', height: 160 }} 
-                          resizeMode="cover" 
-                        />
-                        <View style={{ padding: 10 }}>
+                    {item.attachments.map((attach: string, idx: number) => {
+                      const finalUri = attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+                      return (
+                        <View key={idx} style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
+                          <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(finalUri)}>
+                            <Image 
+                              source={{ uri: finalUri }} 
+                              style={{ width: '100%', height: 160 }} 
+                              resizeMode="cover" 
+                            />
+                          </TouchableOpacity>
+                          <View style={{ padding: 10 }}>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.text }}>{attach.split('/').pop() || attach}</Text>
                         </View>
                       </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 </>
               )}
@@ -998,22 +1088,22 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                   {/* Botones para solicitudes en estado Pendiente */}
                   {item.status.toLowerCase() === 'pendiente' && (
                     <>
-                      {/* Poner en Progreso (Play Azul) para Transporte y Mantenimiento - Primero */}
-                      {['transport', 'maintenance'].includes(item.category) && (
+                      {/* Grupo 1: Transporte, Mantenimiento, Sala Especial */}
+                      { (item.category === 'transport' || item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
                         <TouchableOpacity 
                           style={[styles.actionBtn, styles.processBtn]}
-                          onPress={() => onUpdateStatus(item.id, 'en_progreso')}
+                          onPress={() => onUpdateStatus(item, 'en_progreso')}
                         >
                           <Ionicons name="play-outline" size={16} color={COLORS.white} />
                           <Text style={styles.actionBtnText}>Procesar</Text>
                         </TouchableOpacity>
                       )}
 
-                      {/* Aprobar Directamente (Check Verde) para todas las categorías - Segundo o Único */}
-                      {!['transport', 'maintenance'].includes(item.category) && (
+                      {/* Grupo 2: Visitantes, Parqueadero, Sala Estándar */}
+                      { (item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
                         <TouchableOpacity 
                           style={[styles.actionBtn, styles.successBtn]}
-                          onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                          onPress={() => onUpdateStatus(item, 'resuelto')}
                         >
                           <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
                           <Text style={styles.actionBtnText}>Aprobar</Text>
@@ -1022,11 +1112,10 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                     </>
                   )}
 
-                  {/* Botones para solicitudes en progreso */}
                   {['en_progreso', 'en progreso'].includes(item.status.toLowerCase()) && (
                     <TouchableOpacity 
                        style={[styles.actionBtn, styles.successBtn]}
-                       onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                       onPress={() => onUpdateStatus(item, 'resuelto')}
                     >
                       <Ionicons name="checkmark-done-outline" size={16} color={COLORS.white} />
                       <Text style={styles.actionBtnText}>Finalizar</Text>
@@ -1037,7 +1126,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                   {item.status.toLowerCase() === 'programada' && (
                     <TouchableOpacity 
                       style={[styles.actionBtn, styles.infoBtn]}
-                      onPress={() => onUpdateStatus(item.id, 'resuelto')}
+                      onPress={() => onUpdateStatus(item, 'resuelto')}
                     >
                       <Ionicons name="car-outline" size={16} color={COLORS.white} />
                       <Text style={styles.actionBtnText}>Despachar</Text>
@@ -1047,7 +1136,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                   {!['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase()) && (
                     <TouchableOpacity 
                       style={[styles.actionBtn, styles.rejectBtn]}
-                      onPress={() => onUpdateStatus(item.id, 'rechazado')}
+                      onPress={() => onUpdateStatus(item, 'rechazado')}
                     >
                       <Ionicons name="close-outline" size={16} color={COLORS.white} />
                       <Text style={[styles.actionBtnText, { color: COLORS.white }]}>Rechazar</Text>
