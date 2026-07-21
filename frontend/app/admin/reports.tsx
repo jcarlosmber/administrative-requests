@@ -612,7 +612,7 @@ export default function AdminReports() {
 
                       {/* Columna 3: KPIs Clásicos */}
                       <View style={[{ gap: 15 }, isDesktop ? { flex: 1, justifyContent: 'space-between' } : { flex: undefined }]}>
-                        <KPICard label="Efectividad Distrital" value={`${stats.effectiveness}%`} color={COLORS.success} icon="trending-up" trend="+2.4% este período" />
+                        <KPICard label="Efectividad" value={`${stats.effectiveness}%`} color={COLORS.success} icon="trending-up" trend="+2.4% este período" />
                         <KPICard label="Pendientes de Atención" value={stats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Requieren acción" />
                         <KPICard label="Total Requerimientos" value={stats.total.toString()} color={COLORS.accent} icon="folder-open" trend="Registrados en sistema" />
                       </View>
