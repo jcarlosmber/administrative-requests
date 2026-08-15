@@ -34,21 +34,25 @@ export default function TransportRequestScreen() {
   
   // Form State
   const [dependency, setDependency] = useState('');
-  const [origin, setOrigin] = useState('');
+  const [origin, setOrigin] = useState('Alcaldía Mayor de Bogotá');
   const [destination, setDestination] = useState('');
   const [passengers, setPassengers] = useState('1');
+  const [passengerName, setPassengerName] = useState('');
+  const [passengerPhone, setPassengerPhone] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [pickupTime, setPickupTime] = useState('');
   const [returnTime, setReturnTime] = useState('');
   const [requiresReturn, setRequiresReturn] = useState(false);
   const [reason, setReason] = useState('');
 
-  // Efecto para auto-completar dependencia desde LDAP
+  // Efecto para auto-completar datos desde LDAP / auth
   useEffect(() => {
     const fetchUserLdapData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user && user.dependency) {
-          setDependency(user.dependency);
+        if (user) {
+          if (user.dependency) setDependency(user.dependency);
+          if (user.name) setPassengerName(user.name);
         }
       } catch (err) {
         console.error('Error fetching user for transport prefill:', err);
@@ -68,14 +72,15 @@ export default function TransportRequestScreen() {
 
   const progress = useMemo(() => {
     let p = 10;
-    if (dependency) p += 15;
-    if (origin && destination) p += 25;
+    if (dependency) p += 10;
+    if (passengerName && passengerPhone) p += 15;
+    if (origin && destination && date) p += 25;
     if (pickupTime) p += 15;
-    if (reason) p += 25;
+    if (reason) p += 15;
     if (requiresReturn && returnTime) p += 10;
     else if (!requiresReturn) p += 10;
     return Math.min(p, 100);
-  }, [dependency, origin, destination, pickupTime, reason, requiresReturn, returnTime]);
+  }, [dependency, passengerName, passengerPhone, origin, destination, date, pickupTime, reason, requiresReturn, returnTime]);
 
   const handleRegister = async () => {
     try {
@@ -83,11 +88,14 @@ export default function TransportRequestScreen() {
       const trimmedDependency = dependency.trim();
       const trimmedOrigin = origin.trim();
       const trimmedDestination = destination.trim();
+      const trimmedPassengerName = passengerName.trim();
+      const trimmedPassengerPhone = passengerPhone.trim();
+      const trimmedDate = date.trim();
       const trimmedReason = reason.trim();
       const passengerCount = parseInt(passengers, 10) || 1;
 
-      if (!trimmedDependency || !trimmedOrigin || !trimmedDestination || !pickupTime || !trimmedReason) {
-        setErrorMessage('Completa la dependencia, origen, destino, hora de recogida y motivo de la solicitud.');
+      if (!trimmedDependency || !trimmedPassengerName || !trimmedPassengerPhone || !trimmedOrigin || !trimmedDestination || !trimmedDate || !pickupTime || !trimmedReason) {
+        setErrorMessage('Completa los datos de la persona a trasladar, teléfono, fecha, origen, destino, hora de recogida y motivo.');
         return;
       }
 
@@ -101,14 +109,17 @@ export default function TransportRequestScreen() {
 
       await requestService.create({
         user_id: user?.id || null,
-        title: `Transporte: ${trimmedOrigin} -> ${trimmedDestination}`,
-        description: `Traslado para ${passengerCount} personas. Motivo: ${trimmedReason}`,
+        title: `Transporte: ${trimmedPassengerName} (${trimmedOrigin} -> ${trimmedDestination})`,
+        description: `Traslado para ${passengerCount} persona(s) (${trimmedPassengerName} - Tel: ${trimmedPassengerPhone}). Motivo: ${trimmedReason}`,
         category: 'transport',
         priority: 'media',
         metadata: {
           dependency: trimmedDependency,
+          passengerName: trimmedPassengerName,
+          passengerPhone: trimmedPassengerPhone,
           origin: trimmedOrigin,
           destination: trimmedDestination,
+          date: trimmedDate,
           passengers: passengerCount.toString(),
           pickupTime,
           requiresReturn,
@@ -148,7 +159,21 @@ export default function TransportRequestScreen() {
               <Hero progress={progress} />
 
               <View style={{ gap: 18 }}>
-                <Card title="Información del Solicitante" icon="person">
+                <Card title="Información de la Persona a Trasladar" icon="person">
+                  <Field 
+                    label="Nombre Completo" 
+                    icon="person-outline" 
+                    value={passengerName} 
+                    onChangeText={setPassengerName} 
+                    placeholder="Nombre del funcionario a trasladar" 
+                  />
+                  <Field 
+                    label="Teléfono de Contacto" 
+                    icon="call-outline" 
+                    value={passengerPhone} 
+                    onChangeText={setPassengerPhone} 
+                    placeholder="Ej. 3001234567" 
+                  />
                   <View style={styles.field}>
                     <Text style={styles.label}>Dependencia / Área</Text>
                     <TouchableOpacity 
@@ -227,6 +252,13 @@ export default function TransportRequestScreen() {
                 </Card>
 
                 <Card title="Detalles del Trayecto" icon="map">
+                  <Field 
+                    label="Fecha del Traslado (AAAA-MM-DD)" 
+                    icon="calendar-outline" 
+                    value={date} 
+                    onChangeText={setDate} 
+                    placeholder="Ej. 2026-08-20" 
+                  />
                   <Field 
                     label="Punto de Origen" 
                     icon="location-outline" 

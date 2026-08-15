@@ -116,7 +116,7 @@ export const requestService = {
     return await res.json() as AdministrativeRequest;
   },
 
-  async evaluateRequest(id: string, evaluation: { rating: number; comment?: string }) {
+  async evaluateRequest(id: string, evaluation: { rating: number; comment?: string; serviceTaken?: boolean }) {
     const res = await fetch(`${API_URL}/api/requests/${id}/evaluate`, {
       method: 'POST',
       headers: await getHeaders(),

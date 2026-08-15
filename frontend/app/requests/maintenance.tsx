@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,38 +40,58 @@ export default function MaintenanceRequestScreen() {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'baja' | 'media' | 'alta'>('media');
   const [attachment, setAttachment] = useState<{ name: string; uri: string } | null>(null);
+  const [readingFile, setReadingFile] = useState(false);
+
+  const readAsDataURLAsync = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('No se pudo convertir el archivo a cadena base64.'));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
 
   const handlePickDocument = async () => {
     try {
+      setErrorMessage('');
       const result = await DocumentPicker.getDocumentAsync({
         type: ['image/*', 'application/pdf'],
         copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const fileUri = result.assets[0].uri;
-        const fileName = result.assets[0].name;
+        const asset = result.assets[0];
         
+        // Validar tamaño máximo de 5MB
+        if (asset.size && asset.size > 5 * 1024 * 1024) {
+          setErrorMessage('El archivo seleccionado supera el límite máximo permitido de 5MB.');
+          return;
+        }
+
+        setReadingFile(true);
         try {
-          const response = await fetch(fileUri);
+          const response = await fetch(asset.uri);
           const blob = await response.blob();
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setAttachment({
-              name: fileName,
-              uri: reader.result as string
-            });
-          };
-          reader.readAsDataURL(blob);
+          const dataUrl = await readAsDataURLAsync(blob);
+          setAttachment({
+            name: asset.name,
+            uri: dataUrl
+          });
         } catch (readError) {
           console.error('Error reading file to base64:', readError);
-          setAttachment({
-            name: fileName,
-            uri: fileUri
-          });
+          setErrorMessage('Error al procesar el archivo. Intenta seleccionar otra imagen o documento.');
+        } finally {
+          setReadingFile(false);
         }
       }
     } catch (err) {
       console.error('Error al seleccionar documento:', err);
+      setErrorMessage('Ocurrió un error al abrir el selector de archivos.');
     }
   };
 
@@ -109,6 +129,11 @@ export default function MaintenanceRequestScreen() {
   const handleRegister = async () => {
     try {
       setErrorMessage('');
+      if (readingFile) {
+        setErrorMessage('Por favor espera a que termine de cargarse el archivo adjunto.');
+        return;
+      }
+
       if (!title.trim() || !dependency.trim() || !description.trim() || (!location.trim() && !room.trim())) {
         setErrorMessage('Completa el asunto, la dependencia, la ubicación y la descripción antes de enviar.');
         return;
@@ -263,8 +288,14 @@ export default function MaintenanceRequestScreen() {
                 </Card>
 
                 <Card title="Evidencia" icon="camera">
-                  <TouchableOpacity style={styles.uploadBox} onPress={handlePickDocument}>
-                    {attachment ? (
+                  <TouchableOpacity style={styles.uploadBox} onPress={handlePickDocument} disabled={readingFile}>
+                    {readingFile ? (
+                      <>
+                        <ActivityIndicator size="large" color={COLORS.primary} />
+                        <Text style={[styles.uploadText, { marginTop: 10 }]}>Procesando archivo...</Text>
+                        <Text style={styles.uploadSub}>Por favor espera un momento</Text>
+                      </>
+                    ) : attachment ? (
                       <>
                         <View style={[styles.uploadIcon, { backgroundColor: COLORS.success }]}>
                           <Ionicons name="checkmark" size={32} color={COLORS.white} />
@@ -277,8 +308,8 @@ export default function MaintenanceRequestScreen() {
                         <View style={styles.uploadIcon}>
                           <Ionicons name="cloud-upload-outline" size={32} color={COLORS.primary} />
                         </View>
-                        <Text style={styles.uploadText}>Subir Evidencia Fotográfica</Text>
-                        <Text style={styles.uploadSub}>Capture una imagen del daño para agilizar el proceso</Text>
+                        <Text style={styles.uploadText}>Subir Evidencia Fotográfica / PDF</Text>
+                        <Text style={styles.uploadSub}>Adjunte una imagen o documento (Máx. 5MB)</Text>
                       </>
                     )}
                   </TouchableOpacity>

@@ -181,8 +181,14 @@ function formatMetadataForEmail(request) {
       append('Dependencia', meta.responsible?.dependency);
       append('Desde', meta.fromDate);
       append('Hasta', meta.toDate);
-      if (meta.visitors) append('Visitantes', meta.visitors.length + ' persona(s)');
-      if (meta.vehicles) append('Vehículos', meta.vehicles.length + ' vehículo(s)');
+      if (Array.isArray(meta.visitors) && meta.visitors.length > 0) {
+        const vList = meta.visitors.map(v => `${v.name || 'Sin nombre'} ${v.document ? '(CC/Doc: ' + v.document + ')' : ''}`).join('<br>• ');
+        details += `<br><span class="highlight">Nómina de Visitantes (${meta.visitors.length}):</span><br>• ${vList}`;
+      }
+      if (Array.isArray(meta.vehicles) && meta.vehicles.length > 0) {
+        const vehList = meta.vehicles.map(v => `${v.plate || 'Sin placa'} ${v.brand ? '(' + v.brand + ')' : ''}`).join(', ');
+        append('Placas y Vehículos Autorizados', vehList);
+      }
       break;
     case 'parking':
       append('Funcionario', meta.name);
@@ -224,13 +230,18 @@ function formatMetadataForEmail(request) {
       break;
     }
     case 'transport':
-      append('Origen', meta.origin);
+      append('Persona a Trasladar', meta.passengerName);
+      append('Teléfono Contacto', meta.passengerPhone);
+      append('Origen', meta.origin || 'Alcaldía Mayor de Bogotá');
       append('Destino', meta.destination);
-      append('Fecha', meta.date);
+      append('Fecha del Traslado', meta.date);
       append('Hora de Recogida', meta.pickupTime);
       append('Pasajeros', meta.passengers + ' persona(s)');
       append('Motivo', meta.reason);
       if (meta.requiresReturn) append('Retorno', 'Sí, a las ' + meta.returnTime);
+      if (meta.driver) {
+        append('Conductor Asignado', `${meta.driver.name || 'Conductor'} ${meta.driver.phone ? '- Tel: ' + meta.driver.phone : ''} ${meta.driver.plate ? '(Vehículo Placa: ' + meta.driver.plate + ')' : ''}`);
+      }
       break;
     case 'maintenance':
       append('Ubicación Exacta', meta.locationDetail);

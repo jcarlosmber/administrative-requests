@@ -136,10 +136,43 @@ export default function ManageRequests() {
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
   const [confirmModal, setConfirmModal] = useState<{ visible: boolean; reqId: string; newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado'; actionName: string; category?: string; finalImage?: string | null; item?: AdministrativeRequest } | null>(null);
+  const [driverModal, setDriverModal] = useState<{ visible: boolean; item: AdministrativeRequest | null }>({ visible: false, item: null });
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
+  const [driverPlate, setDriverPlate] = useState('');
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [serviceEmails, setServiceEmails] = useState<ServiceEmail[]>([]);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+
+  const handleApproveTransport = async () => {
+    if (!driverModal.item) return;
+    try {
+      setLoading(true);
+      const updatedMetadata = {
+        ...(driverModal.item.metadata || {}),
+        driver: {
+          name: driverName.trim() || 'Conductor Asignado',
+          phone: driverPhone.trim(),
+          plate: driverPlate.trim()
+        }
+      };
+      await requestService.update(driverModal.item.id, {
+        status: 'resuelto',
+        metadata: updatedMetadata
+      });
+      await fetchRequests();
+      setDriverModal({ visible: false, item: null });
+      setDriverName('');
+      setDriverPhone('');
+      setDriverPlate('');
+      setSuccessModal({ visible: true, message: 'Solicitud aprobada exitosamente con conductor asignado.' });
+    } catch (err: any) {
+      console.error('Error al aprobar transporte:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     settingsService.getServiceEmails().then(setServiceEmails).catch(console.error);
@@ -551,6 +584,68 @@ export default function ManageRequests() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Asignación de Conductor al Aprobar Traslado */}
+      <Modal visible={driverModal.visible} transparent animationType="fade" onRequestClose={() => setDriverModal({ visible: false, item: null })}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={[styles.modalIconBox, { backgroundColor: '#DBEAFE' }]}>
+              <Ionicons name="car-sport" size={35} color={COLORS.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Aprobar Traslado</Text>
+            <Text style={styles.modalMessage}>Asigna el conductor y vehículo que prestará el servicio de transporte.</Text>
+            
+            <View style={{ width: '100%', gap: 12, marginBottom: 20 }}>
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 4 }}>Nombre del Conductor *</Text>
+                <TextInput
+                  style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                  placeholder="Ej. Carlos Pérez"
+                  placeholderTextColor={COLORS.muted}
+                  value={driverName}
+                  onChangeText={setDriverName}
+                />
+              </View>
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 4 }}>Teléfono de Contacto</Text>
+                <TextInput
+                  style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                  placeholder="Ej. 3109876543"
+                  placeholderTextColor={COLORS.muted}
+                  value={driverPhone}
+                  onChangeText={setDriverPhone}
+                />
+              </View>
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 4 }}>Placa del Vehículo / Datos</Text>
+                <TextInput
+                  style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                  placeholder="Ej. ABC-123 (Camioneta Oficial)"
+                  placeholderTextColor={COLORS.muted}
+                  value={driverPlate}
+                  onChangeText={setDriverPlate}
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]} 
+                onPress={() => setDriverModal({ visible: false, item: null })}
+              >
+                <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.success }]} 
+                onPress={handleApproveTransport}
+              >
+                <Text style={styles.modalBtnText}>Aprobar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal de Confirmación */}
       <Modal
         animationType="fade"
@@ -1121,8 +1216,8 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                   {/* Botones para solicitudes en estado Pendiente */}
                   {item.status.toLowerCase() === 'pendiente' && (
                     <>
-                      {/* Grupo 1: Transporte, Mantenimiento, Sala Especial */}
-                      { (item.category === 'transport' || item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
+                      {/* Grupo 1: Mantenimiento, Sala Especial */}
+                      { (item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
                         <TouchableOpacity 
                           style={[styles.actionBtn, styles.processBtn]}
                           onPress={() => onUpdateStatus(item, 'en_progreso')}
@@ -1137,6 +1232,17 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                         <TouchableOpacity 
                           style={[styles.actionBtn, styles.successBtn]}
                           onPress={() => onUpdateStatus(item, 'resuelto')}
+                        >
+                          <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
+                          <Text style={styles.actionBtnText}>Aprobar</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Grupo 3: Transporte con Asignación de Conductor */}
+                      { item.category === 'transport' && (
+                        <TouchableOpacity 
+                          style={[styles.actionBtn, styles.successBtn]}
+                          onPress={() => setDriverModal({ visible: true, item })}
                         >
                           <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
                           <Text style={styles.actionBtnText}>Aprobar</Text>

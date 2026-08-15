@@ -238,18 +238,24 @@ export default function DashboardScreen() {
 
   const pendingEvaluations = useMemo(() => {
     const evalCategories = ['visitors', 'transport', 'maintenance', 'rooms', 'parking'];
+    const todayStr = new Date().toISOString().split('T')[0];
     return requests.filter(req => {
-      const needsEval = req.status.toLowerCase() === 'resuelto' && (!req.metadata || !req.metadata.evaluation) && evalCategories.includes(req.category);
+      const isResolved = req.status.toLowerCase() === 'resuelto';
+      const datePassed = req.metadata?.date ? req.metadata.date < todayStr : false;
+      const needsEval = (isResolved || datePassed) && (!req.metadata || !req.metadata.evaluation) && evalCategories.includes(req.category);
       return needsEval;
     });
   }, [requests]);
 
   const upcomingRoomBookings = useMemo(() => {
-    // 1. Filtrar solicitudes de salas activas (que no estén rechazadas de forma negativa)
-    const roomReqs = requests.filter(r => 
-      ['rooms', 'salas'].includes(r.category.toLowerCase()) && 
-      !['rechazado', 'rechazada', 'rejected'].includes(r.status.toLowerCase())
-    );
+    const todayStr = new Date().toISOString().split('T')[0];
+    // 1. Filtrar solicitudes de salas activas a futuro (que no hayan pasado por fecha ni estén rechazadas)
+    const roomReqs = requests.filter(r => {
+      if (!['rooms', 'salas'].includes(r.category.toLowerCase())) return false;
+      if (['rechazado', 'rechazada', 'rejected'].includes(r.status.toLowerCase())) return false;
+      if (r.metadata?.date && r.metadata.date < todayStr) return false;
+      return true;
+    });
 
     // 2. Formatear para el listado del dashboard
     return roomReqs.map(req => {
@@ -276,7 +282,7 @@ export default function DashboardScreen() {
         statusColor,
         isLarge: !!meta.requires_secretaria_general
       };
-    }).slice(0, 3); // Mostrar las 3 reservas más próximas/recientes
+    }).slice(0, 3);
   }, [requests]);
 
   const activeMaintenances = useMemo(() => {
@@ -1218,7 +1224,7 @@ const styles = StyleSheet.create({
   statDiv: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
 
   content: { paddingHorizontal: 35, paddingVertical: 25 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   sectionKicker: { color: COLORS.primary, fontWeight: '900', fontSize: 11, letterSpacing: 2 },
   sectionTitle: { fontSize: 28, fontWeight: '900', color: COLORS.dark, marginTop: 4 },
   viewAllText: { color: COLORS.primary, fontWeight: '800', fontSize: 14 },
