@@ -198,7 +198,7 @@ export default function AdminReports() {
       mediumPriority,
       lowPriority,
       highResolved,
-      recentGlobal: dbData.slice(0, 8)
+      recentGlobal: dbData.slice(0, 15)
     };
   }, [dbData]);
 
@@ -1444,7 +1444,7 @@ export default function AdminReports() {
                     </View>
 
                     {/* Tabla de Requerimientos Institucionales Recientes */}
-                    <View style={styles.card}>
+                    <View style={[styles.card, { width: '100%' }]}>
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Auditoría de Requerimientos Recientes</Text>
@@ -1456,37 +1456,42 @@ export default function AdminReports() {
                         </TouchableOpacity>
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                        <View style={{ minWidth: 780 }}>
-                          <View style={styles.tableHeaderRowDark}>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>MÓDULO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 200 }]}>ASUNTO / DETALLE</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 170 }]}>SOLICITANTE</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>PRIORIDAD</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={true}
+                        contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 860 }}>
+                          <View style={[styles.tableHeaderRowDark, { width: '100%' }]}>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 105 }]}>FECHA</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>MÓDULO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { flex: 2.2, minWidth: 240 }]}>ASUNTO / DETALLE</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { flex: 1.3, minWidth: 180 }]}>SOLICITANTE</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 105, textAlign: 'center' }]}>PRIORIDAD</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 125, textAlign: 'center' }]}>ESTADO</Text>
                           </View>
 
                           {stats.recentGlobal.length > 0 ? (
                             stats.recentGlobal.map((req, idx) => {
                               const meta = getModuleMeta(req.category);
                               return (
-                                <View key={req.id || idx} style={styles.tableRowDark}>
-                                  <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(req.created_at)}</Text>
-                                  <View style={{ width: 140, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <View key={req.id || idx} style={[styles.tableRowDark, { width: '100%' }]}>
+                                  <Text style={[styles.tableCellTxt, { width: 105 }]}>{formatDisplayDate(req.created_at)}</Text>
+                                  <View style={{ width: 160, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                     <Ionicons name={meta.icon as any} size={14} color={meta.color} />
                                     <Text style={[styles.tableCellTxtBold, { fontSize: 11 }]}>{meta.name}</Text>
                                   </View>
-                                  <Text style={[styles.tableCellTxt, { flex: 1, minWidth: 200 }]} numberOfLines={1}>
+                                  <Text style={[styles.tableCellTxt, { flex: 2.2, minWidth: 240 }]} numberOfLines={1}>
                                     {req.title || 'Solicitud administrativa'}
                                   </Text>
-                                  <Text style={[styles.tableCellTxt, { width: 170 }]} numberOfLines={1}>
+                                  <Text style={[styles.tableCellTxt, { flex: 1.3, minWidth: 180 }]} numberOfLines={1}>
                                     {req.profiles?.full_name || req.profiles?.dependency?.name || 'Funcionario'}
                                   </Text>
-                                  <View style={{ width: 90, alignItems: 'center' }}>
+                                  <View style={{ width: 105, alignItems: 'center', justifyContent: 'center' }}>
                                     <PriorityBadge priority={req.priority} />
                                   </View>
-                                  <View style={{ width: 110, alignItems: 'center' }}>
+                                  <View style={{ width: 125, alignItems: 'center', justifyContent: 'center' }}>
                                     <StatusBadge status={req.status} />
                                   </View>
                                 </View>
@@ -1562,8 +1567,13 @@ export default function AdminReports() {
                         </TouchableOpacity>
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                        <View style={{ minWidth: 760 }}>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={true}
+                        contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 780 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>ASUNTO / MOTIVO</Text>
@@ -1678,8 +1688,13 @@ export default function AdminReports() {
                         </TouchableOpacity>
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                        <View style={{ minWidth: 780 }}>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={true}
+                        contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 800 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 200 }]}>INCIDENCIA / DAÑO</Text>
@@ -1792,8 +1807,13 @@ export default function AdminReports() {
                         </TouchableOpacity>
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                        <View style={{ minWidth: 740 }}>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={true}
+                        contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 760 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110 }]}>PLACA</Text>
@@ -1890,8 +1910,13 @@ export default function AdminReports() {
                         </TouchableOpacity>
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                        <View style={{ minWidth: 760 }}>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={true}
+                        contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 780 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SALA</Text>
@@ -1985,8 +2010,13 @@ export default function AdminReports() {
                         </TouchableOpacity>
                       </View>
 
-                      <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                        <View style={{ minWidth: 780 }}>
+                      <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={true}
+                        contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 800 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>ASUNTO / MISIÓN</Text>
@@ -3155,9 +3185,9 @@ const styles = StyleSheet.create({
   cardSectionAction: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line },
   cardSectionActionText: { fontSize: 11, fontWeight: '800', color: COLORS.accent },
   tableContainer: { borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden', marginTop: 15 },
-  tableHeaderRowDark: { flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: COLORS.line },
+  tableHeaderRowDark: { flexDirection: 'row', backgroundColor: '#F8FAFC', paddingVertical: 11, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: COLORS.line, width: '100%' },
   tableHeaderTxtDark: { fontSize: 11, fontWeight: '800', color: COLORS.primarySoft, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tableRowDark: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.white },
+  tableRowDark: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: COLORS.line, backgroundColor: COLORS.white, width: '100%' },
   tableCellTxt: { fontSize: 12, color: COLORS.text, fontWeight: '500' },
   tableCellTxtBold: { fontSize: 12, color: COLORS.primary, fontWeight: '800' },
 
