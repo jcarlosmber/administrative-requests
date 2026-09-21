@@ -2895,78 +2895,84 @@ const getStatusTheme = (status: string) => {
   return { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0', dot: '#94A3B8' };
 };
 
-// Paleta de fondos y acentos según categoría de servicio para Cards y Filas
+// Paleta de fondos según categoría de servicio para Cards y Filas (fondos opacos sin líneas)
 const getCategoryCardTheme = (category?: string, type?: string) => {
   const cat = (category || type || '').toLowerCase();
   if (cat.includes('visit') || cat === 'visitors') {
     return {
-      bg: '#FFF8F9',
-      border: '#FECDD3',
-      borderExpanded: '#F43F5E',
+      bg: '#FFE4E6', // Tono opaco cálido (correspondiente a la línea rosa)
+      hoverBg: '#FECDD3',
+      border: 'transparent',
+      borderExpanded: 'transparent',
       headerBg: '#FFE4E6',
       color: '#E11D48',
       colorDark: '#9F1239',
-      accentBar: '#E11D48',
-      shadow: 'rgba(225, 29, 72, 0.12)',
+      accentBar: 'transparent',
+      shadow: 'rgba(225, 29, 72, 0.08)',
     };
   }
   if (cat.includes('transp') || cat === 'transport') {
     return {
-      bg: '#F6FAFD',
-      border: '#BAE6FD',
-      borderExpanded: '#0284C7',
+      bg: '#E0F2FE', // Tono opaco azul (correspondiente a la línea celeste)
+      hoverBg: '#BAE6FD',
+      border: 'transparent',
+      borderExpanded: 'transparent',
       headerBg: '#E0F2FE',
       color: '#0284C7',
       colorDark: '#0369A1',
-      accentBar: '#0284C7',
-      shadow: 'rgba(2, 132, 199, 0.12)',
+      accentBar: 'transparent',
+      shadow: 'rgba(2, 132, 199, 0.08)',
     };
   }
   if (cat.includes('manten') || cat === 'maintenance') {
     return {
-      bg: '#F3FAF9',
-      border: '#99F6E4',
-      borderExpanded: '#0D9488',
+      bg: '#CCFBF1', // Tono opaco turquesa (correspondiente a la línea verde agua)
+      hoverBg: '#99F6E4',
+      border: 'transparent',
+      borderExpanded: 'transparent',
       headerBg: '#CCFBF1',
       color: '#0D9488',
       colorDark: '#0F766E',
-      accentBar: '#0D9488',
-      shadow: 'rgba(13, 148, 136, 0.12)',
+      accentBar: 'transparent',
+      shadow: 'rgba(13, 148, 136, 0.08)',
     };
   }
   if (cat.includes('sala') || cat === 'rooms') {
     return {
-      bg: '#FAF8FF',
-      border: '#DDD6FE',
-      borderExpanded: '#7C3AED',
+      bg: '#EDE9FE', // Tono opaco violeta (correspondiente a la línea morada)
+      hoverBg: '#DDD6FE',
+      border: 'transparent',
+      borderExpanded: 'transparent',
       headerBg: '#EDE9FE',
       color: '#7C3AED',
       colorDark: '#6D28D9',
-      accentBar: '#7C3AED',
-      shadow: 'rgba(124, 58, 237, 0.12)',
+      accentBar: 'transparent',
+      shadow: 'rgba(124, 58, 237, 0.08)',
     };
   }
   if (cat.includes('parque') || cat === 'parking') {
     return {
-      bg: '#FFF9F5',
-      border: '#FED7AA',
-      borderExpanded: '#EA580C',
+      bg: '#FFEDD5', // Tono opaco naranja (correspondiente a la línea naranja)
+      hoverBg: '#FED7AA',
+      border: 'transparent',
+      borderExpanded: 'transparent',
       headerBg: '#FFEDD5',
       color: '#EA580C',
       colorDark: '#C2410C',
-      accentBar: '#EA580C',
-      shadow: 'rgba(234, 88, 12, 0.12)',
+      accentBar: 'transparent',
+      shadow: 'rgba(234, 88, 12, 0.08)',
     };
   }
   return {
-    bg: '#FFFFFF',
-    border: '#E2E8F0',
-    borderExpanded: '#3B82F6',
-    headerBg: '#F1F5F9',
+    bg: '#E2E8F0', // Tono opaco slate (correspondiente a la línea gris slate)
+    hoverBg: '#CBD5E1',
+    border: 'transparent',
+    borderExpanded: 'transparent',
+    headerBg: '#E2E8F0',
     color: '#3B82F6',
     colorDark: '#1E293B',
-    accentBar: '#3B82F6',
-    shadow: 'rgba(15, 23, 42, 0.08)',
+    accentBar: 'transparent',
+    shadow: 'rgba(15, 23, 42, 0.06)',
   };
 };
 
@@ -3032,23 +3038,20 @@ function RequestTableRow({
         {
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: hovered ? serviceTheme.headerBg : serviceTheme.bg,
-          paddingVertical: 12,
+          backgroundColor: hovered ? serviceTheme.hoverBg : serviceTheme.bg,
+          paddingVertical: 13,
           paddingHorizontal: 18,
           borderRadius: 14,
           marginBottom: 8,
           marginHorizontal: 25,
           minWidth: 1080,
           gap: 12,
-          borderWidth: 1.5,
-          borderColor: hovered ? serviceTheme.color : serviceTheme.border,
-          borderLeftWidth: 4.5,
-          borderLeftColor: serviceTheme.accentBar,
+          borderWidth: 0,
         } as any,
         Platform.OS === 'web' ? { 
           cursor: 'pointer',
           transition: 'all 0.15s ease-in-out',
-          boxShadow: hovered ? `0 4px 14px ${serviceTheme.shadow}` : '0 1px 3px rgba(15, 23, 42, 0.04)'
+          boxShadow: hovered ? `0 4px 14px ${serviceTheme.shadow}` : '0 1px 4px rgba(15, 23, 42, 0.04)'
         } : {},
       ]}
     >
@@ -3080,8 +3083,7 @@ function RequestTableRow({
           paddingHorizontal: 9,
           paddingVertical: 5,
           borderRadius: 8,
-          borderWidth: 1.2,
-          borderColor: serviceTheme.border,
+          borderWidth: 0,
           alignSelf: 'flex-start',
         }}>
           <Ionicons name={catIcon as any} size={14} color={serviceTheme.color} />
@@ -3100,8 +3102,7 @@ function RequestTableRow({
           backgroundColor: `${serviceTheme.color}18`,
           alignItems: 'center',
           justifyContent: 'center',
-          borderWidth: 1,
-          borderColor: `${serviceTheme.color}35`,
+          borderWidth: 0,
         }}>
           <Text style={{ fontSize: 12, fontWeight: '800', color: serviceTheme.color }}>
             {initials}
@@ -3374,10 +3375,8 @@ function RequestDetailModal({
           maxHeight: isDesktop ? '88%' : '94%',
           backgroundColor: '#FFFFFF',
           borderRadius: 22,
-          borderWidth: 1.5,
-          borderColor: serviceTheme.border,
-          borderTopWidth: 4.5,
-          borderTopColor: serviceTheme.accentBar,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
           shadowColor: '#0F172A',
           shadowOffset: { width: 0, height: 16 },
           shadowOpacity: 0.25,
@@ -4025,9 +4024,7 @@ function RequestListItem({
         styles.card, 
         {
           backgroundColor: serviceTheme.bg,
-          borderColor: expanded ? serviceTheme.borderExpanded : serviceTheme.border,
-          borderTopWidth: 4,
-          borderTopColor: serviceTheme.accentBar,
+          borderWidth: 0,
         },
         numCols > 1 && { 
           flex: 1, 
@@ -4054,8 +4051,8 @@ function RequestListItem({
               </View>
             )}
 
-            {/* Badge de Categoría con fondo blanco para contrastar con el fondo de la card */}
-            <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]}>
+            {/* Badge de Categoría con fondo blanco para contrastar con el fondo opaco */}
+            <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
               <Ionicons name={catIcon as any} size={13} color={serviceTheme.color} />
               <Text style={[styles.categoryBadgeText, { color: serviceTheme.colorDark }]}>{item.type}</Text>
             </View>
@@ -4090,7 +4087,7 @@ function RequestListItem({
           onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
           activeOpacity={0.85}
         >
-          <View style={[styles.avatarCircle, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]}>
+          <View style={[styles.avatarCircle, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
             <Text style={[styles.avatarText, { color: serviceTheme.color || '#0F172A' }]}>{initials}</Text>
           </View>
           <View style={{ flex: 1 }}>
@@ -4100,14 +4097,14 @@ function RequestListItem({
               <Text style={styles.cardUserDept}>{item.dependency}</Text>
             </View>
           </View>
-          <View style={[styles.toggleExpandChip, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: serviceTheme.border }]}>
+          <View style={[styles.toggleExpandChip, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
             <Ionicons name={expanded ? "chevron-up" : "open-outline"} size={14} color="#64748B" />
           </View>
         </TouchableOpacity>
 
         {/* Caja de Requerimiento / Detalle */}
         <TouchableOpacity 
-          style={[styles.detailBox, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]} 
+          style={[styles.detailBox, { backgroundColor: '#FFFFFF', borderWidth: 0 }]} 
           onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
           activeOpacity={0.85}
         >
@@ -4117,9 +4114,9 @@ function RequestListItem({
 
           {/* Metadatos rápidos a simple vista si no está expandido */}
           {item.uiMetadata && item.uiMetadata.length > 0 && (
-            <View style={[styles.quickMetaRow, { borderTopColor: serviceTheme.border }]}>
+            <View style={[styles.quickMetaRow, { borderTopWidth: 0, marginTop: 8, paddingTop: 4 }]}>
               {item.uiMetadata.slice(0, 2).map((meta: any, idx: number) => (
-                <View key={idx} style={[styles.quickMetaChip, { backgroundColor: serviceTheme.bg, borderColor: serviceTheme.border }]}>
+                <View key={idx} style={[styles.quickMetaChip, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
                   <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={serviceTheme.color} />
                   <Text style={[styles.quickMetaLabel, { color: serviceTheme.colorDark }]}>{meta.label}:</Text>
                   <Text style={styles.quickMetaVal} numberOfLines={1}>{meta.value}</Text>
@@ -4154,7 +4151,7 @@ function RequestListItem({
         )}
           
           {expanded && (
-            <View style={[styles.expandedInfo, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]}>
+            <View style={[styles.expandedInfo, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
               <Text style={styles.infoTitle}>TRAZABILIDAD Y SEGUIMIENTO</Text>
               
               {/* Timeline */}
@@ -4330,7 +4327,7 @@ function RequestListItem({
           )}
 
           {/* Pie de Tarjeta con Acciones Rápidas Directas */}
-          <View style={[styles.cardFooter, { borderTopColor: serviceTheme.border }]}>
+          <View style={[styles.cardFooter, { borderTopWidth: 0, paddingTop: 10 }]}>
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={13} color="#64748B" />
               <Text style={styles.metaText}>{item.date}</Text>
@@ -4475,8 +4472,7 @@ const styles = StyleSheet.create({
     borderRadius: 18, 
     marginBottom: 16, 
     marginHorizontal: 25, 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0', 
+    borderWidth: 0, 
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 12 },
@@ -4542,7 +4538,7 @@ const styles = StyleSheet.create({
   statusPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, gap: 6 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 15, marginTop: 5 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 0, paddingTop: 12, marginTop: 5 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 13, color: COLORS.muted, fontWeight: '600' },
   actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
