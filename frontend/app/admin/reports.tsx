@@ -233,6 +233,7 @@ export default function AdminReports() {
 
     return {
       total,
+      criticalityTotal,
       resolved,
       pending,
       inProgress,
@@ -1544,6 +1545,218 @@ export default function AdminReports() {
                       </View>
                     </View>
 
+                    {/* Panel de Satisfacción de Usuarios y Calidad de Servicio (CSAT) */}
+                    <View style={[styles.card, { width: '100%' }]}>
+                      <View style={styles.cardSectionHeader}>
+                        <View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={styles.cardTitle}>Satisfacción de Usuarios y Calidad de Servicio</Text>
+                            <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>CSAT INSTITUCIONAL</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.cardSubtitle}>
+                            Percepción, calificaciones y retroalimentación de los funcionarios al cierre de sus requerimientos
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.bg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: COLORS.line }}>
+                          <Ionicons name="sparkles" size={14} color="#D97706" />
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
+                            {stats.favorablePercent}% Favorable (4-5★)
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Contenido en 3 columnas en desktop */}
+                      <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20, marginTop: 10 }}>
+                        
+                        {/* Columna 1: Puntuación Global Promedio */}
+                        <View style={{ flex: 1, backgroundColor: COLORS.bg, borderRadius: 20, padding: 22, borderWidth: 1, borderColor: COLORS.line, alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                            CALIFICACIÓN PROMEDIO
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                            <Text style={{ fontSize: 44, fontWeight: '900', color: COLORS.primary }}>
+                              {stats.averageRating > 0 ? stats.averageRating : '—'}
+                            </Text>
+                            <Text style={{ fontSize: 18, fontWeight: '700', color: COLORS.muted }}>/ 5.0</Text>
+                          </View>
+
+                          {/* Estrellas */}
+                          <View style={{ flexDirection: 'row', gap: 4, marginVertical: 10 }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Ionicons 
+                                key={star} 
+                                name={stats.averageRating >= star ? 'star' : stats.averageRating >= star - 0.5 ? 'star-half' : 'star-outline'} 
+                                size={22} 
+                                color="#D97706" 
+                              />
+                            ))}
+                          </View>
+
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.primarySoft, textAlign: 'center' }}>
+                            Basado en {stats.totalEvaluated} {stats.totalEvaluated === 1 ? 'evaluación recibida' : 'evaluaciones recibidas'}
+                          </Text>
+                          <View style={{ marginTop: 12, backgroundColor: COLORS.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: COLORS.line }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.muted }}>
+                              Tasa de respuesta: <Text style={{ color: COLORS.accent, fontWeight: '900' }}>{stats.responseRate}%</Text> de resueltos
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Columna 2: Distribución por Estrellas (5★ a 1★) */}
+                        <View style={{ flex: 1.2, backgroundColor: COLORS.bg, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: COLORS.line, justifyContent: 'center' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            DISTRIBUCIÓN DE CALIFICACIONES
+                          </Text>
+                          <View style={{ gap: 10 }}>
+                            {[5, 4, 3, 2, 1].map((n) => {
+                              const count = stats.ratingCounts[n] || 0;
+                              const pct = stats.totalEvaluated > 0 ? Math.round((count / stats.totalEvaluated) * 100) : 0;
+                              return (
+                                <View key={n} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', width: 36, gap: 2 }}>
+                                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>{n}</Text>
+                                    <Ionicons name="star" size={12} color="#D97706" />
+                                  </View>
+                                  <View style={{ flex: 1, height: 10, backgroundColor: COLORS.white, borderRadius: 5, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line }}>
+                                    <View style={{ width: `${pct}%`, height: '100%', backgroundColor: n >= 4 ? COLORS.success : n === 3 ? COLORS.warning : COLORS.danger, borderRadius: 5 }} />
+                                  </View>
+                                  <Text style={{ width: 50, fontSize: 11, fontWeight: '700', color: COLORS.muted, textAlign: 'right' }}>
+                                    {count} ({pct}%)
+                                  </Text>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        </View>
+
+                        {/* Columna 3: Calificación por Módulo */}
+                        <View style={{ flex: 1.3, backgroundColor: COLORS.bg, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: COLORS.line }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            SATISFACCIÓN POR ÁREA OPERATIVA
+                          </Text>
+                          <View style={{ gap: 8 }}>
+                            {[
+                              { key: 'visitors', name: 'Control de Acceso', icon: 'people', color: COLORS.danger },
+                              { key: 'maintenance', name: 'Mantenimiento Locativo', icon: 'construct', color: COLORS.accent },
+                              { key: 'parking', name: 'Cupo de Parqueadero', icon: 'car', color: COLORS.purple },
+                              { key: 'rooms', name: 'Reserva de Salas', icon: 'easel', color: COLORS.warning },
+                              { key: 'transport', name: 'Transporte Oficial', icon: 'car-sport', color: COLORS.success },
+                            ].map((mod) => {
+                              const modData = (stats.moduleEvaluations as any)[mod.key];
+                              const avg = modData?.avg || 0;
+                              const count = modData?.count || 0;
+                              return (
+                                <View key={mod.key} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.white, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12, borderWidth: 1, borderColor: COLORS.line }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                                    <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: `${mod.color}15`, justifyContent: 'center', alignItems: 'center' }}>
+                                      <Ionicons name={mod.icon as any} size={13} color={mod.color} />
+                                    </View>
+                                    <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.text }} numberOfLines={1}>
+                                      {mod.name}
+                                    </Text>
+                                  </View>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    {count > 0 ? (
+                                      <>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                                          <Ionicons name="star" size={11} color="#D97706" />
+                                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>{avg.toFixed(1)}</Text>
+                                        </View>
+                                        <Text style={{ fontSize: 10, color: COLORS.muted, fontWeight: '600' }}>({count})</Text>
+                                      </>
+                                    ) : (
+                                      <Text style={{ fontSize: 10, color: COLORS.muted, fontStyle: 'italic' }}>Sin calificar</Text>
+                                    )}
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        </View>
+
+                      </View>
+
+                      {/* Opiniones y Comentarios Cualitativos de Funcionarios */}
+                      <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 16 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="chatbubbles-outline" size={16} color={COLORS.primary} />
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
+                              Retroalimentación y Comentarios de Servidores
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '600' }}>
+                            {stats.recentEvaluations.length} {stats.recentEvaluations.length === 1 ? 'opinión registrada' : 'opiniones registradas'}
+                          </Text>
+                        </View>
+
+                        {stats.recentEvaluations.length > 0 ? (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                            {stats.recentEvaluations.map((item, idx) => {
+                              const modMeta = getModuleMeta(item.category);
+                              const evalData = item.metadata?.evaluation;
+                              return (
+                                <View 
+                                  key={item.id || idx} 
+                                  style={{ 
+                                    flex: 1, 
+                                    minWidth: isDesktop ? 280 : '100%', 
+                                    backgroundColor: COLORS.bg, 
+                                    borderRadius: 14, 
+                                    padding: 14, 
+                                    borderWidth: 1, 
+                                    borderColor: COLORS.line,
+                                    gap: 8 
+                                  }}
+                                >
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                      <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: `${modMeta.color}15`, justifyContent: 'center', alignItems: 'center' }}>
+                                        <Ionicons name={modMeta.icon as any} size={12} color={modMeta.color} />
+                                      </View>
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: modMeta.color }}>{modMeta.name}</Text>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                      {[1, 2, 3, 4, 5].map((s) => (
+                                        <Ionicons 
+                                          key={s} 
+                                          name={evalData?.rating >= s ? 'star' : 'star-outline'} 
+                                          size={11} 
+                                          color="#D97706" 
+                                        />
+                                      ))}
+                                    </View>
+                                  </View>
+
+                                  <Text style={{ fontSize: 12, color: COLORS.text, fontStyle: 'italic', lineHeight: 17 }} numberOfLines={3}>
+                                    "{evalData?.comment}"
+                                  </Text>
+
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 6, marginTop: 2 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.muted }} numberOfLines={1}>
+                                      {item.profiles?.full_name || 'Servidor Público'}
+                                    </Text>
+                                    <Text style={{ fontSize: 10, color: COLORS.muted }}>
+                                      {formatDisplayDate(evalData?.date || item.created_at)}
+                                    </Text>
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        ) : (
+                          <View style={{ backgroundColor: COLORS.bg, borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: COLORS.line }}>
+                            <Ionicons name="chatbox-ellipses-outline" size={22} color={COLORS.muted} style={{ marginBottom: 6 }} />
+                            <Text style={{ fontSize: 12, color: COLORS.muted, fontWeight: '600' }}>
+                              No se registran observaciones textuales en las calificaciones de este periodo.
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+
                     {/* Tabla de Requerimientos Institucionales Recientes */}
                     <View style={[styles.card, { width: '100%' }]}>
                       <View style={styles.cardSectionHeader}>
@@ -1563,37 +1776,53 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 860 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 940 }}>
                           <View style={[styles.tableHeaderRowDark, { width: '100%' }]}>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 105 }]}>FECHA</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>MÓDULO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { flex: 2.2, minWidth: 240 }]}>ASUNTO / DETALLE</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { flex: 1.3, minWidth: 180 }]}>SOLICITANTE</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 105, textAlign: 'center' }]}>PRIORIDAD</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 125, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 145 }]}>MÓDULO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { flex: 2, minWidth: 200 }]}>ASUNTO / DETALLE</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { flex: 1.2, minWidth: 150 }]}>SOLICITANTE</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 95, textAlign: 'center' }]}>PRIORIDAD</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
                           </View>
 
                           {stats.recentGlobal.length > 0 ? (
                             stats.recentGlobal.map((req, idx) => {
                               const meta = getModuleMeta(req.category);
+                              const evalRating = req.metadata?.evaluation?.rating;
                               return (
                                 <View key={req.id || idx} style={[styles.tableRowDark, { width: '100%' }]}>
-                                  <Text style={[styles.tableCellTxt, { width: 105 }]}>{formatDisplayDate(req.created_at)}</Text>
-                                  <View style={{ width: 160, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(req.created_at)}</Text>
+                                  <View style={{ width: 145, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                     <Ionicons name={meta.icon as any} size={14} color={meta.color} />
                                     <Text style={[styles.tableCellTxtBold, { fontSize: 11 }]}>{meta.name}</Text>
                                   </View>
-                                  <Text style={[styles.tableCellTxt, { flex: 2.2, minWidth: 240 }]} numberOfLines={1}>
+                                  <Text style={[styles.tableCellTxt, { flex: 2, minWidth: 200 }]} numberOfLines={1}>
                                     {req.title || 'Solicitud administrativa'}
                                   </Text>
-                                  <Text style={[styles.tableCellTxt, { flex: 1.3, minWidth: 180 }]} numberOfLines={1}>
+                                  <Text style={[styles.tableCellTxt, { flex: 1.2, minWidth: 150 }]} numberOfLines={1}>
                                     {req.profiles?.full_name || req.profiles?.dependency?.name || 'Funcionario'}
                                   </Text>
-                                  <View style={{ width: 105, alignItems: 'center', justifyContent: 'center' }}>
+                                  <View style={{ width: 95, alignItems: 'center', justifyContent: 'center' }}>
                                     <PriorityBadge priority={req.priority} />
                                   </View>
-                                  <View style={{ width: 125, alignItems: 'center', justifyContent: 'center' }}>
+                                  <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
                                     <StatusBadge status={req.status} />
+                                  </View>
+                                  <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                    {typeof evalRating === 'number' ? (
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                        <Ionicons name="star" size={11} color="#D97706" />
+                                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                                          {evalRating}.0
+                                        </Text>
+                                      </View>
+                                    ) : ['resuelto', 'aprobado'].includes(req.status) ? (
+                                      <Text style={{ fontSize: 10, color: COLORS.muted, fontStyle: 'italic' }}>Sin calificar</Text>
+                                    ) : (
+                                      <Text style={{ fontSize: 11, color: COLORS.line }}>—</Text>
+                                    )}
                                   </View>
                                 </View>
                               );
@@ -1616,6 +1845,14 @@ export default function AdminReports() {
                       <KPICard label="Trámites Creados" value={visitorStats.totalRequests.toString()} color={COLORS.purple} icon="shield-checkmark" trend="Solicitudes formales" />
                       <KPICard label="Promedio por Visita" value={`${visitorStats.avgVisitorsPerRequest} pers.`} color={COLORS.success} icon="person-add" trend="Aforo por solicitud" />
                     </View>
+
+                    {/* Calidad y Satisfacción del Módulo */}
+                    <ModuleCSATCard 
+                      moduleName="Control de Acceso y Visitantes" 
+                      category="visitors" 
+                      stats={stats} 
+                      color={COLORS.danger} 
+                    />
 
                     {/* 2 Columnas: Dependencias Receptoras y Modalidad de Acceso */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -1734,6 +1971,14 @@ export default function AdminReports() {
                       <KPICard label="Tasa de Solución" value={`${maintenanceStats.effectivenessRate}%`} color={COLORS.purple} icon="speedometer" trend="Efectividad técnica" />
                     </View>
 
+                    {/* Calidad y Satisfacción del Módulo */}
+                    <ModuleCSATCard 
+                      moduleName="Mantenimiento Locativo" 
+                      category="maintenance" 
+                      stats={stats} 
+                      color={COLORS.accent} 
+                    />
+
                     {/* Fila 2 columnas: Pipeline y Especialidades Técnicas */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
                       <View style={[styles.card, { flex: 1 }]}>
@@ -1838,6 +2083,14 @@ export default function AdminReports() {
                       <KPICard label="Total Registros" value={parkingStats.total.toString()} color={COLORS.accent} icon="car" trend="Historial solicitudes" />
                       <KPICard label="Tasa de Ocupación" value={`${parkingStats.occupancyRate}%`} color={COLORS.purple} icon="pie-chart" trend="Capacidad sótanos" />
                     </View>
+
+                    {/* Calidad y Satisfacción del Módulo */}
+                    <ModuleCSATCard 
+                      moduleName="Cupos de Parqueadero" 
+                      category="parking" 
+                      stats={stats} 
+                      color={COLORS.purple} 
+                    />
 
                     {/* Fila 2 Columnas: Tipología Vehicular y Reglamento */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -1956,6 +2209,14 @@ export default function AdminReports() {
                       <KPICard label="Servicios Demandados" value="Alta" color={COLORS.warning} icon="cafe" trend="Café y audiovisuales" />
                     </View>
 
+                    {/* Calidad y Satisfacción del Módulo */}
+                    <ModuleCSATCard 
+                      moduleName="Reserva de Salas de Juntas" 
+                      category="rooms" 
+                      stats={stats} 
+                      color={COLORS.warning} 
+                    />
+
                     {/* Fila 2 Columnas: Salas y Servicios */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
                       <View style={[styles.card, { flex: 1.2 }]}>
@@ -2058,6 +2319,14 @@ export default function AdminReports() {
                       <KPICard label="Promedio Pasajeros" value={`${transportStats.avgPassengers} pers.`} color={COLORS.purple} icon="speedometer" trend="Por misión" />
                       <KPICard label="Cobertura Operativa" value="100%" color={COLORS.danger} icon="navigate" trend="Sede y Distrital" />
                     </View>
+
+                    {/* Calidad y Satisfacción del Módulo */}
+                    <ModuleCSATCard 
+                      moduleName="Transporte Institucional" 
+                      category="transport" 
+                      stats={stats} 
+                      color={COLORS.success} 
+                    />
 
                     {/* Fila 2 Columnas: Rutas y Modalidades */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -2320,6 +2589,11 @@ export default function AdminReports() {
                       <Text style={styles.reportSectionTitle}>4. RECURSOS LOGÍSTICOS Y MOVILIDAD</Text>
                       <Text style={styles.reportParagraph}>
                         En salas de juntas se coordinaron **{roomStats.totalReservations}** reuniones (promedio de **{roomStats.averageAttendees}** asistentes por evento). En transporte oficial se ejecutaron **{transportStats.totalRequests}** traslados movilizando a **{transportStats.totalPassengers}** servidores distritales.
+                      </Text>
+
+                      <Text style={styles.reportSectionTitle}>5. EVALUACIÓN DE CALIDAD Y SATISFACCIÓN DEL USUARIO (CSAT)</Text>
+                      <Text style={styles.reportParagraph}>
+                        El índice de satisfacción de los servidores distritales se situó en **{stats.averageRating} / 5.0 estrellas**, con un **{stats.favorablePercent}%** de evaluaciones favorables (4 y 5 estrellas) sobre un total de **{stats.totalEvaluated}** calificaciones registradas en el periodo.
                       </Text>
                     </View>
                   )}
@@ -2621,6 +2895,79 @@ export default function AdminReports() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+}
+
+// --- COMPONENTE DE TARJETA DE SATISFACCIÓN (CSAT) POR SUBMÓDULO ---
+interface ModuleCSATCardProps {
+  moduleName: string;
+  category: string;
+  stats: any;
+  color: string;
+}
+
+function ModuleCSATCard({ moduleName, category, stats, color }: ModuleCSATCardProps) {
+  const modData = stats.moduleEvaluations?.[category];
+  const avg = modData?.avg || 0;
+  const count = modData?.count || 0;
+  const modComments = (stats.recentEvaluations || []).filter((e: any) => e.category === category);
+
+  return (
+    <View style={styles.card}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${color}18`, justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="star" size={22} color="#D97706" />
+          </View>
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.cardTitle}>Satisfacción y Calidad de Atención</Text>
+              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>CSAT</Text>
+              </View>
+            </View>
+            <Text style={styles.cardSubtitle}>Percepción y calificaciones de servidores usuarios de {moduleName}</Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: count > 0 ? '#FEF3C7' : COLORS.bg, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: count > 0 ? '#FDE68A' : COLORS.line }}>
+          <Ionicons name="star" size={18} color="#D97706" />
+          <Text style={{ fontSize: 16, fontWeight: '900', color: count > 0 ? '#92400E' : COLORS.muted }}>
+            {avg > 0 ? `${avg.toFixed(1)} / 5.0` : 'Sin calificaciones'}
+          </Text>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: count > 0 ? '#B45309' : COLORS.muted }}>
+            ({count} {count === 1 ? 'evaluación' : 'evaluaciones'})
+          </Text>
+        </View>
+      </View>
+
+      {modComments.length > 0 && (
+        <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 14, gap: 10 }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primarySoft, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            COMENTARIOS RECIENTES DE FUNCIONARIOS
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {modComments.slice(0, 3).map((item: any, idx: number) => (
+              <View key={item.id || idx} style={{ flex: 1, minWidth: 260, backgroundColor: COLORS.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: COLORS.line }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>
+                    {item.profiles?.full_name || 'Funcionario'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 1 }}>
+                    {[1, 2, 3, 4, 5].map((s: number) => (
+                      <Ionicons key={s} name={item.metadata?.evaluation?.rating >= s ? 'star' : 'star-outline'} size={11} color="#D97706" />
+                    ))}
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, color: COLORS.text, fontStyle: 'italic', lineHeight: 16 }}>
+                  "{item.metadata?.evaluation?.comment}"
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
     </View>
   );
 }

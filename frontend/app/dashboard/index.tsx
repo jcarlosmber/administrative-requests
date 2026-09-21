@@ -449,7 +449,18 @@ export default function DashboardScreen() {
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false} 
-                  contentContainerStyle={{ gap: 16, paddingRight: 35, paddingBottom: 5 }}
+                  style={{
+                    marginHorizontal: -12,
+                    marginTop: -10,
+                    marginBottom: -10,
+                  }}
+                  contentContainerStyle={{
+                    gap: 16,
+                    paddingTop: 12,
+                    paddingBottom: 20,
+                    paddingLeft: 12,
+                    paddingRight: 35,
+                  }}
                 >
                   {pendingEvaluations.map((req) => (
                     <PendingEvaluationCard
@@ -499,7 +510,18 @@ export default function DashboardScreen() {
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false} 
-                  contentContainerStyle={{ gap: 16, paddingRight: 35, paddingBottom: 5 }}
+                  style={{
+                    marginHorizontal: -12,
+                    marginTop: -10,
+                    marginBottom: -10,
+                  }}
+                  contentContainerStyle={{
+                    gap: 16,
+                    paddingTop: 12,
+                    paddingBottom: 20,
+                    paddingLeft: 12,
+                    paddingRight: 35,
+                  }}
                 >
                   {upcomingRoomBookings.map((booking) => (
                     <TouchableOpacity 
@@ -1083,7 +1105,11 @@ function PendingEvaluationCard({ req, isDesktop, onPress }: { req: Administrativ
       // @ts-ignore
       onHoverIn={handleIn}
       onHoverOut={handleOut}
-      style={{ cursor: 'pointer' }}
+      style={{
+        cursor: 'pointer',
+        position: 'relative',
+        zIndex: isHovered ? 20 : 1,
+      }}
     >
       <Animated.View
         style={[

@@ -209,11 +209,14 @@ export default function AdminSettings() {
         // 3. Cargar usuarios del sistema
         const { data: dbUsers, error: dbUsersError } = await supabase
           .from('profiles')
-          .select('id, full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled, created_at')
+          .select('id, full_name, first_name, last_name, name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled, created_at')
           .order('full_name');
 
-        if (!dbUsersError) {
-          setUsers(dbUsers || []);
+        if (!dbUsersError && dbUsers) {
+          setUsers(dbUsers.map((u: any) => ({
+            ...u,
+            full_name: u.full_name || u.name || [u.first_name, u.last_name].filter(Boolean).join(' ') || ''
+          })));
         }
 
         // 4. Cargar Conductores y Correos de Servicio
@@ -414,12 +417,14 @@ export default function AdminSettings() {
     return users.filter(user =>
       [
         user.full_name,
+        user.name,
         user.first_name,
         user.last_name,
         user.email,
         user.username,
         user.phone,
         user.role,
+        user.dependency,
         dependencies.find(dep => dep.id === user.dependency_id)?.name,
         user.entity
       ]
@@ -437,8 +442,10 @@ export default function AdminSettings() {
       setSaving(true);
       for (const user of users) {
         const normalizedFullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+        const finalName = normalizedFullName || user.full_name || user.name || '';
         const payload = {
-          full_name: normalizedFullName || user.full_name || '',
+          name: finalName,
+          full_name: finalName,
           first_name: user.first_name || null,
           last_name: user.last_name || null,
           email: user.email || '',
@@ -448,6 +455,7 @@ export default function AdminSettings() {
           role: user.role || 'user',
           is_active: user.is_active ?? true,
           dependency_id: user.dependency_id || null,
+          dependency: dependencies.find(d => d.id === user.dependency_id)?.name || user.dependency || null,
           start_date: user.start_date || null,
           end_date: user.end_date || null,
           ldap_enabled: user.ldap_enabled ?? false,
@@ -482,11 +490,11 @@ export default function AdminSettings() {
 
   const exportUsers = useCallback(() => {
     const exportRows = filteredUsers.map(user => ({
-      nombre: user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' '),
+      nombre: user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' '),
       email: user.email || '',
       usuario: user.username || '',
       telefono: user.phone || '',
-      dependencia: dependencies.find(dep => dep.id === user.dependency_id)?.name || '',
+      dependencia: dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || '',
       entidad: user.entity || '',
       rol: user.role === 'admin' ? 'Administrador' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
       activo: user.is_active ? 'Sí' : 'No',
@@ -537,17 +545,19 @@ export default function AdminSettings() {
   const openUserEditor = (user: any) => {
     let fn = user.first_name;
     let ln = user.last_name;
-    if (!fn && !ln && user.full_name) {
-      const parts = user.full_name.trim().split(' ');
+    const displayName = user.full_name || user.name || '';
+    if (!fn && !ln && displayName) {
+      const parts = displayName.trim().split(/\s+/);
       fn = parts[0] || '';
       ln = parts.slice(1).join(' ') || '';
     }
 
     setUserDraft({
       ...user,
+      full_name: displayName,
       first_name: fn || '',
       last_name: ln || '',
-      dependency_id: user.dependency_id || dependencies[0]?.id || null,
+      dependency_id: user.dependency_id || dependencies.find(d => d.name?.toLowerCase() === (user.dependency || '').toLowerCase())?.id || dependencies[0]?.id || null,
       entity: user.entity || '',
       ldap_enabled: user.ldap_enabled ?? false,
       is_active: user.is_active ?? true,
@@ -568,8 +578,10 @@ export default function AdminSettings() {
     try {
       setSaving(true);
       const normalizedFullName = [userDraft.first_name, userDraft.last_name].filter(Boolean).join(' ').trim();
+      const finalName = normalizedFullName || userDraft.full_name || userDraft.name || '';
       const payload = {
-        full_name: normalizedFullName || userDraft.full_name || '',
+        name: finalName,
+        full_name: finalName,
         first_name: userDraft.first_name || null,
         last_name: userDraft.last_name || null,
         email: userDraft.email || '',
@@ -579,6 +591,7 @@ export default function AdminSettings() {
         role: userDraft.role || 'user',
         is_active: userDraft.is_active ?? true,
         dependency_id: userDraft.dependency_id || null,
+        dependency: dependencies.find(d => d.id === userDraft.dependency_id)?.name || userDraft.dependency || null,
         start_date: userDraft.start_date || null,
         end_date: userDraft.end_date || null,
         ldap_enabled: userDraft.ldap_enabled ?? false,
@@ -1108,11 +1121,11 @@ export default function AdminSettings() {
                       {filteredUsers.map(user => (
                         <View key={user.id} style={styles.userTableRow}>
                           <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
-                            <Text style={styles.userNameText}>{user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
+                            <Text style={styles.userNameText}>{user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
                             <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
                           </View>
                           <View style={[styles.userTableCell, { flex: 1.3 }]}>
-                            <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || 'Sin dependencia'}</Text>
+                            <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || 'Sin dependencia'}</Text>
                           </View>
                           <View style={[styles.userTableCell, { flex: 0.8 }]}>
                             <View style={{ backgroundColor: user.role === 'admin' ? '#FEF08A' : user.role === 'security' ? '#BFDBFE' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' }}>
@@ -1124,9 +1137,6 @@ export default function AdminSettings() {
                           <View style={[styles.userTableCell, { flex: 1.3, gap: 6 }]}>
                             <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
                               <Text style={styles.userActionBtnText}>Modificar</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.userActionBtn, styles.userDeleteBtn]} onPress={() => openUserDeleteConfirmation(user)}>
-                              <Text style={[styles.userActionBtnText, { color: COLORS.danger }]}>Borrar</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -1719,78 +1729,540 @@ export default function AdminSettings() {
         </ScrollView>
       </View>
 
+      {/* MODAL MODERNO DE CREAR / EDITAR USUARIO */}
       <Modal
         visible={userModalVisible && !!userDraft}
         transparent={true}
-        animationType="slide"
+        animationType="fade"
         onRequestClose={closeUserEditor}
       >
         <View style={styles.modalOverlay}>
-          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContainer, { maxWidth: 700, padding: 24, backgroundColor: COLORS.primary, borderWidth: 1, borderColor: COLORS.primarySoft }]}> 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Text style={[styles.modalTitle, { color: COLORS.white, fontSize: 20 }]}>{userDraft?.id?.toString().startsWith('temp-') ? 'Crear Nuevo Usuario' : 'Editar Usuario'}</Text>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={{
+            backgroundColor: COLORS.white,
+            borderRadius: 28,
+            width: '100%',
+            maxWidth: 720,
+            maxHeight: '92%',
+            overflow: 'hidden',
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+            ...Platform.select({
+              ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30 },
+              android: { elevation: 12 },
+              web: { boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)' }
+            })
+          }}>
+            {/* Header del Modal */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 28,
+              paddingVertical: 20,
+              borderBottomWidth: 1,
+              borderBottomColor: '#F1F5F9',
+              backgroundColor: '#FFFFFF'
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                <View style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 14,
+                  backgroundColor: userDraft?.id?.toString().startsWith('temp-') ? '#EFF6FF' : '#F5F3FF',
+                  borderWidth: 1,
+                  borderColor: userDraft?.id?.toString().startsWith('temp-') ? '#DBEAFE' : '#EDE9FE',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <Ionicons 
+                    name={userDraft?.id?.toString().startsWith('temp-') ? "person-add" : "person"} 
+                    size={22} 
+                    color={userDraft?.id?.toString().startsWith('temp-') ? '#2563EB' : '#7C3AED'} 
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: COLORS.primary, letterSpacing: -0.3 }}>
+                    {userDraft?.id?.toString().startsWith('temp-') ? 'Crear Nuevo Usuario' : 'Editar Usuario'}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: COLORS.muted, marginTop: 2, fontWeight: '500' }}>
+                    {userDraft?.id?.toString().startsWith('temp-') 
+                      ? 'Registra un funcionario en la plataforma SASGE' 
+                      : `Modificando perfil de ${userDraft?.full_name || userDraft?.email || 'usuario'}`}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                onPress={closeUserEditor}
+                activeOpacity={0.7}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: '#F1F5F9',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 600, paddingRight: 8 }}>
-              <View style={{ gap: 20 }}>
-                
-                {/* Información Personal */}
-                <View style={{ gap: 10 }}>
-                  <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Información Personal</Text>
-                  <View style={styles.userRow}>
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.first_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })} placeholder="Nombres" />
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.last_name || ''} onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })} placeholder="Apellidos" />
+
+            {/* Cuerpo con Scroll */}
+            <ScrollView 
+              style={{ paddingHorizontal: 28, paddingVertical: 20 }} 
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ gap: 20, paddingBottom: 15 }}
+            >
+              {/* Sección 1: Información Personal */}
+              <View style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 20,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 14
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="person-circle-outline" size={18} color="#2563EB" />
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Información Personal
+                  </Text>
+                </View>
+
+                {/* Fila: Nombres y Apellidos */}
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                      Nombres <Text style={{ color: COLORS.danger }}>*</Text>
+                    </Text>
+                    <TextInput 
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
+                      value={userDraft?.first_name || ''} 
+                      onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })} 
+                      placeholder="Ej: Juan Carlos" 
+                    />
                   </View>
-                  <View style={styles.userRow}>
-                    <TextInput style={[styles.userFieldInput, { flex: 1.5, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.email || ''} onChangeText={(val) => setUserDraft({ ...userDraft, email: val })} placeholder="Correo electrónico" keyboardType="email-address" autoCapitalize="none" />
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.phone || ''} onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })} placeholder="Teléfono" keyboardType="phone-pad" />
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                      Apellidos <Text style={{ color: COLORS.danger }}>*</Text>
+                    </Text>
+                    <TextInput 
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
+                      value={userDraft?.last_name || ''} 
+                      onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })} 
+                      placeholder="Ej: Martínez Blanco" 
+                    />
                   </View>
                 </View>
 
-                {/* Información Institucional */}
-                <View style={{ gap: 10 }}>
-                  <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Información Institucional</Text>
-                  <View style={styles.userRow}>
-                    <TextInput style={[styles.userFieldInput, { flex: 1, backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]} placeholderTextColor={COLORS.muted} value={userDraft?.username || ''} onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} placeholder="Nombre de usuario (Login)" autoCapitalize="none" />
+                {/* Fila: Correo y Teléfono */}
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                  <View style={{ flex: 1.4 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                      Correo Electrónico Institucional <Text style={{ color: COLORS.danger }}>*</Text>
+                    </Text>
+                    <TextInput 
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
+                      value={userDraft?.email || ''} 
+                      onChangeText={(val) => setUserDraft({ ...userDraft, email: val })} 
+                      placeholder="usuario@secretariajuridica.gov.co" 
+                      keyboardType="email-address" 
+                      autoCapitalize="none" 
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                      Teléfono / Extensión
+                    </Text>
+                    <TextInput 
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
+                      value={userDraft?.phone || ''} 
+                      onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })} 
+                      placeholder="300 000 0000" 
+                      keyboardType="phone-pad" 
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {/* Sección 2: Información Institucional y Dependencia */}
+              <View style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 20,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 14
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="business-outline" size={18} color="#2563EB" />
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Información Institucional
+                  </Text>
+                </View>
+
+                {/* Fila: Login / sAMAccountName y Entidad */}
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                      Usuario de Red (Login AD) <Text style={{ color: COLORS.danger }}>*</Text>
+                    </Text>
+                    <TextInput 
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
+                      value={userDraft?.username || ''} 
+                      onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} 
+                      placeholder="ej: jcmartinezb" 
+                      autoCapitalize="none" 
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                      Entidad
+                    </Text>
+                    <TextInput 
+                      style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
+                      value={userDraft?.entity || ''} 
+                      onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })} 
+                      placeholder="Secretaría Jurídica Distrital" 
+                    />
                   </View>
                 </View>
 
-                {/* Rol del Sistema */}
-                <View style={{ gap: 10 }}>
-                  <Text style={{ color: COLORS.accent, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>Rol del Sistema</Text>
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <TouchableOpacity 
-                      onPress={() => setUserDraft({ ...userDraft, role: 'user' })}
-                      style={[styles.userFieldInput, { flex: 1, backgroundColor: userDraft?.role === 'user' ? COLORS.accent : COLORS.primarySoft, borderColor: userDraft?.role === 'user' ? COLORS.accent : COLORS.primaryDark, justifyContent: 'center', alignItems: 'center' }]}
-                    >
-                      <Text style={{ color: COLORS.white, fontWeight: '600' }}>Usuario</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      onPress={() => setUserDraft({ ...userDraft, role: 'admin' })}
-                      style={[styles.userFieldInput, { flex: 1, backgroundColor: userDraft?.role === 'admin' ? COLORS.accent : COLORS.primarySoft, borderColor: userDraft?.role === 'admin' ? COLORS.accent : COLORS.primaryDark, justifyContent: 'center', alignItems: 'center' }]}
-                    >
-                      <Text style={{ color: COLORS.white, fontWeight: '600' }}>Administrador</Text>
-                    </TouchableOpacity>
+                {/* Selector de Dependencia */}
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 8 }}>
+                    Dependencia Asignada <Text style={{ color: COLORS.danger }}>*</Text>
+                  </Text>
+                  
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {dependencies.map((dep) => {
+                      const isSelected = userDraft?.dependency_id === dep.id;
+                      return (
+                        <TouchableOpacity
+                          key={dep.id}
+                          onPress={() => setUserDraft({ ...userDraft, dependency_id: dep.id, dependency: dep.name })}
+                          activeOpacity={0.7}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 10,
+                            backgroundColor: isSelected ? '#EFF6FF' : COLORS.white,
+                            borderWidth: 1.5,
+                            borderColor: isSelected ? '#2563EB' : '#E2E8F0',
+                          }}
+                        >
+                          <Ionicons 
+                            name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
+                            size={16} 
+                            color={isSelected ? '#2563EB' : '#94A3B8'} 
+                          />
+                          <Text style={{
+                            fontSize: 12,
+                            fontWeight: isSelected ? '800' : '600',
+                            color: isSelected ? '#1E40AF' : '#475569'
+                          }}>
+                            {dep.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
-                <View style={[styles.modalActions, { marginTop: 20 }]}>
+              </View>
+
+              {/* Sección 3: Rol del Sistema */}
+              <View style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 20,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 12
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#2563EB" />
+                  <Text style={{ fontSize: 11, fontWeight: '900', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1 }}>
+                    Rol y Nivel de Acceso
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
+                  {/* Rol: Funcionario / Usuario */}
                   <TouchableOpacity 
-                    style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
-                    onPress={closeUserEditor}
+                    onPress={() => setUserDraft({ ...userDraft, role: 'funcionario' })}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: (userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#EFF6FF' : COLORS.white,
+                      borderWidth: 1.5,
+                      borderColor: (userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#2563EB' : '#E2E8F0',
+                      gap: 4
+                    }}
                   >
-                    <Text style={[styles.cancelButtonText, { color: COLORS.line }]}>CANCELAR</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name="person-outline" size={20} color={(userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#2563EB' : '#64748B'} />
+                      <Ionicons name={(userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? "radio-button-on" : "radio-button-off"} size={18} color={(userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#2563EB' : '#CBD5E1'} />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: (userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#1E40AF' : COLORS.primary, marginTop: 4 }}>
+                      Funcionario
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
+                      Solicitudes de salas, movilidad, mantenimientos.
+                    </Text>
                   </TouchableOpacity>
+
+                  {/* Rol: Administrador */}
                   <TouchableOpacity 
-                    style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1.5, backgroundColor: COLORS.accent }, saving && { opacity: 0.5 }]} 
-                    onPress={saveUserDraft}
-                    disabled={saving}
+                    onPress={() => setUserDraft({ ...userDraft, role: 'admin' })}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: userDraft?.role === 'admin' ? '#FEFCE8' : COLORS.white,
+                      borderWidth: 1.5,
+                      borderColor: userDraft?.role === 'admin' ? '#CA8A04' : '#E2E8F0',
+                      gap: 4
+                    }}
                   >
-                    {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.confirmDeleteButtonText}>{userDraft?.id?.toString().startsWith('temp-') ? 'CREAR USUARIO' : 'ACTUALIZAR USUARIO'}</Text>}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name="shield-checkmark" size={20} color={userDraft?.role === 'admin' ? '#CA8A04' : '#64748B'} />
+                      <Ionicons name={userDraft?.role === 'admin' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'admin' ? '#CA8A04' : '#CBD5E1'} />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: userDraft?.role === 'admin' ? '#854D0E' : COLORS.primary, marginTop: 4 }}>
+                      Administrador
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
+                      Control total, gestión de solicitudes y parámetros.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Rol: Seguridad */}
+                  <TouchableOpacity 
+                    onPress={() => setUserDraft({ ...userDraft, role: 'security' })}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1,
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: userDraft?.role === 'security' ? '#F0FDF4' : COLORS.white,
+                      borderWidth: 1.5,
+                      borderColor: userDraft?.role === 'security' ? '#16A34A' : '#E2E8F0',
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name="key-outline" size={20} color={userDraft?.role === 'security' ? '#16A34A' : '#64748B'} />
+                      <Ionicons name={userDraft?.role === 'security' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'security' ? '#16A34A' : '#CBD5E1'} />
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: userDraft?.role === 'security' ? '#166534' : COLORS.primary, marginTop: 4 }}>
+                      Seguridad
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
+                      Ingreso peatonal y vehicular de visitantes.
+                    </Text>
                   </TouchableOpacity>
                 </View>
+              </View>
 
+              {/* Sección 4: Parámetros de Acceso */}
+              <View style={{
+                flexDirection: isDesktop ? 'row' : 'column',
+                gap: 12
+              }}>
+                <View style={{
+                  flex: 1,
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 16,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>Cuenta Activa</Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 1 }}>Permite el inicio de sesión</Text>
+                  </View>
+                  <Switch 
+                    value={userDraft?.is_active ?? true} 
+                    onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })} 
+                    trackColor={{ false: '#CBD5E1', true: '#10B981' }} 
+                    thumbColor={COLORS.white} 
+                  />
+                </View>
+
+                <View style={{
+                  flex: 1,
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 16,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <View style={{ flex: 1, marginRight: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>Directorio Activo (LDAP)</Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 1 }}>Autenticación centralizada AD</Text>
+                  </View>
+                  <Switch 
+                    value={userDraft?.ldap_enabled ?? false} 
+                    onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })} 
+                    trackColor={{ false: '#CBD5E1', true: COLORS.accent }} 
+                    thumbColor={COLORS.white} 
+                  />
+                </View>
               </View>
             </ScrollView>
+
+            {/* Footer de Acciones */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              gap: 12,
+              paddingHorizontal: 28,
+              paddingVertical: 18,
+              borderTopWidth: 1,
+              borderTopColor: '#F1F5F9',
+              backgroundColor: '#FFFFFF'
+            }}>
+              <TouchableOpacity 
+                style={{
+                  paddingHorizontal: 20,
+                  height: 48,
+                  borderRadius: 14,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0'
+                }}
+                onPress={closeUserEditor}
+                disabled={saving}
+              >
+                <Text style={{ color: '#475569', fontSize: 14, fontWeight: '700' }}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{
+                  minWidth: 180,
+                  height: 48,
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  opacity: saving ? 0.6 : 1
+                }}
+                onPress={saveUserDraft}
+                disabled={saving}
+                activeOpacity={0.85}
+              >
+                <LinearGradient 
+                  colors={['#1E40AF', '#0F172A']} 
+                  start={{ x: 0, y: 0 }} 
+                  end={{ x: 1, y: 0 }}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingHorizontal: 24
+                  }}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={18} color={COLORS.white} />
+                      <Text style={{ color: COLORS.white, fontSize: 14, fontWeight: '800', letterSpacing: 0.3 }}>
+                        {userDraft?.id?.toString().startsWith('temp-') ? 'CREAR USUARIO' : 'GUARDAR CAMBIOS'}
+                      </Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

@@ -107,6 +107,24 @@ const initDatabase = async () => {
       `).catch(err => console.error(`Error al agregar columna ${col.name}:`, err.message));
     }
 
+    // Sincronizar usuarios existentes que tengan 'name' pero no 'full_name' o 'first_name'/'last_name'
+    await pool.query(`
+      UPDATE public.users 
+      SET full_name = name 
+      WHERE (full_name IS NULL OR full_name = '') AND name IS NOT NULL AND name != '';
+
+      UPDATE public.users 
+      SET first_name = SPLIT_PART(name, ' ', 1),
+          last_name = NULLIF(SUBSTRING(name FROM LENGTH(SPLIT_PART(name, ' ', 1)) + 2), '')
+      WHERE (first_name IS NULL OR first_name = '') AND name IS NOT NULL AND name != '';
+
+      UPDATE public.users u
+      SET dependency_id = d.id
+      FROM public.dependencies d
+      WHERE u.dependency_id IS NULL AND u.dependency IS NOT NULL 
+        AND (LOWER(TRIM(u.dependency)) = LOWER(TRIM(d.name)) OR LOWER(d.name) LIKE '%' || LOWER(TRIM(u.dependency)) || '%');
+    `).catch(err => console.error('Error al sincronizar nombres de usuarios existentes:', err.message));
+
     // Asegurar dependencias iniciales si está vacío
     const depCheck = await pool.query('SELECT COUNT(*) FROM public.dependencies');
     if (parseInt(depCheck.rows[0].count) === 0) {
@@ -482,6 +500,16 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
 
 // --- ENDPOINTS DE AUTENTICACIÓN ---
 
+const splitFullName = (fullName) => {
+  if (!fullName) return { firstName: '', lastName: '' };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+  if (parts.length === 2) return { firstName: parts[0], lastName: parts[1] };
+  const firstName = parts.slice(0, parts.length > 3 ? 2 : 1).join(' ');
+  const lastName = parts.slice(parts.length > 3 ? 2 : 1).join(' ');
+  return { firstName, lastName };
+};
+
 // Registro de usuario
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, name, role } = req.body;
@@ -497,10 +525,14 @@ app.post('/api/auth/register', async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
+    const fullName = name.trim();
+    const { firstName, lastName } = splitFullName(fullName);
 
     const result = await pool.query(
-      'INSERT INTO users (email, password_hash, name, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, role',
-      [email.toLowerCase(), passwordHash, name, role || 'funcionario']
+      `INSERT INTO users (email, password_hash, name, full_name, first_name, last_name, role) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING id, email, name, full_name, first_name, last_name, role`,
+      [email.toLowerCase(), passwordHash, fullName, fullName, firstName, lastName, role || 'funcionario']
     );
 
     const newUser = result.rows[0];
@@ -545,9 +577,30 @@ app.post('/api/auth/login', async (req, res) => {
 
           // Sincronizar datos de LDAP en la base de datos local
           const ldapUser = ldapResult.user;
+          const resolvedName = (ldapUser.name && ldapUser.name !== 'Usuario AD' ? ldapUser.name : null) || user.full_name || user.name || simpleUsername;
+          const { firstName, lastName } = splitFullName(resolvedName);
+
+          let dependencyId = user.dependency_id || null;
+          if (!dependencyId && ldapUser.dependency) {
+            const depRes = await pool.query(
+              'SELECT id FROM dependencies WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) OR LOWER(name) LIKE $2 LIMIT 1',
+              [ldapUser.dependency, `%${ldapUser.dependency.toLowerCase().trim()}%`]
+            );
+            if (depRes.rows.length > 0) {
+              dependencyId = depRes.rows[0].id;
+            }
+          }
+
           const updateResult = await pool.query(
-            'UPDATE users SET name = $1, dependency = $2 WHERE id = $3 RETURNING *',
-            [ldapUser.name, ldapUser.dependency, user.id]
+            `UPDATE users 
+             SET name = $1, 
+                 full_name = $1, 
+                 first_name = COALESCE(NULLIF(first_name, ''), $2), 
+                 last_name = COALESCE(NULLIF(last_name, ''), $3), 
+                 dependency = COALESCE($4, dependency),
+                 dependency_id = COALESCE($5, dependency_id)
+             WHERE id = $6 RETURNING *`,
+            [resolvedName, firstName, lastName, ldapUser.dependency, dependencyId, user.id]
           );
           user = updateResult.rows[0];
         } catch (ldapErr) {
@@ -559,6 +612,22 @@ app.post('/api/auth/login', async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password_hash);
         if (!validPassword) {
           return res.status(400).json({ error: 'Credenciales inválidas.' });
+        }
+
+        // Sincronizar nombres si estaban incompletos
+        const resolvedName = user.full_name || user.name;
+        if (resolvedName && (!user.full_name || !user.name || !user.first_name)) {
+          const { firstName, lastName } = splitFullName(resolvedName);
+          const updateResult = await pool.query(
+            `UPDATE users 
+             SET name = COALESCE(name, $1),
+                 full_name = COALESCE(full_name, $1),
+                 first_name = COALESCE(NULLIF(first_name, ''), $2),
+                 last_name = COALESCE(NULLIF(last_name, ''), $3)
+             WHERE id = $4 RETURNING *`,
+            [resolvedName, firstName, lastName, user.id]
+          );
+          user = updateResult.rows[0];
         }
       }
     } else {
@@ -573,13 +642,32 @@ app.post('/api/auth/login', async (req, res) => {
 
         // Crear usuario automáticamente (sincronización) en la base de datos
         const ldapUser = ldapResult.user;
+        const resolvedName = (ldapUser.name && ldapUser.name !== 'Usuario AD' ? ldapUser.name : null) || simpleUsername;
+        const { firstName, lastName } = splitFullName(resolvedName);
+
+        let dependencyId = null;
+        if (ldapUser.dependency) {
+          const depRes = await pool.query(
+            'SELECT id FROM dependencies WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) OR LOWER(name) LIKE $2 LIMIT 1',
+            [ldapUser.dependency, `%${ldapUser.dependency.toLowerCase().trim()}%`]
+          );
+          if (depRes.rows.length > 0) {
+            dependencyId = depRes.rows[0].id;
+          }
+        }
+
         const insertResult = await pool.query(
-          'INSERT INTO users (email, username, name, dependency, ldap_enabled, role) VALUES ($1, $2, $3, $4, true, $5) RETURNING *',
+          `INSERT INTO users (email, username, name, full_name, first_name, last_name, dependency, dependency_id, ldap_enabled, role) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9) RETURNING *`,
           [
             ldapUser.email.toLowerCase(), 
             ldapUser.username.toLowerCase(), 
-            ldapUser.name, 
+            resolvedName, 
+            resolvedName, 
+            firstName, 
+            lastName, 
             ldapUser.dependency, 
+            dependencyId,
             'funcionario'
           ]
         );
@@ -603,10 +691,14 @@ app.post('/api/auth/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name,
+        name: user.full_name || user.name,
+        full_name: user.full_name || user.name,
+        first_name: user.first_name,
+        last_name: user.last_name,
         role: user.role,
         username: user.username,
         dependency: user.dependency,
+        dependency_id: user.dependency_id,
         ldap_enabled: user.ldap_enabled
       }
     });
@@ -619,11 +711,21 @@ app.post('/api/auth/login', async (req, res) => {
 // Obtener información del usuario logueado
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, email, name, role, dependency, username, ldap_enabled FROM users WHERE id = $1', [req.user.id]);
+    const result = await pool.query(`
+      SELECT id, email, name, full_name, first_name, last_name, role, dependency, dependency_id, username, ldap_enabled 
+      FROM users WHERE id = $1
+    `, [req.user.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Usuario no encontrado.' });
     }
-    res.json({ user: result.rows[0] });
+    const u = result.rows[0];
+    res.json({ 
+      user: {
+        ...u,
+        name: u.full_name || u.name,
+        full_name: u.full_name || u.name
+      } 
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener datos del usuario.' });
@@ -1231,9 +1333,26 @@ app.delete('/api/service_emails/:id', authenticateToken, handleServiceEmailsDele
 const handleProfilesGet = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled, created_at 
+      SELECT 
+        id, 
+        name,
+        COALESCE(full_name, name) AS full_name, 
+        COALESCE(first_name, SPLIT_PART(COALESCE(full_name, name), ' ', 1)) AS first_name, 
+        COALESCE(last_name, NULLIF(SUBSTRING(COALESCE(full_name, name) FROM LENGTH(SPLIT_PART(COALESCE(full_name, name), ' ', 1)) + 2), '')) AS last_name,
+        email, 
+        role, 
+        username, 
+        phone, 
+        entity, 
+        is_active, 
+        dependency,
+        dependency_id, 
+        start_date, 
+        end_date, 
+        ldap_enabled, 
+        created_at 
       FROM users 
-      ORDER BY full_name
+      ORDER BY COALESCE(full_name, name) ASC
     `);
     res.json(result.rows);
   } catch (err) {
@@ -1245,13 +1364,18 @@ app.get('/api/users', authenticateToken, handleProfilesGet);
 app.get('/api/profiles', authenticateToken, handleProfilesGet);
 
 const handleProfilesPost = async (req, res) => {
-  const { id, full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled } = req.body;
+  const { id, full_name, first_name, last_name, name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled } = req.body;
+  const resolvedName = (full_name || name || [first_name, last_name].filter(Boolean).join(' ').trim()) || null;
+  const { firstName: fn, lastName: ln } = splitFullName(resolvedName);
+  const finalFirstName = first_name || fn;
+  const finalLastName = last_name || ln;
+
   try {
     const result = await pool.query(
-      `INSERT INTO users (id, full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled) 
-       VALUES (COALESCE($1, gen_random_uuid()), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+      `INSERT INTO users (id, name, full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled) 
+       VALUES (COALESCE($1, gen_random_uuid()), $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
        RETURNING *`,
-      [id || null, full_name, first_name, last_name, email, role || 'funcionario', username, phone, entity, is_active !== false, dependency_id, start_date || null, end_date || null, ldap_enabled === true]
+      [id || null, resolvedName, finalFirstName, finalLastName, email, role || 'funcionario', username, phone, entity, is_active !== false, dependency || null, dependency_id || null, start_date || null, end_date || null, ldap_enabled === true]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -1264,11 +1388,14 @@ app.post('/api/profiles', authenticateToken, handleProfilesPost);
 
 const handleProfilesPut = async (req, res) => {
   const { id } = req.params;
-  const { full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled } = req.body;
+  const { full_name, first_name, last_name, name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled } = req.body;
+  const resolvedName = full_name || name || (first_name || last_name ? [first_name, last_name].filter(Boolean).join(' ').trim() : null);
+
   try {
     const result = await pool.query(
       `UPDATE users 
-       SET full_name = COALESCE($1, full_name), 
+       SET name = COALESCE($1, name), 
+           full_name = COALESCE($1, full_name, name), 
            first_name = COALESCE($2, first_name), 
            last_name = COALESCE($3, last_name), 
            email = COALESCE($4, email), 
@@ -1277,12 +1404,13 @@ const handleProfilesPut = async (req, res) => {
            phone = COALESCE($7, phone), 
            entity = COALESCE($8, entity), 
            is_active = COALESCE($9, is_active), 
-           dependency_id = COALESCE($10, dependency_id), 
-           start_date = COALESCE($11, start_date), 
-           end_date = COALESCE($12, end_date), 
-           ldap_enabled = COALESCE($13, ldap_enabled) 
-       WHERE id = $14 RETURNING *`,
-      [full_name, first_name, last_name, email, role, username, phone, entity, is_active, dependency_id, start_date, end_date, ldap_enabled, id]
+           dependency = COALESCE($10, dependency),
+           dependency_id = COALESCE($11, dependency_id), 
+           start_date = COALESCE($12, start_date), 
+           end_date = COALESCE($13, end_date), 
+           ldap_enabled = COALESCE($14, ldap_enabled) 
+       WHERE id = $15 RETURNING *`,
+      [resolvedName, first_name, last_name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled, id]
     );
     res.json(result.rows[0]);
   } catch (err) {
