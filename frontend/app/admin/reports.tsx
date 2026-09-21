@@ -75,6 +75,13 @@ const COLORS = {
   purpleSoft: '#F5F3FF',  // Violet 50
 };
 
+const isHighPriority = (p?: string) => ['alta', 'urgente', 'urgent', 'critica', 'crítica'].includes((p || '').toLowerCase().trim());
+const isLowPriority = (p?: string) => ['baja', 'preventiva', 'menor'].includes((p || '').toLowerCase().trim());
+const isMediumPriority = (p?: string) => {
+  const norm = (p || '').toLowerCase().trim();
+  return !norm || ['media', 'normal', 'ordinaria'].includes(norm);
+};
+
 export default function AdminReports() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -181,10 +188,48 @@ export default function AdminReports() {
       return acc;
     }, { visitors: 0, maintenance: 0, parking: 0, rooms: 0, transport: 0 });
 
-    const highPriority = validData.filter(d => d.priority === 'alta').length;
-    const mediumPriority = validData.filter(d => d.priority === 'media' || !d.priority).length;
-    const lowPriority = validData.filter(d => d.priority === 'baja').length;
-    const highResolved = validData.filter(d => d.priority === 'alta' && d.status === 'resuelto').length;
+    // Criticidad Global: evaluar sobre la totalidad de solicitudes recibidas en el periodo (incluyendo alta/urgente)
+    const highPriority = dbData.filter(d => isHighPriority(d.priority)).length;
+    const mediumPriority = dbData.filter(d => isMediumPriority(d.priority)).length;
+    const lowPriority = dbData.filter(d => isLowPriority(d.priority)).length;
+    const highResolved = dbData.filter(d => isHighPriority(d.priority) && d.status === 'resuelto').length;
+    const criticalityTotal = highPriority + mediumPriority + lowPriority || dbData.length;
+
+    // Evaluaciones y Calificaciones
+    const evaluatedRequests = dbData.filter(d => typeof d.metadata?.evaluation?.rating === 'number');
+    const totalEvaluated = evaluatedRequests.length;
+    const sumRatings = evaluatedRequests.reduce((acc, cur) => acc + (cur.metadata.evaluation.rating || 0), 0);
+    const averageRating = totalEvaluated > 0 ? Number((sumRatings / totalEvaluated).toFixed(1)) : 0;
+
+    const ratingCounts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    evaluatedRequests.forEach(d => {
+      const r = Math.round(d.metadata.evaluation.rating);
+      if (r >= 1 && r <= 5) ratingCounts[r] = (ratingCounts[r] || 0) + 1;
+    });
+    const favorablePercent = totalEvaluated > 0 
+      ? Math.round(((ratingCounts[5] + ratingCounts[4]) / totalEvaluated) * 100) 
+      : 0;
+    const responseRate = resolved > 0 ? Math.round((totalEvaluated / resolved) * 100) : 0;
+
+    const getModuleEval = (cat: string) => {
+      const modEvals = evaluatedRequests.filter(d => d.category === cat);
+      const count = modEvals.length;
+      const avg = count > 0 ? Number((modEvals.reduce((a, c) => a + c.metadata.evaluation.rating, 0) / count).toFixed(1)) : 0;
+      return { count, avg, list: modEvals };
+    };
+
+    const moduleEvaluations = {
+      visitors: getModuleEval('visitors'),
+      maintenance: getModuleEval('maintenance'),
+      parking: getModuleEval('parking'),
+      rooms: getModuleEval('rooms'),
+      transport: getModuleEval('transport'),
+    };
+
+    const recentEvaluations = evaluatedRequests
+      .filter(d => d.metadata?.evaluation?.comment)
+      .sort((a, b) => new Date(b.metadata.evaluation.date || b.created_at).getTime() - new Date(a.metadata.evaluation.date || a.created_at).getTime())
+      .slice(0, 8);
 
     return {
       total,
@@ -198,6 +243,13 @@ export default function AdminReports() {
       mediumPriority,
       lowPriority,
       highResolved,
+      totalEvaluated,
+      averageRating,
+      ratingCounts,
+      favorablePercent,
+      responseRate,
+      moduleEvaluations,
+      recentEvaluations,
       recentGlobal: dbData.slice(0, 15)
     };
   }, [dbData]);
@@ -237,7 +289,7 @@ export default function AdminReports() {
     const rejected = maintenanceRequests.filter(d => isRejectedStatus(d.status)).length;
 
     // Criticidad: solicitudes de prioridad alta que siguen pendientes
-    const highPriorityPending = maintenanceRequests.filter(d => d.priority === 'alta' && d.status === 'pendiente').length;
+    const highPriorityPending = maintenanceRequests.filter(d => isHighPriority(d.priority) && d.status === 'pendiente').length;
 
     // Especialidades de daño
     const specialties: Record<string, number> = {
@@ -282,9 +334,9 @@ export default function AdminReports() {
       .sort((a, b) => b.count - a.count);
 
     const effectivenessRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-    const highCount = validMaintenance.filter(d => d.priority === 'alta').length;
-    const medCount = validMaintenance.filter(d => d.priority === 'media' || !d.priority).length;
-    const lowCount = validMaintenance.filter(d => d.priority === 'baja').length;
+    const highCount = maintenanceRequests.filter(d => isHighPriority(d.priority)).length;
+    const medCount = maintenanceRequests.filter(d => isMediumPriority(d.priority)).length;
+    const lowCount = maintenanceRequests.filter(d => isLowPriority(d.priority)).length;
 
     return {
       total,
@@ -489,7 +541,12 @@ export default function AdminReports() {
       estado: row.status || '',
       prioridad: row.priority || '',
       fecha_creacion: row.created_at || '',
-      dependencia: row.metadata?.responsible?.dependency || row.metadata?.dependency || '',
+      dependencia: row.metadata?.responsible?.dependency || row.metadata?.dependency || row.profiles?.dependency?.name || '',
+      solicitante: row.profiles?.full_name || '',
+      calificacion: row.metadata?.evaluation?.rating != null ? `${row.metadata.evaluation.rating} / 5` : 'Sin calificar',
+      comentario_evaluacion: row.metadata?.evaluation?.comment || '',
+      servicio_prestado: row.metadata?.evaluation ? (row.metadata.evaluation.serviceTaken ? 'Sí' : 'No') : '',
+      fecha_evaluacion: row.metadata?.evaluation?.date || '',
       descripcion: row.description || ''
     }));
 
@@ -634,7 +691,51 @@ export default function AdminReports() {
           </table>
           <div class="section-title">2. Diagnóstico de Mantenimiento e Infraestructura</div>
           <p>Se registraron <strong>${maintenanceStats.total}</strong> incidencias técnicas locativas. ${maintenanceStats.highPriorityPending > 0 ? `<span style="color:#B91C1C;font-weight:700;">Atención requerida:</span> Existen <strong>${maintenanceStats.highPriorityPending}</strong> casos de prioridad ALTA pendientes de cierre.` : 'No se registran casos críticos pendientes en la infraestructura física de la sede.'}</p>
-          <div class="section-title">3. Conclusiones y Recomendaciones de Gestión</div>
+          <div class="section-title">3. Evaluación de Calidad y Satisfacción del Usuario (CSAT)</div>
+          <p>El índice de satisfacción promedio alcanzado en el periodo es de <strong>${stats.averageRating} / 5.0 estrellas</strong>, con un <strong>${stats.favorablePercent}%</strong> de calificaciones altamente favorables (4 y 5 estrellas) sobre un total de <strong>${stats.totalEvaluated}</strong> solicitudes evaluadas formalmente por los funcionarios.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Módulo Operativo</th>
+                <th class="text-center">Evaluaciones Recibidas</th>
+                <th class="text-center">Calificación Promedio</th>
+                <th class="text-center">Percepción de Calidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Control de Acceso (Visitantes)</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.visitors.count}</td>
+                <td class="text-center">${stats.moduleEvaluations.visitors.avg > 0 ? stats.moduleEvaluations.visitors.avg + ' / 5.0' : 'Sin evaluar'}</td>
+                <td class="text-center">${stats.moduleEvaluations.visitors.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.visitors.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
+              </tr>
+              <tr>
+                <td><strong>Mantenimiento Locativo</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.maintenance.count}</td>
+                <td class="text-center">${stats.moduleEvaluations.maintenance.avg > 0 ? stats.moduleEvaluations.maintenance.avg + ' / 5.0' : 'Sin evaluar'}</td>
+                <td class="text-center">${stats.moduleEvaluations.maintenance.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.maintenance.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
+              </tr>
+              <tr>
+                <td><strong>Cupo de Parqueadero</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.parking.count}</td>
+                <td class="text-center">${stats.moduleEvaluations.parking.avg > 0 ? stats.moduleEvaluations.parking.avg + ' / 5.0' : 'Sin evaluar'}</td>
+                <td class="text-center">${stats.moduleEvaluations.parking.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.parking.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
+              </tr>
+              <tr>
+                <td><strong>Reserva de Salas de Juntas</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.rooms.count}</td>
+                <td class="text-center">${stats.moduleEvaluations.rooms.avg > 0 ? stats.moduleEvaluations.rooms.avg + ' / 5.0' : 'Sin evaluar'}</td>
+                <td class="text-center">${stats.moduleEvaluations.rooms.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.rooms.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
+              </tr>
+              <tr>
+                <td><strong>Transporte Oficial</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.transport.count}</td>
+                <td class="text-center">${stats.moduleEvaluations.transport.avg > 0 ? stats.moduleEvaluations.transport.avg + ' / 5.0' : 'Sin evaluar'}</td>
+                <td class="text-center">${stats.moduleEvaluations.transport.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.transport.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="section-title">4. Conclusiones y Recomendaciones de Gestión</div>
           <p>Se aconseja mantener la periodicidad de seguimiento a los reportes en curso, priorizando las solicitudes de mantenimiento técnico y el control vehicular de parqueaderos para conservar los estándares institucionales de la Secretaría Jurídica Distrital.</p>
         `;
       } else if (reportTab === 'visitors') {
@@ -738,7 +839,7 @@ export default function AdminReports() {
                   <td>${new Date(r.created_at).toLocaleDateString('es-CO')}</td>
                   <td>${r.title || 'Mantenimiento locativo'}</td>
                   <td>${r.metadata?.location || 'General'}</td>
-                  <td class="text-center"><strong style="color:${r.priority === 'alta' ? '#DC2626' : '#2563EB'}">${r.priority?.toUpperCase() || 'MEDIA'}</strong></td>
+                  <td class="text-center"><strong style="color:${isHighPriority(r.priority) ? '#DC2626' : '#2563EB'}">${r.priority?.toUpperCase() || 'MEDIA'}</strong></td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
                 </tr>
               `).join('') || '<tr><td colspan="5" class="text-center">Sin solicitudes registradas</td></tr>'}
@@ -1390,9 +1491,9 @@ export default function AdminReports() {
                         <Text style={styles.cardSubtitle}>Distribución de solicitudes según prioridad de atención</Text>
                         
                         <View style={{ gap: 18, marginTop: 22 }}>
-                          <CategoryProgress label="Prioridad Alta (Urgente)" count={stats.highPriority} total={stats.total} color={COLORS.danger} />
-                          <CategoryProgress label="Prioridad Media (Ordinaria)" count={stats.mediumPriority} total={stats.total} color={COLORS.accent} />
-                          <CategoryProgress label="Prioridad Baja (Preventiva)" count={stats.lowPriority} total={stats.total} color={COLORS.muted} />
+                          <CategoryProgress label="Prioridad Alta (Urgente)" count={stats.highPriority} total={stats.criticalityTotal} color={COLORS.danger} />
+                          <CategoryProgress label="Prioridad Media (Ordinaria)" count={stats.mediumPriority} total={stats.criticalityTotal} color={COLORS.accent} />
+                          <CategoryProgress label="Prioridad Baja (Preventiva)" count={stats.lowPriority} total={stats.criticalityTotal} color={COLORS.muted} />
                         </View>
                         
                         <View style={[styles.infoAlertBox, { marginTop: 20 }]}>
@@ -2333,7 +2434,7 @@ export default function AdminReports() {
                             <Text style={[styles.tableCell, { flex: 1.2, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
                             <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || 'Mantenimiento'}</Text>
                             <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.text }]}>{r.metadata?.location || 'General'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: r.priority === 'alta' ? COLORS.danger : COLORS.accent, fontWeight: '800' }]}>{r.priority?.toUpperCase() || 'MEDIA'}</Text>
+                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: isHighPriority(r.priority) ? COLORS.danger : COLORS.accent, fontWeight: '800' }]}>{r.priority?.toUpperCase() || 'MEDIA'}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
                           </View>
                         ))}
@@ -2893,11 +2994,11 @@ function PriorityBadge({ priority }: { priority?: string }) {
   let text = COLORS.muted;
   let label = 'MEDIA';
 
-  if (p === 'alta') {
+  if (isHighPriority(p)) {
     bg = COLORS.dangerSoft;
     text = COLORS.danger;
     label = 'ALTA';
-  } else if (p === 'baja') {
+  } else if (isLowPriority(p)) {
     bg = '#F8FAFC';
     text = COLORS.muted;
     label = 'BAJA';
