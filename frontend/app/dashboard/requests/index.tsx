@@ -534,6 +534,7 @@ const styles = StyleSheet.create({
 function DetailModal({ visible, request, evalCategories, onClose }: { visible: boolean; request: AdministrativeRequest | null; evalCategories: string[]; onClose: () => void }) {
   const router = useRouter();
   const [rating, setRating] = useState(0);
+  const [serviceTaken, setServiceTaken] = useState<boolean>(true);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [viewerImage, setViewerImage] = useState<string | null>(null);
@@ -541,6 +542,7 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
   React.useEffect(() => {
     if (visible) {
       setRating(0);
+      setServiceTaken(true);
       setComment('');
       setSubmitting(false);
       setViewerImage(null);
@@ -896,7 +898,59 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
               {needsEval && (
                 <View style={[modalStyles.infoBlock, { borderColor: COLORS.warning, borderWidth: 1.5, backgroundColor: '#FFFBEB' }]}>
                   <Text style={[modalStyles.infoSectionTitle, { color: COLORS.warning }]}>EVALUACIÓN REQUERIDA</Text>
-                  <Text style={{fontSize: 14, marginBottom: 15, fontWeight: '700', color: COLORS.dark}}>Por favor califica el servicio para continuar.</Text>
+                  <Text style={{fontSize: 14, marginBottom: 12, fontWeight: '700', color: COLORS.dark}}>Por favor califica el servicio recibido para continuar.</Text>
+                  
+                  {/* Selector ¿Se tomó el servicio? */}
+                  <View style={{ width: '100%', marginBottom: 14 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.dark, marginBottom: 8, textAlign: 'center' }}>
+                      ¿El servicio fue prestado / tomado?
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: serviceTaken ? '#10B981' : COLORS.line,
+                          backgroundColor: serviceTaken ? '#D1FAE5' : COLORS.white,
+                        }}
+                        onPress={() => setServiceTaken(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name={serviceTaken ? "checkmark-circle" : "checkmark-circle-outline"} size={16} color={serviceTaken ? "#059669" : COLORS.muted} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: serviceTaken ? '#059669' : COLORS.muted }}>
+                          Sí, se tomó
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: !serviceTaken ? '#EF4444' : COLORS.line,
+                          backgroundColor: !serviceTaken ? '#FEE2E2' : COLORS.white,
+                        }}
+                        onPress={() => setServiceTaken(false)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name={!serviceTaken ? "close-circle" : "close-circle-outline"} size={16} color={!serviceTaken ? "#DC2626" : COLORS.muted} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: !serviceTaken ? '#DC2626' : COLORS.muted }}>
+                          No se tomó
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                   
                   <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
                     {[1,2,3,4,5].map(star => (
@@ -951,7 +1005,7 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
                   onPress={async () => {
                     setSubmitting(true);
                     try {
-                      await requestService.evaluateRequest(request.id, { rating, comment });
+                      await requestService.evaluateRequest(request.id, { rating, comment, serviceTaken });
                       onClose();
                     } catch(e) {
                       console.error(e);

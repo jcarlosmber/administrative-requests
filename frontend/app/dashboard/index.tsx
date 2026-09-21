@@ -124,7 +124,7 @@ export default function DashboardScreen() {
   const cardWidth = getCardWidth();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [evaluationModal, setEvaluationModal] = useState<{ visible: boolean, requestId: string | null }>({ visible: false, requestId: null });
+  const [evaluationModal, setEvaluationModal] = useState<{ visible: boolean, requestId: string | null, request?: AdministrativeRequest | null }>({ visible: false, requestId: null, request: null });
 
   // Estados de Vehículos Registrados
   const [vehicles, setVehicles] = useState<UserVehicle[]>([]);
@@ -467,7 +467,7 @@ export default function DashboardScreen() {
                       key={req.id}
                       req={req}
                       isDesktop={isDesktop}
-                      onPress={() => setEvaluationModal({ visible: true, requestId: req.id })}
+                      onPress={() => setEvaluationModal({ visible: true, requestId: req.id, request: req })}
                     />
                   ))}
                 </ScrollView>
@@ -979,7 +979,8 @@ export default function DashboardScreen() {
       <EvaluationModal
         visible={evaluationModal.visible}
         requestId={evaluationModal.requestId}
-        onClose={() => setEvaluationModal({ visible: false, requestId: null })}
+        request={evaluationModal.request}
+        onClose={() => setEvaluationModal({ visible: false, requestId: null, request: null })}
         onSuccess={() => {
           fetchDashboardData();
         }}

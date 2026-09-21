@@ -1156,20 +1156,59 @@ export default function AdminSettings() {
               {(activeTab === 'all' || activeTab === 'drivers') && (
                 <>
                   <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
-                  <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
+                  <View style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    flexWrap: 'wrap',
+                    gap: 16,
+                  }}>
                     {drivers.map(drv => (
-                      <View key={drv.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
-                        <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                          <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
-                            <Ionicons name="car-sport" size={20} color="#FFF" />
+                      <View 
+                        key={drv.id} 
+                        style={{
+                          width: isDesktop ? 'calc(50% - 8px)' as any : '100%',
+                          backgroundColor: COLORS.white,
+                          borderRadius: 24,
+                          padding: 22,
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          minHeight: 140,
+                          justifyContent: 'space-between',
+                          ...Platform.select({
+                            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 },
+                            android: { elevation: 3 },
+                            web: { boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)' }
+                          })
+                        }}
+                      >
+                        <TouchableOpacity 
+                          onPress={() => openEditModal(drv, 'driver')} 
+                          activeOpacity={0.7} 
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                        >
+                          <View style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 16,
+                            backgroundColor: '#EFF6FF',
+                            borderWidth: 1,
+                            borderColor: '#DBEAFE',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                          }}>
+                            <Ionicons name="car-sport" size={24} color="#2563EB" />
                           </View>
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{
+                              fontSize: 16,
+                              fontWeight: '800',
+                              color: COLORS.primary,
+                              letterSpacing: -0.2
+                            }}>
                               {drv.name || 'Sin nombre'}
                             </Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                              <Ionicons name="call" size={14} color="#64748B" />
-                              <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                              <Ionicons name="call-outline" size={14} color="#64748B" />
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B' }}>
                                 {drv.phone || 'Sin teléfono'}
                               </Text>
                             </View>
@@ -1177,25 +1216,99 @@ export default function AdminSettings() {
                         </TouchableOpacity>
 
                         {/* Footer */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
-                            REGISTRO ACTIVO
-                          </Text>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} style={{ padding: 4 }}>
-                              <Ionicons name="pencil" size={16} color="#3B82F6" />
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: 16,
+                          paddingTop: 14,
+                          borderTopWidth: 1,
+                          borderTopColor: '#F1F5F9'
+                        }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 4,
+                              backgroundColor: drv.is_active !== false ? '#10B981' : '#94A3B8'
+                            }} />
+                            <Text style={{
+                              fontSize: 11,
+                              fontWeight: '800',
+                              letterSpacing: 0.8,
+                              color: drv.is_active !== false ? '#059669' : '#64748B',
+                              textTransform: 'uppercase'
+                            }}>
+                              {drv.is_active !== false ? 'Activo / En Servicio' : 'Inactivo'}
+                            </Text>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <TouchableOpacity 
+                              onPress={() => openEditModal(drv, 'driver')} 
+                              activeOpacity={0.7}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 10,
+                                backgroundColor: '#EFF6FF'
+                              }}
+                            >
+                              <Ionicons name="pencil" size={14} color="#2563EB" />
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB' }}>Editar</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={{ padding: 4 }}>
-                              <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                            <TouchableOpacity 
+                              onPress={() => openDriverDeleteConfirmation(drv)} 
+                              activeOpacity={0.7}
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 10,
+                                backgroundColor: '#FEF2F2',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={15} color={COLORS.danger} />
                             </TouchableOpacity>
                           </View>
                         </View>
                       </View>
                     ))}
                     
-                    <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDriver}>
-                      <Ionicons name="add" size={24} color={COLORS.muted} />
-                      <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Conductor</Text>
+                    <TouchableOpacity 
+                      style={{
+                        width: isDesktop ? 'calc(50% - 8px)' as any : '100%',
+                        minHeight: 140,
+                        borderRadius: 24,
+                        borderStyle: 'dashed',
+                        borderWidth: 2,
+                        borderColor: '#CBD5E1',
+                        backgroundColor: '#F8FAFC',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: 20
+                      }} 
+                      onPress={addDriver}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 14,
+                        backgroundColor: '#EFF6FF',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                      }}>
+                        <Ionicons name="add" size={24} color="#2563EB" />
+                      </View>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#2563EB' }}>
+                        Agregar Conductor
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -2542,22 +2655,68 @@ export default function AdminSettings() {
       >
         <View style={styles.modalOverlay}>
           <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContainer, { maxWidth: 450, backgroundColor: COLORS.primary, borderWidth: 1, borderColor: COLORS.primarySoft }]}>
+          <View style={{
+            backgroundColor: COLORS.white,
+            borderRadius: 24,
+            padding: 24,
+            width: '100%',
+            maxWidth: 480,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+            ...Platform.select({
+              ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
+              android: { elevation: 8 },
+              web: { boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)' }
+            })
+          }}>
             
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={[styles.modalTitle, { color: COLORS.white }]}>
-                {editType === 'room' ? 'Editar Espacio' : editType === 'dependency' ? 'Editar Dependencia' : 'Editar Conductor'}
-              </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  backgroundColor: '#EFF6FF',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}>
+                  <Ionicons 
+                    name={editType === 'room' ? 'business' : editType === 'dependency' ? 'people' : 'car-sport'} 
+                    size={20} 
+                    color="#2563EB" 
+                  />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                  {editType === 'room' ? 'Editar Espacio' : editType === 'dependency' ? 'Editar Dependencia' : 'Editar Conductor'}
+                </Text>
+              </View>
+
+              <TouchableOpacity 
+                onPress={closeEditModal}
+                style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
+              </TouchableOpacity>
             </View>
 
             <View style={{ gap: 16, width: '100%', marginBottom: 24 }}>
               {editType === 'room' && (
                 <>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Nombre del Espacio</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Nombre del Espacio</Text>
                     <TextInput
-                      style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
-                      placeholderTextColor={COLORS.muted}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
                       value={editDraft?.name || ''}
                       onChangeText={val => setEditDraft({ ...editDraft, name: val })}
                       placeholder="Ej: Sala de Innovación..."
@@ -2565,10 +2724,20 @@ export default function AdminSettings() {
                   </View>
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Capacidad (pers.)</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Capacidad (pers.)</Text>
                       <TextInput
-                        style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
-                        placeholderTextColor={COLORS.muted}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: COLORS.primary
+                        }}
+                        placeholderTextColor="#94A3B8"
                         value={editDraft?.capacity?.toString() || ''}
                         onChangeText={val => setEditDraft({ ...editDraft, capacity: val })}
                         keyboardType="numeric"
@@ -2576,10 +2745,20 @@ export default function AdminSettings() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Ubicación</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Ubicación</Text>
                       <TextInput
-                        style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
-                        placeholderTextColor={COLORS.muted}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: COLORS.primary
+                        }}
+                        placeholderTextColor="#94A3B8"
                         value={editDraft?.floor || ''}
                         onChangeText={val => setEditDraft({ ...editDraft, floor: val })}
                         placeholder="Ej: Piso 1"
@@ -2587,19 +2766,19 @@ export default function AdminSettings() {
                     </View>
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Tipo de Sala</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Tipo de Sala</Text>
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                       <TouchableOpacity 
-                        style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, editDraft?.info === 'Estándar' && { backgroundColor: COLORS.white }]} 
+                        style={[styles.rolePill, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }, editDraft?.info === 'Estándar' && { backgroundColor: '#EFF6FF', borderColor: '#2563EB' }]} 
                         onPress={() => setEditDraft({ ...editDraft, info: 'Estándar' })}
                       >
-                        <Text style={[styles.rolePillText, { color: COLORS.line }, editDraft?.info === 'Estándar' && { color: COLORS.primary }]}>Estándar</Text>
+                        <Text style={[styles.rolePillText, { color: '#64748B' }, editDraft?.info === 'Estándar' && { color: '#2563EB', fontWeight: '800' }]}>Estándar</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
-                        style={[styles.rolePill, { backgroundColor: COLORS.primarySoft }, editDraft?.info === 'Especial' && { backgroundColor: COLORS.white }]} 
+                        style={[styles.rolePill, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }, editDraft?.info === 'Especial' && { backgroundColor: '#F5F3FF', borderColor: '#7C3AED' }]} 
                         onPress={() => setEditDraft({ ...editDraft, info: 'Especial' })}
                       >
-                        <Text style={[styles.rolePillText, { color: COLORS.line }, editDraft?.info === 'Especial' && { color: COLORS.primary }]}>Especial</Text>
+                        <Text style={[styles.rolePillText, { color: '#64748B' }, editDraft?.info === 'Especial' && { color: '#7C3AED', fontWeight: '800' }]}>Especial</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2608,10 +2787,20 @@ export default function AdminSettings() {
 
               {editType === 'dependency' && (
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Nombre de la Dependencia</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Nombre de la Dependencia</Text>
                   <TextInput
-                    style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
-                    placeholderTextColor={COLORS.muted}
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: COLORS.primary
+                    }}
+                    placeholderTextColor="#94A3B8"
                     value={editDraft?.name || ''}
                     onChangeText={val => setEditDraft({ ...editDraft, name: val })}
                     placeholder="Ej: Dirección de Asuntos Penales..."
@@ -2622,20 +2811,40 @@ export default function AdminSettings() {
               {editType === 'driver' && (
                 <>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Nombre del Conductor</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Nombre del Conductor</Text>
                     <TextInput
-                      style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
-                      placeholderTextColor={COLORS.muted}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
                       value={editDraft?.name || ''}
                       onChangeText={val => setEditDraft({ ...editDraft, name: val })}
                       placeholder="Ej: Juan Pérez"
                     />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.line, marginBottom: 8 }}>Teléfono</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Teléfono</Text>
                     <TextInput
-                      style={[styles.userFieldInput, { backgroundColor: COLORS.primarySoft, color: COLORS.white, borderColor: COLORS.primaryDark }]}
-                      placeholderTextColor={COLORS.muted}
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        fontSize: 14,
+                        fontWeight: '600',
+                        color: COLORS.primary
+                      }}
+                      placeholderTextColor="#94A3B8"
                       value={editDraft?.phone || ''}
                       onChangeText={val => setEditDraft({ ...editDraft, phone: val })}
                       keyboardType="phone-pad"
@@ -2648,17 +2857,17 @@ export default function AdminSettings() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }]} 
                 onPress={closeEditModal}
               >
-                <Text style={[styles.cancelButtonText, { color: COLORS.line }]}>CANCELAR</Text>
+                <Text style={[styles.cancelButtonText, { color: '#475569' }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1.5, backgroundColor: COLORS.accent }, (!hasEditChanges || !editDraft?.name?.trim()) && { opacity: 0.5 }]} 
+                style={[styles.modalButton, { flex: 1.5, backgroundColor: '#2563EB', borderRadius: 14 }, (!hasEditChanges || !editDraft?.name?.trim()) && { opacity: 0.5 }]} 
                 onPress={saveEditDraft}
                 disabled={!hasEditChanges || !editDraft?.name?.trim()}
               >
-                <Text style={styles.confirmDeleteButtonText}>ACTUALIZAR</Text>
+                <Text style={{ color: COLORS.white, fontSize: 14, fontWeight: '800' }}>Actualizar</Text>
               </TouchableOpacity>
             </View>
           </View>
