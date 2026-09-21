@@ -2895,83 +2895,40 @@ const getStatusTheme = (status: string) => {
 };
 
 // Paleta de fondos según categoría de servicio para Cards y Filas (fondos opacos sin líneas)
+// Paleta con fondo muted medio unificado (#E2E8F0) para Cards y Filas
 const getCategoryCardTheme = (category?: string, type?: string) => {
   const cat = (category || type || '').toLowerCase();
+  
+  // Acentos de color para badges de categoría e iniciales de avatar
+  let accent = {
+    color: '#0284C7',
+    colorDark: '#0369A1',
+  };
+
   if (cat.includes('visit') || cat === 'visitors') {
-    return {
-      bg: '#FFE4E6', // Tono opaco cálido (correspondiente a la línea rosa)
-      hoverBg: '#FECDD3',
-      border: 'transparent',
-      borderExpanded: 'transparent',
-      headerBg: '#FFE4E6',
-      color: '#E11D48',
-      colorDark: '#9F1239',
-      accentBar: 'transparent',
-      shadow: 'rgba(225, 29, 72, 0.08)',
-    };
+    accent = { color: '#E11D48', colorDark: '#9F1239' };
+  } else if (cat.includes('transp') || cat === 'transport') {
+    accent = { color: '#0284C7', colorDark: '#0369A1' };
+  } else if (cat.includes('manten') || cat === 'maintenance') {
+    accent = { color: '#0D9488', colorDark: '#0F766E' };
+  } else if (cat.includes('sala') || cat === 'rooms') {
+    accent = { color: '#7C3AED', colorDark: '#6D28D9' };
+  } else if (cat.includes('parque') || cat === 'parking') {
+    accent = { color: '#EA580C', colorDark: '#C2410C' };
+  } else {
+    accent = { color: '#3B82F6', colorDark: '#1E293B' };
   }
-  if (cat.includes('transp') || cat === 'transport') {
-    return {
-      bg: '#E0F2FE', // Tono opaco azul (correspondiente a la línea celeste)
-      hoverBg: '#BAE6FD',
-      border: 'transparent',
-      borderExpanded: 'transparent',
-      headerBg: '#E0F2FE',
-      color: '#0284C7',
-      colorDark: '#0369A1',
-      accentBar: 'transparent',
-      shadow: 'rgba(2, 132, 199, 0.08)',
-    };
-  }
-  if (cat.includes('manten') || cat === 'maintenance') {
-    return {
-      bg: '#CCFBF1', // Tono opaco turquesa (correspondiente a la línea verde agua)
-      hoverBg: '#99F6E4',
-      border: 'transparent',
-      borderExpanded: 'transparent',
-      headerBg: '#CCFBF1',
-      color: '#0D9488',
-      colorDark: '#0F766E',
-      accentBar: 'transparent',
-      shadow: 'rgba(13, 148, 136, 0.08)',
-    };
-  }
-  if (cat.includes('sala') || cat === 'rooms') {
-    return {
-      bg: '#EDE9FE', // Tono opaco violeta (correspondiente a la línea morada)
-      hoverBg: '#DDD6FE',
-      border: 'transparent',
-      borderExpanded: 'transparent',
-      headerBg: '#EDE9FE',
-      color: '#7C3AED',
-      colorDark: '#6D28D9',
-      accentBar: 'transparent',
-      shadow: 'rgba(124, 58, 237, 0.08)',
-    };
-  }
-  if (cat.includes('parque') || cat === 'parking') {
-    return {
-      bg: '#FFEDD5', // Tono opaco naranja (correspondiente a la línea naranja)
-      hoverBg: '#FED7AA',
-      border: 'transparent',
-      borderExpanded: 'transparent',
-      headerBg: '#FFEDD5',
-      color: '#EA580C',
-      colorDark: '#C2410C',
-      accentBar: 'transparent',
-      shadow: 'rgba(234, 88, 12, 0.08)',
-    };
-  }
+
   return {
-    bg: '#E2E8F0', // Tono opaco slate (correspondiente a la línea gris slate)
-    hoverBg: '#CBD5E1',
+    bg: '#E2E8F0', // Fondo muted medio unificado (Slate 200)
+    hoverBg: '#CBD5E1', // Hover táctil refinado (Slate 300)
     border: 'transparent',
     borderExpanded: 'transparent',
     headerBg: '#E2E8F0',
-    color: '#3B82F6',
-    colorDark: '#1E293B',
+    color: accent.color,
+    colorDark: accent.colorDark,
     accentBar: 'transparent',
-    shadow: 'rgba(15, 23, 42, 0.06)',
+    shadow: 'rgba(15, 23, 42, 0.05)',
   };
 };
 
@@ -4087,7 +4044,7 @@ function RequestListItem({
           <View style={{ flex: 1 }}>
             <Text style={styles.cardUserName}>{item.user}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <Ionicons name="business-outline" size={13} color="#64748B" />
+              <Ionicons name="business-outline" size={13} color="#475569" />
               <Text style={styles.cardUserDept}>{item.dependency}</Text>
             </View>
           </View>
@@ -4470,11 +4427,11 @@ const styles = StyleSheet.create({
   cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   avatarCircle: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
   avatarText: { fontSize: 13.5, fontWeight: '800' },
-  cardUserName: { fontSize: 15.5, fontWeight: '800', color: COLORS.primary },
-  cardUserDept: { fontSize: 12, fontWeight: '600', color: COLORS.muted },
+  cardUserName: { fontSize: 15.5, fontWeight: '800', color: '#0F172A' },
+  cardUserDept: { fontSize: 12, fontWeight: '700', color: '#475569' },
   toggleExpandChip: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  detailBox: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 13, borderWidth: 1, borderColor: '#EDF2F7', marginBottom: 10 },
-  cardDetailText: { fontSize: 13.5, color: '#1E293B', fontWeight: '600', lineHeight: 20 },
+  detailBox: { backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, borderWidth: 0, marginBottom: 10 },
+  cardDetailText: { fontSize: 13.5, color: '#0F172A', fontWeight: '600', lineHeight: 20 },
   quickMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
   quickMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' },
   quickMetaLabel: { fontSize: 11, fontWeight: '700', color: COLORS.muted },
@@ -4510,7 +4467,7 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 0, paddingTop: 12, marginTop: 5 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { fontSize: 13, color: COLORS.muted, fontWeight: '600' },
+  metaText: { fontSize: 12.5, color: '#475569', fontWeight: '700' },
   actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   actionBtn: { height: 38, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6, borderWidth: 1 },
   actionBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.white },
