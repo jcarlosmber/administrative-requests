@@ -969,7 +969,6 @@ export default function AdminSettings() {
         >
           <HeroSection 
             isDesktop={isDesktop} 
-            onGitPull={() => triggerGitAction('pull')}
           />
           
           {loading ? (
@@ -3118,7 +3117,7 @@ function SidebarTabButton({ label, icon, active, onPress }: any) {
   );
 }
 
-function HeroSection({ isDesktop, onGitPull }: any) {
+function HeroSection({ isDesktop }: any) {
   const router = useRouter();
 
   return (
@@ -3137,17 +3136,6 @@ function HeroSection({ isDesktop, onGitPull }: any) {
             <Text style={styles.heroSub} numberOfLines={2}>Administre los recursos y reglas del portal</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
-            {onGitPull && (
-              <TouchableOpacity 
-                style={[styles.logoutBtn, { width: 'auto', paddingHorizontal: 14, flexDirection: 'row', gap: 8, backgroundColor: COLORS.accent, borderColor: COLORS.accent }]} 
-                onPress={onGitPull}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="cloud-download-outline" size={18} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Git Pull</Text>
-              </TouchableOpacity>
-            )}
-
             <TouchableOpacity 
               style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
               onPress={() => router.replace('/dashboard')}
