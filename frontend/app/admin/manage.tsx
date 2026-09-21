@@ -165,6 +165,7 @@ export default function ManageRequests() {
   const [driverPlate, setDriverPlate] = useState('');
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [serviceEmails, setServiceEmails] = useState<ServiceEmail[]>([]);
+  const [drawerItem, setDrawerItem] = useState<any | null>(null);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
@@ -266,6 +267,41 @@ export default function ManageRequests() {
     return counts;
   }, [requests]);
 
+  // Contadores dinámicos por flujo de trabajo (Segmented Tabs)
+  const workflowCounts = useMemo(() => {
+    const counts = {
+      Todos: requests.length,
+      Pendiente: 0,
+      'En Progreso': 0,
+      Aprobado: 0,
+      Rechazado: 0,
+    };
+    requests.forEach(r => {
+      const s = (r.status || '').toLowerCase().trim();
+      if (s === 'pendiente' || s === 'pending') {
+        counts.Pendiente += 1;
+      } else if (['en_progreso', 'en progreso', 'en curso', 'en_curso', 'in_progress'].includes(s)) {
+        counts['En Progreso'] += 1;
+      } else if (['resuelto', 'aprobado', 'resuelta', 'aprobada', 'completada'].includes(s)) {
+        counts.Aprobado += 1;
+      } else if (s === 'rechazado' || s === 'rechazada' || s === 'rejected') {
+        counts.Rechazado += 1;
+      }
+    });
+    return counts;
+  }, [requests]);
+
+  const hasActiveFilters = searchQuery.trim() !== '' || serviceFilter !== 'Todas' || statusFilter !== 'Todos' || priorityFilter !== 'Todas' || timeFilter !== 'Todos';
+
+  const resetAllFilters = () => {
+    setSearchQuery('');
+    setServiceFilter('Todas');
+    setStatusFilter('Todos');
+    setPriorityFilter('Todas');
+    setTimeFilter('Todos');
+    setCustomDates({ start: '', end: '' });
+  };
+
   // Cargar datos cada vez que la pestaña reciba el foco
   useFocusEffect(
     useCallback(() => {
@@ -301,6 +337,15 @@ export default function ManageRequests() {
       }
     }
   }, [params.status]);
+
+  useEffect(() => {
+    if (params.id && requests.length > 0) {
+      const found = requests.find(r => r.id === params.id);
+      if (found) {
+        setDrawerItem(mapRequestToUI(found));
+      }
+    }
+  }, [params.id, requests]);
 
   const filteredData = useMemo(() => {
     const today = new Date().toDateString();
@@ -607,112 +652,47 @@ export default function ManageRequests() {
           <FlatList
             key={isDesktop ? 'desktop-cols' : 'mobile-cols'}
             numColumns={isDesktop ? 2 : 1}
-            columnWrapperStyle={isDesktop ? { paddingHorizontal: 25, gap: 20 } : undefined}
+            columnWrapperStyle={isDesktop ? { paddingHorizontal: 25, gap: 16 } : undefined}
             ListHeaderComponent={
               <View style={styles.headerContainer}>
-                <HeroSection isDesktop={isDesktop} />
+                <HeroSection 
+                  isDesktop={isDesktop} 
+                  totalRequests={requests.length} 
+                  pendingCount={workflowCounts.Pendiente} 
+                />
+                
                 <View style={styles.contentPadding}>
-                  <SearchBar query={searchQuery} setQuery={setSearchQuery} />
-                  
-                  <ServiceTabsBar 
-                    selected={serviceFilter} 
-                    onSelect={setServiceFilter} 
-                    badges={categoryCounts}
+                  {/* Pestañas por Flujo de Trabajo (Segmented Tabs) */}
+                  <WorkflowSegmentedTabs
+                    selected={statusFilter}
+                    onSelect={setStatusFilter}
+                    counts={workflowCounts}
                     isDesktop={isDesktop}
                   />
 
-                  <FilterRow 
-                    label="Filtrar Prioridad" 
-                    data={PRIORITY_OPTIONS} 
-                    selected={priorityFilter} 
-                    onSelect={setPriorityFilter} 
-                    icon="flag-outline"
+                  {/* Píldoras de Servicios Compactas */}
+                  <CategoryPillsBar
+                    selected={serviceFilter}
+                    onSelect={setServiceFilter}
+                    badges={categoryCounts}
                   />
 
-                  <FilterRow 
-                    label="Filtrar Estado" 
-                    data={STATUS_OPTIONS} 
-                    selected={statusFilter} 
-                    onSelect={setStatusFilter} 
-                    icon="options-outline"
+                  {/* Toolbar Unificada: Búsqueda, Filtros y Acciones */}
+                  <QuickFiltersToolbar
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    priorityFilter={priorityFilter}
+                    setPriorityFilter={setPriorityFilter}
+                    timeFilter={timeFilter}
+                    setTimeFilter={setTimeFilter}
+                    sortOrder={sortOrder}
+                    setSortOrder={setSortOrder}
+                    onOpenCustomDate={() => setShowCustomDateModal(true)}
+                    onExportCSV={exportToCSV}
+                    hasActiveFilters={hasActiveFilters}
+                    onResetFilters={resetAllFilters}
+                    totalResults={filteredData.length}
                   />
-
-                  <FilterRow 
-                    label="Filtrar Fecha" 
-                    data={TIME_OPTIONS} 
-                    selected={timeFilter} 
-                    onSelect={(val: string) => {
-                      if (val === 'Personalizado') {
-                        setShowCustomDateModal(true);
-                      } else {
-                        setTimeFilter(val);
-                      }
-                    }} 
-                    icon="calendar-outline"
-                  />
-                  
-                  <View style={styles.resultsHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.resultsTitle}>
-                        {filteredData.length} {filteredData.length === 1 ? 'Registro filtrado' : 'Registros bajo gestión'}
-                      </Text>
-                      {/* Chips de Ordenamiento Dinámico */}
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginTop: 8 }}>
-                        {SORT_OPTIONS.map(sortOpt => {
-                          const isActive = sortOrder === sortOpt.id;
-                          return (
-                            <TouchableOpacity
-                              key={sortOpt.id}
-                              onPress={() => setSortOrder(sortOpt.id)}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingHorizontal: 10,
-                                paddingVertical: 5,
-                                borderRadius: 8,
-                                backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
-                                borderWidth: 1,
-                                borderColor: isActive ? '#0F172A' : '#CBD5E1',
-                              }}
-                            >
-                              <Ionicons name={sortOpt.icon} size={13} color={isActive ? '#FFFFFF' : '#64748B'} />
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: isActive ? '#FFFFFF' : '#475569' }}>
-                                {sortOpt.label}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-
-                    {/* Botón de Exportar a CSV / Excel */}
-                    <TouchableOpacity
-                      onPress={exportToCSV}
-                      activeOpacity={0.8}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        backgroundColor: '#10B981',
-                        paddingHorizontal: 14,
-                        paddingVertical: 10,
-                        borderRadius: 12,
-                        shadowColor: '#10B981',
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.2,
-                        shadowRadius: 5,
-                        elevation: 3,
-                        alignSelf: 'flex-start',
-                        marginTop: 4
-                      }}
-                    >
-                      <Ionicons name="download-outline" size={17} color="#FFFFFF" />
-                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                        Exportar CSV
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
               </View>
             }
@@ -728,10 +708,57 @@ export default function ManageRequests() {
                 setViewerImage={setViewerImage} 
                 onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
                 onOpenDispatch={(reqItem: any) => setDispatchModal({ visible: true, item: reqItem })}
+                onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
               />
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 18,
+                padding: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginHorizontal: 25,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 12
+              }}>
+                <View style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: '#F1F5F9',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Ionicons name="search-outline" size={26} color="#64748B" />
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                  No se encontraron solicitudes
+                </Text>
+                <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', maxWidth: 340 }}>
+                  Intenta ajustar los filtros de búsqueda, cambiar la pestaña de estado o restablecer los criterios.
+                </Text>
+                {hasActiveFilters && (
+                  <TouchableOpacity
+                    onPress={resetAllFilters}
+                    style={{
+                      marginTop: 6,
+                      backgroundColor: '#0F172A',
+                      paddingHorizontal: 16,
+                      paddingVertical: 9,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                      Restablecer todos los filtros
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            }
           />
         </View>
       </View>
@@ -1866,6 +1893,25 @@ export default function ManageRequests() {
         </View>
       </Modal>
 
+      {/* Panel Lateral o Modal de Detalle (Drawer / Slide-over) */}
+      <RequestDetailDrawer
+        visible={drawerItem !== null}
+        item={drawerItem}
+        onClose={() => setDrawerItem(null)}
+        onUpdateStatus={askConfirmation}
+        onAssignDriver={(reqItem: any) => {
+          setDrawerItem(null);
+          setDriverModal({ visible: true, item: reqItem });
+        }}
+        onOpenDispatch={(reqItem: any) => {
+          setDrawerItem(null);
+          setDispatchModal({ visible: true, item: reqItem });
+        }}
+        setViewerImage={setViewerImage}
+        onRefresh={fetchRequests}
+        onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })}
+      />
+
     </View>
   );
 }
@@ -1944,30 +1990,56 @@ function Sidebar() {
   );
 }
 
-function HeroSection({ isDesktop }: any) {
+function HeroSection({ isDesktop, totalRequests, pendingCount }: any) {
   const router = useRouter();
 
   return (
-    <View style={styles.hero}>
+    <View style={styles.heroCompact}>
       <LinearGradient 
         colors={[COLORS.primaryDark, '#1E293B']} 
         style={StyleSheet.absoluteFill} 
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
-        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
+      <View style={[styles.heroInner, !isDesktop && { paddingTop: 24 }]}>
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroKicker}>PANEL DE ADMINISTRACIÓN</Text>
-            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Control y Seguimiento</Text>
-            <Text style={styles.heroSub} numberOfLines={2}>Gestione requerimientos, asigne despachos y audite trazabilidad</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#3B82F6' }} />
+              <Text style={styles.heroKicker}>SASGE • ADMINISTRACIÓN CENTRAL</Text>
+            </View>
+            <Text style={styles.heroTitle} numberOfLines={1}>Gestión de Solicitudes</Text>
+            <Text style={styles.heroSub} numberOfLines={1}>
+              Supervisión, asignación de despachos y auditoría de requerimientos
+            </Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+            {pendingCount > 0 && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: 'rgba(245, 158, 11, 0.35)',
+              }}>
+                <Ionicons name="alert-circle" size={16} color="#F59E0B" />
+                <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>
+                  {pendingCount} por atender
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity 
-              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+              style={styles.logoutBtn} 
               onPress={() => router.replace('/dashboard')}
+              accessibilityLabel="Portal Funcionario"
             >
-              <Ionicons name="home" size={22} color="#FFFFFF" />
+              <Ionicons name="home-outline" size={19} color="#FFFFFF" />
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -1976,8 +2048,9 @@ function HeroSection({ isDesktop }: any) {
                 await supabase.auth.signOut();
                 router.replace('/login');
               }}
+              accessibilityLabel="Cerrar sesión"
             >
-              <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
+              <Ionicons name="log-out-outline" size={19} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -1986,295 +2059,388 @@ function HeroSection({ isDesktop }: any) {
   );
 }
 
-function SearchBar({ query, setQuery }: any) {
+function WorkflowSegmentedTabs({
+  selected,
+  onSelect,
+  counts,
+  isDesktop
+}: {
+  selected: string;
+  onSelect: (val: string) => void;
+  counts: Record<string, number>;
+  isDesktop: boolean;
+}) {
+  const tabs = [
+    { id: 'Todos', label: 'Todas', icon: 'layers-outline', count: counts.Todos || 0 },
+    { id: 'Pendiente', label: 'Pendientes', icon: 'flash-outline', count: counts.Pendiente || 0, badgeColor: '#D97706', badgeBg: '#FEF3C7' },
+    { id: 'En Progreso', label: 'En Progreso', icon: 'time-outline', count: counts['En Progreso'] || 0, badgeColor: '#2563EB', badgeBg: '#EFF6FF' },
+    { id: 'Aprobado', label: 'Aprobadas', icon: 'checkmark-circle-outline', count: counts.Aprobado || 0, badgeColor: '#059669', badgeBg: '#ECFDF5' },
+    { id: 'Rechazado', label: 'Rechazadas', icon: 'close-circle-outline', count: counts.Rechazado || 0, badgeColor: '#DC2626', badgeBg: '#FEF2F2' },
+  ];
+
   return (
-    <View style={styles.searchContainer}>
-      <Ionicons name="search" size={20} color={COLORS.muted} />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Buscar por solicitante, placa, visitante, conductor o asunto..."
-        value={query}
-        onChangeText={setQuery}
-        placeholderTextColor={COLORS.muted}
-      />
-      {query.length > 0 && (
-        <Pressable onPress={() => setQuery('')}>
-          <Ionicons name="close-circle" size={18} color={COLORS.muted} />
-        </Pressable>
-      )}
+    <View style={{
+      width: '100%',
+      backgroundColor: '#FFFFFF',
+      borderRadius: 14,
+      padding: 5,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      marginTop: 14,
+      marginBottom: 10,
+    }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          flexDirection: 'row',
+          gap: 6,
+          alignItems: 'center',
+          minWidth: isDesktop ? '100%' : undefined,
+          justifyContent: isDesktop ? 'space-between' : 'flex-start',
+        }}
+      >
+        {tabs.map((tab) => {
+          const isSelected = selected === tab.id;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              onPress={() => onSelect(tab.id)}
+              activeOpacity={0.8}
+              style={{
+                flex: isDesktop ? 1 : undefined,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 7,
+                paddingVertical: 9,
+                paddingHorizontal: 14,
+                borderRadius: 10,
+                backgroundColor: isSelected ? '#0F172A' : 'transparent',
+              }}
+            >
+              <Ionicons
+                name={tab.icon as any}
+                size={16}
+                color={isSelected ? '#FFFFFF' : '#64748B'}
+              />
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: isSelected ? '800' : '600',
+                  color: isSelected ? '#FFFFFF' : '#475569',
+                }}
+              >
+                {tab.label}
+              </Text>
+              <View
+                style={{
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                  borderRadius: 12,
+                  backgroundColor: isSelected
+                    ? 'rgba(255,255,255,0.22)'
+                    : (tab.badgeBg || '#F1F5F9'),
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: isSelected ? '#FFFFFF' : (tab.badgeColor || '#475569'),
+                  }}
+                >
+                  {tab.count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
 
-const SERVICE_CONFIG: Record<string, {
-  label: string;
-  icon: any;
-  color: string;
-  gradient: [string, string];
-  bgLight: string;
-  borderColor: string;
-}> = {
-  Todas: {
-    label: 'Todas',
-    icon: 'apps',
-    color: '#0F172A',
-    gradient: ['#1E293B', '#0F172A'],
-    bgLight: '#F1F5F9',
-    borderColor: '#CBD5E1',
-  },
-  Visitantes: {
-    label: 'Visitantes',
-    icon: 'people',
-    color: '#E11D48',
-    gradient: ['#F43F5E', '#BE123C'],
-    bgLight: '#FFE4E6',
-    borderColor: '#FDA4AF',
-  },
-  Transporte: {
-    label: 'Transporte',
-    icon: 'car-sport',
-    color: '#0284C7',
-    gradient: ['#0EA5E9', '#0369A1'],
-    bgLight: '#E0F2FE',
-    borderColor: '#7DD3FC',
-  },
-  Mantenimiento: {
-    label: 'Mantenimiento',
-    icon: 'construct',
-    color: '#0D9488',
-    gradient: ['#14B8A6', '#0F766E'],
-    bgLight: '#CCFBF1',
-    borderColor: '#5EEAD4',
-  },
-  Salas: {
-    label: 'Salas',
-    icon: 'easel',
-    color: '#7C3AED',
-    gradient: ['#8B5CF6', '#6D28D9'],
-    bgLight: '#EDE9FE',
-    borderColor: '#C4B5FD',
-  },
-  Parqueadero: {
-    label: 'Parqueadero',
-    icon: 'car',
-    color: '#EA580C',
-    gradient: ['#FB923C', '#C2410C'],
-    bgLight: '#FFEDD5',
-    borderColor: '#FDBA74',
-  },
-};
-
-function ServiceTabsBar({ 
-  selected, 
-  onSelect, 
-  badges, 
-  isDesktop 
-}: { 
-  selected: string; 
-  onSelect: (cat: string) => void; 
-  badges: Record<string, { total: number; pending: number }>; 
-  isDesktop: boolean; 
+function CategoryPillsBar({
+  selected,
+  onSelect,
+  badges,
+}: {
+  selected: string;
+  onSelect: (cat: string) => void;
+  badges: Record<string, { total: number; pending: number }>;
 }) {
-  const categories = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
+  const categories = [
+    { key: 'Todas', label: 'Todos los servicios', icon: 'apps-outline', color: '#0F172A' },
+    { key: 'Visitantes', label: 'Visitantes', icon: 'people-outline', color: '#E11D48' },
+    { key: 'Transporte', label: 'Transporte', icon: 'car-outline', color: '#0284C7' },
+    { key: 'Mantenimiento', label: 'Mantenimiento', icon: 'construct-outline', color: '#0D9488' },
+    { key: 'Salas', label: 'Salas', icon: 'easel-outline', color: '#7C3AED' },
+    { key: 'Parqueadero', label: 'Parqueadero', icon: 'car-sport-outline', color: '#EA580C' },
+  ];
 
   return (
-    <View style={{ width: '100%', marginTop: 22, marginBottom: 8 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, paddingLeft: 2 }}>
-        <Ionicons name="layers" size={16} color={COLORS.accent} />
-        <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Filtrar por Servicio
-        </Text>
-      </View>
-
-      {/* Grid de Tabs de Ancho Completo */}
-      <View style={{
-        width: '100%',
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-        justifyContent: 'space-between',
-      }}>
-        {categories.map((catKey) => {
-          const cfg = SERVICE_CONFIG[catKey] || SERVICE_CONFIG.Todas;
-          const isSelected = selected === catKey;
-          const count = badges[catKey]?.total ?? 0;
-          const pending = badges[catKey]?.pending ?? 0;
-
-          // En desktop: 6 columnas uniformes (~15.4%). En móvil/tablet: 3 columnas (~31.3%)
-          const tabWidth = isDesktop ? '15.4%' : '31.3%';
+    <View style={{ marginBottom: 12 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+      >
+        {categories.map((cat) => {
+          const isSelected = selected === cat.key;
+          const count = badges[cat.key]?.total ?? 0;
+          const pending = badges[cat.key]?.pending ?? 0;
 
           return (
             <TouchableOpacity
-              key={catKey}
-              onPress={() => onSelect(catKey)}
-              activeOpacity={0.85}
+              key={cat.key}
+              onPress={() => onSelect(cat.key)}
+              activeOpacity={0.75}
               style={{
-                width: tabWidth,
-                minHeight: 76,
-                borderRadius: 16,
-                overflow: 'hidden',
-                backgroundColor: isSelected ? 'transparent' : '#FFFFFF',
-                borderWidth: isSelected ? 0 : 1.5,
-                borderColor: isSelected ? 'transparent' : cfg.borderColor,
-                shadowColor: isSelected ? cfg.color : '#0F172A',
-                shadowOffset: { width: 0, height: isSelected ? 5 : 2 },
-                shadowOpacity: isSelected ? 0.28 : 0.05,
-                shadowRadius: isSelected ? 10 : 4,
-                elevation: isSelected ? 6 : 2,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 7,
+                paddingVertical: 7,
+                paddingHorizontal: 12,
+                borderRadius: 20,
+                backgroundColor: isSelected ? '#F1F5F9' : '#FFFFFF',
+                borderWidth: 1.5,
+                borderColor: isSelected ? cat.color : '#E2E8F0',
               }}
             >
-              {isSelected ? (
-                <LinearGradient
-                  colors={cfg.gradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+              <Ionicons
+                name={cat.icon as any}
+                size={14}
+                color={isSelected ? cat.color : '#64748B'}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: isSelected ? '800' : '600',
+                  color: isSelected ? '#0F172A' : '#475569',
+                }}
+              >
+                {cat.label}
+              </Text>
+              <View
+                style={{
+                  paddingHorizontal: 6,
+                  paddingVertical: 1.5,
+                  borderRadius: 8,
+                  backgroundColor: isSelected ? `${cat.color}18` : '#F8FAFC',
+                }}
+              >
+                <Text
                   style={{
-                    flex: 1,
-                    padding: 10,
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
+                    fontSize: 10,
+                    fontWeight: '800',
+                    color: isSelected ? cat.color : '#64748B',
                   }}
                 >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <View style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 10,
-                      backgroundColor: 'rgba(255,255,255,0.22)',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}>
-                      <Ionicons name={cfg.icon} size={18} color="#FFFFFF" />
-                    </View>
-                    <View style={{
-                      backgroundColor: 'rgba(255,255,255,0.25)',
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 10,
-                    }}>
-                      <Text style={{ fontSize: 12, fontWeight: '900', color: '#FFFFFF' }}>
-                        {count}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ marginTop: 6, width: '100%' }}>
-                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 }} numberOfLines={1}>
-                      {cfg.label}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: '700', marginTop: 1 }}>
-                      {pending > 0 ? `⚡ ${pending} pend.` : '✓ Al día'}
-                    </Text>
-                  </View>
-                </LinearGradient>
-              ) : (
-                <View style={{
-                  flex: 1,
-                  padding: 10,
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  backgroundColor: `${cfg.bgLight}60`,
-                }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                    <View style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 10,
-                      backgroundColor: cfg.bgLight,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: cfg.borderColor,
-                    }}>
-                      <Ionicons name={cfg.icon} size={17} color={cfg.color} />
-                    </View>
-                    <View style={{
-                      backgroundColor: '#FFFFFF',
-                      paddingHorizontal: 7,
-                      paddingVertical: 2,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
-                    }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: cfg.color }}>
-                        {count}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ marginTop: 6, width: '100%' }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }} numberOfLines={1}>
-                      {cfg.label}
-                    </Text>
-                    <Text style={{ fontSize: 10, color: pending > 0 ? '#D97706' : '#64748B', fontWeight: pending > 0 ? '700' : '500', marginTop: 1 }}>
-                      {pending > 0 ? `⚠️ ${pending} pend.` : 'Sin pend.'}
-                    </Text>
-                  </View>
-                </View>
+                  {count}
+                </Text>
+              </View>
+              {pending > 0 && (
+                <View
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#F59E0B',
+                  }}
+                />
               )}
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
-function FilterRow({ label, data, selected, onSelect, icon, badges }: any) {
+function QuickFiltersToolbar({
+  searchQuery,
+  setSearchQuery,
+  priorityFilter,
+  setPriorityFilter,
+  timeFilter,
+  setTimeFilter,
+  sortOrder,
+  setSortOrder,
+  onOpenCustomDate,
+  onExportCSV,
+  hasActiveFilters,
+  onResetFilters,
+  totalResults,
+}: any) {
   return (
-    <View style={styles.filterSection}>
-      <View style={styles.filterHeader}>
-        <Ionicons name={icon} size={14} color={COLORS.accent} />
-        <Text style={styles.filterLabel}>{label}</Text>
+    <View style={{
+      backgroundColor: '#FFFFFF',
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#E2E8F0',
+      padding: 12,
+      gap: 12,
+      marginBottom: 16,
+    }}>
+      {/* Fila 1: Buscador + Botón CSV */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#F8FAFC',
+          borderRadius: 12,
+          paddingHorizontal: 12,
+          height: 42,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+        }}>
+          <Ionicons name="search" size={17} color="#64748B" />
+          <TextInput
+            style={{ flex: 1, paddingHorizontal: 8, fontSize: 13, color: '#0F172A', fontWeight: '600' }}
+            placeholder="Buscar por radicado, solicitante, placa, visitante, detalle..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#94A3B8"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          onPress={onExportCSV}
+          activeOpacity={0.8}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: '#059669',
+            paddingHorizontal: 14,
+            height: 42,
+            borderRadius: 12,
+          }}
+        >
+          <Ionicons name="download-outline" size={16} color="#FFFFFF" />
+          <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
+            Exportar CSV
+          </Text>
+        </TouchableOpacity>
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-        {data.map((item: string) => {
-          const isSelected = selected === item;
-          const countInfo = badges ? badges[item] : null;
 
-          return (
-            <Pressable
-              key={item}
-              onPress={() => onSelect(item)}
-              style={[
-                styles.filterChip,
-                isSelected && styles.filterChipActive,
-                { flexDirection: 'row', alignItems: 'center', gap: 6 }
-              ]}
-            >
-              {/* Punto de color para prioridades si aplica */}
-              {item === 'Alta' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />}
-              {item === 'Media' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />}
-              {item === 'Baja' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />}
-
-              <Text style={[
-                styles.filterChipText,
-                isSelected && styles.filterChipTextActive
-              ]}>
-                {item}
-              </Text>
-
-              {countInfo !== undefined && countInfo !== null && (
-                <View style={{
-                  backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F1F5F9',
-                  paddingHorizontal: 7,
-                  paddingVertical: 1,
-                  borderRadius: 10,
-                  marginLeft: 2
-                }}>
-                  <Text style={{
-                    fontSize: 11,
-                    fontWeight: '800',
-                    color: isSelected ? '#FFFFFF' : '#64748B'
-                  }}>
-                    {countInfo.total}
+      {/* Fila 2: Filtros Compactos (Prioridad, Fecha, Orden y Limpiar) */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          
+          {/* Selector de Prioridad */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', padding: 3, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+            <Ionicons name="flag-outline" size={12} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} />
+            {PRIORITY_OPTIONS.map((p) => {
+              const active = priorityFilter === p;
+              return (
+                <TouchableOpacity
+                  key={p}
+                  onPress={() => setPriorityFilter(p)}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 7,
+                    backgroundColor: active ? '#0F172A' : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? '#FFFFFF' : '#64748B' }}>
+                    {p}
                   </Text>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Selector de Fecha */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', padding: 3, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+            <Ionicons name="calendar-outline" size={12} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} />
+            {TIME_OPTIONS.map((t) => {
+              const active = timeFilter === t;
+              return (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => {
+                    if (t === 'Personalizado') {
+                      onOpenCustomDate();
+                    } else {
+                      setTimeFilter(t);
+                    }
+                  }}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 7,
+                    backgroundColor: active ? '#0F172A' : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? '#FFFFFF' : '#64748B' }}>
+                    {t}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Selector de Orden */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', padding: 3, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+            <Ionicons name="swap-vertical-outline" size={12} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} />
+            {SORT_OPTIONS.map((s) => {
+              const active = sortOrder === s.id;
+              return (
+                <TouchableOpacity
+                  key={s.id}
+                  onPress={() => setSortOrder(s.id)}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 7,
+                    backgroundColor: active ? '#0F172A' : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? '#FFFFFF' : '#64748B' }}>
+                    {s.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Botón Reset / Limpiar si hay filtros activos */}
+          {hasActiveFilters && (
+            <TouchableOpacity
+              onPress={onResetFilters}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 8,
+                backgroundColor: '#FEF2F2',
+                borderWidth: 1,
+                borderColor: '#FECACA',
+              }}
+            >
+              <Ionicons name="close-circle-outline" size={13} color="#DC2626" />
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>
+                Limpiar filtros
+              </Text>
+            </TouchableOpacity>
+          )}
+        </ScrollView>
+
+        <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', alignSelf: 'center', paddingRight: 4 }}>
+          {totalResults} {totalResults === 1 ? 'registro' : 'registros'}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -2337,6 +2503,47 @@ function getSLAInfo(createdAt: string, status: string) {
   }
 }
 
+const getCategoryIcon = (category?: string, type?: string) => {
+  const cat = (category || type || '').toLowerCase();
+  if (cat.includes('sala')) return 'easel-outline';
+  if (cat.includes('transporte')) return 'car-outline';
+  if (cat.includes('mantenimiento')) return 'construct-outline';
+  if (cat.includes('visitante')) return 'people-outline';
+  if (cat.includes('parqueadero')) return 'car-sport-outline';
+  return 'document-text-outline';
+};
+
+const getInitials = (name?: string) => {
+  if (!name || name === 'Funcionario') return 'FN';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
+
+const getPriorityTheme = (priority: string) => {
+  const p = (priority || '').toLowerCase();
+  if (p === 'alta') return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', icon: 'alert-circle' as const };
+  if (p === 'media') return { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A', icon: 'warning-outline' as const };
+  return { bg: '#F0FDF4', text: '#16A34A', border: '#BBF7D0', icon: 'checkmark-circle-outline' as const };
+};
+
+const getStatusTheme = (status: string) => {
+  const s = (status || '').toLowerCase().replace(' ', '_');
+  if (['en_progreso', 'en_curso', 'en_proceso', 'in_progress'].includes(s)) {
+    return { bg: '#EFF6FF', text: '#2563EB', border: '#BFDBFE', dot: '#3B82F6' };
+  }
+  if (['pendiente', 'pending'].includes(s)) {
+    return { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A', dot: '#F59E0B' };
+  }
+  if (['resuelto', 'resuelta', 'completada', 'aprobada', 'aprobado', 'approved'].includes(s)) {
+    return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', dot: '#22C55E' };
+  }
+  if (['rechazado', 'rechazada', 'rejected'].includes(s)) {
+    return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', dot: '#EF4444' };
+  }
+  return { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0', dot: '#94A3B8' };
+};
+
 function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage, onAssignDriver, onOpenDispatch }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -2346,6 +2553,10 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
   const [commentLoading, setCommentLoading] = useState(false);
 
   const sla = getSLAInfo(item.created_at, item.status);
+  const priorityTheme = getPriorityTheme(item.priority);
+  const statusTheme = getStatusTheme(item.status);
+  const catIcon = getCategoryIcon(item.category, item.type);
+  const initials = getInitials(item.user);
 
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase().replace(' ', '_');
@@ -2388,73 +2599,125 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
   const isClosed = ['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase());
 
   return (
-    <Animated.View style={[styles.card, isDesktop && { flex: 1, marginHorizontal: 0 }, { transform: [{ scale }], backgroundColor: `${getStatusColor(item.status)}0D`, borderColor: `${getStatusColor(item.status)}25` }]}>
-      <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
+    <Animated.View 
+      style={[
+        styles.card, 
+        isDesktop && { flex: 1, marginHorizontal: 0 }, 
+        { 
+          transform: [{ scale }],
+          borderColor: expanded ? '#CBD5E1' : '#E2E8F0',
+        }
+      ]}
+    >
       <View style={styles.cardMain}>
-        <TouchableOpacity style={styles.cardHeader} onPress={() => setExpanded(!expanded)} activeOpacity={0.9}>
-            <View style={styles.cardHeaderLeft}>
-              <View style={styles.typeRow}>
-                <View style={{ backgroundColor: item.color, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                  <Text style={[styles.cardCategory, { color: COLORS.white }]}>{item.type}</Text>
-                </View>
-                <View style={[styles.priorityPill, { backgroundColor: item.priority === 'Alta' ? `${COLORS.danger}15` : `${COLORS.warning}15` }]}>
-                  <Text style={[styles.priorityText, { color: item.priority === 'Alta' ? COLORS.danger : COLORS.warning }]}>
-                    {item.priority}
-                  </Text>
-                </View>
-
-                {/* Badge de Indicador SLA */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                  backgroundColor: sla.bg,
-                  paddingHorizontal: 8,
-                  paddingVertical: 2,
-                  borderRadius: 6,
-                  borderWidth: 1,
-                  borderColor: `${sla.color}30`
-                }}>
-                  <Ionicons name={sla.icon} size={11} color={sla.color} />
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: sla.color }}>
-                    {sla.text}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.cardTitle}>{item.user}</Text>
-              <Text style={styles.cardSubTitleText}>{item.dependency}</Text>
+        {/* Cabecera Superior: Badges + ID + Estado */}
+        <View style={styles.cardHeaderTop}>
+          <View style={styles.cardBadgesRow}>
+            {/* Badge de Categoría */}
+            <View style={[styles.categoryBadge, { backgroundColor: `${item.color}15`, borderColor: `${item.color}35` }]}>
+              <Ionicons name={catIcon as any} size={13} color={item.color} />
+              <Text style={[styles.categoryBadgeText, { color: item.color }]}>{item.type}</Text>
             </View>
-            <View style={[styles.statusPill, { backgroundColor: `${getStatusColor(item.status)}10` }]}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-              <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{item.status}</Text>
-            </View>
-          </TouchableOpacity>
-          
-          <Text style={styles.cardDetail} numberOfLines={expanded ? 0 : 2}>{item.detail}</Text>
 
-          {/* Banner de Motivo de Rechazo Visible Si Aplica */}
-          {item.status.toLowerCase() === 'rechazado' && rejectionReasonText && (
-            <View style={{
-              backgroundColor: '#FEF2F2',
-              borderRadius: 12,
-              padding: 12,
-              borderWidth: 1,
-              borderColor: '#FECACA',
-              marginTop: 6,
-              marginBottom: 10,
-              gap: 4
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#991B1B', textTransform: 'uppercase' }}>
-                  Motivo de Rechazo:
-                </Text>
-              </View>
-              <Text style={{ fontSize: 13, color: '#7F1D1D', fontWeight: '500', lineHeight: 18 }}>
-                "{rejectionReasonText}"
+            {/* Badge de Prioridad */}
+            <View style={[styles.priorityBadge, { backgroundColor: priorityTheme.bg, borderColor: priorityTheme.border }]}>
+              <Ionicons name={priorityTheme.icon} size={11} color={priorityTheme.text} />
+              <Text style={[styles.priorityBadgeText, { color: priorityTheme.text }]}>
+                {item.priority}
               </Text>
             </View>
+
+            {/* Badge de SLA */}
+            <View style={[styles.slaBadge, { backgroundColor: sla.bg, borderColor: `${sla.color}30` }]}>
+              <Ionicons name={sla.icon} size={11} color={sla.color} />
+              <Text style={[styles.slaBadgeText, { color: sla.color }]}>
+                {sla.text}
+              </Text>
+            </View>
+
+            {/* Radicado / ID */}
+            {item.id && (
+              <View style={styles.idChip}>
+                <Text style={styles.idChipText}>#{String(item.id).slice(0, 8).toUpperCase()}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Pill de Estado */}
+          <View style={[styles.statusPillNew, { backgroundColor: statusTheme.bg, borderColor: statusTheme.border }]}>
+            <View style={[styles.statusDotNew, { backgroundColor: statusTheme.dot }]} />
+            <Text style={[styles.statusTextNew, { color: statusTheme.text }]}>{item.status}</Text>
+          </View>
+        </View>
+
+        {/* Fila del Solicitante con Avatar */}
+        <TouchableOpacity 
+          style={styles.cardUserRow} 
+          onPress={() => setExpanded(!expanded)} 
+          activeOpacity={0.85}
+        >
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.cardUserName}>{item.user}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+              <Ionicons name="business-outline" size={13} color={COLORS.muted} />
+              <Text style={styles.cardUserDept}>{item.dependency}</Text>
+            </View>
+          </View>
+          <View style={[styles.toggleExpandChip, expanded && { backgroundColor: '#F1F5F9' }]}>
+            <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={16} color={COLORS.muted} />
+          </View>
+        </TouchableOpacity>
+
+        {/* Caja de Requerimiento / Detalle */}
+        <TouchableOpacity 
+          style={styles.detailBox} 
+          onPress={() => setExpanded(!expanded)} 
+          activeOpacity={0.85}
+        >
+          <Text style={styles.cardDetailText} numberOfLines={expanded ? 0 : 2}>
+            {item.detail}
+          </Text>
+
+          {/* Metadatos rápidos a simple vista si no está expandido */}
+          {!expanded && item.uiMetadata && item.uiMetadata.length > 0 && (
+            <View style={styles.quickMetaRow}>
+              {item.uiMetadata.slice(0, 2).map((meta: any, idx: number) => (
+                <View key={idx} style={styles.quickMetaChip}>
+                  <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={COLORS.accent} />
+                  <Text style={styles.quickMetaLabel}>{meta.label}:</Text>
+                  <Text style={styles.quickMetaVal} numberOfLines={1}>{meta.value}</Text>
+                </View>
+              ))}
+            </View>
           )}
+        </TouchableOpacity>
+
+        {/* Banner de Motivo de Rechazo Visible Si Aplica */}
+        {item.status.toLowerCase() === 'rechazado' && rejectionReasonText && (
+          <View style={{
+            backgroundColor: '#FEF2F2',
+            borderRadius: 12,
+            padding: 12,
+            borderWidth: 1,
+            borderColor: '#FECACA',
+            marginTop: 4,
+            marginBottom: 10,
+            gap: 4
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#991B1B', textTransform: 'uppercase' }}>
+                Motivo de Rechazo:
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#7F1D1D', fontWeight: '500', lineHeight: 18 }}>
+              "{rejectionReasonText}"
+            </Text>
+          </View>
+        )}
           
           {expanded && (
             <View style={styles.expandedInfo}>
@@ -2764,24 +3027,49 @@ const styles = StyleSheet.create({
   resultsTitle: { fontSize: 15, fontWeight: '800', color: COLORS.muted },
 
   listContent: { paddingBottom: 100 },
-  card: { backgroundColor: COLORS.white, borderRadius: 24, flexDirection: 'row', overflow: 'hidden', marginBottom: 16, marginHorizontal: 25, borderWidth: 1, borderColor: COLORS.line, 
+  card: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 20, 
+    marginBottom: 16, 
+    marginHorizontal: 25, 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
+      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 14 },
       android: { elevation: 3 },
-      web: { boxShadow: '0 4px 12px rgba(15, 23, 42, 0.05)' }
+      web: { 
+        boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03)',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+      }
     })
   },
-  statusIndicator: { width: 6, height: '100%' },
-  cardMain: { flex: 1, padding: 20 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  cardHeaderLeft: { flex: 1, marginRight: 10 },
-  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
-  cardCategory: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  priorityPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  priorityText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
-  cardTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary },
-  cardSubTitleText: { fontSize: 13, color: COLORS.muted, fontWeight: '700' },
-  cardDetail: { fontSize: 15, color: COLORS.muted, marginTop: 8, marginBottom: 10, fontWeight: '600' },
+  cardMain: { padding: 20 },
+  cardHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 },
+  cardBadgesRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, flex: 1 },
+  categoryBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  categoryBadgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  priorityBadgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  slaBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
+  slaBadgeText: { fontSize: 10, fontWeight: '800' },
+  idChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: '#F1F5F9' },
+  idChipText: { fontSize: 10.5, fontWeight: '700', color: '#64748B', letterSpacing: 0.5 },
+  statusPillNew: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 10, borderWidth: 1 },
+  statusDotNew: { width: 7, height: 7, borderRadius: 4 },
+  statusTextNew: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  avatarCircle: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+  avatarText: { fontSize: 14, fontWeight: '800', color: '#334155' },
+  cardUserName: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
+  cardUserDept: { fontSize: 12.5, fontWeight: '600', color: COLORS.muted },
+  toggleExpandChip: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  detailBox: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 10 },
+  cardDetailText: { fontSize: 13.5, color: '#334155', fontWeight: '500', lineHeight: 20 },
+  quickMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+  quickMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 4.5, borderRadius: 7, borderWidth: 1, borderColor: '#E2E8F0' },
+  quickMetaLabel: { fontSize: 11, fontWeight: '700', color: COLORS.muted },
+  quickMetaVal: { fontSize: 11, fontWeight: '600', color: COLORS.primary, maxWidth: 160 },
   
   expandedInfo: { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginVertical: 12, borderWidth: 1, borderColor: COLORS.line },
   infoTitle: { fontSize: 11, fontWeight: '900', color: COLORS.muted, letterSpacing: 1.5, marginBottom: 15, textAlign: 'center' },

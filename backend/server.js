@@ -1111,13 +1111,41 @@ INSTRUCCIONES FINALES:
 ${require('./chatbotKnowledge')}
 `;
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: "system", content: systemContext },
-        { role: "user", content: message }
-      ],
-      model: "llama-3.3-70b-versatile",
-    });
+    // Modelos candidatos en orden de prioridad (llama-3.1-8b-instant es rápido y disponible para todos los tiers)
+    const candidateModels = [
+      process.env.GROQ_MODEL,
+      "llama-3.1-8b-instant",
+      "llama-3.3-70b-versatile",
+      "openai/gpt-oss-120b"
+    ].filter(Boolean);
+
+    let chatCompletion = null;
+    let lastError = null;
+
+    for (const model of candidateModels) {
+      try {
+        chatCompletion = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: systemContext },
+            { role: "user", content: message }
+          ],
+          model,
+        });
+        if (chatCompletion) break;
+      } catch (err) {
+        lastError = err;
+        // Si el modelo no existe o la cuenta no tiene acceso (404), intentamos con el siguiente modelo
+        if (err.status === 404 || (err.message && (err.message.includes('model_not_found') || err.message.includes('does not exist')))) {
+          console.warn(`Modelo ${model} no disponible en Groq, probando modelo alternativo...`);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!chatCompletion) {
+      throw lastError || new Error("No se pudo obtener respuesta con los modelos configurados.");
+    }
 
     const reply = chatCompletion.choices[0]?.message?.content || "";
 
