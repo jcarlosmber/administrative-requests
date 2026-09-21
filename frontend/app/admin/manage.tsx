@@ -2894,39 +2894,88 @@ const getStatusTheme = (status: string) => {
   return { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0', dot: '#94A3B8' };
 };
 
-// Paleta de fondos según categoría de servicio para Cards y Filas (fondos opacos sin líneas)
-// Paleta con fondo muted medio unificado (#E2E8F0) para Cards y Filas
+// Paleta con fondo muted medio propio con el color de cada servicio para Cards y Filas
 const getCategoryCardTheme = (category?: string, type?: string) => {
   const cat = (category || type || '').toLowerCase();
   
-  // Acentos de color para badges de categoría e iniciales de avatar
-  let accent = {
-    color: '#0284C7',
-    colorDark: '#0369A1',
-  };
-
   if (cat.includes('visit') || cat === 'visitors') {
-    accent = { color: '#E11D48', colorDark: '#9F1239' };
-  } else if (cat.includes('transp') || cat === 'transport') {
-    accent = { color: '#0284C7', colorDark: '#0369A1' };
-  } else if (cat.includes('manten') || cat === 'maintenance') {
-    accent = { color: '#0D9488', colorDark: '#0F766E' };
-  } else if (cat.includes('sala') || cat === 'rooms') {
-    accent = { color: '#7C3AED', colorDark: '#6D28D9' };
-  } else if (cat.includes('parque') || cat === 'parking') {
-    accent = { color: '#EA580C', colorDark: '#C2410C' };
-  } else {
-    accent = { color: '#3B82F6', colorDark: '#1E293B' };
+    return {
+      bg: '#FFE4E6', // Muted suave rosa (Rose 100)
+      hoverBg: '#FECDD3', // Hover interactivo (Rose 200)
+      border: 'transparent',
+      borderExpanded: 'transparent',
+      headerBg: '#FFE4E6',
+      color: '#E11D48',
+      colorDark: '#9F1239',
+      accentBar: 'transparent',
+      shadow: 'rgba(225, 29, 72, 0.07)',
+    };
   }
-
+  
+  if (cat.includes('transp') || cat === 'transport') {
+    return {
+      bg: '#E0F2FE', // Muted suave azul cielo (Sky 100)
+      hoverBg: '#BAE6FD', // Hover interactivo (Sky 200)
+      border: 'transparent',
+      borderExpanded: 'transparent',
+      headerBg: '#E0F2FE',
+      color: '#0284C7',
+      colorDark: '#0369A1',
+      accentBar: 'transparent',
+      shadow: 'rgba(2, 132, 199, 0.07)',
+    };
+  }
+  
+  if (cat.includes('manten') || cat === 'maintenance') {
+    return {
+      bg: '#CCFBF1', // Muted suave verde agua/turquesa (Teal 100)
+      hoverBg: '#99F6E4', // Hover interactivo (Teal 200)
+      border: 'transparent',
+      borderExpanded: 'transparent',
+      headerBg: '#CCFBF1',
+      color: '#0D9488',
+      colorDark: '#0F766E',
+      accentBar: 'transparent',
+      shadow: 'rgba(13, 148, 136, 0.07)',
+    };
+  }
+  
+  if (cat.includes('sala') || cat === 'rooms') {
+    return {
+      bg: '#EDE9FE', // Muted suave violeta (Violet 100)
+      hoverBg: '#DDD6FE', // Hover interactivo (Violet 200)
+      border: 'transparent',
+      borderExpanded: 'transparent',
+      headerBg: '#EDE9FE',
+      color: '#7C3AED',
+      colorDark: '#6D28D9',
+      accentBar: 'transparent',
+      shadow: 'rgba(124, 58, 237, 0.07)',
+    };
+  }
+  
+  if (cat.includes('parque') || cat === 'parking') {
+    return {
+      bg: '#FFEDD5', // Muted suave naranja (Orange 100)
+      hoverBg: '#FED7AA', // Hover interactivo (Orange 200)
+      border: 'transparent',
+      borderExpanded: 'transparent',
+      headerBg: '#FFEDD5',
+      color: '#EA580C',
+      colorDark: '#C2410C',
+      accentBar: 'transparent',
+      shadow: 'rgba(234, 88, 12, 0.07)',
+    };
+  }
+  
   return {
-    bg: '#E2E8F0', // Fondo muted medio unificado (Slate 200)
-    hoverBg: '#CBD5E1', // Hover táctil refinado (Slate 300)
+    bg: '#E2E8F0', // Muted slate por defecto (Slate 200)
+    hoverBg: '#CBD5E1', // Hover interactivo (Slate 300)
     border: 'transparent',
     borderExpanded: 'transparent',
     headerBg: '#E2E8F0',
-    color: accent.color,
-    colorDark: accent.colorDark,
+    color: '#3B82F6',
+    colorDark: '#1E293B',
     accentBar: 'transparent',
     shadow: 'rgba(15, 23, 42, 0.05)',
   };
