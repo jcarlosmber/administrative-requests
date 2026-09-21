@@ -3160,13 +3160,12 @@ function RequestTableRow({
           paddingHorizontal: 8,
           paddingVertical: 4,
           borderRadius: 8,
-          backgroundColor: statusTheme.bg,
-          borderWidth: 1,
-          borderColor: statusTheme.border,
+          backgroundColor: '#1E293B',
+          borderWidth: 0,
           alignSelf: 'flex-start',
         }}>
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dot }} />
-          <Text style={{ fontSize: 11, fontWeight: '800', color: statusTheme.text }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
             {item.status}
           </Text>
         </View>
@@ -3180,108 +3179,126 @@ function RequestTableRow({
         {isPending && (
           <>
             {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
-              <TouchableOpacity
+              <Pressable
                 onPress={(e: any) => {
                   e?.stopPropagation?.();
                   onUpdateStatus(item, 'en_progreso');
                 }}
-                style={{
-                  backgroundColor: '#2563EB',
-                  paddingHorizontal: 10,
-                  height: 30,
-                  borderRadius: 7,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
+                style={({ hovered }: any) => [
+                  {
+                    backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                    paddingHorizontal: 10,
+                    height: 30,
+                    borderRadius: 7,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    borderWidth: 0,
+                  },
+                  Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                ]}
               >
                 <Ionicons name="play-outline" size={13} color="#FFFFFF" />
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Procesar</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
 
             {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
-              <TouchableOpacity
+              <Pressable
                 onPress={(e: any) => {
                   e?.stopPropagation?.();
                   onUpdateStatus(item, 'resuelto');
                 }}
-                style={{
-                  backgroundColor: '#059669',
-                  paddingHorizontal: 10,
-                  height: 30,
-                  borderRadius: 7,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
+                style={({ hovered }: any) => [
+                  {
+                    backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                    paddingHorizontal: 10,
+                    height: 30,
+                    borderRadius: 7,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    borderWidth: 0,
+                  },
+                  Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                ]}
               >
-                <Ionicons name="checkmark-outline" size={13} color="#FFFFFF" />
+                <Ionicons name="checkmark-outline" size={13} color="#34D399" />
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Aprobar</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
 
             {item.category === 'transport' && (
-              <TouchableOpacity
+              <Pressable
                 onPress={(e: any) => {
                   e?.stopPropagation?.();
                   onAssignDriver && onAssignDriver(item);
                 }}
-                style={{
-                  backgroundColor: '#0284C7',
-                  paddingHorizontal: 10,
-                  height: 30,
-                  borderRadius: 7,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
+                style={({ hovered }: any) => [
+                  {
+                    backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                    paddingHorizontal: 10,
+                    height: 30,
+                    borderRadius: 7,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    borderWidth: 0,
+                  },
+                  Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                ]}
               >
                 <Ionicons name="car-outline" size={13} color="#FFFFFF" />
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Asignar</Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
 
-            <TouchableOpacity
+            <Pressable
               onPress={(e: any) => {
                 e?.stopPropagation?.();
                 onUpdateStatus(item, 'rechazado');
               }}
-              style={{
-                backgroundColor: '#FEF2F2',
-                borderWidth: 1,
-                borderColor: '#FECACA',
-                width: 30,
-                height: 30,
-                borderRadius: 7,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              style={({ hovered }: any) => [
+                {
+                  backgroundColor: hovered ? '#1E293B' : '#334155',
+                  borderWidth: 0,
+                  width: 30,
+                  height: 30,
+                  borderRadius: 7,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+              ]}
             >
-              <Ionicons name="close-outline" size={15} color="#DC2626" />
-            </TouchableOpacity>
+              <Ionicons name="close-outline" size={15} color="#F87171" />
+            </Pressable>
           </>
         )}
 
         {isInProgress && (
-          <TouchableOpacity
+          <Pressable
             onPress={(e: any) => {
               e?.stopPropagation?.();
               onUpdateStatus(item, 'resuelto');
             }}
-            style={{
-              backgroundColor: '#059669',
-              paddingHorizontal: 10,
-              height: 30,
-              borderRadius: 7,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-            }}
+            style={({ hovered }: any) => [
+              {
+                backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                paddingHorizontal: 10,
+                height: 30,
+                borderRadius: 7,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                borderWidth: 0,
+              },
+              Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+            ]}
           >
-            <Ionicons name="checkmark-done-outline" size={13} color="#FFFFFF" />
+            <Ionicons name="checkmark-done-outline" size={13} color="#34D399" />
             <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Finalizar</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* Botón Ver Detalle */}
@@ -3460,12 +3477,11 @@ function RequestDetailModal({
                 paddingHorizontal: 9,
                 paddingVertical: 4,
                 borderRadius: 8,
-                backgroundColor: statusTheme.bg,
-                borderWidth: 1,
-                borderColor: statusTheme.border,
+                backgroundColor: '#1E293B',
+                borderWidth: 0,
               }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dot }} />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: statusTheme.text }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
                   {item.status}
                 </Text>
               </View>
@@ -3839,115 +3855,133 @@ function RequestDetailModal({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {/* Rechazar */}
               {!isClosed && (
-                <TouchableOpacity
+                <Pressable
                   onPress={() => {
                     onClose();
                     onUpdateStatus(item, 'rechazado');
                   }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 5,
-                    paddingHorizontal: 14,
-                    height: 40,
-                    borderRadius: 10,
-                    backgroundColor: '#FEF2F2',
-                    borderWidth: 1,
-                    borderColor: '#FECACA',
-                  }}
+                  style={({ hovered }: any) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 16,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: hovered ? '#1E293B' : '#334155',
+                      borderWidth: 0,
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
                 >
-                  <Ionicons name="close-outline" size={16} color="#DC2626" />
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#DC2626' }}>Rechazar</Text>
-                </TouchableOpacity>
+                  <Ionicons name="close-outline" size={16} color="#F87171" />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>Rechazar</Text>
+                </Pressable>
               )}
 
               {/* Acciones principales según estado */}
               {isPending && (
                 <>
                   {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         onClose();
                         onUpdateStatus(item, 'en_progreso');
                       }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingHorizontal: 16,
-                        height: 40,
-                        borderRadius: 10,
-                        backgroundColor: '#2563EB',
-                      }}
+                      style={({ hovered }: any) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 16,
+                          height: 40,
+                          borderRadius: 10,
+                          backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                          borderWidth: 0,
+                        },
+                        Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                      ]}
                     >
                       <Ionicons name="play-outline" size={16} color="#FFFFFF" />
                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>Procesar</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
 
                   {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         onClose();
                         onUpdateStatus(item, 'resuelto');
                       }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingHorizontal: 16,
-                        height: 40,
-                        borderRadius: 10,
-                        backgroundColor: '#059669',
-                      }}
+                      style={({ hovered }: any) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 16,
+                          height: 40,
+                          borderRadius: 10,
+                          backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                          borderWidth: 0,
+                        },
+                        Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                      ]}
                     >
-                      <Ionicons name="checkmark-outline" size={16} color="#FFFFFF" />
+                      <Ionicons name="checkmark-outline" size={16} color="#34D399" />
                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>Aprobar</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
 
                   {item.category === 'transport' && (
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => {
                         onClose();
                         onAssignDriver && onAssignDriver(item);
                       }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingHorizontal: 16,
-                        height: 40,
-                        borderRadius: 10,
-                        backgroundColor: '#0284C7',
-                      }}
+                      style={({ hovered }: any) => [
+                        {
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 16,
+                          height: 40,
+                          borderRadius: 10,
+                          backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                          borderWidth: 0,
+                        },
+                        Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                      ]}
                     >
                       <Ionicons name="car-outline" size={16} color="#FFFFFF" />
                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>Asignar Conductor</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
                 </>
               )}
 
               {isInProgress && (
-                <TouchableOpacity
+                <Pressable
                   onPress={() => {
                     onClose();
                     onUpdateStatus(item, 'resuelto');
                   }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingHorizontal: 16,
-                    height: 40,
-                    borderRadius: 10,
-                    backgroundColor: '#059669',
-                  }}
+                  style={({ hovered }: any) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 16,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: hovered ? '#0F172A' : '#1E293B',
+                      borderWidth: 0,
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
                 >
-                  <Ionicons name="checkmark-done-outline" size={16} color="#FFFFFF" />
+                  <Ionicons name="checkmark-done-outline" size={16} color="#34D399" />
                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>Finalizar</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
             </View>
           </View>
@@ -4050,12 +4084,6 @@ function RequestListItem({
         {/* Cabecera Superior: Radicado + Categoría a la izquierda, Estado a la derecha */}
         <View style={styles.cardHeaderTop}>
           <View style={styles.cardBadgesRow}>
-            {/* Radicado / ID */}
-            {item.id && (
-              <View style={styles.idChip}>
-                <Text style={styles.idChipText}>#{String(item.id).slice(0, 8).toUpperCase()}</Text>
-              </View>
-            )}
 
             {/* Badge de Categoría */}
             <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
@@ -4075,9 +4103,9 @@ function RequestListItem({
           </View>
 
           {/* Pill de Estado */}
-          <View style={[styles.statusPillNew, { backgroundColor: statusTheme.bg, borderWidth: 0 }]}>
+          <View style={[styles.statusPillNew, { backgroundColor: '#1E293B', borderWidth: 0 }]}>
             <View style={[styles.statusDotNew, { backgroundColor: statusTheme.dot }]} />
-            <Text style={[styles.statusTextNew, { color: statusTheme.text }]}>{item.status}</Text>
+            <Text style={[styles.statusTextNew, { color: '#FFFFFF' }]}>{item.status}</Text>
           </View>
         </View>
 
@@ -4313,63 +4341,103 @@ function RequestListItem({
                 <>
                   {/* Grupo 1: Mantenimiento, Sala Especial -> Procesar */}
                   {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, { backgroundColor: '#2563EB', borderColor: '#1D4ED8', height: 32, paddingHorizontal: 11 }]}
+                    <Pressable 
+                      style={({ hovered }: any) => [
+                        styles.actionBtn, 
+                        { 
+                          backgroundColor: hovered ? '#0F172A' : '#1E293B', 
+                          borderWidth: 0, 
+                          height: 32, 
+                          paddingHorizontal: 12 
+                        },
+                        Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                      ]}
                       onPress={() => onUpdateStatus(item, 'en_progreso')}
-                      activeOpacity={0.8}
                     >
                       <Ionicons name="play-outline" size={13} color="#FFFFFF" />
                       <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Procesar</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
 
                   {/* Grupo 2: Visitantes, Parqueadero, Sala Estándar -> Aprobar directo */}
                   {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, { backgroundColor: '#059669', borderColor: '#047857', height: 32, paddingHorizontal: 11 }]}
+                    <Pressable 
+                      style={({ hovered }: any) => [
+                        styles.actionBtn, 
+                        { 
+                          backgroundColor: hovered ? '#0F172A' : '#1E293B', 
+                          borderWidth: 0, 
+                          height: 32, 
+                          paddingHorizontal: 12 
+                        },
+                        Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                      ]}
                       onPress={() => onUpdateStatus(item, 'resuelto')}
-                      activeOpacity={0.8}
                     >
-                      <Ionicons name="checkmark-outline" size={13} color="#FFFFFF" />
+                      <Ionicons name="checkmark-outline" size={13} color="#34D399" />
                       <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Aprobar</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
 
                   {/* Grupo 3: Transporte con Asignación de Conductor */}
                   {item.category === 'transport' && (
-                    <TouchableOpacity 
-                      style={[styles.actionBtn, { backgroundColor: '#0284C7', borderColor: '#0369A1', height: 32, paddingHorizontal: 11 }]}
+                    <Pressable 
+                      style={({ hovered }: any) => [
+                        styles.actionBtn, 
+                        { 
+                          backgroundColor: hovered ? '#0F172A' : '#1E293B', 
+                          borderWidth: 0, 
+                          height: 32, 
+                          paddingHorizontal: 12 
+                        },
+                        Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                      ]}
                       onPress={() => onAssignDriver && onAssignDriver(item)}
-                      activeOpacity={0.8}
                     >
                       <Ionicons name="car-outline" size={13} color="#FFFFFF" />
                       <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Asignar</Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   )}
                 </>
               )}
 
               {isInProgress && (
-                <TouchableOpacity 
-                  style={[styles.actionBtn, { backgroundColor: '#059669', borderColor: '#047857', height: 32, paddingHorizontal: 11 }]}
+                <Pressable 
+                  style={({ hovered }: any) => [
+                    styles.actionBtn, 
+                    { 
+                      backgroundColor: hovered ? '#0F172A' : '#1E293B', 
+                      borderWidth: 0, 
+                      height: 32, 
+                      paddingHorizontal: 12 
+                        },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
                   onPress={() => onUpdateStatus(item, 'resuelto')}
-                  activeOpacity={0.8}
                 >
-                  <Ionicons name="checkmark-done-outline" size={13} color="#FFFFFF" />
+                  <Ionicons name="checkmark-done-outline" size={13} color="#34D399" />
                   <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Finalizar</Text>
-                </TouchableOpacity>
+                </Pressable>
               )}
 
               {/* Botón de Rechazo sutil pero accesible */}
               {!isClosed && (
-                <TouchableOpacity 
-                  style={[styles.actionBtn, { backgroundColor: '#FEF2F2', borderColor: '#FECACA', height: 32, paddingHorizontal: 10 }]}
+                <Pressable 
+                  style={({ hovered }: any) => [
+                    styles.actionBtn, 
+                    { 
+                      backgroundColor: hovered ? '#1E293B' : '#334155', 
+                      borderWidth: 0, 
+                      height: 32, 
+                      paddingHorizontal: 11 
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
                   onPress={() => onUpdateStatus(item, 'rechazado')}
-                  activeOpacity={0.75}
                 >
-                  <Ionicons name="close-outline" size={14} color="#DC2626" />
-                  <Text style={[styles.actionBtnText, { color: '#DC2626', fontSize: 11.5 }]}>Rechazar</Text>
-                </TouchableOpacity>
+                  <Ionicons name="close-outline" size={14} color="#F87171" />
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Rechazar</Text>
+                </Pressable>
               )}
             </View>
           </View>
