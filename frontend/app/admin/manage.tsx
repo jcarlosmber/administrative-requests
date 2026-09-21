@@ -159,15 +159,31 @@ export default function ManageRequests() {
     rejectReason?: string;
   } | null>(null);
   const [driverModal, setDriverModal] = useState<{ visible: boolean; item: AdministrativeRequest | null }>({ visible: false, item: null });
-  const [dispatchModal, setDispatchModal] = useState<{ visible: boolean; item: any | null }>({ visible: false, item: null });
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
   const [driverPlate, setDriverPlate] = useState('');
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [serviceEmails, setServiceEmails] = useState<ServiceEmail[]>([]);
   const [drawerItem, setDrawerItem] = useState<any | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+
+  // Cálculo responsivo: 3 o más tarjetas en pantallas grandes
+  const numCardCols = useMemo(() => {
+    if (!isDesktop) return 1;
+    if (width >= 2100) return 5;
+    if (width >= 1650) return 4;
+    if (width >= 1250) return 3;
+    return 2;
+  }, [isDesktop, width]);
+
+  const maxCardWidth = useMemo(() => {
+    if (!isDesktop || numCardCols <= 1) return undefined;
+    const availableWidth = width - 300 - 50; // Sidebar (300) + Padding horizontal (25*2)
+    const gapTotal = (numCardCols - 1) * 16;
+    return Math.floor((availableWidth - gapTotal) / numCardCols);
+  }, [isDesktop, numCardCols, width]);
 
   const handleApproveTransport = async () => {
     if (!driverModal.item) return;
@@ -654,11 +670,11 @@ export default function ManageRequests() {
           />
         )}
 
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, ...(Platform.OS === 'web' && viewMode === 'table' ? { overflowX: 'auto' } : {}) }}>
           <FlatList
-            key={isDesktop ? 'desktop-cols' : 'mobile-cols'}
-            numColumns={isDesktop ? 2 : 1}
-            columnWrapperStyle={isDesktop ? { paddingHorizontal: 25, gap: 16 } : undefined}
+            key={viewMode === 'table' ? 'table-view' : `cards-${numCardCols}`}
+            numColumns={viewMode === 'table' ? 1 : numCardCols}
+            columnWrapperStyle={viewMode === 'cards' && numCardCols > 1 ? { paddingHorizontal: 25, gap: 16 } : undefined}
             ListHeaderComponent={
               <View style={styles.headerContainer}>
                 <HeroSection 
@@ -698,24 +714,41 @@ export default function ManageRequests() {
                     hasActiveFilters={hasActiveFilters}
                     onResetFilters={resetAllFilters}
                     totalResults={filteredData.length}
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
                   />
                 </View>
+
+                {/* Cabecera de Tabla si la vista activa es Tabla */}
+                {viewMode === 'table' && filteredData.length > 0 && (
+                  <RequestTableHeader />
+                )}
               </View>
             }
             data={filteredData}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
-              <RequestListItem 
-                item={mapRequestToUI(item)} 
-                onUpdateStatus={askConfirmation} 
-                onRefresh={fetchRequests} 
-                initiallyExpanded={params.id === item.id} 
-                onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} 
-                setViewerImage={setViewerImage} 
-                onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
-                onOpenDispatch={(reqItem: any) => setDispatchModal({ visible: true, item: reqItem })}
-                onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
-              />
+              viewMode === 'table' ? (
+                <RequestTableRow 
+                  item={mapRequestToUI(item)} 
+                  onUpdateStatus={askConfirmation} 
+                  onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
+                  onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
+                />
+              ) : (
+                <RequestListItem 
+                  item={mapRequestToUI(item)} 
+                  onUpdateStatus={askConfirmation} 
+                  onRefresh={fetchRequests} 
+                  initiallyExpanded={params.id === item.id} 
+                  onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} 
+                  setViewerImage={setViewerImage} 
+                  onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
+                  onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
+                  maxCardWidth={maxCardWidth}
+                  numCols={numCardCols}
+                />
+              )
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -1726,151 +1759,6 @@ export default function ManageRequests() {
         );
       })()}
 
-      {/* Modal Ficha de Despacho Oficial (Imprimible) */}
-      <Modal visible={dispatchModal.visible} transparent animationType="fade" onRequestClose={() => setDispatchModal({ visible: false, item: null })}>
-        <View style={styles.modalOverlay}>
-          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContent, { maxWidth: 540, maxHeight: '90%', padding: 24 }]}>
-            <TouchableOpacity 
-              style={styles.modalCloseBtn}
-              onPress={() => setDispatchModal({ visible: false, item: null })}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close" size={20} color="#94A3B8" />
-            </TouchableOpacity>
-
-            <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
-              {/* Membrete Institucional */}
-              <View style={{ alignItems: 'center', borderBottomWidth: 2, borderBottomColor: '#0F172A', paddingBottom: 14, marginBottom: 16 }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' }}>
-                  Alcaldía Mayor de Bogotá D.C.
-                </Text>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#2563EB', marginTop: 2, textAlign: 'center' }}>
-                  Secretaría Jurídica Distrital — SASGE
-                </Text>
-                <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, marginTop: 8 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1, textTransform: 'uppercase' }}>
-                    Comprobante Oficial de Despacho y Control
-                  </Text>
-                </View>
-              </View>
-
-              {dispatchModal.item && (
-                <View style={{ gap: 12 }}>
-                  {/* Datos Clave */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                    <View>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>RADICADO</Text>
-                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>#{dispatchModal.item.id?.slice(0, 8).toUpperCase()}</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>FECHA EMISIÓN</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{new Date().toLocaleDateString('es-CO')}</Text>
-                    </View>
-                  </View>
-
-                  {/* Solicitante y Servicio */}
-                  <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 6 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Solicitante:</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>{dispatchModal.item.user || dispatchModal.item.user_name || 'Funcionario'}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Dependencia:</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>{dispatchModal.item.dependency || 'SJD'}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Tipo Servicio:</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#2563EB' }}>{dispatchModal.item.type}</Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Estado Actual:</Text>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#10B981' }}>{dispatchModal.item.status}</Text>
-                    </View>
-                  </View>
-
-                  {/* Descripción del Servicio */}
-                  <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>
-                      Asunto / Detalle Requerimiento
-                    </Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A', lineHeight: 18 }}>
-                      {dispatchModal.item.detail || dispatchModal.item.title}
-                    </Text>
-                  </View>
-
-                  {/* Metadatos Técnicos */}
-                  {dispatchModal.item.uiMetadata && dispatchModal.item.uiMetadata.length > 0 && (
-                    <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 6 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>
-                        Ficha Técnica Operativa
-                      </Text>
-                      {dispatchModal.item.uiMetadata.map((m: any, idx: number) => (
-                        <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>{m.label}:</Text>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', flex: 1, textAlign: 'right', marginLeft: 10 }}>{m.value}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-
-                  {/* Conductor si aplica */}
-                  {dispatchModal.item.metadata?.driver && (
-                    <View style={{ backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 10, padding: 12 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', marginBottom: 4 }}>
-                        Vehículo & Conductor Asignado
-                      </Text>
-                      <Text style={{ fontSize: 12, color: '#1E3A8A', fontWeight: '700' }}>
-                        Conductor: {dispatchModal.item.metadata.driver.name}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: '#1E3A8A' }}>
-                        Teléfono: {dispatchModal.item.metadata.driver.phone || 'N/A'} — Placa: {dispatchModal.item.metadata.driver.plate || 'Oficial'}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Zona de Firmas de Control */}
-                  <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#CBD5E1', flexDirection: 'row', justifyContent: 'space-between', gap: 14 }}>
-                    <View style={{ flex: 1, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#94A3B8', paddingTop: 6 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569' }}>FIRMA SOLICITANTE</Text>
-                      <Text style={{ fontSize: 9, color: '#94A3B8' }}>C.C. / Recibido a Conformidad</Text>
-                    </View>
-                    <View style={{ flex: 1, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#94A3B8', paddingTop: 6 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569' }}>FIRMA DESPACHO / CONTROL</Text>
-                      <Text style={{ fontSize: 9, color: '#94A3B8' }}>Seguridad / Conductor / Técnico</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Botones Imprimir / Cerrar */}
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
-                <TouchableOpacity 
-                  style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
-                  onPress={() => setDispatchModal({ visible: false, item: null })}
-                >
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748B' }}>Cerrar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={{ flex: 1.3, height: 46, borderRadius: 12, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
-                  onPress={() => {
-                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                      window.print();
-                    } else {
-                      setSuccessModal({ visible: true, message: 'Ficha lista para radicación y control.' });
-                    }
-                  }}
-                >
-                  <Ionicons name="print-outline" size={17} color="#FFFFFF" />
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF' }}>Imprimir Ficha</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
       {/* Visor de Imágenes a Pantalla Completa */}
       <Modal visible={viewerImage !== null} transparent={true} animationType="fade" onRequestClose={() => setViewerImage(null)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' }}>
@@ -1899,8 +1787,8 @@ export default function ManageRequests() {
         </View>
       </Modal>
 
-      {/* Panel Lateral o Modal de Detalle (Drawer / Slide-over) */}
-      <RequestDetailDrawer
+      {/* Modal Centrado de Detalle Completo de Solicitud */}
+      <RequestDetailModal
         visible={drawerItem !== null}
         item={drawerItem}
         onClose={() => setDrawerItem(null)}
@@ -1908,10 +1796,6 @@ export default function ManageRequests() {
         onAssignDriver={(reqItem: any) => {
           setDrawerItem(null);
           setDriverModal({ visible: true, item: reqItem });
-        }}
-        onOpenDispatch={(reqItem: any) => {
-          setDrawerItem(null);
-          setDispatchModal({ visible: true, item: reqItem });
         }}
         setViewerImage={setViewerImage}
         onRefresh={fetchRequests}
@@ -1934,12 +1818,12 @@ function Sidebar({
   const router = useRouter();
 
   const TABS = [
-    { id: 'Todas', label: 'Consolidado General', icon: 'layers' },
-    { id: 'Visitantes', label: 'Control de Visitantes', icon: 'people' },
-    { id: 'Mantenimiento', label: 'Mantenimiento Locativo', icon: 'construct' },
-    { id: 'Parqueadero', label: 'Acceso Parqueadero', icon: 'car' },
-    { id: 'Salas', label: 'Reserva de Salas', icon: 'easel' },
-    { id: 'Transporte', label: 'Flota de Transporte', icon: 'car-sport' },
+    { id: 'Todas', label: 'Consolidado General', icon: 'layers', color: '#6366F1', bgLight: 'rgba(99, 102, 241, 0.2)' },
+    { id: 'Visitantes', label: 'Control de Visitantes', icon: 'people', color: '#F43F5E', bgLight: 'rgba(244, 63, 94, 0.2)' },
+    { id: 'Mantenimiento', label: 'Mantenimiento Locativo', icon: 'construct', color: '#14B8A6', bgLight: 'rgba(20, 184, 166, 0.2)' },
+    { id: 'Parqueadero', label: 'Acceso Parqueadero', icon: 'car', color: '#F97316', bgLight: 'rgba(249, 115, 22, 0.2)' },
+    { id: 'Salas', label: 'Reserva de Salas', icon: 'easel', color: '#A855F7', bgLight: 'rgba(168, 85, 247, 0.2)' },
+    { id: 'Transporte', label: 'Flota de Transporte', icon: 'car-sport', color: '#0EA5E9', bgLight: 'rgba(14, 165, 233, 0.2)' },
   ];
 
   return (
@@ -1963,6 +1847,8 @@ function Sidebar({
                 label={tab.label} 
                 icon={tab.icon} 
                 active={active} 
+                color={tab.color}
+                bgLight={tab.bgLight}
                 badge={count > 0 ? count : undefined}
                 onPress={() => setServiceFilter(tab.id)} 
               />
@@ -1984,19 +1870,49 @@ function Sidebar({
   );
 }
 
-function SidebarTabButton({ label, icon, active, badge, onPress }: any) {
+function SidebarTabButton({ label, icon, active, badge, color, bgLight, onPress }: any) {
   return (
     <TouchableOpacity 
-      style={[styles.sideTabBtn, active && styles.sideTabBtnActive]} 
+      style={[
+        styles.sideTabBtn, 
+        active 
+          ? [styles.sideTabBtnActive, { backgroundColor: color || COLORS.white, shadowColor: color, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8 }, Platform.OS === 'web' ? { boxShadow: `0 4px 14px ${color}55` } : {}] 
+          : { backgroundColor: 'transparent' }
+      ]} 
       onPress={onPress}
+      activeOpacity={0.8}
     >
-      <Ionicons name={icon} size={20} color={active ? COLORS.primary : 'rgba(255,255,255,0.7)'} />
-      <Text style={[styles.sideTabLabel, active && styles.sideTabLabelActive, { flex: 1 }]} numberOfLines={1}>
+      <View style={{
+        width: 32,
+        height: 32,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: active ? 'rgba(255,255,255,0.22)' : (bgLight || 'rgba(255,255,255,0.06)'),
+      }}>
+        <Ionicons name={icon} size={18} color={active ? '#FFFFFF' : (color || 'rgba(255,255,255,0.7)')} />
+      </View>
+      <Text 
+        style={[
+          styles.sideTabLabel, 
+          active ? { color: '#FFFFFF', fontWeight: '800' } : { color: 'rgba(255,255,255,0.85)' }, 
+          { flex: 1 }
+        ]} 
+        numberOfLines={1}
+      >
         {label}
       </Text>
       {badge !== undefined && (
-        <View style={[styles.sideBadge, active ? styles.sideBadgeActive : styles.sideBadgeInactive]}>
-          <Text style={[styles.sideBadgeText, active && styles.sideBadgeTextActive]}>
+        <View style={[
+          styles.sideBadge, 
+          active 
+            ? { backgroundColor: 'rgba(255,255,255,0.25)' } 
+            : { backgroundColor: 'rgba(245, 158, 11, 0.25)', borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.5)' }
+        ]}>
+          <Text style={[
+            styles.sideBadgeText, 
+            active ? { color: '#FFFFFF' } : { color: '#FBBF24' }
+          ]}>
             {badge}
           </Text>
         </View>
@@ -2207,12 +2123,72 @@ function CategoryPillsBar({
   badges: Record<string, { total: number; pending: number }>;
 }) {
   const categories = [
-    { key: 'Todas', label: 'Todos los servicios', icon: 'apps-outline', color: '#0F172A', bgLight: '#F1F5F9', borderLight: '#CBD5E1' },
-    { key: 'Visitantes', label: 'Visitantes', icon: 'people-outline', color: '#E11D48', bgLight: '#FFE4E6', borderLight: '#FECDD3' },
-    { key: 'Transporte', label: 'Transporte', icon: 'car-outline', color: '#0284C7', bgLight: '#E0F2FE', borderLight: '#BAE6FD' },
-    { key: 'Mantenimiento', label: 'Mantenimiento', icon: 'construct-outline', color: '#0D9488', bgLight: '#CCFBF1', borderLight: '#99F6E4' },
-    { key: 'Salas', label: 'Salas', icon: 'easel-outline', color: '#7C3AED', bgLight: '#EDE9FE', borderLight: '#DDD6FE' },
-    { key: 'Parqueadero', label: 'Parqueadero', icon: 'car-sport-outline', color: '#EA580C', bgLight: '#FFEDD5', borderLight: '#FED7AA' },
+    { 
+      key: 'Todas', 
+      label: 'Todos los servicios', 
+      icon: 'apps-outline', 
+      color: '#334155', 
+      colorDark: '#0F172A',
+      bgLight: '#F1F5F9', 
+      bgHover: '#E2E8F0',
+      borderLight: '#CBD5E1', 
+      shadow: 'rgba(51, 65, 85, 0.3)' 
+    },
+    { 
+      key: 'Visitantes', 
+      label: 'Visitantes', 
+      icon: 'people-outline', 
+      color: '#E11D48', 
+      colorDark: '#9F1239',
+      bgLight: '#FFF1F2', 
+      bgHover: '#FFE4E6',
+      borderLight: '#FECDD3', 
+      shadow: 'rgba(225, 29, 72, 0.35)' 
+    },
+    { 
+      key: 'Transporte', 
+      label: 'Transporte', 
+      icon: 'car-outline', 
+      color: '#0284C7', 
+      colorDark: '#0369A1',
+      bgLight: '#F0F9FF', 
+      bgHover: '#E0F2FE',
+      borderLight: '#BAE6FD', 
+      shadow: 'rgba(2, 132, 199, 0.35)' 
+    },
+    { 
+      key: 'Mantenimiento', 
+      label: 'Mantenimiento', 
+      icon: 'construct-outline', 
+      color: '#0D9488', 
+      colorDark: '#0F766E',
+      bgLight: '#F0FDFA', 
+      bgHover: '#CCFBF1',
+      borderLight: '#99F6E4', 
+      shadow: 'rgba(13, 148, 136, 0.35)' 
+    },
+    { 
+      key: 'Salas', 
+      label: 'Salas', 
+      icon: 'easel-outline', 
+      color: '#7C3AED', 
+      colorDark: '#6D28D9',
+      bgLight: '#F5F3FF', 
+      bgHover: '#EDE9FE',
+      borderLight: '#DDD6FE', 
+      shadow: 'rgba(124, 58, 237, 0.35)' 
+    },
+    { 
+      key: 'Parqueadero', 
+      label: 'Parqueadero', 
+      icon: 'car-sport-outline', 
+      color: '#EA580C', 
+      colorDark: '#C2410C',
+      bgLight: '#FFF7ED', 
+      bgHover: '#FFEDD5',
+      borderLight: '#FED7AA', 
+      shadow: 'rgba(234, 88, 12, 0.35)' 
+    },
   ];
 
   return (
@@ -2220,7 +2196,7 @@ function CategoryPillsBar({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10, paddingVertical: 3 }}
+        contentContainerStyle={{ gap: 10, paddingVertical: 4, paddingHorizontal: 2 }}
       >
         {categories.map((cat) => {
           const isSelected = selected === cat.key;
@@ -2242,32 +2218,43 @@ function CategoryPillsBar({
                   backgroundColor: isSelected
                     ? cat.color
                     : hovered
-                    ? cat.bgLight
-                    : '#FFFFFF',
+                    ? cat.bgHover
+                    : cat.bgLight,
                   borderWidth: 1.8,
                   borderColor: isSelected
                     ? cat.color
                     : hovered
                     ? cat.color
-                    : '#E2E8F0',
+                    : cat.borderLight,
                 } as any,
-                isSelected && (Platform.OS === 'web' ? { boxShadow: `0 4px 14px ${cat.color}40` } : {}),
-                hovered && !isSelected && (Platform.OS === 'web' ? { transform: [{ translateY: -2 }], boxShadow: `0 3px 10px ${cat.color}25` } : {}),
-                Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+                isSelected && (Platform.OS === 'web' ? { boxShadow: `0 4px 14px ${cat.shadow}` } : {}),
+                hovered && !isSelected && (Platform.OS === 'web' ? { transform: [{ translateY: -2 }], boxShadow: `0 4px 12px ${cat.shadow}` } : {}),
+                Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.18s ease-in-out' } : {},
               ]}
             >
               {({ hovered }: any) => (
                 <>
-                  <Ionicons
-                    name={cat.icon as any}
-                    size={17}
-                    color={isSelected ? '#FFFFFF' : cat.color}
-                  />
+                  <View
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 13,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.22)' : '#FFFFFF',
+                    }}
+                  >
+                    <Ionicons
+                      name={cat.icon as any}
+                      size={15}
+                      color={isSelected ? '#FFFFFF' : cat.color}
+                    />
+                  </View>
                   <Text
                     style={{
                       fontSize: 13.5,
                       fontWeight: isSelected ? '800' : '700',
-                      color: isSelected ? '#FFFFFF' : hovered ? cat.color : '#334155',
+                      color: isSelected ? '#FFFFFF' : cat.colorDark,
                     }}
                   >
                     {cat.label}
@@ -2281,15 +2268,17 @@ function CategoryPillsBar({
                       justifyContent: 'center',
                       borderRadius: 11,
                       backgroundColor: isSelected
-                        ? 'rgba(255,255,255,0.25)'
-                        : cat.bgLight,
+                        ? 'rgba(255, 255, 255, 0.25)'
+                        : '#FFFFFF',
+                      borderWidth: isSelected ? 0 : 1,
+                      borderColor: isSelected ? 'transparent' : cat.borderLight,
                     }}
                   >
                     <Text
                       style={{
                         fontSize: 11.5,
                         fontWeight: '800',
-                        color: isSelected ? '#FFFFFF' : cat.color,
+                        color: isSelected ? '#FFFFFF' : cat.colorDark,
                       }}
                     >
                       {count}
@@ -2300,9 +2289,9 @@ function CategoryPillsBar({
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        gap: 3,
+                        gap: 4,
                         backgroundColor: isSelected ? '#FFFFFF' : '#FEF3C7',
-                        paddingHorizontal: 6,
+                        paddingHorizontal: 7,
                         paddingVertical: 2,
                         borderRadius: 10,
                         borderWidth: 1,
@@ -2319,7 +2308,7 @@ function CategoryPillsBar({
                       />
                       <Text
                         style={{
-                          fontSize: 10.5,
+                          fontSize: 11,
                           fontWeight: '800',
                           color: '#B45309',
                         }}
@@ -2352,6 +2341,8 @@ function QuickFiltersToolbar({
   hasActiveFilters,
   onResetFilters,
   totalResults,
+  viewMode,
+  setViewMode,
 }: any) {
   const [searchFocused, setSearchFocused] = useState(false);
 
@@ -2628,22 +2619,96 @@ function QuickFiltersToolbar({
           )}
         </ScrollView>
 
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 6,
-          backgroundColor: '#F1F5F9',
-          paddingHorizontal: 12,
-          paddingVertical: 7,
-          borderRadius: 10,
-          borderWidth: 1,
-          borderColor: '#E2E8F0',
-          alignSelf: 'center',
-        }}>
-          <Ionicons name="document-text-outline" size={15} color="#475569" />
-          <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }}>
-            {totalResults} {totalResults === 1 ? 'registro' : 'registros'}
-          </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: 'center', flexWrap: 'wrap' }}>
+          {/* Toggle de Vista: Tarjetas vs Tabla */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#F1F5F9',
+            borderRadius: 12,
+            padding: 3,
+            borderWidth: 1,
+            borderColor: '#CBD5E1',
+            gap: 2,
+          }}>
+            <Pressable
+              onPress={() => setViewMode && setViewMode('cards')}
+              style={({ hovered }: any) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 9,
+                  backgroundColor: viewMode === 'cards' ? '#FFFFFF' : hovered ? '#E2E8F0' : 'transparent',
+                } as any,
+                viewMode === 'cards' && (Platform.OS === 'web' ? { boxShadow: '0 2px 6px rgba(15, 23, 42, 0.08)' } : {}),
+                Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+              ]}
+            >
+              <Ionicons 
+                name="grid-outline" 
+                size={15} 
+                color={viewMode === 'cards' ? '#0F172A' : '#64748B'} 
+              />
+              <Text style={{
+                fontSize: 12.5,
+                fontWeight: viewMode === 'cards' ? '800' : '600',
+                color: viewMode === 'cards' ? '#0F172A' : '#64748B',
+              }}>
+                Tarjetas
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setViewMode && setViewMode('table')}
+              style={({ hovered }: any) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 9,
+                  backgroundColor: viewMode === 'table' ? '#FFFFFF' : hovered ? '#E2E8F0' : 'transparent',
+                } as any,
+                viewMode === 'table' && (Platform.OS === 'web' ? { boxShadow: '0 2px 6px rgba(15, 23, 42, 0.08)' } : {}),
+                Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+              ]}
+            >
+              <Ionicons 
+                name="list-outline" 
+                size={16} 
+                color={viewMode === 'table' ? '#0F172A' : '#64748B'} 
+              />
+              <Text style={{
+                fontSize: 12.5,
+                fontWeight: viewMode === 'table' ? '800' : '600',
+                color: viewMode === 'table' ? '#0F172A' : '#64748B',
+              }}>
+                Tabla
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* Contador de Registros */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: '#F1F5F9',
+            paddingHorizontal: 12,
+            paddingVertical: 7,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+          }}>
+            <Ionicons name="document-text-outline" size={15} color="#475569" />
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }}>
+              {totalResults} {totalResults === 1 ? 'registro' : 'registros'}
+            </Text>
+          </View>
         </View>
       </View>
     </View>
@@ -2749,13 +2814,421 @@ const getStatusTheme = (status: string) => {
   return { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0', dot: '#94A3B8' };
 };
 
-function RequestDetailDrawer({
+// Paleta de fondos y acentos según categoría de servicio para Cards y Filas
+const getCategoryCardTheme = (category?: string, type?: string) => {
+  const cat = (category || type || '').toLowerCase();
+  if (cat.includes('visit') || cat === 'visitors') {
+    return {
+      bg: '#FFF8F9',
+      border: '#FECDD3',
+      borderExpanded: '#F43F5E',
+      headerBg: '#FFE4E6',
+      color: '#E11D48',
+      colorDark: '#9F1239',
+      accentBar: '#E11D48',
+      shadow: 'rgba(225, 29, 72, 0.12)',
+    };
+  }
+  if (cat.includes('transp') || cat === 'transport') {
+    return {
+      bg: '#F6FAFD',
+      border: '#BAE6FD',
+      borderExpanded: '#0284C7',
+      headerBg: '#E0F2FE',
+      color: '#0284C7',
+      colorDark: '#0369A1',
+      accentBar: '#0284C7',
+      shadow: 'rgba(2, 132, 199, 0.12)',
+    };
+  }
+  if (cat.includes('manten') || cat === 'maintenance') {
+    return {
+      bg: '#F3FAF9',
+      border: '#99F6E4',
+      borderExpanded: '#0D9488',
+      headerBg: '#CCFBF1',
+      color: '#0D9488',
+      colorDark: '#0F766E',
+      accentBar: '#0D9488',
+      shadow: 'rgba(13, 148, 136, 0.12)',
+    };
+  }
+  if (cat.includes('sala') || cat === 'rooms') {
+    return {
+      bg: '#FAF8FF',
+      border: '#DDD6FE',
+      borderExpanded: '#7C3AED',
+      headerBg: '#EDE9FE',
+      color: '#7C3AED',
+      colorDark: '#6D28D9',
+      accentBar: '#7C3AED',
+      shadow: 'rgba(124, 58, 237, 0.12)',
+    };
+  }
+  if (cat.includes('parque') || cat === 'parking') {
+    return {
+      bg: '#FFF9F5',
+      border: '#FED7AA',
+      borderExpanded: '#EA580C',
+      headerBg: '#FFEDD5',
+      color: '#EA580C',
+      colorDark: '#C2410C',
+      accentBar: '#EA580C',
+      shadow: 'rgba(234, 88, 12, 0.12)',
+    };
+  }
+  return {
+    bg: '#FFFFFF',
+    border: '#E2E8F0',
+    borderExpanded: '#3B82F6',
+    headerBg: '#F1F5F9',
+    color: '#3B82F6',
+    colorDark: '#1E293B',
+    accentBar: '#3B82F6',
+    shadow: 'rgba(15, 23, 42, 0.08)',
+  };
+};
+
+function RequestTableHeader() {
+  return (
+    <View style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#0F172A',
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: 12,
+      marginBottom: 8,
+      marginHorizontal: 25,
+      minWidth: 1080,
+      gap: 12,
+    }}>
+      <View style={{ width: 140 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>RADICADO / FECHA</Text>
+      </View>
+      <View style={{ width: 145 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>SERVICIO</Text>
+      </View>
+      <View style={{ width: 210 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>SOLICITANTE</Text>
+      </View>
+      <View style={{ flex: 1, minWidth: 200 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>DETALLE DEL REQUERIMIENTO</Text>
+      </View>
+      <View style={{ width: 110 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>PRIORIDAD</Text>
+      </View>
+      <View style={{ width: 140 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>ESTADO / SLA</Text>
+      </View>
+      <View style={{ width: 175, alignItems: 'flex-end', paddingRight: 4 }}>
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.8 }}>ACCIONES</Text>
+      </View>
+    </View>
+  );
+}
+
+function RequestTableRow({
+  item,
+  onUpdateStatus,
+  onAssignDriver,
+  onOpenDetail,
+}: any) {
+  const serviceTheme = getCategoryCardTheme(item.category, item.type);
+  const priorityTheme = getPriorityTheme(item.priority);
+  const statusTheme = getStatusTheme(item.status);
+  const sla = getSLAInfo(item.created_at, item.status);
+  const catIcon = getCategoryIcon(item.category, item.type);
+  const initials = getInitials(item.user);
+
+  const isPending = (item.status || '').toLowerCase() === 'pendiente';
+  const isInProgress = ['en_progreso', 'en progreso', 'en curso'].includes((item.status || '').toLowerCase());
+
+  return (
+    <Pressable
+      onPress={() => onOpenDetail && onOpenDetail(item)}
+      style={({ hovered }: any) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: hovered ? serviceTheme.headerBg : serviceTheme.bg,
+          paddingVertical: 12,
+          paddingHorizontal: 18,
+          borderRadius: 14,
+          marginBottom: 8,
+          marginHorizontal: 25,
+          minWidth: 1080,
+          gap: 12,
+          borderWidth: 1.5,
+          borderColor: hovered ? serviceTheme.color : serviceTheme.border,
+          borderLeftWidth: 4.5,
+          borderLeftColor: serviceTheme.accentBar,
+        } as any,
+        Platform.OS === 'web' ? { 
+          cursor: 'pointer',
+          transition: 'all 0.15s ease-in-out',
+          boxShadow: hovered ? `0 4px 14px ${serviceTheme.shadow}` : '0 1px 3px rgba(15, 23, 42, 0.04)'
+        } : {},
+      ]}
+    >
+      {/* 1. Radicado / Fecha */}
+      <View style={{ width: 140 }}>
+        <View style={{
+          backgroundColor: '#0F172A',
+          paddingHorizontal: 8,
+          paddingVertical: 3,
+          borderRadius: 6,
+          alignSelf: 'flex-start',
+        }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
+            #{String(item.id).slice(0, 8).toUpperCase()}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '600', marginTop: 4 }}>
+          {item.date || 'Reciente'}
+        </Text>
+      </View>
+
+      {/* 2. Servicio */}
+      <View style={{ width: 145 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          backgroundColor: '#FFFFFF',
+          paddingHorizontal: 9,
+          paddingVertical: 5,
+          borderRadius: 8,
+          borderWidth: 1.2,
+          borderColor: serviceTheme.border,
+          alignSelf: 'flex-start',
+        }}>
+          <Ionicons name={catIcon as any} size={14} color={serviceTheme.color} />
+          <Text style={{ fontSize: 12, fontWeight: '800', color: serviceTheme.colorDark }} numberOfLines={1}>
+            {item.type}
+          </Text>
+        </View>
+      </View>
+
+      {/* 3. Solicitante */}
+      <View style={{ width: 210, flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+        <View style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: `${serviceTheme.color}18`,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: `${serviceTheme.color}35`,
+        }}>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: serviceTheme.color }}>
+            {initials}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+            {item.user}
+          </Text>
+          <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '600' }} numberOfLines={1}>
+            {item.dependency || 'General'}
+          </Text>
+        </View>
+      </View>
+
+      {/* 4. Detalle / Asunto */}
+      <View style={{ flex: 1, minWidth: 200, paddingRight: 8 }}>
+        <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#1E293B', lineHeight: 17 }} numberOfLines={2}>
+          {item.detail || item.description || 'Sin detalle adicional'}
+        </Text>
+      </View>
+
+      {/* 5. Prioridad */}
+      <View style={{ width: 110 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 8,
+          backgroundColor: priorityTheme.bg,
+          borderWidth: 1,
+          borderColor: priorityTheme.border,
+          alignSelf: 'flex-start',
+        }}>
+          <Ionicons name={priorityTheme.icon} size={12} color={priorityTheme.text} />
+          <Text style={{ fontSize: 11, fontWeight: '800', color: priorityTheme.text }}>
+            {item.priority}
+          </Text>
+        </View>
+      </View>
+
+      {/* 6. Estado / SLA */}
+      <View style={{ width: 140 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 8,
+          backgroundColor: statusTheme.bg,
+          borderWidth: 1,
+          borderColor: statusTheme.border,
+          alignSelf: 'flex-start',
+        }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dot }} />
+          <Text style={{ fontSize: 11, fontWeight: '800', color: statusTheme.text }}>
+            {item.status}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 10.5, color: sla.color, fontWeight: '700', marginTop: 3 }}>
+          {sla.text}
+        </Text>
+      </View>
+
+      {/* 7. Acciones */}
+      <View style={{ width: 175, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+        {isPending && (
+          <>
+            {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
+              <TouchableOpacity
+                onPress={(e: any) => {
+                  e?.stopPropagation?.();
+                  onUpdateStatus(item, 'en_progreso');
+                }}
+                style={{
+                  backgroundColor: '#2563EB',
+                  paddingHorizontal: 10,
+                  height: 30,
+                  borderRadius: 7,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Ionicons name="play-outline" size={13} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Procesar</Text>
+              </TouchableOpacity>
+            )}
+
+            {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
+              <TouchableOpacity
+                onPress={(e: any) => {
+                  e?.stopPropagation?.();
+                  onUpdateStatus(item, 'resuelto');
+                }}
+                style={{
+                  backgroundColor: '#059669',
+                  paddingHorizontal: 10,
+                  height: 30,
+                  borderRadius: 7,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Ionicons name="checkmark-outline" size={13} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Aprobar</Text>
+              </TouchableOpacity>
+            )}
+
+            {item.category === 'transport' && (
+              <TouchableOpacity
+                onPress={(e: any) => {
+                  e?.stopPropagation?.();
+                  onAssignDriver && onAssignDriver(item);
+                }}
+                style={{
+                  backgroundColor: '#0284C7',
+                  paddingHorizontal: 10,
+                  height: 30,
+                  borderRadius: 7,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Ionicons name="car-outline" size={13} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Asignar</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              onPress={(e: any) => {
+                e?.stopPropagation?.();
+                onUpdateStatus(item, 'rechazado');
+              }}
+              style={{
+                backgroundColor: '#FEF2F2',
+                borderWidth: 1,
+                borderColor: '#FECACA',
+                width: 30,
+                height: 30,
+                borderRadius: 7,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="close-outline" size={15} color="#DC2626" />
+            </TouchableOpacity>
+          </>
+        )}
+
+        {isInProgress && (
+          <TouchableOpacity
+            onPress={(e: any) => {
+              e?.stopPropagation?.();
+              onUpdateStatus(item, 'resuelto');
+            }}
+            style={{
+              backgroundColor: '#059669',
+              paddingHorizontal: 10,
+              height: 30,
+              borderRadius: 7,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <Ionicons name="checkmark-done-outline" size={13} color="#FFFFFF" />
+            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Finalizar</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Botón Ver Detalle */}
+        <TouchableOpacity
+          onPress={(e: any) => {
+            e?.stopPropagation?.();
+            onOpenDetail && onOpenDetail(item);
+          }}
+          style={{
+            backgroundColor: '#F1F5F9',
+            borderWidth: 1,
+            borderColor: '#CBD5E1',
+            paddingHorizontal: 9,
+            height: 30,
+            borderRadius: 7,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          <Ionicons name="eye-outline" size={13} color="#334155" />
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#334155' }}>Ver</Text>
+        </TouchableOpacity>
+      </View>
+    </Pressable>
+  );
+}
+
+function RequestDetailModal({
   visible,
   item,
   onClose,
   onUpdateStatus,
   onAssignDriver,
-  onOpenDispatch,
   setViewerImage,
   onRefresh,
   onSuccessAction,
@@ -2767,6 +3240,7 @@ function RequestDetailDrawer({
 
   if (!item) return null;
 
+  const serviceTheme = getCategoryCardTheme(item.category, item.type);
   const priorityTheme = getPriorityTheme(item.priority);
   const statusTheme = getStatusTheme(item.status);
   const catIcon = getCategoryIcon(item.category, item.type);
@@ -2796,49 +3270,53 @@ function RequestDetailDrawer({
     <Modal
       visible={visible}
       transparent
-      animationType={isDesktop ? 'fade' : 'slide'}
+      animationType="fade"
       onRequestClose={onClose}
     >
       <View style={{
         flex: 1,
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        flexDirection: 'row',
-        justifyContent: isDesktop ? 'flex-end' : 'center',
-        alignItems: isDesktop ? 'stretch' : 'flex-end',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: isDesktop ? 24 : 12,
       }}>
         {/* Fondo clicable para cerrar */}
         <Pressable
-          style={{ flex: 1 }}
+          style={StyleSheet.absoluteFill}
           onPress={onClose}
         />
 
-        {/* Contenedor del Drawer / Slide-over */}
+        {/* Contenedor del Modal Centrado */}
         <View style={{
-          width: isDesktop ? Math.min(620, width * 0.52) : '100%',
-          height: isDesktop ? '100%' : '90%',
+          width: '100%',
+          maxWidth: 760,
+          maxHeight: isDesktop ? '88%' : '94%',
           backgroundColor: '#FFFFFF',
-          borderTopLeftRadius: isDesktop ? 0 : 24,
-          borderTopRightRadius: isDesktop ? 0 : 24,
-          borderLeftWidth: isDesktop ? 1 : 0,
-          borderLeftColor: '#E2E8F0',
+          borderRadius: 22,
+          borderWidth: 1.5,
+          borderColor: serviceTheme.border,
+          borderTopWidth: 4.5,
+          borderTopColor: serviceTheme.accentBar,
           shadowColor: '#0F172A',
-          shadowOffset: { width: -4, height: 0 },
-          shadowOpacity: 0.15,
-          shadowRadius: 25,
-          elevation: 20,
+          shadowOffset: { width: 0, height: 16 },
+          shadowOpacity: 0.25,
+          shadowRadius: 36,
+          elevation: 24,
+          overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
+          zIndex: 1,
         }}>
-          {/* Cabecera del Drawer */}
+          {/* Cabecera del Modal */}
           <View style={{
             paddingHorizontal: 22,
-            paddingVertical: 18,
+            paddingVertical: 16,
             borderBottomWidth: 1,
             borderBottomColor: '#E2E8F0',
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: '#F8FAFC',
+            backgroundColor: serviceTheme.headerBg || '#F8FAFC',
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
               {/* Radicado */}
@@ -3254,14 +3732,14 @@ function RequestDetailDrawer({
             justifyContent: 'space-between',
             gap: 10,
           }}>
-            {/* Ficha Oficial */}
+            {/* Botón Cerrar */}
             <TouchableOpacity
-              onPress={() => onOpenDispatch && onOpenDispatch(item)}
+              onPress={onClose}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
-                paddingHorizontal: 12,
+                paddingHorizontal: 16,
                 height: 40,
                 borderRadius: 10,
                 backgroundColor: '#F1F5F9',
@@ -3269,8 +3747,8 @@ function RequestDetailDrawer({
                 borderColor: '#CBD5E1',
               }}
             >
-              <Ionicons name="receipt-outline" size={16} color="#334155" />
-              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#334155' }}>Ficha</Text>
+              <Ionicons name="close-outline" size={17} color="#475569" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>Cerrar</Text>
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -3394,7 +3872,18 @@ function RequestDetailDrawer({
   );
 }
 
-function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage, onAssignDriver, onOpenDispatch, onOpenDetail }: any) {
+function RequestListItem({ 
+  item, 
+  onUpdateStatus, 
+  onRefresh, 
+  initiallyExpanded = false, 
+  onSuccessAction, 
+  setViewerImage, 
+  onAssignDriver, 
+  onOpenDetail,
+  maxCardWidth,
+  numCols = 1,
+}: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
@@ -3402,6 +3891,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
   const [comment, setComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
+  const serviceTheme = getCategoryCardTheme(item.category, item.type);
   const sla = getSLAInfo(item.created_at, item.status);
   const priorityTheme = getPriorityTheme(item.priority);
   const statusTheme = getStatusTheme(item.status);
@@ -3452,10 +3942,23 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
     <Animated.View 
       style={[
         styles.card, 
-        isDesktop && { flex: 1, marginHorizontal: 0 }, 
+        {
+          backgroundColor: serviceTheme.bg,
+          borderColor: expanded ? serviceTheme.borderExpanded : serviceTheme.border,
+          borderTopWidth: 4,
+          borderTopColor: serviceTheme.accentBar,
+        },
+        numCols > 1 && { 
+          flex: 1, 
+          marginHorizontal: 0, 
+          maxWidth: maxCardWidth 
+        }, 
+        Platform.OS === 'web' ? ({ 
+          boxShadow: `0 4px 18px ${serviceTheme.shadow}`,
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        } as any) : {},
         { 
           transform: [{ scale }],
-          borderColor: expanded ? '#CBD5E1' : '#E2E8F0',
         }
       ]}
     >
@@ -3470,10 +3973,10 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
               </View>
             )}
 
-            {/* Badge de Categoría con color suave y borde fino */}
-            <View style={[styles.categoryBadge, { backgroundColor: `${item.color}14`, borderColor: `${item.color}30` }]}>
-              <Ionicons name={catIcon as any} size={13} color={item.color} />
-              <Text style={[styles.categoryBadgeText, { color: item.color }]}>{item.type}</Text>
+            {/* Badge de Categoría con fondo blanco para contrastar con el fondo de la card */}
+            <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]}>
+              <Ionicons name={catIcon as any} size={13} color={serviceTheme.color} />
+              <Text style={[styles.categoryBadgeText, { color: serviceTheme.colorDark }]}>{item.type}</Text>
             </View>
 
             {/* Badge de Prioridad */}
@@ -3506,8 +4009,8 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
           onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
           activeOpacity={0.85}
         >
-          <View style={[styles.avatarCircle, { backgroundColor: `${item.color}15`, borderColor: `${item.color}30` }]}>
-            <Text style={[styles.avatarText, { color: item.color || '#0F172A' }]}>{initials}</Text>
+          <View style={[styles.avatarCircle, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]}>
+            <Text style={[styles.avatarText, { color: serviceTheme.color || '#0F172A' }]}>{initials}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardUserName}>{item.user}</Text>
@@ -3516,14 +4019,14 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
               <Text style={styles.cardUserDept}>{item.dependency}</Text>
             </View>
           </View>
-          <View style={[styles.toggleExpandChip, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]}>
+          <View style={[styles.toggleExpandChip, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: serviceTheme.border }]}>
             <Ionicons name={expanded ? "chevron-up" : "open-outline"} size={14} color="#64748B" />
           </View>
         </TouchableOpacity>
 
         {/* Caja de Requerimiento / Detalle */}
         <TouchableOpacity 
-          style={styles.detailBox} 
+          style={[styles.detailBox, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]} 
           onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
           activeOpacity={0.85}
         >
@@ -3533,11 +4036,11 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
 
           {/* Metadatos rápidos a simple vista si no está expandido */}
           {item.uiMetadata && item.uiMetadata.length > 0 && (
-            <View style={styles.quickMetaRow}>
+            <View style={[styles.quickMetaRow, { borderTopColor: serviceTheme.border }]}>
               {item.uiMetadata.slice(0, 2).map((meta: any, idx: number) => (
-                <View key={idx} style={styles.quickMetaChip}>
-                  <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={item.color || COLORS.accent} />
-                  <Text style={styles.quickMetaLabel}>{meta.label}:</Text>
+                <View key={idx} style={[styles.quickMetaChip, { backgroundColor: serviceTheme.bg, borderColor: serviceTheme.border }]}>
+                  <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={serviceTheme.color} />
+                  <Text style={[styles.quickMetaLabel, { color: serviceTheme.colorDark }]}>{meta.label}:</Text>
                   <Text style={styles.quickMetaVal} numberOfLines={1}>{meta.value}</Text>
                 </View>
               ))}
@@ -3570,7 +4073,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
         )}
           
           {expanded && (
-            <View style={styles.expandedInfo}>
+            <View style={[styles.expandedInfo, { backgroundColor: '#FFFFFF', borderColor: serviceTheme.border }]}>
               <Text style={styles.infoTitle}>TRAZABILIDAD Y SEGUIMIENTO</Text>
               
               {/* Timeline */}
@@ -3746,24 +4249,14 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
           )}
 
           {/* Pie de Tarjeta con Acciones Rápidas Directas */}
-          <View style={styles.cardFooter}>
+          <View style={[styles.cardFooter, { borderTopColor: serviceTheme.border }]}>
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={13} color="#64748B" />
               <Text style={styles.metaText}>{item.date}</Text>
             </View>
 
             <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10, gap: 6 }]}>
-              {/* Botón de Ficha de Despacho Oficial */}
-              <TouchableOpacity 
-                style={[styles.actionBtn, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', height: 32, paddingHorizontal: 10 }]}
-                onPress={() => onOpenDispatch && onOpenDispatch(item)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="receipt-outline" size={13} color="#475569" />
-                <Text style={[styles.actionBtnText, { color: '#475569', fontSize: 11.5 }]}>Ficha</Text>
-              </TouchableOpacity>
-
-              {/* Botón Detalles / Panel Lateral */}
+              {/* Botón Detalles / Modal */}
               <TouchableOpacity 
                 style={[styles.actionBtn, { borderColor: '#0F172A', backgroundColor: '#0F172A', height: 32, paddingHorizontal: 10 }]}
                 onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)}
