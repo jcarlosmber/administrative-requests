@@ -177,12 +177,11 @@ export default function ManageRequests() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
-  // Cálculo responsivo: 3 o más tarjetas en pantallas grandes
+  // Cálculo responsivo: tarjetas más amplias y cómodas de leer (ancho mínimo mayor)
   const numCardCols = useMemo(() => {
     if (!isDesktop) return 1;
-    if (width >= 2100) return 5;
-    if (width >= 1650) return 4;
-    if (width >= 1250) return 3;
+    if (width >= 2100) return 4;
+    if (width >= 1550) return 3;
     return 2;
   }, [isDesktop, width]);
 
@@ -4029,7 +4028,8 @@ function RequestListItem({
         numCols > 1 && { 
           flex: 1, 
           marginHorizontal: 0, 
-          maxWidth: maxCardWidth 
+          maxWidth: maxCardWidth,
+          minWidth: 380,
         }, 
         Platform.OS === 'web' ? ({ 
           boxShadow: `0 4px 18px ${serviceTheme.shadow}`,
@@ -4041,50 +4041,44 @@ function RequestListItem({
       ]}
     >
       <View style={styles.cardMain}>
-        {/* Cabecera Superior: Radicado + Categoría + Badges a la izquierda, Estado a la derecha */}
+        {/* Cabecera Superior: Radicado + Categoría a la izquierda, Estado a la derecha */}
         <View style={styles.cardHeaderTop}>
           <View style={styles.cardBadgesRow}>
-            {/* Radicado / ID con estilo de código institucional */}
+            {/* Radicado / ID */}
             {item.id && (
               <View style={styles.idChip}>
                 <Text style={styles.idChipText}>#{String(item.id).slice(0, 8).toUpperCase()}</Text>
               </View>
             )}
 
-            {/* Badge de Categoría con fondo blanco para contrastar con el fondo opaco */}
+            {/* Badge de Categoría */}
             <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
               <Ionicons name={catIcon as any} size={13} color={serviceTheme.color} />
               <Text style={[styles.categoryBadgeText, { color: serviceTheme.colorDark }]}>{item.type}</Text>
             </View>
 
-            {/* Badge de Prioridad */}
-            <View style={[styles.priorityBadge, { backgroundColor: priorityTheme.bg, borderColor: priorityTheme.border }]}>
-              <Ionicons name={priorityTheme.icon} size={11} color={priorityTheme.text} />
-              <Text style={[styles.priorityBadgeText, { color: priorityTheme.text }]}>
-                {item.priority}
-              </Text>
-            </View>
-
-            {/* Badge de SLA */}
-            <View style={[styles.slaBadge, { backgroundColor: sla.bg, borderColor: `${sla.color}25` }]}>
-              <Ionicons name={sla.icon} size={11} color={sla.color} />
-              <Text style={[styles.slaBadgeText, { color: sla.color }]}>
-                {sla.text}
-              </Text>
-            </View>
+            {/* Badge de Prioridad sólo si es Alta */}
+            {item.priority && item.priority.toLowerCase() === 'alta' && (
+              <View style={[styles.priorityBadge, { backgroundColor: priorityTheme.bg, borderWidth: 0 }]}>
+                <Ionicons name={priorityTheme.icon} size={11} color={priorityTheme.text} />
+                <Text style={[styles.priorityBadgeText, { color: priorityTheme.text }]}>
+                  {item.priority}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Pill de Estado */}
-          <View style={[styles.statusPillNew, { backgroundColor: statusTheme.bg, borderColor: statusTheme.border }]}>
+          <View style={[styles.statusPillNew, { backgroundColor: statusTheme.bg, borderWidth: 0 }]}>
             <View style={[styles.statusDotNew, { backgroundColor: statusTheme.dot }]} />
             <Text style={[styles.statusTextNew, { color: statusTheme.text }]}>{item.status}</Text>
           </View>
         </View>
 
-        {/* Fila del Solicitante con Avatar Premium */}
+        {/* Fila del Solicitante */}
         <TouchableOpacity 
           style={styles.cardUserRow} 
-          onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
+          onPress={() => onOpenDetail && onOpenDetail(item)} 
           activeOpacity={0.85}
         >
           <View style={[styles.avatarCircle, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
@@ -4097,33 +4091,17 @@ function RequestListItem({
               <Text style={styles.cardUserDept}>{item.dependency}</Text>
             </View>
           </View>
-          <View style={[styles.toggleExpandChip, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
-            <Ionicons name={expanded ? "chevron-up" : "open-outline"} size={14} color="#64748B" />
-          </View>
         </TouchableOpacity>
 
         {/* Caja de Requerimiento / Detalle */}
         <TouchableOpacity 
           style={[styles.detailBox, { backgroundColor: '#FFFFFF', borderWidth: 0 }]} 
-          onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
+          onPress={() => onOpenDetail && onOpenDetail(item)} 
           activeOpacity={0.85}
         >
           <Text style={styles.cardDetailText} numberOfLines={2}>
             {item.detail}
           </Text>
-
-          {/* Metadatos rápidos a simple vista si no está expandido */}
-          {item.uiMetadata && item.uiMetadata.length > 0 && (
-            <View style={[styles.quickMetaRow, { borderTopWidth: 0, marginTop: 8, paddingTop: 4 }]}>
-              {item.uiMetadata.slice(0, 2).map((meta: any, idx: number) => (
-                <View key={idx} style={[styles.quickMetaChip, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
-                  <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={serviceTheme.color} />
-                  <Text style={[styles.quickMetaLabel, { color: serviceTheme.colorDark }]}>{meta.label}:</Text>
-                  <Text style={styles.quickMetaVal} numberOfLines={1}>{meta.value}</Text>
-                </View>
-              ))}
-            </View>
-          )}
         </TouchableOpacity>
 
         {/* Banner de Motivo de Rechazo Visible Si Aplica */}
@@ -4334,15 +4312,6 @@ function RequestListItem({
             </View>
 
             <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10, gap: 6 }]}>
-              {/* Botón Detalles / Modal */}
-              <TouchableOpacity 
-                style={[styles.actionBtn, { borderColor: '#0F172A', backgroundColor: '#0F172A', height: 32, paddingHorizontal: 10 }]}
-                onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="eye-outline" size={13} color="#FFFFFF" />
-                <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Detalles</Text>
-              </TouchableOpacity>
 
               {/* ACCIONES RÁPIDAS DIRECTAS */}
               {isPending && (
@@ -4473,6 +4442,7 @@ const styles = StyleSheet.create({
     marginBottom: 16, 
     marginHorizontal: 25, 
     borderWidth: 0, 
+    minWidth: 380,
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 12 },
