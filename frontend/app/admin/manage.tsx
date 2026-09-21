@@ -4099,17 +4099,6 @@ function RequestListItem({
           </View>
         </TouchableOpacity>
 
-        {/* Caja de Requerimiento / Detalle */}
-        <TouchableOpacity 
-          style={[styles.detailBox, { backgroundColor: '#FFFFFF', borderWidth: 0 }]} 
-          onPress={() => onOpenDetail && onOpenDetail(item)} 
-          activeOpacity={0.85}
-        >
-          <Text style={styles.cardDetailText} numberOfLines={2}>
-            {item.detail}
-          </Text>
-        </TouchableOpacity>
-
         {/* Banner de Motivo de Rechazo Visible Si Aplica */}
         {item.status.toLowerCase() === 'rechazado' && rejectionReasonText && (
           <View style={{
