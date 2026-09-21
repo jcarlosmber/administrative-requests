@@ -13,7 +13,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
-  Image
+  Image,
+  Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -509,7 +510,17 @@ export default function ManageRequests() {
             }
             data={filteredData}
             keyExtractor={item => item.id}
-            renderItem={({ item }) => <RequestListItem item={mapRequestToUI(item)} onUpdateStatus={askConfirmation} onRefresh={fetchRequests} initiallyExpanded={params.id === item.id} onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} setViewerImage={setViewerImage} />}
+            renderItem={({ item }) => (
+              <RequestListItem 
+                item={mapRequestToUI(item)} 
+                onUpdateStatus={askConfirmation} 
+                onRefresh={fetchRequests} 
+                initiallyExpanded={params.id === item.id} 
+                onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} 
+                setViewerImage={setViewerImage} 
+                onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
+              />
+            )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />
@@ -522,63 +533,369 @@ export default function ManageRequests() {
         animationType="fade"
       >
         <View style={styles.modalOverlay}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
           <View style={styles.modalContent}>
-            <View style={styles.modalIconBox}>
-              <Ionicons name="checkmark-circle" size={45} color={COLORS.success} />
+            <View style={[styles.modalIconBox, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', borderWidth: 1.5 }]}>
+              <Ionicons name="checkmark-circle" size={38} color={COLORS.success} />
             </View>
             <Text style={styles.modalTitle}>¡Acción exitosa!</Text>
             <Text style={styles.modalMessage}>{successModal.message}</Text>
             <TouchableOpacity 
-              style={styles.modalBtn} 
+              style={[styles.modalBtn, { overflow: 'hidden', backgroundColor: 'transparent' }]} 
               onPress={() => setSuccessModal({ visible: false, message: '' })}
+              activeOpacity={0.8}
             >
-              <Text style={styles.modalBtnText}>Aceptar</Text>
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Text style={styles.modalBtnText}>Aceptar</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal visible={showCustomDateModal} transparent animationType="fade">
+      {/* Modal de Rango de Fechas Modernizado */}
+      <Modal visible={showCustomDateModal} transparent animationType="fade" onRequestClose={() => setShowCustomDateModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.accent}15` }]}>
-              <Ionicons name="calendar" size={35} color={COLORS.accent} />
-            </View>
-            <Text style={styles.modalTitle}>Rango de Fechas</Text>
-            <Text style={styles.modalMessage}>Ingresa la fecha de inicio y fin (AAAA-MM-DD)</Text>
-            
-            <View style={{ width: '100%', gap: 10, marginBottom: 20 }}>
-              <TextInput
-                style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
-                placeholder="Inicio (Ej. 2026-07-01)"
-                placeholderTextColor={COLORS.muted}
-                value={customDates.start}
-                onChangeText={(t) => setCustomDates(prev => ({ ...prev, start: t }))}
-              />
-              <TextInput
-                style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
-                placeholder="Fin (Ej. 2026-07-31)"
-                placeholderTextColor={COLORS.muted}
-                value={customDates.end}
-                onChangeText={(t) => setCustomDates(prev => ({ ...prev, end: t }))}
-              />
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          
+          <View style={[styles.modalContent, { maxWidth: 440, padding: 26 }]}>
+            {/* Botón cerrar X */}
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setShowCustomDateModal(false)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            {/* Icono con Squircle y Glow */}
+            <View style={[styles.modalIconBox, { 
+              backgroundColor: '#EFF6FF', 
+              borderColor: '#BFDBFE',
+              borderWidth: 1.5,
+              marginBottom: 12
+            }]}>
+              <Ionicons name="calendar" size={34} color={COLORS.accent} />
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+            {/* Badge */}
+            <View style={{
+              backgroundColor: '#DBEAFE',
+              paddingHorizontal: 12,
+              paddingVertical: 4,
+              borderRadius: 12,
+              marginBottom: 8,
+            }}>
+              <Text style={{
+                fontSize: 11,
+                fontWeight: '800',
+                color: '#1E40AF',
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+              }}>
+                Filtro Temporal
+              </Text>
+            </View>
+
+            {/* Título y Mensaje */}
+            <Text style={[styles.modalTitle, { fontSize: 20, marginBottom: 6 }]}>
+              Rango de Fechas
+            </Text>
+            <Text style={[styles.modalMessage, { marginBottom: 16, paddingHorizontal: 6 }]}>
+              Selecciona o ingresa el período de fechas para filtrar las solicitudes.
+            </Text>
+
+            {/* Atajos rápidos (Presets) */}
+            <View style={{ width: '100%', marginBottom: 16 }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                Períodos sugeridos
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {[
+                  { label: 'Últimos 7 días', type: '7days' as const },
+                  { label: 'Últimos 15 días', type: '15days' as const },
+                  { label: 'Este mes', type: 'thisMonth' as const },
+                  { label: 'Mes anterior', type: 'lastMonth' as const },
+                ].map(preset => {
+                  const now = new Date();
+                  const pad = (n: number) => String(n).padStart(2, '0');
+                  const toISO = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={preset.type}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 10,
+                        backgroundColor: '#F1F5F9',
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                      }}
+                      onPress={() => {
+                        if (preset.type === '7days') {
+                          const start = new Date(now);
+                          start.setDate(now.getDate() - 7);
+                          setCustomDates({ start: toISO(start), end: toISO(now) });
+                        } else if (preset.type === '15days') {
+                          const start = new Date(now);
+                          start.setDate(now.getDate() - 15);
+                          setCustomDates({ start: toISO(start), end: toISO(now) });
+                        } else if (preset.type === 'thisMonth') {
+                          const start = new Date(now.getFullYear(), now.getMonth(), 1);
+                          const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                          setCustomDates({ start: toISO(start), end: toISO(end) });
+                        } else if (preset.type === 'lastMonth') {
+                          const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                          const end = new Date(now.getFullYear(), now.getMonth(), 0);
+                          setCustomDates({ start: toISO(start), end: toISO(end) });
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
+                        {preset.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Campos de Entrada: Desde y Hasta */}
+            <View style={{ width: '100%', gap: 12, marginBottom: 16 }}>
+              {/* Fecha Desde */}
+              <View style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 14,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                      Fecha de Inicio (Desde)
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                      backgroundColor: '#E2E8F0',
+                    }}
+                    onPress={() => {
+                      const now = new Date();
+                      const pad = (n: number) => String(n).padStart(2, '0');
+                      setCustomDates(prev => ({ ...prev, start: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` }));
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#334155' }}>Hoy</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  paddingHorizontal: 10,
+                  height: 44,
+                }}>
+                  <Ionicons name="calendar-sharp" size={16} color={COLORS.accent} style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#0F172A' }}
+                    placeholder="AAAA-MM-DD (Ej. 2026-07-01)"
+                    placeholderTextColor="#94A3B8"
+                    value={customDates.start}
+                    onChangeText={(t) => setCustomDates(prev => ({ ...prev, start: t }))}
+                  />
+                  {customDates.start ? (
+                    <TouchableOpacity onPress={() => setCustomDates(prev => ({ ...prev, start: '' }))}>
+                      <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Fecha Hasta */}
+              <View style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 14,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+              }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                      Fecha de Fin (Hasta)
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                      backgroundColor: '#E2E8F0',
+                    }}
+                    onPress={() => {
+                      const now = new Date();
+                      const pad = (n: number) => String(n).padStart(2, '0');
+                      setCustomDates(prev => ({ ...prev, end: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` }));
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#334155' }}>Hoy</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  paddingHorizontal: 10,
+                  height: 44,
+                }}>
+                  <Ionicons name="calendar-sharp" size={16} color={COLORS.accent} style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#0F172A' }}
+                    placeholder="AAAA-MM-DD (Ej. 2026-07-31)"
+                    placeholderTextColor="#94A3B8"
+                    value={customDates.end}
+                    onChangeText={(t) => setCustomDates(prev => ({ ...prev, end: t }))}
+                  />
+                  {customDates.end ? (
+                    <TouchableOpacity onPress={() => setCustomDates(prev => ({ ...prev, end: '' }))}>
+                      <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+
+            {/* Banner Informativo de Validación / Conteo de Días */}
+            {(() => {
+              if (!customDates.start || !customDates.end) return null;
+              const s = new Date(customDates.start + 'T00:00:00');
+              const e = new Date(customDates.end + 'T00:00:00');
+              if (isNaN(s.getTime()) || isNaN(e.getTime())) return null;
+              const diffTime = e.getTime() - s.getTime();
+              const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+              if (diffDays <= 0) {
+                return (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#FEF2F2',
+                    borderRadius: 12,
+                    padding: 10,
+                    borderWidth: 1,
+                    borderColor: '#FECACA',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginBottom: 16,
+                  }}>
+                    <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                    <Text style={{ fontSize: 12, color: '#991B1B', fontWeight: '600', flex: 1 }}>
+                      La fecha final debe ser posterior o igual a la inicial.
+                    </Text>
+                  </View>
+                );
+              }
+
+              return (
+                <View style={{
+                  width: '100%',
+                  backgroundColor: '#F0FDF4',
+                  borderRadius: 12,
+                  padding: 10,
+                  borderWidth: 1,
+                  borderColor: '#BBF7D0',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 16,
+                }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#16A34A" />
+                  <Text style={{ fontSize: 12, color: '#166534', fontWeight: '700', flex: 1 }}>
+                    Período válido: {diffDays} {diffDays === 1 ? 'día seleccionado' : 'días seleccionados'}
+                  </Text>
+                </View>
+              );
+            })()}
+
+            {/* Botones de Cancelar / Aplicar */}
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
               <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]} 
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 14,
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  gap: 6
+                }}
                 onPress={() => setShowCustomDateModal(false)}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
+                <Ionicons name="close-circle-outline" size={17} color="#64748B" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
               </TouchableOpacity>
+
               <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1 }]} 
+                style={{
+                  flex: 1.3,
+                  height: 48,
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  opacity: (!customDates.start || !customDates.end) ? 0.6 : 1,
+                  shadowColor: COLORS.accent,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 8,
+                  elevation: 4
+                }}
+                disabled={!customDates.start || !customDates.end}
                 onPress={() => {
                   setTimeFilter('Personalizado');
                   setShowCustomDateModal(false);
                 }}
+                activeOpacity={0.8}
               >
-                <Text style={styles.modalBtnText}>Aplicar</Text>
+                <LinearGradient
+                  colors={['#3B82F6', '#1D4ED8']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    gap: 6,
+                    paddingHorizontal: 12
+                  }}
+                >
+                  <Ionicons name="filter" size={17} color="#FFFFFF" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                    Aplicar Filtro
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
@@ -588,18 +905,27 @@ export default function ManageRequests() {
       {/* Modal de Asignación de Conductor al Aprobar Traslado */}
       <Modal visible={driverModal.visible} transparent animationType="fade" onRequestClose={() => setDriverModal({ visible: false, item: null })}>
         <View style={styles.modalOverlay}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
           <View style={styles.modalContent}>
-            <View style={[styles.modalIconBox, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="car-sport" size={35} color={COLORS.primary} />
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setDriverModal({ visible: false, item: null })}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <View style={[styles.modalIconBox, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', borderWidth: 1.5 }]}>
+              <Ionicons name="car-sport" size={34} color={COLORS.accent} />
             </View>
             <Text style={styles.modalTitle}>Aprobar Traslado</Text>
             <Text style={styles.modalMessage}>Asigna el conductor y vehículo que prestará el servicio de transporte.</Text>
             
             <View style={{ width: '100%', gap: 12, marginBottom: 20 }}>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 4 }}>Nombre del Conductor *</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 5 }}>Nombre del Conductor *</Text>
                 <TextInput
-                  style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                  style={[styles.searchInput, { height: 46, borderRadius: 12 }]}
                   placeholder="Ej. Carlos Pérez"
                   placeholderTextColor={COLORS.muted}
                   value={driverName}
@@ -607,9 +933,9 @@ export default function ManageRequests() {
                 />
               </View>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 4 }}>Teléfono de Contacto</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 5 }}>Teléfono de Contacto</Text>
                 <TextInput
-                  style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                  style={[styles.searchInput, { height: 46, borderRadius: 12 }]}
                   placeholder="Ej. 3109876543"
                   placeholderTextColor={COLORS.muted}
                   value={driverPhone}
@@ -617,9 +943,9 @@ export default function ManageRequests() {
                 />
               </View>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 4 }}>Placa del Vehículo / Datos</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 5 }}>Placa del Vehículo / Datos</Text>
                 <TextInput
-                  style={[styles.searchInput, { height: 45, borderRadius: 12 }]}
+                  style={[styles.searchInput, { height: 46, borderRadius: 12 }]}
                   placeholder="Ej. ABC-123 (Camioneta Oficial)"
                   placeholderTextColor={COLORS.muted}
                   value={driverPlate}
@@ -628,125 +954,465 @@ export default function ManageRequests() {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
               <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]} 
+                style={[styles.modalBtn, { flex: 1, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }]} 
                 onPress={() => setDriverModal({ visible: false, item: null })}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
+                <Text style={[styles.modalBtnText, { color: '#64748B' }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.success }]} 
+                style={[styles.modalBtn, { flex: 1.2, backgroundColor: 'transparent', overflow: 'hidden' }]} 
                 onPress={handleApproveTransport}
+                activeOpacity={0.8}
               >
-                <Text style={styles.modalBtnText}>Aprobar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal de Confirmación */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={!!confirmModal?.visible}
-        onRequestClose={() => setConfirmModal(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.warning}15` }]}>
-                <Ionicons name="help-circle" size={35} color={COLORS.warning} />
-              </View>
-            </View>
-            <Text style={styles.modalTitle}>Confirmar acción</Text>
-            <Text style={styles.modalMessage}>
-              ¿Estás seguro de que deseas {confirmModal?.actionName} esta solicitud?
-            </Text>
-
-            {(() => {
-              if (!confirmModal || !confirmModal.category || confirmModal.category === 'transport') return null;
-              if (confirmModal.newStatus !== 'en_progreso' && confirmModal.newStatus !== 'resuelto') return null;
-              if (confirmModal.item?.status.toLowerCase() !== 'pendiente') return null;
-              
-              let serviceKey = confirmModal.category;
-              if (confirmModal.category === 'rooms' && confirmModal.item?.metadata?.requires_secretaria_general) {
-                serviceKey = 'rooms_special';
-              }
-              const emailObj = serviceEmails.find(e => e.service_type === serviceKey);
-              if (emailObj) {
-                return (
-                  <View style={{ marginTop: 15, padding: 12, backgroundColor: '#EFF6FF', borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
-                    <Text style={{ fontSize: 13, color: '#1E3A8A', fontWeight: '500' }}>
-                      Esta solicitud será enviada a la Secretaría General al correo <Text style={{ fontWeight: 'bold' }}>{emailObj.email}</Text> para la gestión correspondiente.
-                    </Text>
-                  </View>
-                );
-              }
-              return null;
-            })()}
-
-
-            {confirmModal?.category === 'maintenance' && confirmModal?.newStatus === 'resuelto' && (
-              <View style={{ width: '100%', marginTop: 15, padding: 15, backgroundColor: COLORS.bg, borderRadius: 12 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.text, marginBottom: 10 }}>Foto Final Obligatoria</Text>
-                <TouchableOpacity 
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line, borderRadius: 10 }}
-                  onPress={async () => {
-                    try {
-                      const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true });
-                      if (!result.canceled && result.assets && result.assets.length > 0) {
-                        const fileUri = result.assets[0].uri;
-                        
-                        try {
-                          const response = await fetch(fileUri);
-                          const blob = await response.blob();
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setConfirmModal({ ...confirmModal, finalImage: reader.result as string });
-                          };
-                          reader.readAsDataURL(blob);
-                        } catch (e) {
-                          setConfirmModal({ ...confirmModal, finalImage: fileUri });
-                        }
-                      }
-                    } catch (err) {
-                      console.log('Error selecting final image', err);
-                    }
-                  }}
+                <LinearGradient
+                  colors={['#10B981', '#059669']}
+                  style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
                 >
-                  <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
-                  <Text style={{ fontSize: 13, color: COLORS.primary, fontWeight: '600' }}>
-                    {confirmModal.finalImage ? 'Foto Seleccionada (Cambiar)' : 'Tomar / Adjuntar Foto'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20 }}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.line }]}
-                onPress={() => setConfirmModal(null)}
-              >
-                <Text style={[styles.modalBtnText, { color: COLORS.muted }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1, backgroundColor: COLORS.primary, opacity: (confirmModal?.category === 'maintenance' && confirmModal?.newStatus === 'resuelto' && !confirmModal?.finalImage) ? 0.5 : 1 }]}
-                disabled={confirmModal?.category === 'maintenance' && confirmModal?.newStatus === 'resuelto' && !confirmModal?.finalImage}
-                onPress={() => {
-                  if (confirmModal) {
-                    updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage);
-                    setConfirmModal(null);
-                  }
-                }}
-              >
-                <Text style={styles.modalBtnText}>Confirmar</Text>
+                  <Ionicons name="checkmark-circle" size={17} color="#FFF" />
+                  <Text style={styles.modalBtnText}>Aprobar</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Modal de Confirmación Modernizado */}
+      {(() => {
+        if (!confirmModal?.visible) return null;
+
+        const isApprove = confirmModal.newStatus === 'resuelto';
+        const isReject = confirmModal.newStatus === 'rechazado';
+        const isProgress = confirmModal.newStatus === 'en_progreso';
+
+        const modalTheme = isApprove ? {
+          color: '#059669',
+          bgLight: '#ECFDF5',
+          borderColor: '#A7F3D0',
+          badgeBg: '#D1FAE5',
+          badgeColor: '#065F46',
+          icon: 'checkmark-circle-outline' as const,
+          badgeText: 'Aprobación de Solicitud',
+          titleText: '¿Aprobar y finalizar solicitud?',
+          confirmText: 'Aprobar Solicitud',
+          confirmIcon: 'checkmark-circle' as const,
+          gradient: ['#10B981', '#059669'] as [string, string],
+        } : isReject ? {
+          color: '#DC2626',
+          bgLight: '#FEF2F2',
+          borderColor: '#FECACA',
+          badgeBg: '#FEE2E2',
+          badgeColor: '#991B1B',
+          icon: 'close-circle-outline' as const,
+          badgeText: 'Rechazo de Solicitud',
+          titleText: '¿Rechazar esta solicitud?',
+          confirmText: 'Rechazar',
+          confirmIcon: 'close-circle' as const,
+          gradient: ['#EF4444', '#DC2626'] as [string, string],
+        } : isProgress ? {
+          color: '#2563EB',
+          bgLight: '#EFF6FF',
+          borderColor: '#BFDBFE',
+          badgeBg: '#DBEAFE',
+          badgeColor: '#1E40AF',
+          icon: 'hourglass-outline' as const,
+          badgeText: 'Pase a Trámite',
+          titleText: '¿Iniciar trámite de solicitud?',
+          confirmText: 'Iniciar trámite',
+          confirmIcon: 'arrow-forward-circle' as const,
+          gradient: ['#2563EB', '#1D4ED8'] as [string, string],
+        } : {
+          color: '#D97706',
+          bgLight: '#FFFBEB',
+          borderColor: '#FDE68A',
+          badgeBg: '#FEF3C7',
+          badgeColor: '#92400E',
+          icon: 'help-circle-outline' as const,
+          badgeText: 'Confirmación',
+          titleText: 'Confirmar acción',
+          confirmText: 'Confirmar',
+          confirmIcon: 'checkmark' as const,
+          gradient: ['#0F172A', '#1E293B'] as [string, string],
+        };
+
+        const categoryName = {
+          visitors: 'Visitantes',
+          transport: 'Transporte',
+          maintenance: 'Mantenimiento',
+          rooms: 'Salas',
+          parking: 'Parqueadero'
+        }[confirmModal.category || ''] || confirmModal.category;
+
+        // Verificar si aplica notificación a Secretaría General
+        let secGenEmail: string | null = null;
+        if (
+          confirmModal.category && 
+          confirmModal.category !== 'transport' && 
+          (confirmModal.newStatus === 'en_progreso' || confirmModal.newStatus === 'resuelto') &&
+          confirmModal.item?.status.toLowerCase() === 'pendiente'
+        ) {
+          let serviceKey = confirmModal.category;
+          if (confirmModal.category === 'rooms' && confirmModal.item?.metadata?.requires_secretaria_general) {
+            serviceKey = 'rooms_special';
+          }
+          const emailObj = serviceEmails.find(e => e.service_type === serviceKey);
+          if (emailObj) {
+            secGenEmail = emailObj.email;
+          }
+        }
+
+        const isMissingMaintenancePhoto = confirmModal.category === 'maintenance' && confirmModal.newStatus === 'resuelto' && !confirmModal.finalImage;
+
+        return (
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={!!confirmModal.visible}
+            onRequestClose={() => setConfirmModal(null)}
+          >
+            <View style={styles.modalOverlay}>
+              <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+              
+              <View style={[styles.modalContent, { maxWidth: 440, padding: 26 }]}>
+                {/* Botón cerrar X */}
+                <TouchableOpacity 
+                  style={styles.modalCloseBtn}
+                  onPress={() => setConfirmModal(null)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="close" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+
+                {/* Icono con Squircle y Glow */}
+                <View style={[styles.modalIconBox, { 
+                  backgroundColor: modalTheme.bgLight, 
+                  borderColor: modalTheme.borderColor,
+                  borderWidth: 1.5,
+                  marginBottom: 12
+                }]}>
+                  <Ionicons name={modalTheme.icon} size={36} color={modalTheme.color} />
+                </View>
+
+                {/* Badge de tipo de acción */}
+                <View style={{
+                  backgroundColor: modalTheme.badgeBg,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  marginBottom: 8,
+                }}>
+                  <Text style={{
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: modalTheme.badgeColor,
+                    letterSpacing: 0.5,
+                    textTransform: 'uppercase',
+                  }}>
+                    {modalTheme.badgeText}
+                  </Text>
+                </View>
+
+                {/* Título y Mensaje */}
+                <Text style={[styles.modalTitle, { fontSize: 20, marginBottom: 6 }]}>
+                  {modalTheme.titleText}
+                </Text>
+                <Text style={[styles.modalMessage, { marginBottom: 12, paddingHorizontal: 4 }]}>
+                  ¿Estás seguro de que deseas {confirmModal.actionName} esta solicitud?
+                </Text>
+
+                {/* Tarjeta de Contexto de la Solicitud */}
+                {confirmModal.item && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 14,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: modalTheme.color }} />
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                          {categoryName || 'Solicitud'}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>
+                        {(confirmModal.item as any).requester_name || confirmModal.item.metadata?.requester_name || confirmModal.item.metadata?.responsible?.name || confirmModal.item.title || 'Solicitud administrativa'}
+                      </Text>
+                    </View>
+                    <View style={{
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                    }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569' }}>
+                        #{confirmModal.reqId.slice(0, 6).toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Aviso Destacado de Secretaría General */}
+                {secGenEmail && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#F0F7FF',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: '#BFDBFE',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                      <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: '#DBEAFE', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="mail" size={13} color="#1D4ED8" />
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        Notificación a Secretaría General
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#334155', lineHeight: 17, marginBottom: 8 }}>
+                      Esta solicitud será remitida automáticamente vía correo institucional para la gestión correspondiente:
+                    </Text>
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#DBEAFE',
+                    }}>
+                      <Ionicons name="at-outline" size={14} color="#1D4ED8" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E3A8A' }} numberOfLines={1}>
+                        {secGenEmail}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Foto Final Obligatoria para Mantenimiento */}
+                {confirmModal.category === 'maintenance' && confirmModal.newStatus === 'resuelto' && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="camera" size={16} color="#0F172A" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                          Evidencia de Finalización
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#991B1B', textTransform: 'uppercase' }}>Obligatoria</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 10, lineHeight: 16 }}>
+                      Adjunta una fotografía que certifique el trabajo de mantenimiento completado.
+                    </Text>
+
+                    {confirmModal.finalImage ? (
+                      <View style={{ width: '100%', alignItems: 'center', gap: 8 }}>
+                        <View style={{
+                          width: '100%',
+                          height: 140,
+                          borderRadius: 10,
+                          overflow: 'hidden',
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          position: 'relative'
+                        }}>
+                          <Image 
+                            source={{ uri: confirmModal.finalImage }} 
+                            style={{ width: '100%', height: '100%', resizeMode: 'cover' }} 
+                          />
+                          <View style={{
+                            position: 'absolute',
+                            top: 6,
+                            right: 6,
+                            backgroundColor: 'rgba(16, 185, 129, 0.95)',
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Ionicons name="checkmark-circle" size={13} color="#FFF" />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFF' }}>Adjuntada</Text>
+                          </View>
+                        </View>
+                        <TouchableOpacity
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            paddingVertical: 7,
+                            paddingHorizontal: 12,
+                            backgroundColor: '#FFFFFF',
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            borderRadius: 8
+                          }}
+                          onPress={async () => {
+                            try {
+                              const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true });
+                              if (!result.canceled && result.assets && result.assets.length > 0) {
+                                const fileUri = result.assets[0].uri;
+                                try {
+                                  const response = await fetch(fileUri);
+                                  const blob = await response.blob();
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setConfirmModal({ ...confirmModal, finalImage: reader.result as string });
+                                  };
+                                  reader.readAsDataURL(blob);
+                                } catch (e) {
+                                  setConfirmModal({ ...confirmModal, finalImage: fileUri });
+                                }
+                              }
+                            } catch (err) {
+                              console.log('Error selecting final image', err);
+                            }
+                          }}
+                        >
+                          <Ionicons name="camera-reverse-outline" size={15} color="#0F172A" />
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }}>Cambiar foto</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          padding: 14,
+                          backgroundColor: '#FFFFFF',
+                          borderWidth: 1.5,
+                          borderColor: '#CBD5E1',
+                          borderStyle: 'dashed',
+                          borderRadius: 10
+                        }}
+                        onPress={async () => {
+                          try {
+                            const result = await DocumentPicker.getDocumentAsync({ type: 'image/*', copyToCacheDirectory: true });
+                            if (!result.canceled && result.assets && result.assets.length > 0) {
+                              const fileUri = result.assets[0].uri;
+                              try {
+                                const response = await fetch(fileUri);
+                                const blob = await response.blob();
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setConfirmModal({ ...confirmModal, finalImage: reader.result as string });
+                                };
+                                reader.readAsDataURL(blob);
+                              } catch (e) {
+                                setConfirmModal({ ...confirmModal, finalImage: fileUri });
+                              }
+                            }
+                          } catch (err) {
+                            console.log('Error selecting final image', err);
+                          }
+                        }}
+                      >
+                        <Ionicons name="camera-outline" size={20} color="#0F172A" />
+                        <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>
+                          Tomar / Adjuntar Foto
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {/* Botones Cancelar / Confirmar */}
+                <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
+                  <TouchableOpacity 
+                    style={{
+                      flex: 1,
+                      height: 48,
+                      borderRadius: 14,
+                      backgroundColor: '#F1F5F9',
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      flexDirection: 'row',
+                      gap: 6
+                    }}
+                    onPress={() => setConfirmModal(null)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close-circle-outline" size={17} color="#64748B" />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={{
+                      flex: 1.3,
+                      height: 48,
+                      borderRadius: 14,
+                      overflow: 'hidden',
+                      opacity: isMissingMaintenancePhoto ? 0.5 : 1,
+                      shadowColor: modalTheme.color,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.25,
+                      shadowRadius: 8,
+                      elevation: 4
+                    }}
+                    disabled={isMissingMaintenancePhoto}
+                    onPress={() => {
+                      if (confirmModal) {
+                        updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage);
+                        setConfirmModal(null);
+                      }
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={modalTheme.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        flexDirection: 'row',
+                        gap: 6,
+                        paddingHorizontal: 12
+                      }}
+                    >
+                      <Ionicons name={modalTheme.confirmIcon} size={17} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                        {modalTheme.confirmText}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+        );
+      })()}
 
       {/* Visor de Imágenes a Pantalla Completa */}
       <Modal visible={viewerImage !== null} transparent={true} animationType="fade" onRequestClose={() => setViewerImage(null)}>
@@ -990,7 +1656,7 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
   );
 }
 
-function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage }: any) {
+function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage, onAssignDriver }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
@@ -1242,7 +1908,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                       { item.category === 'transport' && (
                         <TouchableOpacity 
                           style={[styles.actionBtn, styles.successBtn]}
-                          onPress={() => setDriverModal({ visible: true, item })}
+                          onPress={() => onAssignDriver && onAssignDriver(item)}
                         >
                           <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
                           <Text style={styles.actionBtnText}>Aprobar</Text>
@@ -1389,12 +2055,13 @@ const styles = StyleSheet.create({
   successBtn: { backgroundColor: COLORS.success, borderColor: COLORS.success },
   infoBtn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 340, backgroundColor: COLORS.white, borderRadius: 24, padding: 25, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: { width: 0, height: 5 }, shadowRadius: 15 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 400, backgroundColor: COLORS.white, borderRadius: 24, padding: 26, alignItems: 'center', elevation: 16, shadowColor: '#0F172A', shadowOpacity: 0.18, shadowOffset: { width: 0, height: 12 }, shadowRadius: 28, borderWidth: 1, borderColor: 'rgba(226, 232, 240, 0.8)', position: 'relative' },
+  modalCloseBtn: { position: 'absolute', top: 16, right: 16, width: 32, height: 32, borderRadius: 16, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', zIndex: 10 },
   modalHeader: { width: '100%', alignItems: 'center' },
-  modalIconBox: { width: 70, height: 70, borderRadius: 35, backgroundColor: `${COLORS.success}15`, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
-  modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginBottom: 8, textAlign: 'center' },
-  modalMessage: { fontSize: 14, color: COLORS.muted, textAlign: 'center', marginBottom: 25, lineHeight: 20, fontWeight: '500' },
-  modalBtn: { backgroundColor: COLORS.primary, width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  modalBtnText: { color: COLORS.white, fontSize: 15, fontWeight: '800', letterSpacing: 1 },
+  modalIconBox: { width: 68, height: 68, borderRadius: 22, backgroundColor: `${COLORS.success}15`, justifyContent: 'center', alignItems: 'center', marginBottom: 14, borderWidth: 1.5, borderColor: `${COLORS.success}30` },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginBottom: 8, textAlign: 'center', letterSpacing: -0.3 },
+  modalMessage: { fontSize: 14, color: COLORS.muted, textAlign: 'center', marginBottom: 20, lineHeight: 21, fontWeight: '500', paddingHorizontal: 6 },
+  modalBtn: { backgroundColor: COLORS.primary, width: '100%', height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  modalBtnText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
 });

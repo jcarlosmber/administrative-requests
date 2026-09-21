@@ -565,14 +565,14 @@ app.post('/api/requests/:id/comment', authenticateToken, async (req, res) => {
 // Actualizar estado de una solicitud (Admin only) evadiendo falsos positivos de WAF
 app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { status, finalImage } = req.body;
+  const { status, finalImage, reason } = req.body;
 
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Solo administradores pueden cambiar el estado.' });
   }
 
   try {
-    const checkResult = await pool.query('SELECT metadata FROM administrative_requests WHERE id = $1', [id]);
+    const checkResult = await pool.query('SELECT metadata, admin_notes FROM administrative_requests WHERE id = $1', [id]);
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Solicitud no encontrada.' });
     }
@@ -583,7 +583,10 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       pendiente: { title: 'Solicitud Pendiente', desc: 'Requerimiento restablecido a estado pendiente.' },
       en_progreso: { title: 'Solicitud en Curso', desc: 'Se ha iniciado la atención y procesamiento del requerimiento.' },
       resuelto: { title: 'Solicitud Aprobada', desc: 'La solicitud ha sido resuelta y aprobada con éxito.' },
-      rechazado: { title: 'Solicitud Rechazada', desc: 'El requerimiento fue declinado por el administrador.' }
+      rechazado: { 
+        title: 'Solicitud Rechazada', 
+        desc: reason ? `Motivo: ${reason}` : 'El requerimiento fue declinado por el administrador.' 
+      }
     }[status] || { title: `Estado cambiado a ${status}`, desc: 'El administrador actualizó el estado.' };
 
     const newStep = {
@@ -596,12 +599,18 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       currentMetadata.finalImage = finalImage;
     }
 
+    if (reason) {
+      currentMetadata.rejection_reason = reason;
+    }
+
     const updatedTimeline = [...(currentMetadata.timeline || []), newStep];
     currentMetadata.timeline = updatedTimeline;
 
+    const notesToSave = reason ? reason : checkResult.rows[0].admin_notes;
+
     const updateResult = await pool.query(
-      'UPDATE administrative_requests SET status = $1, metadata = $2::jsonb WHERE id = $3 RETURNING *',
-      [status, JSON.stringify(currentMetadata), id]
+      'UPDATE administrative_requests SET status = $1, metadata = $2::jsonb, admin_notes = $3 WHERE id = $4 RETURNING *',
+      [status, JSON.stringify(currentMetadata), notesToSave, id]
     );
 
     const updatedRequest = updateResult.rows[0];
