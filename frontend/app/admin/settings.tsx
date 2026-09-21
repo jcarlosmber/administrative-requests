@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
-import { settingsService, Driver, ServiceEmail } from '../../lib/settingsService';
+import { settingsService, Driver, ServiceEmail, ServerStats } from '../../lib/settingsService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -87,7 +87,7 @@ const generateUUID = () => {
 export default function AdminSettings() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
-  const [activeTab, setActiveTab] = useState<'all' | 'rooms' | 'dependencies' | 'users' | 'drivers' | 'emails' | 'evaluations' | 'preferences'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'rooms' | 'dependencies' | 'users' | 'drivers' | 'emails' | 'evaluations' | 'preferences' | 'deployment'>('all');
   
   const [rooms, setRooms] = useState<any[]>([]);
   const [dependencies, setDependencies] = useState<any[]>([]);
@@ -119,6 +119,21 @@ export default function AdminSettings() {
   const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Estados de Despliegue y Control Git
+  const [gitExecuting, setGitExecuting] = useState(false);
+  const [gitActionRunning, setGitActionRunning] = useState<'pull' | 'pull_and_build' | 'restart_backend' | 'status' | null>(null);
+  const [gitOutput, setGitOutput] = useState('');
+  const [gitLastCheck, setGitLastCheck] = useState('');
+  const [showGitConfirmModal, setShowGitConfirmModal] = useState(false);
+  const [pendingGitAction, setPendingGitAction] = useState<{ action: 'pull' | 'pull_and_build' | 'restart_backend'; title: string; desc: string; icon: string } | null>(null);
+  const [showGitResultModal, setShowGitResultModal] = useState(false);
+  const [gitResultStatus, setGitResultStatus] = useState<'success' | 'error'>('success');
+  const [gitResultMessage, setGitResultMessage] = useState('');
+
+  // Estados de Estadísticas e Infraestructura del Servidor
+  const [serverStats, setServerStats] = useState<ServerStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
   
   // Modals States
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -869,7 +884,64 @@ export default function AdminSettings() {
     ldapComments, ldapRelay, loading
   ]);
 
+  const triggerGitAction = (action: 'pull' | 'pull_and_build' | 'restart_backend') => {
+    let title = '¿Ejecutar Git Pull?';
+    let desc = 'Esta acción sincronizará el repositorio local del servidor con la última versión de la rama main en GitHub.';
+    let icon = 'cloud-download';
 
+    if (action === 'pull_and_build') {
+      title = '¿Git Pull y Compilar Frontend?';
+      desc = 'Sincronizará el código con GitHub y compilará la versión web con npx expo export para desplegar los cambios en producción.';
+      icon = 'cube-outline';
+    } else if (action === 'restart_backend') {
+      title = '¿Reiniciar Servicio Backend?';
+      desc = 'Reiniciará el proceso Node.js de SASGE mediante PM2 para aplicar cambios en los servicios del backend.';
+      icon = 'reload-circle';
+    }
+
+    setPendingGitAction({ action, title, desc, icon });
+    setShowGitConfirmModal(true);
+  };
+
+  const handleExecuteGitAction = async (action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status') => {
+    setShowGitConfirmModal(false);
+    try {
+      setGitExecuting(true);
+      setGitActionRunning(action);
+      const res = await settingsService.executeGitOperation(action);
+      setGitOutput(res.output || res.message);
+      setGitLastCheck(new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      setGitResultStatus('success');
+      setGitResultMessage(res.message);
+      setShowGitResultModal(true);
+    } catch (err: any) {
+      setGitOutput(err.message || 'Error desconocido ejecutando operación Git');
+      setGitResultStatus('error');
+      setGitResultMessage(err.message || 'Error al conectar con el servidor.');
+      setShowGitResultModal(true);
+    } finally {
+      setGitExecuting(false);
+      setGitActionRunning(null);
+    }
+  };
+
+  const loadServerStats = useCallback(async () => {
+    try {
+      setLoadingStats(true);
+      const stats = await settingsService.getServerStats();
+      setServerStats(stats);
+    } catch (err: any) {
+      console.warn('Error al cargar métricas del servidor:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'all' || activeTab === 'deployment') {
+      loadServerStats();
+    }
+  }, [activeTab, loadServerStats]);
 
   return (
     <View style={styles.container}>
@@ -882,7 +954,10 @@ export default function AdminSettings() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <HeroSection isDesktop={isDesktop} />
+          <HeroSection 
+            isDesktop={isDesktop} 
+            onGitPull={() => triggerGitAction('pull')}
+          />
           
           {loading ? (
             <View style={styles.loaderContainer}>
@@ -1292,6 +1367,347 @@ export default function AdminSettings() {
                       </View>
                     </View>
                     )}
+                  </View>
+                </>
+              )}
+
+              {/* Sección de Infraestructura y Servidor */}
+              {(activeTab === 'all' || activeTab === 'deployment') && (
+                <>
+                  <SectionHeader title="Infraestructura y Servidor" kicker="MONITOREO DE HARDWARE" />
+                  <View style={styles.statsCard}>
+                    {/* Header de la tarjeta de métricas */}
+                    <View style={styles.statsHeader}>
+                      <View style={[styles.gitIconCircle, { backgroundColor: '#3B82F618' }]}>
+                        <Ionicons name="server" size={24} color="#2563EB" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.gitDeployTitle}>Estado de Infraestructura y Servidor</Text>
+                        <Text style={styles.gitDeploySubtitle}>
+                          Métricas de hardware en tiempo real: almacenamiento en disco, consumo de memoria RAM, procesador y tiempos de actividad.
+                        </Text>
+                      </View>
+                      <TouchableOpacity 
+                        style={styles.statsRefreshBtn} 
+                        onPress={loadServerStats}
+                        disabled={loadingStats}
+                        activeOpacity={0.8}
+                      >
+                        {loadingStats ? (
+                          <ActivityIndicator size="small" color={COLORS.accent} />
+                        ) : (
+                          <>
+                            <Ionicons name="refresh" size={16} color={COLORS.accent} />
+                            <Text style={styles.statsRefreshText}>Actualizar</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.configDivider} />
+
+                    {/* Contenido de métricas */}
+                    {loadingStats && !serverStats ? (
+                      <View style={{ padding: 40, alignItems: 'center', gap: 12 }}>
+                        <ActivityIndicator size="large" color={COLORS.accent} />
+                        <Text style={{ fontSize: 13, color: COLORS.muted, fontWeight: '600' }}>
+                          Consultando métricas de hardware y almacenamiento del servidor...
+                        </Text>
+                      </View>
+                    ) : serverStats ? (
+                      <View style={styles.statsGrid}>
+                        {/* 1. Tarjeta: Almacenamiento en Disco */}
+                        <View style={styles.metricCard}>
+                          <View style={styles.metricHeader}>
+                            <View style={[styles.metricIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                              <Ionicons name="disc" size={20} color="#3B82F6" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.metricLabel}>Almacenamiento (Disco)</Text>
+                              <Text style={styles.metricSubtitle}>Partición {serverStats.disk.filesystem}</Text>
+                            </View>
+                            <View style={[
+                              styles.metricBadge, 
+                              { backgroundColor: serverStats.disk.usedPercent > 85 ? '#FEF2F2' : serverStats.disk.usedPercent > 70 ? '#FFFBEB' : '#ECFDF5' }
+                            ]}>
+                              <Text style={[
+                                styles.metricBadgeText, 
+                                { color: serverStats.disk.usedPercent > 85 ? COLORS.danger : serverStats.disk.usedPercent > 70 ? '#D97706' : COLORS.success }
+                              ]}>
+                                {serverStats.disk.usedPercent}% usado
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ marginVertical: 12 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                              <Text style={styles.metricMainValue}>{serverStats.disk.used}</Text>
+                              <Text style={styles.metricSubValue}>de {serverStats.disk.total}</Text>
+                            </View>
+                            <View style={styles.progressBarBg}>
+                              <View style={[
+                                styles.progressBarFill, 
+                                { 
+                                  width: `${Math.min(100, Math.max(0, serverStats.disk.usedPercent))}%`,
+                                  backgroundColor: serverStats.disk.usedPercent > 85 ? COLORS.danger : serverStats.disk.usedPercent > 70 ? '#F59E0B' : COLORS.success
+                                }
+                              ]} />
+                            </View>
+                          </View>
+
+                          <View style={styles.metricFooterRow}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Ionicons name="checkmark-circle-outline" size={14} color={COLORS.success} />
+                              <Text style={styles.metricFooterText}>Disponible: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{serverStats.disk.free}</Text></Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* 2. Tarjeta: Memoria RAM */}
+                        <View style={styles.metricCard}>
+                          <View style={styles.metricHeader}>
+                            <View style={[styles.metricIconCircle, { backgroundColor: '#F5F3FF' }]}>
+                              <Ionicons name="hardware-chip" size={20} color="#8B5CF6" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.metricLabel}>Memoria RAM</Text>
+                              <Text style={styles.metricSubtitle}>Total Servidor</Text>
+                            </View>
+                            <View style={[
+                              styles.metricBadge, 
+                              { backgroundColor: serverStats.memory.usedPercent > 85 ? '#FEF2F2' : serverStats.memory.usedPercent > 70 ? '#FFFBEB' : '#EFF6FF' }
+                            ]}>
+                              <Text style={[
+                                styles.metricBadgeText, 
+                                { color: serverStats.memory.usedPercent > 85 ? COLORS.danger : serverStats.memory.usedPercent > 70 ? '#D97706' : '#2563EB' }
+                              ]}>
+                                {serverStats.memory.usedPercent}% en uso
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ marginVertical: 12 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                              <Text style={styles.metricMainValue}>{serverStats.memory.used}</Text>
+                              <Text style={styles.metricSubValue}>de {serverStats.memory.total}</Text>
+                            </View>
+                            <View style={styles.progressBarBg}>
+                              <View style={[
+                                styles.progressBarFill, 
+                                { 
+                                  width: `${Math.min(100, Math.max(0, serverStats.memory.usedPercent))}%`,
+                                  backgroundColor: serverStats.memory.usedPercent > 85 ? COLORS.danger : serverStats.memory.usedPercent > 70 ? '#F59E0B' : '#8B5CF6'
+                                }
+                              ]} />
+                            </View>
+                          </View>
+
+                          <View style={styles.metricFooterRow}>
+                            <Text style={styles.metricFooterText}>Libre: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{serverStats.memory.free}</Text></Text>
+                            <Text style={styles.metricFooterText}>Node RSS: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{serverStats.memory.processRss}</Text></Text>
+                          </View>
+                        </View>
+
+                        {/* 3. Tarjeta: Procesador y Carga (CPU) */}
+                        <View style={styles.metricCard}>
+                          <View style={styles.metricHeader}>
+                            <View style={[styles.metricIconCircle, { backgroundColor: '#FEF3C7' }]}>
+                              <Ionicons name="speedometer" size={20} color="#D97706" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.metricLabel}>Procesador (CPU)</Text>
+                              <Text style={styles.metricSubtitle}>{serverStats.cpu.cores} Núcleos lógicos</Text>
+                            </View>
+                            <View style={[styles.metricBadge, { backgroundColor: '#F1F5F9' }]}>
+                              <Text style={[styles.metricBadgeText, { color: COLORS.primarySoft }]}>
+                                {serverStats.arch}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ marginVertical: 12 }}>
+                            <Text style={[styles.metricMainValue, { fontSize: 14, fontWeight: '700' }]} numberOfLines={2}>
+                              {serverStats.cpu.model}
+                            </Text>
+                          </View>
+
+                          <View style={styles.metricFooterRow}>
+                            <Text style={styles.metricFooterText}>Carga Media (1m, 5m, 15m):</Text>
+                            <View style={{ flexDirection: 'row', gap: 6 }}>
+                              {(serverStats.cpu.loadAvg || []).map((val, idx) => (
+                                <View key={idx} style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: COLORS.line }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '800', color: COLORS.primary }}>{val}</Text>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* 4. Tarjeta: Sistema Operativo y Uptime */}
+                        <View style={styles.metricCard}>
+                          <View style={styles.metricHeader}>
+                            <View style={[styles.metricIconCircle, { backgroundColor: '#ECFDF5' }]}>
+                              <Ionicons name="desktop" size={20} color="#059669" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.metricLabel}>Servidor & Uptime</Text>
+                              <Text style={styles.metricSubtitle}>{serverStats.ip}</Text>
+                            </View>
+                            <View style={[styles.metricBadge, { backgroundColor: '#ECFDF5' }]}>
+                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.success, marginRight: 4 }} />
+                              <Text style={[styles.metricBadgeText, { color: COLORS.success }]}>Activo</Text>
+                            </View>
+                          </View>
+
+                          <View style={{ marginVertical: 12 }}>
+                            <Text style={[styles.metricMainValue, { fontSize: 15, fontWeight: '800' }]} numberOfLines={1}>
+                              {serverStats.osDistro}
+                            </Text>
+                            <Text style={[styles.metricSubtitle, { marginTop: 4 }]}>
+                              Host: <Text style={{ fontWeight: '700', color: COLORS.primary }}>{serverStats.hostname}</Text> • Node: <Text style={{ fontWeight: '700', color: COLORS.primary }}>{serverStats.nodeVersion}</Text>
+                            </Text>
+                          </View>
+
+                          <View style={styles.metricFooterRow}>
+                            <Text style={styles.metricFooterText}>Uptime SO: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{serverStats.serverUptime}</Text></Text>
+                            <Text style={styles.metricFooterText}>Uptime Backend: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{serverStats.backendUptime}</Text></Text>
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={{ padding: 30, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 13, color: COLORS.muted }}>
+                          Haga clic en 'Actualizar' para obtener métricas de hardware del servidor.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={{ height: 24 }} />
+
+                  <SectionHeader title="Despliegue y Control de Versiones" kicker="ACTUALIZACIÓN DEL SISTEMA" />
+                  <View style={styles.gitDeployCard}>
+                    {/* Cabecera de la tarjeta */}
+                    <View style={styles.gitDeployHeader}>
+                      <View style={styles.gitIconCircle}>
+                        <Ionicons name="git-branch" size={24} color={COLORS.accent} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.gitDeployTitle}>Sincronización de Código (Git Pull)</Text>
+                        <Text style={styles.gitDeploySubtitle}>
+                          Actualice el código del portal en producción directamente desde el repositorio oficial de GitHub sin necesidad de comandos SSH manuales.
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.configDivider} />
+
+                    {/* Meta info del repositorio */}
+                    <View style={styles.gitMetaRow}>
+                      <View style={styles.gitMetaItem}>
+                        <Text style={styles.gitMetaLabel}>RAMA REMOTA</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <Ionicons name="git-commit-outline" size={16} color={COLORS.accent} />
+                          <Text style={styles.gitMetaValue}>origin / main</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.gitMetaItem}>
+                        <Text style={styles.gitMetaLabel}>SERVIDOR DESTINO</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <Ionicons name="server-outline" size={16} color={COLORS.success} />
+                          <Text style={styles.gitMetaValue}>10.54.80.209 (Producción)</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.gitMetaItem}>
+                        <Text style={styles.gitMetaLabel}>ÚLTIMA CONSULTA</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                          <Ionicons name="time-outline" size={16} color={COLORS.muted} />
+                          <Text style={styles.gitMetaValue}>{gitLastCheck || 'Sin consultar'}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Botonera de acciones */}
+                    <View style={styles.gitActionsContainer}>
+                      {/* Botón 1: Git Pull Principal */}
+                      <TouchableOpacity 
+                        style={[styles.gitActionBtn, styles.gitActionBtnPrimary]} 
+                        onPress={() => triggerGitAction('pull')}
+                        disabled={gitExecuting}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="cloud-download" size={20} color={COLORS.white} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.gitActionBtnTitle}>Hacer Git Pull</Text>
+                          <Text style={styles.gitActionBtnDesc}>Traer cambios recientes de GitHub</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+                      </TouchableOpacity>
+
+                      {/* Botón 2: Git Pull + Build Frontend */}
+                      <TouchableOpacity 
+                        style={[styles.gitActionBtn, styles.gitActionBtnSuccess]} 
+                        onPress={() => triggerGitAction('pull_and_build')}
+                        disabled={gitExecuting}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="cube" size={20} color={COLORS.white} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.gitActionBtnTitle}>Git Pull + Build Frontend</Text>
+                          <Text style={styles.gitActionBtnDesc}>Actualizar código y compilar web</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
+                      </TouchableOpacity>
+
+                      {/* Botón 3: Reiniciar Backend */}
+                      <TouchableOpacity 
+                        style={[styles.gitActionBtn, styles.gitActionBtnSecondary]} 
+                        onPress={() => triggerGitAction('restart_backend')}
+                        disabled={gitExecuting}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="reload-circle" size={20} color={COLORS.primary} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.gitActionBtnTitle, { color: COLORS.primary }]}>Reiniciar Backend</Text>
+                          <Text style={[styles.gitActionBtnDesc, { color: COLORS.muted }]}>Reiniciar servicio Node.js (PM2)</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={COLORS.muted} />
+                      </TouchableOpacity>
+
+                      {/* Botón 4: Verificar Estado */}
+                      <TouchableOpacity 
+                        style={[styles.gitActionBtn, styles.gitActionBtnGhost]} 
+                        onPress={() => handleExecuteGitAction('status')}
+                        disabled={gitExecuting}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="scan-outline" size={20} color={COLORS.accent} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.gitActionBtnTitle, { color: COLORS.accent }]}>Verificar Estado Git</Text>
+                          <Text style={[styles.gitActionBtnDesc, { color: COLORS.muted }]}>Consultar commit y estado</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={COLORS.accent} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Consola de terminal integrada si hay salida */}
+                    {gitOutput ? (
+                      <View style={styles.gitTerminalCard}>
+                        <View style={styles.gitTerminalHeader}>
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            <View style={[styles.gitTerminalDot, { backgroundColor: '#EF4444' }]} />
+                            <View style={[styles.gitTerminalDot, { backgroundColor: '#F59E0B' }]} />
+                            <View style={[styles.gitTerminalDot, { backgroundColor: '#10B981' }]} />
+                          </View>
+                          <Text style={styles.gitTerminalTitle}>Terminal de Servidor (stdout / stderr)</Text>
+                        </View>
+                        <ScrollView style={styles.gitTerminalBody} nestedScrollEnabled={true}>
+                          <Text style={styles.gitTerminalText}>{gitOutput}</Text>
+                        </ScrollView>
+                      </View>
+                    ) : null}
                   </View>
                 </>
               )}
@@ -1842,6 +2258,117 @@ export default function AdminSettings() {
           </View>
         </View>
       </Modal>
+
+      {/* MODAL DE CONFIRMACIÓN DE OPERACIÓN GIT */}
+      <Modal
+        visible={showGitConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowGitConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalContainer, { maxWidth: 480 }]}>
+            <View style={[styles.modalIconBox, { backgroundColor: `${COLORS.accent}15` }]}>
+              <Ionicons name={(pendingGitAction?.icon as any) || 'git-branch'} size={40} color={COLORS.accent} />
+            </View>
+            <Text style={styles.modalTitle}>{pendingGitAction?.title || '¿Ejecutar Acción Git?'}</Text>
+            <Text style={styles.modalDescription}>
+              {pendingGitAction?.desc}
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]} 
+                onPress={() => setShowGitConfirmModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.successButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+                onPress={() => {
+                  if (pendingGitAction) {
+                    handleExecuteGitAction(pendingGitAction.action);
+                  }
+                }}
+              >
+                <Text style={styles.successButtonText}>Confirmar y Ejecutar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE PROGRESO Y RESULTADO DE OPERACIÓN GIT */}
+      <Modal
+        visible={showGitResultModal || gitExecuting}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!gitExecuting) setShowGitResultModal(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalContainer, { maxWidth: 650, width: '92%' }]}>
+            {gitExecuting ? (
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <ActivityIndicator size="large" color={COLORS.accent} style={{ marginBottom: 16 }} />
+                <Text style={styles.modalTitle}>
+                  {gitActionRunning === 'pull' ? 'Ejecutando Git Pull...' :
+                   gitActionRunning === 'pull_and_build' ? 'Sincronizando y Compilando...' :
+                   gitActionRunning === 'restart_backend' ? 'Reiniciando Servicios...' :
+                   'Consultando Repositorio...'}
+                </Text>
+                <Text style={[styles.modalDescription, { textAlign: 'center', marginTop: 8 }]}>
+                  Procesando operación en el servidor institucional. Por favor no cierre esta ventana.
+                </Text>
+              </View>
+            ) : (
+              <View style={{ width: '100%' }}>
+                <View style={{ alignItems: 'center', marginBottom: 15 }}>
+                  <View style={[styles.modalIconBox, { backgroundColor: gitResultStatus === 'success' ? `${COLORS.success}15` : `${COLORS.danger}15` }]}>
+                    <Ionicons 
+                      name={gitResultStatus === 'success' ? 'checkmark-circle' : 'alert-circle'} 
+                      size={40} 
+                      color={gitResultStatus === 'success' ? COLORS.success : COLORS.danger} 
+                    />
+                  </View>
+                  <Text style={styles.modalTitle}>
+                    {gitResultStatus === 'success' ? '¡Operación Completada!' : 'Atención en el Despliegue'}
+                  </Text>
+                  <Text style={[styles.modalDescription, { textAlign: 'center' }]}>
+                    {gitResultMessage}
+                  </Text>
+                </View>
+
+                {/* Salida de consola */}
+                <View style={[styles.gitTerminalCard, { maxHeight: 220, marginBottom: 20 }]}>
+                  <View style={styles.gitTerminalHeader}>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <View style={[styles.gitTerminalDot, { backgroundColor: '#EF4444' }]} />
+                      <View style={[styles.gitTerminalDot, { backgroundColor: '#F59E0B' }]} />
+                      <View style={[styles.gitTerminalDot, { backgroundColor: '#10B981' }]} />
+                    </View>
+                    <Text style={styles.gitTerminalTitle}>Salida del Comando</Text>
+                  </View>
+                  <ScrollView style={{ maxHeight: 160, padding: 12 }} nestedScrollEnabled={true}>
+                    <Text style={[styles.gitTerminalText, { color: gitResultStatus === 'success' ? '#10B981' : '#FCA5A5' }]}>
+                      {gitOutput}
+                    </Text>
+                  </ScrollView>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.modalButton, styles.successButton, { width: '100%', backgroundColor: COLORS.primary }]} 
+                  onPress={() => setShowGitResultModal(false)}
+                >
+                  <Text style={styles.successButtonText}>Cerrar y Continuar</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1858,6 +2385,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveTab:
     { id: 'emails', label: 'Correos de Servicio', icon: 'mail' },
     { id: 'evaluations', label: 'Evaluación Servicios', icon: 'star' },
     { id: 'preferences', label: 'Preferencias Sistema', icon: 'options' },
+    { id: 'deployment', label: 'Servidor & Despliegue', icon: 'server' },
   ];
 
   return (
@@ -1909,7 +2437,7 @@ function SidebarTabButton({ label, icon, active, onPress }: any) {
   );
 }
 
-function HeroSection({ isDesktop }: any) {
+function HeroSection({ isDesktop, onGitPull }: any) {
   const router = useRouter();
 
   return (
@@ -1927,7 +2455,18 @@ function HeroSection({ isDesktop }: any) {
             <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Configuración General</Text>
             <Text style={styles.heroSub} numberOfLines={2}>Administre los recursos y reglas del portal</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+          <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
+            {onGitPull && (
+              <TouchableOpacity 
+                style={[styles.logoutBtn, { width: 'auto', paddingHorizontal: 14, flexDirection: 'row', gap: 8, backgroundColor: COLORS.accent, borderColor: COLORS.accent }]} 
+                onPress={onGitPull}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="cloud-download-outline" size={18} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Git Pull</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity 
               style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
               onPress={() => router.replace('/dashboard')}
@@ -2113,6 +2652,51 @@ const styles = StyleSheet.create({
   confirmDeleteButton: { backgroundColor: COLORS.danger },
   confirmDeleteButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
   successButton: { backgroundColor: COLORS.primary, width: '100%', height: 60, borderRadius: 18 },
-  successButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '900', letterSpacing: 1 }
+  successButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '900', letterSpacing: 1 },
+
+  // Estilos de Despliegue y Git
+  gitDeployCard: { backgroundColor: COLORS.white, borderRadius: 24, padding: 6, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' },
+  gitDeployHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20 },
+  gitIconCircle: { width: 50, height: 50, borderRadius: 16, backgroundColor: `${COLORS.accent}15`, justifyContent: 'center', alignItems: 'center' },
+  gitDeployTitle: { fontSize: 17, fontWeight: '800', color: COLORS.primary },
+  gitDeploySubtitle: { fontSize: 13, color: COLORS.muted, marginTop: 4, lineHeight: 19 },
+  gitMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, padding: 18, backgroundColor: '#F8FAFC', borderRadius: 16, margin: 16 },
+  gitMetaItem: { flex: 1, minWidth: 160 },
+  gitMetaLabel: { fontSize: 11, fontWeight: '900', color: COLORS.muted, letterSpacing: 0.5 },
+  gitMetaValue: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  gitActionsContainer: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
+  gitActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 16, borderWidth: 1 },
+  gitActionBtnPrimary: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  gitActionBtnSuccess: { backgroundColor: '#10B981', borderColor: '#059669' },
+  gitActionBtnSecondary: { backgroundColor: '#F8FAFC', borderColor: COLORS.line },
+  gitActionBtnGhost: { backgroundColor: `${COLORS.accent}08`, borderColor: `${COLORS.accent}30` },
+  gitActionBtnTitle: { fontSize: 14, fontWeight: '800', color: COLORS.white },
+  gitActionBtnDesc: { fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+  gitTerminalCard: { backgroundColor: '#0F172A', borderRadius: 16, margin: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#334155' },
+  gitTerminalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#1E293B', borderBottomWidth: 1, borderBottomColor: '#334155' },
+  gitTerminalDot: { width: 10, height: 10, borderRadius: 5 },
+  gitTerminalTitle: { fontSize: 11, fontWeight: '700', color: '#94A3B8' },
+  gitTerminalBody: { maxHeight: 220, padding: 16 },
+  gitTerminalText: { fontSize: 12, color: '#38BDF8', lineHeight: 18, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) },
+
+  // Estilos de Métricas e Infraestructura
+  statsCard: { backgroundColor: COLORS.white, borderRadius: 24, padding: 6, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' },
+  statsHeader: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20 },
+  statsRefreshBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: `${COLORS.accent}15`, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: `${COLORS.accent}30` },
+  statsRefreshText: { fontSize: 12, fontWeight: '800', color: COLORS.accent },
+  statsGrid: { padding: 16, gap: 16, flexDirection: 'row', flexWrap: 'wrap' },
+  metricCard: { flex: 1, minWidth: 260, backgroundColor: '#FAFCFF', borderRadius: 18, padding: 18, borderWidth: 1, borderColor: COLORS.line },
+  metricHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  metricIconCircle: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  metricLabel: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  metricSubtitle: { fontSize: 11, color: COLORS.muted, marginTop: 1, fontWeight: '500' },
+  metricBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  metricBadgeText: { fontSize: 11, fontWeight: '800' },
+  metricMainValue: { fontSize: 20, fontWeight: '900', color: COLORS.primary },
+  metricSubValue: { fontSize: 12, fontWeight: '600', color: COLORS.muted },
+  progressBarBg: { height: 8, backgroundColor: '#E2E8F0', borderRadius: 999, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 999 },
+  metricFooterRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#EDF2F7', flexWrap: 'wrap', gap: 6 },
+  metricFooterText: { fontSize: 11, color: COLORS.muted, fontWeight: '600' }
 });
 

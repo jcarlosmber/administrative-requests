@@ -145,9 +145,14 @@ export default function AdminDashboardScreen() {
 
   const kpiStats = React.useMemo(() => {
     const today = new Date().toDateString();
-    const pending = requests.filter(r => r.status === 'pendiente').length;
-    const inProgress = requests.filter(r => ['en_progreso', 'en curso', 'en_curso', 'in_progress'].includes((r.status || '').toLowerCase().trim())).length;
-    const urgencies = requests.filter(r => r.priority === 'alta' && r.status !== 'resuelto').length;
+    const isRejected = (s: string) => ['rechazado', 'rechazada', 'rejected'].includes((s || '').toLowerCase().trim());
+    const isResolved = (s: string) => ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'completada'].includes((s || '').toLowerCase().trim());
+    const isPending = (s: string) => ['pendiente', 'pending'].includes((s || '').toLowerCase().trim());
+    const isInProgress = (s: string) => ['en_progreso', 'en curso', 'en_curso', 'in_progress'].includes((s || '').toLowerCase().trim());
+
+    const pending = requests.filter(r => isPending(r.status)).length;
+    const inProgress = requests.filter(r => isInProgress(r.status)).length;
+    const urgencies = requests.filter(r => (r.priority || '').toLowerCase() === 'alta' && !isResolved(r.status) && !isRejected(r.status)).length;
 
     return [
       { id: 'pending', title: 'Pendientes', value: pending.toString(), icon: 'time', color: '#F59E0B', desc: 'Solicitudes por revisar' },
@@ -157,15 +162,21 @@ export default function AdminDashboardScreen() {
   }, [requests]);
 
   const handleKpiPress = (item: { id: string }) => {
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = {
+      service: 'Todas',
+      time: 'Todos',
+      t: Date.now().toString(),
+    };
 
     if (item.id === 'pending') {
       params.status = 'pendiente';
+      params.priority = 'Todas';
     } else if (item.id === 'in_progress') {
       params.status = 'en_progreso';
+      params.priority = 'Todas';
     } else if (item.id === 'alerts') {
-      params.priority = 'alta';
-      params.status = 'pendiente';
+      params.status = 'Todos';
+      params.priority = 'Alta';
     }
 
     router.push({
@@ -207,9 +218,12 @@ export default function AdminDashboardScreen() {
   }, [requests]);
 
   const efficiency = React.useMemo(() => {
-    if (requests.length === 0) return 0;
-    const completed = requests.filter(r => r.status === 'resuelto').length;
-    return Math.round((completed / requests.length) * 100);
+    const isRejected = (s: string) => ['rechazado', 'rechazada', 'rejected'].includes((s || '').toLowerCase().trim());
+    const isResolved = (s: string) => ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'completada'].includes((s || '').toLowerCase().trim());
+    const validRequests = requests.filter(r => !isRejected(r.status));
+    if (validRequests.length === 0) return 0;
+    const completed = validRequests.filter(r => isResolved(r.status)).length;
+    return Math.round((completed / validRequests.length) * 100);
   }, [requests]);
 
   return (
@@ -253,7 +267,16 @@ export default function AdminDashboardScreen() {
                 <Text style={styles.sectionKicker}>ACTIVIDAD</Text>
                 <Text style={styles.sectionTitle}>Últimos Movimientos</Text>
               </View>
-              <Pressable onPress={() => router.push('/admin/manage')}>
+              <Pressable onPress={() => router.push({
+                pathname: '/admin/manage',
+                params: {
+                  status: 'Todos',
+                  service: 'Todas',
+                  priority: 'Todas',
+                  time: 'Todos',
+                  t: Date.now().toString(),
+                }
+              })}>
                 <Text style={styles.viewAllText}>Gestionar todo</Text>
               </Pressable>
             </View>

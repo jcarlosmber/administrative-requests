@@ -3,6 +3,10 @@ const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const path = require('path');
+const { exec } = require('child_process');
+const os = require('os');
+const fs = require('fs');
 require('dotenv').config();
 const ldapClient = require('./ldapClient');
 const emailService = require('./emailService');
@@ -215,6 +219,264 @@ app.put('/api/settings/:key', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error actualizando configuración:', err);
     res.status(500).json({ error: 'Error del servidor.' });
+  }
+});
+
+// --- FUNCIONES AUXILIARES PARA ESTADÍSTICAS DEL SERVIDOR ---
+const getDiskUsage = () => {
+  return new Promise((resolve) => {
+    if (process.platform === 'win32') {
+      exec('wmic logicaldisk get caption,size,freespace', (err, stdout) => {
+        if (err || !stdout) {
+          return resolve({ total: '0 GB', used: '0 GB', free: '0 GB', usedPercent: 0, filesystem: 'C:' });
+        }
+        const lines = stdout.trim().split('\n').slice(1);
+        let totalBytes = 0;
+        let freeBytes = 0;
+        lines.forEach(line => {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 3) {
+            const free = parseInt(parts[1], 10);
+            const size = parseInt(parts[2], 10);
+            if (!isNaN(free) && !isNaN(size)) {
+              freeBytes += free;
+              totalBytes += size;
+            }
+          }
+        });
+        const usedBytes = Math.max(0, totalBytes - freeBytes);
+        const usedPercent = totalBytes > 0 ? Math.round((usedBytes / totalBytes) * 100) : 0;
+        resolve({
+          total: (totalBytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB',
+          used: (usedBytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB',
+          free: (freeBytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB',
+          usedPercent,
+          filesystem: 'C:'
+        });
+      });
+    } else {
+      exec('df -Pk /', (err, stdout) => {
+        if (err || !stdout) {
+          return resolve({ total: 'N/A', used: 'N/A', free: 'N/A', usedPercent: 0, filesystem: '/' });
+        }
+        const lines = stdout.trim().split('\n');
+        if (lines.length > 1) {
+          const parts = lines[1].trim().split(/\s+/);
+          const totalKB = parseInt(parts[1], 10) || 0;
+          const usedKB = parseInt(parts[2], 10) || 0;
+          const freeKB = parseInt(parts[3], 10) || 0;
+          const totalGB = (totalKB / (1024 * 1024)).toFixed(1);
+          const usedGB = (usedKB / (1024 * 1024)).toFixed(1);
+          const freeGB = (freeKB / (1024 * 1024)).toFixed(1);
+          const usedPercent = totalKB > 0 ? Math.round((usedKB / totalKB) * 100) : parseInt(parts[4]) || 0;
+          return resolve({
+            total: `${totalGB} GB`,
+            used: `${usedGB} GB`,
+            free: `${freeGB} GB`,
+            usedPercent,
+            filesystem: parts[0],
+            mountedOn: parts[5] || '/'
+          });
+        }
+        resolve({ total: 'N/A', used: 'N/A', free: 'N/A', usedPercent: 0, filesystem: '/' });
+      });
+    }
+  });
+};
+
+const getOsDistro = () => {
+  if (process.platform === 'linux' && fs.existsSync('/etc/os-release')) {
+    try {
+      const content = fs.readFileSync('/etc/os-release', 'utf8');
+      const prettyMatch = content.match(/PRETTY_NAME="([^"]+)"/);
+      if (prettyMatch) return prettyMatch[1];
+    } catch (_) {}
+  }
+  return `${os.type()} ${os.release()}`;
+};
+
+const getPrimaryIp = () => {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return '10.54.80.209';
+};
+
+const formatUptime = (seconds) => {
+  const d = Math.floor(seconds / (3600 * 24));
+  const h = Math.floor((seconds % (3600 * 24)) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const parts = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0 || parts.length === 0) parts.push(`${m}m`);
+  return parts.join(' ');
+};
+
+// --- ENDPOINT DE ESTADÍSTICAS E INFRAESTRUCTURA DEL SERVIDOR ---
+app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo los administradores pueden consultar métricas del servidor.' });
+    }
+
+    const disk = await getDiskUsage();
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = Math.max(0, totalMem - freeMem);
+    const memPercent = Math.round((usedMem / totalMem) * 100);
+
+    const cpus = os.cpus() || [];
+    const cpuModel = cpus[0]?.model || 'Desconocido';
+    const cpuCores = cpus.length;
+    const loadAvg = os.loadavg().map(l => Number(l.toFixed(2)));
+
+    const processMem = process.memoryUsage();
+    const processRssMB = (processMem.rss / (1024 * 1024)).toFixed(1);
+    const processHeapMB = (processMem.heapUsed / (1024 * 1024)).toFixed(1);
+
+    res.json({
+      hostname: os.hostname(),
+      ip: getPrimaryIp(),
+      osDistro: getOsDistro(),
+      platform: os.platform(),
+      arch: os.arch(),
+      serverUptime: formatUptime(os.uptime()),
+      serverUptimeSeconds: os.uptime(),
+      backendUptime: formatUptime(process.uptime()),
+      nodeVersion: process.version,
+      pid: process.pid,
+      disk: {
+        total: disk.total,
+        used: disk.used,
+        free: disk.free,
+        usedPercent: disk.usedPercent,
+        filesystem: disk.filesystem || '/'
+      },
+      memory: {
+        total: (totalMem / (1024 * 1024 * 1024)).toFixed(1) + ' GB',
+        used: (usedMem / (1024 * 1024 * 1024)).toFixed(1) + ' GB',
+        free: (freeMem / (1024 * 1024 * 1024)).toFixed(1) + ' GB',
+        usedPercent: memPercent,
+        processRss: `${processRssMB} MB`,
+        processHeap: `${processHeapMB} MB`
+      },
+      cpu: {
+        model: cpuModel,
+        cores: cpuCores,
+        loadAvg
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Error obteniendo métricas del servidor:', err);
+    res.status(500).json({ error: 'Error al consultar métricas del servidor.' });
+  }
+});
+
+// --- ENDPOINT DE CONTROL Y DESPLIEGUE GIT ---
+app.post('/api/admin/git', authenticateToken, async (req, res) => {
+  try {
+    // Validar permisos de administrador
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo los administradores del sistema pueden ejecutar operaciones de despliegue y Git.' });
+    }
+
+    const { action = 'pull' } = req.body;
+    const projectRoot = path.resolve(__dirname, '..');
+    const frontendDir = path.join(projectRoot, 'frontend');
+
+    if (action === 'status') {
+      exec('git status -s && git log -1 --pretty=format:"Último commit: %h - %s (%cr) por %an"', { cwd: projectRoot, timeout: 30000 }, (error, stdout, stderr) => {
+        if (error) {
+          return res.status(500).json({ success: false, error: 'Error consultando estado de Git.', output: stderr || stdout || error.message });
+        }
+        res.json({
+          success: true,
+          message: 'Estado de repositorio obtenido exitosamente.',
+          output: stdout || 'Repositorio limpio, sin cambios pendientes.',
+          timestamp: new Date().toISOString()
+        });
+      });
+      return;
+    }
+
+    if (action === 'pull') {
+      console.log(`[GIT] Ejecutando git pull origin main solicitado por ${req.user.email}`);
+      exec('git pull origin main', { cwd: projectRoot, timeout: 90000 }, (error, stdout, stderr) => {
+        const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
+        if (error) {
+          console.error('[GIT] Error ejecutando git pull:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Error al ejecutar git pull origin main.',
+            output: fullOutput || error.message
+          });
+        }
+        console.log('[GIT] git pull completado:', stdout);
+        res.json({
+          success: true,
+          message: 'Git pull completado exitosamente.',
+          output: fullOutput.trim() || 'Repositorio actualizado.',
+          timestamp: new Date().toISOString()
+        });
+      });
+      return;
+    }
+
+    if (action === 'pull_and_build') {
+      console.log(`[GIT] Ejecutando git pull y build frontend solicitado por ${req.user.email}`);
+      const cmd = process.platform === 'win32'
+        ? `git pull origin main && cd "${frontendDir}" && npx expo export`
+        : `git pull origin main && (cd "${frontendDir}" && npx expo export)`;
+
+      exec(cmd, { cwd: projectRoot, timeout: 300000 }, (error, stdout, stderr) => {
+        const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
+        if (error) {
+          console.error('[GIT] Error en git pull + build:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Error durante git pull o compilación del frontend.',
+            output: fullOutput || error.message
+          });
+        }
+        console.log('[GIT] git pull y build completados exitosamente');
+        res.json({
+          success: true,
+          message: 'Git pull y compilación del frontend completados exitosamente.',
+          output: fullOutput.trim(),
+          timestamp: new Date().toISOString()
+        });
+      });
+      return;
+    }
+
+    if (action === 'restart_backend') {
+      console.log(`[GIT] Reinicio de backend solicitado por ${req.user.email}`);
+      res.json({
+        success: true,
+        message: 'Reinicio del servicio backend programado.',
+        output: 'El servicio backend se reiniciará inmediatamente a través de PM2.',
+        timestamp: new Date().toISOString()
+      });
+
+      setTimeout(() => {
+        exec('pm2 restart backend-solicitudes || pm2 restart all', (err) => {
+          if (err) console.error('[GIT] Error al reiniciar PM2:', err);
+        });
+      }, 1500);
+      return;
+    }
+
+    return res.status(400).json({ error: 'Acción no válida. Acciones soportadas: status, pull, pull_and_build, restart_backend' });
+  } catch (err) {
+    console.error('Error general en endpoint git:', err);
+    res.status(500).json({ error: 'Error del servidor procesando solicitud de Git.' });
   }
 });
 

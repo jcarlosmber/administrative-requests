@@ -134,7 +134,15 @@ const SORT_OPTIONS: { id: 'recent' | 'oldest' | 'priority' | 'requester'; label:
 ];
 
 export default function ManageRequests() {
-  const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string; id?: string }>();
+  const params = useLocalSearchParams<{ 
+    status?: string; 
+    priority?: string; 
+    service?: string; 
+    time?: string; 
+    today?: string; 
+    id?: string; 
+    t?: string; 
+  }>();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,10 +263,13 @@ export default function ManageRequests() {
     }
   };
 
-  // Contadores dinámicos por categoría
+  // Contadores dinámicos por categoría (sin sumar rechazados)
+  const isRejectedStatus = (s: string) => ['rechazado', 'rechazada', 'rejected'].includes((s || '').toLowerCase().trim());
+
   const categoryCounts = useMemo(() => {
+    const validRequests = requests.filter(r => !isRejectedStatus(r.status));
     const counts: Record<string, { total: number; pending: number }> = {
-      Todas: { total: requests.length, pending: requests.filter(r => r.status === 'pendiente').length },
+      Todas: { total: validRequests.length, pending: requests.filter(r => (r.status || '').toLowerCase().trim() === 'pendiente').length },
       Visitantes: { total: 0, pending: 0 },
       Transporte: { total: 0, pending: 0 },
       Mantenimiento: { total: 0, pending: 0 },
@@ -266,6 +277,7 @@ export default function ManageRequests() {
       Parqueadero: { total: 0, pending: 0 },
     };
     requests.forEach(r => {
+      if (isRejectedStatus(r.status)) return; // Los rechazados no los sumes al total de categorías
       const catKey = {
         visitors: 'Visitantes',
         transport: 'Transporte',
@@ -275,7 +287,7 @@ export default function ManageRequests() {
       }[r.category];
       if (catKey && counts[catKey]) {
         counts[catKey].total += 1;
-        if (r.status === 'pendiente') {
+        if ((r.status || '').toLowerCase().trim() === 'pendiente') {
           counts[catKey].pending += 1;
         }
       }
@@ -286,7 +298,7 @@ export default function ManageRequests() {
   // Contadores dinámicos por flujo de trabajo (Segmented Tabs)
   const workflowCounts = useMemo(() => {
     const counts = {
-      Todos: requests.length,
+      Todos: requests.filter(r => !isRejectedStatus(r.status)).length, // No sumar rechazados en 'Todos'
       Pendiente: 0,
       'En Progreso': 0,
       Aprobado: 0,
@@ -300,7 +312,7 @@ export default function ManageRequests() {
         counts['En Progreso'] += 1;
       } else if (['resuelto', 'aprobado', 'resuelta', 'aprobada', 'completada'].includes(s)) {
         counts.Aprobado += 1;
-      } else if (s === 'rechazado' || s === 'rechazada' || s === 'rejected') {
+      } else if (isRejectedStatus(s)) {
         counts.Rechazado += 1;
       }
     });
@@ -340,19 +352,59 @@ export default function ManageRequests() {
   }, []);
 
   useEffect(() => {
-    if (params.status) {
-      const statusValue = String(params.status).toLowerCase();
-      if (statusValue === 'pendiente') {
-        setStatusFilter('Pendiente');
-      } else if (statusValue === 'en_progreso' || statusValue === 'en curso') {
-        setStatusFilter('En Progreso');
-      } else if (statusValue === 'resuelto' || statusValue === 'aprobado') {
-        setStatusFilter('Aprobado');
-      } else if (statusValue === 'rechazado') {
-        setStatusFilter('Rechazado');
+    if (params.status !== undefined || params.priority !== undefined || params.service !== undefined || params.time !== undefined || params.t !== undefined) {
+      // 1. Estado
+      if (params.status) {
+        const statusValue = String(params.status).toLowerCase().trim();
+        if (statusValue === 'pendiente') {
+          setStatusFilter('Pendiente');
+        } else if (statusValue === 'en_progreso' || statusValue === 'en curso' || statusValue === 'en_curso') {
+          setStatusFilter('En Progreso');
+        } else if (statusValue === 'resuelto' || statusValue === 'aprobado') {
+          setStatusFilter('Aprobado');
+        } else if (statusValue === 'rechazado') {
+          setStatusFilter('Rechazado');
+        } else if (statusValue === 'todos' || statusValue === 'todas') {
+          setStatusFilter('Todos');
+        }
+      } else if (params.t) {
+        setStatusFilter('Todos');
       }
+
+      // 2. Servicios
+      if (params.service) {
+        const servValue = String(params.service).trim();
+        const foundCategory = CATEGORIES.find(c => c.toLowerCase() === servValue.toLowerCase());
+        setServiceFilter(foundCategory || 'Todas');
+      } else if (params.t) {
+        setServiceFilter('Todas');
+      }
+
+      // 3. Prioridad
+      if (params.priority) {
+        const prioValue = String(params.priority).toLowerCase().trim();
+        if (prioValue === 'alta') setPriorityFilter('Alta');
+        else if (prioValue === 'media') setPriorityFilter('Media');
+        else if (prioValue === 'baja') setPriorityFilter('Baja');
+        else setPriorityFilter('Todas');
+      } else if (params.t) {
+        setPriorityFilter('Todas');
+      }
+
+      // 4. Periodo / Tiempo
+      if (params.time) {
+        const timeValue = String(params.time).trim();
+        const foundTime = TIME_OPTIONS.find(t => t.toLowerCase() === timeValue.toLowerCase());
+        setTimeFilter(foundTime || 'Todos');
+      } else if (params.t) {
+        setTimeFilter('Todos');
+      }
+
+      // 5. Limpiar búsqueda y fechas personalizadas
+      setSearchQuery('');
+      setCustomDates({ start: '', end: '' });
     }
-  }, [params.status]);
+  }, [params.status, params.priority, params.service, params.time, params.t]);
 
   useEffect(() => {
     if (params.id && requests.length > 0) {
@@ -681,6 +733,8 @@ export default function ManageRequests() {
                   isDesktop={isDesktop} 
                   totalRequests={requests.length} 
                   pendingCount={workflowCounts.Pendiente} 
+                  inProgressCount={workflowCounts['En Progreso']}
+                  onSelectStatus={setStatusFilter}
                 />
                 
                 <View style={styles.contentPadding}>
@@ -1921,7 +1975,7 @@ function SidebarTabButton({ label, icon, active, badge, color, bgLight, onPress 
   );
 }
 
-function HeroSection({ isDesktop, totalRequests, pendingCount }: any) {
+function HeroSection({ isDesktop, totalRequests, pendingCount, inProgressCount, onSelectStatus }: any) {
   const router = useRouter();
 
   return (
@@ -1942,24 +1996,51 @@ function HeroSection({ isDesktop, totalRequests, pendingCount }: any) {
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
             {pendingCount > 0 && (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: 'rgba(245, 158, 11, 0.16)',
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: 'rgba(245, 158, 11, 0.35)',
-              }}>
+              <TouchableOpacity 
+                onPress={() => onSelectStatus && onSelectStatus('Pendiente')}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(245, 158, 11, 0.35)',
+                }}
+              >
                 <Ionicons name="alert-circle" size={16} color="#F59E0B" />
                 <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>
                   {pendingCount} por atender
                 </Text>
-              </View>
+              </TouchableOpacity>
+            )}
+
+            {inProgressCount > 0 && (
+              <TouchableOpacity 
+                onPress={() => onSelectStatus && onSelectStatus('En Progreso')}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: 'rgba(59, 130, 246, 0.16)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(59, 130, 246, 0.35)',
+                }}
+              >
+                <Ionicons name="sync" size={16} color="#60A5FA" />
+                <Text style={{ color: '#93C5FD', fontSize: 12, fontWeight: '800' }}>
+                  {inProgressCount} en progreso
+                </Text>
+              </TouchableOpacity>
             )}
 
             <TouchableOpacity 

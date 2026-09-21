@@ -267,5 +267,81 @@ export const settingsService = {
       }
       return value;
     }
+  },
+
+  // ==========================================
+  // DESPLIEGUE Y OPERACIONES GIT
+  // ==========================================
+  async executeGitOperation(action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status'): Promise<{ success: boolean; message: string; output: string; timestamp?: string }> {
+    const token = await appStorage.getItem('auth_token');
+    const res = await fetch(`${API_URL}/api/admin/git`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ action })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al ejecutar la operación de Git.');
+    }
+    return data;
+  },
+
+  // ==========================================
+  // ESTADÍSTICAS E INFRAESTRUCTURA DEL SERVIDOR
+  // ==========================================
+  async getServerStats(): Promise<ServerStats> {
+    const token = await appStorage.getItem('auth_token');
+    const res = await fetch(`${API_URL}/api/admin/server-stats`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al obtener estadísticas del servidor.');
+    }
+    return data;
   }
 };
+
+export interface ServerStats {
+  hostname: string;
+  ip: string;
+  osDistro: string;
+  platform: string;
+  arch: string;
+  serverUptime: string;
+  serverUptimeSeconds: number;
+  backendUptime: string;
+  nodeVersion: string;
+  pid: number;
+  disk: {
+    total: string;
+    used: string;
+    free: string;
+    usedPercent: number;
+    filesystem: string;
+  };
+  memory: {
+    total: string;
+    used: string;
+    free: string;
+    usedPercent: number;
+    processRss: string;
+    processHeap: string;
+  };
+  cpu: {
+    model: string;
+    cores: number;
+    loadAvg: number[];
+  };
+  timestamp: string;
+}
+

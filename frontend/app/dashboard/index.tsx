@@ -213,7 +213,7 @@ export default function DashboardScreen() {
   const stats = useMemo(() => {
     return {
       total: requests.length,
-      active: requests.filter(r => !['resuelto', 'rechazada'].includes(r.status.toLowerCase())).length
+      active: requests.filter(r => !['resuelto', 'aprobado', 'rechazado', 'rechazada', 'rejected'].includes((r.status || '').toLowerCase().trim())).length
     };
   }, [requests]);
 
@@ -452,43 +452,12 @@ export default function DashboardScreen() {
                   contentContainerStyle={{ gap: 16, paddingRight: 35, paddingBottom: 5 }}
                 >
                   {pendingEvaluations.map((req) => (
-                    <TouchableOpacity 
+                    <PendingEvaluationCard
                       key={req.id}
-                      activeOpacity={0.9}
+                      req={req}
+                      isDesktop={isDesktop}
                       onPress={() => setEvaluationModal({ visible: true, requestId: req.id })}
-                      style={{
-                        width: isDesktop ? 280 : 250,
-                        backgroundColor: COLORS.white,
-                        borderRadius: 24,
-                        padding: 18,
-                        borderWidth: 1.5,
-                        borderColor: 'rgba(239, 137, 34, 0.2)',
-                        shadowColor: COLORS.warning,
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 10,
-                        elevation: 3
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#FFF4E6', justifyContent: 'center', alignItems: 'center' }}>
-                          <Ionicons name="star-outline" size={20} color={COLORS.warning} />
-                        </View>
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: `${COLORS.warning}12`, borderStyle: 'solid', borderWidth: 1, borderColor: `${COLORS.warning}25` }}>
-                          <Text style={{ fontSize: 9, fontWeight: '900', color: COLORS.warning, textTransform: 'uppercase' }}>
-                            SIN EVALUAR
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.dark }} numberOfLines={1}>
-                        {req.title}
-                      </Text>
-                      <View style={{ gap: 6, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.line }}>
-                        <Text style={{ fontSize: 13, fontWeight: '500', color: COLORS.muted }}>
-                          Califica este servicio para ayudarnos a mejorar.
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
+                    />
                   ))}
                 </ScrollView>
               </View>
@@ -1079,6 +1048,129 @@ function HeroSection({ isDesktop, user, stats }: any) {
           </View>
         </SafeAreaView>
     </View>
+  );
+}
+
+function PendingEvaluationCard({ req, isDesktop, onPress }: { req: AdministrativeRequest; isDesktop: boolean; onPress: () => void }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleIn = () => {
+    setIsHovered(true);
+    Animated.spring(scale, {
+      toValue: 1.03,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleOut = () => {
+    setIsHovered(false);
+    Animated.spring(scale, {
+      toValue: 1,
+      friction: 8,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handleIn}
+      onPressOut={handleOut}
+      // @ts-ignore
+      onHoverIn={handleIn}
+      onHoverOut={handleOut}
+      style={{ cursor: 'pointer' }}
+    >
+      <Animated.View
+        style={[
+          {
+            width: isDesktop ? 280 : 250,
+            backgroundColor: COLORS.white,
+            borderRadius: 24,
+            padding: 18,
+            borderWidth: 1.5,
+            borderColor: isHovered ? COLORS.warning : 'rgba(239, 137, 34, 0.25)',
+            shadowColor: COLORS.warning,
+            shadowOffset: { width: 0, height: isHovered ? 8 : 4 },
+            shadowOpacity: isHovered ? 0.25 : 0.1,
+            shadowRadius: isHovered ? 16 : 10,
+            elevation: isHovered ? 6 : 3,
+            transform: [{ scale }],
+          },
+          (Platform.OS === 'web' ? {
+            boxShadow: isHovered
+              ? '0 14px 28px -4px rgba(245, 158, 11, 0.28), 0 8px 12px -2px rgba(245, 158, 11, 0.12)'
+              : '0 4px 10px rgba(245, 158, 11, 0.08)',
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+          } : null) as any,
+        ]}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              backgroundColor: isHovered ? '#FEF3C7' : '#FFF4E6',
+              justifyContent: 'center',
+              alignItems: 'center',
+              transform: isHovered ? [{ scale: 1.08 }] : [{ scale: 1 }],
+              ...(Platform.OS === 'web' ? ({ transition: 'transform 0.2s ease, background-color 0.2s ease' } as any) : {}),
+            }}
+          >
+            <Ionicons name={isHovered ? 'star' : 'star-outline'} size={20} color={COLORS.warning} />
+          </View>
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 8,
+              backgroundColor: isHovered ? `${COLORS.warning}22` : `${COLORS.warning}12`,
+              borderStyle: 'solid',
+              borderWidth: 1,
+              borderColor: isHovered ? `${COLORS.warning}45` : `${COLORS.warning}25`,
+            }}
+          >
+            <Text style={{ fontSize: 9, fontWeight: '900', color: COLORS.warning, textTransform: 'uppercase' }}>
+              SIN EVALUAR
+            </Text>
+          </View>
+        </View>
+
+        <Text
+          style={[
+            { fontSize: 16, fontWeight: '900', color: isHovered ? '#B45309' : COLORS.dark },
+            (Platform.OS === 'web' ? { transition: 'color 0.2s ease' } : null) as any,
+          ]}
+          numberOfLines={1}
+        >
+          {req.title}
+        </Text>
+
+        <View
+          style={{
+            gap: 6,
+            marginTop: 12,
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: isHovered ? 'rgba(245, 158, 11, 0.25)' : COLORS.line,
+          }}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, fontWeight: '500', color: COLORS.muted, flex: 1 }}>
+              Califica este servicio para ayudarnos a mejorar.
+            </Text>
+            {isHovered && (
+              <Ionicons name="arrow-forward" size={16} color={COLORS.warning} style={{ marginLeft: 6 }} />
+            )}
+          </View>
+        </View>
+      </Animated.View>
+    </Pressable>
   );
 }
 
