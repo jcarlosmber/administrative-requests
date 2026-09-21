@@ -146,12 +146,12 @@ export default function AdminDashboardScreen() {
   const kpiStats = React.useMemo(() => {
     const today = new Date().toDateString();
     const pending = requests.filter(r => r.status === 'pendiente').length;
-    const todayCount = requests.filter(r => new Date(r.created_at).toDateString() === today).length;
+    const inProgress = requests.filter(r => ['en_progreso', 'en curso', 'en_curso', 'in_progress'].includes((r.status || '').toLowerCase().trim())).length;
     const urgencies = requests.filter(r => r.priority === 'alta' && r.status !== 'resuelto').length;
 
     return [
       { id: 'pending', title: 'Pendientes', value: pending.toString(), icon: 'time', color: '#F59E0B', desc: 'Solicitudes por revisar' },
-      { id: 'total', title: 'Total Hoy', value: todayCount.toString(), icon: 'stats-chart', color: '#3B82F6', desc: 'Trámites procesados' },
+      { id: 'in_progress', title: 'En Progreso', value: inProgress.toString(), icon: 'sync', color: '#3B82F6', desc: 'Trámites en atención' },
       { id: 'alerts', title: 'Urgencias', value: urgencies.toString(), icon: 'alert-circle', color: '#EF4444', desc: 'Atención inmediata' },
     ];
   }, [requests]);
@@ -161,8 +161,8 @@ export default function AdminDashboardScreen() {
 
     if (item.id === 'pending') {
       params.status = 'pendiente';
-    } else if (item.id === 'total') {
-      params.today = 'true';
+    } else if (item.id === 'in_progress') {
+      params.status = 'en_progreso';
     } else if (item.id === 'alerts') {
       params.priority = 'alta';
       params.status = 'pendiente';
@@ -306,35 +306,42 @@ export default function AdminDashboardScreen() {
 }
 
 function Sidebar() {
+  const router = useRouter();
+
   return (
     <View style={styles.sidebar}>
-      <ImageBackground 
-        source={{ uri: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1000&auto=format&fit=crop' }} 
-        style={styles.sideBg}
-      >
-        <LinearGradient colors={['rgba(15, 23, 42, 0.95)', 'rgba(2, 6, 23, 0.98)']} style={StyleSheet.absoluteFill} />
-        <View style={styles.sideContent}>
-          <View style={styles.logoRing}>
-            <Ionicons name="shield-checkmark" size={54} color={COLORS.white} />
+      <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
+      <View style={styles.sideContent}>
+        <View style={styles.logoRing}>
+          <Ionicons name="shield-checkmark" size={40} color={COLORS.white} />
+        </View>
+        <Text style={styles.sideTitle}>Panel de Control</Text>
+        <Text style={styles.sideSub}>SASGE Central 2.0</Text>
+        <View style={styles.sideDivider} />
+        <Text style={styles.sideDesc}>
+          Módulo de supervisión, analítica y gestión operativa de servicios administrativos.
+        </Text>
+        
+        <View style={styles.userSection}>
+          <View style={styles.avatarMini}>
+            <Ionicons name="person" size={20} color={COLORS.white} />
           </View>
-          <Text style={styles.sideTitle}>Panel de Control</Text>
-          <Text style={[styles.sideSub, { fontSize: 13 }]}>Sistema de Administración de Servicios Generales 2.0</Text>
-          <View style={styles.sideDivider} />
-          <Text style={styles.sideDesc}>
-            Módulo de supervisión y gestión de servicios generales de la Secretaría Jurídica Distrital.
-          </Text>
-          
-          <View style={styles.userSection}>
-            <View style={styles.avatarMini}>
-              <Ionicons name="person" size={24} color={COLORS.white} />
-            </View>
-            <View>
-              <Text style={styles.userName}>Administrador</Text>
-              <Text style={styles.userRole}>Nivel: Superusuario</Text>
-            </View>
+          <View>
+            <Text style={styles.userName}>Administrador</Text>
+            <Text style={styles.userRole}>Nivel: Superusuario</Text>
           </View>
         </View>
-      </ImageBackground>
+
+        <View style={{ marginTop: 'auto', width: '100%', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' }}>
+          <TouchableOpacity
+            onPress={() => router.replace('/dashboard')}
+            style={styles.sideBackBtn}
+          >
+            <Ionicons name="arrow-back-outline" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Portal Funcionario</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 }
@@ -342,48 +349,53 @@ function Sidebar() {
 function HeroSection({ isDesktop, efficiency, urgencies }: any) {
   const router = useRouter();
   return (
-    <View style={[styles.hero, isDesktop && styles.heroDesktop]}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.primaryDark }]} />
-        <SafeAreaView style={styles.heroSafe}>
-          <View style={[styles.heroTop, { flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }]}>
-            <View style={{ flex: 1, width: '100%' }}>
-              <Text style={styles.heroKicker}>SISTEMA DE ADMINISTRACIÓN</Text>
-              <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Control de Gestión</Text>
-              <Text style={styles.heroSub} numberOfLines={2}>Supervisando la operación administrativa</Text>
-            </View>
-            
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: isDesktop ? 15 : 10, alignSelf: isDesktop ? 'auto' : 'stretch', justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: isDesktop ? 0 : 15 }}>
-              <View style={styles.statsPanel}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statVal}>{efficiency}%</Text>
-                  <Text style={styles.statLab}>Eficiencia</Text>
-                </View>
-                <View style={styles.statDiv} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statVal}>{urgencies}</Text>
-                  <Text style={styles.statLab}>Críticos</Text>
-                </View>
-              </View>
-
-              <TouchableOpacity 
-                style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
-                onPress={() => router.replace('/dashboard')}
-              >
-                <Ionicons name="home" size={22} color={COLORS.white} />
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={styles.logoutBtn} 
-                onPress={async () => {
-                  await supabase.auth.signOut();
-                  router.replace('/login');
-                }}
-              >
-                <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
-              </TouchableOpacity>
-            </View>
+    <View style={styles.hero}>
+      <LinearGradient 
+        colors={[COLORS.primaryDark, '#1E293B']} 
+        style={StyleSheet.absoluteFill} 
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroKicker}>SISTEMA DE ADMINISTRACIÓN</Text>
+            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Control de Gestión</Text>
+            <Text style={styles.heroSub} numberOfLines={2}>Supervisando la operación administrativa</Text>
           </View>
-        </SafeAreaView>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
+            <View style={styles.statsPanel}>
+              <View style={styles.statItem}>
+                <Text style={styles.statVal}>{efficiency}%</Text>
+                <Text style={styles.statLab}>Eficiencia</Text>
+              </View>
+              <View style={styles.statDiv} />
+              <View style={styles.statItem}>
+                <Text style={styles.statVal}>{urgencies}</Text>
+                <Text style={styles.statLab}>Críticos</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+              onPress={() => router.replace('/dashboard')}
+            >
+              <Ionicons name="home" size={22} color={COLORS.white} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.logoutBtn} 
+              onPress={async () => {
+                await supabase.auth.signOut();
+                router.replace('/login');
+              }}
+            >
+              <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
     </View>
   );
 }
@@ -567,26 +579,24 @@ function ActivityRow({ item, index }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  sidebar: { width: 380, height: '100%' },
-  sideBg: { flex: 1 },
-  sideContent: { flex: 1, padding: 50, justifyContent: 'center' },
-  logoRing: { width: 90, height: 90, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
-  sideTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', lineHeight: 38 },
-  sideSub: { color: 'rgba(255,255,255,0.8)', fontSize: 18, marginTop: 5 },
-  sideDivider: { width: 50, height: 4, backgroundColor: COLORS.accent, marginVertical: 25, borderRadius: 2 },
-  sideDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 16, lineHeight: 24 },
-  userSection: { marginTop: 'auto', flexDirection: 'row', gap: 15, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', padding: 20, borderRadius: 20 },
-  avatarMini: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.accent, justifyContent: 'center', alignItems: 'center' },
-  userName: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
-  userRole: { color: 'rgba(255,255,255,0.6)', fontSize: 12 },
+  sidebar: { width: 300, height: '100%', overflow: 'hidden' },
+  sideContent: { flex: 1, padding: 30, paddingTop: 60, alignItems: 'center' },
+  logoRing: { width: 70, height: 70, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  sideTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  sideSub: { color: COLORS.accent, fontSize: 13, fontWeight: '700', marginTop: 3, textAlign: 'center' },
+  sideDivider: { width: '80%', height: 1.5, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 25 },
+  sideDesc: { color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 20, textAlign: 'center' },
+  userSection: { marginTop: 'auto', width: '100%', flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', padding: 12, borderRadius: 14 },
+  sideBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.08)' },
+  avatarMini: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.accent, justifyContent: 'center', alignItems: 'center' },
+  userName: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
+  userRole: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
 
-  hero: { minHeight: 160, width: '100%', paddingVertical: 15 },
-  heroDesktop: { height: 160, paddingVertical: 0, borderBottomRightRadius: 40, overflow: 'hidden' },
-  heroSafe: { flex: 1, paddingHorizontal: 35, justifyContent: 'center' },
-  heroKicker: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '900', letterSpacing: 2 },
-  heroTitle: { color: COLORS.white, fontSize: 28, fontWeight: '900', marginTop: 4 },
-  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4 },
-  heroTop: { justifyContent: 'space-between', gap: 20 },
+  hero: { minHeight: 160, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },
+  heroInner: { flex: 1, paddingHorizontal: 25, justifyContent: 'center' },
+  heroKicker: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
+  heroTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', marginTop: 5 },
+  heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
   logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   statsPanel: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 18, padding: 12, gap: 15, alignItems: 'center' },
   statItem: { alignItems: 'center' },

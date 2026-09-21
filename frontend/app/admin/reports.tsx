@@ -414,7 +414,7 @@ export default function AdminReports() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             />
-            <View style={[styles.heroInner, !isDesktop && { paddingTop: 35 }]}>
+            <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
               <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.heroKicker}>SECRETARÍA JURÍDICA DISTRITAL</Text>
@@ -1194,12 +1194,12 @@ const styles = StyleSheet.create({
   sideTabLabelActive: { color: COLORS.primary, fontWeight: '900' },
 
   scrollContent: { paddingBottom: 60 },
-  hero: { minHeight: 150, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40, borderBottomLeftRadius: 40, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 15, elevation: 5 },
-  heroInner: { flex: 1, paddingHorizontal: 30, justifyContent: 'center' },
-  heroKicker: { color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '900', letterSpacing: 2 },
-  heroTitle: { color: COLORS.white, fontSize: 28, fontWeight: '900', marginTop: 3 },
-  heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4 },
-  refreshBtn: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
+  hero: { minHeight: 160, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },
+  heroInner: { flex: 1, paddingHorizontal: 25, justifyContent: 'center' },
+  heroKicker: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
+  heroTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', marginTop: 5 },
+  heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
+  refreshBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
   contentPadding: { paddingHorizontal: 26, paddingTop: 26 }, // Padding general incrementado
   

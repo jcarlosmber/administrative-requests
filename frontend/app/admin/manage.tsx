@@ -646,7 +646,13 @@ export default function ManageRequests() {
     <View style={styles.container}>
       <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
         
-        {isDesktop && <Sidebar />}
+        {isDesktop && (
+          <Sidebar 
+            serviceFilter={serviceFilter} 
+            setServiceFilter={setServiceFilter} 
+            categoryCounts={categoryCounts}
+          />
+        )}
 
         <View style={{ flex: 1 }}>
           <FlatList
@@ -1916,14 +1922,24 @@ export default function ManageRequests() {
   );
 }
 
-function Sidebar() {
+function Sidebar({ 
+  serviceFilter, 
+  setServiceFilter, 
+  categoryCounts 
+}: { 
+  serviceFilter: string; 
+  setServiceFilter: (cat: string) => void; 
+  categoryCounts?: Record<string, { total: number; pending: number }>;
+}) {
   const router = useRouter();
 
-  const NAV_ITEMS = [
-    { label: 'Panel Principal', icon: 'grid-outline' as const, path: '/admin' },
-    { label: 'Gestión Solicitudes', icon: 'list-circle-outline' as const, path: '/admin/manage', active: true },
-    { label: 'Reportes y Métricas', icon: 'bar-chart-outline' as const, path: '/admin/reports' },
-    { label: 'Configuración', icon: 'settings-outline' as const, path: '/admin/settings' },
+  const TABS = [
+    { id: 'Todas', label: 'Consolidado General', icon: 'layers' },
+    { id: 'Visitantes', label: 'Control de Visitantes', icon: 'people' },
+    { id: 'Mantenimiento', label: 'Mantenimiento Locativo', icon: 'construct' },
+    { id: 'Parqueadero', label: 'Acceso Parqueadero', icon: 'car' },
+    { id: 'Salas', label: 'Reserva de Salas', icon: 'easel' },
+    { id: 'Transporte', label: 'Flota de Transporte', icon: 'car-sport' },
   ];
 
   return (
@@ -1931,55 +1947,33 @@ function Sidebar() {
       <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
       <View style={styles.sidebarContent}>
         <View style={styles.logoCircle}>
-          <Ionicons name="shield-checkmark-outline" size={38} color={COLORS.white} />
+          <Ionicons name="layers" size={40} color={COLORS.white} />
         </View>
-        <Text style={styles.sideTitle}>SASGE</Text>
-        <Text style={styles.sideSubTitle}>Administración Central</Text>
+        <Text style={styles.sideTitle}>Gestión Operativa</Text>
+        <Text style={styles.sideSubTitle}>Panel de Administración</Text>
+        <View style={styles.sideDivider} />
         
-        <View style={{ width: 40, height: 4, backgroundColor: COLORS.accent, marginVertical: 20, borderRadius: 2 }} />
-
-        {/* Menú de Navegación Rápida */}
-        <View style={{ width: '100%', gap: 8, marginVertical: 10 }}>
-          {NAV_ITEMS.map((item, idx) => (
-            <TouchableOpacity
-              key={idx}
-              onPress={() => router.push(item.path as any)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                paddingVertical: 12,
-                paddingHorizontal: 14,
-                borderRadius: 12,
-                backgroundColor: item.active ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-                borderWidth: 1,
-                borderColor: item.active ? '#3B82F6' : 'rgba(255, 255, 255, 0.05)',
-              }}
-            >
-              <Ionicons name={item.icon} size={20} color={item.active ? '#60A5FA' : 'rgba(255, 255, 255, 0.7)'} />
-              <Text style={{
-                fontSize: 14,
-                fontWeight: item.active ? '800' : '600',
-                color: item.active ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)',
-              }}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={{ gap: 8, width: '100%' }}>
+          {TABS.map(tab => {
+            const active = serviceFilter === tab.id;
+            const count = categoryCounts?.[tab.id]?.pending || 0;
+            return (
+              <SidebarTabButton 
+                key={tab.id}
+                label={tab.label} 
+                icon={tab.icon} 
+                active={active} 
+                badge={count > 0 ? count : undefined}
+                onPress={() => setServiceFilter(tab.id)} 
+              />
+            );
+          })}
         </View>
 
-        <View style={{ marginTop: 'auto', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' }}>
+        <View style={{ marginTop: 'auto', width: '100%', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' }}>
           <TouchableOpacity
             onPress={() => router.replace('/dashboard')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderRadius: 10,
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            }}
+            style={styles.sideBackBtn}
           >
             <Ionicons name="arrow-back-outline" size={18} color="#FFFFFF" />
             <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Portal Funcionario</Text>
@@ -1990,26 +1984,44 @@ function Sidebar() {
   );
 }
 
+function SidebarTabButton({ label, icon, active, badge, onPress }: any) {
+  return (
+    <TouchableOpacity 
+      style={[styles.sideTabBtn, active && styles.sideTabBtnActive]} 
+      onPress={onPress}
+    >
+      <Ionicons name={icon} size={20} color={active ? COLORS.primary : 'rgba(255,255,255,0.7)'} />
+      <Text style={[styles.sideTabLabel, active && styles.sideTabLabelActive, { flex: 1 }]} numberOfLines={1}>
+        {label}
+      </Text>
+      {badge !== undefined && (
+        <View style={[styles.sideBadge, active ? styles.sideBadgeActive : styles.sideBadgeInactive]}>
+          <Text style={[styles.sideBadgeText, active && styles.sideBadgeTextActive]}>
+            {badge}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 function HeroSection({ isDesktop, totalRequests, pendingCount }: any) {
   const router = useRouter();
 
   return (
-    <View style={styles.heroCompact}>
+    <View style={styles.hero}>
       <LinearGradient 
         colors={[COLORS.primaryDark, '#1E293B']} 
         style={StyleSheet.absoluteFill} 
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={[styles.heroInner, !isDesktop && { paddingTop: 24 }]}>
-        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
+      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#3B82F6' }} />
-              <Text style={styles.heroKicker}>SASGE • ADMINISTRACIÓN CENTRAL</Text>
-            </View>
-            <Text style={styles.heroTitle} numberOfLines={1}>Gestión de Solicitudes</Text>
-            <Text style={styles.heroSub} numberOfLines={1}>
+            <Text style={styles.heroKicker}>SASGE • ADMINISTRACIÓN CENTRAL</Text>
+            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Gestión de Solicitudes</Text>
+            <Text style={styles.heroSub} numberOfLines={2}>
               Supervisión, asignación de despachos y auditoría de requerimientos
             </Text>
           </View>
@@ -2035,11 +2047,11 @@ function HeroSection({ isDesktop, totalRequests, pendingCount }: any) {
             )}
 
             <TouchableOpacity 
-              style={styles.logoutBtn} 
+              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
               onPress={() => router.replace('/dashboard')}
               accessibilityLabel="Portal Funcionario"
             >
-              <Ionicons name="home-outline" size={19} color="#FFFFFF" />
+              <Ionicons name="home" size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -2050,7 +2062,7 @@ function HeroSection({ isDesktop, totalRequests, pendingCount }: any) {
               }}
               accessibilityLabel="Cerrar sesión"
             >
-              <Ionicons name="log-out-outline" size={19} color="#FFFFFF" />
+              <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
@@ -2071,30 +2083,31 @@ function WorkflowSegmentedTabs({
   isDesktop: boolean;
 }) {
   const tabs = [
-    { id: 'Todos', label: 'Todas', icon: 'layers-outline', count: counts.Todos || 0 },
-    { id: 'Pendiente', label: 'Pendientes', icon: 'flash-outline', count: counts.Pendiente || 0, badgeColor: '#D97706', badgeBg: '#FEF3C7' },
-    { id: 'En Progreso', label: 'En Progreso', icon: 'time-outline', count: counts['En Progreso'] || 0, badgeColor: '#2563EB', badgeBg: '#EFF6FF' },
-    { id: 'Aprobado', label: 'Aprobadas', icon: 'checkmark-circle-outline', count: counts.Aprobado || 0, badgeColor: '#059669', badgeBg: '#ECFDF5' },
-    { id: 'Rechazado', label: 'Rechazadas', icon: 'close-circle-outline', count: counts.Rechazado || 0, badgeColor: '#DC2626', badgeBg: '#FEF2F2' },
+    { id: 'Todos', label: 'Todas', icon: 'layers-outline', count: counts.Todos || 0, color: '#0F172A', activeBg: '#0F172A', badgeColor: '#475569', badgeBg: '#F1F5F9', shadowColor: 'rgba(15,23,42,0.35)' },
+    { id: 'Pendiente', label: 'Pendientes', icon: 'flash-outline', count: counts.Pendiente || 0, color: '#D97706', activeBg: '#D97706', badgeColor: '#B45309', badgeBg: '#FEF3C7', shadowColor: 'rgba(217,119,6,0.35)' },
+    { id: 'En Progreso', label: 'En Progreso', icon: 'time-outline', count: counts['En Progreso'] || 0, color: '#2563EB', activeBg: '#2563EB', badgeColor: '#1D4ED8', badgeBg: '#EFF6FF', shadowColor: 'rgba(37,99,235,0.35)' },
+    { id: 'Aprobado', label: 'Aprobadas', icon: 'checkmark-circle-outline', count: counts.Aprobado || 0, color: '#059669', activeBg: '#059669', badgeColor: '#047857', badgeBg: '#ECFDF5', shadowColor: 'rgba(5,150,105,0.35)' },
+    { id: 'Rechazado', label: 'Rechazadas', icon: 'close-circle-outline', count: counts.Rechazado || 0, color: '#DC2626', activeBg: '#DC2626', badgeColor: '#B91C1C', badgeBg: '#FEF2F2', shadowColor: 'rgba(220,38,38,0.35)' },
   ];
 
   return (
     <View style={{
       width: '100%',
       backgroundColor: '#FFFFFF',
-      borderRadius: 14,
-      padding: 5,
+      borderRadius: 16,
+      padding: 6,
       borderWidth: 1,
       borderColor: '#E2E8F0',
       marginTop: 14,
-      marginBottom: 10,
+      marginBottom: 12,
+      ...(Platform.OS === 'web' ? { boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)' } : {}),
     }}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
           flexDirection: 'row',
-          gap: 6,
+          gap: 8,
           alignItems: 'center',
           minWidth: isDesktop ? '100%' : undefined,
           justifyContent: isDesktop ? 'space-between' : 'flex-start',
@@ -2103,57 +2116,80 @@ function WorkflowSegmentedTabs({
         {tabs.map((tab) => {
           const isSelected = selected === tab.id;
           return (
-            <TouchableOpacity
+            <Pressable
               key={tab.id}
               onPress={() => onSelect(tab.id)}
-              activeOpacity={0.8}
-              style={{
-                flex: isDesktop ? 1 : undefined,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 7,
-                paddingVertical: 9,
-                paddingHorizontal: 14,
-                borderRadius: 10,
-                backgroundColor: isSelected ? '#0F172A' : 'transparent',
-              }}
-            >
-              <Ionicons
-                name={tab.icon as any}
-                size={16}
-                color={isSelected ? '#FFFFFF' : '#64748B'}
-              />
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: isSelected ? '800' : '600',
-                  color: isSelected ? '#FFFFFF' : '#475569',
-                }}
-              >
-                {tab.label}
-              </Text>
-              <View
-                style={{
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
+              style={({ hovered }: any) => [
+                {
+                  flex: isDesktop ? 1 : undefined,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 12,
+                  paddingHorizontal: 18,
                   borderRadius: 12,
                   backgroundColor: isSelected
-                    ? 'rgba(255,255,255,0.22)'
-                    : (tab.badgeBg || '#F1F5F9'),
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontWeight: '800',
-                    color: isSelected ? '#FFFFFF' : (tab.badgeColor || '#475569'),
-                  }}
-                >
-                  {tab.count}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                    ? tab.activeBg
+                    : hovered
+                    ? tab.badgeBg
+                    : '#FFFFFF',
+                  borderWidth: 1.5,
+                  borderColor: isSelected
+                    ? tab.activeBg
+                    : hovered
+                    ? tab.color + '50'
+                    : 'transparent',
+                } as any,
+                isSelected && (Platform.OS === 'web' ? { boxShadow: `0 4px 14px ${tab.shadowColor}` } : {}),
+                hovered && !isSelected && (Platform.OS === 'web' ? { transform: [{ translateY: -1 }], boxShadow: '0 2px 8px rgba(0,0,0,0.06)' } : {}),
+                Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+              ]}
+            >
+              {({ hovered }: any) => (
+                <>
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={18}
+                    color={isSelected ? '#FFFFFF' : hovered ? tab.color : tab.color}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: isSelected ? '800' : '700',
+                      color: isSelected ? '#FFFFFF' : hovered ? tab.color : '#334155',
+                    }}
+                  >
+                    {tab.label}
+                  </Text>
+                  <View
+                    style={{
+                      minWidth: 26,
+                      height: 24,
+                      paddingHorizontal: 8,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 12,
+                      backgroundColor: isSelected
+                        ? 'rgba(255,255,255,0.25)'
+                        : (tab.badgeBg || '#F1F5F9'),
+                      borderWidth: isSelected ? 0 : 1,
+                      borderColor: isSelected ? 'transparent' : (tab.badgeColor + '30'),
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '800',
+                        color: isSelected ? '#FFFFFF' : (tab.badgeColor || '#475569'),
+                      }}
+                    >
+                      {tab.count}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -2171,20 +2207,20 @@ function CategoryPillsBar({
   badges: Record<string, { total: number; pending: number }>;
 }) {
   const categories = [
-    { key: 'Todas', label: 'Todos los servicios', icon: 'apps-outline', color: '#0F172A' },
-    { key: 'Visitantes', label: 'Visitantes', icon: 'people-outline', color: '#E11D48' },
-    { key: 'Transporte', label: 'Transporte', icon: 'car-outline', color: '#0284C7' },
-    { key: 'Mantenimiento', label: 'Mantenimiento', icon: 'construct-outline', color: '#0D9488' },
-    { key: 'Salas', label: 'Salas', icon: 'easel-outline', color: '#7C3AED' },
-    { key: 'Parqueadero', label: 'Parqueadero', icon: 'car-sport-outline', color: '#EA580C' },
+    { key: 'Todas', label: 'Todos los servicios', icon: 'apps-outline', color: '#0F172A', bgLight: '#F1F5F9', borderLight: '#CBD5E1' },
+    { key: 'Visitantes', label: 'Visitantes', icon: 'people-outline', color: '#E11D48', bgLight: '#FFE4E6', borderLight: '#FECDD3' },
+    { key: 'Transporte', label: 'Transporte', icon: 'car-outline', color: '#0284C7', bgLight: '#E0F2FE', borderLight: '#BAE6FD' },
+    { key: 'Mantenimiento', label: 'Mantenimiento', icon: 'construct-outline', color: '#0D9488', bgLight: '#CCFBF1', borderLight: '#99F6E4' },
+    { key: 'Salas', label: 'Salas', icon: 'easel-outline', color: '#7C3AED', bgLight: '#EDE9FE', borderLight: '#DDD6FE' },
+    { key: 'Parqueadero', label: 'Parqueadero', icon: 'car-sport-outline', color: '#EA580C', bgLight: '#FFEDD5', borderLight: '#FED7AA' },
   ];
 
   return (
-    <View style={{ marginBottom: 12 }}>
+    <View style={{ marginBottom: 14 }}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+        contentContainerStyle={{ gap: 10, paddingVertical: 3 }}
       >
         {categories.map((cat) => {
           const isSelected = selected === cat.key;
@@ -2192,65 +2228,109 @@ function CategoryPillsBar({
           const pending = badges[cat.key]?.pending ?? 0;
 
           return (
-            <TouchableOpacity
+            <Pressable
               key={cat.key}
               onPress={() => onSelect(cat.key)}
-              activeOpacity={0.75}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 7,
-                paddingVertical: 7,
-                paddingHorizontal: 12,
-                borderRadius: 20,
-                backgroundColor: isSelected ? '#F1F5F9' : '#FFFFFF',
-                borderWidth: 1.5,
-                borderColor: isSelected ? cat.color : '#E2E8F0',
-              }}
+              style={({ hovered }: any) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 24,
+                  backgroundColor: isSelected
+                    ? cat.color
+                    : hovered
+                    ? cat.bgLight
+                    : '#FFFFFF',
+                  borderWidth: 1.8,
+                  borderColor: isSelected
+                    ? cat.color
+                    : hovered
+                    ? cat.color
+                    : '#E2E8F0',
+                } as any,
+                isSelected && (Platform.OS === 'web' ? { boxShadow: `0 4px 14px ${cat.color}40` } : {}),
+                hovered && !isSelected && (Platform.OS === 'web' ? { transform: [{ translateY: -2 }], boxShadow: `0 3px 10px ${cat.color}25` } : {}),
+                Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+              ]}
             >
-              <Ionicons
-                name={cat.icon as any}
-                size={14}
-                color={isSelected ? cat.color : '#64748B'}
-              />
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: isSelected ? '800' : '600',
-                  color: isSelected ? '#0F172A' : '#475569',
-                }}
-              >
-                {cat.label}
-              </Text>
-              <View
-                style={{
-                  paddingHorizontal: 6,
-                  paddingVertical: 1.5,
-                  borderRadius: 8,
-                  backgroundColor: isSelected ? `${cat.color}18` : '#F8FAFC',
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: '800',
-                    color: isSelected ? cat.color : '#64748B',
-                  }}
-                >
-                  {count}
-                </Text>
-              </View>
-              {pending > 0 && (
-                <View
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: '#F59E0B',
-                  }}
-                />
+              {({ hovered }: any) => (
+                <>
+                  <Ionicons
+                    name={cat.icon as any}
+                    size={17}
+                    color={isSelected ? '#FFFFFF' : cat.color}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13.5,
+                      fontWeight: isSelected ? '800' : '700',
+                      color: isSelected ? '#FFFFFF' : hovered ? cat.color : '#334155',
+                    }}
+                  >
+                    {cat.label}
+                  </Text>
+                  <View
+                    style={{
+                      minWidth: 24,
+                      height: 22,
+                      paddingHorizontal: 7,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 11,
+                      backgroundColor: isSelected
+                        ? 'rgba(255,255,255,0.25)'
+                        : cat.bgLight,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: '800',
+                        color: isSelected ? '#FFFFFF' : cat.color,
+                      }}
+                    >
+                      {count}
+                    </Text>
+                  </View>
+                  {pending > 0 && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                        backgroundColor: isSelected ? '#FFFFFF' : '#FEF3C7',
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: isSelected ? '#FFFFFF' : '#F59E0B',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: '#F59E0B',
+                        }}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: '800',
+                          color: '#B45309',
+                        }}
+                      >
+                        {pending}
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </ScrollView>
@@ -2273,99 +2353,172 @@ function QuickFiltersToolbar({
   onResetFilters,
   totalResults,
 }: any) {
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Paleta para prioridades
+  const getPriorityStyle = (p: string, active: boolean, hovered: boolean) => {
+    if (active) {
+      if (p === 'Alta') return { bg: '#DC2626', color: '#FFFFFF', shadow: 'rgba(220,38,38,0.35)' };
+      if (p === 'Media') return { bg: '#D97706', color: '#FFFFFF', shadow: 'rgba(217,119,6,0.35)' };
+      if (p === 'Baja') return { bg: '#2563EB', color: '#FFFFFF', shadow: 'rgba(37,99,235,0.35)' };
+      return { bg: '#0F172A', color: '#FFFFFF', shadow: 'rgba(15,23,42,0.35)' };
+    }
+    if (hovered) {
+      if (p === 'Alta') return { bg: '#FEF2F2', color: '#DC2626' };
+      if (p === 'Media') return { bg: '#FEF3C7', color: '#D97706' };
+      if (p === 'Baja') return { bg: '#EFF6FF', color: '#2563EB' };
+      return { bg: '#F1F5F9', color: '#0F172A' };
+    }
+    return { bg: 'transparent', color: '#64748B' };
+  };
+
   return (
     <View style={{
       backgroundColor: '#FFFFFF',
-      borderRadius: 16,
+      borderRadius: 18,
       borderWidth: 1,
       borderColor: '#E2E8F0',
-      padding: 12,
-      gap: 12,
+      padding: 14,
+      gap: 14,
       marginBottom: 16,
+      ...(Platform.OS === 'web' ? { boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)' } : {}),
     }}>
       {/* Fila 1: Buscador + Botón CSV */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{
           flex: 1,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: '#F8FAFC',
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          height: 42,
-          borderWidth: 1,
-          borderColor: '#E2E8F0',
+          borderRadius: 14,
+          paddingHorizontal: 14,
+          height: 46,
+          borderWidth: 1.5,
+          borderColor: searchFocused ? '#3B82F6' : '#E2E8F0',
+          ...(Platform.OS === 'web' && searchFocused ? { boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.15)' } : {}),
         }}>
-          <Ionicons name="search" size={17} color="#64748B" />
+          <Ionicons name="search" size={19} color={searchFocused ? '#3B82F6' : '#64748B'} />
           <TextInput
-            style={{ flex: 1, paddingHorizontal: 8, fontSize: 13, color: '#0F172A', fontWeight: '600' }}
+            style={{
+              flex: 1,
+              paddingHorizontal: 10,
+              fontSize: 14,
+              color: '#0F172A',
+              fontWeight: '600',
+              ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {} as any),
+            }}
             placeholder="Buscar por radicado, solicitante, placa, visitante, detalle..."
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             placeholderTextColor="#94A3B8"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={16} color="#94A3B8" />
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close-circle" size={18} color="#94A3B8" />
             </TouchableOpacity>
           )}
         </View>
 
-        <TouchableOpacity
+        <Pressable
           onPress={onExportCSV}
-          activeOpacity={0.8}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-            backgroundColor: '#059669',
-            paddingHorizontal: 14,
-            height: 42,
-            borderRadius: 12,
-          }}
+          style={({ hovered }: any) => [
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+              backgroundColor: hovered ? '#047857' : '#059669',
+              paddingHorizontal: 18,
+              height: 46,
+              borderRadius: 14,
+            } as any,
+            Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+            hovered && (Platform.OS === 'web' ? { transform: [{ translateY: -1 }], boxShadow: '0 4px 14px rgba(5, 150, 105, 0.35)' } : {}),
+          ]}
         >
-          <Ionicons name="download-outline" size={16} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
+          <Ionicons name="download-outline" size={18} color="#FFFFFF" />
+          <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '800' }}>
             Exportar CSV
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
-      {/* Fila 2: Filtros Compactos (Prioridad, Fecha, Orden y Limpiar) */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {/* Fila 2: Filtros Organizados con Etiquetas Claras, Más Grandes y Mouseover */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           
           {/* Selector de Prioridad */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', padding: 3, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Ionicons name="flag-outline" size={12} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} />
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: '#FFFFFF',
+            padding: 4,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#CBD5E1',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 4 }}>
+              <Ionicons name="flag" size={14} color="#EF4444" />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#475569' }}>
+                Prioridad:
+              </Text>
+            </View>
             {PRIORITY_OPTIONS.map((p) => {
               const active = priorityFilter === p;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={p}
                   onPress={() => setPriorityFilter(p)}
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 7,
-                    backgroundColor: active ? '#0F172A' : 'transparent',
+                  style={({ hovered }: any) => {
+                    const st = getPriorityStyle(p, active, hovered);
+                    return [
+                      {
+                        paddingHorizontal: 12,
+                        paddingVertical: 6.5,
+                        borderRadius: 8,
+                        backgroundColor: st.bg,
+                      } as any,
+                      active && (Platform.OS === 'web' ? { boxShadow: `0 2px 8px ${st.shadow}` } : {}),
+                      Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+                    ];
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? '#FFFFFF' : '#64748B' }}>
-                    {p}
-                  </Text>
-                </TouchableOpacity>
+                  {({ hovered }: any) => {
+                    const st = getPriorityStyle(p, active, hovered);
+                    return (
+                      <Text style={{ fontSize: 12.5, fontWeight: active ? '800' : '700', color: st.color }}>
+                        {p}
+                      </Text>
+                    );
+                  }}
+                </Pressable>
               );
             })}
           </View>
 
-          {/* Selector de Fecha */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', padding: 3, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Ionicons name="calendar-outline" size={12} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} />
+          {/* Selector de Período / Fecha */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: '#FFFFFF',
+            padding: 4,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#CBD5E1',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 4 }}>
+              <Ionicons name="calendar" size={14} color="#3B82F6" />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#475569' }}>
+                Período:
+              </Text>
+            </View>
             {TIME_OPTIONS.map((t) => {
               const active = timeFilter === t;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={t}
                   onPress={() => {
                     if (t === 'Personalizado') {
@@ -2374,72 +2527,124 @@ function QuickFiltersToolbar({
                       setTimeFilter(t);
                     }
                   }}
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 7,
-                    backgroundColor: active ? '#0F172A' : 'transparent',
-                  }}
+                  style={({ hovered }: any) => [
+                    {
+                      paddingHorizontal: 12,
+                      paddingVertical: 6.5,
+                      borderRadius: 8,
+                      backgroundColor: active ? '#2563EB' : hovered ? '#EFF6FF' : 'transparent',
+                    } as any,
+                    active && (Platform.OS === 'web' ? { boxShadow: '0 2px 8px rgba(37, 99, 235, 0.35)' } : {}),
+                    Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+                  ]}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? '#FFFFFF' : '#64748B' }}>
-                    {t}
-                  </Text>
-                </TouchableOpacity>
+                  {({ hovered }: any) => (
+                    <Text style={{
+                      fontSize: 12.5,
+                      fontWeight: active ? '800' : '700',
+                      color: active ? '#FFFFFF' : hovered ? '#2563EB' : '#64748B',
+                    }}>
+                      {t}
+                    </Text>
+                  )}
+                </Pressable>
               );
             })}
           </View>
 
           {/* Selector de Orden */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', padding: 3, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Ionicons name="swap-vertical-outline" size={12} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} />
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            backgroundColor: '#FFFFFF',
+            padding: 4,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#CBD5E1',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 4 }}>
+              <Ionicons name="swap-vertical" size={14} color="#8B5CF6" />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#475569' }}>
+                Ordenar:
+              </Text>
+            </View>
             {SORT_OPTIONS.map((s) => {
               const active = sortOrder === s.id;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={s.id}
                   onPress={() => setSortOrder(s.id)}
-                  style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 7,
-                    backgroundColor: active ? '#0F172A' : 'transparent',
-                  }}
+                  style={({ hovered }: any) => [
+                    {
+                      paddingHorizontal: 12,
+                      paddingVertical: 6.5,
+                      borderRadius: 8,
+                      backgroundColor: active ? '#4F46E5' : hovered ? '#EEF2FF' : 'transparent',
+                    } as any,
+                    active && (Platform.OS === 'web' ? { boxShadow: '0 2px 8px rgba(79, 70, 229, 0.35)' } : {}),
+                    Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+                  ]}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: active ? '800' : '600', color: active ? '#FFFFFF' : '#64748B' }}>
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
+                  {({ hovered }: any) => (
+                    <Text style={{
+                      fontSize: 12.5,
+                      fontWeight: active ? '800' : '700',
+                      color: active ? '#FFFFFF' : hovered ? '#4F46E5' : '#64748B',
+                    }}>
+                      {s.label}
+                    </Text>
+                  )}
+                </Pressable>
               );
             })}
           </View>
 
           {/* Botón Reset / Limpiar si hay filtros activos */}
           {hasActiveFilters && (
-            <TouchableOpacity
+            <Pressable
               onPress={onResetFilters}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderRadius: 8,
-                backgroundColor: '#FEF2F2',
-                borderWidth: 1,
-                borderColor: '#FECACA',
-              }}
+              style={({ hovered }: any) => [
+                {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 10,
+                  backgroundColor: hovered ? '#FEE2E2' : '#FEF2F2',
+                  borderWidth: 1.5,
+                  borderColor: hovered ? '#F87171' : '#FECACA',
+                } as any,
+                Platform.OS === 'web' ? { cursor: 'pointer' } : {},
+                hovered && (Platform.OS === 'web' ? { transform: [{ translateY: -1 }], boxShadow: '0 2px 8px rgba(220, 38, 38, 0.2)' } : {}),
+              ]}
             >
-              <Ionicons name="close-circle-outline" size={13} color="#DC2626" />
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>
+              <Ionicons name="close-circle-outline" size={15} color="#DC2626" />
+              <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#DC2626' }}>
                 Limpiar filtros
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </ScrollView>
 
-        <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', alignSelf: 'center', paddingRight: 4 }}>
-          {totalResults} {totalResults === 1 ? 'registro' : 'registros'}
-        </Text>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          backgroundColor: '#F1F5F9',
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: '#E2E8F0',
+          alignSelf: 'center',
+        }}>
+          <Ionicons name="document-text-outline" size={15} color="#475569" />
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }}>
+            {totalResults} {totalResults === 1 ? 'registro' : 'registros'}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -3640,12 +3845,24 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  sidebar: { width: 320, height: '100%', overflow: 'hidden' },
-  sidebarContent: { flex: 1, padding: 40, justifyContent: 'center' },
-  logoCircle: { width: 80, height: 80, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 30 },
-  sideTitle: { color: COLORS.white, fontSize: 36, fontWeight: '900' },
-  sideSubTitle: { color: COLORS.accent, fontSize: 18, fontWeight: '700', marginTop: 5 },
+  sidebar: { width: 300, height: '100%', overflow: 'hidden' },
+  sidebarContent: { flex: 1, padding: 30, paddingTop: 60, alignItems: 'center' },
+  logoCircle: { width: 70, height: 70, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  sideTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  sideSubTitle: { color: COLORS.accent, fontSize: 13, fontWeight: '700', marginTop: 3 },
+  sideDivider: { width: '80%', height: 1.5, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 25 },
   sideDesc: { color: 'rgba(255,255,255,0.8)', fontSize: 16, lineHeight: 24 },
+
+  sideTabBtn: { width: '100%', height: 48, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderRadius: 14, marginBottom: 6 },
+  sideTabBtnActive: { backgroundColor: COLORS.white },
+  sideTabLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '700' },
+  sideTabLabelActive: { color: COLORS.primary, fontWeight: '900' },
+  sideBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  sideBadgeActive: { backgroundColor: 'rgba(15, 23, 42, 0.12)' },
+  sideBadgeInactive: { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
+  sideBadgeText: { fontSize: 11, fontWeight: '800', color: COLORS.white },
+  sideBadgeTextActive: { color: COLORS.primary },
+  sideBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.08)' },
 
   headerContainer: { paddingBottom: 10 },
   hero: { minHeight: 160, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },

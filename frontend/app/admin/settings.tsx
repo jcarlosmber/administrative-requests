@@ -87,6 +87,7 @@ const generateUUID = () => {
 export default function AdminSettings() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const [activeTab, setActiveTab] = useState<'all' | 'rooms' | 'dependencies' | 'users' | 'drivers' | 'emails' | 'evaluations' | 'preferences'>('all');
   
   const [rooms, setRooms] = useState<any[]>([]);
   const [dependencies, setDependencies] = useState<any[]>([]);
@@ -874,7 +875,7 @@ export default function AdminSettings() {
     <View style={styles.container}>
       <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
         
-        {isDesktop && <Sidebar />}
+        {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
         <ScrollView 
           style={{ flex: 1 }}
@@ -891,374 +892,409 @@ export default function AdminSettings() {
           ) : (
             <View style={styles.contentPadding}>
               
-              <SectionHeader title="Gestión de Espacios" kicker="INFRAESTRUCTURA" />
-              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
-                {rooms.map(room => (
-                  <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%' }]}>
-                    <TouchableOpacity onPress={() => openEditModal(room, 'room')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                      {/* Icon */}
-                      <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#7209B7', justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="business" size={20} color="#FFF" />
-                      </View>
-                      
-                      {/* Title & Info */}
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
-                          {room.name || 'Sin nombre'}
-                        </Text>
-                        
-                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Ionicons name="people" size={14} color="#64748B" />
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>
-                              {room.capacity || '0'} pers.
-                            </Text>
+              {/* Gestión de Espacios */}
+              {(activeTab === 'all' || activeTab === 'rooms') && (
+                <>
+                  <SectionHeader title="Gestión de Espacios" kicker="INFRAESTRUCTURA" />
+                  <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
+                    {rooms.map(room => (
+                      <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%' }]}>
+                        <TouchableOpacity onPress={() => openEditModal(room, 'room')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                          {/* Icon */}
+                          <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#7209B7', justifyContent: 'center', alignItems: 'center' }}>
+                            <Ionicons name="business" size={20} color="#FFF" />
                           </View>
                           
-                          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center' }} />
-                          
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Ionicons name="location" size={14} color="#64748B" />
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
-                              {room.floor || 'Sin ubicación'}
+                          {/* Title & Info */}
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
+                              {room.name || 'Sin nombre'}
                             </Text>
+                            
+                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="people" size={14} color="#64748B" />
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>
+                                  {room.capacity || '0'} pers.
+                                </Text>
+                              </View>
+                              
+                              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center' }} />
+                              
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="location" size={14} color="#64748B" />
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                                  {room.floor || 'Sin ubicación'}
+                                </Text>
+                              </View>
+                            </View>
                           </View>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Footer */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
-                        ESPACIO {room.info === 'Especial' ? 'ESPECIAL' : 'ESTÁNDAR'}
-                      </Text>
-                      
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <TouchableOpacity onPress={() => openEditModal(room, 'room')} style={{ padding: 4 }}>
-                          <Ionicons name="pencil" size={16} color="#3B82F6" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
-                          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-                
-                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addRoom}>
-                  <Ionicons name="add" size={24} color={COLORS.muted} />
-                  <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Espacio</Text>
-                </TouchableOpacity>
-              </View>
 
-              <SectionHeader title="Gestión de Dependencias" kicker="ORGANIZACIÓN" />
-              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
-                {dependencies.map(dep => (
-                  <View key={dep.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
-                    <TouchableOpacity onPress={() => openEditModal(dep, 'dependency')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                      <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#A9301E', justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="people-circle" size={20} color="#FFF" />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0, justifyContent: 'center', height: 44 }}>
-                        <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B' }]}>
-                          {dep.name || 'Sin nombre'}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                    
-                    {/* Footer */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
-                        REGISTRO ACTIVO
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <TouchableOpacity onPress={() => openEditModal(dep, 'dependency')} style={{ padding: 4 }}>
-                          <Ionicons name="pencil" size={16} color="#3B82F6" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={{ padding: 4 }}>
-                          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-                
-                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDependency}>
-                  <Ionicons name="add" size={24} color={COLORS.muted} />
-                  <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Dependencia</Text>
-                </TouchableOpacity>
-              </View>
-
-              <SectionHeader title="Usuarios y Roles" kicker="ACCESOS DEL SISTEMA" />
-              <View style={styles.userSectionCard}>
-                <View style={styles.userSectionHeader}>
-                  <TextInput
-                    style={styles.userSearchInput}
-                    value={userSearch}
-                    onChangeText={setUserSearch}
-                    placeholder="Buscar usuario, correo o dependencia"
-                  />
-                  <TouchableOpacity style={styles.exportUsersBtn} onPress={exportUsers}>
-                    <Ionicons name="download-outline" size={18} color={COLORS.white} />
-                    <Text style={styles.exportUsersText}>Excel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.addUserBtn} onPress={addUser}>
-                    <Ionicons name="person-add-outline" size={18} color={COLORS.white} />
-                    <Text style={styles.exportUsersText}>Agregar</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.userTable}>
-                  <View style={styles.userTableHeader}>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Rol</Text>
-                    <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Acciones</Text>
-                  </View>
-
-                  {filteredUsers.map(user => (
-                    <View key={user.id} style={styles.userTableRow}>
-                      <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
-                        <Text style={styles.userNameText}>{user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
-                        <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
-                      </View>
-                      <View style={[styles.userTableCell, { flex: 1.3 }]}>
-                        <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || 'Sin dependencia'}</Text>
-                      </View>
-                      <View style={[styles.userTableCell, { flex: 0.8 }]}>
-                        <View style={{ backgroundColor: user.role === 'admin' ? '#FEF08A' : user.role === 'security' ? '#BFDBFE' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: user.role === 'admin' ? '#854D0E' : user.role === 'security' ? '#1E40AF' : '#475569' }}>
-                            {user.role === 'admin' ? 'Admin' : user.role === 'security' ? 'Seguridad' : 'Func.'}
+                        {/* Footer */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
+                            ESPACIO {room.info === 'Especial' ? 'ESPECIAL' : 'ESTÁNDAR'}
                           </Text>
-                        </View>
-                      </View>
-                      <View style={[styles.userTableCell, { flex: 1.3, gap: 6 }]}>
-                        <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
-                          <Text style={styles.userActionBtnText}>Modificar</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.userActionBtn, styles.userDeleteBtn]} onPress={() => openUserDeleteConfirmation(user)}>
-                          <Text style={[styles.userActionBtnText, { color: COLORS.danger }]}>Borrar</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                <TouchableOpacity style={styles.saveBtn} onPress={saveUsers} disabled={saving}>
-                  <LinearGradient colors={[COLORS.primary, COLORS.primarySoft]} style={styles.saveGradient}>
-                    {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.saveText}>GUARDAR USUARIOS</Text>}
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-
-              <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
-              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
-                {drivers.map(drv => (
-                  <View key={drv.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
-                    <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                      <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="car-sport" size={20} color="#FFF" />
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
-                          {drv.name || 'Sin nombre'}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                          <Ionicons name="call" size={14} color="#64748B" />
-                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
-                            {drv.phone || 'Sin teléfono'}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Footer */}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
-                        REGISTRO ACTIVO
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} style={{ padding: 4 }}>
-                          <Ionicons name="pencil" size={16} color="#3B82F6" />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={{ padding: 4 }}>
-                          <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                ))}
-                
-                <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDriver}>
-                  <Ionicons name="add" size={24} color={COLORS.muted} />
-                  <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Conductor</Text>
-                </TouchableOpacity>
-              </View>
-
-              <SectionHeader title="Correos de Secretaría General" kicker="NOTIFICACIONES DE SERVICIO" />
-              <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
-                {([
-                  { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F' },
-                  { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946' },
-                  { type: 'rooms', title: 'Salas Estándar', icon: 'business', color: '#4361EE' },
-                  { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7' },
-                  { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261' }
-                ] as const).map(({ type, title, icon, color }) => {
-                  const emails = (serviceEmails || []).filter(e => e && e.service_type === type);
-                  return (
-                    <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%' }]}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                        <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
-                          <Ionicons name={icon as any} size={24} color={color} />
-                        </View>
-                        <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
-                          {title}
-                        </Text>
-                      </View>
-
-                      {/* Chips de correos registrados */}
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-                        {emails.map(emailObj => (
-                          <View key={emailObj.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: `${color}10`, borderRadius: 10, paddingLeft: 10, paddingRight: 6, paddingVertical: 6, borderWidth: 1, borderColor: `${color}20` }}>
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginRight: 6 }}>
-                              {emailObj.email}
-                            </Text>
-                            <TouchableOpacity onPress={() => removeServiceEmail(emailObj.id)} style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center' }}>
-                              <Ionicons name="close" size={12} color={COLORS.danger} />
+                          
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <TouchableOpacity onPress={() => openEditModal(room, 'room')} style={{ padding: 4 }}>
+                              <Ionicons name="pencil" size={16} color="#3B82F6" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
+                              <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
                             </TouchableOpacity>
                           </View>
-                        ))}
-                        {emails.length === 0 && (
-                          <Text style={{ fontSize: 13, color: COLORS.muted, fontStyle: 'italic' }}>
-                            No hay correos configurados.
-                          </Text>
-                        )}
+                        </View>
                       </View>
+                    ))}
+                    
+                    <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addRoom}>
+                      <Ionicons name="add" size={24} color={COLORS.muted} />
+                      <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Espacio</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
 
-                      {/* Campo de agregar nuevo correo */}
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 'auto' }}>
-                        <TextInput
-                          style={[styles.roomNameInput, { flex: 1, fontSize: 13, height: 40, paddingVertical: 4 }]}
-                          value={emailInputs[type] || ''}
-                          onChangeText={(val) => setEmailInputs({ ...emailInputs, [type]: val })}
-                          placeholder={`Añadir correo para ${title.toLowerCase()}...`}
-                          keyboardType="email-address"
-                          autoCapitalize="none"
-                        />
-                        <TouchableOpacity 
-                          style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }}
-                          onPress={() => addServiceEmail(type)}
-                        >
-                          <Ionicons name="add" size={20} color={COLORS.white} />
+              {/* Gestión de Dependencias */}
+              {(activeTab === 'all' || activeTab === 'dependencies') && (
+                <>
+                  <SectionHeader title="Gestión de Dependencias" kicker="ORGANIZACIÓN" />
+                  <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
+                    {dependencies.map(dep => (
+                      <View key={dep.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
+                        <TouchableOpacity onPress={() => openEditModal(dep, 'dependency')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                          <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#A9301E', justifyContent: 'center', alignItems: 'center' }}>
+                            <Ionicons name="people-circle" size={20} color="#FFF" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0, justifyContent: 'center', height: 44 }}>
+                            <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B' }]}>
+                              {dep.name || 'Sin nombre'}
+                            </Text>
+                          </View>
                         </TouchableOpacity>
+                        
+                        {/* Footer */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
+                            REGISTRO ACTIVO
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <TouchableOpacity onPress={() => openEditModal(dep, 'dependency')} style={{ padding: 4 }}>
+                              <Ionicons name="pencil" size={16} color="#3B82F6" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => openDeleteDepConfirmation(dep)} style={{ padding: 4 }}>
+                              <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       </View>
-                    </View>
-                  );
-                })}
-              </View>
+                    ))}
+                    
+                    <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDependency}>
+                      <Ionicons name="add" size={24} color={COLORS.muted} />
+                      <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Dependencia</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
 
-              <SectionHeader title="Evaluación de Servicios" kicker="CONTROL DE CALIDAD" />
-              <View style={styles.configCard}>
-                {[
-                  { id: 'maintenance', label: 'Mantenimiento Locativo' },
-                  { id: 'visitors', label: 'Control de Visitantes' },
-                  { id: 'rooms', label: 'Reserva de Salas' },
-                  { id: 'parking', label: 'Cupo de Parqueadero' },
-                  { id: 'transport', label: 'Transporte Oficial' }
-                ].map((item, index, arr) => (
-                  <React.Fragment key={item.id}>
+              {/* Usuarios y Roles */}
+              {(activeTab === 'all' || activeTab === 'users') && (
+                <>
+                  <SectionHeader title="Usuarios y Roles" kicker="ACCESOS DEL SISTEMA" />
+                  <View style={styles.userSectionCard}>
+                    <View style={styles.userSectionHeader}>
+                      <TextInput
+                        style={styles.userSearchInput}
+                        value={userSearch}
+                        onChangeText={setUserSearch}
+                        placeholder="Buscar usuario, correo o dependencia"
+                      />
+                      <TouchableOpacity style={styles.exportUsersBtn} onPress={exportUsers}>
+                        <Ionicons name="download-outline" size={18} color={COLORS.white} />
+                        <Text style={styles.exportUsersText}>Excel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.addUserBtn} onPress={addUser}>
+                        <Ionicons name="person-add-outline" size={18} color={COLORS.white} />
+                        <Text style={styles.exportUsersText}>Agregar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.userTable}>
+                      <View style={styles.userTableHeader}>
+                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
+                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
+                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Rol</Text>
+                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Acciones</Text>
+                      </View>
+
+                      {filteredUsers.map(user => (
+                        <View key={user.id} style={styles.userTableRow}>
+                          <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
+                            <Text style={styles.userNameText}>{user.full_name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
+                            <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
+                          </View>
+                          <View style={[styles.userTableCell, { flex: 1.3 }]}>
+                            <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || 'Sin dependencia'}</Text>
+                          </View>
+                          <View style={[styles.userTableCell, { flex: 0.8 }]}>
+                            <View style={{ backgroundColor: user.role === 'admin' ? '#FEF08A' : user.role === 'security' ? '#BFDBFE' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: user.role === 'admin' ? '#854D0E' : user.role === 'security' ? '#1E40AF' : '#475569' }}>
+                                {user.role === 'admin' ? 'Admin' : user.role === 'security' ? 'Seguridad' : 'Func.'}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={[styles.userTableCell, { flex: 1.3, gap: 6 }]}>
+                            <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
+                              <Text style={styles.userActionBtnText}>Modificar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.userActionBtn, styles.userDeleteBtn]} onPress={() => openUserDeleteConfirmation(user)}>
+                              <Text style={[styles.userActionBtnText, { color: COLORS.danger }]}>Borrar</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+
+                    <TouchableOpacity style={styles.saveBtn} onPress={saveUsers} disabled={saving}>
+                      <LinearGradient colors={[COLORS.primary, COLORS.primarySoft]} style={styles.saveGradient}>
+                        {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.saveText}>GUARDAR USUARIOS</Text>}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {/* Gestión de Conductores */}
+              {(activeTab === 'all' || activeTab === 'drivers') && (
+                <>
+                  <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
+                  <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
+                    {drivers.map(drv => (
+                      <View key={drv.id} style={[styles.depCard, isDesktop && { width: '48%' }]}>
+                        <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                          <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
+                            <Ionicons name="car-sport" size={20} color="#FFF" />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
+                              {drv.name || 'Sin nombre'}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <Ionicons name="call" size={14} color="#64748B" />
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
+                                {drv.phone || 'Sin teléfono'}
+                              </Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* Footer */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
+                            REGISTRO ACTIVO
+                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            <TouchableOpacity onPress={() => openEditModal(drv, 'driver')} style={{ padding: 4 }}>
+                              <Ionicons name="pencil" size={16} color="#3B82F6" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => openDriverDeleteConfirmation(drv)} style={{ padding: 4 }}>
+                              <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                    
+                    <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDriver}>
+                      <Ionicons name="add" size={24} color={COLORS.muted} />
+                      <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Conductor</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {/* Correos de Secretaría General */}
+              {(activeTab === 'all' || activeTab === 'emails') && (
+                <>
+                  <SectionHeader title="Correos de Secretaría General" kicker="NOTIFICACIONES DE SERVICIO" />
+                  <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
+                    {([
+                      { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F' },
+                      { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946' },
+                      { type: 'rooms', title: 'Salas Estándar', icon: 'business', color: '#4361EE' },
+                      { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7' },
+                      { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261' }
+                    ] as const).map(({ type, title, icon, color }) => {
+                      const emails = (serviceEmails || []).filter(e => e && e.service_type === type);
+                      return (
+                        <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%' }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+                            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
+                              <Ionicons name={icon as any} size={24} color={color} />
+                            </View>
+                            <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                              {title}
+                            </Text>
+                          </View>
+
+                          {/* Chips de correos registrados */}
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                            {emails.map(emailObj => (
+                              <View key={emailObj.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: `${color}10`, borderRadius: 10, paddingLeft: 10, paddingRight: 6, paddingVertical: 6, borderWidth: 1, borderColor: `${color}20` }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primarySoft, marginRight: 6 }}>
+                                  {emailObj.email}
+                                </Text>
+                                <TouchableOpacity onPress={() => removeServiceEmail(emailObj.id)} style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center' }}>
+                                  <Ionicons name="close" size={12} color={COLORS.danger} />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                            {emails.length === 0 && (
+                              <Text style={{ fontSize: 13, color: COLORS.muted, fontStyle: 'italic' }}>
+                                No hay correos configurados.
+                              </Text>
+                            )}
+                          </View>
+
+                          {/* Campo de agregar nuevo correo */}
+                          <View style={{ flexDirection: 'row', gap: 8, marginTop: 'auto' }}>
+                            <TextInput
+                              style={[styles.roomNameInput, { flex: 1, fontSize: 13, height: 40, paddingVertical: 4 }]}
+                              value={emailInputs[type] || ''}
+                              onChangeText={(val) => setEmailInputs({ ...emailInputs, [type]: val })}
+                              placeholder={`Añadir correo para ${title.toLowerCase()}...`}
+                              keyboardType="email-address"
+                              autoCapitalize="none"
+                            />
+                            <TouchableOpacity 
+                              style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }}
+                              onPress={() => addServiceEmail(type)}
+                            >
+                              <Ionicons name="add" size={20} color={COLORS.white} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
+              {/* Evaluación de Servicios */}
+              {(activeTab === 'all' || activeTab === 'evaluations') && (
+                <>
+                  <SectionHeader title="Evaluación de Servicios" kicker="CONTROL DE CALIDAD" />
+                  <View style={styles.configCard}>
+                    {[
+                      { id: 'maintenance', label: 'Mantenimiento Locativo' },
+                      { id: 'visitors', label: 'Control de Visitantes' },
+                      { id: 'rooms', label: 'Reserva de Salas' },
+                      { id: 'parking', label: 'Cupo de Parqueadero' },
+                      { id: 'transport', label: 'Transporte Oficial' }
+                    ].map((item, index, arr) => (
+                      <React.Fragment key={item.id}>
+                        <ConfigToggle 
+                          label={item.label} 
+                          desc={`Solicitar evaluación obligatoria al completar servicios de ${item.label.toLowerCase()}.`}
+                          value={evalCategories.includes(item.id)}
+                          onValueChange={(val: boolean) => {
+                            setPendingEvalToggle({ id: item.id, label: item.label, newValue: val });
+                            setShowEvalConfirmModal(true);
+                          }}
+                          icon="star"
+                        />
+                        {index < arr.length - 1 && <View style={styles.configDivider} />}
+                      </React.Fragment>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {/* Preferencias del Sistema */}
+              {(activeTab === 'all' || activeTab === 'preferences') && (
+                <>
+                  <SectionHeader title="Preferencias del Sistema" kicker="CONFIGURACIÓN" />
+                  <View style={styles.configCard}>
                     <ConfigToggle 
-                      label={item.label} 
-                      desc={`Solicitar evaluación obligatoria al completar servicios de ${item.label.toLowerCase()}.`}
-                      value={evalCategories.includes(item.id)}
-                      onValueChange={(val: boolean) => {
-                        setPendingEvalToggle({ id: item.id, label: item.label, newValue: val });
-                        setShowEvalConfirmModal(true);
-                      }}
-                      icon="star"
+                      label="Notificaciones Push" 
+                      desc="Enviar avisos al administrador por cada nueva solicitud."
+                      value={notifications}
+                      onValueChange={setNotifications}
+                      icon="notifications"
                     />
-                    {index < arr.length - 1 && <View style={styles.configDivider} />}
-                  </React.Fragment>
-                ))}
-              </View>
-
-              <SectionHeader title="Preferencias del Sistema" kicker="CONFIGURACIÓN" />
-              <View style={styles.configCard}>
-                <ConfigToggle 
-                  label="Notificaciones Push" 
-                  desc="Enviar avisos al administrador por cada nueva solicitud."
-                  value={notifications}
-                  onValueChange={setNotifications}
-                  icon="notifications"
-                />
-                <View style={styles.configDivider} />
-                <ConfigToggle 
-                  label="Aprobación Automática Salas" 
-                  desc="Aprobar solicitudes de salas estandar si hay disponibilidad inmediata."
-                  value={autoApprove}
-                  onValueChange={(val: boolean) => {
-                    setPendingSystemToggle({
-                      key: 'autoApprove',
-                      label: 'Aprobación Automática Salas',
-                      desc: 'aprobar las solicitudes de salas estándar de forma automática',
-                      newValue: val
-                    });
-                    setShowSystemConfirmModal(true);
-                  }}
-                  icon="flash"
-                />
-                <View style={styles.configDivider} />
-                <ConfigToggle 
-                  label="Aprobación Automática Visitantes" 
-                  desc="Aprobar solicitudes de visitantes de forma automática."
-                  value={autoApproveVisitors}
-                  onValueChange={(val: boolean) => {
-                    setPendingSystemToggle({
-                      key: 'autoApproveVisitors',
-                      label: 'Aprobación Automática Visitantes',
-                      desc: 'aprobar las solicitudes de control de visitantes de forma automática',
-                      newValue: val
-                    });
-                    setShowSystemConfirmModal(true);
-                  }}
-                  icon="flash"
-                />
-                <View style={styles.configDivider} />
-                {currentUserEmail === 'admin@sasge.com' && (
-                  <View style={styles.ldapConfigCard}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <Ionicons name="business-outline" size={18} color={COLORS.accent} />
-                    <Text style={styles.toggleLabel}>Directorio Activo</Text>
-                  </View>
-                  <View style={{ gap: 10 }}>
-                    <View style={styles.userRow}>
-                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapServer} onChangeText={setLdapServer} placeholder="Servidor" />
-                      <View style={styles.userSwitchRow}>
-                        <Text style={styles.userSwitchLabel}>SSL</Text>
-                        <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                    <View style={styles.configDivider} />
+                    <ConfigToggle 
+                      label="Aprobación Automática Salas" 
+                      desc="Aprobar solicitudes de salas estandar si hay disponibilidad inmediata."
+                      value={autoApprove}
+                      onValueChange={(val: boolean) => {
+                        setPendingSystemToggle({
+                          key: 'autoApprove',
+                          label: 'Aprobación Automática Salas',
+                          desc: 'aprobar las solicitudes de salas estándar de forma automática',
+                          newValue: val
+                        });
+                        setShowSystemConfirmModal(true);
+                      }}
+                      icon="flash"
+                    />
+                    <View style={styles.configDivider} />
+                    <ConfigToggle 
+                      label="Aprobación Automática Visitantes" 
+                      desc="Aprobar solicitudes de visitantes de forma automática."
+                      value={autoApproveVisitors}
+                      onValueChange={(val: boolean) => {
+                        setPendingSystemToggle({
+                          key: 'autoApproveVisitors',
+                          label: 'Aprobación Automática Visitantes',
+                          desc: 'aprobar las solicitudes de control de visitantes de forma automática',
+                          newValue: val
+                        });
+                        setShowSystemConfirmModal(true);
+                      }}
+                      icon="flash"
+                    />
+                    <View style={styles.configDivider} />
+                    {currentUserEmail === 'admin@sasge.com' && (
+                      <View style={styles.ldapConfigCard}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                        <Ionicons name="business-outline" size={18} color={COLORS.accent} />
+                        <Text style={styles.toggleLabel}>Directorio Activo</Text>
+                      </View>
+                      <View style={{ gap: 10 }}>
+                        <View style={styles.userRow}>
+                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapServer} onChangeText={setLdapServer} placeholder="Servidor" />
+                          <View style={styles.userSwitchRow}>
+                            <Text style={styles.userSwitchLabel}>SSL</Text>
+                            <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                          </View>
+                        </View>
+                        <View style={styles.userRow}>
+                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapPort} onChangeText={setLdapPort} placeholder="Puerto LDAP" keyboardType="number-pad" />
+                          <View style={styles.userSwitchRow}>
+                            <Text style={styles.userSwitchLabel}>Usar bind</Text>
+                            <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
+                          </View>
+                        </View>
+                        <TextInput style={styles.userFieldInput} value={ldapComments} onChangeText={setLdapComments} placeholder="Comentarios" />
+                        <TextInput style={styles.userFieldInput} value={ldapFilter} onChangeText={setLdapFilter} placeholder="Filtro de conexión" multiline />
+                        <TextInput style={styles.userFieldInput} value={ldapBaseDn} onChangeText={setLdapBaseDn} placeholder="BaseDN" />
+                        <TextInput style={styles.userFieldInput} value={ldapRootDn} onChangeText={setLdapRootDn} placeholder="RootDN" />
+                        <TextInput style={styles.userFieldInput} value={ldapPassword} onChangeText={setLdapPassword} placeholder="Contraseña" secureTextEntry />
+                        <View style={styles.userRow}>
+                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapUserField} onChangeText={setLdapUserField} placeholder="Campo de usuario" />
+                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapSyncField} onChangeText={setLdapSyncField} placeholder="Campo de sincronización" />
+                        </View>
+                        <TextInput style={styles.userFieldInput} value={ldapRelay} onChangeText={setLdapRelay} placeholder="Relay correo" />
                       </View>
                     </View>
-                    <View style={styles.userRow}>
-                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapPort} onChangeText={setLdapPort} placeholder="Puerto LDAP" keyboardType="number-pad" />
-                      <View style={styles.userSwitchRow}>
-                        <Text style={styles.userSwitchLabel}>Usar bind</Text>
-                        <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
-                      </View>
-                    </View>
-                    <TextInput style={styles.userFieldInput} value={ldapComments} onChangeText={setLdapComments} placeholder="Comentarios" />
-                    <TextInput style={styles.userFieldInput} value={ldapFilter} onChangeText={setLdapFilter} placeholder="Filtro de conexión" multiline />
-                    <TextInput style={styles.userFieldInput} value={ldapBaseDn} onChangeText={setLdapBaseDn} placeholder="BaseDN" />
-                    <TextInput style={styles.userFieldInput} value={ldapRootDn} onChangeText={setLdapRootDn} placeholder="RootDN" />
-                    <TextInput style={styles.userFieldInput} value={ldapPassword} onChangeText={setLdapPassword} placeholder="Contraseña" secureTextEntry />
-                    <View style={styles.userRow}>
-                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapUserField} onChangeText={setLdapUserField} placeholder="Campo de usuario" />
-                      <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapSyncField} onChangeText={setLdapSyncField} placeholder="Campo de sincronización" />
-                    </View>
-                    <TextInput style={styles.userFieldInput} value={ldapRelay} onChangeText={setLdapRelay} placeholder="Relay correo" />
+                    )}
                   </View>
-                </View>
-                )}
-              </View>
+                </>
+              )}
 
               {/* Removed handleSaveChanges button for auto-save feature */}
 
@@ -1810,22 +1846,66 @@ export default function AdminSettings() {
   );
 }
 
-function Sidebar() {
+function Sidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: any) => void }) {
+  const router = useRouter();
+
+  const TABS = [
+    { id: 'all', label: 'Todas las Secciones', icon: 'grid' },
+    { id: 'rooms', label: 'Gestión de Espacios', icon: 'business' },
+    { id: 'dependencies', label: 'Dependencias', icon: 'people-circle' },
+    { id: 'users', label: 'Usuarios y Roles', icon: 'people' },
+    { id: 'drivers', label: 'Gestión Conductores', icon: 'car-sport' },
+    { id: 'emails', label: 'Correos de Servicio', icon: 'mail' },
+    { id: 'evaluations', label: 'Evaluación Servicios', icon: 'star' },
+    { id: 'preferences', label: 'Preferencias Sistema', icon: 'options' },
+  ];
+
   return (
     <View style={styles.sidebar}>
       <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
       <View style={styles.sidebarContent}>
         <View style={styles.logoCircle}>
-          <Ionicons name="settings-outline" size={40} color={COLORS.white} />
+          <Ionicons name="settings" size={40} color={COLORS.white} />
         </View>
-        <Text style={styles.sideTitle}>Ajustes</Text>
-        <Text style={styles.sideSubTitle}>Configuración Técnica</Text>
-        <View style={{ width: 40, height: 4, backgroundColor: COLORS.white, marginVertical: 25, borderRadius: 2 }} />
-        <Text style={styles.sideDesc}>
-          Personalice los parámetros operativos de la plataforma y gestione el inventario de recursos físicos.
-        </Text>
+        <Text style={styles.sideTitle}>Configuración</Text>
+        <Text style={styles.sideSubTitle}>Panel de Administración</Text>
+        <View style={styles.sideDivider} />
+        
+        <View style={{ gap: 6, width: '100%' }}>
+          {TABS.map(tab => (
+            <SidebarTabButton 
+              key={tab.id}
+              label={tab.label} 
+              icon={tab.icon} 
+              active={activeTab === tab.id} 
+              onPress={() => setActiveTab(tab.id)} 
+            />
+          ))}
+        </View>
+
+        <View style={{ marginTop: 'auto', width: '100%', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' }}>
+          <TouchableOpacity
+            onPress={() => router.replace('/dashboard')}
+            style={styles.sideBackBtn}
+          >
+            <Ionicons name="arrow-back-outline" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Portal Funcionario</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
+  );
+}
+
+function SidebarTabButton({ label, icon, active, onPress }: any) {
+  return (
+    <TouchableOpacity 
+      style={[styles.sideTabBtn, active && styles.sideTabBtnActive]} 
+      onPress={onPress}
+    >
+      <Ionicons name={icon} size={18} color={active ? COLORS.primary : 'rgba(255,255,255,0.7)'} />
+      <Text style={[styles.sideTabLabel, active && styles.sideTabLabelActive]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -1902,12 +1982,19 @@ function ConfigToggle({ label, desc, value, onValueChange, icon }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  sidebar: { width: 320, height: '100%', overflow: 'hidden' },
-  sidebarContent: { flex: 1, padding: 40, justifyContent: 'center' },
-  logoCircle: { width: 80, height: 80, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 30 },
-  sideTitle: { color: COLORS.white, fontSize: 36, fontWeight: '900' },
-  sideSubTitle: { color: COLORS.accent, fontSize: 18, fontWeight: '700', marginTop: 5 },
+  sidebar: { width: 300, height: '100%', overflow: 'hidden' },
+  sidebarContent: { flex: 1, padding: 30, paddingTop: 60, alignItems: 'center' },
+  logoCircle: { width: 70, height: 70, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  sideTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', textAlign: 'center' },
+  sideSubTitle: { color: COLORS.accent, fontSize: 13, fontWeight: '700', marginTop: 3 },
+  sideDivider: { width: '80%', height: 1.5, backgroundColor: 'rgba(255,255,255,0.1)', marginVertical: 25 },
   sideDesc: { color: 'rgba(255,255,255,0.8)', fontSize: 16, lineHeight: 24 },
+
+  sideTabBtn: { width: '100%', height: 44, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderRadius: 14, marginBottom: 4 },
+  sideTabBtnActive: { backgroundColor: COLORS.white },
+  sideTabLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '700' },
+  sideTabLabelActive: { color: COLORS.primary, fontWeight: '900' },
+  sideBackBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.08)' },
 
   scrollContent: { paddingBottom: 60 },
   hero: { minHeight: 160, paddingVertical: 15, width: '100%', overflow: 'hidden', borderBottomRightRadius: 40 },
