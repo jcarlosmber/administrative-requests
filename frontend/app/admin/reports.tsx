@@ -208,7 +208,8 @@ export default function AdminReports() {
       const items = dbData.filter(d => d.category === cat);
       const validItems = items.filter(d => !isRejectedStatus(d.status));
       return {
-        total: validItems.length,
+        total: items.length,
+        validTotal: validItems.length,
         resolved: items.filter(d => d.status === 'resuelto').length,
         inProgress: items.filter(d => d.status === 'en_progreso').length,
         pending: items.filter(d => d.status === 'pendiente').length,
@@ -1315,7 +1316,7 @@ export default function AdminReports() {
                           <SegmentedCategoryBar 
                             label="Control de Acceso" 
                             icon="people" 
-                            total={stats.catCounts.visitors} 
+                            total={categoryBreakdown.visitors.total} 
                             resolved={categoryBreakdown.visitors.resolved}
                             inProgress={categoryBreakdown.visitors.inProgress}
                             pending={categoryBreakdown.visitors.pending}
@@ -1324,7 +1325,7 @@ export default function AdminReports() {
                           <SegmentedCategoryBar 
                             label="Mantenimiento Locativo" 
                             icon="construct" 
-                            total={stats.catCounts.maintenance} 
+                            total={categoryBreakdown.maintenance.total} 
                             resolved={categoryBreakdown.maintenance.resolved}
                             inProgress={categoryBreakdown.maintenance.inProgress}
                             pending={categoryBreakdown.maintenance.pending}
@@ -1333,7 +1334,7 @@ export default function AdminReports() {
                           <SegmentedCategoryBar 
                             label="Cupo de Parqueadero" 
                             icon="car" 
-                            total={stats.catCounts.parking} 
+                            total={categoryBreakdown.parking.total} 
                             resolved={categoryBreakdown.parking.resolved}
                             inProgress={categoryBreakdown.parking.inProgress}
                             pending={categoryBreakdown.parking.pending}
@@ -1342,7 +1343,7 @@ export default function AdminReports() {
                           <SegmentedCategoryBar 
                             label="Salas de Juntas" 
                             icon="easel" 
-                            total={stats.catCounts.rooms} 
+                            total={categoryBreakdown.rooms.total} 
                             resolved={categoryBreakdown.rooms.resolved}
                             inProgress={categoryBreakdown.rooms.inProgress}
                             pending={categoryBreakdown.rooms.pending}
@@ -1351,7 +1352,7 @@ export default function AdminReports() {
                           <SegmentedCategoryBar 
                             label="Transporte Oficial" 
                             icon="car-sport" 
-                            total={stats.catCounts.transport} 
+                            total={categoryBreakdown.transport.total} 
                             resolved={categoryBreakdown.transport.resolved}
                             inProgress={categoryBreakdown.transport.inProgress}
                             pending={categoryBreakdown.transport.pending}
@@ -2716,10 +2717,9 @@ function SegmentedCategoryBar({
   pending,
   rejected
 }: SegmentedCategoryBarProps) {
-  const pResolved = total > 0 ? (resolved / total) * 100 : 0;
-  const pInProgress = total > 0 ? (inProgress / total) * 100 : 0;
-  const pPending = total > 0 ? (pending / total) * 100 : 0;
-  const pRejected = total > 0 ? (rejected / total) * 100 : 0;
+  // El total real para la distribución gráfica y visual de la barra es la suma de todas las solicitudes de la categoría
+  const sumTotal = resolved + inProgress + pending + rejected;
+  const barTotal = sumTotal > 0 ? sumTotal : (total || 0);
 
   return (
     <View style={styles.segmentedContainer}>
@@ -2730,26 +2730,26 @@ function SegmentedCategoryBar({
           </View>
           <Text style={styles.segmentedLabel}>{label}</Text>
         </View>
-        <Text style={styles.segmentedTotal}>{total} {total === 1 ? 'solicitud' : 'solicitudes'}</Text>
+        <Text style={styles.segmentedTotal}>{barTotal} {barTotal === 1 ? 'solicitud' : 'solicitudes'}</Text>
       </View>
 
       {/* Barra segmentada por estado */}
       <View style={styles.segmentedBarOuter}>
-        {total === 0 ? (
+        {barTotal === 0 ? (
           <View style={{ flex: 1, backgroundColor: '#F1F5F9', borderRadius: 6 }} />
         ) : (
           <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden', borderRadius: 6, gap: 1 }}>
-            {pResolved > 0 && (
-              <View style={{ width: `${pResolved}%`, backgroundColor: COLORS.success, height: '100%' }} />
+            {resolved > 0 && (
+              <View style={{ flex: resolved, backgroundColor: COLORS.success, height: '100%' }} />
             )}
-            {pInProgress > 0 && (
-              <View style={{ width: `${pInProgress}%`, backgroundColor: COLORS.accent, height: '100%' }} />
+            {inProgress > 0 && (
+              <View style={{ flex: inProgress, backgroundColor: COLORS.accent, height: '100%' }} />
             )}
-            {pPending > 0 && (
-              <View style={{ width: `${pPending}%`, backgroundColor: COLORS.warning, height: '100%' }} />
+            {pending > 0 && (
+              <View style={{ flex: pending, backgroundColor: COLORS.warning, height: '100%' }} />
             )}
-            {pRejected > 0 && (
-              <View style={{ width: `${pRejected}%`, backgroundColor: COLORS.danger, height: '100%' }} />
+            {rejected > 0 && (
+              <View style={{ flex: rejected, backgroundColor: COLORS.danger, height: '100%' }} />
             )}
           </View>
         )}
@@ -2769,12 +2769,10 @@ function SegmentedCategoryBar({
           <View style={[styles.statusDotMini, { backgroundColor: COLORS.warning }]} />
           <Text style={styles.statusTextMini}>{pending} pendientes</Text>
         </View>
-        {rejected > 0 && (
-          <View style={styles.statusBadgeMini}>
-            <View style={[styles.statusDotMini, { backgroundColor: COLORS.danger }]} />
-            <Text style={styles.statusTextMini}>{rejected} rechazadas</Text>
-          </View>
-        )}
+        <View style={styles.statusBadgeMini}>
+          <View style={[styles.statusDotMini, { backgroundColor: COLORS.danger }]} />
+          <Text style={styles.statusTextMini}>{rejected} rechazadas</Text>
+        </View>
       </View>
     </View>
   );
