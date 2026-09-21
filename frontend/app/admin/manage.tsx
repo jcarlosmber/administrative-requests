@@ -3251,17 +3251,22 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
         { 
           transform: [{ scale }],
           borderColor: expanded ? '#CBD5E1' : '#E2E8F0',
-          borderLeftWidth: 4,
-          borderLeftColor: item.color || '#3B82F6',
         }
       ]}
     >
       <View style={styles.cardMain}>
-        {/* Cabecera Superior: Badges + ID + Estado */}
+        {/* Cabecera Superior: Radicado + Categoría + Badges a la izquierda, Estado a la derecha */}
         <View style={styles.cardHeaderTop}>
           <View style={styles.cardBadgesRow}>
-            {/* Badge de Categoría */}
-            <View style={[styles.categoryBadge, { backgroundColor: `${item.color}15`, borderColor: `${item.color}35` }]}>
+            {/* Radicado / ID con estilo de código institucional */}
+            {item.id && (
+              <View style={styles.idChip}>
+                <Text style={styles.idChipText}>#{String(item.id).slice(0, 8).toUpperCase()}</Text>
+              </View>
+            )}
+
+            {/* Badge de Categoría con color suave y borde fino */}
+            <View style={[styles.categoryBadge, { backgroundColor: `${item.color}14`, borderColor: `${item.color}30` }]}>
               <Ionicons name={catIcon as any} size={13} color={item.color} />
               <Text style={[styles.categoryBadgeText, { color: item.color }]}>{item.type}</Text>
             </View>
@@ -3275,19 +3280,12 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
             </View>
 
             {/* Badge de SLA */}
-            <View style={[styles.slaBadge, { backgroundColor: sla.bg, borderColor: `${sla.color}30` }]}>
+            <View style={[styles.slaBadge, { backgroundColor: sla.bg, borderColor: `${sla.color}25` }]}>
               <Ionicons name={sla.icon} size={11} color={sla.color} />
               <Text style={[styles.slaBadgeText, { color: sla.color }]}>
                 {sla.text}
               </Text>
             </View>
-
-            {/* Radicado / ID */}
-            {item.id && (
-              <View style={styles.idChip}>
-                <Text style={styles.idChipText}>#{String(item.id).slice(0, 8).toUpperCase()}</Text>
-              </View>
-            )}
           </View>
 
           {/* Pill de Estado */}
@@ -3297,24 +3295,24 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
           </View>
         </View>
 
-        {/* Fila del Solicitante con Avatar */}
+        {/* Fila del Solicitante con Avatar Premium */}
         <TouchableOpacity 
           style={styles.cardUserRow} 
           onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)} 
           activeOpacity={0.85}
         >
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{initials}</Text>
+          <View style={[styles.avatarCircle, { backgroundColor: `${item.color}15`, borderColor: `${item.color}30` }]}>
+            <Text style={[styles.avatarText, { color: item.color || '#0F172A' }]}>{initials}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardUserName}>{item.user}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <Ionicons name="business-outline" size={13} color={COLORS.muted} />
+              <Ionicons name="business-outline" size={13} color="#64748B" />
               <Text style={styles.cardUserDept}>{item.dependency}</Text>
             </View>
           </View>
-          <View style={[styles.toggleExpandChip, { backgroundColor: '#F8FAFC' }]}>
-            <Ionicons name="open-outline" size={15} color={COLORS.muted} />
+          <View style={[styles.toggleExpandChip, { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }]}>
+            <Ionicons name={expanded ? "chevron-up" : "open-outline"} size={14} color="#64748B" />
           </View>
         </TouchableOpacity>
 
@@ -3333,7 +3331,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
             <View style={styles.quickMetaRow}>
               {item.uiMetadata.slice(0, 2).map((meta: any, idx: number) => (
                 <View key={idx} style={styles.quickMetaChip}>
-                  <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={COLORS.accent} />
+                  <Ionicons name={meta.icon || 'information-circle-outline'} size={12} color={item.color || COLORS.accent} />
                   <Text style={styles.quickMetaLabel}>{meta.label}:</Text>
                   <Text style={styles.quickMetaVal} numberOfLines={1}>{meta.value}</Text>
                 </View>
@@ -3545,64 +3543,67 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
           {/* Pie de Tarjeta con Acciones Rápidas Directas */}
           <View style={styles.cardFooter}>
             <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
+              <Ionicons name="calendar-outline" size={13} color="#64748B" />
               <Text style={styles.metaText}>{item.date}</Text>
             </View>
 
             <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10, gap: 6 }]}>
               {/* Botón de Ficha de Despacho Oficial */}
               <TouchableOpacity 
-                style={[styles.actionBtn, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', height: 34 }]}
+                style={[styles.actionBtn, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', height: 32, paddingHorizontal: 10 }]}
                 onPress={() => onOpenDispatch && onOpenDispatch(item)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="receipt-outline" size={15} color="#334155" />
-                <Text style={[styles.actionBtnText, { color: '#334155' }]}>Ficha</Text>
+                <Ionicons name="receipt-outline" size={13} color="#475569" />
+                <Text style={[styles.actionBtnText, { color: '#475569', fontSize: 11.5 }]}>Ficha</Text>
               </TouchableOpacity>
 
               {/* Botón Detalles / Panel Lateral */}
               <TouchableOpacity 
-                style={[styles.actionBtn, { borderColor: '#0F172A', backgroundColor: '#0F172A', height: 34 }]}
+                style={[styles.actionBtn, { borderColor: '#0F172A', backgroundColor: '#0F172A', height: 32, paddingHorizontal: 10 }]}
                 onPress={() => onOpenDetail ? onOpenDetail(item) : setExpanded(!expanded)}
                 activeOpacity={0.8}
               >
-                <Ionicons name="open-outline" size={14} color="#FFFFFF" />
-                <Text style={[styles.actionBtnText, { color: '#FFFFFF' }]}>Detalles</Text>
+                <Ionicons name="eye-outline" size={13} color="#FFFFFF" />
+                <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Detalles</Text>
               </TouchableOpacity>
 
-              {/* ACCIONES RÁPIDAS DIRECTAS (No requieren forzar expansión) */}
+              {/* ACCIONES RÁPIDAS DIRECTAS */}
               {isPending && (
                 <>
                   {/* Grupo 1: Mantenimiento, Sala Especial -> Procesar */}
                   {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
                     <TouchableOpacity 
-                      style={[styles.actionBtn, styles.processBtn, { height: 34 }]}
+                      style={[styles.actionBtn, { backgroundColor: '#2563EB', borderColor: '#1D4ED8', height: 32, paddingHorizontal: 11 }]}
                       onPress={() => onUpdateStatus(item, 'en_progreso')}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons name="play-outline" size={15} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Procesar</Text>
+                      <Ionicons name="play-outline" size={13} color="#FFFFFF" />
+                      <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Procesar</Text>
                     </TouchableOpacity>
                   )}
 
                   {/* Grupo 2: Visitantes, Parqueadero, Sala Estándar -> Aprobar directo */}
                   {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
                     <TouchableOpacity 
-                      style={[styles.actionBtn, styles.successBtn, { height: 34 }]}
+                      style={[styles.actionBtn, { backgroundColor: '#059669', borderColor: '#047857', height: 32, paddingHorizontal: 11 }]}
                       onPress={() => onUpdateStatus(item, 'resuelto')}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons name="checkmark-outline" size={15} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Aprobar</Text>
+                      <Ionicons name="checkmark-outline" size={13} color="#FFFFFF" />
+                      <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Aprobar</Text>
                     </TouchableOpacity>
                   )}
 
                   {/* Grupo 3: Transporte con Asignación de Conductor */}
                   {item.category === 'transport' && (
                     <TouchableOpacity 
-                      style={[styles.actionBtn, styles.successBtn, { height: 34 }]}
+                      style={[styles.actionBtn, { backgroundColor: '#0284C7', borderColor: '#0369A1', height: 32, paddingHorizontal: 11 }]}
                       onPress={() => onAssignDriver && onAssignDriver(item)}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons name="car-outline" size={15} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Asignar</Text>
+                      <Ionicons name="car-outline" size={13} color="#FFFFFF" />
+                      <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Asignar</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -3610,22 +3611,24 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
 
               {isInProgress && (
                 <TouchableOpacity 
-                  style={[styles.actionBtn, styles.successBtn, { height: 34 }]}
+                  style={[styles.actionBtn, { backgroundColor: '#059669', borderColor: '#047857', height: 32, paddingHorizontal: 11 }]}
                   onPress={() => onUpdateStatus(item, 'resuelto')}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons name="checkmark-done-outline" size={15} color={COLORS.white} />
-                  <Text style={styles.actionBtnText}>Finalizar</Text>
+                  <Ionicons name="checkmark-done-outline" size={13} color="#FFFFFF" />
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>Finalizar</Text>
                 </TouchableOpacity>
               )}
 
-              {/* Botón de Rechazo (Equis Roja) accesible directamente si la solicitud no está cerrada */}
+              {/* Botón de Rechazo sutil pero accesible */}
               {!isClosed && (
                 <TouchableOpacity 
-                  style={[styles.actionBtn, styles.rejectBtn, { height: 34 }]}
+                  style={[styles.actionBtn, { backgroundColor: '#FEF2F2', borderColor: '#FECACA', height: 32, paddingHorizontal: 10 }]}
                   onPress={() => onUpdateStatus(item, 'rechazado')}
+                  activeOpacity={0.75}
                 >
-                  <Ionicons name="close-outline" size={15} color={COLORS.white} />
-                  <Text style={[styles.actionBtnText, { color: COLORS.white }]}>Rechazar</Text>
+                  <Ionicons name="close-outline" size={14} color="#DC2626" />
+                  <Text style={[styles.actionBtnText, { color: '#DC2626', fontSize: 11.5 }]}>Rechazar</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -3678,23 +3681,23 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 100 },
   card: { 
     backgroundColor: '#FFFFFF', 
-    borderRadius: 20, 
+    borderRadius: 18, 
     marginBottom: 16, 
     marginHorizontal: 25, 
     borderWidth: 1, 
     borderColor: '#E2E8F0', 
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 14 },
-      android: { elevation: 3 },
+      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 12 },
+      android: { elevation: 2 },
       web: { 
-        boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03)',
+        boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03)',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
       }
     })
   },
-  cardMain: { padding: 20 },
-  cardHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 },
+  cardMain: { padding: 18 },
+  cardHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
   cardBadgesRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, flex: 1 },
   categoryBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   categoryBadgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -3702,21 +3705,21 @@ const styles = StyleSheet.create({
   priorityBadgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   slaBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
   slaBadgeText: { fontSize: 10, fontWeight: '800' },
-  idChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: '#F1F5F9' },
-  idChipText: { fontSize: 10.5, fontWeight: '700', color: '#64748B', letterSpacing: 0.5 },
+  idChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: '#0F172A' },
+  idChipText: { fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 },
   statusPillNew: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 10, borderWidth: 1 },
   statusDotNew: { width: 7, height: 7, borderRadius: 4 },
   statusTextNew: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
-  avatarCircle: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-  avatarText: { fontSize: 14, fontWeight: '800', color: '#334155' },
-  cardUserName: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
-  cardUserDept: { fontSize: 12.5, fontWeight: '600', color: COLORS.muted },
+  avatarCircle: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  avatarText: { fontSize: 13.5, fontWeight: '800' },
+  cardUserName: { fontSize: 15.5, fontWeight: '800', color: COLORS.primary },
+  cardUserDept: { fontSize: 12, fontWeight: '600', color: COLORS.muted },
   toggleExpandChip: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  detailBox: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#F1F5F9', marginBottom: 10 },
-  cardDetailText: { fontSize: 13.5, color: '#334155', fontWeight: '500', lineHeight: 20 },
+  detailBox: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 13, borderWidth: 1, borderColor: '#EDF2F7', marginBottom: 10 },
+  cardDetailText: { fontSize: 13.5, color: '#1E293B', fontWeight: '600', lineHeight: 20 },
   quickMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
-  quickMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 4.5, borderRadius: 7, borderWidth: 1, borderColor: '#E2E8F0' },
+  quickMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' },
   quickMetaLabel: { fontSize: 11, fontWeight: '700', color: COLORS.muted },
   quickMetaVal: { fontSize: 11, fontWeight: '600', color: COLORS.primary, maxWidth: 160 },
   
