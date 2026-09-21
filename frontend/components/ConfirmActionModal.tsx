@@ -23,6 +23,8 @@ export interface ConfirmActionModalProps {
 const VARIANTS = {
   primary: {
     color: '#0F172A',
+    cardBg: '#F8FAFC',
+    cardBorder: '#CBD5E1',
     bgLight: '#F1F5F9',
     borderColor: '#CBD5E1',
     badgeBg: '#E2E8F0',
@@ -33,8 +35,10 @@ const VARIANTS = {
   },
   warning: {
     color: '#D97706',
-    bgLight: '#FFFBEB',
-    borderColor: '#FDE68A',
+    cardBg: '#FFFBEB',
+    cardBorder: '#FDE68A',
+    bgLight: '#FEF3C7',
+    borderColor: '#FCD34D',
     badgeBg: '#FEF3C7',
     badgeColor: '#92400E',
     defaultIcon: 'alert-circle-outline' as const,
@@ -43,8 +47,10 @@ const VARIANTS = {
   },
   danger: {
     color: '#DC2626',
-    bgLight: '#FEF2F2',
-    borderColor: '#FECACA',
+    cardBg: '#FEF2F2',
+    cardBorder: '#FCA5A5',
+    bgLight: '#FEE2E2',
+    borderColor: '#FCA5A5',
     badgeBg: '#FEE2E2',
     badgeColor: '#991B1B',
     defaultIcon: 'trash-outline' as const,
@@ -53,8 +59,10 @@ const VARIANTS = {
   },
   success: {
     color: '#059669',
-    bgLight: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    cardBg: '#F0FDF4',
+    cardBorder: '#86EFAC',
+    bgLight: '#DCFCE7',
+    borderColor: '#86EFAC',
     badgeBg: '#D1FAE5',
     badgeColor: '#065F46',
     defaultIcon: 'checkmark-circle-outline' as const,
@@ -63,8 +71,10 @@ const VARIANTS = {
   },
   info: {
     color: '#2563EB',
-    bgLight: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    cardBg: '#F0F7FF',
+    cardBorder: '#BFDBFE',
+    bgLight: '#DBEAFE',
+    borderColor: '#93C5FD',
     badgeBg: '#DBEAFE',
     badgeColor: '#1E40AF',
     defaultIcon: 'information-circle-outline' as const,
@@ -101,15 +111,22 @@ export default function ConfirmActionModal({
       <View style={styles.modalOverlay}>
         <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
         
-        <View style={styles.modalContent}>
+        <View style={[
+          styles.modalContent,
+          {
+            backgroundColor: theme.cardBg,
+            borderColor: theme.cardBorder,
+            borderWidth: 1.5,
+          }
+        ]}>
           {/* Botón cerrar X */}
           <TouchableOpacity 
-            style={styles.closeBtn}
+            style={[styles.closeBtn, { backgroundColor: '#FFFFFF', borderColor: theme.cardBorder }]}
             onPress={onClose}
             disabled={loading}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={20} color="#94A3B8" />
+            <Ionicons name="close" size={20} color="#64748B" />
           </TouchableOpacity>
 
           {/* Icon Box */}
@@ -134,7 +151,7 @@ export default function ConfirmActionModal({
           {/* Botones de Acción */}
           <View style={styles.btnRow}>
             <TouchableOpacity 
-              style={styles.cancelBtn}
+              style={[styles.cancelBtn, { backgroundColor: '#FFFFFF', borderColor: theme.cardBorder }]}
               onPress={onClose}
               disabled={loading}
               activeOpacity={0.7}

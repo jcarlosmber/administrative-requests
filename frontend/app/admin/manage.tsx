@@ -123,7 +123,15 @@ const MOCK_REQUESTS = [
 
 const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
 const STATUS_OPTIONS = ['Todos', 'Pendiente', 'En Progreso', 'Aprobado', 'Rechazado'];
+const PRIORITY_OPTIONS = ['Todas', 'Alta', 'Media', 'Baja'];
 const TIME_OPTIONS = ['Todos', 'Hoy', 'Últimos 7 días', 'Este mes', 'Personalizado'];
+
+const SORT_OPTIONS: { id: 'recent' | 'oldest' | 'priority' | 'requester'; label: string; icon: any }[] = [
+  { id: 'recent', label: 'Más recientes', icon: 'time-outline' },
+  { id: 'oldest', label: 'Más antiguas', icon: 'hourglass-outline' },
+  { id: 'priority', label: 'Prioridad', icon: 'alert-circle-outline' },
+  { id: 'requester', label: 'Solicitante (A-Z)', icon: 'person-outline' },
+];
 
 export default function ManageRequests() {
   const params = useLocalSearchParams<{ status?: string; priority?: string; today?: string; id?: string }>();
@@ -132,12 +140,26 @@ export default function ManageRequests() {
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState('Todas');
   const [statusFilter, setStatusFilter] = useState('Todos');
+  const [priorityFilter, setPriorityFilter] = useState<string>(
+    params.priority ? (params.priority.charAt(0).toUpperCase() + params.priority.slice(1).toLowerCase()) : 'Todas'
+  );
   const [timeFilter, setTimeFilter] = useState('Todos');
+  const [sortOrder, setSortOrder] = useState<'recent' | 'oldest' | 'priority' | 'requester'>('recent');
   const [customDates, setCustomDates] = useState({ start: '', end: '' });
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [successModal, setSuccessModal] = useState({ visible: false, message: '' });
-  const [confirmModal, setConfirmModal] = useState<{ visible: boolean; reqId: string; newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado'; actionName: string; category?: string; finalImage?: string | null; item?: AdministrativeRequest } | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{ 
+    visible: boolean; 
+    reqId: string; 
+    newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado'; 
+    actionName: string; 
+    category?: string; 
+    finalImage?: string | null; 
+    item?: AdministrativeRequest;
+    rejectReason?: string;
+  } | null>(null);
   const [driverModal, setDriverModal] = useState<{ visible: boolean; item: AdministrativeRequest | null }>({ visible: false, item: null });
+  const [dispatchModal, setDispatchModal] = useState<{ visible: boolean; item: any | null }>({ visible: false, item: null });
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
   const [driverPlate, setDriverPlate] = useState('');
@@ -184,7 +206,7 @@ export default function ManageRequests() {
     if (newStatus === 'resuelto') actionName = 'aprobar / finalizar';
     if (newStatus === 'rechazado') actionName = 'rechazar';
     if (newStatus === 'en_progreso') actionName = 'poner en progreso';
-    setConfirmModal({ visible: true, reqId: item.id, newStatus, actionName, category: item.category, finalImage: null, item });
+    setConfirmModal({ visible: true, reqId: item.id, newStatus, actionName, category: item.category, finalImage: null, item, rejectReason: '' });
   };
 
   const fetchRequests = async () => {
@@ -199,10 +221,10 @@ export default function ManageRequests() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado', finalImage?: string | null) => {
+  const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado', finalImage?: string | null, reason?: string) => {
     try {
       setLoading(true);
-      await requestService.updateStatus(id, newStatus, finalImage || undefined);
+      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason);
       await fetchRequests();
       let actionName = 'procesada';
       if (newStatus === 'resuelto') actionName = 'aprobada / finalizada';
@@ -216,6 +238,34 @@ export default function ManageRequests() {
     }
   };
 
+  // Contadores dinámicos por categoría
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, { total: number; pending: number }> = {
+      Todas: { total: requests.length, pending: requests.filter(r => r.status === 'pendiente').length },
+      Visitantes: { total: 0, pending: 0 },
+      Transporte: { total: 0, pending: 0 },
+      Mantenimiento: { total: 0, pending: 0 },
+      Salas: { total: 0, pending: 0 },
+      Parqueadero: { total: 0, pending: 0 },
+    };
+    requests.forEach(r => {
+      const catKey = {
+        visitors: 'Visitantes',
+        transport: 'Transporte',
+        maintenance: 'Mantenimiento',
+        rooms: 'Salas',
+        parking: 'Parqueadero'
+      }[r.category];
+      if (catKey && counts[catKey]) {
+        counts[catKey].total += 1;
+        if (r.status === 'pendiente') {
+          counts[catKey].pending += 1;
+        }
+      }
+    });
+    return counts;
+  }, [requests]);
+
   // Cargar datos cada vez que la pestaña reciba el foco
   useFocusEffect(
     useCallback(() => {
@@ -224,7 +274,6 @@ export default function ManageRequests() {
   );
 
   React.useEffect(() => {
-    // Crear un canal con nombre único para evitar colisiones en la caché global de Supabase
     const channelName = `admin_requests_changes_${Math.random().toString(36).substr(2, 9)}`;
     const channel = supabase
       .channel(channelName)
@@ -256,8 +305,21 @@ export default function ManageRequests() {
   const filteredData = useMemo(() => {
     const today = new Date().toDateString();
 
-    return requests.filter(item => {
-      const matchesSearch = (item.title + (item.category || '') + (item.description || '')).toLowerCase().includes(searchQuery.toLowerCase());
+    const filtered = requests.filter(item => {
+      // Búsqueda Profunda
+      const q = searchQuery.toLowerCase().trim();
+      let matchesSearch = true;
+      if (q) {
+        const title = (item.title || '').toLowerCase();
+        const desc = (item.description || '').toLowerCase();
+        const cat = (item.category || '').toLowerCase();
+        const user = ((item as any).user_name || item.metadata?.responsible?.name || item.metadata?.name || item.metadata?.requester_name || item.metadata?.passengerName || '').toLowerCase();
+        const dep = (item.metadata?.dependency || item.metadata?.responsible?.dependency || '').toLowerCase();
+        const notes = (item.admin_notes || item.metadata?.rejection_reason || '').toLowerCase();
+        const metaJson = JSON.stringify(item.metadata || {}).toLowerCase();
+        matchesSearch = title.includes(q) || desc.includes(q) || cat.includes(q) || user.includes(q) || dep.includes(q) || notes.includes(q) || metaJson.includes(q);
+      }
+
       const matchesService = serviceFilter === 'Todas' || 
                            (serviceFilter === 'Visitantes' && item.category === 'visitors') ||
                            (serviceFilter === 'Transporte' && item.category === 'transport') ||
@@ -268,12 +330,12 @@ export default function ManageRequests() {
       const itemStatus = item.status ? item.status.toLowerCase() : '';
       const matchesStatus = statusFilter === 'Todos' ||
                            (statusFilter === 'Pendiente' && itemStatus === 'pendiente') ||
-                           (statusFilter === 'En Progreso' && itemStatus === 'en_progreso') ||
+                           (statusFilter === 'En Progreso' && (itemStatus === 'en_progreso' || itemStatus === 'en curso' || itemStatus === 'en_curso')) ||
                            (statusFilter === 'Aprobado' && (itemStatus === 'resuelto' || itemStatus === 'aprobado')) ||
                            (statusFilter === 'Rechazado' && itemStatus === 'rechazado');
 
-      const matchesPriority = !params.priority || params.priority === 'all' || item.priority === String(params.priority);
-      const matchesToday = !params.today || new Date(item.created_at).toDateString() === today;
+      const itemPriority = (item.priority || 'media').toLowerCase();
+      const matchesPriority = priorityFilter === 'Todas' || itemPriority === priorityFilter.toLowerCase();
 
       const itemDate = new Date(item.created_at);
       const todayDate = new Date();
@@ -293,9 +355,101 @@ export default function ManageRequests() {
         matchesTime = itemDate >= start && itemDate <= end;
       }
 
-      return matchesSearch && matchesService && matchesStatus && matchesPriority && matchesToday && matchesTime;
+      return matchesSearch && matchesService && matchesStatus && matchesPriority && matchesTime;
     });
-  }, [requests, searchQuery, serviceFilter, statusFilter, timeFilter, customDates, params.priority, params.today]);
+
+    // Ordenamiento Dinámico
+    return filtered.sort((a, b) => {
+      if (sortOrder === 'recent') {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortOrder === 'oldest') {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      if (sortOrder === 'priority') {
+        const weight: Record<string, number> = { alta: 3, media: 2, baja: 1 };
+        const wA = weight[(a.priority || 'media').toLowerCase()] || 0;
+        const wB = weight[(b.priority || 'media').toLowerCase()] || 0;
+        if (wB !== wA) return wB - wA;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      if (sortOrder === 'requester') {
+        const userA = ((a as any).user_name || a.metadata?.responsible?.name || a.metadata?.name || a.title || '').toLowerCase();
+        const userB = ((b as any).user_name || b.metadata?.responsible?.name || b.metadata?.name || b.title || '').toLowerCase();
+        return userA.localeCompare(userB);
+      }
+      return 0;
+    });
+  }, [requests, searchQuery, serviceFilter, statusFilter, priorityFilter, timeFilter, customDates, sortOrder]);
+
+  // Exportación a CSV / Excel con codificación UTF-8 BOM
+  const exportToCSV = () => {
+    if (!filteredData || filteredData.length === 0) {
+      setSuccessModal({ visible: true, message: 'No hay solicitudes disponibles para exportar con los filtros actuales.' });
+      return;
+    }
+
+    const headers = [
+      'Radicado SASGE',
+      'Fecha Creacion',
+      'Categoria',
+      'Prioridad',
+      'Estado',
+      'Funcionario Solicitante',
+      'Dependencia',
+      'Titulo / Asunto',
+      'Descripcion General',
+      'Detalles Tecnicos',
+      'Observaciones / Motivo Rechazo'
+    ];
+
+    const rows = filteredData.map(item => {
+      const u = mapRequestToUI(item);
+      const catLabel = u.type;
+      const userName = (u.user || '').replace(/"/g, '""');
+      const depName = (u.dependency || '').replace(/"/g, '""');
+      const title = (item.title || '').replace(/"/g, '""');
+      const desc = (item.description || '').replace(/"/g, '""');
+      const metaValues = (u.uiMetadata || []).map((m: any) => `${m.label}: ${m.value}`).join(' | ').replace(/"/g, '""');
+      const notes = (item.admin_notes || item.metadata?.rejection_reason || '').replace(/"/g, '""');
+      const dateStr = new Date(item.created_at).toLocaleString('es-CO');
+
+      return [
+        `"#${item.id.slice(0, 8).toUpperCase()}"`,
+        `"${dateStr}"`,
+        `"${catLabel}"`,
+        `"${item.priority.toUpperCase()}"`,
+        `"${u.status}"`,
+        `"${userName}"`,
+        `"${depName}"`,
+        `"${title}"`,
+        `"${desc}"`,
+        `"${metaValues}"`,
+        `"${notes}"`
+      ].join(';');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
+
+    if (Platform.OS === 'web') {
+      try {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `SASGE_Gestion_Solicitudes_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setSuccessModal({ visible: true, message: `Reporte CSV generado y descargado exitosamente con ${filteredData.length} solicitudes.` });
+      } catch (e) {
+        console.error('Error al descargar CSV:', e);
+      }
+    } else {
+      setSuccessModal({ visible: true, message: `Reporte preparado con éxito (${filteredData.length} registros).` });
+    }
+  };
 
   const mapRequestToUI = (item: AdministrativeRequest) => {
     const typeLabel = {
@@ -443,15 +597,6 @@ export default function ManageRequests() {
     };
   };
 
-  const stats = useMemo(() => {
-    const today = new Date().toDateString();
-    return {
-      enCurso: requests.filter(r => r.status === 'en_progreso').length,
-      pendientes: requests.filter(r => r.status === 'pendiente').length,
-      hoy: requests.filter(r => new Date(r.created_at).toDateString() === today).length
-    };
-  }, [requests]);
-
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
@@ -467,15 +612,21 @@ export default function ManageRequests() {
               <View style={styles.headerContainer}>
                 <HeroSection isDesktop={isDesktop} />
                 <View style={styles.contentPadding}>
-                  <KPISection stats={stats} />
                   <SearchBar query={searchQuery} setQuery={setSearchQuery} />
                   
-                  <FilterRow 
-                    label="Filtrar Servicio" 
-                    data={CATEGORIES} 
+                  <ServiceTabsBar 
                     selected={serviceFilter} 
                     onSelect={setServiceFilter} 
-                    icon="layers-outline"
+                    badges={categoryCounts}
+                    isDesktop={isDesktop}
+                  />
+
+                  <FilterRow 
+                    label="Filtrar Prioridad" 
+                    data={PRIORITY_OPTIONS} 
+                    selected={priorityFilter} 
+                    onSelect={setPriorityFilter} 
+                    icon="flag-outline"
                   />
 
                   <FilterRow 
@@ -501,9 +652,66 @@ export default function ManageRequests() {
                   />
                   
                   <View style={styles.resultsHeader}>
-                    <Text style={styles.resultsTitle}>
-                      {filteredData.length} {filteredData.length === 1 ? 'Registro activo' : 'Registros bajo gestión'}
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.resultsTitle}>
+                        {filteredData.length} {filteredData.length === 1 ? 'Registro filtrado' : 'Registros bajo gestión'}
+                      </Text>
+                      {/* Chips de Ordenamiento Dinámico */}
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginTop: 8 }}>
+                        {SORT_OPTIONS.map(sortOpt => {
+                          const isActive = sortOrder === sortOpt.id;
+                          return (
+                            <TouchableOpacity
+                              key={sortOpt.id}
+                              onPress={() => setSortOrder(sortOpt.id)}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 8,
+                                backgroundColor: isActive ? '#0F172A' : '#FFFFFF',
+                                borderWidth: 1,
+                                borderColor: isActive ? '#0F172A' : '#CBD5E1',
+                              }}
+                            >
+                              <Ionicons name={sortOpt.icon} size={13} color={isActive ? '#FFFFFF' : '#64748B'} />
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: isActive ? '#FFFFFF' : '#475569' }}>
+                                {sortOpt.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+
+                    {/* Botón de Exportar a CSV / Excel */}
+                    <TouchableOpacity
+                      onPress={exportToCSV}
+                      activeOpacity={0.8}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: '#10B981',
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        shadowColor: '#10B981',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 5,
+                        elevation: 3,
+                        alignSelf: 'flex-start',
+                        marginTop: 4
+                      }}
+                    >
+                      <Ionicons name="download-outline" size={17} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                        Exportar CSV
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -519,6 +727,7 @@ export default function ManageRequests() {
                 onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} 
                 setViewerImage={setViewerImage} 
                 onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
+                onOpenDispatch={(reqItem: any) => setDispatchModal({ visible: true, item: reqItem })}
               />
             )}
             contentContainerStyle={styles.listContent}
@@ -534,9 +743,9 @@ export default function ManageRequests() {
       >
         <View style={styles.modalOverlay}>
           <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={styles.modalContent}>
-            <View style={[styles.modalIconBox, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', borderWidth: 1.5 }]}>
-              <Ionicons name="checkmark-circle" size={38} color={COLORS.success} />
+          <View style={[styles.modalContent, { backgroundColor: '#F0FDF4', borderColor: '#86EFAC', borderWidth: 1.5 }]}>
+            <View style={[styles.modalIconBox, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC', borderWidth: 1.5 }]}>
+              <Ionicons name="checkmark-circle" size={38} color="#059669" />
             </View>
             <Text style={styles.modalTitle}>¡Acción exitosa!</Text>
             <Text style={styles.modalMessage}>{successModal.message}</Text>
@@ -561,14 +770,14 @@ export default function ManageRequests() {
         <View style={styles.modalOverlay}>
           <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
           
-          <View style={[styles.modalContent, { maxWidth: 440, padding: 26 }]}>
+          <View style={[styles.modalContent, { maxWidth: 440, padding: 26, backgroundColor: '#F0F7FF', borderColor: '#BFDBFE', borderWidth: 1.5 }]}>
             {/* Botón cerrar X */}
             <TouchableOpacity 
-              style={styles.modalCloseBtn}
+              style={[styles.modalCloseBtn, { backgroundColor: '#FFFFFF', borderColor: '#BFDBFE' }]}
               onPress={() => setShowCustomDateModal(false)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons name="close" size={20} color="#94A3B8" />
+              <Ionicons name="close" size={20} color="#64748B" />
             </TouchableOpacity>
 
             {/* Icono con Squircle y Glow */}
@@ -990,8 +1199,10 @@ export default function ManageRequests() {
 
         const modalTheme = isApprove ? {
           color: '#059669',
-          bgLight: '#ECFDF5',
-          borderColor: '#A7F3D0',
+          cardBg: '#F0FDF4',
+          cardBorder: '#86EFAC',
+          bgLight: '#DCFCE7',
+          borderColor: '#86EFAC',
           badgeBg: '#D1FAE5',
           badgeColor: '#065F46',
           icon: 'checkmark-circle-outline' as const,
@@ -1002,8 +1213,10 @@ export default function ManageRequests() {
           gradient: ['#10B981', '#059669'] as [string, string],
         } : isReject ? {
           color: '#DC2626',
-          bgLight: '#FEF2F2',
-          borderColor: '#FECACA',
+          cardBg: '#FEF2F2',
+          cardBorder: '#FCA5A5',
+          bgLight: '#FEE2E2',
+          borderColor: '#FCA5A5',
           badgeBg: '#FEE2E2',
           badgeColor: '#991B1B',
           icon: 'close-circle-outline' as const,
@@ -1014,8 +1227,10 @@ export default function ManageRequests() {
           gradient: ['#EF4444', '#DC2626'] as [string, string],
         } : isProgress ? {
           color: '#2563EB',
-          bgLight: '#EFF6FF',
-          borderColor: '#BFDBFE',
+          cardBg: '#EFF6FF',
+          cardBorder: '#BFDBFE',
+          bgLight: '#DBEAFE',
+          borderColor: '#93C5FD',
           badgeBg: '#DBEAFE',
           badgeColor: '#1E40AF',
           icon: 'hourglass-outline' as const,
@@ -1026,8 +1241,10 @@ export default function ManageRequests() {
           gradient: ['#2563EB', '#1D4ED8'] as [string, string],
         } : {
           color: '#D97706',
-          bgLight: '#FFFBEB',
-          borderColor: '#FDE68A',
+          cardBg: '#FFFBEB',
+          cardBorder: '#FDE68A',
+          bgLight: '#FEF3C7',
+          borderColor: '#FCD34D',
           badgeBg: '#FEF3C7',
           badgeColor: '#92400E',
           icon: 'help-circle-outline' as const,
@@ -1076,14 +1293,23 @@ export default function ManageRequests() {
             <View style={styles.modalOverlay}>
               <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
               
-              <View style={[styles.modalContent, { maxWidth: 440, padding: 26 }]}>
+              <View style={[
+                styles.modalContent, 
+                { 
+                  maxWidth: 440, 
+                  padding: 26,
+                  backgroundColor: modalTheme.cardBg,
+                  borderColor: modalTheme.cardBorder,
+                  borderWidth: 1.5,
+                }
+              ]}>
                 {/* Botón cerrar X */}
                 <TouchableOpacity 
-                  style={styles.modalCloseBtn}
+                  style={[styles.modalCloseBtn, { backgroundColor: '#FFFFFF', borderColor: modalTheme.cardBorder }]}
                   onPress={() => setConfirmModal(null)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="close" size={20} color="#94A3B8" />
+                  <Ionicons name="close" size={20} color="#64748B" />
                 </TouchableOpacity>
 
                 {/* Icono con Squircle y Glow */}
@@ -1127,11 +1353,11 @@ export default function ManageRequests() {
                 {confirmModal.item && (
                   <View style={{
                     width: '100%',
-                    backgroundColor: '#F8FAFC',
+                    backgroundColor: '#FFFFFF',
                     borderRadius: 14,
                     padding: 12,
                     borderWidth: 1,
-                    borderColor: '#E2E8F0',
+                    borderColor: modalTheme.cardBorder,
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -1149,14 +1375,14 @@ export default function ManageRequests() {
                       </Text>
                     </View>
                     <View style={{
-                      backgroundColor: '#FFFFFF',
+                      backgroundColor: modalTheme.bgLight,
                       paddingHorizontal: 8,
                       paddingVertical: 4,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: '#E2E8F0',
+                      borderColor: modalTheme.cardBorder,
                     }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: modalTheme.color }}>
                         #{confirmModal.reqId.slice(0, 6).toUpperCase()}
                       </Text>
                     </View>
@@ -1204,15 +1430,61 @@ export default function ManageRequests() {
                   </View>
                 )}
 
+                {/* Motivo Obligatorio al Rechazar */}
+                {isReject && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#FEF2F2',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: '#FECACA',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#991B1B' }}>
+                          Justificación del Rechazo
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#991B1B', textTransform: 'uppercase' }}>Obligatorio</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#7F1D1D', marginBottom: 8, lineHeight: 16 }}>
+                      Indique el motivo o fundamento institucional por el cual se declina este requerimiento. Esta justificación quedará registrada y se notificará al solicitante.
+                    </Text>
+                    <TextInput
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#FCA5A5',
+                        padding: 10,
+                        fontSize: 13,
+                        color: '#0F172A',
+                        minHeight: 70,
+                        textAlignVertical: 'top'
+                      }}
+                      placeholder="Ej. No se cuenta con disponibilidad de cupos vehiculares para la fecha solicitada..."
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      value={confirmModal.rejectReason || ''}
+                      onChangeText={(t) => setConfirmModal({ ...confirmModal, rejectReason: t })}
+                    />
+                  </View>
+                )}
+
                 {/* Foto Final Obligatoria para Mantenimiento */}
                 {confirmModal.category === 'maintenance' && confirmModal.newStatus === 'resuelto' && (
                   <View style={{
                     width: '100%',
-                    backgroundColor: '#F8FAFC',
+                    backgroundColor: '#FFFFFF',
                     borderRadius: 14,
                     padding: 14,
                     borderWidth: 1,
-                    borderColor: '#E2E8F0',
+                    borderColor: modalTheme.cardBorder,
                     marginBottom: 12,
                   }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -1345,74 +1617,226 @@ export default function ManageRequests() {
                 )}
 
                 {/* Botones Cancelar / Confirmar */}
-                <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
-                  <TouchableOpacity 
-                    style={{
-                      flex: 1,
-                      height: 48,
-                      borderRadius: 14,
-                      backgroundColor: '#F1F5F9',
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      flexDirection: 'row',
-                      gap: 6
-                    }}
-                    onPress={() => setConfirmModal(null)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="close-circle-outline" size={17} color="#64748B" />
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
-                  </TouchableOpacity>
+                {(() => {
+                  const isMissingRejectReason = isReject && (!confirmModal.rejectReason || !confirmModal.rejectReason.trim());
+                  const isBlocked = isMissingMaintenancePhoto || isMissingRejectReason;
 
-                  <TouchableOpacity 
-                    style={{
-                      flex: 1.3,
-                      height: 48,
-                      borderRadius: 14,
-                      overflow: 'hidden',
-                      opacity: isMissingMaintenancePhoto ? 0.5 : 1,
-                      shadowColor: modalTheme.color,
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.25,
-                      shadowRadius: 8,
-                      elevation: 4
-                    }}
-                    disabled={isMissingMaintenancePhoto}
-                    onPress={() => {
-                      if (confirmModal) {
-                        updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage);
-                        setConfirmModal(null);
-                      }
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <LinearGradient
-                      colors={modalTheme.gradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        flexDirection: 'row',
-                        gap: 6,
-                        paddingHorizontal: 12
-                      }}
-                    >
-                      <Ionicons name={modalTheme.confirmIcon} size={17} color="#FFFFFF" />
-                      <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
-                        {modalTheme.confirmText}
-                      </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </View>
+                  return (
+                    <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
+                      <TouchableOpacity 
+                        style={{
+                          flex: 1,
+                          height: 48,
+                          borderRadius: 14,
+                          backgroundColor: '#FFFFFF',
+                          borderWidth: 1,
+                          borderColor: modalTheme.cardBorder,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          flexDirection: 'row',
+                          gap: 6
+                        }}
+                        onPress={() => setConfirmModal(null)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="close-circle-outline" size={17} color="#64748B" />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity 
+                        style={{
+                          flex: 1.3,
+                          height: 48,
+                          borderRadius: 14,
+                          overflow: 'hidden',
+                          opacity: isBlocked ? 0.5 : 1,
+                          shadowColor: modalTheme.color,
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.25,
+                          shadowRadius: 8,
+                          elevation: 4
+                        }}
+                        disabled={isBlocked}
+                        onPress={() => {
+                          if (confirmModal) {
+                            updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage, confirmModal.rejectReason?.trim());
+                            setConfirmModal(null);
+                          }
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <LinearGradient
+                          colors={modalTheme.gradient}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                            gap: 6,
+                            paddingHorizontal: 12
+                          }}
+                        >
+                          <Ionicons name={modalTheme.confirmIcon} size={17} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                            {modalTheme.confirmText}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
               </View>
             </View>
           </Modal>
         );
       })()}
+
+      {/* Modal Ficha de Despacho Oficial (Imprimible) */}
+      <Modal visible={dispatchModal.visible} transparent animationType="fade" onRequestClose={() => setDispatchModal({ visible: false, item: null })}>
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalContent, { maxWidth: 540, maxHeight: '90%', padding: 24 }]}>
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setDispatchModal({ visible: false, item: null })}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
+              {/* Membrete Institucional */}
+              <View style={{ alignItems: 'center', borderBottomWidth: 2, borderBottomColor: '#0F172A', paddingBottom: 14, marginBottom: 16 }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', letterSpacing: 1, textTransform: 'uppercase', textAlign: 'center' }}>
+                  Alcaldía Mayor de Bogotá D.C.
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#2563EB', marginTop: 2, textAlign: 'center' }}>
+                  Secretaría Jurídica Distrital — SASGE
+                </Text>
+                <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, marginTop: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1, textTransform: 'uppercase' }}>
+                    Comprobante Oficial de Despacho y Control
+                  </Text>
+                </View>
+              </View>
+
+              {dispatchModal.item && (
+                <View style={{ gap: 12 }}>
+                  {/* Datos Clave */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <View>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>RADICADO</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>#{dispatchModal.item.id?.slice(0, 8).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>FECHA EMISIÓN</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{new Date().toLocaleDateString('es-CO')}</Text>
+                    </View>
+                  </View>
+
+                  {/* Solicitante y Servicio */}
+                  <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 6 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Solicitante:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>{dispatchModal.item.user || dispatchModal.item.user_name || 'Funcionario'}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Dependencia:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>{dispatchModal.item.dependency || 'SJD'}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Tipo Servicio:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#2563EB' }}>{dispatchModal.item.type}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Estado Actual:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#10B981' }}>{dispatchModal.item.status}</Text>
+                    </View>
+                  </View>
+
+                  {/* Descripción del Servicio */}
+                  <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>
+                      Asunto / Detalle Requerimiento
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A', lineHeight: 18 }}>
+                      {dispatchModal.item.detail || dispatchModal.item.title}
+                    </Text>
+                  </View>
+
+                  {/* Metadatos Técnicos */}
+                  {dispatchModal.item.uiMetadata && dispatchModal.item.uiMetadata.length > 0 && (
+                    <View style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, gap: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>
+                        Ficha Técnica Operativa
+                      </Text>
+                      {dispatchModal.item.uiMetadata.map((m: any, idx: number) => (
+                        <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>{m.label}:</Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', flex: 1, textAlign: 'right', marginLeft: 10 }}>{m.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Conductor si aplica */}
+                  {dispatchModal.item.metadata?.driver && (
+                    <View style={{ backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', borderRadius: 10, padding: 12 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', marginBottom: 4 }}>
+                        Vehículo & Conductor Asignado
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#1E3A8A', fontWeight: '700' }}>
+                        Conductor: {dispatchModal.item.metadata.driver.name}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#1E3A8A' }}>
+                        Teléfono: {dispatchModal.item.metadata.driver.phone || 'N/A'} — Placa: {dispatchModal.item.metadata.driver.plate || 'Oficial'}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Zona de Firmas de Control */}
+                  <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#CBD5E1', flexDirection: 'row', justifyContent: 'space-between', gap: 14 }}>
+                    <View style={{ flex: 1, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#94A3B8', paddingTop: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569' }}>FIRMA SOLICITANTE</Text>
+                      <Text style={{ fontSize: 9, color: '#94A3B8' }}>C.C. / Recibido a Conformidad</Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center', borderTopWidth: 1, borderTopColor: '#94A3B8', paddingTop: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569' }}>FIRMA DESPACHO / CONTROL</Text>
+                      <Text style={{ fontSize: 9, color: '#94A3B8' }}>Seguridad / Conductor / Técnico</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Botones Imprimir / Cerrar */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+                <TouchableOpacity 
+                  style={{ flex: 1, height: 46, borderRadius: 12, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
+                  onPress={() => setDispatchModal({ visible: false, item: null })}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#64748B' }}>Cerrar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={{ flex: 1.3, height: 46, borderRadius: 12, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6 }}
+                  onPress={() => {
+                    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                      window.print();
+                    } else {
+                      setSuccessModal({ visible: true, message: 'Ficha lista para radicación y control.' });
+                    }
+                  }}
+                >
+                  <Ionicons name="print-outline" size={17} color="#FFFFFF" />
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#FFFFFF' }}>Imprimir Ficha</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* Visor de Imágenes a Pantalla Completa */}
       <Modal visible={viewerImage !== null} transparent={true} animationType="fade" onRequestClose={() => setViewerImage(null)}>
@@ -1447,19 +1871,74 @@ export default function ManageRequests() {
 }
 
 function Sidebar() {
+  const router = useRouter();
+
+  const NAV_ITEMS = [
+    { label: 'Panel Principal', icon: 'grid-outline' as const, path: '/admin' },
+    { label: 'Gestión Solicitudes', icon: 'list-circle-outline' as const, path: '/admin/manage', active: true },
+    { label: 'Reportes y Métricas', icon: 'bar-chart-outline' as const, path: '/admin/reports' },
+    { label: 'Configuración', icon: 'settings-outline' as const, path: '/admin/settings' },
+  ];
+
   return (
     <View style={styles.sidebar}>
       <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
       <View style={styles.sidebarContent}>
         <View style={styles.logoCircle}>
-          <Ionicons name="shield-checkmark-outline" size={40} color={COLORS.white} />
+          <Ionicons name="shield-checkmark-outline" size={38} color={COLORS.white} />
         </View>
-        <Text style={styles.sideTitle}>Gestión</Text>
+        <Text style={styles.sideTitle}>SASGE</Text>
         <Text style={styles.sideSubTitle}>Administración Central</Text>
-        <View style={{ width: 40, height: 4, backgroundColor: COLORS.white, marginVertical: 25, borderRadius: 2 }} />
-        <Text style={styles.sideDesc}>
-          Seguimiento detallado y trazabilidad de requerimientos administrativos para asegurar el cumplimiento del servicio.
-        </Text>
+        
+        <View style={{ width: 40, height: 4, backgroundColor: COLORS.accent, marginVertical: 20, borderRadius: 2 }} />
+
+        {/* Menú de Navegación Rápida */}
+        <View style={{ width: '100%', gap: 8, marginVertical: 10 }}>
+          {NAV_ITEMS.map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              onPress={() => router.push(item.path as any)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                backgroundColor: item.active ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                borderWidth: 1,
+                borderColor: item.active ? '#3B82F6' : 'rgba(255, 255, 255, 0.05)',
+              }}
+            >
+              <Ionicons name={item.icon} size={20} color={item.active ? '#60A5FA' : 'rgba(255, 255, 255, 0.7)'} />
+              <Text style={{
+                fontSize: 14,
+                fontWeight: item.active ? '800' : '600',
+                color: item.active ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)',
+              }}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={{ marginTop: 'auto', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' }}>
+          <TouchableOpacity
+            onPress={() => router.replace('/dashboard')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              borderRadius: 10,
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <Ionicons name="arrow-back-outline" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Portal Funcionario</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -1481,7 +1960,7 @@ function HeroSection({ isDesktop }: any) {
           <View style={{ flex: 1 }}>
             <Text style={styles.heroKicker}>PANEL DE ADMINISTRACIÓN</Text>
             <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Control y Seguimiento</Text>
-            <Text style={styles.heroSub} numberOfLines={2}>Monitoree el progreso de cada requerimiento</Text>
+            <Text style={styles.heroSub} numberOfLines={2}>Gestione requerimientos, asigne despachos y audite trazabilidad</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
             <TouchableOpacity 
@@ -1507,112 +1986,13 @@ function HeroSection({ isDesktop }: any) {
   );
 }
 
-function KPISection({ stats }: { stats: { enCurso: number, pendientes: number, hoy: number } }) {
-  return (
-    <View style={styles.kpiRow}>
-      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.info} icon="swap-horizontal" index={0} />
-      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" index={1} />
-      <KPICard label="Hoy" value={stats.hoy.toString()} color={COLORS.accent} icon="calendar" index={2} />
-    </View>
-  );
-}
-
-function KPICard({ label, value, color, icon, index }: any) {
-  const hoverAnim = React.useRef(new Animated.Value(0)).current;
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(20)).current;
-
-  React.useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 450,
-        delay: index * 100,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        friction: 8,
-        tension: 35,
-        delay: index * 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const handleHoverIn = () => {
-    Animated.spring(hoverAnim, {
-      toValue: 1,
-      friction: 6,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleHoverOut = () => {
-    Animated.spring(hoverAnim, {
-      toValue: 0,
-      friction: 6,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const translateY = Animated.add(
-    slideAnim,
-    hoverAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, -6],
-    })
-  );
-
-  const scale = hoverAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.025],
-  });
-
-  return (
-    <Pressable
-      onHoverIn={handleHoverIn}
-      onHoverOut={handleHoverOut}
-      onPressIn={handleHoverIn}
-      onPressOut={handleHoverOut}
-      style={{ flex: 1 }}
-    >
-      <Animated.View style={[
-        styles.kpiCard,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY }, { scale }],
-          borderTopWidth: 4,
-          borderTopColor: color,
-        }
-      ]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-          <View>
-            <Text style={styles.kpiValue}>{value}</Text>
-            <Text style={styles.kpiLabel}>{label}</Text>
-          </View>
-          <View style={[styles.kpiIcon, { backgroundColor: `${color}15`, width: 50, height: 50, borderRadius: 25 }]}>
-            <Ionicons name={icon} size={24} color={color} />
-          </View>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, width: '100%', gap: 4 }}>
-          <Ionicons name="time-outline" size={12} color={COLORS.muted} />
-          <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '600' }}>Actualizado ahora</Text>
-        </View>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
 function SearchBar({ query, setQuery }: any) {
   return (
     <View style={styles.searchContainer}>
       <Ionicons name="search" size={20} color={COLORS.muted} />
       <TextInput
         style={styles.searchInput}
-        placeholder="Buscar por usuario, tipo o dependencia..."
+        placeholder="Buscar por solicitante, placa, visitante, conductor o asunto..."
         value={query}
         onChangeText={setQuery}
         placeholderTextColor={COLORS.muted}
@@ -1626,7 +2006,221 @@ function SearchBar({ query, setQuery }: any) {
   );
 }
 
-function FilterRow({ label, data, selected, onSelect, icon }: any) {
+const SERVICE_CONFIG: Record<string, {
+  label: string;
+  icon: any;
+  color: string;
+  gradient: [string, string];
+  bgLight: string;
+  borderColor: string;
+}> = {
+  Todas: {
+    label: 'Todas',
+    icon: 'apps',
+    color: '#0F172A',
+    gradient: ['#1E293B', '#0F172A'],
+    bgLight: '#F1F5F9',
+    borderColor: '#CBD5E1',
+  },
+  Visitantes: {
+    label: 'Visitantes',
+    icon: 'people',
+    color: '#E11D48',
+    gradient: ['#F43F5E', '#BE123C'],
+    bgLight: '#FFE4E6',
+    borderColor: '#FDA4AF',
+  },
+  Transporte: {
+    label: 'Transporte',
+    icon: 'car-sport',
+    color: '#0284C7',
+    gradient: ['#0EA5E9', '#0369A1'],
+    bgLight: '#E0F2FE',
+    borderColor: '#7DD3FC',
+  },
+  Mantenimiento: {
+    label: 'Mantenimiento',
+    icon: 'construct',
+    color: '#0D9488',
+    gradient: ['#14B8A6', '#0F766E'],
+    bgLight: '#CCFBF1',
+    borderColor: '#5EEAD4',
+  },
+  Salas: {
+    label: 'Salas',
+    icon: 'easel',
+    color: '#7C3AED',
+    gradient: ['#8B5CF6', '#6D28D9'],
+    bgLight: '#EDE9FE',
+    borderColor: '#C4B5FD',
+  },
+  Parqueadero: {
+    label: 'Parqueadero',
+    icon: 'car',
+    color: '#EA580C',
+    gradient: ['#FB923C', '#C2410C'],
+    bgLight: '#FFEDD5',
+    borderColor: '#FDBA74',
+  },
+};
+
+function ServiceTabsBar({ 
+  selected, 
+  onSelect, 
+  badges, 
+  isDesktop 
+}: { 
+  selected: string; 
+  onSelect: (cat: string) => void; 
+  badges: Record<string, { total: number; pending: number }>; 
+  isDesktop: boolean; 
+}) {
+  const categories = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas', 'Parqueadero'];
+
+  return (
+    <View style={{ width: '100%', marginTop: 22, marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, paddingLeft: 2 }}>
+        <Ionicons name="layers" size={16} color={COLORS.accent} />
+        <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 1 }}>
+          Filtrar por Servicio
+        </Text>
+      </View>
+
+      {/* Grid de Tabs de Ancho Completo */}
+      <View style={{
+        width: '100%',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        justifyContent: 'space-between',
+      }}>
+        {categories.map((catKey) => {
+          const cfg = SERVICE_CONFIG[catKey] || SERVICE_CONFIG.Todas;
+          const isSelected = selected === catKey;
+          const count = badges[catKey]?.total ?? 0;
+          const pending = badges[catKey]?.pending ?? 0;
+
+          // En desktop: 6 columnas uniformes (~15.4%). En móvil/tablet: 3 columnas (~31.3%)
+          const tabWidth = isDesktop ? '15.4%' : '31.3%';
+
+          return (
+            <TouchableOpacity
+              key={catKey}
+              onPress={() => onSelect(catKey)}
+              activeOpacity={0.85}
+              style={{
+                width: tabWidth,
+                minHeight: 76,
+                borderRadius: 16,
+                overflow: 'hidden',
+                backgroundColor: isSelected ? 'transparent' : '#FFFFFF',
+                borderWidth: isSelected ? 0 : 1.5,
+                borderColor: isSelected ? 'transparent' : cfg.borderColor,
+                shadowColor: isSelected ? cfg.color : '#0F172A',
+                shadowOffset: { width: 0, height: isSelected ? 5 : 2 },
+                shadowOpacity: isSelected ? 0.28 : 0.05,
+                shadowRadius: isSelected ? 10 : 4,
+                elevation: isSelected ? 6 : 2,
+              }}
+            >
+              {isSelected ? (
+                <LinearGradient
+                  colors={cfg.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    flex: 1,
+                    padding: 10,
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      backgroundColor: 'rgba(255,255,255,0.22)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                      <Ionicons name={cfg.icon} size={18} color="#FFFFFF" />
+                    </View>
+                    <View style={{
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 10,
+                    }}>
+                      <Text style={{ fontSize: 12, fontWeight: '900', color: '#FFFFFF' }}>
+                        {count}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ marginTop: 6, width: '100%' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.2 }} numberOfLines={1}>
+                      {cfg.label}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.9)', fontWeight: '700', marginTop: 1 }}>
+                      {pending > 0 ? `⚡ ${pending} pend.` : '✓ Al día'}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              ) : (
+                <View style={{
+                  flex: 1,
+                  padding: 10,
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  backgroundColor: `${cfg.bgLight}60`,
+                }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <View style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      backgroundColor: cfg.bgLight,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: cfg.borderColor,
+                    }}>
+                      <Ionicons name={cfg.icon} size={17} color={cfg.color} />
+                    </View>
+                    <View style={{
+                      backgroundColor: '#FFFFFF',
+                      paddingHorizontal: 7,
+                      paddingVertical: 2,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                    }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: cfg.color }}>
+                        {count}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ marginTop: 6, width: '100%' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }} numberOfLines={1}>
+                      {cfg.label}
+                    </Text>
+                    <Text style={{ fontSize: 10, color: pending > 0 ? '#D97706' : '#64748B', fontWeight: pending > 0 ? '700' : '500', marginTop: 1 }}>
+                      {pending > 0 ? `⚠️ ${pending} pend.` : 'Sin pend.'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function FilterRow({ label, data, selected, onSelect, icon, badges }: any) {
   return (
     <View style={styles.filterSection}>
       <View style={styles.filterHeader}>
@@ -1634,29 +2228,116 @@ function FilterRow({ label, data, selected, onSelect, icon }: any) {
         <Text style={styles.filterLabel}>{label}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-        {data.map((item: string) => (
-          <Pressable
-            key={item}
-            onPress={() => onSelect(item)}
-            style={[
-              styles.filterChip,
-              selected === item && styles.filterChipActive
-            ]}
-          >
-            <Text style={[
-              styles.filterChipText,
-              selected === item && styles.filterChipTextActive
-            ]}>
-              {item}
-            </Text>
-          </Pressable>
-        ))}
+        {data.map((item: string) => {
+          const isSelected = selected === item;
+          const countInfo = badges ? badges[item] : null;
+
+          return (
+            <Pressable
+              key={item}
+              onPress={() => onSelect(item)}
+              style={[
+                styles.filterChip,
+                isSelected && styles.filterChipActive,
+                { flexDirection: 'row', alignItems: 'center', gap: 6 }
+              ]}
+            >
+              {/* Punto de color para prioridades si aplica */}
+              {item === 'Alta' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />}
+              {item === 'Media' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B' }} />}
+              {item === 'Baja' && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' }} />}
+
+              <Text style={[
+                styles.filterChipText,
+                isSelected && styles.filterChipTextActive
+              ]}>
+                {item}
+              </Text>
+
+              {countInfo !== undefined && countInfo !== null && (
+                <View style={{
+                  backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F1F5F9',
+                  paddingHorizontal: 7,
+                  paddingVertical: 1,
+                  borderRadius: 10,
+                  marginLeft: 2
+                }}>
+                  <Text style={{
+                    fontSize: 11,
+                    fontWeight: '800',
+                    color: isSelected ? '#FFFFFF' : '#64748B'
+                  }}>
+                    {countInfo.total}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );
 }
 
-function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage, onAssignDriver }: any) {
+// Función auxiliar para calcular tiempo transcurrido / SLA
+function getSLAInfo(createdAt: string, status: string) {
+  const statusLower = (status || '').toLowerCase();
+  const isResolved = ['resuelto', 'aprobado', 'completada'].includes(statusLower);
+  const isRejected = ['rechazado', 'rechazada'].includes(statusLower);
+
+  if (isResolved) {
+    return {
+      text: 'Finalizado',
+      color: '#059669',
+      bg: '#ECFDF5',
+      icon: 'checkmark-circle-outline' as const,
+      isAlert: false
+    };
+  }
+
+  if (isRejected) {
+    return {
+      text: 'Rechazado',
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      icon: 'close-circle-outline' as const,
+      isAlert: false
+    };
+  }
+
+  const now = new Date().getTime();
+  const created = new Date(createdAt).getTime();
+  const diffHours = Math.floor((now - created) / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffHours >= 48) {
+    return {
+      text: `SLA Crítico (+${diffDays}d)`,
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      icon: 'alert-circle' as const,
+      isAlert: true
+    };
+  } else if (diffHours >= 24) {
+    return {
+      text: `SLA En Riesgo (${diffHours}h)`,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      icon: 'time' as const,
+      isAlert: true
+    };
+  } else {
+    return {
+      text: diffHours <= 0 ? 'Reciente (<1h)' : `En tiempo (${diffHours}h)`,
+      color: '#2563EB',
+      bg: '#EFF6FF',
+      icon: 'hourglass-outline' as const,
+      isAlert: false
+    };
+  }
+}
+
+function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = false, onSuccessAction, setViewerImage, onAssignDriver, onOpenDispatch }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
@@ -1664,8 +2345,7 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
   const [comment, setComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
-  const handleIn = () => Animated.spring(scale, { toValue: 0.99, useNativeDriver: true }).start();
-  const handleOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  const sla = getSLAInfo(item.created_at, item.status);
 
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase().replace(' ', '_');
@@ -1702,6 +2382,11 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
     }
   };
 
+  const rejectionReasonText = item.admin_notes || item.metadata?.rejection_reason;
+  const isPending = item.status.toLowerCase() === 'pendiente';
+  const isInProgress = ['en_progreso', 'en progreso', 'en curso'].includes(item.status.toLowerCase());
+  const isClosed = ['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase());
+
   return (
     <Animated.View style={[styles.card, isDesktop && { flex: 1, marginHorizontal: 0 }, { transform: [{ scale }], backgroundColor: `${getStatusColor(item.status)}0D`, borderColor: `${getStatusColor(item.status)}25` }]}>
       <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
@@ -1717,6 +2402,24 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                     {item.priority}
                   </Text>
                 </View>
+
+                {/* Badge de Indicador SLA */}
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  backgroundColor: sla.bg,
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: `${sla.color}30`
+                }}>
+                  <Ionicons name={sla.icon} size={11} color={sla.color} />
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: sla.color }}>
+                    {sla.text}
+                  </Text>
+                </View>
               </View>
               <Text style={styles.cardTitle}>{item.user}</Text>
               <Text style={styles.cardSubTitleText}>{item.dependency}</Text>
@@ -1727,7 +2430,31 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
             </View>
           </TouchableOpacity>
           
-          <Text style={styles.cardDetail} numberOfLines={expanded ? 0 : 1}>{item.detail}</Text>
+          <Text style={styles.cardDetail} numberOfLines={expanded ? 0 : 2}>{item.detail}</Text>
+
+          {/* Banner de Motivo de Rechazo Visible Si Aplica */}
+          {item.status.toLowerCase() === 'rechazado' && rejectionReasonText && (
+            <View style={{
+              backgroundColor: '#FEF2F2',
+              borderRadius: 12,
+              padding: 12,
+              borderWidth: 1,
+              borderColor: '#FECACA',
+              marginTop: 6,
+              marginBottom: 10,
+              gap: 4
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#991B1B', textTransform: 'uppercase' }}>
+                  Motivo de Rechazo:
+                </Text>
+              </View>
+              <Text style={{ fontSize: 13, color: '#7F1D1D', fontWeight: '500', lineHeight: 18 }}>
+                "{rejectionReasonText}"
+              </Text>
+            </View>
+          )}
           
           {expanded && (
             <View style={styles.expandedInfo}>
@@ -1765,49 +2492,91 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
                 ))}
               </View>
 
-              {item.attachments && item.attachments.length > 0 && (
+              {/* Evidencia Fotográfica Mejorada (Galería Antes/Después) */}
+              {((item.attachments && item.attachments.length > 0) || item.metadata?.finalImage) && (
                 <>
                   <View style={styles.metaDivider} />
-                  <Text style={styles.infoTitle}>EVIDENCIA ADJUNTA</Text>
-                  <View style={{ gap: 12 }}>
-                    {item.attachments.map((attach: string, idx: number) => {
-                      const finalUri = attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
-                      return (
-                        <View key={idx} style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
-                          <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(finalUri)}>
-                            <Image 
-                              source={{ uri: finalUri }} 
-                              style={{ width: '100%', height: 160 }} 
-                              resizeMode="cover" 
-                            />
-                          </TouchableOpacity>
-                          <View style={{ padding: 10 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.text }}>{attach.split('/').pop() || attach}</Text>
+                  <Text style={styles.infoTitle}>REGISTRO Y EVIDENCIA FOTOGRÁFICA</Text>
+                  
+                  <View style={{ gap: 14 }}>
+                    {/* Evidencia Inicial / Reporte */}
+                    {item.attachments && item.attachments.length > 0 && (
+                      <View style={{ gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase' }}>Reporte Inicial (Antes)</Text>
+                          </View>
+                          <Text style={{ fontSize: 11, color: COLORS.muted }}>{item.attachments.length} archivo(s)</Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                          {item.attachments.map((attach: string, idx: number) => {
+                            const finalUri = attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
+                            return (
+                              <TouchableOpacity 
+                                key={idx} 
+                                activeOpacity={0.85} 
+                                onPress={() => setViewerImage(finalUri)}
+                                style={{
+                                  width: isDesktop ? '31%' : '47%',
+                                  height: 120,
+                                  borderRadius: 12,
+                                  overflow: 'hidden',
+                                  borderWidth: 1,
+                                  borderColor: COLORS.line,
+                                  backgroundColor: COLORS.white,
+                                  position: 'relative'
+                                }}
+                              >
+                                <Image 
+                                  source={{ uri: finalUri }} 
+                                  style={{ width: '100%', height: '100%' }} 
+                                  resizeMode="cover" 
+                                />
+                                <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.6)', padding: 4, borderRadius: 6 }}>
+                                  <Ionicons name="expand-outline" size={14} color="#FFF" />
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })}
                         </View>
                       </View>
-                      );
-                    })}
-                  </View>
-                </>
-              )}
-              
-              {item.metadata?.finalImage && (
-                <>
-                  <View style={styles.metaDivider} />
-                  <Text style={styles.infoTitle}>EVIDENCIA DE FINALIZACIÓN</Text>
-                  <View style={{ gap: 12 }}>
-                    <View style={{ borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.white }}>
-                      <TouchableOpacity activeOpacity={0.8} onPress={() => setViewerImage(item.metadata.finalImage)}>
-                        <Image 
-                          source={{ uri: item.metadata.finalImage }} 
-                          style={{ width: '100%', height: 160 }} 
-                          resizeMode="cover" 
-                        />
-                      </TouchableOpacity>
-                      <View style={{ padding: 10 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.text }}>Foto Final</Text>
+                    )}
+
+                    {/* Evidencia Final / Trabajo Concluido */}
+                    {item.metadata?.finalImage && (
+                      <View style={{ gap: 8, marginTop: item.attachments?.length ? 6 : 0 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#065F46', textTransform: 'uppercase' }}>Trabajo Finalizado (Después)</Text>
+                          </View>
+                        </View>
+
+                        <TouchableOpacity 
+                          activeOpacity={0.85} 
+                          onPress={() => setViewerImage(item.metadata.finalImage)}
+                          style={{
+                            width: isDesktop ? '31%' : '100%',
+                            height: 140,
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            borderWidth: 1.5,
+                            borderColor: '#10B981',
+                            backgroundColor: COLORS.white,
+                            position: 'relative'
+                          }}
+                        >
+                          <Image 
+                            source={{ uri: item.metadata.finalImage }} 
+                            style={{ width: '100%', height: '100%' }} 
+                            resizeMode="cover" 
+                          />
+                          <View style={{ position: 'absolute', top: 6, right: 6, backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFF' }}>Foto de Cierre</Text>
+                          </View>
+                        </TouchableOpacity>
                       </View>
-                    </View>
+                    )}
                   </View>
                 </>
               )}
@@ -1863,91 +2632,90 @@ function RequestListItem({ item, onUpdateStatus, onRefresh, initiallyExpanded = 
             </View>
           )}
 
+          {/* Pie de Tarjeta con Acciones Rápidas Directas */}
           <View style={styles.cardFooter}>
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
               <Text style={styles.metaText}>{item.date}</Text>
             </View>
-            <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10 }]}>
+
+            <View style={[styles.actionButtons, { flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1, paddingLeft: 10, gap: 6 }]}>
+              {/* Botón de Ficha de Despacho Oficial */}
               <TouchableOpacity 
-                style={[styles.actionBtn, { borderColor: COLORS.text, backgroundColor: COLORS.text, height: 32 }]}
+                style={[styles.actionBtn, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1', height: 34 }]}
+                onPress={() => onOpenDispatch && onOpenDispatch(item)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="receipt-outline" size={15} color="#334155" />
+                <Text style={[styles.actionBtnText, { color: '#334155' }]}>Ficha</Text>
+              </TouchableOpacity>
+
+              {/* Botón Detalles / Ampliar */}
+              <TouchableOpacity 
+                style={[styles.actionBtn, { borderColor: COLORS.text, backgroundColor: COLORS.text, height: 34 }]}
                 onPress={() => setExpanded(!expanded)}
               >
-                <Text style={[styles.actionBtnText, { color: COLORS.white }]}>{expanded ? 'Ocultar' : 'Ampliar'}</Text>
+                <Text style={[styles.actionBtnText, { color: COLORS.white }]}>{expanded ? 'Ocultar' : 'Detalles'}</Text>
                 <Ionicons name={expanded ? "chevron-up" : "chevron-down"} size={14} color={COLORS.white} />
               </TouchableOpacity>
 
-              {expanded && (
+              {/* ACCIONES RÁPIDAS DIRECTAS (No requieren forzar expansión) */}
+              {isPending && (
                 <>
-                  {/* Botones para solicitudes en estado Pendiente */}
-                  {item.status.toLowerCase() === 'pendiente' && (
-                    <>
-                      {/* Grupo 1: Mantenimiento, Sala Especial */}
-                      { (item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
-                        <TouchableOpacity 
-                          style={[styles.actionBtn, styles.processBtn]}
-                          onPress={() => onUpdateStatus(item, 'en_progreso')}
-                        >
-                          <Ionicons name="play-outline" size={16} color={COLORS.white} />
-                          <Text style={styles.actionBtnText}>Procesar</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {/* Grupo 2: Visitantes, Parqueadero, Sala Estándar */}
-                      { (item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
-                        <TouchableOpacity 
-                          style={[styles.actionBtn, styles.successBtn]}
-                          onPress={() => onUpdateStatus(item, 'resuelto')}
-                        >
-                          <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
-                          <Text style={styles.actionBtnText}>Aprobar</Text>
-                        </TouchableOpacity>
-                      )}
-
-                      {/* Grupo 3: Transporte con Asignación de Conductor */}
-                      { item.category === 'transport' && (
-                        <TouchableOpacity 
-                          style={[styles.actionBtn, styles.successBtn]}
-                          onPress={() => onAssignDriver && onAssignDriver(item)}
-                        >
-                          <Ionicons name="checkmark-outline" size={16} color={COLORS.white} />
-                          <Text style={styles.actionBtnText}>Aprobar</Text>
-                        </TouchableOpacity>
-                      )}
-                    </>
-                  )}
-
-                  {['en_progreso', 'en progreso'].includes(item.status.toLowerCase()) && (
+                  {/* Grupo 1: Mantenimiento, Sala Especial -> Procesar */}
+                  {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
                     <TouchableOpacity 
-                       style={[styles.actionBtn, styles.successBtn]}
-                       onPress={() => onUpdateStatus(item, 'resuelto')}
+                      style={[styles.actionBtn, styles.processBtn, { height: 34 }]}
+                      onPress={() => onUpdateStatus(item, 'en_progreso')}
                     >
-                      <Ionicons name="checkmark-done-outline" size={16} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Finalizar</Text>
+                      <Ionicons name="play-outline" size={15} color={COLORS.white} />
+                      <Text style={styles.actionBtnText}>Procesar</Text>
                     </TouchableOpacity>
                   )}
 
-                  {/* Botón para solicitudes programadas (fallback de mock data) */}
-                  {item.status.toLowerCase() === 'programada' && (
+                  {/* Grupo 2: Visitantes, Parqueadero, Sala Estándar -> Aprobar directo */}
+                  {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
                     <TouchableOpacity 
-                      style={[styles.actionBtn, styles.infoBtn]}
+                      style={[styles.actionBtn, styles.successBtn, { height: 34 }]}
                       onPress={() => onUpdateStatus(item, 'resuelto')}
                     >
-                      <Ionicons name="car-outline" size={16} color={COLORS.white} />
-                      <Text style={styles.actionBtnText}>Despachar</Text>
+                      <Ionicons name="checkmark-outline" size={15} color={COLORS.white} />
+                      <Text style={styles.actionBtnText}>Aprobar</Text>
                     </TouchableOpacity>
                   )}
-                  {/* Botón de Rechazo (Equis Roja) para cualquier solicitud activa */}
-                  {!['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase()) && (
+
+                  {/* Grupo 3: Transporte con Asignación de Conductor */}
+                  {item.category === 'transport' && (
                     <TouchableOpacity 
-                      style={[styles.actionBtn, styles.rejectBtn]}
-                      onPress={() => onUpdateStatus(item, 'rechazado')}
+                      style={[styles.actionBtn, styles.successBtn, { height: 34 }]}
+                      onPress={() => onAssignDriver && onAssignDriver(item)}
                     >
-                      <Ionicons name="close-outline" size={16} color={COLORS.white} />
-                      <Text style={[styles.actionBtnText, { color: COLORS.white }]}>Rechazar</Text>
+                      <Ionicons name="car-outline" size={15} color={COLORS.white} />
+                      <Text style={styles.actionBtnText}>Asignar</Text>
                     </TouchableOpacity>
                   )}
                 </>
+              )}
+
+              {isInProgress && (
+                <TouchableOpacity 
+                  style={[styles.actionBtn, styles.successBtn, { height: 34 }]}
+                  onPress={() => onUpdateStatus(item, 'resuelto')}
+                >
+                  <Ionicons name="checkmark-done-outline" size={15} color={COLORS.white} />
+                  <Text style={styles.actionBtnText}>Finalizar</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Botón de Rechazo (Equis Roja) accesible directamente si la solicitud no está cerrada */}
+              {!isClosed && (
+                <TouchableOpacity 
+                  style={[styles.actionBtn, styles.rejectBtn, { height: 34 }]}
+                  onPress={() => onUpdateStatus(item, 'rechazado')}
+                >
+                  <Ionicons name="close-outline" size={15} color={COLORS.white} />
+                  <Text style={[styles.actionBtnText, { color: COLORS.white }]}>Rechazar</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
