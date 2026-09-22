@@ -157,6 +157,7 @@ export default function AdminSettings() {
 
   // Inputs para añadir correos en tiempo real
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({
+    manager: '',
     maintenance: '',
     visitors: '',
     transport: '',
@@ -821,7 +822,7 @@ export default function AdminSettings() {
   // ==========================================
   // MANEJADORES PARA CORREOS (SERVICE EMAILS)
   // ==========================================
-  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'transport' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking') => {
+  const addServiceEmail = async (type: 'manager' | 'maintenance' | 'visitors' | 'transport' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking') => {
     const emailVal = emailInputs[type]?.trim();
     if (!emailVal) return;
 
@@ -1375,6 +1376,7 @@ export default function AdminSettings() {
                   <SectionHeader title="Correos de Notificación y Gestión" kicker="CANALES DE ATENCIÓN" />
                   <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                     {([
+                      { type: 'manager', title: 'Equipo Gestor / Aprobadores', icon: 'shield-checkmark', color: '#1E40AF', desc: 'Notificación inmediata de nuevas solicitudes para revisión, trámite y aprobación', isHighlight: true },
                       { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F', desc: 'Alertas para reparaciones e infraestructura' },
                       { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946', desc: 'Control de accesos y seguridad en portería' },
                       { type: 'transport', title: 'Transporte Oficial', icon: 'car-sport', color: '#0077B6', desc: 'Alertas y coordinación de traslados vehiculares' },
@@ -1382,18 +1384,45 @@ export default function AdminSettings() {
                       { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7', desc: 'Eventos masivos (Auditorio y salas magnas)' },
                       { type: 'rooms_tic', title: 'Equipos TIC (Salas)', icon: 'laptop', color: '#0284C7', desc: 'Proyector, Laptop y soporte técnico tecnológico' },
                       { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261', desc: 'Gestión y asignación de cupos vehiculares' }
-                    ] as const).map(({ type, title, icon, color, desc }) => {
+                    ] as const).map(({ type, title, icon, color, desc, ...itemProps }) => {
+                      const isHighlight = (itemProps as any).isHighlight;
                       const emails = (serviceEmails || []).filter(e => e && e.service_type === type);
                       return (
-                        <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%' }]}>
+                        <View 
+                          key={type} 
+                          style={[
+                            { 
+                              backgroundColor: COLORS.white, 
+                              borderRadius: 24, 
+                              padding: 25, 
+                              borderWidth: isHighlight ? 1.8 : 1, 
+                              borderColor: isHighlight ? '#3B82F6' : COLORS.line,
+                              shadowColor: isHighlight ? '#2563EB' : '#000',
+                              shadowOffset: { width: 0, height: 4 },
+                              shadowOpacity: isHighlight ? 0.08 : 0.03,
+                              shadowRadius: 10,
+                              elevation: isHighlight ? 3 : 1
+                            }, 
+                            isDesktop && { width: isHighlight ? '100%' : '48%' }
+                          ]}
+                        >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                             <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
                               <Ionicons name={icon as any} size={24} color={color} />
                             </View>
                             <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
-                                {title}
-                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                                  {title}
+                                </Text>
+                                {isHighlight && (
+                                  <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#1D4ED8', textTransform: 'uppercase' }}>
+                                      Principal
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
                               <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
                                 {desc}
                               </Text>

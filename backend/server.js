@@ -799,17 +799,19 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       }
     }
 
-    if (adminServiceKey) {
-      try {
-        const adminEmailsRes = await pool.query('SELECT email FROM service_emails WHERE service_type = $1', [adminServiceKey]);
-        const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-        if (adminEmails.length > 0) {
-          const combinedAdminEmails = adminEmails.join(', ');
-          emailService.sendAdminNewRequestNotification(combinedAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
-        }
-      } catch (adminNotifyErr) {
-        console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
+    try {
+      const adminEmailsRes = await pool.query(
+        'SELECT email FROM service_emails WHERE service_type = $1 OR service_type = $2',
+        [adminServiceKey || '', 'manager']
+      );
+      const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+      const uniqueAdminEmails = [...new Set(adminEmails)];
+      if (uniqueAdminEmails.length > 0) {
+        const combinedAdminEmails = uniqueAdminEmails.join(', ');
+        emailService.sendAdminNewRequestNotification(combinedAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
       }
+    } catch (adminNotifyErr) {
+      console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
     }
 
     // 3. Notificación automática a la Oficina de TIC si es solicitud de sala con Proyector y/o Laptop
@@ -1038,6 +1040,41 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
         const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
         u.name = displayName;
         emailService.sendRequestUpdatedNotification(u, updatedRequest);
+      }
+
+      // Notificar a equipo de servicio y gestores si pasa a en_progreso o resuelto
+      let serviceEmailCategory = updatedRequest.category?.toLowerCase() || '';
+      let notifyAdmin = false;
+      if (serviceEmailCategory === 'visitors' && (status === 'en_progreso' || status === 'resuelto')) notifyAdmin = true;
+      if (serviceEmailCategory === 'parking' && status === 'resuelto') notifyAdmin = true;
+      if (serviceEmailCategory === 'maintenance' && status === 'en_progreso') notifyAdmin = true;
+      if (serviceEmailCategory === 'transport' && status === 'en_progreso') notifyAdmin = true;
+
+      if (serviceEmailCategory === 'rooms') {
+        const isLargeScale = updatedRequest.metadata?.info === 'Especial' || (parseInt(updatedRequest.metadata?.capacity) || 0) >= 100;
+        if (isLargeScale && status === 'en_progreso') {
+          notifyAdmin = true;
+          serviceEmailCategory = 'rooms_special';
+        } else if (!isLargeScale && status === 'resuelto') {
+          notifyAdmin = true;
+        }
+      }
+
+      if (notifyAdmin) {
+        try {
+          const serviceEmailsRes = await pool.query(
+            'SELECT email FROM service_emails WHERE service_type = $1 OR service_type = $2',
+            [serviceEmailCategory, 'manager']
+          );
+          const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+          const uniqueEmails = [...new Set(emails)];
+          if (uniqueEmails.length > 0) {
+            const combinedEmails = uniqueEmails.join(', ');
+            emailService.sendAdminServiceNotification(combinedEmails, updatedRequest, status);
+          }
+        } catch (adminEmailErr) {
+          console.error('Error enviando correo a administradores en cambio de estado:', adminEmailErr);
+        }
       }
     }
 

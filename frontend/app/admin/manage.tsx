@@ -1389,6 +1389,7 @@ export default function ManageRequests() {
 
         // Verificar si aplica notificación a Secretaría General / Equipo Gestor
         let secGenEmail: string | null = null;
+        let secGenEmailList: string[] = [];
         if (
           confirmModal.category && 
           (confirmModal.newStatus === 'en_progreso' || confirmModal.newStatus === 'resuelto') &&
@@ -1399,10 +1400,12 @@ export default function ManageRequests() {
             serviceKey = 'rooms_special';
           }
           const matchingEmails = serviceEmails
-            .filter(e => e && e.service_type === serviceKey && e.email?.trim())
+            .filter(e => e && (e.service_type === serviceKey || e.service_type === 'manager') && e.email?.trim())
             .map(e => e.email.trim());
-          if (matchingEmails.length > 0) {
-            secGenEmail = matchingEmails.join(', ');
+          
+          secGenEmailList = Array.from(new Set(matchingEmails));
+          if (secGenEmailList.length > 0) {
+            secGenEmail = secGenEmailList.join(', ');
           }
         }
 
@@ -1514,7 +1517,7 @@ export default function ManageRequests() {
                   </View>
                 )}
 
-                {/* Aviso Destacado de Secretaría General */}
+                {/* Aviso Destacado de Secretaría General / Equipo Gestor */}
                 {secGenEmail && (
                   <View style={{
                     width: '100%',
@@ -1530,27 +1533,32 @@ export default function ManageRequests() {
                         <Ionicons name="mail" size={13} color="#1D4ED8" />
                       </View>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                        Notificación a Equipo Gestor
+                        Notificación a Equipo Gestor {secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 12, color: '#334155', lineHeight: 17, marginBottom: 8 }}>
-                      Esta solicitud será remitida automáticamente vía correo institucional para la gestión correspondiente:
+                      {secGenEmailList.length > 1 
+                        ? 'Esta solicitud será remitida automáticamente vía correo institucional a los siguientes destinatarios:' 
+                        : 'Esta solicitud será remitida automáticamente vía correo institucional para la gestión correspondiente:'}
                     </Text>
                     <View style={{
-                      flexDirection: 'row',
-                      alignItems: 'flex-start',
-                      gap: 8,
+                      flexDirection: 'column',
+                      gap: 6,
                       backgroundColor: '#FFFFFF',
                       paddingHorizontal: 12,
-                      paddingVertical: 8,
+                      paddingVertical: 10,
                       borderRadius: 10,
                       borderWidth: 1,
                       borderColor: '#DBEAFE',
                     }}>
-                      <Ionicons name="at-outline" size={15} color="#1D4ED8" style={{ marginTop: 2 }} />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E3A8A', flex: 1, lineHeight: 18 }}>
-                        {secGenEmail}
-                      </Text>
+                      {secGenEmailList.map((em, idx) => (
+                        <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="at-outline" size={14} color="#1D4ED8" />
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E3A8A', flex: 1, lineHeight: 18 }}>
+                            {em}
+                          </Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )}
