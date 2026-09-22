@@ -103,7 +103,7 @@ export default function AdminReports() {
   const [dataSource, setDataSource] = useState<'database' | 'empty' | 'error'>('empty');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [modalTarget, setModalTarget] = useState<'from' | 'to'>('from');
-  const [reportTab, setReportTab] = useState<'consolidated' | 'visitors' | 'maintenance' | 'parking' | 'rooms' | 'transport'>('consolidated');
+  const [reportTab, setReportTab] = useState<'consolidated' | 'visitors' | 'maintenance' | 'parking' | 'rooms' | 'transport' | 'satisfaction'>('consolidated');
   const [isModalExpanded, setIsModalExpanded] = useState(false);
 
   const selectedMonthOption = useMemo(
@@ -117,6 +117,33 @@ export default function AdminReports() {
     if (dateRange === 'custom') return `Personalizado: ${customStartDate || 'Inicio'} al ${customEndDate || 'Fin'}`;
     return 'Histórico completo';
   }, [dateRange, selectedMonthOption, customStartDate, customEndDate]);
+
+  // Navegación fluida hacia la gestión de solicitudes con filtros o apertura de modal detallada
+  const navigateToManage = useCallback((options: {
+    id?: string;
+    status?: string;
+    service?: string;
+    priority?: string;
+    time?: string;
+  }) => {
+    const params: Record<string, string> = {
+      t: Date.now().toString(),
+    };
+    if (options.id) params.id = options.id;
+    if (options.status) params.status = options.status;
+    if (options.service) params.service = options.service;
+    if (options.priority) params.priority = options.priority;
+    if (options.time) params.time = options.time;
+
+    if (showDocModal) {
+      setShowDocModal(false);
+    }
+
+    router.push({
+      pathname: '/admin/manage',
+      params,
+    });
+  }, [router, showDocModal]);
 
   // Carga de datos de analítica de Supabase. El reporte siempre usa este mismo arreglo filtrado desde la BD.
   const loadAnalyticsData = useCallback(async () => {
@@ -228,8 +255,7 @@ export default function AdminReports() {
 
     const recentEvaluations = evaluatedRequests
       .filter(d => d.metadata?.evaluation?.comment)
-      .sort((a, b) => new Date(b.metadata.evaluation.date || b.created_at).getTime() - new Date(a.metadata.evaluation.date || a.created_at).getTime())
-      .slice(0, 8);
+      .sort((a, b) => new Date(b.metadata.evaluation.date || b.created_at).getTime() - new Date(a.metadata.evaluation.date || a.created_at).getTime());
 
     return {
       total,
@@ -527,9 +553,10 @@ export default function AdminReports() {
   }, [dbData]);
 
   // Simulación de descarga del PDF membretado oficial
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (targetTab?: any) => {
     await loadAnalyticsData();
-    setReportTab(activeTab);
+    const tabToUse = typeof targetTab === 'string' ? targetTab : activeTab;
+    setReportTab(tabToUse as any);
     setShowDocModal(true);
     triggerPdfGeneration();
   };
@@ -624,6 +651,11 @@ export default function AdminReports() {
           title: 'REPORTE DE MOVILIDAD INSTITUCIONAL Y COMISIONES DE TRANSPORTE',
           subtitle: 'Módulo de Desplazamientos Terrestres y Flota Oficial',
           code: 'SASGE-REP-06'
+        },
+        satisfaction: {
+          title: 'REPORTE OFICIAL DE SATISFACCIÓN DE USUARIOS Y CALIDAD DEL SERVICIO (CSAT)',
+          subtitle: 'Módulo de Percepción Institucional, Calificaciones y Retroalimentación Ciudadana',
+          code: 'SASGE-REP-07'
         }
       };
 
@@ -740,7 +772,7 @@ export default function AdminReports() {
           <p>Se aconseja mantener la periodicidad de seguimiento a los reportes en curso, priorizando las solicitudes de mantenimiento técnico y el control vehicular de parqueaderos para conservar los estándares institucionales de la Secretaría Jurídica Distrital.</p>
         `;
       } else if (reportTab === 'visitors') {
-        const visitorRows = dbData.filter(d => d.category === 'visitors').slice(0, 25);
+        const visitorRows = dbData.filter(d => d.category === 'visitors');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -769,7 +801,7 @@ export default function AdminReports() {
               `).join('') || '<tr><td colspan="3" class="text-center">Sin registros en el periodo</td></tr>'}
             </tbody>
           </table>
-          <div class="section-title">3. Registro Detallado de Visitas Autorizadas (Muestra Reciente)</div>
+          <div class="section-title">3. Registro Completo de Visitas Autorizadas</div>
           <table>
             <thead>
               <tr>
@@ -778,6 +810,7 @@ export default function AdminReports() {
                 <th>Dependencia</th>
                 <th class="text-center">Personas</th>
                 <th class="text-center">Estado</th>
+                <th class="text-center">Calificación</th>
               </tr>
             </thead>
             <tbody>
@@ -788,13 +821,14 @@ export default function AdminReports() {
                   <td>${r.metadata?.responsible?.dependency || r.profiles?.dependency?.name || 'General'}</td>
                   <td class="text-center">${r.metadata?.visitors?.length || 1}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
                 </tr>
-              `).join('') || '<tr><td colspan="5" class="text-center">No se registran visitas en el periodo</td></tr>'}
+              `).join('') || '<tr><td colspan="6" class="text-center">No se registran visitas en el periodo</td></tr>'}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'maintenance') {
-        const maintenanceRows = dbData.filter(d => d.category === 'maintenance').slice(0, 25);
+        const maintenanceRows = dbData.filter(d => d.category === 'maintenance');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -823,7 +857,7 @@ export default function AdminReports() {
               `).join('') || '<tr><td colspan="3" class="text-center">Sin averías reportadas</td></tr>'}
             </tbody>
           </table>
-          <div class="section-title">3. Detalle de Requerimientos Técnicos</div>
+          <div class="section-title">3. Registro Completo de Requerimientos Técnicos</div>
           <table>
             <thead>
               <tr>
@@ -832,6 +866,7 @@ export default function AdminReports() {
                 <th>Ubicación</th>
                 <th class="text-center">Prioridad</th>
                 <th class="text-center">Estado</th>
+                <th class="text-center">Calificación</th>
               </tr>
             </thead>
             <tbody>
@@ -842,13 +877,14 @@ export default function AdminReports() {
                   <td>${r.metadata?.location || 'General'}</td>
                   <td class="text-center"><strong style="color:${isHighPriority(r.priority) ? '#DC2626' : '#2563EB'}">${r.priority?.toUpperCase() || 'MEDIA'}</strong></td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
                 </tr>
-              `).join('') || '<tr><td colspan="5" class="text-center">Sin solicitudes registradas</td></tr>'}
+              `).join('') || '<tr><td colspan="6" class="text-center">Sin solicitudes registradas</td></tr>'}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'parking') {
-        const parkingRows = dbData.filter(d => d.category === 'parking').slice(0, 25);
+        const parkingRows = dbData.filter(d => d.category === 'parking');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -858,7 +894,7 @@ export default function AdminReports() {
           </div>
           <div class="section-title">1. Resumen Operativo de Parqueadero</div>
           <p>Se registraron <strong>${parkingStats.total}</strong> solicitudes de estacionamiento institucional, manteniendo <strong>${parkingStats.approved}</strong> autorizaciones vigentes con control de placa vehicular y <strong>${parkingStats.pending}</strong> en lista de espera para asignación conforme a disponibilidad física en sótanos.</p>
-          <div class="section-title">2. Placas Recientes con Autorización Vigente</div>
+          <div class="section-title">2. Registro Completo de Placas con Autorización Vigente</div>
           <table>
             <thead>
               <tr>
@@ -866,6 +902,7 @@ export default function AdminReports() {
                 <th>Placa Vehicular</th>
                 <th>Vehículo / Solicitante</th>
                 <th class="text-center">Estado</th>
+                <th class="text-center">Calificación</th>
               </tr>
             </thead>
             <tbody>
@@ -875,13 +912,14 @@ export default function AdminReports() {
                   <td><strong>${r.metadata?.plate || 'Sin placa'}</strong></td>
                   <td>${r.title || r.metadata?.vehicleType || 'Vehículo institucional'}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
                 </tr>
-              `).join('') || '<tr><td colspan="4" class="text-center">No hay registros de parqueadero en el periodo</td></tr>'}
+              `).join('') || '<tr><td colspan="5" class="text-center">No hay registros de parqueadero en el periodo</td></tr>'}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'rooms') {
-        const roomRows = dbData.filter(d => d.category === 'rooms').slice(0, 25);
+        const roomRows = dbData.filter(d => d.category === 'rooms');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -910,7 +948,7 @@ export default function AdminReports() {
               `).join('') || '<tr><td colspan="3" class="text-center">Sin reservas en el periodo</td></tr>'}
             </tbody>
           </table>
-          <div class="section-title">3. Detalle de Reuniones Registradas</div>
+          <div class="section-title">3. Registro Completo de Reuniones y Reservas</div>
           <table>
             <thead>
               <tr>
@@ -919,6 +957,7 @@ export default function AdminReports() {
                 <th>Sala</th>
                 <th class="text-center">Asistentes</th>
                 <th class="text-center">Estado</th>
+                <th class="text-center">Calificación</th>
               </tr>
             </thead>
             <tbody>
@@ -929,13 +968,14 @@ export default function AdminReports() {
                   <td>${r.metadata?.room?.name || 'Sala general'}</td>
                   <td class="text-center">${r.metadata?.attendees || '-'}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
                 </tr>
-              `).join('') || '<tr><td colspan="5" class="text-center">No hay reuniones en el periodo</td></tr>'}
+              `).join('') || '<tr><td colspan="6" class="text-center">No hay reuniones en el periodo</td></tr>'}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'transport') {
-        const transportRows = dbData.filter(d => d.category === 'transport').slice(0, 25);
+        const transportRows = dbData.filter(d => d.category === 'transport');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -962,7 +1002,7 @@ export default function AdminReports() {
               `).join('') || '<tr><td colspan="2" class="text-center">Sin rutas registradas</td></tr>'}
             </tbody>
           </table>
-          <div class="section-title">3. Detalle de Misiones de Transporte</div>
+          <div class="section-title">3. Registro Completo de Misiones de Transporte</div>
           <table>
             <thead>
               <tr>
@@ -971,6 +1011,7 @@ export default function AdminReports() {
                 <th>Ruta</th>
                 <th class="text-center">Pasajeros</th>
                 <th class="text-center">Estado</th>
+                <th class="text-center">Calificación</th>
               </tr>
             </thead>
             <tbody>
@@ -981,8 +1022,127 @@ export default function AdminReports() {
                   <td>${r.metadata?.origin || 'Origen'} - ${r.metadata?.destination || 'Destino'}</td>
                   <td class="text-center">${r.metadata?.passengers || 1}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
                 </tr>
-              `).join('') || '<tr><td colspan="5" class="text-center">No hay comisiones en el periodo</td></tr>'}
+              `).join('') || '<tr><td colspan="6" class="text-center">No hay comisiones en el periodo</td></tr>'}
+            </tbody>
+          </table>
+        `;
+      } else if (reportTab === 'satisfaction') {
+        bodySections = `
+          <div class="meta-box">
+            <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
+            <div class="meta-item"><strong>Fecha Emisión:</strong> ${todayStr}</div>
+            <div class="meta-item"><strong>Índice CSAT Global:</strong> ${stats.averageRating > 0 ? `${stats.averageRating} / 5.0 ★` : 'Sin calificaciones'}</div>
+            <div class="meta-item"><strong>Encuestas Recibidas:</strong> ${stats.totalEvaluated} (${stats.favorablePercent}% favorables)</div>
+          </div>
+          <div class="section-title">1. Balance Ejecutivo de Satisfacción de Usuarios</div>
+          <p>Durante el periodo evaluado (${reportPeriodLabel}), la gestión de servicios operativos de la Secretaría Jurídica Distrital registró una calificación promedio de <strong>${stats.averageRating} / 5.0 puntos</strong>. Se consolidaron <strong>${stats.totalEvaluated}</strong> encuestas de percepción diligenciadas por funcionarios tras la resolución de sus solicitudes, alcanzando un <strong>${stats.favorablePercent}%</strong> de calificaciones de alta satisfacción (4 y 5 estrellas).</p>
+          <div class="section-title">2. Distribución de Calificaciones (Escala 1 a 5 Estrellas)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Nivel de Calificación</th>
+                <th class="text-center">Total Encuestas</th>
+                <th class="text-center">Porcentaje</th>
+                <th class="text-center">Concepto</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>★★★★★ (5 Estrellas)</strong></td>
+                <td class="text-center">${stats.ratingCounts[5] || 0}</td>
+                <td class="text-center">${stats.totalEvaluated > 0 ? Math.round(((stats.ratingCounts[5] || 0) / stats.totalEvaluated) * 100) : 0}%</td>
+                <td class="text-center" style="color:#059669"><strong>Excelente</strong></td>
+              </tr>
+              <tr>
+                <td><strong>★★★★☆ (4 Estrellas)</strong></td>
+                <td class="text-center">${stats.ratingCounts[4] || 0}</td>
+                <td class="text-center">${stats.totalEvaluated > 0 ? Math.round(((stats.ratingCounts[4] || 0) / stats.totalEvaluated) * 100) : 0}%</td>
+                <td class="text-center" style="color:#10B981"><strong>Bueno / Favorable</strong></td>
+              </tr>
+              <tr>
+                <td><strong>★★★☆☆ (3 Estrellas)</strong></td>
+                <td class="text-center">${stats.ratingCounts[3] || 0}</td>
+                <td class="text-center">${stats.totalEvaluated > 0 ? Math.round(((stats.ratingCounts[3] || 0) / stats.totalEvaluated) * 100) : 0}%</td>
+                <td class="text-center" style="color:#D97706"><strong>Aceptable</strong></td>
+              </tr>
+              <tr>
+                <td><strong>★★☆☆☆ (2 Estrellas)</strong></td>
+                <td class="text-center">${stats.ratingCounts[2] || 0}</td>
+                <td class="text-center">${stats.totalEvaluated > 0 ? Math.round(((stats.ratingCounts[2] || 0) / stats.totalEvaluated) * 100) : 0}%</td>
+                <td class="text-center" style="color:#EA580C"><strong>Regular</strong></td>
+              </tr>
+              <tr>
+                <td><strong>★☆☆☆☆ (1 Estrella)</strong></td>
+                <td class="text-center">${stats.ratingCounts[1] || 0}</td>
+                <td class="text-center">${stats.totalEvaluated > 0 ? Math.round(((stats.ratingCounts[1] || 0) / stats.totalEvaluated) * 100) : 0}%</td>
+                <td class="text-center" style="color:#DC2626"><strong>Deficiente / Crítico</strong></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="section-title">3. Calidad y Satisfacción por Servicio Operativo</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Servicio / Módulo</th>
+                <th class="text-center">Encuestas</th>
+                <th class="text-center">Calificación Promedio</th>
+                <th class="text-center">Estado de Calidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Control de Acceso y Visitantes</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.visitors.count}</td>
+                <td class="text-center"><strong>${stats.moduleEvaluations.visitors.count > 0 ? `★ ${stats.moduleEvaluations.visitors.avg.toFixed(1)}` : '—'}</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.visitors.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.visitors.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.visitors.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
+              </tr>
+              <tr>
+                <td><strong>Mantenimiento Locativo</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.maintenance.count}</td>
+                <td class="text-center"><strong>${stats.moduleEvaluations.maintenance.count > 0 ? `★ ${stats.moduleEvaluations.maintenance.avg.toFixed(1)}` : '—'}</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.maintenance.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.maintenance.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.maintenance.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
+              </tr>
+              <tr>
+                <td><strong>Acceso Parqueadero</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.parking.count}</td>
+                <td class="text-center"><strong>${stats.moduleEvaluations.parking.count > 0 ? `★ ${stats.moduleEvaluations.parking.avg.toFixed(1)}` : '—'}</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.parking.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.parking.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.parking.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
+              </tr>
+              <tr>
+                <td><strong>Reserva de Salas de Juntas</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.rooms.count}</td>
+                <td class="text-center"><strong>${stats.moduleEvaluations.rooms.count > 0 ? `★ ${stats.moduleEvaluations.rooms.avg.toFixed(1)}` : '—'}</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.rooms.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.rooms.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.rooms.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
+              </tr>
+              <tr>
+                <td><strong>Transporte Oficial</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.transport.count}</td>
+                <td class="text-center"><strong>${stats.moduleEvaluations.transport.count > 0 ? `★ ${stats.moduleEvaluations.transport.avg.toFixed(1)}` : '—'}</strong></td>
+                <td class="text-center">${stats.moduleEvaluations.transport.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.transport.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.transport.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="section-title">4. Comentarios y Observaciones Cualitativas de los Usuarios</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Servicio</th>
+                <th class="text-center">Calif.</th>
+                <th>Comentario / Observación</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${stats.recentEvaluations.map(r => `
+                <tr>
+                  <td>${r.metadata?.evaluation?.date ? new Date(r.metadata.evaluation.date).toLocaleDateString('es-CO') : new Date(r.created_at).toLocaleDateString('es-CO')}</td>
+                  <td><strong>${getModuleMeta(r.category).name}</strong></td>
+                  <td class="text-center" style="color:#B45309"><strong>★ ${r.metadata?.evaluation?.rating}</strong></td>
+                  <td><em>"${r.metadata?.evaluation?.comment || ''}"</em></td>
+                </tr>
+              `).join('') || '<tr><td colspan="4" class="text-center">No hay comentarios registrados en el periodo</td></tr>'}
             </tbody>
           </table>
         `;
@@ -1267,7 +1427,14 @@ export default function AdminReports() {
                 </TouchableOpacity>
               </View>
               
-              <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+                <TouchableOpacity 
+                  style={[styles.downloadDocBtn, { backgroundColor: COLORS.primarySoft }]} 
+                  onPress={() => navigateToManage({ status: 'Todos', service: 'Todas' })}
+                >
+                  <Ionicons name="layers-outline" size={18} color={COLORS.white} />
+                  <Text style={styles.downloadDocText}>Ver Solicitudes</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.downloadDocBtn} onPress={handleGenerateReport} disabled={loading}>
                   <Ionicons name="document-text-outline" size={18} color={COLORS.white} />
                   <Text style={styles.downloadDocText}>Generar Reporte PDF</Text>
@@ -1423,6 +1590,11 @@ export default function AdminReports() {
                             inProgress={categoryBreakdown.visitors.inProgress}
                             pending={categoryBreakdown.visitors.pending}
                             rejected={categoryBreakdown.visitors.rejected}
+                            onPressCategory={() => navigateToManage({ service: 'Visitantes' })}
+                            onPressResolved={() => navigateToManage({ service: 'Visitantes', status: 'resuelto' })}
+                            onPressInProgress={() => navigateToManage({ service: 'Visitantes', status: 'en_progreso' })}
+                            onPressPending={() => navigateToManage({ service: 'Visitantes', status: 'pendiente' })}
+                            onPressRejected={() => navigateToManage({ service: 'Visitantes', status: 'rechazado' })}
                           />
                           <SegmentedCategoryBar 
                             label="Mantenimiento Locativo" 
@@ -1432,6 +1604,11 @@ export default function AdminReports() {
                             inProgress={categoryBreakdown.maintenance.inProgress}
                             pending={categoryBreakdown.maintenance.pending}
                             rejected={categoryBreakdown.maintenance.rejected}
+                            onPressCategory={() => navigateToManage({ service: 'Mantenimiento' })}
+                            onPressResolved={() => navigateToManage({ service: 'Mantenimiento', status: 'resuelto' })}
+                            onPressInProgress={() => navigateToManage({ service: 'Mantenimiento', status: 'en_progreso' })}
+                            onPressPending={() => navigateToManage({ service: 'Mantenimiento', status: 'pendiente' })}
+                            onPressRejected={() => navigateToManage({ service: 'Mantenimiento', status: 'rechazado' })}
                           />
                           <SegmentedCategoryBar 
                             label="Cupo de Parqueadero" 
@@ -1441,6 +1618,11 @@ export default function AdminReports() {
                             inProgress={categoryBreakdown.parking.inProgress}
                             pending={categoryBreakdown.parking.pending}
                             rejected={categoryBreakdown.parking.rejected}
+                            onPressCategory={() => navigateToManage({ service: 'Parqueadero' })}
+                            onPressResolved={() => navigateToManage({ service: 'Parqueadero', status: 'resuelto' })}
+                            onPressInProgress={() => navigateToManage({ service: 'Parqueadero', status: 'en_progreso' })}
+                            onPressPending={() => navigateToManage({ service: 'Parqueadero', status: 'pendiente' })}
+                            onPressRejected={() => navigateToManage({ service: 'Parqueadero', status: 'rechazado' })}
                           />
                           <SegmentedCategoryBar 
                             label="Salas de Juntas" 
@@ -1450,6 +1632,11 @@ export default function AdminReports() {
                             inProgress={categoryBreakdown.rooms.inProgress}
                             pending={categoryBreakdown.rooms.pending}
                             rejected={categoryBreakdown.rooms.rejected}
+                            onPressCategory={() => navigateToManage({ service: 'Salas' })}
+                            onPressResolved={() => navigateToManage({ service: 'Salas', status: 'resuelto' })}
+                            onPressInProgress={() => navigateToManage({ service: 'Salas', status: 'en_progreso' })}
+                            onPressPending={() => navigateToManage({ service: 'Salas', status: 'pendiente' })}
+                            onPressRejected={() => navigateToManage({ service: 'Salas', status: 'rechazado' })}
                           />
                           <SegmentedCategoryBar 
                             label="Transporte Oficial" 
@@ -1459,28 +1646,85 @@ export default function AdminReports() {
                             inProgress={categoryBreakdown.transport.inProgress}
                             pending={categoryBreakdown.transport.pending}
                             rejected={categoryBreakdown.transport.rejected}
+                            onPressCategory={() => navigateToManage({ service: 'Transporte' })}
+                            onPressResolved={() => navigateToManage({ service: 'Transporte', status: 'resuelto' })}
+                            onPressInProgress={() => navigateToManage({ service: 'Transporte', status: 'en_progreso' })}
+                            onPressPending={() => navigateToManage({ service: 'Transporte', status: 'pendiente' })}
+                            onPressRejected={() => navigateToManage({ service: 'Transporte', status: 'rechazado' })}
                           />
                         </View>
                       </View>
 
                       {/* Columna 3: KPIs Clásicos */}
                       <View style={[{ gap: 15 }, isDesktop ? { flex: 1, justifyContent: 'space-between' } : { flex: undefined }]}>
-                        <KPICard label="Efectividad" value={`${stats.effectiveness}%`} color={COLORS.success} icon="trending-up" trend="+2.4% este período" />
-                        <KPICard label="Pendientes de Atención" value={stats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Requieren acción" />
-                        <KPICard label="Total Requerimientos" value={stats.total.toString()} color={COLORS.accent} icon="folder-open" trend="Registrados en sistema" />
+                        <KPICard 
+                          label="Efectividad" 
+                          value={`${stats.effectiveness}%`} 
+                          color={COLORS.success} 
+                          icon="trending-up" 
+                          trend="+2.4% este período" 
+                          onPress={() => navigateToManage({ status: 'resuelto', service: 'Todas' })}
+                        />
+                        <KPICard 
+                          label="Pendientes de Atención" 
+                          value={stats.pending.toString()} 
+                          color={COLORS.warning} 
+                          icon="hourglass" 
+                          trend="Requieren acción" 
+                          onPress={() => navigateToManage({ status: 'pendiente', service: 'Todas' })}
+                        />
+                        <KPICard 
+                          label="Total Requerimientos" 
+                          value={stats.total.toString()} 
+                          color={COLORS.accent} 
+                          icon="folder-open" 
+                          trend="Registrados en sistema" 
+                          onPress={() => navigateToManage({ status: 'Todos', service: 'Todas' })}
+                        />
                       </View>
                     </View>
 
                     {/* Estado del Flujo de Procesos */}
                     <View style={styles.card}>
-                      <Text style={styles.cardTitle}>Embudo de Solicitudes Administrativas</Text>
-                      <Text style={styles.cardSubtitle}>Estado general del ciclo de vida de los trámites</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={styles.cardTitle}>Embudo de Solicitudes Administrativas</Text>
+                        <Text style={{ fontSize: 11, color: COLORS.muted, fontStyle: 'italic' }}>Clic en un estado para filtrar</Text>
+                      </View>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 15 }]}>Estado general del ciclo de vida de los trámites</Text>
                       
                       <View style={styles.statesRow}>
-                        <StateWidget label="Pendiente" count={stats.pending} color={COLORS.warning} icon="alert-circle-outline" bg={COLORS.warningSoft} />
-                        <StateWidget label="En Progreso" count={stats.inProgress} color={COLORS.accent} icon="sync-outline" bg={COLORS.accentLight} />
-                        <StateWidget label="Resuelto" count={stats.resolved} color={COLORS.success} icon="checkmark-done-circle-outline" bg={COLORS.successSoft} />
-                        <StateWidget label="Rechazado" count={stats.rejected} color={COLORS.danger} icon="close-circle-outline" bg={COLORS.dangerSoft} />
+                        <StateWidget 
+                          label="Pendiente" 
+                          count={stats.pending} 
+                          color={COLORS.warning} 
+                          icon="alert-circle-outline" 
+                          bg={COLORS.warningSoft} 
+                          onPress={() => navigateToManage({ status: 'pendiente', service: 'Todas' })}
+                        />
+                        <StateWidget 
+                          label="En Progreso" 
+                          count={stats.inProgress} 
+                          color={COLORS.accent} 
+                          icon="sync-outline" 
+                          bg={COLORS.accentLight} 
+                          onPress={() => navigateToManage({ status: 'en_progreso', service: 'Todas' })}
+                        />
+                        <StateWidget 
+                          label="Resuelto" 
+                          count={stats.resolved} 
+                          color={COLORS.success} 
+                          icon="checkmark-done-circle-outline" 
+                          bg={COLORS.successSoft} 
+                          onPress={() => navigateToManage({ status: 'resuelto', service: 'Todas' })}
+                        />
+                        <StateWidget 
+                          label="Rechazado" 
+                          count={stats.rejected} 
+                          color={COLORS.danger} 
+                          icon="close-circle-outline" 
+                          bg={COLORS.dangerSoft} 
+                          onPress={() => navigateToManage({ status: 'rechazado', service: 'Todas' })}
+                        />
                       </View>
                     </View>
 
@@ -1489,23 +1733,48 @@ export default function AdminReports() {
                       {/* Distribución por Nivel de Criticidad */}
                       <View style={[styles.card, { flex: 1 }]}>
                         <Text style={styles.cardTitle}>Nivel de Criticidad Global</Text>
-                        <Text style={styles.cardSubtitle}>Distribución de solicitudes según prioridad de atención</Text>
+                        <Text style={styles.cardSubtitle}>Distribución de solicitudes según prioridad de atención (clic para ver solicitudes)</Text>
                         
                         <View style={{ gap: 18, marginTop: 22 }}>
-                          <CategoryProgress label="Prioridad Alta (Urgente)" count={stats.highPriority} total={stats.criticalityTotal} color={COLORS.danger} />
-                          <CategoryProgress label="Prioridad Media (Ordinaria)" count={stats.mediumPriority} total={stats.criticalityTotal} color={COLORS.accent} />
-                          <CategoryProgress label="Prioridad Baja (Preventiva)" count={stats.lowPriority} total={stats.criticalityTotal} color={COLORS.muted} />
+                          <CategoryProgress 
+                            label="Prioridad Alta (Urgente)" 
+                            count={stats.highPriority} 
+                            total={stats.criticalityTotal} 
+                            color={COLORS.danger} 
+                            onPress={() => navigateToManage({ priority: 'Alta', status: 'Todos', service: 'Todas' })}
+                          />
+                          <CategoryProgress 
+                            label="Prioridad Media (Ordinaria)" 
+                            count={stats.mediumPriority} 
+                            total={stats.criticalityTotal} 
+                            color={COLORS.accent} 
+                            onPress={() => navigateToManage({ priority: 'Media', status: 'Todos', service: 'Todas' })}
+                          />
+                          <CategoryProgress 
+                            label="Prioridad Baja (Preventiva)" 
+                            count={stats.lowPriority} 
+                            total={stats.criticalityTotal} 
+                            color={COLORS.muted} 
+                            onPress={() => navigateToManage({ priority: 'Baja', status: 'Todos', service: 'Todas' })}
+                          />
                         </View>
                         
-                        <View style={[styles.infoAlertBox, { marginTop: 20 }]}>
+                        <TouchableOpacity 
+                          style={[styles.infoAlertBox, { marginTop: 20, cursor: 'pointer' } as any]}
+                          activeOpacity={0.75}
+                          onPress={() => navigateToManage({ priority: 'Alta', status: 'resuelto', service: 'Todas' })}
+                        >
                           <Ionicons name="information-circle-outline" size={22} color={COLORS.accent} />
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.infoAlertTitle}>Atención Oportuna</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={styles.infoAlertTitle}>Atención Oportuna</Text>
+                              <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: '800' }}>VER CASOS →</Text>
+                            </View>
                             <Text style={styles.infoAlertDesc}>
                               {stats.highResolved} de {stats.highPriority} casos de alta prioridad han sido resueltos satisfactoriamente.
                             </Text>
                           </View>
-                        </View>
+                        </TouchableOpacity>
                       </View>
 
                       {/* Indicadores Clave de Capacidad Operativa */}
@@ -1514,33 +1783,53 @@ export default function AdminReports() {
                         <Text style={styles.cardSubtitle}>Resumen ejecutivo de atención por servicio en el periodo</Text>
                         
                         <View style={styles.miniCardGrid}>
-                          <View style={styles.miniInfoCard}>
+                          <TouchableOpacity 
+                            style={[styles.miniInfoCard, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Visitantes' })}
+                          >
                             <Ionicons name="people" size={20} color={COLORS.danger} />
                             <Text style={styles.miniInfoCardValue}>{visitorStats.totalVisitors}</Text>
                             <Text style={styles.miniInfoCardLabel}>Visitantes</Text>
                             <Text style={styles.miniInfoCardSub}>{visitorStats.vehicularEntries} accesos con vehículo</Text>
-                          </View>
+                            <Text style={{ fontSize: 10, color: COLORS.danger, fontWeight: '700', marginTop: 4 }}>Ver módulo →</Text>
+                          </TouchableOpacity>
 
-                          <View style={styles.miniInfoCard}>
+                          <TouchableOpacity 
+                            style={[styles.miniInfoCard, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'pendiente' })}
+                          >
                             <Ionicons name="construct" size={20} color={COLORS.accent} />
                             <Text style={styles.miniInfoCardValue}>{maintenanceStats.inProgress + maintenanceStats.pending}</Text>
                             <Text style={styles.miniInfoCardLabel}>Averías Activas</Text>
                             <Text style={styles.miniInfoCardSub}>{maintenanceStats.resolved} ya solucionadas</Text>
-                          </View>
+                            <Text style={{ fontSize: 10, color: COLORS.warning, fontWeight: '700', marginTop: 4 }}>Ver pendientes →</Text>
+                          </TouchableOpacity>
 
-                          <View style={styles.miniInfoCard}>
+                          <TouchableOpacity 
+                            style={[styles.miniInfoCard, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Parqueadero' })}
+                          >
                             <Ionicons name="car" size={20} color={COLORS.purple} />
                             <Text style={styles.miniInfoCardValue}>{parkingStats.approved}</Text>
                             <Text style={styles.miniInfoCardLabel}>Cupos Parqueadero</Text>
                             <Text style={styles.miniInfoCardSub}>{parkingStats.occupancyRate}% tasa de ocupación</Text>
-                          </View>
+                            <Text style={{ fontSize: 10, color: COLORS.purple, fontWeight: '700', marginTop: 4 }}>Ver módulo →</Text>
+                          </TouchableOpacity>
 
-                          <View style={styles.miniInfoCard}>
+                          <TouchableOpacity 
+                            style={[styles.miniInfoCard, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Transporte' })}
+                          >
                             <Ionicons name="car-sport" size={20} color={COLORS.success} />
                             <Text style={styles.miniInfoCardValue}>{transportStats.totalRequests}</Text>
                             <Text style={styles.miniInfoCardLabel}>Misiones Flota</Text>
                             <Text style={styles.miniInfoCardSub}>{transportStats.totalPassengers} funcionarios movilizados</Text>
-                          </View>
+                            <Text style={{ fontSize: 10, color: COLORS.success, fontWeight: '700', marginTop: 4 }}>Ver módulo →</Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
                     </View>
@@ -1559,11 +1848,20 @@ export default function AdminReports() {
                             Percepción, calificaciones y retroalimentación de los funcionarios al cierre de sus requerimientos
                           </Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.bg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: COLORS.line }}>
-                          <Ionicons name="sparkles" size={14} color="#D97706" />
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
-                            {stats.favorablePercent}% Favorable (4-5★)
-                          </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.bg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: COLORS.line }}>
+                            <Ionicons name="sparkles" size={14} color="#D97706" />
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
+                              {stats.favorablePercent}% Favorable (4-5★)
+                            </Text>
+                          </View>
+                          <TouchableOpacity 
+                            style={styles.cardSectionAction} 
+                            onPress={() => handleGenerateReport('satisfaction')}
+                          >
+                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Reporte CSAT</Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
 
@@ -1698,7 +1996,7 @@ export default function AdminReports() {
                               const modMeta = getModuleMeta(item.category);
                               const evalData = item.metadata?.evaluation;
                               return (
-                                <View 
+                                <TouchableOpacity 
                                   key={item.id || idx} 
                                   style={{ 
                                     flex: 1, 
@@ -1708,8 +2006,11 @@ export default function AdminReports() {
                                     padding: 14, 
                                     borderWidth: 1, 
                                     borderColor: COLORS.line,
-                                    gap: 8 
+                                    gap: 8,
+                                    cursor: 'pointer' as any
                                   }}
+                                  activeOpacity={0.75}
+                                  onPress={() => navigateToManage({ id: item.id })}
                                 >
                                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1738,11 +2039,14 @@ export default function AdminReports() {
                                     <Text style={{ fontSize: 10, fontWeight: '700', color: COLORS.muted }} numberOfLines={1}>
                                       {item.profiles?.full_name || 'Servidor Público'}
                                     </Text>
-                                    <Text style={{ fontSize: 10, color: COLORS.muted }}>
-                                      {formatDisplayDate(evalData?.date || item.created_at)}
-                                    </Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                      <Text style={{ fontSize: 10, color: COLORS.muted }}>
+                                        {formatDisplayDate(evalData?.date || item.created_at)}
+                                      </Text>
+                                      <Ionicons name="open-outline" size={11} color={COLORS.accent} />
+                                    </View>
                                   </View>
-                                </View>
+                                </TouchableOpacity>
                               );
                             })}
                           </View>
@@ -1762,12 +2066,21 @@ export default function AdminReports() {
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Auditoría de Requerimientos Recientes</Text>
-                          <Text style={styles.cardSubtitle}>Muestra de las últimas solicitudes tramitadas en todas las áreas de la entidad</Text>
+                          <Text style={styles.cardSubtitle}>Muestra de las últimas solicitudes tramitadas (clic en cualquier fila para abrir el modal detallado)</Text>
                         </View>
-                        <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                          <Ionicons name="document-text-outline" size={14} color={COLORS.accent} />
-                          <Text style={styles.cardSectionActionText}>Ver Reporte Oficial</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#3B82F615', borderColor: '#3B82F635' }]} 
+                            onPress={() => navigateToManage({ status: 'Todos', service: 'Todas' })}
+                          >
+                            <Ionicons name="layers-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Gestionar Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                            <Ionicons name="document-text-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Ver Reporte Oficial</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <ScrollView 
@@ -1792,7 +2105,12 @@ export default function AdminReports() {
                               const meta = getModuleMeta(req.category);
                               const evalRating = req.metadata?.evaluation?.rating;
                               return (
-                                <View key={req.id || idx} style={[styles.tableRowDark, { width: '100%' }]}>
+                                <TouchableOpacity 
+                                  key={req.id || idx} 
+                                  style={[styles.tableRowDark, { width: '100%', cursor: 'pointer' } as any]}
+                                  activeOpacity={0.75}
+                                  onPress={() => navigateToManage({ id: req.id })}
+                                >
                                   <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(req.created_at)}</Text>
                                   <View style={{ width: 145, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                     <Ionicons name={meta.icon as any} size={14} color={meta.color} />
@@ -1811,20 +2129,9 @@ export default function AdminReports() {
                                     <StatusBadge status={req.status} />
                                   </View>
                                   <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                    {typeof evalRating === 'number' ? (
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
-                                        <Ionicons name="star" size={11} color="#D97706" />
-                                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
-                                          {evalRating}.0
-                                        </Text>
-                                      </View>
-                                    ) : ['resuelto', 'aprobado'].includes(req.status) ? (
-                                      <Text style={{ fontSize: 10, color: COLORS.muted, fontStyle: 'italic' }}>Sin calificar</Text>
-                                    ) : (
-                                      <Text style={{ fontSize: 11, color: COLORS.line }}>—</Text>
-                                    )}
+                                    <RatingBadge rating={evalRating} status={req.status} />
                                   </View>
-                                </View>
+                                </TouchableOpacity>
                               );
                             })
                           ) : (
@@ -1840,9 +2147,9 @@ export default function AdminReports() {
                 {activeTab === 'visitors' && (
                   <View style={{ gap: 25 }}>
                     <View style={styles.kpiRow}>
-                      <KPICard label="Total Visitantes" value={visitorStats.totalVisitors.toString()} color={COLORS.danger} icon="people" trend="Externos autorizados" />
-                      <KPICard label="Ingresos Vehiculares" value={visitorStats.vehicularEntries.toString()} color={COLORS.accent} icon="car" trend="Vehículos con placa" />
-                      <KPICard label="Trámites Creados" value={visitorStats.totalRequests.toString()} color={COLORS.purple} icon="shield-checkmark" trend="Solicitudes formales" />
+                      <KPICard label="Total Visitantes" value={visitorStats.totalVisitors.toString()} color={COLORS.danger} icon="people" trend="Externos autorizados" onPress={() => navigateToManage({ service: 'Visitantes' })} />
+                      <KPICard label="Ingresos Vehiculares" value={visitorStats.vehicularEntries.toString()} color={COLORS.accent} icon="car" trend="Vehículos con placa" onPress={() => navigateToManage({ service: 'Visitantes' })} />
+                      <KPICard label="Trámites Creados" value={visitorStats.totalRequests.toString()} color={COLORS.purple} icon="shield-checkmark" trend="Solicitudes formales" onPress={() => navigateToManage({ service: 'Visitantes' })} />
                       <KPICard label="Promedio por Visita" value={`${visitorStats.avgVisitorsPerRequest} pers.`} color={COLORS.success} icon="person-add" trend="Aforo por solicitud" />
                     </View>
 
@@ -1852,6 +2159,7 @@ export default function AdminReports() {
                       category="visitors" 
                       stats={stats} 
                       color={COLORS.danger} 
+                      onPressComment={(id) => navigateToManage({ id })}
                     />
 
                     {/* 2 Columnas: Dependencias Receptoras y Modalidad de Acceso */}
@@ -1863,7 +2171,7 @@ export default function AdminReports() {
                         <View style={{ gap: 18, marginTop: 22 }}>
                           {visitorStats.departments.length > 0 ? (
                             visitorStats.departments.slice(0, 6).map((dep, idx) => (
-                              <RankProgress key={idx} name={dep.name} count={dep.count} max={visitorStats.departments[0].count} color={COLORS.danger} index={idx + 1} />
+                              <RankProgress key={idx} name={dep.name} count={dep.count} max={visitorStats.departments[0].count} color={COLORS.danger} index={idx + 1} onPress={() => navigateToManage({ service: 'Visitantes' })} />
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No se registran visitas en el periodo</Text>
@@ -1876,8 +2184,8 @@ export default function AdminReports() {
                         <Text style={styles.cardSubtitle}>Discriminación de accesos peatonales vs vehiculares</Text>
                         
                         <View style={{ gap: 18, marginTop: 22 }}>
-                          <CategoryProgress label="Ingreso Peatonal" count={visitorStats.pedestrianEntries} total={visitorStats.totalVisitors} color={COLORS.purple} suffix=" personas" />
-                          <CategoryProgress label="Ingreso Vehicular con Placa" count={visitorStats.vehicularEntries} total={visitorStats.totalVisitors} color={COLORS.accent} suffix=" vehículos" />
+                          <CategoryProgress label="Ingreso Peatonal" count={visitorStats.pedestrianEntries} total={visitorStats.totalVisitors} color={COLORS.purple} suffix=" personas" onPress={() => navigateToManage({ service: 'Visitantes' })} />
+                          <CategoryProgress label="Ingreso Vehicular con Placa" count={visitorStats.vehicularEntries} total={visitorStats.totalVisitors} color={COLORS.accent} suffix=" vehículos" onPress={() => navigateToManage({ service: 'Visitantes' })} />
                         </View>
 
                         <View style={[styles.infoAlertBox, { marginTop: 24 }]}>
@@ -1897,12 +2205,21 @@ export default function AdminReports() {
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Registro Detallado de Ingresos Recientes</Text>
-                          <Text style={styles.cardSubtitle}>Historial de visitas autorizadas con verificación de seguridad</Text>
+                          <Text style={styles.cardSubtitle}>Historial de visitas (clic en cualquier fila para abrir el modal detallado)</Text>
                         </View>
-                        <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                          <Ionicons name="print-outline" size={14} color={COLORS.accent} />
-                          <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#EF444415', borderColor: '#EF444430' }]} 
+                            onPress={() => navigateToManage({ service: 'Visitantes' })}
+                          >
+                            <Ionicons name="open-outline" size={14} color={COLORS.danger} />
+                            <Text style={[styles.cardSectionActionText, { color: COLORS.danger }]}>Ver en Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <ScrollView 
@@ -1911,7 +2228,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 780 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 890 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>ASUNTO / MOTIVO</Text>
@@ -1919,11 +2236,17 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>PERSONAS</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>MODALIDAD</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
                           </View>
 
                           {visitorStats.recentList.length > 0 ? (
                             visitorStats.recentList.map((r, idx) => (
-                              <View key={r.id || idx} style={styles.tableRowDark}>
+                              <TouchableOpacity 
+                                key={r.id || idx} 
+                                style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
+                                activeOpacity={0.75}
+                                onPress={() => navigateToManage({ id: r.id })}
+                              >
                                 <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
                                 <Text style={[styles.tableCellTxtBold, { flex: 1, minWidth: 180 }]} numberOfLines={1}>{r.title || 'Visita institucional'}</Text>
                                 <Text style={[styles.tableCellTxt, { width: 180 }]} numberOfLines={1}>{r.metadata?.responsible?.dependency || r.profiles?.dependency?.name || 'General'}</Text>
@@ -1937,7 +2260,10 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                              </View>
+                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                </View>
+                              </TouchableOpacity>
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No hay visitas registradas</Text>
@@ -1953,21 +2279,28 @@ export default function AdminReports() {
                   <View style={{ gap: 25 }}>
                     {/* Alertas de criticidad */}
                     {maintenanceStats.highPriorityPending > 0 && (
-                      <View style={styles.dangerAlertBox}>
+                      <TouchableOpacity 
+                        style={[styles.dangerAlertBox, { cursor: 'pointer' } as any]}
+                        activeOpacity={0.8}
+                        onPress={() => navigateToManage({ service: 'Mantenimiento', priority: 'Alta', status: 'pendiente' })}
+                      >
                         <Ionicons name="warning" size={26} color={COLORS.danger} />
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.dangerAlertTitle}>Incidentes Críticos Pendientes</Text>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.dangerAlertTitle}>Incidentes Críticos Pendientes</Text>
+                            <Text style={{ fontSize: 10, color: COLORS.danger, fontWeight: '800' }}>VER SOLICITUDES →</Text>
+                          </View>
                           <Text style={styles.dangerAlertDesc}>
                             Hay {maintenanceStats.highPriorityPending} reporte(s) de prioridad **ALTA** en espera de atención técnica. Requieren asignación inmediata.
                           </Text>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     )}
 
                     <View style={styles.kpiRow}>
-                      <KPICard label="En Curso" value={maintenanceStats.inProgress.toString()} color={COLORS.accent} icon="construct" trend="Técnicos asignados" />
-                      <KPICard label="Pendientes" value={maintenanceStats.pending.toString()} color={COLORS.warning} icon="time" trend="Por asignar" />
-                      <KPICard label="Finalizados" value={maintenanceStats.resolved.toString()} color={COLORS.success} icon="checkmark-circle" trend="Solucionados" />
+                      <KPICard label="En Curso" value={maintenanceStats.inProgress.toString()} color={COLORS.accent} icon="construct" trend="Técnicos asignados" onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'en_progreso' })} />
+                      <KPICard label="Pendientes" value={maintenanceStats.pending.toString()} color={COLORS.warning} icon="time" trend="Por asignar" onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'pendiente' })} />
+                      <KPICard label="Finalizados" value={maintenanceStats.resolved.toString()} color={COLORS.success} icon="checkmark-circle" trend="Solucionados" onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'resuelto' })} />
                       <KPICard label="Tasa de Solución" value={`${maintenanceStats.effectivenessRate}%`} color={COLORS.purple} icon="speedometer" trend="Efectividad técnica" />
                     </View>
 
@@ -1977,19 +2310,20 @@ export default function AdminReports() {
                       category="maintenance" 
                       stats={stats} 
                       color={COLORS.accent} 
+                      onPressComment={(id) => navigateToManage({ id })}
                     />
 
                     {/* Fila 2 columnas: Pipeline y Especialidades Técnicas */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
                       <View style={[styles.card, { flex: 1 }]}>
                         <Text style={styles.cardTitle}>Manejo de Estados de Incidentes</Text>
-                        <Text style={styles.cardSubtitle}>Pipeline de control y seguimiento de órdenes</Text>
+                        <Text style={styles.cardSubtitle}>Pipeline de control y seguimiento de órdenes (clic para filtrar)</Text>
                         
                         <View style={{ gap: 18, marginTop: 22 }}>
-                          <CategoryProgress label="Pendiente de Revisión (Inicial)" count={maintenanceStats.pending} total={maintenanceStats.total} color={COLORS.warning} />
-                          <CategoryProgress label="En Curso / Técnico Asignado" count={maintenanceStats.inProgress} total={maintenanceStats.total} color={COLORS.accent} />
-                          <CategoryProgress label="Finalizado y Validado (Cerrado)" count={maintenanceStats.resolved} total={maintenanceStats.total} color={COLORS.success} />
-                          <CategoryProgress label="Rechazado / No Aplica" count={maintenanceStats.rejected} total={maintenanceStats.total} color={COLORS.danger} />
+                          <CategoryProgress label="Pendiente de Revisión (Inicial)" count={maintenanceStats.pending} total={maintenanceStats.total} color={COLORS.warning} onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'pendiente' })} />
+                          <CategoryProgress label="En Curso / Técnico Asignado" count={maintenanceStats.inProgress} total={maintenanceStats.total} color={COLORS.accent} onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'en_progreso' })} />
+                          <CategoryProgress label="Finalizado y Validado (Cerrado)" count={maintenanceStats.resolved} total={maintenanceStats.total} color={COLORS.success} onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'resuelto' })} />
+                          <CategoryProgress label="Rechazado / No Aplica" count={maintenanceStats.rejected} total={maintenanceStats.total} color={COLORS.danger} onPress={() => navigateToManage({ service: 'Mantenimiento', status: 'rechazado' })} />
                         </View>
                       </View>
 
@@ -1999,7 +2333,14 @@ export default function AdminReports() {
                         
                         <View style={{ gap: 16, marginTop: 22 }}>
                           {maintenanceStats.specialties.map((sp, idx) => (
-                            <CategoryProgress key={idx} label={sp.name} count={sp.count} total={maintenanceStats.total} color={COLORS.accent} />
+                            <CategoryProgress 
+                              key={idx} 
+                              label={sp.name} 
+                              count={sp.count} 
+                              total={maintenanceStats.total} 
+                              color={COLORS.accent} 
+                              onPress={() => navigateToManage({ service: 'Mantenimiento' })}
+                            />
                           ))}
                         </View>
                       </View>
@@ -2013,7 +2354,15 @@ export default function AdminReports() {
                       <View style={{ gap: 18, marginTop: 22 }}>
                         {maintenanceStats.locations.length > 0 ? (
                           maintenanceStats.locations.slice(0, 6).map((loc, idx) => (
-                            <RankProgress key={idx} name={`Piso / Área: ${loc.name}`} count={loc.count} max={maintenanceStats.locations[0].count} color={COLORS.success} index={idx + 1} />
+                            <RankProgress 
+                              key={idx} 
+                              name={`Piso / Área: ${loc.name}`} 
+                              count={loc.count} 
+                              max={maintenanceStats.locations[0].count} 
+                              color={COLORS.success} 
+                              index={idx + 1} 
+                              onPress={() => navigateToManage({ service: 'Mantenimiento' })}
+                            />
                           ))
                         ) : (
                           <Text style={styles.noDataText}>No se registran daños en el periodo</Text>
@@ -2026,12 +2375,21 @@ export default function AdminReports() {
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Órdenes de Trabajo y Mantenimiento Técnico</Text>
-                          <Text style={styles.cardSubtitle}>Seguimiento individual de las solicitudes e intervenciones locativas</Text>
+                          <Text style={styles.cardSubtitle}>Seguimiento individual (clic en cualquier fila para abrir el modal detallado)</Text>
                         </View>
-                        <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                          <Ionicons name="print-outline" size={14} color={COLORS.accent} />
-                          <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#3B82F615', borderColor: '#3B82F630' }]} 
+                            onPress={() => navigateToManage({ service: 'Mantenimiento' })}
+                          >
+                            <Ionicons name="open-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Ver en Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <ScrollView 
@@ -2040,7 +2398,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 800 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 910 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 200 }]}>INCIDENCIA / DAÑO</Text>
@@ -2048,11 +2406,17 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>PRIORIDAD</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SOLICITANTE</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
                           </View>
 
                           {maintenanceStats.recentList.length > 0 ? (
                             maintenanceStats.recentList.map((r, idx) => (
-                              <View key={r.id || idx} style={styles.tableRowDark}>
+                              <TouchableOpacity 
+                                key={r.id || idx} 
+                                style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
+                                activeOpacity={0.75}
+                                onPress={() => navigateToManage({ id: r.id })}
+                              >
                                 <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
                                 <Text style={[styles.tableCellTxtBold, { flex: 1, minWidth: 200 }]} numberOfLines={1}>{r.title || 'Mantenimiento locativo'}</Text>
                                 <Text style={[styles.tableCellTxt, { width: 160 }]} numberOfLines={1}>{r.metadata?.location || 'General'}</Text>
@@ -2063,7 +2427,10 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                              </View>
+                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                </View>
+                              </TouchableOpacity>
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No hay órdenes técnicas en el periodo</Text>
@@ -2078,10 +2445,10 @@ export default function AdminReports() {
                 {activeTab === 'parking' && (
                   <View style={{ gap: 25 }}>
                     <View style={styles.kpiRow}>
-                      <KPICard label="Cupos Activos" value={parkingStats.approved.toString()} color={COLORS.success} icon="checkmark-circle" trend="Autorizaciones vigentes" />
-                      <KPICard label="En Espera" value={parkingStats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Solicitudes en trámite" />
-                      <KPICard label="Total Registros" value={parkingStats.total.toString()} color={COLORS.accent} icon="car" trend="Historial solicitudes" />
-                      <KPICard label="Tasa de Ocupación" value={`${parkingStats.occupancyRate}%`} color={COLORS.purple} icon="pie-chart" trend="Capacidad sótanos" />
+                      <KPICard label="Cupos Activos" value={parkingStats.approved.toString()} color={COLORS.success} icon="checkmark-circle" trend="Autorizaciones vigentes" onPress={() => navigateToManage({ service: 'Parqueadero', status: 'resuelto' })} />
+                      <KPICard label="En Espera" value={parkingStats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Solicitudes en trámite" onPress={() => navigateToManage({ service: 'Parqueadero', status: 'pendiente' })} />
+                      <KPICard label="Total Registros" value={parkingStats.total.toString()} color={COLORS.accent} icon="car" trend="Historial solicitudes" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
+                      <KPICard label="Tasa de Ocupación" value={`${parkingStats.occupancyRate}%`} color={COLORS.purple} icon="pie-chart" trend="Capacidad sótanos" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
@@ -2090,6 +2457,7 @@ export default function AdminReports() {
                       category="parking" 
                       stats={stats} 
                       color={COLORS.purple} 
+                      onPressComment={(id) => navigateToManage({ id })}
                     />
 
                     {/* Fila 2 Columnas: Tipología Vehicular y Reglamento */}
@@ -2099,9 +2467,9 @@ export default function AdminReports() {
                         <Text style={styles.cardSubtitle}>Clasificación de vehículos autorizados para ingreso a sótanos</Text>
                         
                         <View style={{ gap: 18, marginTop: 22 }}>
-                          <CategoryProgress label="Automóviles / Camionetas" count={parkingStats.cars} total={parkingStats.total} color={COLORS.accent} suffix=" cupos" />
-                          <CategoryProgress label="Motocicletas" count={parkingStats.motos} total={parkingStats.total} color={COLORS.warning} suffix=" cupos" />
-                          <CategoryProgress label="Bicicletas / Micromovilidad Eléctrica" count={parkingStats.bikes} total={parkingStats.total} color={COLORS.success} suffix=" cupos" />
+                          <CategoryProgress label="Automóviles / Camionetas" count={parkingStats.cars} total={parkingStats.total} color={COLORS.accent} suffix=" cupos" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
+                          <CategoryProgress label="Motocicletas" count={parkingStats.motos} total={parkingStats.total} color={COLORS.warning} suffix=" cupos" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
+                          <CategoryProgress label="Bicicletas / Micromovilidad Eléctrica" count={parkingStats.bikes} total={parkingStats.total} color={COLORS.success} suffix=" cupos" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
                         </View>
                       </View>
 
@@ -2137,10 +2505,15 @@ export default function AdminReports() {
                       <View style={styles.platesGrid}>
                         {parkingStats.plates.length > 0 ? (
                           parkingStats.plates.map((plate, idx) => (
-                            <View key={idx} style={styles.plateCard}>
+                            <TouchableOpacity 
+                              key={idx} 
+                              style={[styles.plateCard, { cursor: 'pointer' } as any]}
+                              activeOpacity={0.75}
+                              onPress={() => navigateToManage({ service: 'Parqueadero' })}
+                            >
                               <Text style={styles.plateText}>{plate}</Text>
                               <View style={styles.plateBadge}><Text style={styles.plateBadgeText}>ACTIVO</Text></View>
-                            </View>
+                            </TouchableOpacity>
                           ))
                         ) : (
                           <Text style={styles.noDataText}>No hay placas autorizadas en el periodo</Text>
@@ -2153,12 +2526,21 @@ export default function AdminReports() {
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Registro y Control de Cupos Vehiculares</Text>
-                          <Text style={styles.cardSubtitle}>Historial de asignaciones de estacionamiento por placa</Text>
+                          <Text style={styles.cardSubtitle}>Historial de asignaciones de estacionamiento por placa (clic para abrir detalle)</Text>
                         </View>
-                        <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                          <Ionicons name="print-outline" size={14} color={COLORS.accent} />
-                          <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} 
+                            onPress={() => navigateToManage({ service: 'Parqueadero' })}
+                          >
+                            <Ionicons name="list-outline" size={14} color={COLORS.accent} />
+                            <Text style={[styles.cardSectionActionText, { color: COLORS.accent }]}>Ver en Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <ScrollView 
@@ -2167,7 +2549,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 760 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 870 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110 }]}>PLACA</Text>
@@ -2175,11 +2557,17 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>SOLICITANTE</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 150 }]}>DEPENDENCIA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
                           </View>
 
                           {parkingStats.recentList.length > 0 ? (
                             parkingStats.recentList.map((r, idx) => (
-                              <View key={r.id || idx} style={styles.tableRowDark}>
+                              <TouchableOpacity 
+                                key={r.id || idx} 
+                                style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
+                                activeOpacity={0.75}
+                                onPress={() => navigateToManage({ id: r.id })}
+                              >
                                 <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
                                 <Text style={[styles.tableCellTxtBold, { width: 110, color: COLORS.primary }]}>{r.metadata?.plate || 'Sin placa'}</Text>
                                 <Text style={[styles.tableCellTxt, { flex: 1, minWidth: 180 }]} numberOfLines={1}>{r.title || r.metadata?.vehicleType || 'Vehículo institucional'}</Text>
@@ -2188,7 +2576,10 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                              </View>
+                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                </View>
+                              </TouchableOpacity>
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No hay registros de parqueadero</Text>
@@ -2203,10 +2594,10 @@ export default function AdminReports() {
                 {activeTab === 'rooms' && (
                   <View style={{ gap: 25 }}>
                     <View style={styles.kpiRow}>
-                      <KPICard label="Reservas Realizadas" value={roomStats.totalReservations.toString()} color={COLORS.purple} icon="calendar" trend="Reuniones ejecutadas" />
-                      <KPICard label="Asistencia Promedio" value={`${roomStats.averageAttendees} pers.`} color={COLORS.accent} icon="people" trend="Por reunión" />
-                      <KPICard label="Total Asistentes" value={`${roomStats.totalAttendees} pers.`} color={COLORS.success} icon="person-add" trend="Acumulado periodo" />
-                      <KPICard label="Servicios Demandados" value="Alta" color={COLORS.warning} icon="cafe" trend="Café y audiovisuales" />
+                      <KPICard label="Reservas Realizadas" value={roomStats.totalReservations.toString()} color={COLORS.purple} icon="calendar" trend="Reuniones ejecutadas" onPress={() => navigateToManage({ service: 'Salas' })} />
+                      <KPICard label="Asistencia Promedio" value={`${roomStats.averageAttendees} pers.`} color={COLORS.accent} icon="people" trend="Por reunión" onPress={() => navigateToManage({ service: 'Salas' })} />
+                      <KPICard label="Total Asistentes" value={`${roomStats.totalAttendees} pers.`} color={COLORS.success} icon="person-add" trend="Acumulado periodo" onPress={() => navigateToManage({ service: 'Salas' })} />
+                      <KPICard label="Servicios Demandados" value="Alta" color={COLORS.warning} icon="cafe" trend="Café y audiovisuales" onPress={() => navigateToManage({ service: 'Salas' })} />
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
@@ -2215,6 +2606,7 @@ export default function AdminReports() {
                       category="rooms" 
                       stats={stats} 
                       color={COLORS.warning} 
+                      onPressComment={(id) => navigateToManage({ id })}
                     />
 
                     {/* Fila 2 Columnas: Salas y Servicios */}
@@ -2226,7 +2618,7 @@ export default function AdminReports() {
                         <View style={{ gap: 18, marginTop: 22 }}>
                           {roomStats.roomsList.length > 0 ? (
                             roomStats.roomsList.slice(0, 6).map((room, idx) => (
-                              <RankProgress key={idx} name={room.name} count={room.count} max={roomStats.roomsList[0].count} color={COLORS.purple} index={idx + 1} />
+                              <RankProgress key={idx} name={room.name} count={room.count} max={roomStats.roomsList[0].count} color={COLORS.purple} index={idx + 1} onPress={() => navigateToManage({ service: 'Salas' })} />
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No se registran reservas en el periodo</Text>
@@ -2239,22 +2631,30 @@ export default function AdminReports() {
                         <Text style={styles.cardSubtitle}>Servicios complementarios y picos de demanda</Text>
                         
                         <View style={{ gap: 16, marginTop: 22 }}>
-                          <CategoryProgress label="Estación de Café y Refrigerios" count={roomStats.services.coffee} total={100} color={COLORS.warning} suffix="%" />
-                          <CategoryProgress label="Proyector y Ayudas Visuales" count={roomStats.services.projector} total={100} color={COLORS.accent} suffix="%" />
-                          <CategoryProgress label="Laptops y Conectividad" count={roomStats.services.laptop} total={100} color={COLORS.purple} suffix="%" />
+                          <CategoryProgress label="Estación de Café y Refrigerios" count={roomStats.services.coffee} total={100} color={COLORS.warning} suffix="%" onPress={() => navigateToManage({ service: 'Salas' })} />
+                          <CategoryProgress label="Proyector y Ayudas Visuales" count={roomStats.services.projector} total={100} color={COLORS.accent} suffix="%" onPress={() => navigateToManage({ service: 'Salas' })} />
+                          <CategoryProgress label="Laptops y Conectividad" count={roomStats.services.laptop} total={100} color={COLORS.purple} suffix="%" onPress={() => navigateToManage({ service: 'Salas' })} />
                         </View>
 
                         <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
-                          <View style={styles.miniInfoCard}>
+                          <TouchableOpacity 
+                            style={[styles.miniInfoCard, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.75}
+                            onPress={() => navigateToManage({ service: 'Salas' })}
+                          >
                             <Text style={styles.miniInfoCardLabel}>Franja Mañana (8am-12m)</Text>
                             <Text style={styles.miniInfoCardValue}>{roomStats.morningSlots}</Text>
-                            <Text style={styles.miniInfoCardSub}>reuniones programadas</Text>
-                          </View>
-                          <View style={styles.miniInfoCard}>
+                            <Text style={styles.miniInfoCardSub}>reuniones programadas →</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={[styles.miniInfoCard, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.75}
+                            onPress={() => navigateToManage({ service: 'Salas' })}
+                          >
                             <Text style={styles.miniInfoCardLabel}>Franja Tarde (2pm-5pm)</Text>
                             <Text style={styles.miniInfoCardValue}>{roomStats.afternoonSlots}</Text>
-                            <Text style={styles.miniInfoCardSub}>reuniones programadas</Text>
-                          </View>
+                            <Text style={styles.miniInfoCardSub}>reuniones programadas →</Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
                     </View>
@@ -2264,12 +2664,21 @@ export default function AdminReports() {
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Bitácora de Reservaciones y Sesiones de Trabajo</Text>
-                          <Text style={styles.cardSubtitle}>Historial de eventos y reuniones desarrolladas en las salas de la entidad</Text>
+                          <Text style={styles.cardSubtitle}>Historial de eventos y reuniones desarrolladas en las salas de la entidad (clic para abrir detalle)</Text>
                         </View>
-                        <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                          <Ionicons name="print-outline" size={14} color={COLORS.accent} />
-                          <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} 
+                            onPress={() => navigateToManage({ service: 'Salas' })}
+                          >
+                            <Ionicons name="list-outline" size={14} color={COLORS.accent} />
+                            <Text style={[styles.cardSectionActionText, { color: COLORS.accent }]}>Ver en Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <ScrollView 
@@ -2278,7 +2687,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 780 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 890 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SALA</Text>
@@ -2286,11 +2695,17 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>DEPENDENCIA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>ASISTENTES</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
                           </View>
 
                           {roomStats.recentList.length > 0 ? (
                             roomStats.recentList.map((r, idx) => (
-                              <View key={r.id || idx} style={styles.tableRowDark}>
+                              <TouchableOpacity 
+                                key={r.id || idx} 
+                                style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
+                                activeOpacity={0.75}
+                                onPress={() => navigateToManage({ id: r.id })}
+                              >
                                 <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
                                 <Text style={[styles.tableCellTxtBold, { width: 140 }]}>{r.metadata?.room?.name || 'Sala General'}</Text>
                                 <Text style={[styles.tableCellTxt, { flex: 1, minWidth: 200 }]} numberOfLines={1}>{r.title || 'Reunión de trabajo'}</Text>
@@ -2299,7 +2714,10 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                              </View>
+                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                </View>
+                              </TouchableOpacity>
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No hay reuniones registradas</Text>
@@ -2314,10 +2732,10 @@ export default function AdminReports() {
                 {activeTab === 'transport' && (
                   <View style={{ gap: 25 }}>
                     <View style={styles.kpiRow}>
-                      <KPICard label="Misiones de Viaje" value={transportStats.totalRequests.toString()} color={COLORS.accent} icon="car-sport" trend="Servicios ejecutados" />
-                      <KPICard label="Servidores Movilizados" value={transportStats.totalPassengers.toString()} color={COLORS.success} icon="people" trend="Pasajeros oficiales" />
-                      <KPICard label="Promedio Pasajeros" value={`${transportStats.avgPassengers} pers.`} color={COLORS.purple} icon="speedometer" trend="Por misión" />
-                      <KPICard label="Cobertura Operativa" value="100%" color={COLORS.danger} icon="navigate" trend="Sede y Distrital" />
+                      <KPICard label="Misiones de Viaje" value={transportStats.totalRequests.toString()} color={COLORS.accent} icon="car-sport" trend="Servicios ejecutados" onPress={() => navigateToManage({ service: 'Transporte' })} />
+                      <KPICard label="Servidores Movilizados" value={transportStats.totalPassengers.toString()} color={COLORS.success} icon="people" trend="Pasajeros oficiales" onPress={() => navigateToManage({ service: 'Transporte' })} />
+                      <KPICard label="Promedio Pasajeros" value={`${transportStats.avgPassengers} pers.`} color={COLORS.purple} icon="speedometer" trend="Por misión" onPress={() => navigateToManage({ service: 'Transporte' })} />
+                      <KPICard label="Cobertura Operativa" value="100%" color={COLORS.danger} icon="navigate" trend="Sede y Distrital" onPress={() => navigateToManage({ service: 'Transporte' })} />
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
@@ -2326,6 +2744,7 @@ export default function AdminReports() {
                       category="transport" 
                       stats={stats} 
                       color={COLORS.success} 
+                      onPressComment={(id) => navigateToManage({ id })}
                     />
 
                     {/* Fila 2 Columnas: Rutas y Modalidades */}
@@ -2337,7 +2756,7 @@ export default function AdminReports() {
                         <View style={{ gap: 18, marginTop: 22 }}>
                           {transportStats.routes.length > 0 ? (
                             transportStats.routes.slice(0, 6).map((route, idx) => (
-                              <RankProgress key={idx} name={route.name} count={route.count} max={transportStats.routes[0].count} color={COLORS.accent} index={idx + 1} />
+                              <RankProgress key={idx} name={route.name} count={route.count} max={transportStats.routes[0].count} color={COLORS.accent} index={idx + 1} onPress={() => navigateToManage({ service: 'Transporte' })} />
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No se registran misiones de transporte en el periodo</Text>
@@ -2350,20 +2769,27 @@ export default function AdminReports() {
                         <Text style={styles.cardSubtitle}>Clasificación por tipo y objetivo de misión institucional</Text>
                         
                         <View style={{ gap: 18, marginTop: 22 }}>
-                          <CategoryProgress label="Diligencias Judiciales y Notificaciones" count={transportStats.judicialTrips} total={transportStats.totalRequests} color={COLORS.accent} suffix=" viajes" />
-                          <CategoryProgress label="Comisiones Directivas y Despacho" count={transportStats.executiveTrips} total={transportStats.totalRequests} color={COLORS.purple} suffix=" viajes" />
-                          <CategoryProgress label="Logística Administrativa y Envíos" count={transportStats.adminTrips} total={transportStats.totalRequests} color={COLORS.success} suffix=" viajes" />
+                          <CategoryProgress label="Diligencias Judiciales y Notificaciones" count={transportStats.judicialTrips} total={transportStats.totalRequests} color={COLORS.accent} suffix=" viajes" onPress={() => navigateToManage({ service: 'Transporte' })} />
+                          <CategoryProgress label="Comisiones Directivas y Despacho" count={transportStats.executiveTrips} total={transportStats.totalRequests} color={COLORS.purple} suffix=" viajes" onPress={() => navigateToManage({ service: 'Transporte' })} />
+                          <CategoryProgress label="Logística Administrativa y Envíos" count={transportStats.adminTrips} total={transportStats.totalRequests} color={COLORS.success} suffix=" viajes" onPress={() => navigateToManage({ service: 'Transporte' })} />
                         </View>
 
-                        <View style={[styles.infoAlertBox, { marginTop: 20 }]}>
+                        <TouchableOpacity 
+                          style={[styles.infoAlertBox, { marginTop: 20, cursor: 'pointer' } as any]}
+                          activeOpacity={0.75}
+                          onPress={() => navigateToManage({ service: 'Transporte' })}
+                        >
                           <Ionicons name="checkmark-circle-outline" size={24} color={COLORS.accent} />
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.infoAlertTitle}>Seguridad Vial y SOAT Vigente</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={styles.infoAlertTitle}>Seguridad Vial y SOAT Vigente</Text>
+                              <Text style={{ fontSize: 10, color: COLORS.accent, fontWeight: '800' }}>VER EN SOLICITUDES →</Text>
+                            </View>
                             <Text style={styles.infoAlertDesc}>
                               Toda la flota institucional cuenta con revisiones técnico-mecánicas y pólizas contractuales al día.
                             </Text>
                           </View>
-                        </View>
+                        </TouchableOpacity>
                       </View>
                     </View>
 
@@ -2372,12 +2798,21 @@ export default function AdminReports() {
                       <View style={styles.cardSectionHeader}>
                         <View>
                           <Text style={styles.cardTitle}>Registro de Salidas y Comisiones de Transporte Oficial</Text>
-                          <Text style={styles.cardSubtitle}>Relación de traslados con origen, destino y personal a bordo</Text>
+                          <Text style={styles.cardSubtitle}>Relación de traslados con origen, destino y personal a bordo (clic para abrir detalle)</Text>
                         </View>
-                        <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                          <Ionicons name="print-outline" size={14} color={COLORS.accent} />
-                          <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} 
+                            onPress={() => navigateToManage({ service: 'Transporte' })}
+                          >
+                            <Ionicons name="list-outline" size={14} color={COLORS.accent} />
+                            <Text style={[styles.cardSectionActionText, { color: COLORS.accent }]}>Ver en Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
 
                       <ScrollView 
@@ -2386,7 +2821,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 800 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 910 }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>ASUNTO / MISIÓN</Text>
@@ -2394,11 +2829,17 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 80, textAlign: 'center' }]}>PASAJEROS</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SOLICITANTE</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
                           </View>
 
                           {transportStats.recentList.length > 0 ? (
                             transportStats.recentList.map((r, idx) => (
-                              <View key={r.id || idx} style={styles.tableRowDark}>
+                              <TouchableOpacity 
+                                key={r.id || idx} 
+                                style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
+                                activeOpacity={0.75}
+                                onPress={() => navigateToManage({ id: r.id })}
+                              >
                                 <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
                                 <Text style={[styles.tableCellTxtBold, { flex: 1, minWidth: 180 }]} numberOfLines={1}>{r.title || 'Misión oficial'}</Text>
                                 <Text style={[styles.tableCellTxt, { width: 200 }]} numberOfLines={1}>
@@ -2409,7 +2850,10 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                              </View>
+                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                </View>
+                              </TouchableOpacity>
                             ))
                           ) : (
                             <Text style={styles.noDataText}>No hay misiones de transporte en el periodo</Text>
@@ -2496,6 +2940,14 @@ export default function AdminReports() {
                     </TouchableOpacity>
 
                     <TouchableOpacity 
+                      style={[styles.modalTabBtn, reportTab === 'satisfaction' && styles.modalTabBtnActive]} 
+                      onPress={() => setReportTab('satisfaction')}
+                    >
+                      <Ionicons name="star" size={14} color={reportTab === 'satisfaction' ? COLORS.white : '#D97706'} />
+                      <Text style={[styles.modalTabBtnText, reportTab === 'satisfaction' && styles.modalTabBtnTextActive]}>Satisfacción (CSAT)</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
                       style={[styles.modalTabBtn, reportTab === 'visitors' && styles.modalTabBtnActive]} 
                       onPress={() => setReportTab('visitors')}
                     >
@@ -2548,6 +3000,20 @@ export default function AdminReports() {
                       </Text>
                       <View style={styles.docDivider} />
 
+                      {/* Banner de ayuda interactiva */}
+                      <TouchableOpacity 
+                        style={[styles.infoAlertBox, { marginBottom: 16, cursor: 'pointer' } as any]}
+                        activeOpacity={0.8}
+                        onPress={() => navigateToManage({ service: 'Todas', status: 'Todos' })}
+                      >
+                        <Ionicons name="sparkles" size={18} color={COLORS.accent} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>Panel Interactivo</Text>
+                          <Text style={{ fontSize: 11, color: COLORS.muted }}>Haz clic sobre cualquier servicio, fila o solicitud para abrir su detalle completo o gestionar en Solicitudes.</Text>
+                        </View>
+                        <Ionicons name="arrow-forward" size={14} color={COLORS.accent} />
+                      </TouchableOpacity>
+
                       <View style={styles.reportDocMetaGrid}>
                         <Text style={styles.reportMetaLabel}>Periodo del Reporte: <Text style={{fontWeight:'400'}}>{reportPeriodLabel}</Text></Text>
                         <Text style={styles.reportMetaLabel}>Fecha de Emisión: <Text style={{fontWeight:'400'}}>{new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}</Text></Text>
@@ -2569,11 +3035,11 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>EFECTIVIDAD</Text>
                         </View>
                         
-                        <TableRow label="Control Acceso (Visitantes)" count={stats.catCounts.visitors} inProg={categoryBreakdown.visitors.inProgress} resolved={categoryBreakdown.visitors.resolved} />
-                        <TableRow label="Mantenimiento Locativo" count={stats.catCounts.maintenance} inProg={categoryBreakdown.maintenance.inProgress} resolved={categoryBreakdown.maintenance.resolved} />
-                        <TableRow label="Cupo de Parqueadero" count={stats.catCounts.parking} inProg={categoryBreakdown.parking.inProgress} resolved={categoryBreakdown.parking.resolved} />
-                        <TableRow label="Reserva de Salas" count={stats.catCounts.rooms} inProg={categoryBreakdown.rooms.inProgress} resolved={categoryBreakdown.rooms.resolved} />
-                        <TableRow label="Transporte Oficial" count={stats.catCounts.transport} inProg={categoryBreakdown.transport.inProgress} resolved={categoryBreakdown.transport.resolved} />
+                        <TableRow label="Control Acceso (Visitantes)" count={stats.catCounts.visitors} inProg={categoryBreakdown.visitors.inProgress} resolved={categoryBreakdown.visitors.resolved} onPress={() => navigateToManage({ service: 'Visitantes' })} />
+                        <TableRow label="Mantenimiento Locativo" count={stats.catCounts.maintenance} inProg={categoryBreakdown.maintenance.inProgress} resolved={categoryBreakdown.maintenance.resolved} onPress={() => navigateToManage({ service: 'Mantenimiento' })} />
+                        <TableRow label="Cupo de Parqueadero" count={stats.catCounts.parking} inProg={categoryBreakdown.parking.inProgress} resolved={categoryBreakdown.parking.resolved} onPress={() => navigateToManage({ service: 'Parqueadero' })} />
+                        <TableRow label="Reserva de Salas" count={stats.catCounts.rooms} inProg={categoryBreakdown.rooms.inProgress} resolved={categoryBreakdown.rooms.resolved} onPress={() => navigateToManage({ service: 'Salas' })} />
+                        <TableRow label="Transporte Oficial" count={stats.catCounts.transport} inProg={categoryBreakdown.transport.inProgress} resolved={categoryBreakdown.transport.resolved} onPress={() => navigateToManage({ service: 'Transporte' })} />
                       </View>
 
                       <Text style={styles.reportSectionTitle}>2. INFRAESTRUCTURA Y MANTENIMIENTO</Text>
@@ -2626,31 +3092,44 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>PARTICIPACIÓN</Text>
                         </View>
                         {visitorStats.departments.slice(0, 8).map((dep, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{dep.name}</Text>
+                          <TouchableOpacity 
+                            key={idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Visitantes' })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text, fontWeight: '700' }]}>{dep.name}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{dep.count}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>
                               {visitorStats.totalVisitors > 0 ? Math.round((dep.count / visitorStats.totalVisitors) * 100) : 0}%
                             </Text>
-                          </View>
+                          </TouchableOpacity>
                         ))}
                       </View>
 
-                      <Text style={styles.reportSectionTitle}>3. MUESTRA RECIENTE DE REGISTROS DE VISITA</Text>
+                      <Text style={styles.reportSectionTitle}>3. REGISTRO COMPLETO DE VISITAS AUTORIZADAS</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier visita para abrir su modal detallado</Text>
                       <View style={styles.reportTable}>
                         <View style={styles.reportTableHeader}>
-                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800' }]}>FECHA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
                           <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>MOTIVO / ASUNTO</Text>
-                          <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>DEPENDENCIA</Text>
-                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>DEPENDENCIA</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
                         </View>
-                        {dbData.filter(d => d.category === 'visitors').slice(0, 10).map((r, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 1.2, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || 'Visita oficial'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1.8, color: COLORS.text }]}>{r.metadata?.responsible?.dependency || r.profiles?.dependency?.name || 'General'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                          </View>
+                        {dbData.filter(d => d.category === 'visitors').map((r, idx) => (
+                          <TouchableOpacity 
+                            key={r.id || idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ id: r.id })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
+                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.primary, fontWeight: '700' }]}>{r.title || 'Visita oficial'}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.text }]}>{r.metadata?.responsible?.dependency || r.profiles?.dependency?.name || 'General'}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                          </TouchableOpacity>
                         ))}
                       </View>
                     </View>
@@ -2684,33 +3163,46 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>PARTICIPACIÓN</Text>
                         </View>
                         {maintenanceStats.locations.slice(0, 8).map((loc, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{loc.name}</Text>
+                          <TouchableOpacity 
+                            key={idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Mantenimiento' })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text, fontWeight: '700' }]}>{loc.name}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{loc.count}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>
                               {maintenanceStats.total > 0 ? Math.round((loc.count / maintenanceStats.total) * 100) : 0}%
                             </Text>
-                          </View>
+                          </TouchableOpacity>
                         ))}
                       </View>
 
-                      <Text style={styles.reportSectionTitle}>3. DETALLE DE SOLICITUDES TÉCNICAS RECIENTES</Text>
+                      <Text style={styles.reportSectionTitle}>3. REGISTRO COMPLETO DE SOLICITUDES TÉCNICAS</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier incidencia técnica para abrir su gestión detallada</Text>
                       <View style={styles.reportTable}>
                         <View style={styles.reportTableHeader}>
-                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800' }]}>FECHA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
                           <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>INCIDENCIA</Text>
-                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>UBICACIÓN</Text>
-                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>PRIORIDAD</Text>
-                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>UBICACIÓN</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>PRIORIDAD</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
                         </View>
-                        {dbData.filter(d => d.category === 'maintenance').slice(0, 10).map((r, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 1.2, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || 'Mantenimiento'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.text }]}>{r.metadata?.location || 'General'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: isHighPriority(r.priority) ? COLORS.danger : COLORS.accent, fontWeight: '800' }]}>{r.priority?.toUpperCase() || 'MEDIA'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                          </View>
+                        {dbData.filter(d => d.category === 'maintenance').map((r, idx) => (
+                          <TouchableOpacity 
+                            key={r.id || idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ id: r.id })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
+                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.primary, fontWeight: '700' }]}>{r.title || 'Mantenimiento'}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>{r.metadata?.location || 'General'}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: isHighPriority(r.priority) ? COLORS.danger : COLORS.accent, fontWeight: '800' }]}>{r.priority?.toUpperCase() || 'MEDIA'}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                          </TouchableOpacity>
                         ))}
                       </View>
                     </View>
@@ -2736,21 +3228,29 @@ export default function AdminReports() {
                         El parqueadero de la Secretaría Jurídica Distrital mantiene **{parkingStats.approved}** asignaciones vehiculares activas con placa autorizada. Se cuenta con **{parkingStats.pending}** solicitudes en trámite de validación conforme a disponibilidad de espacios en sótanos.
                       </Text>
 
-                      <Text style={styles.reportSectionTitle}>2. MUESTRA DE PLACAS AUTORIZADAS RECIENTES</Text>
+                      <Text style={styles.reportSectionTitle}>2. REGISTRO COMPLETO DE PLACAS Y CUPOS AUTORIZADOS</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier vehículo para abrir su solicitud detallada</Text>
                       <View style={styles.reportTable}>
                         <View style={styles.reportTableHeader}>
-                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800' }]}>FECHA</Text>
-                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PLACA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.3, fontWeight: '800' }]}>PLACA</Text>
                           <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>DESCRIPCIÓN / VEHÍCULO</Text>
-                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
                         </View>
-                        {dbData.filter(d => d.category === 'parking').slice(0, 10).map((r, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 1.2, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
-                            <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '900' }]}>{r.metadata?.plate || 'Sin placa'}</Text>
+                        {dbData.filter(d => d.category === 'parking').map((r, idx) => (
+                          <TouchableOpacity 
+                            key={r.id || idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ id: r.id })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.3, color: COLORS.primary, fontWeight: '900' }]}>{r.metadata?.plate || 'Sin placa'}</Text>
                             <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || r.metadata?.vehicleType || 'Vehículo autorizado'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                          </View>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                          </TouchableOpacity>
                         ))}
                       </View>
                     </View>
@@ -2784,33 +3284,46 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>% OCUPACIÓN</Text>
                         </View>
                         {roomStats.roomsList.map((rm, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{rm.name}</Text>
+                          <TouchableOpacity 
+                            key={idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Salas' })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text, fontWeight: '700' }]}>{rm.name}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{rm.count}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>
                               {roomStats.totalReservations > 0 ? Math.round((rm.count / roomStats.totalReservations) * 100) : 0}%
                             </Text>
-                          </View>
+                          </TouchableOpacity>
                         ))}
                       </View>
 
-                      <Text style={styles.reportSectionTitle}>3. DETALLE DE REUNIONES RECIENTES</Text>
+                      <Text style={styles.reportSectionTitle}>3. REGISTRO COMPLETO DE REUNIONES Y RESERVAS DE SALAS</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier reunión para abrir su detalle completo</Text>
                       <View style={styles.reportTable}>
                         <View style={styles.reportTableHeader}>
-                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800' }]}>FECHA</Text>
-                          <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>ASUNTO</Text>
-                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>SALA</Text>
-                          <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ASIST.</Text>
-                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.9, fontWeight: '800' }]}>ASUNTO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.3, fontWeight: '800' }]}>SALA</Text>
+                          <Text style={[styles.tableCell, { flex: 0.7, fontWeight: '800', textAlign: 'center' }]}>ASIST.</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
                         </View>
-                        {dbData.filter(d => d.category === 'rooms').slice(0, 10).map((r, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 1.2, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || 'Reunión'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.text }]}>{r.metadata?.room?.name || 'General'}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', color: COLORS.text }]}>{r.metadata?.attendees || '-'}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                          </View>
+                        {dbData.filter(d => d.category === 'rooms').map((r, idx) => (
+                          <TouchableOpacity 
+                            key={r.id || idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ id: r.id })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.9, color: COLORS.primary, fontWeight: '700' }]}>{r.title || 'Reunión'}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.3, color: COLORS.text }]}>{r.metadata?.room?.name || 'General'}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.7, textAlign: 'center', color: COLORS.text }]}>{r.metadata?.attendees || '-'}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                          </TouchableOpacity>
                         ))}
                       </View>
                     </View>
@@ -2843,31 +3356,171 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>VIAJES</Text>
                         </View>
                         {transportStats.routes.slice(0, 8).map((rt, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 2.5, color: COLORS.text }]}>{rt.name}</Text>
+                          <TouchableOpacity 
+                            key={idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ service: 'Transporte' })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 2.5, color: COLORS.text, fontWeight: '700' }]}>{rt.name}</Text>
                             <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{rt.count}</Text>
-                          </View>
+                          </TouchableOpacity>
                         ))}
                       </View>
 
-                      <Text style={styles.reportSectionTitle}>3. DETALLE DE MISIONES RECIENTES</Text>
+                      <Text style={styles.reportSectionTitle}>3. REGISTRO COMPLETO DE MISIONES DE TRANSPORTE</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier comisión para abrir su detalle completo</Text>
                       <View style={styles.reportTable}>
                         <View style={styles.reportTableHeader}>
-                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800' }]}>FECHA</Text>
-                          <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>ASUNTO / MISIÓN</Text>
-                          <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>RUTA</Text>
-                          <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>PASAJ.</Text>
-                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>ASUNTO / MISIÓN</Text>
+                          <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>RUTA</Text>
+                          <Text style={[styles.tableCell, { flex: 0.7, fontWeight: '800', textAlign: 'center' }]}>PASAJ.</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
                         </View>
-                        {dbData.filter(d => d.category === 'transport').slice(0, 10).map((r, idx) => (
-                          <View key={idx} style={styles.reportTableRow}>
-                            <Text style={[styles.tableCell, { flex: 1.2, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || 'Misión oficial'}</Text>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.metadata?.origin || 'Origen'} - {r.metadata?.destination || 'Destino'}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', color: COLORS.text }]}>{r.metadata?.passengers || 1}</Text>
-                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                          </View>
+                        {dbData.filter(d => d.category === 'transport').map((r, idx) => (
+                          <TouchableOpacity 
+                            key={r.id || idx} 
+                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                            activeOpacity={0.7}
+                            onPress={() => navigateToManage({ id: r.id })}
+                          >
+                            <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.8, color: COLORS.primary, fontWeight: '700' }]}>{r.title || 'Misión oficial'}</Text>
+                            <Text style={[styles.tableCell, { flex: 1.8, color: COLORS.text }]}>{r.metadata?.origin || 'Origen'} - {r.metadata?.destination || 'Destino'}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.7, textAlign: 'center', color: COLORS.text }]}>{r.metadata?.passengers || 1}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
+                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                          </TouchableOpacity>
                         ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* --- 7. REPORTE OFICIAL DE SATISFACCIÓN Y CALIDAD DEL SERVICIO (CSAT) --- */}
+                  {reportTab === 'satisfaction' && (
+                    <View>
+                      <Text style={styles.reportDocTitle}>
+                        REPORTE OFICIAL DE SATISFACCIÓN DE USUARIOS Y CALIDAD DEL SERVICIO (CSAT)
+                      </Text>
+                      <View style={styles.docDivider} />
+
+                      <View style={styles.reportDocMetaGrid}>
+                        <Text style={styles.reportMetaLabel}>Periodo Evaluado: <Text style={{fontWeight:'400'}}>{reportPeriodLabel}</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Índice Global CSAT: <Text style={{fontWeight:'800', color: stats.averageRating >= 4 ? COLORS.success : COLORS.warning}}>{stats.averageRating > 0 ? `${stats.averageRating} / 5.0 ★` : 'Sin datos'}</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Encuestas Diligenciadas: <Text style={{fontWeight:'400'}}>{stats.totalEvaluated} ({stats.responseRate}% de solicitudes resueltas)</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Percepción Favorable: <Text style={{fontWeight:'800', color: COLORS.success}}>{stats.favorablePercent}% (4 y 5 estrellas)</Text></Text>
+                      </View>
+
+                      <Text style={styles.reportSectionTitle}>1. BALANCE EJECUTIVO DE PERCEPCIÓN INSTITUCIONAL</Text>
+                      <Text style={styles.reportParagraph}>
+                        Durante el periodo analizado ({reportPeriodLabel}), la gestión de servicios administrativos de la Secretaría Jurídica Distrital obtuvo un promedio de satisfacción de **{stats.averageRating} / 5.0 estrellas**, con un **{stats.favorablePercent}%** de conceptos altamente favorables. De las **{stats.resolved}** solicitudes resueltas con éxito en el sistema SASGE, se consolidaron **{stats.totalEvaluated}** encuestas de satisfacción diligenciadas por funcionarios y colaboradores de las diferentes dependencias distritales.
+                      </Text>
+
+                      <Text style={styles.reportSectionTitle}>2. DISTRIBUCIÓN DE CALIFICACIONES (ESCALA 1 A 5 ESTRELLAS)</Text>
+                      <View style={styles.reportTable}>
+                        <View style={styles.reportTableHeader}>
+                          <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>ESCALA DE VALORACIÓN</Text>
+                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ENCUESTAS</Text>
+                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>PARTICIPACIÓN</Text>
+                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800', textAlign: 'center' }]}>NIVEL PERCEPCIÓN</Text>
+                        </View>
+                        {[
+                          { star: 5, label: '★★★★★ (5 Estrellas)', desc: 'Excelente', color: '#059669' },
+                          { star: 4, label: '★★★★☆ (4 Estrellas)', desc: 'Bueno / Favorable', color: '#10B981' },
+                          { star: 3, label: '★★★☆☆ (3 Estrellas)', desc: 'Aceptable', color: '#D97706' },
+                          { star: 2, label: '★★☆☆☆ (2 Estrellas)', desc: 'Regular', color: '#EA580C' },
+                          { star: 1, label: '★☆☆☆☆ (1 Estrella)', desc: 'Deficiente / Crítico', color: '#DC2626' },
+                        ].map((scale) => {
+                          const count = stats.ratingCounts[scale.star] || 0;
+                          const pct = stats.totalEvaluated > 0 ? Math.round((count / stats.totalEvaluated) * 100) : 0;
+                          return (
+                            <View key={scale.star} style={styles.reportTableRow}>
+                              <Text style={[styles.tableCell, { flex: 2, color: COLORS.text, fontWeight: '700' }]}>{scale.label}</Text>
+                              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{count}</Text>
+                              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{pct}%</Text>
+                              <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'center', color: scale.color, fontWeight: '800' }]}>{scale.desc}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      <Text style={styles.reportSectionTitle}>3. CALIDAD Y SATISFACCIÓN POR SERVICIO OPERATIVO</Text>
+                      <View style={styles.reportTable}>
+                        <View style={styles.reportTableHeader}>
+                          <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>SERVICIO / MÓDULO</Text>
+                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>ENCUESTAS</Text>
+                          <Text style={[styles.tableCell, { flex: 1, fontWeight: '800', textAlign: 'center' }]}>PROMEDIO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800', textAlign: 'center' }]}>ESTADO DE CALIDAD</Text>
+                        </View>
+                        {[
+                          { key: 'visitors', name: 'Control de Acceso y Visitantes', srv: 'Visitantes' },
+                          { key: 'maintenance', name: 'Mantenimiento Locativo', srv: 'Mantenimiento' },
+                          { key: 'parking', name: 'Acceso Parqueadero', srv: 'Parqueadero' },
+                          { key: 'rooms', name: 'Reserva de Salas de Juntas', srv: 'Salas' },
+                          { key: 'transport', name: 'Transporte Oficial', srv: 'Transporte' },
+                        ].map((mod) => {
+                          const modEval = stats.moduleEvaluations[mod.key as keyof typeof stats.moduleEvaluations];
+                          const avg = modEval?.avg || 0;
+                          const count = modEval?.count || 0;
+                          const statusText = count === 0 ? 'Sin evaluar' : avg >= 4.5 ? 'Sobresaliente' : avg >= 4.0 ? 'Excelente' : avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora';
+                          const statusColor = count === 0 ? COLORS.muted : avg >= 4.0 ? '#059669' : avg >= 3.0 ? '#D97706' : '#DC2626';
+                          return (
+                            <TouchableOpacity 
+                              key={mod.key} 
+                              style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                              activeOpacity={0.7}
+                              onPress={() => navigateToManage({ service: mod.srv })}
+                            >
+                              <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={[styles.tableCell, { flex: 1, color: COLORS.text, fontWeight: '700' }]}>{mod.name}</Text>
+                                <Ionicons name="open-outline" size={12} color={COLORS.accent} />
+                              </View>
+                              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{count}</Text>
+                              <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{count > 0 ? `★ ${avg.toFixed(1)}` : '—'}</Text>
+                              <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'center', color: statusColor, fontWeight: '800' }]}>{statusText}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+
+                      <Text style={styles.reportSectionTitle}>4. RETROALIMENTACIÓN CUALITATIVA Y COMENTARIOS DE USUARIOS</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier comentario para abrir la solicitud evaluada</Text>
+                      <View style={styles.reportTable}>
+                        <View style={styles.reportTableHeader}>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>SERVICIO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          <Text style={[styles.tableCell, { flex: 3, fontWeight: '800' }]}>COMENTARIO / OBSERVACIÓN</Text>
+                        </View>
+                        {dbData.filter(d => d.metadata?.evaluation?.comment).map((r, idx) => {
+                          const meta = getModuleMeta(r.category);
+                          return (
+                            <TouchableOpacity 
+                              key={r.id || idx} 
+                              style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                              activeOpacity={0.7}
+                              onPress={() => navigateToManage({ id: r.id })}
+                            >
+                              <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>
+                                {r.metadata?.evaluation?.date ? formatDisplayDate(r.metadata.evaluation.date) : formatDisplayDate(r.created_at)}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.5, color: meta.color, fontWeight: '700' }]}>{meta.name}</Text>
+                              <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>★ {r.metadata?.evaluation?.rating}</Text>
+                              <Text style={[styles.tableCell, { flex: 3, color: COLORS.text, fontStyle: 'italic' }]} numberOfLines={2}>
+                                "{r.metadata?.evaluation?.comment}"
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                        {dbData.filter(d => d.metadata?.evaluation?.comment).length === 0 && (
+                          <View style={styles.reportTableRow}>
+                            <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.muted, fontStyle: 'italic' }]}>
+                              No se registran comentarios cualitativos en las encuestas de este periodo
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   )}
@@ -2905,9 +3558,10 @@ interface ModuleCSATCardProps {
   category: string;
   stats: any;
   color: string;
+  onPressComment?: (id: string) => void;
 }
 
-function ModuleCSATCard({ moduleName, category, stats, color }: ModuleCSATCardProps) {
+function ModuleCSATCard({ moduleName, category, stats, color, onPressComment }: ModuleCSATCardProps) {
   const modData = stats.moduleEvaluations?.[category];
   const avg = modData?.avg || 0;
   const count = modData?.count || 0;
@@ -2945,15 +3599,24 @@ function ModuleCSATCard({ moduleName, category, stats, color }: ModuleCSATCardPr
       {modComments.length > 0 && (
         <View style={{ marginTop: 16, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 14, gap: 10 }}>
           <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primarySoft, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            COMENTARIOS RECIENTES DE FUNCIONARIOS
+            COMENTARIOS RECIENTES DE FUNCIONARIOS (CLIC PARA ABRIR SOLICITUD)
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             {modComments.slice(0, 3).map((item: any, idx: number) => (
-              <View key={item.id || idx} style={{ flex: 1, minWidth: 260, backgroundColor: COLORS.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: COLORS.line }}>
+              <TouchableOpacity 
+                key={item.id || idx} 
+                style={[{ flex: 1, minWidth: 260, backgroundColor: COLORS.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: COLORS.line }, onPressComment ? { cursor: 'pointer' } as any : {}]}
+                activeOpacity={onPressComment ? 0.75 : 1}
+                onPress={() => onPressComment && item.id && onPressComment(item.id)}
+                disabled={!onPressComment}
+              >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>
-                    {item.profiles?.full_name || 'Funcionario'}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>
+                      {item.profiles?.full_name || 'Funcionario'}
+                    </Text>
+                    {onPressComment && <Ionicons name="open-outline" size={11} color={COLORS.accent} />}
+                  </View>
                   <View style={{ flexDirection: 'row', gap: 1 }}>
                     {[1, 2, 3, 4, 5].map((s: number) => (
                       <Ionicons key={s} name={item.metadata?.evaluation?.rating >= s ? 'star' : 'star-outline'} size={11} color="#D97706" />
@@ -2963,7 +3626,7 @@ function ModuleCSATCard({ moduleName, category, stats, color }: ModuleCSATCardPr
                 <Text style={{ fontSize: 11, color: COLORS.text, fontStyle: 'italic', lineHeight: 16 }}>
                   "{item.metadata?.evaluation?.comment}"
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </View>
@@ -3157,23 +3820,44 @@ function TabButton({ id, label, icon, activeTab, setActiveTab }: any) {
   );
 }
 
-function KPICard({ label, value, color, icon, trend, style }: any) {
-  return (
-    <View style={[styles.kpiCard, style]}>
+function KPICard({ label, value, color, icon, trend, style, onPress }: any) {
+  const content = (
+    <View style={[styles.kpiCard, style, onPress ? { borderWidth: 1.5, borderColor: `${color}40` } : {}]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 8 }}>
         <View style={[styles.kpiIcon, { backgroundColor: `${color}14`, borderWidth: 1, borderColor: `${color}28` }]}>
           <Ionicons name={icon} size={22} color={color} />
         </View>
-        {trend && (
-          <View style={[styles.trendBadge, { backgroundColor: `${color}10`, borderColor: `${color}25`, borderWidth: 1, flexShrink: 1 }]}>
-            <Text style={[styles.trendText, { color: color }]} numberOfLines={1} adjustsFontSizeToFit>{trend}</Text>
-          </View>
-        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {trend && (
+            <View style={[styles.trendBadge, { backgroundColor: `${color}10`, borderColor: `${color}25`, borderWidth: 1, flexShrink: 1 }]}>
+              <Text style={[styles.trendText, { color: color }]} numberOfLines={1} adjustsFontSizeToFit>{trend}</Text>
+            </View>
+          )}
+          {onPress && (
+            <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="arrow-forward" size={12} color={color} />
+            </View>
+          )}
+        </View>
       </View>
       <Text style={styles.kpiValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.kpiLabel} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+        {onPress && (
+          <Text style={{ fontSize: 10, fontWeight: '700', color: color, letterSpacing: 0.2 }}>Filtrar →</Text>
+        )}
+      </View>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.75} onPress={onPress} style={Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
 }
 
 interface SegmentedCategoryBarProps {
@@ -3184,6 +3868,11 @@ interface SegmentedCategoryBarProps {
   inProgress: number;
   pending: number;
   rejected: number;
+  onPressCategory?: () => void;
+  onPressResolved?: () => void;
+  onPressInProgress?: () => void;
+  onPressPending?: () => void;
+  onPressRejected?: () => void;
 }
 
 function SegmentedCategoryBar({
@@ -3193,7 +3882,12 @@ function SegmentedCategoryBar({
   resolved,
   inProgress,
   pending,
-  rejected
+  rejected,
+  onPressCategory,
+  onPressResolved,
+  onPressInProgress,
+  onPressPending,
+  onPressRejected
 }: SegmentedCategoryBarProps) {
   // El total real para la distribución gráfica y visual de la barra es la suma de todas las solicitudes de la categoría
   const sumTotal = resolved + inProgress + pending + rejected;
@@ -3201,15 +3895,26 @@ function SegmentedCategoryBar({
 
   return (
     <View style={styles.segmentedContainer}>
-      <View style={styles.segmentedHeader}>
+      <TouchableOpacity 
+        style={styles.segmentedHeader} 
+        activeOpacity={onPressCategory ? 0.7 : 1}
+        onPress={onPressCategory}
+        disabled={!onPressCategory}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={styles.moduleIconBadge}>
             <Ionicons name={icon as any} size={14} color={COLORS.primary} />
           </View>
           <Text style={styles.segmentedLabel}>{label}</Text>
+          {onPressCategory && (
+            <Ionicons name="open-outline" size={13} color={COLORS.accent} />
+          )}
         </View>
-        <Text style={styles.segmentedTotal}>{barTotal} {barTotal === 1 ? 'solicitud' : 'solicitudes'}</Text>
-      </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={styles.segmentedTotal}>{barTotal} {barTotal === 1 ? 'solicitud' : 'solicitudes'}</Text>
+          {onPressCategory && <Ionicons name="chevron-forward" size={14} color={COLORS.muted} />}
+        </View>
+      </TouchableOpacity>
 
       {/* Barra segmentada por estado */}
       <View style={styles.segmentedBarOuter}>
@@ -3218,61 +3923,109 @@ function SegmentedCategoryBar({
         ) : (
           <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden', borderRadius: 6, gap: 1 }}>
             {resolved > 0 && (
-              <View style={{ flex: resolved, backgroundColor: COLORS.success, height: '100%' }} />
+              <TouchableOpacity 
+                style={{ flex: resolved, backgroundColor: COLORS.success, height: '100%' }}
+                onPress={onPressResolved || onPressCategory}
+                disabled={!onPressResolved && !onPressCategory}
+              />
             )}
             {inProgress > 0 && (
-              <View style={{ flex: inProgress, backgroundColor: COLORS.accent, height: '100%' }} />
+              <TouchableOpacity 
+                style={{ flex: inProgress, backgroundColor: COLORS.accent, height: '100%' }}
+                onPress={onPressInProgress || onPressCategory}
+                disabled={!onPressInProgress && !onPressCategory}
+              />
             )}
             {pending > 0 && (
-              <View style={{ flex: pending, backgroundColor: COLORS.warning, height: '100%' }} />
+              <TouchableOpacity 
+                style={{ flex: pending, backgroundColor: COLORS.warning, height: '100%' }}
+                onPress={onPressPending || onPressCategory}
+                disabled={!onPressPending && !onPressCategory}
+              />
             )}
             {rejected > 0 && (
-              <View style={{ flex: rejected, backgroundColor: COLORS.danger, height: '100%' }} />
+              <TouchableOpacity 
+                style={{ flex: rejected, backgroundColor: COLORS.danger, height: '100%' }}
+                onPress={onPressRejected || onPressCategory}
+                disabled={!onPressRejected && !onPressCategory}
+              />
             )}
           </View>
         )}
       </View>
 
-      {/* Mini indicadores de desglose */}
+      {/* Mini indicadores de desglose con botones interactivos */}
       <View style={styles.segmentedBadgesRow}>
-        <View style={styles.statusBadgeMini}>
+        <TouchableOpacity 
+          style={[styles.statusBadgeMini, onPressResolved ? { cursor: 'pointer' } as any : {}]}
+          onPress={onPressResolved}
+          disabled={!onPressResolved}
+          activeOpacity={0.7}
+        >
           <View style={[styles.statusDotMini, { backgroundColor: COLORS.success }]} />
           <Text style={styles.statusTextMini}>{resolved} resueltas</Text>
-        </View>
-        <View style={styles.statusBadgeMini}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.statusBadgeMini, onPressInProgress ? { cursor: 'pointer' } as any : {}]}
+          onPress={onPressInProgress}
+          disabled={!onPressInProgress}
+          activeOpacity={0.7}
+        >
           <View style={[styles.statusDotMini, { backgroundColor: COLORS.accent }]} />
           <Text style={styles.statusTextMini}>{inProgress} en curso</Text>
-        </View>
-        <View style={styles.statusBadgeMini}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.statusBadgeMini, onPressPending ? { cursor: 'pointer' } as any : {}]}
+          onPress={onPressPending}
+          disabled={!onPressPending}
+          activeOpacity={0.7}
+        >
           <View style={[styles.statusDotMini, { backgroundColor: COLORS.warning }]} />
           <Text style={styles.statusTextMini}>{pending} pendientes</Text>
-        </View>
-        <View style={styles.statusBadgeMini}>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.statusBadgeMini, onPressRejected ? { cursor: 'pointer' } as any : {}]}
+          onPress={onPressRejected}
+          disabled={!onPressRejected}
+          activeOpacity={0.7}
+        >
           <View style={[styles.statusDotMini, { backgroundColor: COLORS.danger }]} />
           <Text style={styles.statusTextMini}>{rejected} rechazadas</Text>
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-function CategoryProgress({ label, count, total, color, suffix = '', prefix = '' }: any) {
+function CategoryProgress({ label, count, total, color, suffix = '', prefix = '', onPress }: any) {
   const percent = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <View style={styles.progressContainer}>
+  const content = (
+    <View style={[styles.progressContainer, onPress ? { padding: 8, borderRadius: 10, backgroundColor: `${color}06` } : {}]}>
       <View style={styles.progressTextRow}>
-        <Text style={styles.progressLabel}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={[styles.progressLabel, onPress ? { color: COLORS.primary, fontWeight: '800' } : {}]}>{label}</Text>
+          {onPress && <Ionicons name="open-outline" size={12} color={color} />}
+        </View>
         <Text style={styles.progressValue}>{prefix}{count}{suffix}</Text>
       </View>
       <AnimatedProgressBar percent={percent} color={color} />
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : undefined}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
 }
 
-function RankProgress({ name, count, max, color, index }: any) {
+function RankProgress({ name, count, max, color, index, onPress }: any) {
   const percent = max > 0 ? (count / max) * 100 : 0;
-  return (
-    <View style={styles.rankContainer}>
+  const content = (
+    <View style={[styles.rankContainer, onPress ? { cursor: 'pointer' } as any : {}]}>
       <View style={styles.rankIndexCircle}><Text style={styles.rankIndexText}>{index}</Text></View>
       <View style={{ flex: 1 }}>
         <View style={styles.progressTextRow}>
@@ -3281,31 +4034,70 @@ function RankProgress({ name, count, max, color, index }: any) {
         </View>
         <AnimatedProgressBar percent={percent} color={color} />
       </View>
+      {onPress && <Ionicons name="chevron-forward" size={14} color={COLORS.muted} style={{ marginLeft: 6 }} />}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
 }
 
-function StateWidget({ label, count, color, icon, bg }: any) {
-  return (
-    <View style={[styles.stateWidget, { borderLeftColor: color }]}>
-      <View style={[styles.stateIconCircle, { backgroundColor: bg }]}>
-        <Ionicons name={icon} size={22} color={color} />
+function StateWidget({ label, count, color, icon, bg, onPress }: any) {
+  const content = (
+    <View style={[styles.stateWidget, { borderLeftColor: color }, onPress ? { borderWidth: 1, borderColor: `${color}35` } : {}]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+        <View style={[styles.stateIconCircle, { backgroundColor: bg }]}>
+          <Ionicons name={icon} size={22} color={color} />
+        </View>
+        {onPress && (
+          <View style={{ backgroundColor: `${color}15`, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: color }}>VER</Text>
+            <Ionicons name="chevron-forward" size={10} color={color} />
+          </View>
+        )}
       </View>
       <Text style={styles.stateCount}>{count}</Text>
       <Text style={styles.stateLabel}>{label}</Text>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.75} onPress={onPress} style={[{ flex: 1 }, Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}]}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
 }
 
-function TableRow({ label, count, inProg, resolved }: any) {
-  return (
-    <View style={styles.reportTableRow}>
-      <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{label}</Text>
+function TableRow({ label, count, inProg, resolved, onPress }: any) {
+  const content = (
+    <View style={[styles.reportTableRow, onPress ? { cursor: 'pointer' } as any : {}]}>
+      <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <Text style={[styles.tableCell, { flex: 1, color: COLORS.text, fontWeight: onPress ? '700' : '400' }]}>{label}</Text>
+        {onPress && <Ionicons name="open-outline" size={12} color={COLORS.accent} />}
+      </View>
       <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{count}</Text>
       <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{inProg}</Text>
       <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text }]}>{resolved}</Text>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
 }
 
 function StatusBadge({ status }: { status?: string }) {
@@ -3356,6 +4148,23 @@ function PriorityBadge({ priority }: { priority?: string }) {
       <Text style={[styles.priorityBadgeText, { color: text }]}>{label}</Text>
     </View>
   );
+}
+
+function RatingBadge({ rating, status }: { rating?: number | null; status?: string }) {
+  if (typeof rating === 'number') {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2.5, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+        <Ionicons name="star" size={11} color="#D97706" />
+        <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+          {Number(rating).toFixed(1)}
+        </Text>
+      </View>
+    );
+  }
+  if (status && ['resuelto', 'aprobado'].includes(status.toLowerCase())) {
+    return <Text style={{ fontSize: 10, color: COLORS.muted, fontStyle: 'italic' }}>Sin calificar</Text>;
+  }
+  return <Text style={{ fontSize: 11, color: COLORS.line }}>—</Text>;
 }
 
 const formatDisplayDate = (d?: string) => {
