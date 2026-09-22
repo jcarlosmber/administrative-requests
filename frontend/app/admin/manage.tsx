@@ -596,6 +596,7 @@ export default function ManageRequests() {
       uiMetadata = [
         { label: 'Visitantes', value: `${item.metadata.visitors?.length || 0} personas`, icon: 'people-outline' },
         { label: 'Listado Detallado', value: visitorList, icon: 'list-circle-outline' },
+        { label: 'Motivo de la Visita', value: item.metadata.visitReason || item.metadata.reason || 'N/A', icon: 'document-text-outline' },
         { label: 'Vehículo', value: hasVeh ? 'Sí' : 'No', icon: 'car-outline' },
         ...(hasVeh ? [{ label: 'Detalles Vehículo', value: vehList, icon: 'car-sport-outline' }] : []),
         { label: 'Autoriza (Funcionario)', value: item.metadata.responsible?.name || 'N/A', icon: 'person-outline' },

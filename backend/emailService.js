@@ -179,6 +179,7 @@ function formatMetadataForEmail(request) {
     case 'visitors':
       append('Responsable', meta.responsible?.name);
       append('Dependencia', meta.responsible?.dependency);
+      append('Motivo de la Visita', meta.visitReason || meta.reason);
       append('Desde', meta.fromDate);
       append('Hasta', meta.toDate);
       if (Array.isArray(meta.visitors) && meta.visitors.length > 0) {
@@ -282,53 +283,801 @@ function formatMetadataForEmail(request) {
 }
 
 /**
+ * Procesa imágenes base64 para adjuntarlas como inline CID en correos
+ */
+function processEmailAttachments(attachments = [], finalImage = null) {
+  const emailAttachments = [];
+
+  const handleImage = (attach, type) => {
+    if (attach && typeof attach === 'string' && attach.startsWith('data:image')) {
+      const cid = `img_${Math.random().toString(36).substring(7)}`;
+      const base64Data = attach.split(';base64,').pop();
+      emailAttachments.push({
+        filename: `${type}_${cid}.jpg`,
+        content: Buffer.from(base64Data, 'base64'),
+        cid: cid
+      });
+      return `cid:${cid}`;
+    }
+    return (attach && typeof attach === 'string' && attach.startsWith('http')) ? attach : null;
+  };
+
+  let imagesHtml = '';
+  if (Array.isArray(attachments) && attachments.length > 0) {
+    const listHtml = attachments.map(att => {
+      const src = handleImage(att, 'evidencia');
+      return src ? `<img src="${src}" alt="Evidencia Inicial" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 8px; border: 1px solid #CBD5E1; display: block;" />` : '';
+    }).filter(Boolean).join('');
+
+    if (listHtml) {
+      imagesHtml += `
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0;">
+          <strong style="color: #0F172A; font-size: 13px;">Evidencia Fotográfica Inicial:</strong>
+          ${listHtml}
+        </div>
+      `;
+    }
+  }
+
+  if (finalImage) {
+    const src = handleImage(finalImage, 'final');
+    if (src) {
+      imagesHtml += `
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0;">
+          <strong style="color: #059669; font-size: 13px;">Evidencia de Trabajo Finalizado:</strong>
+          <img src="${src}" alt="Evidencia Final" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 8px; border: 1px solid #10B981; display: block;" />
+        </div>
+      `;
+    }
+  }
+
+  return { imagesHtml, emailAttachments };
+}
+
+/**
+ * Maquetador base institucional para los correos de los 5 servicios
+ */
+function renderServiceEmailLayout({
+  serviceCategory,
+  headerSubTitle,
+  introParagraph,
+  cardItems = [],
+  extraSectionsHtml = '',
+  closingParagraphs = [],
+  actionButton = null,
+  footerNote = null
+}) {
+  const [primary, dark] = CATEGORY_COLORS[serviceCategory?.toLowerCase()] || ['#0077B6', '#023E8A'];
+  const fullTitle = `Sistema de Administración de Servicios Generales (SASGE) - ${headerSubTitle}`;
+
+  let cardHtml = '';
+  if (cardItems.length > 0 || extraSectionsHtml) {
+    cardHtml = `
+      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 18px 20px; margin: 18px 0;">
+        ${cardItems.map(item => `
+          <p style="margin: 5px 0; font-size: 14px; line-height: 1.5;">
+            <strong style="color: #0F172A;">${item.label}:</strong> 
+            <span style="color: #334155;">${item.value || 'N/A'}</span>
+          </p>
+        `).join('')}
+        ${extraSectionsHtml}
+      </div>
+    `;
+  }
+
+  const paragraphsHtml = closingParagraphs.map(p => `
+    <p style="margin: 10px 0; font-size: 14px; line-height: 1.6; color: #1E293B;">${p}</p>
+  `).join('');
+
+  const btnHtml = actionButton ? `
+    <div style="text-align: center; margin-top: 26px;">
+      <a href="${actionButton.url}" 
+         style="background-color: ${primary}; color: #FFFFFF; text-decoration: none; padding: 11px 24px; border-radius: 6px; font-weight: 700; font-size: 13px; display: inline-block;">
+        ${actionButton.text}
+      </a>
+    </div>
+  ` : '';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          background-color: #F8FAFC;
+          color: #0F172A;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 620px;
+          margin: 25px auto;
+          background: #FFFFFF;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+          border: 1px solid #E2E8F0;
+        }
+        .header {
+          background: linear-gradient(135deg, ${dark} 0%, ${primary} 100%);
+          padding: 24px 26px;
+          text-align: center;
+        }
+        .header h1 {
+          color: #FFFFFF;
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+          letter-spacing: 0.3px;
+        }
+        .content {
+          padding: 28px 26px;
+          line-height: 1.6;
+          font-size: 14px;
+          color: #0F172A;
+        }
+        .footer {
+          background-color: #F1F5F9;
+          padding: 16px;
+          text-align: center;
+          font-size: 12px;
+          color: #64748B;
+          border-top: 1px solid #E2E8F0;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>${fullTitle}</h1>
+        </div>
+        <div class="content">
+          ${introParagraph ? `<p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">${introParagraph}</p>` : ''}
+          ${cardHtml}
+          ${paragraphsHtml}
+
+          <p style="margin: 20px 0 0 0; font-size: 14px; line-height: 1.6;">
+            Cordialmente,<br>
+            <strong>Secretaría Jurídica Distrital</strong>
+          </p>
+
+          ${btnHtml}
+        </div>
+        <div class="footer">
+          ${footerNote || 'Este es un correo automático generado por el Sistema de Administración de Servicios Generales (SASGE).<br>Alcaldía Mayor de Bogotá - Secretaría Jurídica Distrital.'}
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * 1. INGRESO DE VISITANTES (visitors)
+ */
+function getVisitorsEmailContent(request, isUserRecipient, isUpdate, status, user) {
+  const meta = request.metadata || {};
+  const visitorsList = Array.isArray(meta.visitors) && meta.visitors.length > 0 ? meta.visitors : [];
+  
+  const firstVisitorName = visitorsList[0]?.name || request.title?.replace(/^Ingreso:\s*/i, '') || 'Visitante';
+  const visitorSubject = visitorsList.length > 1
+    ? visitorsList.map(v => v.name).filter(Boolean).join(', ')
+    : firstVisitorName;
+
+  const fromDate = meta.fromDate || 'Por definir';
+  const toDate = meta.toDate || meta.fromDate || 'Por definir';
+  const dependency = meta.responsible?.dependency || user?.dependency || 'Secretaría Jurídica Distrital';
+  const responsibleName = meta.responsible?.name || user?.name || 'Funcionario Responsable';
+  const visitReason = meta.visitReason || meta.reason || request.description || 'Sin especificar';
+
+  let visitorsBlock = '';
+  if (visitorsList.length > 0) {
+    visitorsBlock = visitorsList.map((v, index) => `
+      <p style="margin: 8px 0 2px 0; font-size: 14px; color: #0F172A;">
+        <strong>Visitante ${index + 1}:</strong> ${v.name || 'Sin nombre'}
+      </p>
+      <p style="margin: 0 0 10px 0; font-size: 14px; color: #334155;">
+        <strong>Documento:</strong> ${v.document || 'No especificado'}
+      </p>
+    `).join('');
+  } else {
+    visitorsBlock = `
+      <p style="margin: 8px 0 2px 0; font-size: 14px; color: #0F172A;">
+        <strong>Visitante 1:</strong> ${firstVisitorName}
+      </p>
+      <p style="margin: 0 0 10px 0; font-size: 14px; color: #334155;">
+        <strong>Documento:</strong> No especificado
+      </p>
+    `;
+  }
+
+  let vehiclesText = 'Ninguno';
+  const vehArr = (meta.hasVehicle && Array.isArray(meta.vehicles) && meta.vehicles.length > 0)
+    ? meta.vehicles
+    : (Array.isArray(meta.vehicles) && meta.vehicles.length > 0 ? meta.vehicles : []);
+
+  if (vehArr.length > 0) {
+    const list = vehArr.map(vh => `${vh.plate || 'Sin placa'}-${vh.brand || 'Sin marca'}`).filter(Boolean);
+    if (list.length > 0) vehiclesText = list.join(', ');
+  }
+
+  const extraSectionsHtml = `
+    <div style="border-top: 1px solid #E2E8F0; margin: 14px 0 10px 0; padding-top: 8px;">
+      ${visitorsBlock}
+    </div>
+    <div style="border-top: 1px solid #E2E8F0; margin-top: 10px; padding-top: 10px;">
+      <p style="margin: 4px 0;"><strong>Vehículos:</strong> ${vehiclesText}</p>
+    </div>
+  `;
+
+  // CASO: DESTINATARIO ADMINISTRADOR / PORTERÍA
+  if (!isUserRecipient) {
+    const subject = `Solicitud de autorización de ingreso – ${visitorSubject}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'visitors',
+      headerSubTitle: 'Ingresos',
+      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la autorización de ingreso a las instalaciones de los siguientes visitantes y vehículos relacionados a continuación:',
+      cardItems: [
+        { label: 'Fecha de ingreso', value: fromDate },
+        { label: 'Fecha de salida', value: toDate },
+        { label: 'Dependencia a visitar', value: dependency },
+        { label: 'Funcionario responsable', value: responsibleName },
+        { label: 'Motivo de la visita', value: visitReason }
+      ],
+      extraSectionsHtml,
+      closingParagraphs: [
+        'Agradecemos autorizar el ingreso del visitante relacionado, de acuerdo con los protocolos establecidos para el acceso a las instalaciones.',
+        'Quedamos atentos a cualquier información adicional que se requiera para gestionar el ingreso.'
+      ],
+      actionButton: {
+        text: 'Ver Solicitud en SASGE',
+        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+      }
+    });
+    return { subject, html };
+  }
+
+  // CASO: DESTINATARIO FUNCIONARIO SOLICITANTE
+  if (!isUpdate) {
+    // Creación
+    const subject = `Solicitud de ingreso registrada – ${visitorSubject}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'visitors',
+      headerSubTitle: 'Ingresos',
+      introParagraph: `Apreciado(a) <strong>${user?.name || 'Funcionario(a)'}</strong>, tu solicitud de autorización de ingreso de visitantes ha sido radicada correctamente en el sistema:`,
+      cardItems: [
+        { label: 'Fecha de ingreso', value: fromDate },
+        { label: 'Fecha de salida', value: toDate },
+        { label: 'Dependencia anfitriona', value: dependency },
+        { label: 'Motivo de la visita', value: visitReason }
+      ],
+      extraSectionsHtml,
+      closingParagraphs: [
+        'La solicitud ha sido remitida al equipo de recepción y seguridad para la validación y autorización de acceso correspondiente.',
+        'Te notificaremos por este medio cuando la solicitud sea gestionada.'
+      ]
+    });
+    return { subject, html };
+  } else {
+    // Actualización
+    const isApproved = status === 'resuelto' || status === 'aprobado';
+    const isRejected = status === 'rechazado';
+    const statusText = isApproved ? 'AUTORIZADO' : isRejected ? 'NO AUTORIZADO' : (status?.toUpperCase() || 'EN TRÁMITE');
+    const subject = isApproved 
+      ? `Ingreso de visitantes autorizado – ${visitorSubject}`
+      : `Solicitud de ingreso actualizada – Estado: ${statusText}`;
+
+    const adminNote = request.admin_notes ? `<p style="margin-top: 10px; color: #78350F; background: #FEF3C7; padding: 10px; border-radius: 6px;"><strong>Observaciones:</strong> ${request.admin_notes}</p>` : '';
+
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'visitors',
+      headerSubTitle: 'Ingresos',
+      introParagraph: isApproved 
+        ? `Te informamos que la solicitud de autorización de ingreso ha sido <strong>APROBADA</strong> por la administración:`
+        : `Te informamos que la solicitud de ingreso de visitantes se encuentra en estado <strong>${statusText}</strong>:`,
+      cardItems: [
+        { label: 'Fecha autorizada', value: fromDate === toDate ? fromDate : `${fromDate} al ${toDate}` },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Motivo', value: visitReason },
+        { label: 'Estado', value: statusText }
+      ],
+      extraSectionsHtml: extraSectionsHtml + adminNote,
+      closingParagraphs: isApproved ? [
+        'La portería y el personal de seguridad cuentan con el registro para facilitar el acceso en las fechas autorizadas.',
+        'Recuerda que cada visitante debe presentar su documento de identidad original en la recepción.'
+      ] : [
+        'Puedes ingresar a la plataforma SASGE si requieres verificar detalles adicionales o radicar una nueva solicitud.'
+      ]
+    });
+    return { subject, html };
+  }
+}
+
+/**
+ * 2. RESERVA DE SALAS (rooms)
+ */
+function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) {
+  const meta = request.metadata || {};
+  const roomObj = meta.room;
+  const roomName = (roomObj && typeof roomObj === 'object') ? (roomObj.name || 'Sala Regular') : (roomObj || 'Sala Regular');
+  const date = meta.date || 'Por confirmar';
+  const time = meta.time || meta.booking_hours || ((meta.startTime || '') + (meta.endTime ? ' a ' + meta.endTime : '')) || 'Horario por confirmar';
+  const organizer = meta.responsible_name || meta.responsibleName || user?.name || request.user_name || 'Funcionario Solicitante';
+  const dependency = meta.dependency || user?.dependency || 'Secretaría Jurídica Distrital';
+  const phone = meta.contact_phone || user?.phone || 'No registrado';
+  const attendees = meta.participants_count || meta.attendees || '4';
+  const activity = meta.activity_name || request.title?.replace(/^Reserva:\s*/i, '') || 'Reunión de trabajo';
+
+  // Servicios
+  const srvList = [];
+  if (meta.services?.coffee) srvList.push('Estación de café');
+  if (meta.services?.projector) srvList.push('Proyector');
+  if (meta.services?.laptop) srvList.push('Laptop');
+  if (meta.services_description) srvList.push(meta.services_description);
+  const servicesText = srvList.length > 0 ? srvList.join(', ') : 'Ninguno';
+
+  // CASO: DESTINATARIO ADMINISTRADOR DE SALAS
+  if (!isUserRecipient) {
+    const subject = `Solicitud de reserva de espacio – ${roomName} – ${date}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'rooms',
+      headerSubTitle: 'Reserva de Salas',
+      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la gestión y asignación del siguiente espacio institucional:',
+      cardItems: [
+        { label: 'Espacio Solicitado', value: roomName },
+        { label: 'Fecha de la Reserva', value: date },
+        { label: 'Horario', value: time },
+        { label: 'Actividad / Evento', value: activity },
+        { label: 'Funcionario Organizador', value: organizer },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Teléfono / Contacto', value: phone },
+        { label: 'Asistentes Previstos', value: `${attendees} persona(s)` },
+        { label: 'Servicios Logísticos / TIC', value: servicesText }
+      ],
+      closingParagraphs: [
+        'Agradecemos verificar la agenda del espacio y formalizar la aprobación y alistamiento correspondiente.',
+        'Quedamos atentos a cualquier inquietud o coordinación logística.'
+      ],
+      actionButton: {
+        text: 'Gestionar Reserva en SASGE',
+        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+      }
+    });
+    return { subject, html };
+  }
+
+  // CASO: DESTINATARIO FUNCIONARIO SOLICITANTE
+  if (!isUpdate) {
+    const subject = `Confirmación de radicación – Reserva de Sala ${roomName} (${date})`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'rooms',
+      headerSubTitle: 'Reserva de Salas',
+      introParagraph: `Apreciado(a) <strong>${organizer}</strong>, tu solicitud de reserva de sala ha sido radicada exitosamente:`,
+      cardItems: [
+        { label: 'Espacio', value: roomName },
+        { label: 'Fecha', value: date },
+        { label: 'Horario', value: time },
+        { label: 'Evento', value: activity },
+        { label: 'Servicios solicitados', value: servicesText }
+      ],
+      closingParagraphs: [
+        'El equipo de administración de salas revisará la disponibilidad de la agenda y te confirmará la reserva oportunamente.'
+      ]
+    });
+    return { subject, html };
+  } else {
+    const isApproved = status === 'resuelto' || status === 'aprobado';
+    const isRejected = status === 'rechazado';
+    const statusText = isApproved ? 'APROBADA' : isRejected ? 'NO DISPONIBLE' : (status?.toUpperCase() || 'EN PROCESO');
+    const subject = isApproved 
+      ? `Reserva Aprobada – ${roomName} (${date})`
+      : `Actualización de reserva – ${roomName} (${statusText})`;
+
+    const adminNote = request.admin_notes ? `<p style="margin-top: 10px; color: #78350F; background: #FEF3C7; padding: 10px; border-radius: 6px;"><strong>Observaciones:</strong> ${request.admin_notes}</p>` : '';
+
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'rooms',
+      headerSubTitle: 'Reserva de Salas',
+      introParagraph: isApproved
+        ? `¡Tu reserva de espacio institucional ha sido <strong>CONFIRMADA</strong>!`
+        : `Te informamos que tu solicitud de reserva se encuentra en estado <strong>${statusText}</strong>:`,
+      cardItems: [
+        { label: 'Espacio', value: roomName },
+        { label: 'Fecha', value: date },
+        { label: 'Horario', value: time },
+        { label: 'Estado', value: statusText }
+      ],
+      extraSectionsHtml: adminNote,
+      closingParagraphs: isApproved ? [
+        'Por favor ten presentes los lineamientos de uso del espacio: iniciar y finalizar dentro del horario reservado, hacer uso responsable de los equipos y entregar la sala en perfecto estado.',
+        'Si requieres cancelar o reprogramar, por favor infórmalo con antelación en SASGE.'
+      ] : [
+        'Puedes consultar la disponibilidad de otros espacios o fechas a través de la plataforma SASGE.'
+      ]
+    });
+    return { subject, html };
+  }
+}
+
+/**
+ * 3. TRANSPORTE INSTITUCIONAL (transport)
+ */
+function getTransportEmailContent(request, isUserRecipient, isUpdate, status, user) {
+  const meta = request.metadata || {};
+  const passengerName = meta.passengerName || user?.name || request.user_name || 'Funcionario';
+  const phone = meta.passengerPhone || user?.phone || 'No registrado';
+  const origin = meta.origin || 'Alcaldía Mayor de Bogotá (Manzana Liévano)';
+  const destination = meta.destination || 'Por definir';
+  const date = meta.date || 'Por definir';
+  const pickupTime = meta.pickupTime || 'Por definir';
+  const passengers = meta.passengers || '1';
+  const reason = meta.reason || request.description || 'Diligencia oficial';
+  const requiresReturn = meta.requiresReturn ? `Sí (Hora retorno: ${meta.returnTime || 'Por confirmar'})` : 'No';
+
+  let driverSectionHtml = '';
+  if (meta.driver) {
+    driverSectionHtml = `
+      <div style="border-top: 1px solid #CBD5E1; margin-top: 12px; padding-top: 10px;">
+        <strong style="color: #0369A1;">Conductor y Vehículo Asignado:</strong><br>
+        <span style="color: #0F172A; font-weight: 700;">Conductor:</span> ${meta.driver.name || 'Conductor asignado'}<br>
+        <span style="color: #0F172A; font-weight: 700;">Contacto:</span> ${meta.driver.phone || 'No registrado'}<br>
+        <span style="color: #0F172A; font-weight: 700;">Vehículo Placa:</span> ${meta.driver.plate || 'Institucional'}
+      </div>
+    `;
+  }
+
+  // CASO: DESTINATARIO ADMINISTRADOR / EQUIPO DE TRANSPORTE
+  if (!isUserRecipient) {
+    const subject = `Solicitud de servicio de transporte – ${passengerName} – ${destination}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'transport',
+      headerSubTitle: 'Transporte Institucional',
+      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la programación de servicio de transporte para la siguiente comisión o diligencia oficial:',
+      cardItems: [
+        { label: 'Fecha del Traslado', value: date },
+        { label: 'Hora de Recogida', value: pickupTime },
+        { label: 'Origen', value: origin },
+        { label: 'Destino', value: destination },
+        { label: 'Requiere Retorno', value: requiresReturn },
+        { label: 'Funcionario / Pasajero', value: passengerName },
+        { label: 'Teléfono de Contacto', value: phone },
+        { label: 'Dependencia', value: user?.dependency || meta.dependency || 'SJD' },
+        { label: 'Cantidad de Pasajeros', value: `${passengers} persona(s)` },
+        { label: 'Motivo del Traslado', value: reason }
+      ],
+      extraSectionsHtml: driverSectionHtml,
+      closingParagraphs: [
+        'Agradecemos programar el vehículo correspondiente y coordinar la logística con el funcionario solicitante.',
+        'Quedamos atentos a la confirmación del servicio.'
+      ],
+      actionButton: {
+        text: 'Gestionar Transporte en SASGE',
+        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+      }
+    });
+    return { subject, html };
+  }
+
+  // CASO: DESTINATARIO FUNCIONARIO SOLICITANTE / PASAJERO
+  if (!isUpdate) {
+    const subject = `Solicitud de transporte radicada – ${destination} (${date})`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'transport',
+      headerSubTitle: 'Transporte Institucional',
+      introParagraph: `Apreciado(a) <strong>${passengerName}</strong>, tu requerimiento de transporte oficial ha sido radicado exitosamente:`,
+      cardItems: [
+        { label: 'Fecha', value: date },
+        { label: 'Hora de recogida', value: pickupTime },
+        { label: 'Origen', value: origin },
+        { label: 'Destino', value: destination },
+        { label: 'Retorno', value: requiresReturn },
+        { label: 'Pasajeros', value: `${passengers} persona(s)` }
+      ],
+      closingParagraphs: [
+        'El área de transporte revisará la programación operativa y te notificará los datos del vehículo y conductor asignado.'
+      ]
+    });
+    return { subject, html };
+  } else {
+    const isApproved = status === 'resuelto' || status === 'aprobado' || status === 'en_progreso';
+    const isRejected = status === 'rechazado';
+    const statusText = isApproved ? 'PROGRAMADO' : isRejected ? 'NO DISPONIBLE' : (status?.toUpperCase() || 'EN GESTIÓN');
+    const subject = isApproved 
+      ? `Servicio de transporte programado – ${destination} (${date})`
+      : `Actualización de servicio de transporte – ${statusText}`;
+
+    const adminNote = request.admin_notes ? `<p style="margin-top: 10px; color: #78350F; background: #FEF3C7; padding: 10px; border-radius: 6px;"><strong>Observaciones:</strong> ${request.admin_notes}</p>` : '';
+
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'transport',
+      headerSubTitle: 'Transporte Institucional',
+      introParagraph: isApproved 
+        ? `Te informamos que tu servicio de transporte oficial ha sido <strong>PROGRAMADO</strong>:`
+        : `Te informamos sobre la actualización de tu solicitud de transporte oficial:`,
+      cardItems: [
+        { label: 'Fecha', value: date },
+        { label: 'Hora de recogida', value: pickupTime },
+        { label: 'Origen', value: origin },
+        { label: 'Destino', value: destination },
+        { label: 'Estado', value: statusText }
+      ],
+      extraSectionsHtml: driverSectionHtml + adminNote,
+      closingParagraphs: isApproved ? [
+        'Recomendamos presentarse en el punto de encuentro 10 minutos antes de la hora indicada y portar tu carnet de la entidad.',
+        'Ante cualquier cambio o imprevisto, por favor contactar directamente al conductor o al área de transporte.'
+      ] : [
+        'Si tienes dudas sobre la programación, puedes consultar a través del sistema SASGE.'
+      ]
+    });
+    return { subject, html };
+  }
+}
+
+/**
+ * 4. MANTENIMIENTOS LOCATIVOS (maintenance)
+ */
+function getMaintenanceEmailContent(request, isUserRecipient, isUpdate, status, user) {
+  const meta = request.metadata || {};
+  const element = meta.element || request.title?.replace(/^Mantenimiento:\s*/i, '') || 'Mantenimiento locativo';
+  const location = `${meta.floor ? 'Piso ' + meta.floor : ''} ${meta.room ? '- ' + meta.room : ''} ${meta.locationDetail ? '(' + meta.locationDetail + ')' : ''}`.trim() || 'Sede SJD';
+  const urgency = meta.urgency || meta.priority || request.priority || 'Normal';
+  const description = request.description || meta.description || 'Sin descripción adicional';
+  const requester = user?.name || request.user_name || 'Funcionario';
+  const dependency = user?.dependency || meta.dependency || 'Secretaría Jurídica Distrital';
+
+  const { imagesHtml, emailAttachments } = processEmailAttachments(request.attachments, meta.finalImage);
+
+  // CASO: DESTINATARIO ADMINISTRADOR / EQUIPO TÉCNICO
+  if (!isUserRecipient) {
+    const subject = `Reporte de mantenimiento locativo – ${element} – ${location}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'maintenance',
+      headerSubTitle: 'Mantenimientos Locativos',
+      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos reportar el siguiente requerimiento de mantenimiento locativo para su correspondiente diagnóstico y atención técnica:',
+      cardItems: [
+        { label: 'Elemento / Asunto', value: element },
+        { label: 'Ubicación Exacta', value: location },
+        { label: 'Nivel de Urgencia', value: urgency.toUpperCase() },
+        { label: 'Funcionario que Reporta', value: requester },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Descripción del Reporte', value: description }
+      ],
+      extraSectionsHtml: imagesHtml,
+      closingParagraphs: [
+        'Agradecemos coordinar con el personal técnico o contratista la visita de inspección y labores de reparación correspondientes.'
+      ],
+      actionButton: {
+        text: 'Atender Mantenimiento en SASGE',
+        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+      }
+    });
+    return { subject, html, attachments: emailAttachments };
+  }
+
+  // CASO: DESTINATARIO FUNCIONARIO SOLICITANTE
+  if (!isUpdate) {
+    const subject = `Reporte de mantenimiento recibido – ${element}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'maintenance',
+      headerSubTitle: 'Mantenimientos Locativos',
+      introParagraph: `Apreciado(a) <strong>${requester}</strong>, hemos recibido tu reporte de novedad locativa:`,
+      cardItems: [
+        { label: 'Novedad', value: element },
+        { label: 'Ubicación', value: location },
+        { label: 'Urgencia', value: urgency.toUpperCase() },
+        { label: 'Descripción', value: description }
+      ],
+      extraSectionsHtml: imagesHtml,
+      closingParagraphs: [
+        'El equipo de servicios generales programará la visita técnica para atender el requerimiento lo antes posible.'
+      ]
+    });
+    return { subject, html, attachments: emailAttachments };
+  } else {
+    const isResolved = status === 'resuelto';
+    const isProgress = status === 'en_progreso';
+    const statusText = isResolved ? 'FINALIZADO' : isProgress ? 'EN ATENCIÓN TÉCNICA' : (status?.toUpperCase() || 'ACTUALIZADO');
+    const subject = isResolved 
+      ? `Mantenimiento locativo finalizado – ${element}`
+      : `Actualización de mantenimiento – ${element} (${statusText})`;
+
+    const adminNote = request.admin_notes ? `<p style="margin-top: 10px; color: #78350F; background: #FEF3C7; padding: 10px; border-radius: 6px;"><strong>Observaciones del Técnico:</strong> ${request.admin_notes}</p>` : '';
+
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'maintenance',
+      headerSubTitle: 'Mantenimientos Locativos',
+      introParagraph: isResolved
+        ? `Te informamos que el reporte de mantenimiento locativo ha sido <strong>SOLUCIONADO Y FINALIZADO</strong> exitosamente:`
+        : `Te informamos que tu reporte de mantenimiento locativo se encuentra en estado <strong>${statusText}</strong>:`,
+      cardItems: [
+        { label: 'Elemento', value: element },
+        { label: 'Ubicación', value: location },
+        { label: 'Estado', value: statusText }
+      ],
+      extraSectionsHtml: imagesHtml + adminNote,
+      closingParagraphs: isResolved ? [
+        'Agradecemos tu reporte para el cuidado, preservación y buen estado de las instalaciones de la entidad.'
+      ] : [
+        'El equipo técnico se encuentra adelantando las labores correspondientes para solucionar la novedad.'
+      ]
+    });
+    return { subject, html, attachments: emailAttachments };
+  }
+}
+
+/**
+ * 5. PARQUEADERO INSTITUCIONAL (parking)
+ */
+function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user) {
+  const meta = request.metadata || {};
+  const name = meta.name || user?.name || request.user_name || 'Funcionario';
+  const doc = meta.doc || 'No registrado';
+  const dependency = meta.dependency || user?.dependency || 'Secretaría Jurídica Distrital';
+  const plate = meta.plate ? meta.plate.toUpperCase() : 'Por confirmar';
+  const vehicleInfo = `${meta.brand || ''} ${meta.color ? '- ' + meta.color : ''}`.trim() || 'Vehículo particular';
+
+  // CASO: DESTINATARIO ADMINISTRADOR / VIGILANCIA
+  if (!isUserRecipient) {
+    const subject = `Solicitud de asignación de parqueadero – ${name} – Placa ${plate}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'parking',
+      headerSubTitle: 'Parqueadero Institucional',
+      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la gestión de cupo de estacionamiento para el siguiente servidor público:',
+      cardItems: [
+        { label: 'Funcionario Solicitante', value: name },
+        { label: 'Documento de Identidad', value: doc },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Placa del Vehículo', value: plate },
+        { label: 'Vehículo (Marca / Color)', value: vehicleInfo }
+      ],
+      closingParagraphs: [
+        'Agradecemos verificar la disponibilidad y asignación de cupo conforme a la reglamentación y lineamientos de la Manzana Liévano.',
+        'Quedamos atentos a la confirmación del trámite.'
+      ],
+      actionButton: {
+        text: 'Gestionar Parqueadero en SASGE',
+        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+      }
+    });
+    return { subject, html };
+  }
+
+  // CASO: DESTINATARIO FUNCIONARIO SOLICITANTE
+  if (!isUpdate) {
+    const subject = `Solicitud de parqueadero radicada – Placa ${plate}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'parking',
+      headerSubTitle: 'Parqueadero Institucional',
+      introParagraph: `Apreciado(a) <strong>${name}</strong>, tu solicitud de asignación de parqueadero ha sido radicada exitosamente en el sistema:`,
+      cardItems: [
+        { label: 'Funcionario', value: name },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Placa del Vehículo', value: plate },
+        { label: 'Vehículo', value: vehicleInfo }
+      ],
+      closingParagraphs: [
+        'La Dirección de Gestión Corporativa evaluará la disponibilidad de cupos conforme a la normatividad interna y te notificará la respuesta oportuna.'
+      ]
+    });
+    return { subject, html };
+  } else {
+    const isApproved = status === 'resuelto' || status === 'aprobado';
+    const isRejected = status === 'rechazado';
+    const statusText = isApproved ? 'AUTORIZADO' : isRejected ? 'NO DISPONIBLE' : (status?.toUpperCase() || 'EN TRÁMITE');
+    const subject = isApproved 
+      ? `Cupo de parqueadero autorizado – Placa ${plate}`
+      : `Actualización de cupo de parqueadero – Placa ${plate} (${statusText})`;
+
+    const adminNote = request.admin_notes ? `<p style="margin-top: 10px; color: #78350F; background: #FEF3C7; padding: 10px; border-radius: 6px;"><strong>Observaciones:</strong> ${request.admin_notes}</p>` : '';
+
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'parking',
+      headerSubTitle: 'Parqueadero Institucional',
+      introParagraph: isApproved
+        ? `Te informamos que tu solicitud de cupo de estacionamiento ha sido <strong>APROBADA</strong>:`
+        : `Te informamos sobre la actualización de tu solicitud de parqueadero:`,
+      cardItems: [
+        { label: 'Placa Autorizada', value: plate },
+        { label: 'Vehículo', value: vehicleInfo },
+        { label: 'Servidor', value: name },
+        { label: 'Estado', value: statusText }
+      ],
+      extraSectionsHtml: adminNote,
+      closingParagraphs: isApproved ? [
+        'Por favor ten presentes las normas de acceso: conducir a una velocidad máxima de 10 Km/h, apagar el vehículo al ingresar, portar carnet de la entidad y usar el casco reglamentario en caso de motocicletas.',
+        'Recuerda ubicar el vehículo en el espacio asignado por el personal de vigilancia.'
+      ] : [
+        'En esta ocasión no fue posible asignar cupo por disponibilidad de espacios en la sede.'
+      ]
+    });
+    return { subject, html };
+  }
+}
+
+/**
+ * Fallback genérico para solicitudes no categorizadas
+ */
+function getGenericEmailContent(request, isUserRecipient, isUpdate, status, user) {
+  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category || 'General';
+  const userName = user?.name || user?.full_name || request.user_name || 'Funcionario';
+  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
+
+  if (!isUserRecipient) {
+    const subject = `SASGE: Solicitud en gestión - ${categoryName} - ${request.title}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: request.category,
+      headerSubTitle: categoryName,
+      introParagraph: 'Se requiere la gestión de la siguiente solicitud en el sistema:',
+      cardItems: [
+        { label: 'Título', value: request.title },
+        { label: 'Descripción', value: request.description },
+        { label: 'Prioridad', value: request.priority ? request.priority.toUpperCase() : 'NORMAL' }
+      ],
+      extraSectionsHtml: metadataHtml,
+      closingParagraphs: ['Por favor ingresar a SASGE para gestionar el requerimiento.'],
+      actionButton: { text: 'Gestionar en SASGE', url: 'https://sasge.secretariajuridica.gov.co/admin/manage' }
+    });
+    return { subject, html, attachments: emailAttachments };
+  } else {
+    const subject = isUpdate 
+      ? `SASGE: Actualización de solicitud - ${request.title}`
+      : `SASGE: Solicitud radicada - ${request.title}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: request.category,
+      headerSubTitle: categoryName,
+      introParagraph: isUpdate
+        ? `Apreciado(a) <strong>${userName}</strong>, tu solicitud ha cambiado de estado:`
+        : `Apreciado(a) <strong>${userName}</strong>, tu solicitud ha sido radicada:`,
+      cardItems: [
+        { label: 'Título', value: request.title },
+        { label: 'Descripción', value: request.description },
+        { label: 'Estado', value: status || request.status }
+      ],
+      extraSectionsHtml: metadataHtml,
+      closingParagraphs: ['Te notificaremos ante cualquier novedad.']
+    });
+    return { subject, html, attachments: emailAttachments };
+  }
+}
+
+/**
+ * Enrutador principal que despacha al generador correspondiente
+ */
+function getServiceEmailData({ request, user, isUserRecipient, isUpdate, triggerStatus }) {
+  const category = request.category?.toLowerCase();
+  switch (category) {
+    case 'visitors':
+      return getVisitorsEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+    case 'rooms':
+      return getRoomsEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+    case 'transport':
+      return getTransportEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+    case 'maintenance':
+      return getMaintenanceEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+    case 'parking':
+      return getParkingEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+    default:
+      return getGenericEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+  }
+}
+
+/**
  * Envía correo al funcionario confirmando la creación de su solicitud
  */
 async function sendRequestCreatedNotification(user, request) {
-  let displayStatus = request.status;
-  if (request.category?.toLowerCase() === 'rooms' && request.status === 'resuelto') {
-    displayStatus = 'aprobado';
-  }
-
-  const subject = `SASGE: Solicitud registrada exitosamente - ${request.title}`;
-  
-  const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
-  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
-  
-  // Si el nombre parece ser un username (ej. jcmartinezb), lo ponemos en mayúscula inicial si es posible o usamos uno por defecto
-  const userName = user.name || user.full_name || 'Funcionario';
-  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
-  
-  const htmlContent = getHtmlTemplate(
-    'Confirmación de Solicitud',
-    `
-      <p>Hola, <span class="highlight">${userName}</span>.</p>
-      <p>Tu solicitud de la categoría <span class="highlight">${categoryName.toUpperCase()}</span> ha sido radicada correctamente en el Sistema de Administración de Servicios Generales (SASGE).</p>
-      
-      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <strong>Detalles de la Solicitud:</strong><br>
-        <span class="highlight">Título:</span> ${request.title}<br>
-        <span class="highlight">Descripción:</span> ${request.description}<br>
-        <span class="highlight">Prioridad:</span> ${request.priority.toUpperCase()}<br>
-        <span class="highlight">Estado Inicial:</span> ${statusBadge}<br>
-        <span class="highlight">Fecha:</span> ${new Date(request.created_at).toLocaleString('es-CO')}
-        ${metadataHtml}
-      </div>
-      
-      <p>El equipo de servicios generales revisará tu requerimiento y te notificará por este medio sobre cualquier actualización.</p>
-    `,
-    request.category
-  );
-
+  if (!user?.email) return;
+  const emailData = getServiceEmailData({ request, user, isUserRecipient: true, isUpdate: false });
   try {
     await transporter.sendMail({
       from: FROM_EMAIL,
       to: user.email,
-      subject: subject,
-      html: htmlContent,
-      attachments: emailAttachments
+      subject: emailData.subject,
+      html: emailData.html,
+      attachments: emailData.attachments || []
     });
-    console.log(`Correo de creación enviado a: ${user.email}`);
+    console.log(`📧 Correo de radicación enviado al solicitante: ${user.email} (${request.category})`);
   } catch (error) {
     console.error('Error al enviar correo de creación de solicitud:', error);
   }
@@ -338,60 +1087,17 @@ async function sendRequestCreatedNotification(user, request) {
  * Envía correo al funcionario notificando la actualización de su solicitud
  */
 async function sendRequestUpdatedNotification(user, request) {
-  let displayStatus = request.status;
-  if (request.category?.toLowerCase() === 'rooms' && request.status === 'resuelto') {
-    displayStatus = 'aprobado';
-  }
-
-  const subject = `SASGE: Tu solicitud ha sido actualizada - Estado: ${displayStatus.toUpperCase()}`;
-  
-  const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
-  
-  let adminNotesSection = '';
-  if (request.admin_notes) {
-    adminNotesSection = `
-      <div style="background-color: #FFFBEB; border: 1px solid #FCD34D; border-radius: 8px; padding: 15px; margin: 20px 0; color: #78350F;">
-        <strong>Notas del Administrador / Observaciones:</strong><br>
-        ${request.admin_notes}
-      </div>
-    `;
-  }
-
-  const userName = user.name || user.full_name || 'Funcionario';
-  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
-
-  const htmlContent = getHtmlTemplate(
-    'Actualización de Estado',
-    `
-      <p>Hola, <span class="highlight">${userName}</span>.</p>
-      <p>Te informamos que tu solicitud ha cambiado de estado.</p>
-      
-      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <strong>Detalles de la Solicitud:</strong><br>
-        <span class="highlight">Título:</span> ${request.title}<br>
-        <span class="highlight">Descripción:</span> ${request.description}<br>
-        <span class="highlight">Prioridad:</span> ${request.priority ? request.priority.toUpperCase() : 'NORMAL'}<br>
-        <span class="highlight">Nuevo Estado:</span> ${statusBadge}<br>
-        <span class="highlight">Última Actualización:</span> ${new Date(request.updated_at || new Date()).toLocaleString('es-CO')}
-        ${metadataHtml}
-      </div>
-      
-      ${adminNotesSection}
-      
-      <p>Puedes ingresar al sistema en cualquier momento para ver más detalles.</p>
-    `,
-    request.category
-  );
-
+  if (!user?.email) return;
+  const emailData = getServiceEmailData({ request, user, isUserRecipient: true, isUpdate: true, triggerStatus: request.status });
   try {
     await transporter.sendMail({
       from: FROM_EMAIL,
       to: user.email,
-      subject: subject,
-      html: htmlContent,
-      attachments: emailAttachments
+      subject: emailData.subject,
+      html: emailData.html,
+      attachments: emailData.attachments || []
     });
-    console.log(`Correo de actualización enviado a: ${user.email}`);
+    console.log(`📧 Correo de actualización enviado al solicitante: ${user.email} (${request.category} - ${request.status})`);
   } catch (error) {
     console.error('Error al enviar correo de actualización de solicitud:', error);
   }
@@ -413,55 +1119,45 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
     return;
   }
   const toRecipients = toList.length === 1 ? toList[0] : toList;
-
-  const isApprovedTrigger = triggerStatus === 'resuelto';
-  
-  let displayStatus = request.status;
-  if (request.category?.toLowerCase() === 'rooms' && request.status === 'resuelto') {
-    displayStatus = 'aprobado';
-  }
-
-  const actionText = isApprovedTrigger 
-    ? 'Una solicitud ha sido aprobada y se requiere la ejecución del servicio correspondiente.'
-    : 'Una solicitud requiere ser procesada y coordinada (En Progreso).';
-    
-  const subject = `SASGE: Alerta de Servicio - ${request.title}`;
-  const statusBadge = `<span class="badge badge-${displayStatus === 'aprobado' ? 'aprobado' : displayStatus}">${displayStatus.toUpperCase()}</span>`;
-  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
-  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
-
-  const htmlContent = getHtmlTemplate(
-    'Alerta para Equipo Administrador',
-    `
-      <p>Hola, <strong>Equipo de ${categoryName.toUpperCase()}</strong>.</p>
-      <p>${actionText}</p>
-      
-      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <strong>Detalles de la Solicitud:</strong><br>
-        <span class="highlight">Título:</span> ${request.title}<br>
-        <span class="highlight">Descripción:</span> ${request.description}<br>
-        <span class="highlight">Prioridad:</span> ${request.priority ? request.priority.toUpperCase() : 'NORMAL'}<br>
-        <span class="highlight">Estado Actual:</span> ${statusBadge}<br>
-        <span class="highlight">Última Actualización:</span> ${new Date(request.updated_at || new Date()).toLocaleString('es-CO')}
-        ${metadataHtml}
-      </div>
-      
-      <p>Por favor, revisa el panel de administrador en SASGE para más detalles y coordinar la logística necesaria.</p>
-    `,
-    request.category
-  );
+  const emailData = getServiceEmailData({ request, user: null, isUserRecipient: false, isUpdate: true, triggerStatus });
 
   try {
     await transporter.sendMail({
       from: FROM_EMAIL,
       to: toRecipients,
-      subject: subject,
-      html: htmlContent,
-      attachments: emailAttachments
+      subject: emailData.subject,
+      html: emailData.html,
+      attachments: emailData.attachments || []
     });
-    console.log(`📧 Correo administrativo enviado a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
+    console.log(`📧 Correo administrativo de servicio enviado a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
   } catch (error) {
     console.error('Error al enviar correo administrativo:', error);
+  }
+}
+
+/**
+ * Envía correo a los encargados/aprobadores (service_emails) informando que se radicó una nueva solicitud
+ */
+async function sendAdminNewRequestNotification(adminEmails, request, user) {
+  const toList = normalizeRecipients(adminEmails);
+  if (toList.length === 0) {
+    console.warn('⚠️ [ADMIN EMAIL] Sin destinatarios válidos para sendAdminNewRequestNotification');
+    return;
+  }
+  const toRecipients = toList.length === 1 ? toList[0] : toList;
+  const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: false });
+
+  try {
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toRecipients,
+      subject: emailData.subject,
+      html: emailData.html,
+      attachments: emailData.attachments || []
+    });
+    console.log(`📧 Correo de nueva solicitud enviado a encargados: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
+  } catch (error) {
+    console.error('Error al enviar correo de nueva solicitud a encargados:', error);
   }
 }
 
@@ -499,87 +1195,38 @@ async function sendTicRoomNotification(ticEmail, request, user) {
     techItems.push('Equipos TIC (Proyector y Computador Portátil)');
   }
 
-  const subject = `SASGE TIC: Requerimiento de Equipos para Sala - ${roomName} (${formattedDate})`;
+  const subject = `SASGE TIC: Alistamiento de Equipos - ${roomName} (${formattedDate})`;
 
-  const techItemsHtml = techItems.map(item => `
-    <li style="margin-bottom: 8px; color: #0F172A; font-size: 14px; display: flex; align-items: center;">
-      <span style="display: inline-block; width: 18px; height: 18px; background-color: #0284C7; color: #FFFFFF; border-radius: 50%; text-align: center; line-height: 18px; font-size: 11px; margin-right: 10px; font-weight: bold;">✓</span>
-      ${item}
-    </li>
-  `).join('');
-
-  const bodyContent = `
-    <div style="background-color: #EFF6FF; border-left: 5px solid #0284C7; padding: 14px 18px; border-radius: 6px; margin-bottom: 22px;">
-      <p style="margin: 0; font-size: 14px; color: #0369A1; font-weight: 700;">
-        🖥️ Notificación Automática para la Oficina de TIC
-      </p>
-      <p style="margin: 6px 0 0 0; font-size: 13px; color: #0C4A6E; line-height: 1.5;">
-        Se ha registrado una reserva de sala en SASGE que requiere soporte técnico y suministro de <strong>Proyector y/o Laptop</strong>.
-      </p>
-    </div>
-
-    <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 22px; margin-bottom: 20px;">
-      <h3 style="margin-top: 0; margin-bottom: 14px; font-size: 16px; color: #0F172A; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px;">
-        📍 Información del Espacio y la Reunión
-      </h3>
-      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-        <tr>
-          <td style="padding: 6px 0; color: #64748B; width: 35%;"><strong>Espacio / Sala:</strong></td>
-          <td style="padding: 6px 0; color: #0F172A; font-weight: 700;">${roomName} ${roomFloor}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #64748B;"><strong>Fecha:</strong></td>
-          <td style="padding: 6px 0; color: #0F172A; font-weight: 700;">${formattedDate}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #64748B;"><strong>Horario:</strong></td>
-          <td style="padding: 6px 0; color: #0284C7; font-weight: 700;">${timeVal}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #64748B;"><strong>Motivo / Asunto:</strong></td>
-          <td style="padding: 6px 0; color: #0F172A;">${request.title}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #64748B;"><strong>Funcionario Responsable:</strong></td>
-          <td style="padding: 6px 0; color: #0F172A;">${organizerName}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #64748B;"><strong>Dependencia:</strong></td>
-          <td style="padding: 6px 0; color: #0F172A;">${dependency}</td>
-        </tr>
-        <tr>
-          <td style="padding: 6px 0; color: #64748B;"><strong>Teléfono de Contacto:</strong></td>
-          <td style="padding: 6px 0; color: #0F172A;">${contactPhone}</td>
-        </tr>
-      </table>
-    </div>
-
-    <div style="background-color: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-      <h3 style="margin-top: 0; margin-bottom: 14px; font-size: 15px; color: #0369A1; font-weight: 800;">
-        💻 Equipos Tecnológicos Solicitados:
-      </h3>
-      <ul style="margin: 0; padding-left: 0; list-style: none;">
-        ${techItemsHtml}
+  const techSectionsHtml = `
+    <div style="border-top: 1px solid #CBD5E1; margin-top: 12px; padding-top: 10px;">
+      <strong style="color: #0369A1;">Equipos Tecnológicos Solicitados:</strong>
+      <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #1E293B; font-size: 13px; line-height: 1.6;">
+        ${techItems.map(item => `<li>${item}</li>`).join('')}
       </ul>
-    </div>
-
-    <p style="font-size: 13px; color: #64748B; margin-top: 20px; line-height: 1.5;">
-      Agradecemos al equipo de TIC coordinar el alistamiento, instalación o verificación previa de los equipos en la sala con antelación al inicio de la jornada.
-    </p>
-
-    <div style="text-align: center; margin-top: 25px;">
-      <a href="https://sasge.secretariajuridica.gov.co/admin/manage" 
-         style="background-color: #0284C7; color: #FFFFFF; text-decoration: none; padding: 12px 26px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
-        Ver Solicitud en SASGE
-      </a>
     </div>
   `;
 
-  const htmlContent = getHtmlTemplate(
-    'Requerimiento de Equipos TIC',
-    bodyContent,
-    'rooms'
-  );
+  const html = renderServiceEmailLayout({
+    serviceCategory: 'rooms',
+    headerSubTitle: 'Soporte TIC para Salas',
+    introParagraph: `Se ha programado una reunión en <strong>${roomName} ${roomFloor}</strong> que requiere alistamiento técnico de equipos por parte de la Oficina de TIC:`,
+    cardItems: [
+      { label: 'Espacio / Sala', value: `${roomName} ${roomFloor}` },
+      { label: 'Fecha del Evento', value: formattedDate },
+      { label: 'Horario de Uso', value: timeVal },
+      { label: 'Organizador', value: organizerName },
+      { label: 'Dependencia', value: dependency },
+      { label: 'Contacto', value: contactPhone }
+    ],
+    extraSectionsHtml: techSectionsHtml,
+    closingParagraphs: [
+      'Agradecemos realizar el alistamiento y verificación de conexión en la sala con 15 minutos de antelación al inicio del horario programado.'
+    ],
+    actionButton: {
+      text: 'Ver Solicitud en SASGE',
+      url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+    }
+  });
 
   try {
     const toList = normalizeRecipients(ticEmail);
@@ -592,84 +1239,11 @@ async function sendTicRoomNotification(ticEmail, request, user) {
       from: FROM_EMAIL,
       to: toRecipients,
       subject: subject,
-      html: htmlContent
+      html: html
     });
     console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
   } catch (error) {
     console.error(`Error al enviar notificación a TIC (${ticEmail}):`, error);
-  }
-}
-
-/**
- * Envía correo a los encargados/aprobadores (service_emails) informando que se radicó una nueva solicitud
- */
-async function sendAdminNewRequestNotification(adminEmails, request, user) {
-  const toList = normalizeRecipients(adminEmails);
-  if (toList.length === 0) {
-    console.warn('⚠️ [ADMIN EMAIL] Sin destinatarios válidos para sendAdminNewRequestNotification');
-    return;
-  }
-  const toRecipients = toList.length === 1 ? toList[0] : toList;
-
-  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
-  const radNumber = request.id ? `#${String(request.id).slice(0, 6).toUpperCase()}` : '';
-  const subject = `SASGE: Nueva Solicitud Radicada - ${categoryName} ${radNumber} - ${request.title}`;
-  
-  const requesterName = user?.name || user?.full_name || request.user_name || 'Funcionario';
-  const requesterDep = user?.dependency || request.metadata?.dependency || 'Secretaría Jurídica Distrital';
-  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
-
-  const htmlContent = getHtmlTemplate(
-    'Nueva Solicitud Radicada',
-    `
-      <div style="background-color: #EFF6FF; border-left: 4px solid #2563EB; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 14px; color: #1E40AF; font-weight: 700;">
-          📋 Nueva Solicitud en SASGE para Revisión / Aprobación
-        </p>
-        <p style="margin: 4px 0 0 0; font-size: 13px; color: #1E3A8A; line-height: 1.5;">
-          Se ha radicado una nueva solicitud en el módulo de <strong>${categoryName}</strong> que requiere su gestión, validación o trámite correspondiente.
-        </p>
-      </div>
-
-      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin: 20px 0;">
-        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px; color: #0F172A; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px;">
-          Ficha de la Solicitud
-        </h3>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Radicado / ID:</strong> <span style="font-weight: 800; color: #0F172A;">${radNumber || 'Pendiente'}</span></p>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Título:</strong> <span style="font-weight: 700; color: #0F172A;">${request.title}</span></p>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Solicitante:</strong> ${requesterName}</p>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Dependencia:</strong> ${requesterDep}</p>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Prioridad:</strong> <span style="font-weight: 800; color: #2563EB;">${request.priority ? request.priority.toUpperCase() : 'NORMAL'}</span></p>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Fecha de Radicación:</strong> ${new Date(request.created_at || new Date()).toLocaleString('es-CO')}</p>
-        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Descripción:</strong> ${request.description}</p>
-        ${metadataHtml}
-      </div>
-
-      <p style="font-size: 13px; color: #64748B; margin-top: 15px;">
-        Por favor ingresa al módulo de administración para revisar los detalles, aprobar o coordinar el trámite.
-      </p>
-
-      <div style="text-align: center; margin-top: 25px;">
-        <a href="https://sasge.secretariajuridica.gov.co/admin/manage" 
-           style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 12px 26px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
-          Gestionar Solicitud en SASGE
-        </a>
-      </div>
-    `,
-    request.category
-  );
-
-  try {
-    await transporter.sendMail({
-      from: FROM_EMAIL,
-      to: toRecipients,
-      subject: subject,
-      html: htmlContent,
-      attachments: emailAttachments
-    });
-    console.log(`📧 Correo de nueva solicitud enviado a encargados: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
-  } catch (error) {
-    console.error('Error al enviar correo de nueva solicitud a encargados:', error);
   }
 }
 

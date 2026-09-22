@@ -49,6 +49,7 @@ export default function VisitorsScreen() {
   const [hasVehicle, setHasVehicle] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([{ id: '1', plate: '', brand: '' }]);
   const [responsible, setResponsible] = useState({ name: '', phone: '', dependency: '' });
+  const [visitReason, setVisitReason] = useState('');
 
   // Efecto para auto-completar responsable desde LDAP
   useEffect(() => {
@@ -89,6 +90,9 @@ export default function VisitorsScreen() {
                 ...prev,
                 ...data.metadata.responsible
               }));
+            }
+            if (data.metadata.visitReason || data.metadata.reason) {
+              setVisitReason(data.metadata.visitReason || data.metadata.reason);
             }
           }
         } catch (err) {
@@ -138,11 +142,12 @@ export default function VisitorsScreen() {
   const progress = useMemo(() => {
     let p = 10;
     const vFull = visitors.every(v => v.name && v.document);
-    if (vFull) p += 30;
-    if (responsible.name && responsible.phone) p += 30;
-    if (acceptedTerms) p += 30;
+    if (vFull) p += 25;
+    if (responsible.name && responsible.phone) p += 25;
+    if (visitReason.trim()) p += 15;
+    if (acceptedTerms) p += 25;
     return Math.min(p, 100);
-  }, [visitors, responsible, acceptedTerms]);
+  }, [visitors, responsible, visitReason, acceptedTerms]);
 
   const addVisitor = () => setVisitors([...visitors, { id: Math.random().toString(), name: '', document: '' }]);
   const updateVisitor = (id: string, field: keyof Visitor, val: string) => {
@@ -178,6 +183,12 @@ export default function VisitorsScreen() {
         return;
       }
 
+      const trimmedReason = visitReason.trim();
+      if (!trimmedReason) {
+        setErrorMessage('Ingresa una breve descripción del motivo de la visita.');
+        return;
+      }
+
       if (new Date(toDate) < new Date(fromDate)) {
         setErrorMessage('La fecha final no puede ser anterior a la fecha inicial.');
         return;
@@ -197,7 +208,7 @@ export default function VisitorsScreen() {
       await requestService.create({
         user_id: user?.id || null,
         title: `Ingreso: ${visitorNames}`,
-        description: `Visita para ${trimmedResponsibleName} en ${trimmedResponsibleDependency} desde ${fromDate} hasta ${toDate}`,
+        description: `Motivo: ${trimmedReason} | Visita para ${trimmedResponsibleName} en ${trimmedResponsibleDependency} desde ${fromDate} hasta ${toDate}`,
         category: 'visitors',
         priority: 'media',
         metadata: {
@@ -209,6 +220,8 @@ export default function VisitorsScreen() {
             phone: trimmedResponsiblePhone,
             dependency: trimmedResponsibleDependency
           },
+          visitReason: trimmedReason,
+          reason: trimmedReason,
           fromDate,
           toDate
         }
@@ -408,6 +421,16 @@ export default function VisitorsScreen() {
                   </View>
                 </Card>
 
+                <Card title="Motivo de la Visita" icon="document-text">
+                  <Field 
+                    label="Descripción Breve del Motivo" 
+                    icon="information-circle-outline" 
+                    value={visitReason} 
+                    onChangeText={setVisitReason} 
+                    placeholder="Ej. Reunión técnica sobre lineamientos jurídicos" 
+                  />
+                </Card>
+
                 <Card title="Vigencia del Ingreso" icon="calendar">
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <View style={{ flex: 1 }}>
@@ -488,6 +511,7 @@ export default function VisitorsScreen() {
         hasVehicle={hasVehicle}
         vehicles={hasVehicle ? vehicles.filter(vh => vh.plate) : []}
         responsible={responsible}
+        visitReason={visitReason}
         fromDate={fromDate}
         toDate={toDate}
         onClose={() => { setShowSuccess(false); router.replace('/dashboard'); }} 
@@ -651,6 +675,7 @@ function SuccessModal({
   hasVehicle, 
   vehicles, 
   responsible, 
+  visitReason,
   fromDate, 
   toDate 
 }: any) {
@@ -688,10 +713,13 @@ function SuccessModal({
               
               <View style={{ height: 1, backgroundColor: COLORS.line, marginVertical: 4 }} />
               
-              {/* Bloque de Anfitrión */}
+              {/* Bloque de Anfitrión y Motivo */}
               <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Anfitrión:</Text> {responsible.name}</Text>
               <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Dependencia:</Text> {responsible.dependency}</Text>
               <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Contacto / Ext:</Text> {responsible.phone || 'N/A'}</Text>
+              {visitReason ? (
+                <Text style={{ fontSize: 14, color: COLORS.text }}><Text style={{fontWeight:'900', color: COLORS.text}}>Motivo:</Text> {visitReason}</Text>
+              ) : null}
               
               <View style={{ height: 1, backgroundColor: COLORS.line, marginVertical: 4 }} />
               
