@@ -1064,19 +1064,20 @@ export default function RoomsRequestScreen() {
                     </View>
                   </Card>
 
-                  <Card title="Servicios Adicionales" icon="add-circle">
+                  <Card title="Servicios y Apoyo Logístico" icon="add-circle">
                     <View style={styles.servicesGrid}>
                       <ServiceToggle 
-                        active={services.projector} 
-                        label="Proyector" 
-                        icon="videocam-outline" 
-                        onPress={() => setServices({...services, projector: !services.projector})} 
-                      />
-                      <ServiceToggle 
-                        active={services.laptop} 
-                        label="Laptop" 
+                        active={services.projector || services.laptop} 
+                        label="Equipos TIC (Proyector y Laptop)" 
                         icon="laptop-outline" 
-                        onPress={() => setServices({...services, laptop: !services.laptop})} 
+                        onPress={() => {
+                          const nextVal = !(services.projector || services.laptop);
+                          setServices({
+                            ...services,
+                            projector: nextVal,
+                            laptop: nextVal
+                          });
+                        }} 
                       />
                       <ServiceToggle 
                         active={services.coffee} 
@@ -1429,9 +1430,8 @@ function SuccessModal({
                       <View style={{ height: 1, backgroundColor: COLORS.line, marginVertical: 4 }} />
                       <Text style={{ fontSize: 14, color: COLORS.text }}>
                         <Text style={{fontWeight:'900', color: COLORS.text}}>Servicios:</Text> {[
-                          standardServices.projector ? 'Proyector' : '',
-                          standardServices.laptop ? 'Laptop' : '',
-                          standardServices.coffee ? 'Café' : ''
+                          (standardServices.projector || standardServices.laptop) ? 'Equipos TIC (Proyector y Laptop)' : '',
+                          standardServices.coffee ? 'Servicio de Café' : ''
                         ].filter(Boolean).join(', ') || 'Ninguno'}
                       </Text>
                     </>
@@ -1672,8 +1672,7 @@ const SERVICE_OPTIONS = [
 ];
 
 const TECH_OPTIONS = [
-  'Videobeam / Proyector',
-  'Laptop / Computador',
+  'Equipos TIC (Proyector y Laptop)',
   'Conexión a Internet (WiFi)',
   'Cable HDMI / Adaptadores',
   'Grabación de Audio / Video',

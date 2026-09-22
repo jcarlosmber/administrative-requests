@@ -161,6 +161,7 @@ export default function AdminSettings() {
     visitors: '',
     rooms: '',
     rooms_special: '',
+    rooms_tic: '',
     parking: ''
   });
   
@@ -819,7 +820,7 @@ export default function AdminSettings() {
   // ==========================================
   // MANEJADORES PARA CORREOS (SERVICE EMAILS)
   // ==========================================
-  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'parking') => {
+  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking') => {
     const emailVal = emailInputs[type]?.trim();
     if (!emailVal) return;
 
@@ -1316,15 +1317,16 @@ export default function AdminSettings() {
               {/* Correos de Secretaría General */}
               {(activeTab === 'all' || activeTab === 'emails') && (
                 <>
-                  <SectionHeader title="Correos de Secretaría General" kicker="NOTIFICACIONES DE SERVICIO" />
+                  <SectionHeader title="Correos de Notificación y Gestión" kicker="CANALES DE ATENCIÓN" />
                   <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                     {([
-                      { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F' },
-                      { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946' },
-                      { type: 'rooms', title: 'Salas Estándar', icon: 'business', color: '#4361EE' },
-                      { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7' },
-                      { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261' }
-                    ] as const).map(({ type, title, icon, color }) => {
+                      { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F', desc: 'Alertas para reparaciones e infraestructura' },
+                      { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946', desc: 'Control de accesos y seguridad en portería' },
+                      { type: 'rooms', title: 'Salas Estándar', icon: 'business', color: '#4361EE', desc: 'Notificaciones de reservas convencionales' },
+                      { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7', desc: 'Eventos masivos (Auditorio y salas magnas)' },
+                      { type: 'rooms_tic', title: 'Equipos TIC (Salas)', icon: 'laptop', color: '#0284C7', desc: 'Proyector, Laptop y soporte técnico tecnológico' },
+                      { type: 'parking', title: 'Parqueaderos', icon: 'car', color: '#F4A261', desc: 'Gestión y asignación de cupos vehiculares' }
+                    ] as const).map(({ type, title, icon, color, desc }) => {
                       const emails = (serviceEmails || []).filter(e => e && e.service_type === type);
                       return (
                         <View key={type} style={[{ backgroundColor: COLORS.white, borderRadius: 24, padding: 25, borderWidth: 1, borderColor: COLORS.line }, isDesktop && { width: '48%' }]}>
@@ -1332,9 +1334,14 @@ export default function AdminSettings() {
                             <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
                               <Ionicons name={icon as any} size={24} color={color} />
                             </View>
-                            <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
-                              {title}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                                {title}
+                              </Text>
+                              <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
+                                {desc}
+                              </Text>
+                            </View>
                           </View>
 
                           {/* Chips de correos registrados */}

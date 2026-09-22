@@ -1753,20 +1753,25 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
 
           {/* Footer / Actions */}
           <View style={modalStyles.footer}>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
               {request.category === 'visitors' && (
                 <TouchableOpacity 
                   onPress={() => {
                     onClose();
                     router.push({ pathname: '/requests/visitors', params: { templateId: request.id } });
                   }} 
-                  style={[modalStyles.primaryBtn, { flex: 1, backgroundColor: '#FFF1F2', borderWidth: 1.5, borderColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }]}
+                  style={[modalStyles.primaryBtn, { flex: 1, backgroundColor: '#FFF1F2', borderWidth: 1.5, borderColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', cursor: 'pointer' } as any]}
+                  activeOpacity={0.8}
                 >
                   <Ionicons name="copy-outline" size={20} color={COLORS.primaryDark} style={{ position: 'absolute', left: 16 }} />
                   <Text style={[modalStyles.btnText, { color: COLORS.primaryDark }]}>Plantilla</Text>
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={onClose} style={[modalStyles.primaryBtn, { flex: request.category === 'visitors' ? 1 : undefined }]}>
+              <TouchableOpacity 
+                onPress={onClose} 
+                activeOpacity={0.8}
+                style={[modalStyles.primaryBtn, { flex: 1, cursor: 'pointer' } as any]}
+              >
                 <LinearGradient 
                   colors={[COLORS.primary, COLORS.primaryDark]} 
                   start={{ x: 0, y: 0 }} 
@@ -1942,12 +1947,16 @@ const modalStyles = StyleSheet.create({
   primaryBtn: {
     height: 54,
     borderRadius: 16,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   btnGradient: {
-    flex: 1,
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingHorizontal: 20
   },
   btnText: {
     color: COLORS.white,

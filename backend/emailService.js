@@ -217,8 +217,12 @@ function formatMetadataForEmail(request) {
       }
       if (meta.services && typeof meta.services === 'object') {
         const stdServices = [];
-        if (meta.services.projector) stdServices.push('Proyector');
-        if (meta.services.laptop) stdServices.push('Laptop/Portátil');
+        if (meta.services.projector && meta.services.laptop) {
+          stdServices.push('Equipos TIC (Proyector y Laptop)');
+        } else {
+          if (meta.services.projector) stdServices.push('Proyector');
+          if (meta.services.laptop) stdServices.push('Laptop/Portátil');
+        }
         if (meta.services.coffee) stdServices.push('Estación de café');
         if (stdServices.length > 0) {
           servicesList.push(stdServices.join(', '));
@@ -448,8 +452,138 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
   }
 }
 
+/**
+ * Envía correo a la Oficina de TIC cuando una solicitud de sala requiere equipos tecnológicos (Proyector/Laptop)
+ */
+async function sendTicRoomNotification(ticEmail, request, user) {
+  const meta = request.metadata || {};
+  const roomObj = meta.room;
+  const roomName = (roomObj && typeof roomObj === 'object') ? (roomObj.name || 'Sala de Juntas') : (roomObj || 'Sala de Juntas');
+  const roomFloor = (roomObj && typeof roomObj === 'object' && roomObj.floor) ? `(${roomObj.floor})` : '';
+  
+  const formattedDate = meta.date || 'Fecha por confirmar';
+  const timeVal = meta.time || meta.booking_hours || ((meta.startTime || '') + (meta.endTime ? ' a ' + meta.endTime : '')) || 'Horario por confirmar';
+  
+  const organizerName = user?.name || user?.full_name || meta.responsible_name || meta.responsibleName || 'Funcionario';
+  const dependency = meta.dependency || user?.dependency || 'Secretaría Jurídica Distrital';
+  const contactPhone = meta.contact_phone || user?.phone || 'No registrado';
+  
+  const techItems = [];
+  if (meta.services?.projector || meta.services?.laptop || meta.services?.tech_tic) {
+    techItems.push('Proyector / Videobeam institucional');
+    techItems.push('Computador Portátil (Laptop) para presentaciones');
+    techItems.push('Cables de conexión HDMI / Adaptadores de video');
+  }
+  if (Array.isArray(meta.tech_requirements) && meta.tech_requirements.length > 0) {
+    meta.tech_requirements.forEach(item => {
+      if (!techItems.includes(item)) techItems.push(item);
+    });
+  }
+  if (meta.custom_tech_description && meta.custom_tech_description.trim()) {
+    techItems.push(`Especificación adicional: ${meta.custom_tech_description.trim()}`);
+  }
+  if (techItems.length === 0) {
+    techItems.push('Equipos TIC (Proyector y Computador Portátil)');
+  }
+
+  const subject = `SASGE TIC: Requerimiento de Equipos para Sala - ${roomName} (${formattedDate})`;
+
+  const techItemsHtml = techItems.map(item => `
+    <li style="margin-bottom: 8px; color: #0F172A; font-size: 14px; display: flex; align-items: center;">
+      <span style="display: inline-block; width: 18px; height: 18px; background-color: #0284C7; color: #FFFFFF; border-radius: 50%; text-align: center; line-height: 18px; font-size: 11px; margin-right: 10px; font-weight: bold;">✓</span>
+      ${item}
+    </li>
+  `).join('');
+
+  const bodyContent = `
+    <div style="background-color: #EFF6FF; border-left: 5px solid #0284C7; padding: 14px 18px; border-radius: 6px; margin-bottom: 22px;">
+      <p style="margin: 0; font-size: 14px; color: #0369A1; font-weight: 700;">
+        🖥️ Notificación Automática para la Oficina de TIC
+      </p>
+      <p style="margin: 6px 0 0 0; font-size: 13px; color: #0C4A6E; line-height: 1.5;">
+        Se ha registrado una reserva de sala en SASGE que requiere soporte técnico y suministro de <strong>Proyector y/o Laptop</strong>.
+      </p>
+    </div>
+
+    <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 22px; margin-bottom: 20px;">
+      <h3 style="margin-top: 0; margin-bottom: 14px; font-size: 16px; color: #0F172A; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px;">
+        📍 Información del Espacio y la Reunión
+      </h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <tr>
+          <td style="padding: 6px 0; color: #64748B; width: 35%;"><strong>Espacio / Sala:</strong></td>
+          <td style="padding: 6px 0; color: #0F172A; font-weight: 700;">${roomName} ${roomFloor}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748B;"><strong>Fecha:</strong></td>
+          <td style="padding: 6px 0; color: #0F172A; font-weight: 700;">${formattedDate}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748B;"><strong>Horario:</strong></td>
+          <td style="padding: 6px 0; color: #0284C7; font-weight: 700;">${timeVal}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748B;"><strong>Motivo / Asunto:</strong></td>
+          <td style="padding: 6px 0; color: #0F172A;">${request.title}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748B;"><strong>Funcionario Responsable:</strong></td>
+          <td style="padding: 6px 0; color: #0F172A;">${organizerName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748B;"><strong>Dependencia:</strong></td>
+          <td style="padding: 6px 0; color: #0F172A;">${dependency}</td>
+        </tr>
+        <tr>
+          <td style="padding: 6px 0; color: #64748B;"><strong>Teléfono de Contacto:</strong></td>
+          <td style="padding: 6px 0; color: #0F172A;">${contactPhone}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background-color: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+      <h3 style="margin-top: 0; margin-bottom: 14px; font-size: 15px; color: #0369A1; font-weight: 800;">
+        💻 Equipos Tecnológicos Solicitados:
+      </h3>
+      <ul style="margin: 0; padding-left: 0; list-style: none;">
+        ${techItemsHtml}
+      </ul>
+    </div>
+
+    <p style="font-size: 13px; color: #64748B; margin-top: 20px; line-height: 1.5;">
+      Agradecemos al equipo de TIC coordinar el alistamiento, instalación o verificación previa de los equipos en la sala con antelación al inicio de la jornada.
+    </p>
+
+    <div style="text-align: center; margin-top: 25px;">
+      <a href="https://sasge.secretariajuridica.gov.co/admin/manage" 
+         style="background-color: #0284C7; color: #FFFFFF; text-decoration: none; padding: 12px 26px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
+        Ver Solicitud en SASGE
+      </a>
+    </div>
+  `;
+
+  const htmlContent = getHtmlTemplate(
+    'Requerimiento de Equipos TIC',
+    bodyContent,
+    'rooms'
+  );
+
+  try {
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: ticEmail,
+      subject: subject,
+      html: htmlContent
+    });
+    console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${ticEmail}`);
+  } catch (error) {
+    console.error(`Error al enviar notificación a TIC (${ticEmail}):`, error);
+  }
+}
+
 module.exports = {
   sendRequestCreatedNotification,
   sendRequestUpdatedNotification,
-  sendAdminServiceNotification
+  sendAdminServiceNotification,
+  sendTicRoomNotification
 };

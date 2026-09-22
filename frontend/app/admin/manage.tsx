@@ -637,8 +637,12 @@ export default function ManageRequests() {
         ];
       } else {
         const activeServices: string[] = [];
-        if (item.metadata.services?.projector) activeServices.push('Proyector');
-        if (item.metadata.services?.laptop) activeServices.push('Computador');
+        if (item.metadata.services?.projector && item.metadata.services?.laptop) {
+          activeServices.push('Equipos TIC (Proyector y Laptop)');
+        } else {
+          if (item.metadata.services?.projector) activeServices.push('Proyector');
+          if (item.metadata.services?.laptop) activeServices.push('Computador / Laptop');
+        }
         if (item.metadata.services?.coffee) activeServices.push('Cafetería');
         const servicesVal = activeServices.join(', ') || 'Ninguno';
 

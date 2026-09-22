@@ -1038,7 +1038,11 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
                       <Text style={[modalStyles.btnText, { color: COLORS.primaryDark }]}>Plantilla</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity onPress={onClose} style={[modalStyles.primaryBtn, { flex: request.category === 'visitors' ? 1 : undefined }]}>
+                  <TouchableOpacity 
+                    onPress={onClose} 
+                    activeOpacity={0.8}
+                    style={[modalStyles.primaryBtn, { flex: 1, cursor: 'pointer' } as any]}
+                  >
                     <LinearGradient 
                       colors={[COLORS.primary, COLORS.primaryDark]} 
                       start={{ x: 0, y: 0 }} 
@@ -1247,13 +1251,17 @@ const modalStyles = StyleSheet.create({
   primaryBtn: {
     height: 56,
     borderRadius: 18,
-    overflow: 'hidden'
-  },
-  btnGradient: {
-    flex: 1,
-    flexDirection: 'row',
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center'
+  },
+  btnGradient: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20
   },
   btnText: {
     color: COLORS.white,

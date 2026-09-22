@@ -779,11 +779,37 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     // Obtener información del usuario para enviar el correo de notificación
     const createdRequest = result.rows[0];
     const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [req.user.id]);
+    let currentUserObj = null;
     if (userResult.rows.length > 0) {
       const u = userResult.rows[0];
       const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
       u.name = displayName;
+      currentUserObj = u;
       emailService.sendRequestCreatedNotification(u, createdRequest);
+    }
+
+    // Notificación automática a la Oficina de TIC si es solicitud de sala con Proyector y/o Laptop
+    if (createdRequest.category?.toLowerCase() === 'rooms') {
+      const meta = createdRequest.metadata || {};
+      const hasTechEquipment = 
+        (meta.services && (meta.services.projector || meta.services.laptop || meta.services.tech_tic)) ||
+        (Array.isArray(meta.tech_requirements) && meta.tech_requirements.some(t => 
+          /proyector|videobeam|laptop|computador|equipos tic/i.test(t)
+        )) ||
+        (meta.custom_tech_description && meta.custom_tech_description.trim().length > 0);
+
+      if (hasTechEquipment) {
+        try {
+          const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
+          for (const row of ticEmailsRes.rows) {
+            if (row.email && row.email.trim()) {
+              emailService.sendTicRoomNotification(row.email.trim(), createdRequest, currentUserObj || { name: 'Funcionario' });
+            }
+          }
+        } catch (ticEmailErr) {
+          console.error('Error enviando notificación automática a TIC:', ticEmailErr);
+        }
+      }
     }
 
     res.status(201).json(createdRequest);
