@@ -3102,7 +3102,7 @@ export default function AdminSettings() {
               Los espacios físicos y las reglas operativas han sido actualizados con éxito en el sistema.
             </Text>
             <TouchableOpacity 
-              style={[styles.modalButton, styles.successButton]} 
+              style={styles.successButton} 
               onPress={() => setShowSuccessModal(false)}
             >
               <Text style={styles.successButtonText}>ENTENDIDO</Text>
@@ -3133,7 +3133,7 @@ export default function AdminSettings() {
               {emailModalData.message}
             </Text>
             <TouchableOpacity 
-              style={[styles.modalButton, styles.successButton, emailModalData.isError && { backgroundColor: COLORS.danger }]} 
+              style={[styles.successButton, emailModalData.isError && { backgroundColor: COLORS.danger }]} 
               onPress={() => setShowEmailModal(false)}
             >
               <Text style={styles.successButtonText}>ENTENDIDO</Text>
@@ -3242,7 +3242,7 @@ export default function AdminSettings() {
                 </View>
 
                 <TouchableOpacity 
-                  style={[styles.modalButton, styles.successButton, { width: '100%', backgroundColor: COLORS.primary }]} 
+                  style={[styles.successButton, { backgroundColor: COLORS.primary }]} 
                   onPress={() => setShowGitResultModal(false)}
                 >
                   <Text style={styles.successButtonText}>Cerrar y Continuar</Text>
@@ -3523,8 +3523,8 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: COLORS.primarySoft, fontSize: 14, fontWeight: '800' },
   confirmDeleteButton: { backgroundColor: COLORS.danger },
   confirmDeleteButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
-  successButton: { backgroundColor: COLORS.primary, width: '100%', height: 60, borderRadius: 18 },
-  successButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '900', letterSpacing: 1 },
+  successButton: { backgroundColor: COLORS.primary, width: '100%', minWidth: '100%', height: 54, borderRadius: 16, paddingHorizontal: 24 },
+  successButtonText: { color: COLORS.white, fontSize: 15, fontWeight: '900', letterSpacing: 1, textAlign: 'center' },
 
   // Estilos de Despliegue y Git
   gitDeployCard: { backgroundColor: COLORS.white, borderRadius: 24, padding: 6, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' },

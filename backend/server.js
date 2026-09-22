@@ -1451,8 +1451,37 @@ app.post('/api/service-emails/sync', optionalAuthenticateToken, async (req, res)
     res.status(500).json({ error: 'Error sincronizando correos.' });
   }
 });
+app.post('/api/service_emails/sync', optionalAuthenticateToken, async (req, res) => {
+  const { emails } = req.body;
+  if (!Array.isArray(emails)) {
+    return res.status(400).json({ error: 'Se esperaba un array de correos.' });
+  }
+  try {
+    for (const item of emails) {
+      if (item && item.service_type && item.email) {
+        const cleanType = String(item.service_type).trim();
+        const cleanEmail = String(item.email).trim().toLowerCase();
+        const check = await pool.query(
+          'SELECT id FROM service_emails WHERE service_type = $1 AND LOWER(TRIM(email)) = LOWER($2)',
+          [cleanType, cleanEmail]
+        );
+        if (check.rows.length === 0) {
+          await pool.query(
+            'INSERT INTO service_emails (service_type, email) VALUES ($1, $2)',
+            [cleanType, cleanEmail]
+          );
+        }
+      }
+    }
+    const updated = await pool.query('SELECT * FROM service_emails ORDER BY service_type, email');
+    res.json(updated.rows);
+  } catch (err) {
+    console.error('Error en sincronización de correos:', err);
+    res.status(500).json({ error: 'Error sincronizando correos.' });
+  }
+});
 
-app.post('/api/service-emails/bulk-save', optionalAuthenticateToken, async (req, res) => {
+const handleBulkSaveServiceEmails = async (req, res) => {
   const { emails } = req.body;
   if (!Array.isArray(emails)) {
     return res.status(400).json({ error: 'Se esperaba un array de correos.' });
@@ -1480,7 +1509,9 @@ app.post('/api/service-emails/bulk-save', optionalAuthenticateToken, async (req,
     console.error('Error al guardar masivamente los correos de servicio:', err);
     res.status(500).json({ error: 'Error al guardar los correos en la base de datos.' });
   }
-});
+};
+app.post('/api/service-emails/bulk-save', optionalAuthenticateToken, handleBulkSaveServiceEmails);
+app.post('/api/service_emails/bulk-save', optionalAuthenticateToken, handleBulkSaveServiceEmails);
 
 const handleServiceEmailsDelete = async (req, res) => {
   const { id } = req.params;

@@ -1634,7 +1634,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text, marginBottom: 15 },
   confirmSummary: { width: '100%', backgroundColor: COLORS.bg, padding: 20, borderRadius: 20, gap: 10, marginBottom: 10 },
   confirmText: { fontSize: 16, color: COLORS.text },
-  modalBtn: { backgroundColor: COLORS.primary, height: 54, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 25 },
+  modalBtn: { backgroundColor: COLORS.primary, width: '100%', height: 54, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 25 },
   modalBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   

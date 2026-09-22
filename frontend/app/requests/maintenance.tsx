@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   modalPanel: { backgroundColor: COLORS.white, borderRadius: 30, width: '100%', maxWidth: 500, padding: 25, shadowOpacity: 0.2, shadowRadius: 20 },
   modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.text },
   modalText: { fontSize: 15, color: COLORS.muted, lineHeight: 24 },
-  modalBtn: { backgroundColor: COLORS.primary, height: 54, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 25 },
+  modalBtn: { backgroundColor: COLORS.primary, width: '100%', height: 54, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 25 },
   modalBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 16 },
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }
 });

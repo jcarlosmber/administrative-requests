@@ -132,22 +132,21 @@ export const settingsService = {
   },
 
   // ==========================================
+  // ==========================================
   // SERVICIO DE CORREOS DE SERVICIOS (EMAILS)
   // ==========================================
   async getServiceEmails(): Promise<ServiceEmail[]> {
     try {
-      const res = await fetch(`${API_URL}/api/service-emails`);
-      if (res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            if (Platform.OS === 'web') {
-              localStorage.setItem('local_service_emails', JSON.stringify(data));
-            }
-            return data as ServiceEmail[];
-          }
+      const { data, error } = await supabase
+        .from('service_emails')
+        .select('*')
+        .order('service_type');
+
+      if (!error && Array.isArray(data)) {
+        if (Platform.OS === 'web') {
+          localStorage.setItem('local_service_emails', JSON.stringify(data));
         }
+        return data as ServiceEmail[];
       }
     } catch (err) {
       console.warn('Usando respaldo local para correos debido a error de conexión:', err);
@@ -169,57 +168,45 @@ export const settingsService = {
 
   async createServiceEmail(email: Omit<ServiceEmail, 'id' | 'created_at'>): Promise<ServiceEmail> {
     try {
-      const token = await appStorage.getItem('auth_token');
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const { data, error } = await supabase
+        .from('service_emails')
+        .insert([email])
+        .select()
+        .single();
 
-      const res = await fetch(`${API_URL}/api/service-emails`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(email)
-      });
-
-      if (res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const created = await res.json();
-          if (Platform.OS === 'web') {
-            const emails = await this.getServiceEmails();
-            const updated = [...emails.filter(e => e.id !== created.id), created];
-            localStorage.setItem('local_service_emails', JSON.stringify(updated));
-          }
-          return created;
+      if (!error && data) {
+        if (Platform.OS === 'web') {
+          const emails = await this.getServiceEmails();
+          const updated = [...emails.filter(e => e.id !== data.id), data];
+          localStorage.setItem('local_service_emails', JSON.stringify(updated));
         }
+        return data as ServiceEmail;
       }
-      throw new Error(`HTTP ${res.status}`);
     } catch (err) {
       console.warn('Error al guardar correo en backend, usando respaldo local:', err);
-      const newEmail: ServiceEmail = {
-        id: `temp-${Date.now()}`,
-        ...email
-      };
-      
-      if (Platform.OS === 'web') {
-        const emails = await this.getServiceEmails();
-        const updated = [...emails, newEmail];
-        localStorage.setItem('local_service_emails', JSON.stringify(updated));
-      }
-      return newEmail;
     }
+
+    const newEmail: ServiceEmail = {
+      id: `temp-${Date.now()}`,
+      ...email
+    };
+    
+    if (Platform.OS === 'web') {
+      const emails = await this.getServiceEmails();
+      const updated = [...emails, newEmail];
+      localStorage.setItem('local_service_emails', JSON.stringify(updated));
+    }
+    return newEmail;
   },
 
   async deleteServiceEmail(id: string): Promise<void> {
     try {
       const isTemp = id.startsWith('temp-');
       if (!isTemp) {
-        const token = await appStorage.getItem('auth_token');
-        const headers: Record<string, string> = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        await fetch(`${API_URL}/api/service-emails/${id}`, {
-          method: 'DELETE',
-          headers
-        });
+        await supabase
+          .from('service_emails')
+          .delete()
+          .eq('id', id);
       }
     } catch (err) {
       console.warn('Error al eliminar correo en backend:', err);
@@ -244,6 +231,7 @@ export const settingsService = {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
+      // Intentar sincronizar con el backend
       const res = await fetch(`${API_URL}/api/service-emails/sync`, {
         method: 'POST',
         headers,
@@ -267,11 +255,12 @@ export const settingsService = {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const cleanEmails = emails.map(e => ({
+      const cleanEmails = (emails || []).filter(Boolean).map(e => ({
         service_type: e.service_type,
         email: e.email
       }));
 
+      // Intentar bulk-save directo
       const res = await fetch(`${API_URL}/api/service-emails/bulk-save`, {
         method: 'POST',
         headers,
@@ -285,7 +274,28 @@ export const settingsService = {
         }
         return saved;
       }
-      throw new Error(`HTTP ${res.status}`);
+
+      // Si bulk-save da 404 (ej. versión previa en producción), usar sync
+      const syncRes = await fetch(`${API_URL}/api/service-emails/sync`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ emails: cleanEmails })
+      });
+
+      if (syncRes.ok) {
+        const synced = await syncRes.json();
+        if (Platform.OS === 'web') {
+          localStorage.setItem('local_service_emails', JSON.stringify(synced));
+        }
+        return synced;
+      }
+
+      // Fallback: insertar uno por uno con supabase.from('service_emails')
+      for (const item of cleanEmails) {
+        await supabase.from('service_emails').insert([item]).catch(() => {});
+      }
+      const updated = await this.getServiceEmails();
+      return updated.length > 0 ? updated : emails;
     } catch (e) {
       console.warn('Error al guardar todos los correos en el servidor:', e);
       if (Platform.OS === 'web') {
