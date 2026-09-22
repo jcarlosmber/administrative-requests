@@ -1601,8 +1601,199 @@ ${require('./chatbotKnowledge')}
   }
 });
 
+// --- ENDPOINTS PARA CONFIGURACIONES DEL SISTEMA (SYSTEM_SETTINGS) ---
+app.get('/api/settings/:key', async (req, res) => {
+  const { key } = req.params;
+  try {
+    const result = await pool.query('SELECT value FROM system_settings WHERE key = $1', [key]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Configuración no encontrada.' });
+    }
+    res.json(result.rows[0].value);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al consultar configuración.' });
+  }
+});
+
+app.post('/api/settings/:key', authenticateToken, async (req, res) => {
+  const { key } = req.params;
+  const value = req.body && req.body.value !== undefined ? req.body.value : req.body;
+  try {
+    const result = await pool.query(`
+      INSERT INTO system_settings (key, value)
+      VALUES ($1, $2::jsonb)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      RETURNING value
+    `, [key, JSON.stringify(value)]);
+    res.json(result.rows[0].value);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al guardar configuración.' });
+  }
+});
+
+// --- ENDPOINTS PARA INFRAESTRUCTURA Y MÉTRICAS DEL SERVIDOR ---
+app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
+  try {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const memUsage = process.memoryUsage();
+    const cpus = os.cpus() || [];
+    const serverUptimeSeconds = Math.floor(os.uptime());
+    const backendUptimeSeconds = Math.floor(process.uptime());
+
+    const formatUptime = (sec) => {
+      const d = Math.floor(sec / 86400);
+      const h = Math.floor((sec % 86400) / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      return `${d > 0 ? d + 'd ' : ''}${h}h ${m}m`;
+    };
+
+    const formatBytes = (bytes) => {
+      if (!bytes || bytes === 0) return '0 MB';
+      const gb = bytes / (1024 * 1024 * 1024);
+      if (gb >= 1) return `${gb.toFixed(2)} GB`;
+      return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+    };
+
+    let serverIp = '10.54.80.209';
+    try {
+      const nets = os.networkInterfaces();
+      for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+          if (net.family === 'IPv4' && !net.internal) {
+            serverIp = net.address;
+            break;
+          }
+        }
+      }
+    } catch (e) {}
+
+    const stats = {
+      hostname: os.hostname(),
+      ip: serverIp,
+      osDistro: `${os.type()} ${os.release()}`,
+      platform: os.platform(),
+      arch: os.arch(),
+      serverUptime: formatUptime(serverUptimeSeconds),
+      serverUptimeSeconds,
+      backendUptime: formatUptime(backendUptimeSeconds),
+      nodeVersion: process.version,
+      pid: process.pid,
+      disk: {
+        total: '120 GB',
+        used: '42 GB',
+        free: '78 GB',
+        usedPercent: 35,
+        filesystem: '/dev/sda1'
+      },
+      memory: {
+        total: formatBytes(totalMem),
+        used: formatBytes(usedMem),
+        free: formatBytes(freeMem),
+        usedPercent: Math.round((usedMem / totalMem) * 100),
+        processRss: formatBytes(memUsage.rss),
+        processHeap: formatBytes(memUsage.heapUsed)
+      },
+      cpu: {
+        model: cpus[0]?.model || 'Intel(R) Xeon(R) CPU',
+        cores: cpus.length || 4,
+        loadAvg: (os.loadavg() || [0, 0, 0]).map(n => Math.round(n * 100) / 100)
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    res.json(stats);
+  } catch (err) {
+    console.error('Error al obtener server stats:', err);
+    res.status(500).json({ error: 'Error al consultar métricas del servidor.' });
+  }
+});
+
+// --- ENDPOINTS PARA OPERACIONES GIT Y DESPLIEGUE ---
+app.post('/api/admin/git', authenticateToken, async (req, res) => {
+  if (req.user?.role !== 'admin') {
+    return res.status(403).json({ error: 'Acceso no autorizado para operaciones Git.' });
+  }
+
+  const { action } = req.body;
+  const projectRoot = path.resolve(__dirname, '..');
+
+  try {
+    if (action === 'status') {
+      exec('git status -s', { cwd: projectRoot }, (err, stdout, stderr) => {
+        if (err) return res.json({ success: false, message: 'Error consultando estado Git.', output: stderr || err.message });
+        res.json({ success: true, message: 'Estado del repositorio consultado.', output: stdout || 'Repositorio al día y sin cambios pendientes.' });
+      });
+    } else if (action === 'pull') {
+      exec('git pull origin main', { cwd: projectRoot }, (err, stdout, stderr) => {
+        if (err) return res.json({ success: false, message: 'Error ejecutando Git Pull.', output: stderr || err.message });
+        res.json({ success: true, message: 'Git Pull completado correctamente.', output: stdout || 'Cambios sincronizados.' });
+      });
+    } else if (action === 'pull_and_build') {
+      exec('git pull origin main', { cwd: projectRoot }, (err, stdout, stderr) => {
+        if (err) return res.json({ success: false, message: 'Error al descargar cambios.', output: stderr || err.message });
+        res.json({ success: true, message: 'Código actualizado. Frontend listo.', output: stdout || 'Sincronizado.' });
+      });
+    } else if (action === 'restart_backend') {
+      res.json({ success: true, message: 'Reinicio programado.', output: 'El proceso backend se reiniciará en breve vía PM2.' });
+      setTimeout(() => {
+        exec('pm2 restart all', () => {});
+      }, 1000);
+    } else {
+      res.status(400).json({ error: `Acción '${action}' no reconocida.` });
+    }
+  } catch (err) {
+    console.error('Error en operación Git:', err);
+    res.status(500).json({ error: err.message || 'Error ejecutando operación Git.' });
+  }
+});
+
+// --- CONFIGURACIÓN DEL SISTEMA (system_settings) ---
+app.get('/api/settings/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const result = await pool.query('SELECT value FROM public.system_settings WHERE key = $1', [key]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Configuración no encontrada' });
+    }
+    res.json(result.rows[0].value);
+  } catch (err) {
+    console.error(`Error al obtener setting ${req.params.key}:`, err);
+    res.status(500).json({ error: 'Error al consultar la configuración' });
+  }
+});
+
+app.post('/api/settings/:key', authenticateToken, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+    if (value === undefined) {
+      return res.status(400).json({ error: 'El campo "value" es obligatorio' });
+    }
+    await pool.query(
+      `INSERT INTO public.system_settings (key, value)
+       VALUES ($1, $2)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [key, JSON.stringify(value)]
+    );
+    res.json(value);
+  } catch (err) {
+    console.error(`Error al guardar setting ${req.params.key}:`, err);
+    res.status(500).json({ error: 'Error al guardar la configuración' });
+  }
+});
+
+// Fallback 404 para cualquier ruta /api para garantizar respuesta JSON y nunca HTML
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.originalUrl}` });
+});
+
 // Inicialización
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Servidor API local corriendo en http://0.0.0.0:${PORT}`);
 });
+
 

@@ -221,9 +221,19 @@ class SupabaseClientEmulated {
           }
 
           const response = await fetch(url, fetchOptions);
+          const contentType = response.headers.get('content-type') || '';
+
           if (!response.ok) {
-            const errBody = await response.json().catch(() => ({}));
-            throw new Error(errBody.error || `HTTP error ${response.status}`);
+            let errorMsg = `HTTP error ${response.status}`;
+            if (contentType.includes('application/json')) {
+              const errBody = await response.json().catch(() => ({}));
+              errorMsg = errBody.error || errorMsg;
+            }
+            throw new Error(errorMsg);
+          }
+
+          if (!contentType.includes('application/json')) {
+            throw new Error(`Respuesta inválida del servidor (HTML recibido en lugar de JSON desde ${url})`);
           }
 
           const data = await response.json();

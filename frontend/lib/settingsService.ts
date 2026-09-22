@@ -223,19 +223,27 @@ export const settingsService = {
   // ==========================================
   // CONFIGURACIÓN GLOBAL DEL SISTEMA
   // ==========================================
+  // CONFIGURACIÓN GLOBAL DEL SISTEMA
+  // ==========================================
   async getSystemSetting(key: string): Promise<any> {
     try {
       const res = await fetch(`${API_URL}/api/settings/${key}`);
       if (!res.ok) {
         if (res.status === 404) return null;
-        throw new Error('Error al obtener configuración');
+        throw new Error(`Error al obtener configuración (${res.status})`);
+      }
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error('La respuesta del servidor no es JSON válido');
       }
       return await res.json();
     } catch (err) {
       console.warn(`Usando configuración local para ${key} debido a error:`, err);
       if (Platform.OS === 'web') {
         const local = localStorage.getItem(`sys_set_${key}`);
-        if (local) return JSON.parse(local);
+        if (local) {
+          try { return JSON.parse(local); } catch (e) {}
+        }
       }
       // Defaults fallbacks
       if (key === 'eval_categories') return ['visitors', 'transport', 'maintenance', 'rooms', 'parking'];
@@ -257,7 +265,8 @@ export const settingsService = {
       });
       if (!res.ok) throw new Error('Error al actualizar configuración');
       
-      const updatedValue = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      const updatedValue = contentType.includes('application/json') ? await res.json() : value;
       if (Platform.OS === 'web') {
         localStorage.setItem(`sys_set_${key}`, JSON.stringify(updatedValue));
       }
@@ -285,6 +294,10 @@ export const settingsService = {
       body: JSON.stringify({ action })
     });
     
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(!res.ok ? `Error ${res.status}: El servidor no devolvió una respuesta JSON.` : 'Respuesta no válida del servidor.');
+    }
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Error al ejecutar la operación de Git.');
@@ -304,6 +317,11 @@ export const settingsService = {
         Authorization: `Bearer ${token}`
       }
     });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(!res.ok ? `Error ${res.status}: Servidor no disponible o ruta no encontrada.` : 'Respuesta no válida del servidor.');
+    }
 
     const data = await res.json();
     if (!res.ok) {
