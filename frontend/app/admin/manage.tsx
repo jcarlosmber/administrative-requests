@@ -177,12 +177,12 @@ export default function ManageRequests() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
-  // Cálculo responsivo equilibrado: cards proporcionadas y no tan grandes
+  // Cálculo responsivo adaptado para cards 30% más anchas
   const numCardCols = useMemo(() => {
     if (!isDesktop) return 1;
-    if (width >= 1920) return 4;
-    if (width >= 1420) return 3;
-    if (width >= 900) return 2;
+    if (width >= 2150) return 4;
+    if (width >= 1550) return 3;
+    if (width >= 1150) return 2;
     return 1;
   }, [isDesktop, width]);
 
@@ -3854,33 +3854,7 @@ function RequestDetailModal({
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {/* Rechazar */}
-              {!isClosed && (
-                <Pressable
-                  onPress={() => {
-                    onClose();
-                    onUpdateStatus(item, 'rechazado');
-                  }}
-                  style={({ hovered }: any) => [
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 18,
-                      height: 38,
-                      borderRadius: 9999,
-                      backgroundColor: hovered ? '#DC2626' : '#EF4444',
-                      borderWidth: 0,
-                    },
-                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
-                  ]}
-                >
-                  <Ionicons name="close" size={16} color="#FFFFFF" />
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>RECHAZAR</Text>
-                </Pressable>
-              )}
-
-              {/* Acciones principales según estado */}
+              {/* Acciones principales según estado (a la izquierda) */}
               {isPending && (
                 <>
                   {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
@@ -3984,6 +3958,32 @@ function RequestDetailModal({
                   <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>FINALIZAR</Text>
                 </Pressable>
               )}
+
+              {/* Rechazar (a la derecha) */}
+              {!isClosed && (
+                <Pressable
+                  onPress={() => {
+                    onClose();
+                    onUpdateStatus(item, 'rechazado');
+                  }}
+                  style={({ hovered }: any) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 18,
+                      height: 38,
+                      borderRadius: 9999,
+                      backgroundColor: hovered ? '#DC2626' : '#EF4444',
+                      borderWidth: 0,
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
+                >
+                  <Ionicons name="close" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>RECHAZAR</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         </View>
@@ -4070,7 +4070,7 @@ function RequestListItem({
           flex: 1, 
           marginHorizontal: 0, 
           maxWidth: maxCardWidth,
-          minWidth: 350,
+          minWidth: 455,
         }, 
         Platform.OS === 'web' ? ({ 
           boxShadow: `0 4px 18px ${serviceTheme.shadow}`,
@@ -4530,7 +4530,7 @@ const styles = StyleSheet.create({
     marginBottom: 14, 
     marginHorizontal: 25, 
     borderWidth: 0, 
-    minWidth: 350,
+    minWidth: 455,
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 10 },
