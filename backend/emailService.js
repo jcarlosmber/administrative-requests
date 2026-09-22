@@ -401,6 +401,10 @@ async function sendRequestUpdatedNotification(user, request) {
  * Envía correo al equipo administrador (service_emails) informando que deben gestionar un servicio
  */
 async function sendAdminServiceNotification(adminEmail, request, triggerStatus) {
+  if (!adminEmail) return;
+  const toRecipients = Array.isArray(adminEmail) ? adminEmail.join(', ') : adminEmail;
+  if (!toRecipients.trim()) return;
+
   const isApprovedTrigger = triggerStatus === 'resuelto';
   
   let displayStatus = request.status;
@@ -441,12 +445,12 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
   try {
     await transporter.sendMail({
       from: FROM_EMAIL,
-      to: adminEmail,
+      to: toRecipients,
       subject: subject,
       html: htmlContent,
       attachments: emailAttachments
     });
-    console.log(`Correo administrativo enviado a: ${adminEmail}`);
+    console.log(`Correo administrativo enviado a: ${toRecipients}`);
   } catch (error) {
     console.error('Error al enviar correo administrativo:', error);
   }
@@ -569,15 +573,86 @@ async function sendTicRoomNotification(ticEmail, request, user) {
   );
 
   try {
+    const toRecipients = Array.isArray(ticEmail) ? ticEmail.join(', ') : ticEmail;
     await transporter.sendMail({
       from: FROM_EMAIL,
-      to: ticEmail,
+      to: toRecipients,
       subject: subject,
       html: htmlContent
     });
-    console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${ticEmail}`);
+    console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${toRecipients}`);
   } catch (error) {
     console.error(`Error al enviar notificación a TIC (${ticEmail}):`, error);
+  }
+}
+
+/**
+ * Envía correo a los encargados/aprobadores (service_emails) informando que se radicó una nueva solicitud
+ */
+async function sendAdminNewRequestNotification(adminEmails, request, user) {
+  if (!adminEmails) return;
+  const toRecipients = Array.isArray(adminEmails) ? adminEmails.join(', ') : adminEmails;
+  if (!toRecipients.trim()) return;
+
+  const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
+  const radNumber = request.id ? `#${String(request.id).slice(0, 6).toUpperCase()}` : '';
+  const subject = `SASGE: Nueva Solicitud Radicada - ${categoryName} ${radNumber} - ${request.title}`;
+  
+  const requesterName = user?.name || user?.full_name || request.user_name || 'Funcionario';
+  const requesterDep = user?.dependency || request.metadata?.dependency || 'Secretaría Jurídica Distrital';
+  const { html: metadataHtml, attachments: emailAttachments } = formatMetadataForEmail(request);
+
+  const htmlContent = getHtmlTemplate(
+    'Nueva Solicitud Radicada',
+    `
+      <div style="background-color: #EFF6FF; border-left: 4px solid #2563EB; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
+        <p style="margin: 0; font-size: 14px; color: #1E40AF; font-weight: 700;">
+          📋 Nueva Solicitud en SASGE para Revisión / Aprobación
+        </p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #1E3A8A; line-height: 1.5;">
+          Se ha radicado una nueva solicitud en el módulo de <strong>${categoryName}</strong> que requiere su gestión, validación o trámite correspondiente.
+        </p>
+      </div>
+
+      <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 20px; margin: 20px 0;">
+        <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 15px; color: #0F172A; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px;">
+          Ficha de la Solicitud
+        </h3>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Radicado / ID:</strong> <span style="font-weight: 800; color: #0F172A;">${radNumber || 'Pendiente'}</span></p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Título:</strong> <span style="font-weight: 700; color: #0F172A;">${request.title}</span></p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Solicitante:</strong> ${requesterName}</p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Dependencia:</strong> ${requesterDep}</p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Prioridad:</strong> <span style="font-weight: 800; color: #2563EB;">${request.priority ? request.priority.toUpperCase() : 'NORMAL'}</span></p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Fecha de Radicación:</strong> ${new Date(request.created_at || new Date()).toLocaleString('es-CO')}</p>
+        <p style="margin: 6px 0; font-size: 14px;"><strong style="color: #64748B;">Descripción:</strong> ${request.description}</p>
+        ${metadataHtml}
+      </div>
+
+      <p style="font-size: 13px; color: #64748B; margin-top: 15px;">
+        Por favor ingresa al módulo de administración para revisar los detalles, aprobar o coordinar el trámite.
+      </p>
+
+      <div style="text-align: center; margin-top: 25px;">
+        <a href="https://sasge.secretariajuridica.gov.co/admin/manage" 
+           style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 12px 26px; border-radius: 8px; font-weight: 700; font-size: 14px; display: inline-block;">
+          Gestionar Solicitud en SASGE
+        </a>
+      </div>
+    `,
+    request.category
+  );
+
+  try {
+    await transporter.sendMail({
+      from: FROM_EMAIL,
+      to: toRecipients,
+      subject: subject,
+      html: htmlContent,
+      attachments: emailAttachments
+    });
+    console.log(`📧 Correo de nueva solicitud enviado a encargados: ${toRecipients}`);
+  } catch (error) {
+    console.error('Error al enviar correo de nueva solicitud a encargados:', error);
   }
 }
 
@@ -585,5 +660,6 @@ module.exports = {
   sendRequestCreatedNotification,
   sendRequestUpdatedNotification,
   sendAdminServiceNotification,
-  sendTicRoomNotification
+  sendTicRoomNotification,
+  sendAdminNewRequestNotification
 };

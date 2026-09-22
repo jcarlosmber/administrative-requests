@@ -11,7 +11,7 @@ export interface Driver {
 
 export interface ServiceEmail {
   id: string;
-  service_type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking';
+  service_type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking' | 'transport';
   email: string;
   created_at?: string;
 }
@@ -28,7 +28,8 @@ const INITIAL_EMAILS: ServiceEmail[] = [
   { id: '11111111-2222-3333-4444-777777777772', service_type: 'visitors', email: 'visitantes.sg@SJD.gov.co' },
   { id: '11111111-2222-3333-4444-777777777773', service_type: 'rooms_special', email: 'eventos.sg@SJD.gov.co' },
   { id: '11111111-2222-3333-4444-777777777774', service_type: 'parking', email: 'porteria.sg@SJD.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777775', service_type: 'rooms_tic', email: 'tics@secjuridica.gov.co' }
+  { id: '11111111-2222-3333-4444-777777777775', service_type: 'rooms_tic', email: 'tics@secjuridica.gov.co' },
+  { id: '11111111-2222-3333-4444-777777777776', service_type: 'transport', email: 'transporte.sg@SJD.gov.co' }
 ];
 
 export const settingsService = {

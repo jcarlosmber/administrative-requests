@@ -1387,11 +1387,10 @@ export default function ManageRequests() {
           parking: 'Parqueadero'
         }[confirmModal.category || ''] || confirmModal.category;
 
-        // Verificar si aplica notificación a Secretaría General
+        // Verificar si aplica notificación a Secretaría General / Equipo Gestor
         let secGenEmail: string | null = null;
         if (
           confirmModal.category && 
-          confirmModal.category !== 'transport' && 
           (confirmModal.newStatus === 'en_progreso' || confirmModal.newStatus === 'resuelto') &&
           confirmModal.item?.status.toLowerCase() === 'pendiente'
         ) {
@@ -1399,9 +1398,11 @@ export default function ManageRequests() {
           if (confirmModal.category === 'rooms' && confirmModal.item?.metadata?.requires_secretaria_general) {
             serviceKey = 'rooms_special';
           }
-          const emailObj = serviceEmails.find(e => e.service_type === serviceKey);
-          if (emailObj) {
-            secGenEmail = emailObj.email;
+          const matchingEmails = serviceEmails
+            .filter(e => e && e.service_type === serviceKey && e.email?.trim())
+            .map(e => e.email.trim());
+          if (matchingEmails.length > 0) {
+            secGenEmail = matchingEmails.join(', ');
           }
         }
 
@@ -1529,7 +1530,7 @@ export default function ManageRequests() {
                         <Ionicons name="mail" size={13} color="#1D4ED8" />
                       </View>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                        Notificación a Secretaría General
+                        Notificación a Equipo Gestor
                       </Text>
                     </View>
                     <Text style={{ fontSize: 12, color: '#334155', lineHeight: 17, marginBottom: 8 }}>
@@ -1537,17 +1538,17 @@ export default function ManageRequests() {
                     </Text>
                     <View style={{
                       flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
+                      alignItems: 'flex-start',
+                      gap: 8,
                       backgroundColor: '#FFFFFF',
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 10,
                       borderWidth: 1,
                       borderColor: '#DBEAFE',
                     }}>
-                      <Ionicons name="at-outline" size={14} color="#1D4ED8" />
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E3A8A' }} numberOfLines={1}>
+                      <Ionicons name="at-outline" size={15} color="#1D4ED8" style={{ marginTop: 2 }} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E3A8A', flex: 1, lineHeight: 18 }}>
                         {secGenEmail}
                       </Text>
                     </View>

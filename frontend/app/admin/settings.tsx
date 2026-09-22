@@ -159,6 +159,7 @@ export default function AdminSettings() {
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({
     maintenance: '',
     visitors: '',
+    transport: '',
     rooms: '',
     rooms_special: '',
     rooms_tic: '',
@@ -820,7 +821,7 @@ export default function AdminSettings() {
   // ==========================================
   // MANEJADORES PARA CORREOS (SERVICE EMAILS)
   // ==========================================
-  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking') => {
+  const addServiceEmail = async (type: 'maintenance' | 'visitors' | 'transport' | 'rooms' | 'rooms_special' | 'rooms_tic' | 'parking') => {
     const emailVal = emailInputs[type]?.trim();
     if (!emailVal) return;
 
@@ -1155,39 +1156,72 @@ export default function AdminSettings() {
               {/* Gestión de Conductores */}
               {(activeTab === 'all' || activeTab === 'drivers') && (
                 <>
-                  <SectionHeader title="Gestión de Conductores" kicker="LOGÍSTICA DE TRANSPORTE" />
-                  <View style={{
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    flexWrap: 'wrap',
-                    gap: 16,
-                  }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 70, marginBottom: 20 }}>
+                    <View>
+                      <Text style={styles.sectionKicker}>LOGÍSTICA DE TRANSPORTE</Text>
+                      <Text style={styles.sectionTitle}>Gestión de Conductores</Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        backgroundColor: '#2563EB',
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 14,
+                        ...Platform.select({
+                          web: { boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)' }
+                        })
+                      }}
+                      onPress={addDriver}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="add" size={20} color={COLORS.white} />
+                      <Text style={{ color: COLORS.white, fontSize: 13, fontWeight: '800' }}>
+                        Agregar Conductor
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: 'column', gap: 14 }}>
                     {drivers.map(drv => (
                       <View 
                         key={drv.id} 
                         style={{
-                          width: isDesktop ? 'calc(50% - 8px)' as any : '100%',
+                          width: '100%',
                           backgroundColor: COLORS.white,
-                          borderRadius: 24,
-                          padding: 22,
+                          borderRadius: 22,
+                          paddingVertical: 18,
+                          paddingHorizontal: 22,
                           borderWidth: 1,
                           borderColor: '#E2E8F0',
-                          minHeight: 140,
+                          flexDirection: isDesktop ? 'row' : 'column',
+                          alignItems: isDesktop ? 'center' : 'stretch',
                           justifyContent: 'space-between',
+                          gap: 16,
                           ...Platform.select({
-                            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.04, shadowRadius: 12 },
-                            android: { elevation: 3 },
-                            web: { boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)' }
+                            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10 },
+                            android: { elevation: 2 },
+                            web: { boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)' }
                           })
                         }}
                       >
+                        {/* 1. Información del Conductor (Izquierda) */}
                         <TouchableOpacity 
                           onPress={() => openEditModal(drv, 'driver')} 
                           activeOpacity={0.7} 
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 14,
+                            flex: isDesktop ? 1.2 : undefined,
+                            minWidth: 220
+                          }}
                         >
                           <View style={{
-                            width: 48,
-                            height: 48,
+                            width: 52,
+                            height: 52,
                             borderRadius: 16,
                             backgroundColor: '#EFF6FF',
                             borderWidth: 1,
@@ -1195,37 +1229,59 @@ export default function AdminSettings() {
                             justifyContent: 'center',
                             alignItems: 'center'
                           }}>
-                            <Ionicons name="car-sport" size={24} color="#2563EB" />
+                            <Ionicons name="car-sport" size={26} color="#2563EB" />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={{
-                              fontSize: 16,
-                              fontWeight: '800',
+                              fontSize: 17,
+                              fontWeight: '900',
                               color: COLORS.primary,
                               letterSpacing: -0.2
                             }}>
                               {drv.name || 'Sin nombre'}
                             </Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                              <Ionicons name="call-outline" size={14} color="#64748B" />
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B' }}>
-                                {drv.phone || 'Sin teléfono'}
-                              </Text>
-                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.muted, marginTop: 2 }}>
+                              Conductor Oficial • Secretaría Jurídica Distrital
+                            </Text>
                           </View>
                         </TouchableOpacity>
 
-                        {/* Footer */}
+                        {/* 2. Bloque de Contacto y Disponibilidad (Centro) */}
                         <View style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginTop: 16,
-                          paddingTop: 14,
-                          borderTopWidth: 1,
-                          borderTopColor: '#F1F5F9'
+                          gap: 12,
+                          flex: isDesktop ? 1 : undefined,
+                          flexWrap: 'wrap'
                         }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 8,
+                            backgroundColor: '#F8FAFC',
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0'
+                          }}>
+                            <Ionicons name="call" size={15} color="#2563EB" />
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primary }}>
+                              {drv.phone || 'Sin teléfono'}
+                            </Text>
+                          </View>
+
+                          <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            backgroundColor: drv.is_active !== false ? '#ECFDF5' : '#F1F5F9',
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: drv.is_active !== false ? '#A7F3D0' : '#E2E8F0'
+                          }}>
                             <View style={{
                               width: 8,
                               height: 8,
@@ -1235,81 +1291,80 @@ export default function AdminSettings() {
                             <Text style={{
                               fontSize: 11,
                               fontWeight: '800',
-                              letterSpacing: 0.8,
+                              letterSpacing: 0.6,
                               color: drv.is_active !== false ? '#059669' : '#64748B',
                               textTransform: 'uppercase'
                             }}>
                               {drv.is_active !== false ? 'Activo / En Servicio' : 'Inactivo'}
                             </Text>
                           </View>
+                        </View>
 
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <TouchableOpacity 
-                              onPress={() => openEditModal(drv, 'driver')} 
-                              activeOpacity={0.7}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingHorizontal: 10,
-                                paddingVertical: 6,
-                                borderRadius: 10,
-                                backgroundColor: '#EFF6FF'
-                              }}
-                            >
-                              <Ionicons name="pencil" size={14} color="#2563EB" />
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB' }}>Editar</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                              onPress={() => openDriverDeleteConfirmation(drv)} 
-                              activeOpacity={0.7}
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 10,
-                                backgroundColor: '#FEF2F2',
-                                justifyContent: 'center',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <Ionicons name="trash-outline" size={15} color={COLORS.danger} />
-                            </TouchableOpacity>
-                          </View>
+                        {/* 3. Acciones (Derecha) */}
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: isDesktop ? 'flex-end' : 'space-between',
+                          gap: 10,
+                          borderTopWidth: isDesktop ? 0 : 1,
+                          borderTopColor: '#F1F5F9',
+                          paddingTop: isDesktop ? 0 : 12
+                        }}>
+                          <TouchableOpacity 
+                            onPress={() => openEditModal(drv, 'driver')} 
+                            activeOpacity={0.7}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 12,
+                              backgroundColor: '#EFF6FF',
+                              borderWidth: 1,
+                              borderColor: '#DBEAFE'
+                            }}
+                          >
+                            <Ionicons name="pencil" size={15} color="#2563EB" />
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#2563EB' }}>Editar</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity 
+                            onPress={() => openDriverDeleteConfirmation(drv)} 
+                            activeOpacity={0.7}
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 12,
+                              backgroundColor: '#FEF2F2',
+                              borderWidth: 1,
+                              borderColor: '#FEE2E2',
+                              justifyContent: 'center',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
+                          </TouchableOpacity>
                         </View>
                       </View>
                     ))}
                     
-                    <TouchableOpacity 
-                      style={{
-                        width: isDesktop ? 'calc(50% - 8px)' as any : '100%',
-                        minHeight: 140,
-                        borderRadius: 24,
-                        borderStyle: 'dashed',
-                        borderWidth: 2,
-                        borderColor: '#CBD5E1',
-                        backgroundColor: '#F8FAFC',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: 20
-                      }} 
-                      onPress={addDriver}
-                      activeOpacity={0.7}
-                    >
+                    {drivers.length === 0 && (
                       <View style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 14,
-                        backgroundColor: '#EFF6FF',
-                        justifyContent: 'center',
-                        alignItems: 'center'
+                        padding: 30,
+                        backgroundColor: COLORS.white,
+                        borderRadius: 20,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        alignItems: 'center',
+                        gap: 10
                       }}>
-                        <Ionicons name="add" size={24} color="#2563EB" />
+                        <Ionicons name="car-outline" size={36} color={COLORS.muted} />
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.muted }}>
+                          No hay conductores registrados en el sistema.
+                        </Text>
                       </View>
-                      <Text style={{ fontSize: 15, fontWeight: '800', color: '#2563EB' }}>
-                        Agregar Conductor
-                      </Text>
-                    </TouchableOpacity>
+                    )}
                   </View>
                 </>
               )}
@@ -1322,6 +1377,7 @@ export default function AdminSettings() {
                     {([
                       { type: 'maintenance', title: 'Mantenimientos', icon: 'construct', color: '#2A9D8F', desc: 'Alertas para reparaciones e infraestructura' },
                       { type: 'visitors', title: 'Visitantes', icon: 'people', color: '#E63946', desc: 'Control de accesos y seguridad en portería' },
+                      { type: 'transport', title: 'Transporte Oficial', icon: 'car-sport', color: '#0077B6', desc: 'Alertas y coordinación de traslados vehiculares' },
                       { type: 'rooms', title: 'Salas Estándar', icon: 'business', color: '#4361EE', desc: 'Notificaciones de reservas convencionales' },
                       { type: 'rooms_special', title: 'Salas Especiales', icon: 'ribbon', color: '#7209B7', desc: 'Eventos masivos (Auditorio y salas magnas)' },
                       { type: 'rooms_tic', title: 'Equipos TIC (Salas)', icon: 'laptop', color: '#0284C7', desc: 'Proyector, Laptop y soporte técnico tecnológico' },

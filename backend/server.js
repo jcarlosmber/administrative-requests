@@ -788,7 +788,31 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       emailService.sendRequestCreatedNotification(u, createdRequest);
     }
 
-    // Notificación automática a la Oficina de TIC si es solicitud de sala con Proyector y/o Laptop
+    // 2. Notificación automática a la persona/equipo que aprueba o gestiona el trámite (service_emails)
+    let adminServiceKey = createdRequest.category?.toLowerCase() || '';
+    if (adminServiceKey === 'rooms') {
+      const isSpecialRoom = createdRequest.metadata?.info === 'Especial' || 
+                            createdRequest.metadata?.requires_secretaria_general || 
+                            (parseInt(createdRequest.metadata?.capacity) || 0) >= 100;
+      if (isSpecialRoom) {
+        adminServiceKey = 'rooms_special';
+      }
+    }
+
+    if (adminServiceKey) {
+      try {
+        const adminEmailsRes = await pool.query('SELECT email FROM service_emails WHERE service_type = $1', [adminServiceKey]);
+        const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+        if (adminEmails.length > 0) {
+          const combinedAdminEmails = adminEmails.join(', ');
+          emailService.sendAdminNewRequestNotification(combinedAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
+        }
+      } catch (adminNotifyErr) {
+        console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
+      }
+    }
+
+    // 3. Notificación automática a la Oficina de TIC si es solicitud de sala con Proyector y/o Laptop
     if (createdRequest.category?.toLowerCase() === 'rooms') {
       const meta = createdRequest.metadata || {};
       const hasTechEquipment = 
@@ -801,10 +825,10 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       if (hasTechEquipment) {
         try {
           const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
-          for (const row of ticEmailsRes.rows) {
-            if (row.email && row.email.trim()) {
-              emailService.sendTicRoomNotification(row.email.trim(), createdRequest, currentUserObj || { name: 'Funcionario' });
-            }
+          const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+          if (ticEmails.length > 0) {
+            const combinedTic = ticEmails.join(', ');
+            emailService.sendTicRoomNotification(combinedTic, createdRequest, currentUserObj || { name: 'Funcionario' });
           }
         } catch (ticEmailErr) {
           console.error('Error enviando notificación automática a TIC:', ticEmailErr);
@@ -900,8 +924,10 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
       if (notifyAdmin) {
         try {
           const serviceEmailsRes = await pool.query('SELECT email FROM service_emails WHERE service_type = $1', [serviceEmailCategory]);
-          for (const row of serviceEmailsRes.rows) {
-            emailService.sendAdminServiceNotification(row.email, updatedRequest, status);
+          const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+          if (emails.length > 0) {
+            const combinedEmails = emails.join(', ');
+            emailService.sendAdminServiceNotification(combinedEmails, updatedRequest, status);
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a admins:', adminEmailErr);
