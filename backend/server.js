@@ -161,6 +161,23 @@ const initDatabase = async () => {
       `);
     }
 
+    // Asegurar correos de servicio y equipo gestor iniciales si está vacío
+    const emailCheck = await pool.query('SELECT COUNT(*) FROM public.service_emails');
+    if (parseInt(emailCheck.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO public.service_emails (service_type, email) VALUES 
+        ('manager', 'serviciosgenerales.sg@SJD.gov.co'),
+        ('maintenance', 'mantenimiento.sg@SJD.gov.co'),
+        ('visitors', 'visitantes.sg@SJD.gov.co'),
+        ('rooms', 'eventos.sg@SJD.gov.co'),
+        ('rooms_special', 'eventos.sg@SJD.gov.co'),
+        ('rooms_tic', 'tics@secjuridica.gov.co'),
+        ('parking', 'porteria.sg@SJD.gov.co'),
+        ('transport', 'transporte.sg@SJD.gov.co');
+      `);
+      console.log('Correos de notificación y gestión iniciales sembrados en la base de datos.');
+    }
+
     console.log('Base de datos inicializada y migrada exitosamente.');
   } catch (err) {
     console.error('Error al inicializar la base de datos:', err);
@@ -785,7 +802,7 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
       u.name = displayName;
       currentUserObj = u;
-      emailService.sendRequestCreatedNotification(u, createdRequest);
+      await emailService.sendRequestCreatedNotification(u, createdRequest).catch(e => console.error('Error enviando correo de creación al solicitante:', e));
     }
 
     // 2. Notificación automática a la persona/equipo que aprueba o gestiona el trámite (service_emails)
@@ -806,9 +823,9 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       );
       const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
       const uniqueAdminEmails = [...new Set(adminEmails)];
+      console.log(`📧 [ADMIN NOTIFY] Encontrados ${uniqueAdminEmails.length} correos para (${adminServiceKey}, manager):`, uniqueAdminEmails);
       if (uniqueAdminEmails.length > 0) {
-        const combinedAdminEmails = uniqueAdminEmails.join(', ');
-        emailService.sendAdminNewRequestNotification(combinedAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
+        await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
       }
     } catch (adminNotifyErr) {
       console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
@@ -828,9 +845,10 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
         try {
           const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
           const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          if (ticEmails.length > 0) {
-            const combinedTic = ticEmails.join(', ');
-            emailService.sendTicRoomNotification(combinedTic, createdRequest, currentUserObj || { name: 'Funcionario' });
+          const uniqueTic = [...new Set(ticEmails)];
+          console.log(`🖥️ [TIC NOTIFY] Encontrados ${uniqueTic.length} correos para TIC:`, uniqueTic);
+          if (uniqueTic.length > 0) {
+            await emailService.sendTicRoomNotification(uniqueTic, createdRequest, currentUserObj || { name: 'Funcionario' });
           }
         } catch (ticEmailErr) {
           console.error('Error enviando notificación automática a TIC:', ticEmailErr);
@@ -925,11 +943,14 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
 
       if (notifyAdmin) {
         try {
-          const serviceEmailsRes = await pool.query('SELECT email FROM service_emails WHERE service_type = $1', [serviceEmailCategory]);
+          const serviceEmailsRes = await pool.query(
+            'SELECT email FROM service_emails WHERE service_type = $1 OR service_type = $2',
+            [serviceEmailCategory, 'manager']
+          );
           const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          if (emails.length > 0) {
-            const combinedEmails = emails.join(', ');
-            emailService.sendAdminServiceNotification(combinedEmails, updatedRequest, status);
+          const uniqueEmails = [...new Set(emails)];
+          if (uniqueEmails.length > 0) {
+            await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a admins:', adminEmailErr);
@@ -1069,8 +1090,7 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
           const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
           const uniqueEmails = [...new Set(emails)];
           if (uniqueEmails.length > 0) {
-            const combinedEmails = uniqueEmails.join(', ');
-            emailService.sendAdminServiceNotification(combinedEmails, updatedRequest, status);
+            await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a administradores en cambio de estado:', adminEmailErr);
@@ -1382,28 +1402,72 @@ const handleServiceEmailsGet = async (req, res) => {
     const result = await pool.query('SELECT * FROM service_emails ORDER BY service_type');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener correos:', err);
     res.status(500).json({ error: 'Error al obtener correos.' });
   }
 };
-app.get('/api/service-emails', authenticateToken, handleServiceEmailsGet);
-app.get('/api/service_emails', authenticateToken, handleServiceEmailsGet);
+app.get('/api/service-emails', optionalAuthenticateToken, handleServiceEmailsGet);
+app.get('/api/service_emails', optionalAuthenticateToken, handleServiceEmailsGet);
 
 const handleServiceEmailsPost = async (req, res) => {
   const { service_type, email } = req.body;
+  const cleanEmail = String(email || '').trim();
+  const cleanType = String(service_type || '').trim();
+  if (!cleanEmail || !cleanType) {
+    return res.status(400).json({ error: 'service_type y email son requeridos.' });
+  }
+
   try {
+    const existing = await pool.query(
+      'SELECT * FROM service_emails WHERE service_type = $1 AND LOWER(TRIM(email)) = LOWER($2)',
+      [cleanType, cleanEmail]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(200).json(existing.rows[0]);
+    }
+
     const result = await pool.query(
       'INSERT INTO service_emails (service_type, email) VALUES ($1, $2) RETURNING *',
-      [service_type, email]
+      [cleanType, cleanEmail]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('Error al guardar correo:', err);
     res.status(500).json({ error: 'Error al guardar correo.' });
   }
 };
-app.post('/api/service-emails', authenticateToken, handleServiceEmailsPost);
-app.post('/api/service_emails', authenticateToken, handleServiceEmailsPost);
+app.post('/api/service-emails', optionalAuthenticateToken, handleServiceEmailsPost);
+app.post('/api/service_emails', optionalAuthenticateToken, handleServiceEmailsPost);
+
+app.post('/api/service-emails/sync', optionalAuthenticateToken, async (req, res) => {
+  const { emails } = req.body;
+  if (!Array.isArray(emails)) {
+    return res.status(400).json({ error: 'Se esperaba un array de correos.' });
+  }
+  try {
+    for (const item of emails) {
+      if (item && item.service_type && item.email) {
+        const cleanType = String(item.service_type).trim();
+        const cleanEmail = String(item.email).trim();
+        const check = await pool.query(
+          'SELECT id FROM service_emails WHERE service_type = $1 AND LOWER(TRIM(email)) = LOWER($2)',
+          [cleanType, cleanEmail]
+        );
+        if (check.rows.length === 0) {
+          await pool.query(
+            'INSERT INTO service_emails (service_type, email) VALUES ($1, $2)',
+            [cleanType, cleanEmail]
+          );
+        }
+      }
+    }
+    const updated = await pool.query('SELECT * FROM service_emails ORDER BY service_type');
+    res.json(updated.rows);
+  } catch (err) {
+    console.error('Error en sincronización de correos:', err);
+    res.status(500).json({ error: 'Error sincronizando correos.' });
+  }
+});
 
 const handleServiceEmailsDelete = async (req, res) => {
   const { id } = req.params;
@@ -1411,12 +1475,12 @@ const handleServiceEmailsDelete = async (req, res) => {
     await pool.query('DELETE FROM service_emails WHERE id = $1', [id]);
     res.json({ message: 'Correo eliminado.' });
   } catch (err) {
-    console.error(err);
+    console.error('Error al eliminar correo:', err);
     res.status(500).json({ error: 'Error al eliminar correo.' });
   }
 };
-app.delete('/api/service-emails/:id', authenticateToken, handleServiceEmailsDelete);
-app.delete('/api/service_emails/:id', authenticateToken, handleServiceEmailsDelete);
+app.delete('/api/service-emails/:id', optionalAuthenticateToken, handleServiceEmailsDelete);
+app.delete('/api/service_emails/:id', optionalAuthenticateToken, handleServiceEmailsDelete);
 
 // --- ENDPOINTS PARA USUARIOS / PERFILES (PROFILES) ---
 const handleProfilesGet = async (req, res) => {

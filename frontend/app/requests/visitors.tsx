@@ -99,6 +99,14 @@ export default function VisitorsScreen() {
     }
   }, [params?.templateId]);
 
+  const todayDate = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
   const [fromDate, setFromDate] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -502,9 +510,12 @@ export default function VisitorsScreen() {
         onClose={() => setShowDatePicker(false)} 
         title={modalTarget === 'from' ? 'Vigencia: Desde' : 'Vigencia: Hasta'}
         value={modalTarget === 'from' ? fromDate : toDate}
+        minDate={modalTarget === 'to' ? fromDate : todayDate}
         onSelect={(val: string) => {
           if (modalTarget === 'from') {
             setFromDate(val);
+            // Al cambiar la Vigencia Desde, cambiar automáticamente la fecha Hasta al mismo día
+            setToDate(val);
           } else {
             setToDate(val);
           }
@@ -941,12 +952,15 @@ const styles = StyleSheet.create({
   successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }
 });
 
-const getNext14Days = () => {
+const getNextDays = (count = 60) => {
   const days = [];
   const locale = 'es-ES';
-  for (let i = 0; i < 14; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
+  const base = new Date();
+  base.setHours(0, 0, 0, 0);
+
+  for (let i = 0; i < count; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
     const dayName = i === 0 ? 'Hoy' : i === 1 ? 'Mañana' : d.toLocaleDateString(locale, { weekday: 'short' });
     const dayNumber = d.getDate();
     const monthName = d.toLocaleDateString(locale, { month: 'short' });
@@ -961,19 +975,32 @@ const getNext14Days = () => {
   return days;
 };
 
-function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) {
-  const days = useMemo(() => getNext14Days(), []);
+function DateTimePickerModal({ visible, onClose, title, value, minDate, onSelect }: any) {
+  const days = useMemo(() => getNextDays(60), []);
   
-  const [selectedDate, setSelectedDate] = useState(value || days[0].dateString);
+  const [selectedDate, setSelectedDate] = useState(value || days[0]?.dateString);
 
-  // Actualizar estados internos si cambia el value externo al abrir el modal
+  // Actualizar estados internos si cambia el value o minDate al abrir el modal
   React.useEffect(() => {
-    if (visible && value) {
-      setSelectedDate(value);
+    if (visible) {
+      if (value) {
+        if (minDate && value < minDate) {
+          setSelectedDate(minDate);
+        } else {
+          setSelectedDate(value);
+        }
+      } else if (minDate) {
+        setSelectedDate(minDate);
+      } else if (days[0]) {
+        setSelectedDate(days[0].dateString);
+      }
     }
-  }, [visible, value]);
+  }, [visible, value, minDate]);
 
   const handleConfirm = () => {
+    if (minDate && selectedDate < minDate) {
+      return;
+    }
     onSelect(selectedDate);
   };
 
@@ -981,7 +1008,7 @@ function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) 
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalBlur}>
         <BlurView intensity={20} style={StyleSheet.absoluteFill} />
-        <View style={[styles.modalPanel, { maxWidth: 350, padding: 20 }]}>
+        <View style={[styles.modalPanel, { maxWidth: 360, padding: 20 }]}>
           <View style={styles.modalHead}>
             <Text style={styles.modalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose}>
@@ -995,34 +1022,55 @@ function DateTimePickerModal({ visible, onClose, title, value, onSelect }: any) 
             <Text style={{ fontSize: 18, color: COLORS.text, fontWeight: '900', marginTop: 4 }}>
               {selectedDate}
             </Text>
+            {minDate && (
+              <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 4, fontWeight: '600' }}>
+                Fechas anteriores a {minDate} bloqueadas
+              </Text>
+            )}
           </View>
 
-          <View style={{ flexDirection: 'row', height: 260, gap: 10, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', height: 270, gap: 10, marginBottom: 20 }}>
             {/* Columna Fecha */}
             <View style={{ flex: 1, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, overflow: 'hidden' }}>
               <View style={{ backgroundColor: '#F1F5F9', padding: 8, alignItems: 'center' }}>
-                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>FECHA</Text>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: COLORS.muted }}>FECHA DISPONIBLE</Text>
               </View>
               <ScrollView showsVerticalScrollIndicator={false}>
                 {days.map((d) => {
+                  const isBlocked = minDate ? d.dateString < minDate : false;
                   const isSelected = d.dateString === selectedDate;
                   return (
                     <TouchableOpacity 
                       key={d.dateString}
+                      disabled={isBlocked}
                       style={{ 
                         paddingVertical: 10, 
                         paddingHorizontal: 8, 
-                        backgroundColor: isSelected ? COLORS.primary : 'transparent',
+                        backgroundColor: isSelected ? COLORS.primary : isBlocked ? '#F8FAFC' : 'transparent',
                         borderBottomWidth: 1,
                         borderBottomColor: 'rgba(0,0,0,0.03)',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        opacity: isBlocked ? 0.35 : 1
                       }}
-                      onPress={() => setSelectedDate(d.dateString)}
+                      onPress={() => !isBlocked && setSelectedDate(d.dateString)}
                     >
-                      <Text style={{ fontSize: 10, color: isSelected ? COLORS.accent : COLORS.muted, fontWeight: '800' }}>
-                        {d.dayName}
-                      </Text>
-                      <Text style={{ fontSize: 14, color: isSelected ? COLORS.white : COLORS.text, fontWeight: '900', marginTop: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        {isBlocked && <Ionicons name="lock-closed" size={10} color={COLORS.muted} />}
+                        <Text style={{ 
+                          fontSize: 10, 
+                          color: isSelected ? COLORS.accent : COLORS.muted, 
+                          fontWeight: '800',
+                          textDecorationLine: isBlocked ? 'line-through' : 'none'
+                        }}>
+                          {d.dayName} {isBlocked ? '(Bloqueado)' : ''}
+                        </Text>
+                      </View>
+                      <Text style={{ 
+                        fontSize: 14, 
+                        color: isSelected ? COLORS.white : isBlocked ? '#94A3B8' : COLORS.text, 
+                        fontWeight: '900', 
+                        marginTop: 2 
+                      }}>
                         {d.dayNumber} {d.monthName}
                       </Text>
                     </TouchableOpacity>

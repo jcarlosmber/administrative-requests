@@ -397,13 +397,22 @@ async function sendRequestUpdatedNotification(user, request) {
   }
 }
 
+function normalizeRecipients(recipients) {
+  if (!recipients) return [];
+  const list = Array.isArray(recipients) ? recipients : String(recipients).split(',');
+  return list.map(r => String(r || '').trim()).filter(Boolean);
+}
+
 /**
  * Envía correo al equipo administrador (service_emails) informando que deben gestionar un servicio
  */
 async function sendAdminServiceNotification(adminEmail, request, triggerStatus) {
-  if (!adminEmail) return;
-  const toRecipients = Array.isArray(adminEmail) ? adminEmail.join(', ') : adminEmail;
-  if (!toRecipients.trim()) return;
+  const toList = normalizeRecipients(adminEmail);
+  if (toList.length === 0) {
+    console.warn('⚠️ [EMAIL SERVICE] Sin destinatarios válidos para sendAdminServiceNotification');
+    return;
+  }
+  const toRecipients = toList.length === 1 ? toList[0] : toList;
 
   const isApprovedTrigger = triggerStatus === 'resuelto';
   
@@ -450,7 +459,7 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
       html: htmlContent,
       attachments: emailAttachments
     });
-    console.log(`Correo administrativo enviado a: ${toRecipients}`);
+    console.log(`📧 Correo administrativo enviado a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
   } catch (error) {
     console.error('Error al enviar correo administrativo:', error);
   }
@@ -573,14 +582,19 @@ async function sendTicRoomNotification(ticEmail, request, user) {
   );
 
   try {
-    const toRecipients = Array.isArray(ticEmail) ? ticEmail.join(', ') : ticEmail;
+    const toList = normalizeRecipients(ticEmail);
+    if (toList.length === 0) {
+      console.warn('⚠️ [TIC EMAIL] Sin destinatarios válidos para sendTicRoomNotification');
+      return;
+    }
+    const toRecipients = toList.length === 1 ? toList[0] : toList;
     await transporter.sendMail({
       from: FROM_EMAIL,
       to: toRecipients,
       subject: subject,
       html: htmlContent
     });
-    console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${toRecipients}`);
+    console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
   } catch (error) {
     console.error(`Error al enviar notificación a TIC (${ticEmail}):`, error);
   }
@@ -590,9 +604,12 @@ async function sendTicRoomNotification(ticEmail, request, user) {
  * Envía correo a los encargados/aprobadores (service_emails) informando que se radicó una nueva solicitud
  */
 async function sendAdminNewRequestNotification(adminEmails, request, user) {
-  if (!adminEmails) return;
-  const toRecipients = Array.isArray(adminEmails) ? adminEmails.join(', ') : adminEmails;
-  if (!toRecipients.trim()) return;
+  const toList = normalizeRecipients(adminEmails);
+  if (toList.length === 0) {
+    console.warn('⚠️ [ADMIN EMAIL] Sin destinatarios válidos para sendAdminNewRequestNotification');
+    return;
+  }
+  const toRecipients = toList.length === 1 ? toList[0] : toList;
 
   const categoryName = CATEGORIES[request.category?.toLowerCase()] || request.category;
   const radNumber = request.id ? `#${String(request.id).slice(0, 6).toUpperCase()}` : '';
@@ -650,7 +667,7 @@ async function sendAdminNewRequestNotification(adminEmails, request, user) {
       html: htmlContent,
       attachments: emailAttachments
     });
-    console.log(`📧 Correo de nueva solicitud enviado a encargados: ${toRecipients}`);
+    console.log(`📧 Correo de nueva solicitud enviado a encargados: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
   } catch (error) {
     console.error('Error al enviar correo de nueva solicitud a encargados:', error);
   }

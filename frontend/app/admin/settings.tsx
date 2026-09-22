@@ -226,6 +226,7 @@ export default function AdminSettings() {
         const dbDrivers = await settingsService.getDrivers();
         setDrivers(dbDrivers);
 
+        await settingsService.syncLocalEmails().catch(() => {});
         const dbEmails = await settingsService.getServiceEmails();
         setServiceEmails(dbEmails);
 

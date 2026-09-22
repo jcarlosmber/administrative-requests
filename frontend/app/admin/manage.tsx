@@ -143,6 +143,7 @@ export default function ManageRequests() {
     id?: string; 
     t?: string; 
   }>();
+  const router = useRouter();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -798,7 +799,6 @@ export default function ManageRequests() {
                   item={mapRequestToUI(item)} 
                   onUpdateStatus={askConfirmation} 
                   onRefresh={fetchRequests} 
-                  initiallyExpanded={params.id === item.id} 
                   onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} 
                   setViewerImage={setViewerImage} 
                   onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
@@ -1858,10 +1858,18 @@ export default function ManageRequests() {
       <RequestDetailModal
         visible={drawerItem !== null}
         item={drawerItem}
-        onClose={() => setDrawerItem(null)}
+        onClose={() => {
+          setDrawerItem(null);
+          if (params.id) {
+            router.setParams({ id: '' });
+          }
+        }}
         onUpdateStatus={askConfirmation}
         onAssignDriver={(reqItem: any) => {
           setDrawerItem(null);
+          if (params.id) {
+            router.setParams({ id: '' });
+          }
           setDriverModal({ visible: true, item: reqItem });
         }}
         setViewerImage={setViewerImage}
@@ -4009,7 +4017,6 @@ function RequestListItem({
   item, 
   onUpdateStatus, 
   onRefresh, 
-  initiallyExpanded = false, 
   onSuccessAction, 
   setViewerImage, 
   onAssignDriver, 
@@ -4020,9 +4027,6 @@ function RequestListItem({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const scale = useRef(new Animated.Value(1)).current;
-  const [expanded, setExpanded] = useState(initiallyExpanded);
-  const [comment, setComment] = useState('');
-  const [commentLoading, setCommentLoading] = useState(false);
 
   const serviceTheme = getCategoryCardTheme(item.category, item.type);
   const sla = getSLAInfo(item.created_at, item.status);
@@ -4047,22 +4051,6 @@ function RequestListItem({
       case 'rechazado':
       case 'rechazada': return COLORS.danger;
       default: return item.color;
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!comment.trim() || commentLoading) return;
-    
-    try {
-      setCommentLoading(true);
-      await requestService.addComment(item.id, comment.trim());
-      setComment('');
-      if (onRefresh) onRefresh();
-      if (onSuccessAction) onSuccessAction('Comentario añadido exitosamente.');
-    } catch (err: any) {
-      console.error('Error al guardar comentario:', err);
-    } finally {
-      setCommentLoading(false);
     }
   };
 
@@ -4183,185 +4171,9 @@ function RequestListItem({
             </Text>
           </View>
         )}
-          
-          {expanded && (
-            <View style={[styles.expandedInfo, { backgroundColor: '#FFFFFF', borderWidth: 0 }]}>
-              <Text style={styles.infoTitle}>TRAZABILIDAD Y SEGUIMIENTO</Text>
-              
-              {/* Timeline */}
-              <View style={styles.timelineContainer}>
-                {item.timeline.map((step: any, idx: number) => (
-                  <View key={idx} style={styles.timelineStep}>
-                    <View style={styles.timelineLeft}>
-                      <View style={[styles.timelineDot, idx === 0 && { backgroundColor: COLORS.accent }]} />
-                      {idx < item.timeline.length - 1 && <View style={styles.timelineLine} />}
-                    </View>
-                    <View style={styles.timelineRight}>
-                      <Text style={styles.stepTitle}>{step.title}</Text>
-                      <Text style={styles.stepDate}>{step.date}</Text>
-                      <Text style={styles.stepDesc}>{step.desc}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
 
-              <View style={styles.metaDivider} />
-              
-              <Text style={styles.infoTitle}>DATOS TÉCNICOS</Text>
-              <View style={[styles.metaGrid, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16 }]}>
-                {item.uiMetadata && item.uiMetadata.map((meta: any, idx: number) => (
-                  <View key={idx} style={[styles.metaBox, isDesktop && { width: '48%', borderBottomWidth: 1 }]}>
-                    <View style={styles.metaHeader}>
-                      <Ionicons name={meta.icon} size={14} color={COLORS.accent} />
-                      <Text style={styles.metaLabel}>{meta.label}</Text>
-                    </View>
-                    <Text style={styles.metaValue}>{meta.value}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Evidencia Fotográfica Mejorada (Galería Antes/Después) */}
-              {((item.attachments && item.attachments.length > 0) || item.metadata?.finalImage) && (
-                <>
-                  <View style={styles.metaDivider} />
-                  <Text style={styles.infoTitle}>REGISTRO Y EVIDENCIA FOTOGRÁFICA</Text>
-                  
-                  <View style={{ gap: 14 }}>
-                    {/* Evidencia Inicial / Reporte */}
-                    {item.attachments && item.attachments.length > 0 && (
-                      <View style={{ gap: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase' }}>Reporte Inicial (Antes)</Text>
-                          </View>
-                          <Text style={{ fontSize: 11, color: COLORS.muted }}>{item.attachments.length} archivo(s)</Text>
-                        </View>
-
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                          {item.attachments.map((attach: string, idx: number) => {
-                            const finalUri = attach.startsWith('http') || attach.startsWith('file') || attach.startsWith('data:') || attach.startsWith('blob:') ? attach : 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1000&auto=format&fit=crop';
-                            return (
-                              <TouchableOpacity 
-                                key={idx} 
-                                activeOpacity={0.85} 
-                                onPress={() => setViewerImage(finalUri)}
-                                style={{
-                                  width: isDesktop ? '31%' : '47%',
-                                  height: 120,
-                                  borderRadius: 12,
-                                  overflow: 'hidden',
-                                  borderWidth: 1,
-                                  borderColor: COLORS.line,
-                                  backgroundColor: COLORS.white,
-                                  position: 'relative'
-                                }}
-                              >
-                                <Image 
-                                  source={{ uri: finalUri }} 
-                                  style={{ width: '100%', height: '100%' }} 
-                                  resizeMode="cover" 
-                                />
-                                <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.6)', padding: 4, borderRadius: 6 }}>
-                                  <Ionicons name="expand-outline" size={14} color="#FFF" />
-                                </View>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      </View>
-                    )}
-
-                    {/* Evidencia Final / Trabajo Concluido */}
-                    {item.metadata?.finalImage && (
-                      <View style={{ gap: 8, marginTop: item.attachments?.length ? 6 : 0 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#065F46', textTransform: 'uppercase' }}>Trabajo Finalizado (Después)</Text>
-                          </View>
-                        </View>
-
-                        <TouchableOpacity 
-                          activeOpacity={0.85} 
-                          onPress={() => setViewerImage(item.metadata.finalImage)}
-                          style={{
-                            width: isDesktop ? '31%' : '100%',
-                            height: 140,
-                            borderRadius: 12,
-                            overflow: 'hidden',
-                            borderWidth: 1.5,
-                            borderColor: '#10B981',
-                            backgroundColor: COLORS.white,
-                            position: 'relative'
-                          }}
-                        >
-                          <Image 
-                            source={{ uri: item.metadata.finalImage }} 
-                            style={{ width: '100%', height: '100%' }} 
-                            resizeMode="cover" 
-                          />
-                          <View style={{ position: 'absolute', top: 6, right: 6, backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFF' }}>Foto de Cierre</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                </>
-              )}
-
-              {item.metadata?.evaluation && (
-                <>
-                  <View style={styles.metaDivider} />
-                  <Text style={styles.infoTitle}>EVALUACIÓN DEL SERVICIO</Text>
-                  <View style={{ backgroundColor: '#F0FDF4', padding: 15, borderRadius: 12, borderColor: COLORS.success, borderWidth: 1, marginBottom: 15 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                      <Text style={{ fontWeight: '800', color: COLORS.text }}>Calificación:</Text>
-                      <View style={{ flexDirection: 'row' }}>
-                        {[1, 2, 3, 4, 5].map(star => (
-                          <Ionicons key={star} name={item.metadata.evaluation.rating >= star ? 'star' : 'star-outline'} size={16} color={COLORS.accent} />
-                        ))}
-                      </View>
-                    </View>
-                    {item.metadata.evaluation.comment ? (
-                      <Text style={{ fontStyle: 'italic', color: COLORS.text }}>"{item.metadata.evaluation.comment}"</Text>
-                    ) : (
-                      <Text style={{ color: COLORS.muted }}>Sin comentarios.</Text>
-                    )}
-                  </View>
-                </>
-              )}
-
-              <View style={styles.updateAction}>
-                <TextInput 
-                  style={styles.updateInput} 
-                  placeholder="Añadir comentario o actualización..." 
-                  placeholderTextColor={COLORS.muted}
-                  value={comment}
-                  onChangeText={setComment}
-                  editable={!commentLoading}
-                  multiline
-                  blurOnSubmit={false}
-                  returnKeyType="default"
-                  textAlignVertical="top"
-                />
-                <TouchableOpacity 
-                  style={styles.sendUpdateBtn}
-                  onPress={handleAddComment}
-                  disabled={commentLoading || !comment.trim()}
-                  activeOpacity={0.8}
-                >
-                  {commentLoading ? (
-                    <ActivityIndicator size="small" color="#FFF" />
-                  ) : (
-                    <Ionicons name="send" size={18} color={COLORS.white} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Pie de Tarjeta con Acciones Rápidas Directas */}
-          <View style={[styles.cardFooter, { borderTopWidth: 0, paddingTop: 10 }]}>
+        {/* Pie de Tarjeta con Acciones Rápidas Directas */}
+        <View style={[styles.cardFooter, { borderTopWidth: 0, paddingTop: 10 }]}>
             <View style={styles.metaItem}>
               <Ionicons name="calendar-outline" size={13} color="#64748B" />
               <Text style={styles.metaText}>{item.date}</Text>
