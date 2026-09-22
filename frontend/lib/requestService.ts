@@ -103,11 +103,11 @@ export const requestService = {
     return await res.json() as AdministrativeRequest;
   },
 
-  async updateStatus(id: string, status: string, finalImage?: string, reason?: string) {
+  async updateStatus(id: string, status: string, finalImage?: string, reason?: string, adminEmails?: string[]) {
     const res = await fetch(`${API_URL}/api/requests/${id}/status`, {
       method: 'POST',
       headers: await getHeaders(),
-      body: JSON.stringify({ status, finalImage, reason }),
+      body: JSON.stringify({ status, finalImage, reason, adminEmails }),
     });
     if (!res.ok) {
       const err = await res.json();

@@ -599,7 +599,10 @@ function getVisitorsEmailContent(request, isUserRecipient, isUpdate, status, use
  * 2. RESERVA DE SALAS (rooms)
  */
 function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) {
-  const meta = request.metadata || {};
+  let meta = request.metadata || {};
+  if (typeof meta === 'string') {
+    try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+  }
   const roomObj = meta.room;
   const roomName = (roomObj && typeof roomObj === 'object') ? (roomObj.name || 'Sala Regular') : (roomObj || 'Sala Regular');
   const date = meta.date || 'Por confirmar';
@@ -625,7 +628,8 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
                          (parseInt(meta.capacity) || 0) >= 100 ||
                          /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
 
-    const isApproved = status === 'resuelto' || status === 'aprobado';
+    const cleanStatus = String(status || request.status || '').toLowerCase().trim();
+    const isApproved = ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'approved', 'resolved'].includes(cleanStatus);
 
     let subject = `Solicitud de reserva de espacio – ${roomName} – ${date}`;
     let introParagraph = 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la gestión y asignación del siguiente espacio institucional:';

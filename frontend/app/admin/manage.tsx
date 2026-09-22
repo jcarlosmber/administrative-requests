@@ -247,10 +247,16 @@ export default function ManageRequests() {
     }
   };
 
-  const updateStatus = async (id: string, newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado', finalImage?: string | null, reason?: string) => {
+  const updateStatus = async (
+    id: string, 
+    newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado', 
+    finalImage?: string | null, 
+    reason?: string,
+    adminEmails?: string[]
+  ) => {
     try {
       setLoading(true);
-      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason);
+      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason, adminEmails);
       await fetchRequests();
       let actionName = 'procesada';
       if (newStatus === 'resuelto') actionName = 'aprobada / finalizada';
@@ -1393,16 +1399,30 @@ export default function ManageRequests() {
         let secGenEmailList: string[] = [];
         if (
           confirmModal.category && 
-          (confirmModal.newStatus === 'en_progreso' || confirmModal.newStatus === 'resuelto') &&
-          confirmModal.item?.status.toLowerCase() === 'pendiente'
+          (confirmModal.newStatus === 'en_progreso' || confirmModal.newStatus === 'resuelto')
         ) {
           let serviceKey = confirmModal.category;
-          if (confirmModal.category === 'rooms' && confirmModal.item?.metadata?.requires_secretaria_general) {
+          const meta = confirmModal.item?.metadata || {};
+          const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+          const isSpecial = meta.requires_secretaria_general === true ||
+                            meta.info === 'Especial' ||
+                            (parseInt(meta.capacity) || 0) >= 100 ||
+                            /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+          if (confirmModal.category === 'rooms' && isSpecial) {
             serviceKey = 'rooms_special';
           }
-          const matchingEmails = serviceEmails
-            .filter(e => e && (e.service_type === serviceKey || e.service_type === 'manager') && e.email?.trim())
-            .map(e => e.email.trim());
+
+          let matchingEmails: string[] = [];
+          if (serviceKey === 'rooms_special') {
+            matchingEmails = serviceEmails
+              .filter(e => e && (['rooms_special', 'rooms'].includes(e.service_type) || e.service_type === 'manager') && e.email?.trim())
+              .map(e => e.email.trim());
+          } else {
+            matchingEmails = serviceEmails
+              .filter(e => e && (e.service_type === serviceKey || e.service_type === 'manager') && e.email?.trim())
+              .map(e => e.email.trim());
+          }
           
           secGenEmailList = Array.from(new Set(matchingEmails));
           if (secGenEmailList.length > 0) {
@@ -1793,7 +1813,7 @@ export default function ManageRequests() {
                         disabled={isBlocked}
                         onPress={() => {
                           if (confirmModal) {
-                            updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage, confirmModal.rejectReason?.trim());
+                            updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage, confirmModal.rejectReason?.trim(), secGenEmailList);
                             setConfirmModal(null);
                           }
                         }}
@@ -3226,7 +3246,7 @@ function RequestTableRow({
               </Pressable>
             )}
 
-            {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
+            {(item.category === 'visitors' || item.category === 'parking' || item.category === 'rooms') && (
               <Pressable
                 onPress={(e: any) => {
                   e?.stopPropagation?.();
@@ -3904,7 +3924,7 @@ function RequestDetailModal({
                     </Pressable>
                   )}
 
-                  {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
+                  {(item.category === 'visitors' || item.category === 'parking' || item.category === 'rooms') && (
                     <Pressable
                       onPress={() => {
                         onClose();
@@ -4206,8 +4226,8 @@ function RequestListItem({
                     </Pressable>
                   )}
 
-                  {/* Grupo 2: Visitantes, Parqueadero, Sala Estándar -> Aprobar directo */}
-                  {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !item.metadata?.requires_secretaria_general)) && (
+                  {/* Grupo 2: Visitantes, Parqueadero, Salas (Estándar y Especiales) -> Aprobar directo */}
+                  {(item.category === 'visitors' || item.category === 'parking' || item.category === 'rooms') && (
                     <Pressable 
                       style={({ hovered }: any) => [
                         styles.actionBtn, 

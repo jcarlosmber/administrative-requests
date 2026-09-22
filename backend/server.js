@@ -791,7 +791,10 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     // 2. Notificación automática a la persona/equipo que aprueba o gestiona el trámite (service_emails)
     let adminServiceKey = createdRequest.category?.toLowerCase() || '';
     if (adminServiceKey === 'rooms') {
-      const meta = createdRequest.metadata || {};
+      let meta = createdRequest.metadata || {};
+      if (typeof meta === 'string') {
+        try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+      }
       const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
       const isSpecialRoom = meta.requires_secretaria_general === true ||
                             meta.info === 'Especial' || 
@@ -803,15 +806,28 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     }
 
     try {
-      const adminEmailsRes = await pool.query(
-        'SELECT email FROM service_emails WHERE service_type = $1 OR service_type = $2',
-        [adminServiceKey || '', 'manager']
-      );
+      let adminEmailsRes;
+      if (adminServiceKey === 'rooms_special') {
+        adminEmailsRes = await pool.query(
+          `SELECT email FROM service_emails 
+           WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')
+              OR LOWER(TRIM(service_type)) = 'manager'`
+        );
+        if (adminEmailsRes.rows.length === 0) {
+          adminEmailsRes = await pool.query(
+            `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'rooms'`
+          );
+        }
+      } else {
+        adminEmailsRes = await pool.query(
+          `SELECT email FROM service_emails 
+           WHERE LOWER(TRIM(service_type)) = LOWER(TRIM($1)) 
+              OR LOWER(TRIM(service_type)) IN ('manager', 'secretaria_general', 'secretariageneral', 'secretaria')`,
+          [adminServiceKey || '']
+        );
+      }
       const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
       let uniqueAdminEmails = [...new Set(adminEmails)];
-      if (adminServiceKey === 'rooms_special' && uniqueAdminEmails.length === 0) {
-        uniqueAdminEmails = ['subdireccionadministrativa@alcaldiabogota.gov.co', 'eventoshuitaca@alcaldiabogota.gov.co'];
-      }
       console.log(`📧 [ADMIN NOTIFY] Encontrados ${uniqueAdminEmails.length} correos para (${adminServiceKey}, manager):`, uniqueAdminEmails);
       if (uniqueAdminEmails.length > 0) {
         await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
@@ -914,8 +930,9 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
       // Send email to admins based on category and status
       let notifyAdmin = false;
       let serviceEmailCategory = updatedRequest.category?.toLowerCase() || '';
-      const isStatusApprove = status === 'resuelto' || status === 'aprobado';
-      const isStatusProgress = status === 'en_progreso';
+      const cleanStatus = (status || updatedRequest.status || '').toLowerCase().trim();
+      const isStatusApprove = ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'approved', 'resolved'].includes(cleanStatus);
+      const isStatusProgress = ['en_progreso', 'en progreso', 'en curso', 'en_curso', 'in_progress'].includes(cleanStatus);
 
       if (serviceEmailCategory === 'visitors' && isStatusApprove) notifyAdmin = true;
       if (serviceEmailCategory === 'parking' && isStatusApprove) notifyAdmin = true;
@@ -923,7 +940,10 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
       if (serviceEmailCategory === 'transport' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
 
       if (serviceEmailCategory === 'rooms') {
-        const meta = updatedRequest.metadata || {};
+        let meta = updatedRequest.metadata || {};
+        if (typeof meta === 'string') {
+          try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+        }
         const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
         const isSpecialRoom = meta.requires_secretaria_general === true ||
                               meta.info === 'Especial' || 
@@ -944,15 +964,33 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
 
       if (notifyAdmin) {
         try {
-          const serviceEmailsRes = await pool.query(
-            'SELECT email FROM service_emails WHERE service_type = $1 OR service_type = $2',
-            [serviceEmailCategory, 'manager']
-          );
-          const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          let uniqueEmails = [...new Set(emails)];
-          if (serviceEmailCategory === 'rooms_special' && uniqueEmails.length === 0) {
-            uniqueEmails = ['subdireccionadministrativa@alcaldiabogota.gov.co', 'eventoshuitaca@alcaldiabogota.gov.co'];
+          let serviceEmailsRes;
+          if (serviceEmailCategory === 'rooms_special') {
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')
+                  OR LOWER(TRIM(service_type)) = 'manager'`
+            );
+            if (serviceEmailsRes.rows.length === 0) {
+              serviceEmailsRes = await pool.query(
+                `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'rooms'`
+              );
+            }
+          } else {
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) = LOWER(TRIM($1)) 
+                  OR LOWER(TRIM(service_type)) IN ('manager', 'secretaria_general', 'secretariageneral', 'secretaria')`,
+              [serviceEmailCategory]
+            );
           }
+          const dbEmails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+          const clientEmails = Array.isArray(req.body?.adminEmails)
+            ? req.body.adminEmails.map(e => String(e).trim()).filter(Boolean)
+            : [];
+          let uniqueEmails = [...new Set([...dbEmails, ...clientEmails])];
+
+          console.log(`📧 [ADMIN NOTIFY STATUS] Encontrados ${uniqueEmails.length} correos para (${serviceEmailCategory}):`, uniqueEmails);
           if (uniqueEmails.length > 0) {
             await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
@@ -1070,8 +1108,9 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       // Notificar a equipo de servicio y gestores si pasa a en_progreso o resuelto
       let serviceEmailCategory = updatedRequest.category?.toLowerCase() || '';
       let notifyAdmin = false;
-      const isStatusApprove = status === 'resuelto' || status === 'aprobado';
-      const isStatusProgress = status === 'en_progreso';
+      const cleanStatus = (status || updatedRequest.status || '').toLowerCase().trim();
+      const isStatusApprove = ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'approved', 'resolved'].includes(cleanStatus);
+      const isStatusProgress = ['en_progreso', 'en progreso', 'en curso', 'en_curso', 'in_progress'].includes(cleanStatus);
 
       if (serviceEmailCategory === 'visitors' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
       if (serviceEmailCategory === 'parking' && isStatusApprove) notifyAdmin = true;
@@ -1079,7 +1118,10 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       if (serviceEmailCategory === 'transport' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
 
       if (serviceEmailCategory === 'rooms') {
-        const meta = updatedRequest.metadata || {};
+        let meta = updatedRequest.metadata || {};
+        if (typeof meta === 'string') {
+          try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+        }
         const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
         const isSpecialRoom = meta.requires_secretaria_general === true ||
                               meta.info === 'Especial' || 
@@ -1100,15 +1142,33 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
 
       if (notifyAdmin) {
         try {
-          const serviceEmailsRes = await pool.query(
-            'SELECT email FROM service_emails WHERE service_type = $1 OR service_type = $2',
-            [serviceEmailCategory, 'manager']
-          );
-          const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          let uniqueEmails = [...new Set(emails)];
-          if (serviceEmailCategory === 'rooms_special' && uniqueEmails.length === 0) {
-            uniqueEmails = ['subdireccionadministrativa@alcaldiabogota.gov.co', 'eventoshuitaca@alcaldiabogota.gov.co'];
+          let serviceEmailsRes;
+          if (serviceEmailCategory === 'rooms_special') {
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')
+                  OR LOWER(TRIM(service_type)) = 'manager'`
+            );
+            if (serviceEmailsRes.rows.length === 0) {
+              serviceEmailsRes = await pool.query(
+                `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'rooms'`
+              );
+            }
+          } else {
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) = LOWER(TRIM($1)) 
+                  OR LOWER(TRIM(service_type)) IN ('manager', 'secretaria_general', 'secretariageneral', 'secretaria')`,
+              [serviceEmailCategory]
+            );
           }
+          const dbEmails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+          const clientEmails = Array.isArray(req.body?.adminEmails)
+            ? req.body.adminEmails.map(e => String(e).trim()).filter(Boolean)
+            : [];
+          let uniqueEmails = [...new Set([...dbEmails, ...clientEmails])];
+
+          console.log(`📧 [ADMIN NOTIFY STATUS POST] Encontrados ${uniqueEmails.length} correos para (${serviceEmailCategory}):`, uniqueEmails);
           if (uniqueEmails.length > 0) {
             await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
