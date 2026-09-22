@@ -161,23 +161,6 @@ const initDatabase = async () => {
       `);
     }
 
-    // Asegurar correos de servicio y equipo gestor iniciales si está vacío
-    const emailCheck = await pool.query('SELECT COUNT(*) FROM public.service_emails');
-    if (parseInt(emailCheck.rows[0].count) === 0) {
-      await pool.query(`
-        INSERT INTO public.service_emails (service_type, email) VALUES 
-        ('manager', 'serviciosgenerales.sg@SJD.gov.co'),
-        ('maintenance', 'mantenimiento.sg@SJD.gov.co'),
-        ('visitors', 'visitantes.sg@SJD.gov.co'),
-        ('rooms', 'eventos.sg@SJD.gov.co'),
-        ('rooms_special', 'eventos.sg@SJD.gov.co'),
-        ('rooms_tic', 'tics@secjuridica.gov.co'),
-        ('parking', 'porteria.sg@SJD.gov.co'),
-        ('transport', 'transporte.sg@SJD.gov.co');
-      `);
-      console.log('Correos de notificación y gestión iniciales sembrados en la base de datos.');
-    }
-
     console.log('Base de datos inicializada y migrada exitosamente.');
   } catch (err) {
     console.error('Error al inicializar la base de datos:', err);

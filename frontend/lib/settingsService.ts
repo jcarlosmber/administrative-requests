@@ -23,15 +23,7 @@ const INITIAL_DRIVERS: Driver[] = [
   { id: '11111111-2222-3333-4444-666666666663', name: 'Martha Lucia Gómez', phone: '3203456789', is_active: true }
 ];
 
-const INITIAL_EMAILS: ServiceEmail[] = [
-  { id: '11111111-2222-3333-4444-777777777770', service_type: 'manager', email: 'serviciosgenerales.sg@SJD.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777771', service_type: 'maintenance', email: 'mantenimiento.sg@SJD.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777772', service_type: 'visitors', email: 'visitantes.sg@SJD.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777773', service_type: 'rooms_special', email: 'eventos.sg@SJD.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777774', service_type: 'parking', email: 'porteria.sg@SJD.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777775', service_type: 'rooms_tic', email: 'tics@secjuridica.gov.co' },
-  { id: '11111111-2222-3333-4444-777777777776', service_type: 'transport', email: 'transporte.sg@SJD.gov.co' }
-];
+const INITIAL_EMAILS: ServiceEmail[] = [];
 
 export const settingsService = {
   // ==========================================
@@ -149,7 +141,7 @@ export const settingsService = {
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             if (Platform.OS === 'web') {
               localStorage.setItem('local_service_emails', JSON.stringify(data));
             }
@@ -166,14 +158,13 @@ export const settingsService = {
       if (local) {
         try {
           const parsed = JSON.parse(local);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             return parsed.filter(Boolean) as ServiceEmail[];
           }
         } catch(e) {}
       }
-      localStorage.setItem('local_service_emails', JSON.stringify(INITIAL_EMAILS));
     }
-    return INITIAL_EMAILS;
+    return [];
   },
 
   async createServiceEmail(email: Omit<ServiceEmail, 'id' | 'created_at'>): Promise<ServiceEmail> {
