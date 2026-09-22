@@ -177,11 +177,12 @@ export default function ManageRequests() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
-  // Cálculo responsivo: tarjetas más amplias y cómodas de leer (ancho mínimo mayor)
+  // Cálculo responsivo equilibrado: cards proporcionadas y no tan grandes
   const numCardCols = useMemo(() => {
     if (!isDesktop) return 1;
-    if (width >= 2200) return 3; // Ultra-wide
-    if (width >= 1280) return 2; // Gran pantalla y escritorios estándar: 2 columnas amplias (~600-750px)
+    if (width >= 1920) return 4;
+    if (width >= 1420) return 3;
+    if (width >= 900) return 2;
     return 1;
   }, [isDesktop, width]);
 
@@ -3157,15 +3158,15 @@ function RequestTableRow({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 5,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          borderRadius: 8,
-          backgroundColor: statusTheme.bg,
+          backgroundColor: '#1E293B',
           borderWidth: 0,
+          borderRadius: 9999,
+          paddingHorizontal: 9,
+          paddingVertical: 4.5,
           alignSelf: 'flex-start',
         }}>
           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dot }} />
-          <Text style={{ fontSize: 11, fontWeight: '800', color: statusTheme.text }}>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
             {item.status}
           </Text>
         </View>
@@ -3186,10 +3187,10 @@ function RequestTableRow({
                 }}
                 style={({ hovered }: any) => [
                   {
-                    backgroundColor: hovered ? '#7DD3FC' : '#BAE6FD',
-                    paddingHorizontal: 10,
+                    backgroundColor: hovered ? '#1D4ED8' : '#2563EB',
+                    paddingHorizontal: 11,
                     height: 30,
-                    borderRadius: 7,
+                    borderRadius: 9999,
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 4,
@@ -3198,8 +3199,8 @@ function RequestTableRow({
                   Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                 ]}
               >
-                <Ionicons name="play-outline" size={13} color="#0369A1" />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#0C4A6E' }}>Procesar</Text>
+                <Ionicons name="play" size={12} color="#FFFFFF" />
+                <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>PROCESAR</Text>
               </Pressable>
             )}
 
@@ -3211,10 +3212,10 @@ function RequestTableRow({
                 }}
                 style={({ hovered }: any) => [
                   {
-                    backgroundColor: hovered ? '#6EE7B7' : '#A7F3D0',
-                    paddingHorizontal: 10,
+                    backgroundColor: hovered ? '#059669' : '#10B981',
+                    paddingHorizontal: 11,
                     height: 30,
-                    borderRadius: 7,
+                    borderRadius: 9999,
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 4,
@@ -3223,8 +3224,8 @@ function RequestTableRow({
                   Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                 ]}
               >
-                <Ionicons name="checkmark-outline" size={13} color="#065F46" />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#064E3B' }}>Aprobar</Text>
+                <Ionicons name="checkmark" size={13} color="#FFFFFF" />
+                <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>APROBAR</Text>
               </Pressable>
             )}
 
@@ -3236,10 +3237,10 @@ function RequestTableRow({
                 }}
                 style={({ hovered }: any) => [
                   {
-                    backgroundColor: hovered ? '#7DD3FC' : '#BAE6FD',
-                    paddingHorizontal: 10,
+                    backgroundColor: hovered ? '#0369A1' : '#0284C7',
+                    paddingHorizontal: 11,
                     height: 30,
-                    borderRadius: 7,
+                    borderRadius: 9999,
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 4,
@@ -3248,8 +3249,8 @@ function RequestTableRow({
                   Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                 ]}
               >
-                <Ionicons name="car-outline" size={13} color="#0284C7" />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#0C4A6E' }}>Asignar</Text>
+                <Ionicons name="car" size={13} color="#FFFFFF" />
+                <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>ASIGNAR</Text>
               </Pressable>
             )}
 
@@ -3260,18 +3261,18 @@ function RequestTableRow({
               }}
               style={({ hovered }: any) => [
                 {
-                  backgroundColor: hovered ? '#FDA4AF' : '#FECDD3',
+                  backgroundColor: hovered ? '#DC2626' : '#EF4444',
                   borderWidth: 0,
                   width: 30,
                   height: 30,
-                  borderRadius: 7,
+                  borderRadius: 15,
                   alignItems: 'center',
                   justifyContent: 'center',
                 },
                 Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
               ]}
             >
-              <Ionicons name="close-outline" size={15} color="#9F1239" />
+              <Ionicons name="close" size={15} color="#FFFFFF" />
             </Pressable>
           </>
         )}
@@ -3284,10 +3285,10 @@ function RequestTableRow({
             }}
             style={({ hovered }: any) => [
               {
-                backgroundColor: hovered ? '#6EE7B7' : '#A7F3D0',
-                paddingHorizontal: 10,
+                backgroundColor: hovered ? '#059669' : '#10B981',
+                paddingHorizontal: 11,
                 height: 30,
-                borderRadius: 7,
+                borderRadius: 9999,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 4,
@@ -3296,8 +3297,8 @@ function RequestTableRow({
               Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
             ]}
           >
-            <Ionicons name="checkmark-done-outline" size={13} color="#065F46" />
-            <Text style={{ fontSize: 11, fontWeight: '800', color: '#064E3B' }}>Finalizar</Text>
+            <Ionicons name="checkmark-done" size={13} color="#FFFFFF" />
+            <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>FINALIZAR</Text>
           </Pressable>
         )}
 
@@ -3474,14 +3475,14 @@ function RequestDetailModal({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 5,
-                paddingHorizontal: 9,
-                paddingVertical: 4,
-                borderRadius: 8,
-                backgroundColor: statusTheme.bg,
+                paddingHorizontal: 10,
+                paddingVertical: 4.5,
+                borderRadius: 9999,
+                backgroundColor: '#1E293B',
                 borderWidth: 0,
               }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusTheme.dot }} />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: statusTheme.text }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
                   {item.status}
                 </Text>
               </View>
@@ -3865,17 +3866,17 @@ function RequestDetailModal({
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
-                      paddingHorizontal: 16,
-                      height: 40,
-                      borderRadius: 10,
-                      backgroundColor: hovered ? '#FDA4AF' : '#FECDD3',
+                      paddingHorizontal: 18,
+                      height: 38,
+                      borderRadius: 9999,
+                      backgroundColor: hovered ? '#DC2626' : '#EF4444',
                       borderWidth: 0,
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                 >
-                  <Ionicons name="close-outline" size={16} color="#9F1239" />
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#881337' }}>Rechazar</Text>
+                  <Ionicons name="close" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>RECHAZAR</Text>
                 </Pressable>
               )}
 
@@ -3893,17 +3894,17 @@ function RequestDetailModal({
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 6,
-                          paddingHorizontal: 16,
-                          height: 40,
-                          borderRadius: 10,
-                          backgroundColor: hovered ? '#7DD3FC' : '#BAE6FD',
+                          paddingHorizontal: 18,
+                          height: 38,
+                          borderRadius: 9999,
+                          backgroundColor: hovered ? '#1D4ED8' : '#2563EB',
                           borderWidth: 0,
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                     >
-                      <Ionicons name="play-outline" size={16} color="#0369A1" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0C4A6E' }}>Procesar</Text>
+                      <Ionicons name="play" size={14} color="#FFFFFF" />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>PROCESAR</Text>
                     </Pressable>
                   )}
 
@@ -3918,17 +3919,17 @@ function RequestDetailModal({
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 6,
-                          paddingHorizontal: 16,
-                          height: 40,
-                          borderRadius: 10,
-                          backgroundColor: hovered ? '#6EE7B7' : '#A7F3D0',
+                          paddingHorizontal: 18,
+                          height: 38,
+                          borderRadius: 9999,
+                          backgroundColor: hovered ? '#059669' : '#10B981',
                           borderWidth: 0,
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                     >
-                      <Ionicons name="checkmark-outline" size={16} color="#065F46" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#064E3B' }}>Aprobar</Text>
+                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>APROBAR</Text>
                     </Pressable>
                   )}
 
@@ -3943,17 +3944,17 @@ function RequestDetailModal({
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 6,
-                          paddingHorizontal: 16,
-                          height: 40,
-                          borderRadius: 10,
-                          backgroundColor: hovered ? '#7DD3FC' : '#BAE6FD',
+                          paddingHorizontal: 18,
+                          height: 38,
+                          borderRadius: 9999,
+                          backgroundColor: hovered ? '#0369A1' : '#0284C7',
                           borderWidth: 0,
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                     >
-                      <Ionicons name="car-outline" size={16} color="#0284C7" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0C4A6E' }}>Asignar Conductor</Text>
+                      <Ionicons name="car" size={16} color="#FFFFFF" />
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>ASIGNAR CONDUCTOR</Text>
                     </Pressable>
                   )}
                 </>
@@ -3970,17 +3971,17 @@ function RequestDetailModal({
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
-                      paddingHorizontal: 16,
-                      height: 40,
-                      borderRadius: 10,
-                      backgroundColor: hovered ? '#6EE7B7' : '#A7F3D0',
+                      paddingHorizontal: 18,
+                      height: 38,
+                      borderRadius: 9999,
+                      backgroundColor: hovered ? '#059669' : '#10B981',
                       borderWidth: 0,
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                 >
-                  <Ionicons name="checkmark-done-outline" size={16} color="#065F46" />
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#064E3B' }}>Finalizar</Text>
+                  <Ionicons name="checkmark-done" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>FINALIZAR</Text>
                 </Pressable>
               )}
             </View>
@@ -4069,7 +4070,7 @@ function RequestListItem({
           flex: 1, 
           marginHorizontal: 0, 
           maxWidth: maxCardWidth,
-          minWidth: 420,
+          minWidth: 350,
         }, 
         Platform.OS === 'web' ? ({ 
           boxShadow: `0 4px 18px ${serviceTheme.shadow}`,
@@ -4102,10 +4103,10 @@ function RequestListItem({
             )}
           </View>
 
-          {/* Pill de Estado */}
-          <View style={[styles.statusPillNew, { backgroundColor: statusTheme.bg, borderWidth: 0 }]}>
+          {/* Pill de Estado Oscuro */}
+          <View style={[styles.statusPillNew, { backgroundColor: '#1E293B', borderWidth: 0 }]}>
             <View style={[styles.statusDotNew, { backgroundColor: statusTheme.dot }]} />
-            <Text style={[styles.statusTextNew, { color: statusTheme.text }]}>{item.status}</Text>
+            <Text style={[styles.statusTextNew, { color: '#FFFFFF' }]}>{item.status}</Text>
           </View>
         </View>
 
@@ -4364,17 +4365,18 @@ function RequestListItem({
                       style={({ hovered }: any) => [
                         styles.actionBtn, 
                         { 
-                          backgroundColor: hovered ? '#7DD3FC' : '#BAE6FD', 
+                          backgroundColor: hovered ? '#1D4ED8' : '#2563EB', 
                           borderWidth: 0, 
-                          height: 32, 
-                          paddingHorizontal: 12 
+                          borderRadius: 9999,
+                          height: 34, 
+                          paddingHorizontal: 15 
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                       onPress={() => onUpdateStatus(item, 'en_progreso')}
                     >
-                      <Ionicons name="play-outline" size={13} color="#0369A1" />
-                      <Text style={[styles.actionBtnText, { color: '#0C4A6E', fontSize: 11.5 }]}>Procesar</Text>
+                      <Ionicons name="play" size={12} color="#FFFFFF" />
+                      <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>PROCESAR</Text>
                     </Pressable>
                   )}
 
@@ -4384,17 +4386,18 @@ function RequestListItem({
                       style={({ hovered }: any) => [
                         styles.actionBtn, 
                         { 
-                          backgroundColor: hovered ? '#6EE7B7' : '#A7F3D0', 
+                          backgroundColor: hovered ? '#059669' : '#10B981', 
                           borderWidth: 0, 
-                          height: 32, 
-                          paddingHorizontal: 12 
+                          borderRadius: 9999,
+                          height: 34, 
+                          paddingHorizontal: 15 
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                       onPress={() => onUpdateStatus(item, 'resuelto')}
                     >
-                      <Ionicons name="checkmark-outline" size={13} color="#065F46" />
-                      <Text style={[styles.actionBtnText, { color: '#064E3B', fontSize: 11.5 }]}>Aprobar</Text>
+                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                      <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>APROBAR</Text>
                     </Pressable>
                   )}
 
@@ -4404,17 +4407,18 @@ function RequestListItem({
                       style={({ hovered }: any) => [
                         styles.actionBtn, 
                         { 
-                          backgroundColor: hovered ? '#7DD3FC' : '#BAE6FD', 
+                          backgroundColor: hovered ? '#0369A1' : '#0284C7', 
                           borderWidth: 0, 
-                          height: 32, 
-                          paddingHorizontal: 12 
+                          borderRadius: 9999,
+                          height: 34, 
+                          paddingHorizontal: 15 
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                       onPress={() => onAssignDriver && onAssignDriver(item)}
                     >
-                      <Ionicons name="car-outline" size={13} color="#0284C7" />
-                      <Text style={[styles.actionBtnText, { color: '#0C4A6E', fontSize: 11.5 }]}>Asignar</Text>
+                      <Ionicons name="car" size={14} color="#FFFFFF" />
+                      <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>ASIGNAR</Text>
                     </Pressable>
                   )}
                 </>
@@ -4425,37 +4429,39 @@ function RequestListItem({
                   style={({ hovered }: any) => [
                     styles.actionBtn, 
                     { 
-                      backgroundColor: hovered ? '#6EE7B7' : '#A7F3D0', 
+                      backgroundColor: hovered ? '#059669' : '#10B981', 
                       borderWidth: 0, 
-                      height: 32, 
-                      paddingHorizontal: 12 
+                      borderRadius: 9999,
+                      height: 34, 
+                      paddingHorizontal: 15 
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                   onPress={() => onUpdateStatus(item, 'resuelto')}
                 >
-                  <Ionicons name="checkmark-done-outline" size={13} color="#065F46" />
-                  <Text style={[styles.actionBtnText, { color: '#064E3B', fontSize: 11.5 }]}>Finalizar</Text>
+                  <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>FINALIZAR</Text>
                 </Pressable>
               )}
 
-              {/* Botón de Rechazo sutil pero accesible */}
+              {/* Botón de Rechazo estilo cápsula */}
               {!isClosed && (
                 <Pressable 
                   style={({ hovered }: any) => [
                     styles.actionBtn, 
                     { 
-                      backgroundColor: hovered ? '#FDA4AF' : '#FECDD3', 
+                      backgroundColor: hovered ? '#DC2626' : '#EF4444', 
                       borderWidth: 0, 
-                      height: 32, 
-                      paddingHorizontal: 11 
+                      borderRadius: 9999,
+                      height: 34, 
+                      paddingHorizontal: 14 
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                   onPress={() => onUpdateStatus(item, 'rechazado')}
                 >
-                  <Ionicons name="close-outline" size={14} color="#9F1239" />
-                  <Text style={[styles.actionBtnText, { color: '#881337', fontSize: 11.5 }]}>Rechazar</Text>
+                  <Ionicons name="close" size={15} color="#FFFFFF" />
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>RECHAZAR</Text>
                 </Pressable>
               )}
             </View>
@@ -4520,22 +4526,22 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 100 },
   card: { 
     backgroundColor: '#FFFFFF', 
-    borderRadius: 20, 
-    marginBottom: 20, 
+    borderRadius: 16, 
+    marginBottom: 14, 
     marginHorizontal: 25, 
     borderWidth: 0, 
-    minWidth: 420,
+    minWidth: 350,
     overflow: 'hidden',
     ...Platform.select({
-      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.07, shadowRadius: 14 },
-      android: { elevation: 3 },
+      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 10 },
+      android: { elevation: 2 },
       web: { 
-        boxShadow: '0 6px 20px -2px rgba(15, 23, 42, 0.06), 0 3px 8px -1px rgba(15, 23, 42, 0.03)',
+        boxShadow: '0 4px 14px -2px rgba(15, 23, 42, 0.05), 0 2px 5px -1px rgba(15, 23, 42, 0.02)',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
       }
     })
   },
-  cardMain: { padding: 22 },
+  cardMain: { padding: 16 },
   cardHeaderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 },
   cardBadgesRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, flex: 1 },
   categoryBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1 },
@@ -4546,7 +4552,7 @@ const styles = StyleSheet.create({
   slaBadgeText: { fontSize: 10, fontWeight: '800' },
   idChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, backgroundColor: '#0F172A' },
   idChipText: { fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 },
-  statusPillNew: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 10, borderWidth: 1 },
+  statusPillNew: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 9999, borderWidth: 0 },
   statusDotNew: { width: 7, height: 7, borderRadius: 4 },
   statusTextNew: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   cardUserRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
@@ -4594,8 +4600,8 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 12.5, color: '#475569', fontWeight: '700' },
   actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  actionBtn: { height: 38, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6, borderWidth: 1 },
-  actionBtnText: { fontSize: 12, fontWeight: '800', color: COLORS.white },
+  actionBtn: { height: 34, paddingHorizontal: 14, borderRadius: 9999, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6, borderWidth: 0 },
+  actionBtnText: { fontSize: 11.5, fontWeight: '800', color: COLORS.white, textTransform: 'uppercase', letterSpacing: 0.5 },
   rejectBtn: { backgroundColor: COLORS.danger, borderColor: COLORS.danger },
   approveBtn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   processBtn: { backgroundColor: '#FF8C00', borderColor: '#FF8C00' },
