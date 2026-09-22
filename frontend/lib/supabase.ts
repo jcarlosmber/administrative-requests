@@ -253,6 +253,21 @@ class SupabaseClientEmulated {
           const result = { data: null, error: e };
           return Promise.resolve(result).then(onfulfilled, onrejected);
         }
+      },
+      catch: (onrejected?: (reason: any) => any) => {
+        return chain.then(undefined, onrejected);
+      },
+      finally: (onfinally?: () => void) => {
+        return chain.then(
+          (val: any) => {
+            onfinally?.();
+            return val;
+          },
+          (err: any) => {
+            onfinally?.();
+            throw err;
+          }
+        );
       }
     };
     return chain;

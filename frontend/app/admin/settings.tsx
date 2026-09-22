@@ -3104,7 +3104,9 @@ export default function AdminSettings() {
             <TouchableOpacity 
               style={styles.successButton} 
               onPress={() => setShowSuccessModal(false)}
+              activeOpacity={0.8}
             >
+              <Ionicons name="checkmark-circle-outline" size={18} color={COLORS.white} />
               <Text style={styles.successButtonText}>ENTENDIDO</Text>
             </TouchableOpacity>
           </View>
@@ -3135,7 +3137,9 @@ export default function AdminSettings() {
             <TouchableOpacity 
               style={[styles.successButton, emailModalData.isError && { backgroundColor: COLORS.danger }]} 
               onPress={() => setShowEmailModal(false)}
+              activeOpacity={0.8}
             >
+              <Ionicons name={emailModalData.isError ? "alert-circle-outline" : "checkmark-circle-outline"} size={18} color={COLORS.white} />
               <Text style={styles.successButtonText}>ENTENDIDO</Text>
             </TouchableOpacity>
           </View>
@@ -3517,14 +3521,30 @@ const styles = StyleSheet.create({
   modalIconBox: { width: 64, height: 64, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.primary, marginBottom: 12 },
   modalDescription: { fontSize: 14, color: COLORS.muted, textAlign: 'center', lineHeight: 22, marginBottom: 25, fontWeight: '500' },
-  modalActions: { flexDirection: 'row', gap: 12, width: '100%' },
-  modalButton: { flex: 1, height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  modalActions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 8 },
+  modalButton: { flex: 1, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   cancelButton: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line },
   cancelButtonText: { color: COLORS.primarySoft, fontSize: 14, fontWeight: '800' },
   confirmDeleteButton: { backgroundColor: COLORS.danger },
   confirmDeleteButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
-  successButton: { backgroundColor: COLORS.primary, width: '100%', minWidth: '100%', height: 54, borderRadius: 16, paddingHorizontal: 24 },
-  successButtonText: { color: COLORS.white, fontSize: 15, fontWeight: '900', letterSpacing: 1, textAlign: 'center' },
+  successButton: { 
+    backgroundColor: COLORS.primary, 
+    width: '100%', 
+    height: 48, 
+    borderRadius: 14, 
+    paddingHorizontal: 20, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8 },
+      android: { elevation: 3 },
+      web: { boxShadow: '0 4px 14px rgba(0, 0, 0, 0.12)', cursor: 'pointer' }
+    })
+  },
+  successButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '800', letterSpacing: 0.6, textTransform: 'uppercase' },
 
   // Estilos de Despliegue y Git
   gitDeployCard: { backgroundColor: COLORS.white, borderRadius: 24, padding: 6, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' },

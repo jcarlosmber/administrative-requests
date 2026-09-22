@@ -290,9 +290,11 @@ export const settingsService = {
         return synced;
       }
 
-      // Fallback: insertar uno por uno con supabase.from('service_emails')
+      // Fallback: insertar uno por uno con el emulador supabase
       for (const item of cleanEmails) {
-        await supabase.from('service_emails').insert([item]).catch(() => {});
+        try {
+          await supabase.from('service_emails').insert([item]);
+        } catch (_) {}
       }
       const updated = await this.getServiceEmails();
       return updated.length > 0 ? updated : emails;
