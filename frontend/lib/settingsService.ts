@@ -261,6 +261,40 @@ export const settingsService = {
     return [];
   },
 
+  async saveAllServiceEmails(emails: ServiceEmail[]): Promise<ServiceEmail[]> {
+    try {
+      const token = await appStorage.getItem('auth_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const cleanEmails = emails.map(e => ({
+        service_type: e.service_type,
+        email: e.email
+      }));
+
+      const res = await fetch(`${API_URL}/api/service-emails/bulk-save`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ emails: cleanEmails })
+      });
+
+      if (res.ok) {
+        const saved = await res.json();
+        if (Platform.OS === 'web') {
+          localStorage.setItem('local_service_emails', JSON.stringify(saved));
+        }
+        return saved;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      console.warn('Error al guardar todos los correos en el servidor:', e);
+      if (Platform.OS === 'web') {
+        localStorage.setItem('local_service_emails', JSON.stringify(emails));
+      }
+      throw e;
+    }
+  },
+
   // ==========================================
   // CONFIGURACIÓN GLOBAL DEL SISTEMA
   // ==========================================

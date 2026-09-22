@@ -137,6 +137,9 @@ export default function AdminSettings() {
   
   // Modals States
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalData, setEmailModalData] = useState<{ title: string; message: string; isError?: boolean }>({ title: '', message: '' });
+  const [savingEmails, setSavingEmails] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<any | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [dependencyToDelete, setDependencyToDelete] = useState<any | null>(null);
@@ -869,6 +872,30 @@ export default function AdminSettings() {
     }
   };
 
+  const handleSaveAllEmails = async () => {
+    try {
+      setSavingEmails(true);
+      const saved = await settingsService.saveAllServiceEmails(serviceEmails || []);
+      setServiceEmails(saved);
+      setEmailModalData({
+        title: '¡Correos Guardados!',
+        message: `Se han sincronizado y registrado exitosamente ${saved.length} dirección(es) de correo en el servidor y la base de datos. Las alertas automáticas ya llegarán a estos buzones.`,
+        isError: false
+      });
+      setShowEmailModal(true);
+    } catch (err) {
+      console.error('Error al guardar todos los correos:', err);
+      setEmailModalData({
+        title: 'Atención al Guardar',
+        message: 'No se pudo conectar con el servidor para persistir los correos en la base de datos. Se han conservado localmente en tu navegador.',
+        isError: true
+      });
+      setShowEmailModal(true);
+    } finally {
+      setSavingEmails(false);
+    }
+  };
+
   useEffect(() => {
     if (loading) return; // Skip saving on mount
     const timer = setTimeout(() => {
@@ -1374,7 +1401,39 @@ export default function AdminSettings() {
               {/* Correos de Secretaría General */}
               {(activeTab === 'all' || activeTab === 'emails') && (
                 <>
-                  <SectionHeader title="Correos de Notificación y Gestión" kicker="CANALES DE ATENCIÓN" />
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 40, marginBottom: 20 }}>
+                    <View>
+                      <Text style={styles.sectionKicker}>CANALES DE ATENCIÓN</Text>
+                      <Text style={styles.sectionTitle}>Correos de Notificación y Gestión</Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        backgroundColor: '#1E40AF',
+                        paddingHorizontal: 20,
+                        paddingVertical: 12,
+                        borderRadius: 14,
+                        ...Platform.select({
+                          web: { cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 4px 12px rgba(30, 64, 175, 0.25)' },
+                          default: { elevation: 3 }
+                        }),
+                        opacity: savingEmails ? 0.7 : 1
+                      }}
+                      onPress={handleSaveAllEmails}
+                      disabled={savingEmails}
+                    >
+                      {savingEmails ? (
+                        <ActivityIndicator size="small" color={COLORS.white} />
+                      ) : (
+                        <Ionicons name="cloud-upload" size={18} color={COLORS.white} />
+                      )}
+                      <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 14 }}>
+                        {savingEmails ? 'Guardando en BD...' : 'Guardar y Sincronizar Correos'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                   <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
                     {([
                       { type: 'manager', title: 'Equipo Gestor / Aprobadores', icon: 'shield-checkmark', color: '#1E40AF', desc: 'Notificación inmediata de nuevas solicitudes para revisión, trámite y aprobación', isHighlight: true },
@@ -1469,6 +1528,26 @@ export default function AdminSettings() {
                         </View>
                       );
                     })}
+                  </View>
+
+                  {/* Botón de Guardar al pie de las tarjetas */}
+                  <View style={{ marginTop: 20, alignItems: 'center' }}>
+                    <TouchableOpacity 
+                      style={[styles.saveBtn, { maxWidth: 460, width: '100%' }]} 
+                      onPress={handleSaveAllEmails} 
+                      disabled={savingEmails}
+                    >
+                      <LinearGradient colors={['#1E40AF', '#3B82F6']} style={styles.saveGradient}>
+                        {savingEmails ? (
+                          <ActivityIndicator size="small" color={COLORS.white} />
+                        ) : (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Ionicons name="checkmark-done-circle" size={20} color={COLORS.white} />
+                            <Text style={styles.saveText}>GUARDAR Y APLICAR TODOS LOS CORREOS</Text>
+                          </View>
+                        )}
+                      </LinearGradient>
+                    </TouchableOpacity>
                   </View>
                 </>
               )}
@@ -3025,6 +3104,37 @@ export default function AdminSettings() {
             <TouchableOpacity 
               style={[styles.modalButton, styles.successButton]} 
               onPress={() => setShowSuccessModal(false)}
+            >
+              <Text style={styles.successButtonText}>ENTENDIDO</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE RESULTADO DE CORREOS DE NOTIFICACIÓN */}
+      <Modal
+        visible={showEmailModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEmailModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: emailModalData.isError ? `${COLORS.danger}15` : `${COLORS.success}15` }]}>
+              <Ionicons 
+                name={emailModalData.isError ? "alert-circle" : "checkmark-done-circle"} 
+                size={40} 
+                color={emailModalData.isError ? COLORS.danger : COLORS.success} 
+              />
+            </View>
+            <Text style={styles.modalTitle}>{emailModalData.title}</Text>
+            <Text style={styles.modalDescription}>
+              {emailModalData.message}
+            </Text>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.successButton, emailModalData.isError && { backgroundColor: COLORS.danger }]} 
+              onPress={() => setShowEmailModal(false)}
             >
               <Text style={styles.successButtonText}>ENTENDIDO</Text>
             </TouchableOpacity>

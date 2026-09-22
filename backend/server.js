@@ -1431,7 +1431,7 @@ app.post('/api/service-emails/sync', optionalAuthenticateToken, async (req, res)
     for (const item of emails) {
       if (item && item.service_type && item.email) {
         const cleanType = String(item.service_type).trim();
-        const cleanEmail = String(item.email).trim();
+        const cleanEmail = String(item.email).trim().toLowerCase();
         const check = await pool.query(
           'SELECT id FROM service_emails WHERE service_type = $1 AND LOWER(TRIM(email)) = LOWER($2)',
           [cleanType, cleanEmail]
@@ -1444,11 +1444,41 @@ app.post('/api/service-emails/sync', optionalAuthenticateToken, async (req, res)
         }
       }
     }
-    const updated = await pool.query('SELECT * FROM service_emails ORDER BY service_type');
+    const updated = await pool.query('SELECT * FROM service_emails ORDER BY service_type, email');
     res.json(updated.rows);
   } catch (err) {
     console.error('Error en sincronización de correos:', err);
     res.status(500).json({ error: 'Error sincronizando correos.' });
+  }
+});
+
+app.post('/api/service-emails/bulk-save', optionalAuthenticateToken, async (req, res) => {
+  const { emails } = req.body;
+  if (!Array.isArray(emails)) {
+    return res.status(400).json({ error: 'Se esperaba un array de correos.' });
+  }
+  try {
+    await pool.query('BEGIN');
+    await pool.query('DELETE FROM service_emails');
+    for (const item of emails) {
+      if (item && item.service_type && item.email) {
+        const cleanType = String(item.service_type).trim();
+        const cleanEmail = String(item.email).trim().toLowerCase();
+        if (cleanType && cleanEmail) {
+          await pool.query(
+            'INSERT INTO service_emails (service_type, email) VALUES ($1, $2)',
+            [cleanType, cleanEmail]
+          );
+        }
+      }
+    }
+    await pool.query('COMMIT');
+    const updated = await pool.query('SELECT * FROM service_emails ORDER BY service_type, email');
+    res.json(updated.rows);
+  } catch (err) {
+    await pool.query('ROLLBACK');
+    console.error('Error al guardar masivamente los correos de servicio:', err);
+    res.status(500).json({ error: 'Error al guardar los correos en la base de datos.' });
   }
 });
 
