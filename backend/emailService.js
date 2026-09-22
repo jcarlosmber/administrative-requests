@@ -618,28 +618,75 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
   if (meta.services_description) srvList.push(meta.services_description);
   const servicesText = srvList.length > 0 ? srvList.join(', ') : 'Ninguno';
 
-  // CASO: DESTINATARIO ADMINISTRADOR DE SALAS
+  // CASO: DESTINATARIO ADMINISTRADOR DE SALAS / SECRETARÍA GENERAL
   if (!isUserRecipient) {
-    const subject = `Solicitud de reserva de espacio – ${roomName} – ${date}`;
+    const isSecGeneral = meta.requires_secretaria_general === true ||
+                         meta.info === 'Especial' ||
+                         (parseInt(meta.capacity) || 0) >= 100 ||
+                         /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+    const isApproved = status === 'resuelto' || status === 'aprobado';
+
+    let subject = `Solicitud de reserva de espacio – ${roomName} – ${date}`;
+    let introParagraph = 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la gestión y asignación del siguiente espacio institucional:';
+    let headerSubTitle = 'Reserva de Salas';
+
+    if (isSecGeneral) {
+      headerSubTitle = isApproved ? 'Autorización de Espacio Especial' : 'Solicitud de Espacio Especial';
+      subject = isApproved
+        ? `Reserva Aprobada – ${roomName} (${date})`
+        : `Solicitud de reserva de espacio – ${roomName} (${date})`;
+      introParagraph = isApproved
+        ? 'Nos permitimos informar a la Secretaría General de la Alcaldía Mayor de Bogotá que la siguiente reserva de espacio ha sido APROBADA en SASGE:'
+        : 'Desde la Secretaría Jurídica Distrital, nos permitimos remitir la solicitud de reserva para el siguiente espacio de la Secretaría General:';
+    } else if (isApproved) {
+      subject = `Alerta de Servicio: Reserva Aprobada – ${roomName} (${date})`;
+      introParagraph = 'Una reserva de sala ha sido aprobada y se requiere la coordinación o ejecución logística del espacio:';
+    }
+
+    const cardItems = isSecGeneral ? [
+      { label: 'Espacio Especial', value: roomName },
+      { label: 'Fecha del Evento', value: date },
+      { label: 'Horario Reserva (Montaje)', value: time },
+      { label: 'Horario Real del Evento', value: (meta.event_start_hour && meta.event_end_hour) ? `${meta.event_start_hour} - ${meta.event_end_hour}` : time },
+      { label: 'Entidad Solicitante', value: meta.entity_name || dependency },
+      { label: 'Actividad / Evento', value: activity },
+      { label: 'Descripción', value: meta.activity_description || request.description },
+      { label: 'Responsable', value: organizer },
+      { label: 'Cargo Responsable', value: meta.responsible_role || 'Funcionario' },
+      { label: 'Teléfono Contacto', value: phone },
+      { label: 'Aforo / Asistentes', value: `${attendees} persona(s)` },
+      { label: 'Modalidad', value: meta.meeting_type || 'Presencial' },
+      { label: 'Servicios Logísticos', value: meta.services_description || servicesText },
+      { label: 'Requerimientos Técnicos', value: Array.isArray(meta.tech_requirements) ? meta.tech_requirements.join(', ') : 'Ninguno' },
+      { label: 'Declaración y Póliza SJD', value: meta.manifestation_express ? 'Aceptada y Acreditada' : 'Aceptada' }
+    ] : [
+      { label: 'Espacio Solicitado', value: roomName },
+      { label: 'Fecha de la Reserva', value: date },
+      { label: 'Horario', value: time },
+      { label: 'Actividad / Evento', value: activity },
+      { label: 'Funcionario Organizador', value: organizer },
+      { label: 'Dependencia', value: dependency },
+      { label: 'Teléfono / Contacto', value: phone },
+      { label: 'Asistentes Previstos', value: `${attendees} persona(s)` },
+      { label: 'Servicios Logísticos / TIC', value: servicesText }
+    ];
+
+    const closingParagraphs = isSecGeneral && isApproved ? [
+      'Se solicita formalizar la reserva en la agenda del Auditorio Huitaca y coordinar el inventario para la entrega del espacio.',
+      'La entidad solicitante entregará el listado de asistentes y del personal de apoyo logístico y brigadistas con antelación conforme a los lineamientos establecidos.',
+      'Quedamos atentos a cualquier inquietud adicional.'
+    ] : [
+      'Agradecemos verificar la agenda del espacio y formalizar la aprobación y alistamiento correspondiente.',
+      'Quedamos atentos a cualquier inquietud o coordinación logística.'
+    ];
+
     const html = renderServiceEmailLayout({
       serviceCategory: 'rooms',
-      headerSubTitle: 'Reserva de Salas',
-      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la gestión y asignación del siguiente espacio institucional:',
-      cardItems: [
-        { label: 'Espacio Solicitado', value: roomName },
-        { label: 'Fecha de la Reserva', value: date },
-        { label: 'Horario', value: time },
-        { label: 'Actividad / Evento', value: activity },
-        { label: 'Funcionario Organizador', value: organizer },
-        { label: 'Dependencia', value: dependency },
-        { label: 'Teléfono / Contacto', value: phone },
-        { label: 'Asistentes Previstos', value: `${attendees} persona(s)` },
-        { label: 'Servicios Logísticos / TIC', value: servicesText }
-      ],
-      closingParagraphs: [
-        'Agradecemos verificar la agenda del espacio y formalizar la aprobación y alistamiento correspondiente.',
-        'Quedamos atentos a cualquier inquietud o coordinación logística.'
-      ],
+      headerSubTitle,
+      introParagraph,
+      cardItems,
+      closingParagraphs,
       actionButton: {
         text: 'Gestionar Reserva en SASGE',
         url: 'https://sasge.secretariajuridica.gov.co/admin/manage'

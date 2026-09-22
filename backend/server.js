@@ -791,9 +791,12 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     // 2. Notificación automática a la persona/equipo que aprueba o gestiona el trámite (service_emails)
     let adminServiceKey = createdRequest.category?.toLowerCase() || '';
     if (adminServiceKey === 'rooms') {
-      const isSpecialRoom = createdRequest.metadata?.info === 'Especial' || 
-                            createdRequest.metadata?.requires_secretaria_general || 
-                            (parseInt(createdRequest.metadata?.capacity) || 0) >= 100;
+      const meta = createdRequest.metadata || {};
+      const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+      const isSpecialRoom = meta.requires_secretaria_general === true ||
+                            meta.info === 'Especial' || 
+                            (parseInt(meta.capacity) || 0) >= 100 ||
+                            /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
       if (isSpecialRoom) {
         adminServiceKey = 'rooms_special';
       }
@@ -805,7 +808,10 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
         [adminServiceKey || '', 'manager']
       );
       const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-      const uniqueAdminEmails = [...new Set(adminEmails)];
+      let uniqueAdminEmails = [...new Set(adminEmails)];
+      if (adminServiceKey === 'rooms_special' && uniqueAdminEmails.length === 0) {
+        uniqueAdminEmails = ['subdireccionadministrativa@alcaldiabogota.gov.co', 'eventoshuitaca@alcaldiabogota.gov.co'];
+      }
       console.log(`📧 [ADMIN NOTIFY] Encontrados ${uniqueAdminEmails.length} correos para (${adminServiceKey}, manager):`, uniqueAdminEmails);
       if (uniqueAdminEmails.length > 0) {
         await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
@@ -908,19 +914,31 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
       // Send email to admins based on category and status
       let notifyAdmin = false;
       let serviceEmailCategory = updatedRequest.category?.toLowerCase() || '';
+      const isStatusApprove = status === 'resuelto' || status === 'aprobado';
+      const isStatusProgress = status === 'en_progreso';
 
-      if (serviceEmailCategory === 'visitors' && status === 'resuelto') notifyAdmin = true;
-      if (serviceEmailCategory === 'parking' && status === 'resuelto') notifyAdmin = true;
-      if (serviceEmailCategory === 'maintenance' && status === 'en_progreso') notifyAdmin = true;
-      if (serviceEmailCategory === 'transport' && status === 'en_progreso') notifyAdmin = true;
+      if (serviceEmailCategory === 'visitors' && isStatusApprove) notifyAdmin = true;
+      if (serviceEmailCategory === 'parking' && isStatusApprove) notifyAdmin = true;
+      if (serviceEmailCategory === 'maintenance' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
+      if (serviceEmailCategory === 'transport' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
 
       if (serviceEmailCategory === 'rooms') {
-        const isLargeScale = updatedRequest.metadata?.info === 'Especial' || (parseInt(updatedRequest.metadata?.capacity) || 0) >= 100;
-        if (isLargeScale && status === 'en_progreso') {
-          notifyAdmin = true;
+        const meta = updatedRequest.metadata || {};
+        const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+        const isSpecialRoom = meta.requires_secretaria_general === true ||
+                              meta.info === 'Especial' || 
+                              (parseInt(meta.capacity) || 0) >= 100 ||
+                              /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+        if (isSpecialRoom) {
           serviceEmailCategory = 'rooms_special';
-        } else if (!isLargeScale && status === 'resuelto') {
-          notifyAdmin = true;
+          if (isStatusApprove || isStatusProgress) {
+            notifyAdmin = true;
+          }
+        } else {
+          if (isStatusApprove || isStatusProgress) {
+            notifyAdmin = true;
+          }
         }
       }
 
@@ -931,7 +949,10 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
             [serviceEmailCategory, 'manager']
           );
           const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          const uniqueEmails = [...new Set(emails)];
+          let uniqueEmails = [...new Set(emails)];
+          if (serviceEmailCategory === 'rooms_special' && uniqueEmails.length === 0) {
+            uniqueEmails = ['subdireccionadministrativa@alcaldiabogota.gov.co', 'eventoshuitaca@alcaldiabogota.gov.co'];
+          }
           if (uniqueEmails.length > 0) {
             await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
@@ -1049,18 +1070,31 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       // Notificar a equipo de servicio y gestores si pasa a en_progreso o resuelto
       let serviceEmailCategory = updatedRequest.category?.toLowerCase() || '';
       let notifyAdmin = false;
-      if (serviceEmailCategory === 'visitors' && (status === 'en_progreso' || status === 'resuelto')) notifyAdmin = true;
-      if (serviceEmailCategory === 'parking' && status === 'resuelto') notifyAdmin = true;
-      if (serviceEmailCategory === 'maintenance' && status === 'en_progreso') notifyAdmin = true;
-      if (serviceEmailCategory === 'transport' && status === 'en_progreso') notifyAdmin = true;
+      const isStatusApprove = status === 'resuelto' || status === 'aprobado';
+      const isStatusProgress = status === 'en_progreso';
+
+      if (serviceEmailCategory === 'visitors' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
+      if (serviceEmailCategory === 'parking' && isStatusApprove) notifyAdmin = true;
+      if (serviceEmailCategory === 'maintenance' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
+      if (serviceEmailCategory === 'transport' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
 
       if (serviceEmailCategory === 'rooms') {
-        const isLargeScale = updatedRequest.metadata?.info === 'Especial' || (parseInt(updatedRequest.metadata?.capacity) || 0) >= 100;
-        if (isLargeScale && status === 'en_progreso') {
-          notifyAdmin = true;
+        const meta = updatedRequest.metadata || {};
+        const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+        const isSpecialRoom = meta.requires_secretaria_general === true ||
+                              meta.info === 'Especial' || 
+                              (parseInt(meta.capacity) || 0) >= 100 ||
+                              /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+        if (isSpecialRoom) {
           serviceEmailCategory = 'rooms_special';
-        } else if (!isLargeScale && status === 'resuelto') {
-          notifyAdmin = true;
+          if (isStatusApprove || isStatusProgress) {
+            notifyAdmin = true;
+          }
+        } else {
+          if (isStatusApprove || isStatusProgress) {
+            notifyAdmin = true;
+          }
         }
       }
 
@@ -1071,7 +1105,10 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
             [serviceEmailCategory, 'manager']
           );
           const emails = serviceEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          const uniqueEmails = [...new Set(emails)];
+          let uniqueEmails = [...new Set(emails)];
+          if (serviceEmailCategory === 'rooms_special' && uniqueEmails.length === 0) {
+            uniqueEmails = ['subdireccionadministrativa@alcaldiabogota.gov.co', 'eventoshuitaca@alcaldiabogota.gov.co'];
+          }
           if (uniqueEmails.length > 0) {
             await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
