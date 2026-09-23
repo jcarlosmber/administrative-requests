@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,9 +10,6 @@ import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
 import { requestService } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
-
-const { width } = Dimensions.get('window');
-const isDesktop = width >= 1024;
 
 const COLORS = {
   primary: '#7209B7', // Royal Purple
@@ -81,6 +78,8 @@ const cleanTitle = (title?: string) => {
 
 export default function RoomsRequestScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   
   // Slots ocupados en tiempo real (limpio por defecto)
   const [occupiedSlots, setOccupiedSlots] = useState<{ day: number; hour: number; title?: string }[]>([]);
@@ -459,7 +458,7 @@ export default function RoomsRequestScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 20, 
+              padding: isDesktop ? 40 : 14, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -1215,27 +1214,33 @@ function Sidebar() {
 function MobileHeader() {
   const router = useRouter();
   return (
-    <View style={[styles.mobHeader, { justifyContent: 'space-between', width: '100%', alignItems: 'center' }]}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Ionicons name="business" size={32} color={COLORS.primary} />
-        <View>
-          <Text style={styles.mobTitle}>Secretaría Jurídica</Text>
-          <Text style={styles.mobSub}>Reserva de Salas</Text>
+    <View style={[styles.mobHeader, { justifyContent: 'space-between', width: '100%', alignItems: 'center', paddingRight: 52 }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+        <TouchableOpacity 
+          onPress={() => router.push('/dashboard')}
+          style={{ padding: 8, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: COLORS.line }}
+        >
+          <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+        </TouchableOpacity>
+        <Ionicons name="business" size={28} color={COLORS.primary} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.mobTitle} numberOfLines={1}>Secretaría Jurídica</Text>
+          <Text style={styles.mobSub} numberOfLines={1}>Reserva de Salas</Text>
         </View>
       </View>
       <TouchableOpacity 
         style={{ 
           flexDirection: 'row', 
           alignItems: 'center', 
-          gap: 6, 
+          gap: 4, 
           backgroundColor: COLORS.soft, 
-          paddingHorizontal: 12, 
-          paddingVertical: 8, 
+          paddingHorizontal: 10, 
+          paddingVertical: 7, 
           borderRadius: 12 
         }}
         onPress={() => router.push({ pathname: '/dashboard/requests', params: { service: 'Salas' } })}
       >
-        <Ionicons name="calendar-outline" size={16} color={COLORS.primary} />
+        <Ionicons name="calendar-outline" size={15} color={COLORS.primary} />
         <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }}>Mis Reservas</Text>
       </TouchableOpacity>
     </View>

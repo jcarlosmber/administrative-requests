@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   Platform,
   ImageSourcePropType,
 } from 'react-native';
@@ -53,12 +53,13 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
-  const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
-  // Dimensiones calculadas para el contenedor de la imagen en modal
-  const modalWidth = Math.min(windowWidth * 0.95, 1100);
-  const modalHeight = Math.min(windowHeight * 0.88, 850);
+  // Dimensiones calculadas dinámicamente para móvil y desktop
   const isDesktop = windowWidth >= 1024;
+  const isMobile = windowWidth < 768;
+  const modalWidth = isMobile ? Math.min(windowWidth * 0.96, 500) : Math.min(windowWidth * 0.94, 1100);
+  const modalHeight = isMobile ? Math.min(windowHeight * 0.92, 700) : Math.min(windowHeight * 0.88, 850);
 
   const handleOpenImageInNewTab = () => {
     if (Platform.OS === 'web') {
@@ -67,7 +68,6 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
         if (uri) {
           window.open(uri, '_blank');
         } else {
-          // Si no hay URI directa expuesta, aumentar el zoom al máximo
           setZoomLevel((prev) => Math.min(prev + 0.5, 3));
         }
       } catch (err) {
@@ -80,8 +80,8 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
   const handleZoomOut = () => setZoomLevel((prev) => Math.max(Number((prev - 0.3).toFixed(1)), 0.8));
   const handleZoomReset = () => setZoomLevel(1);
 
-  const baseImageWidth = modalWidth - 40;
-  const baseImageHeight = modalHeight - 140;
+  const baseImageWidth = modalWidth - (isMobile ? 20 : 40);
+  const baseImageHeight = modalHeight - (isMobile ? 110 : 140);
 
   return (
     <>
@@ -90,8 +90,8 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
           floating
             ? {
                 position: 'absolute',
-                top: Platform.OS === 'web' ? 20 : 12,
-                right: Platform.OS === 'web' ? 24 : 16,
+                top: Platform.OS === 'web' ? (isDesktop ? 20 : 12) : 10,
+                right: Platform.OS === 'web' ? (isDesktop ? 24 : 12) : 10,
                 zIndex: 999,
               }
             : null,
@@ -111,8 +111,8 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
             alignItems: 'center',
             backgroundColor: '#FFFFFF',
             borderRadius: 999,
-            paddingVertical: 8,
-            paddingHorizontal: isDesktop ? 14 : 10,
+            paddingVertical: isMobile ? 6 : 8,
+            paddingHorizontal: isDesktop ? 14 : isMobile ? 8 : 10,
             shadowColor: '#0F172A',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.15,
@@ -120,25 +120,25 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
             elevation: 6,
             borderWidth: 1.5,
             borderColor: '#E2E8F0',
-            gap: 6,
+            gap: isMobile ? 4 : 6,
           }}
         >
           <View
             style={{
-              width: 32,
-              height: 32,
+              width: isMobile ? 28 : 32,
+              height: isMobile ? 28 : 32,
               borderRadius: 16,
               backgroundColor: themeColor,
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Ionicons name="help" size={20} color="#FFFFFF" />
+            <Ionicons name="help" size={isMobile ? 17 : 20} color="#FFFFFF" />
           </View>
           <View>
             <Text
               style={{
-                fontSize: 13,
+                fontSize: isMobile ? 12 : 13,
                 fontWeight: '700',
                 color: '#1E293B',
                 letterSpacing: 0.2,

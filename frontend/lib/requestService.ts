@@ -79,13 +79,21 @@ export const requestService = {
   },
 
   async update(id: string, updates: Partial<AdministrativeRequest>) {
-    const res = await fetch(`${API_URL}/api/requests/${id}`, {
-      method: 'PUT',
+    // Usar POST para evitar bloqueos por políticas de WAF o proxies en servidores distritales
+    let res = await fetch(`${API_URL}/api/requests/${id}/update`, {
+      method: 'POST',
       headers: await getHeaders(),
       body: JSON.stringify(updates),
     });
+    if (!res.ok && res.status === 404) {
+      res = await fetch(`${API_URL}/api/requests/${id}`, {
+        method: 'PUT',
+        headers: await getHeaders(),
+        body: JSON.stringify(updates),
+      });
+    }
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Error al actualizar solicitud');
     }
     return await res.json() as AdministrativeRequest;
@@ -98,20 +106,20 @@ export const requestService = {
       body: JSON.stringify({ text, author }),
     });
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Error al agregar comentario');
     }
     return await res.json() as AdministrativeRequest;
   },
 
-  async updateStatus(id: string, status: string, finalImage?: string, reason?: string, adminEmails?: string[]) {
+  async updateStatus(id: string, status: string, finalImage?: string, reason?: string, adminEmails?: string[], metadata?: any) {
     const res = await fetch(`${API_URL}/api/requests/${id}/status`, {
       method: 'POST',
       headers: await getHeaders(),
-      body: JSON.stringify({ status, finalImage, reason, adminEmails }),
+      body: JSON.stringify({ status, finalImage, reason, adminEmails, metadata }),
     });
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Error al actualizar el estado');
     }
     return await res.json() as AdministrativeRequest;

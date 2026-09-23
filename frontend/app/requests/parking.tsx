@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,9 +12,6 @@ import { supabase } from '../../lib/supabase';
 import { requestService } from '../../lib/requestService';
 import { vehicleService } from '../../lib/vehicleService';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
-
-const { width } = Dimensions.get('window');
-const isDesktop = width >= 1024;
 
 const COLORS = {
   primary: '#F4A261', // Sand/Orange
@@ -33,6 +30,8 @@ const COLORS = {
 
 export default function ParkingRequestScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   
   // Form State
   const [name, setName] = useState('');
@@ -145,7 +144,7 @@ export default function ParkingRequestScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 20, 
+              padding: isDesktop ? 40 : 14, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -231,8 +230,8 @@ export default function ParkingRequestScreen() {
                     onChangeText={setCharge} 
                     placeholder="Ej. Profesional Especializado, Director, Asesor" 
                   />
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <Field 
                         label="Cédula / ID" 
                         icon="card-outline" 
@@ -241,7 +240,7 @@ export default function ParkingRequestScreen() {
                         placeholder="1.000.000" 
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={styles.label}>Dependencia</Text>
                       <TouchableOpacity 
                         style={styles.inputWrap} 
@@ -261,8 +260,8 @@ export default function ParkingRequestScreen() {
                 </Card>
 
                 <Card title="Datos del Vehículo" icon="car">
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <Field 
                         label="Placa" 
                         icon="barcode-outline" 
@@ -272,7 +271,7 @@ export default function ParkingRequestScreen() {
                         maxLength={6}
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <Field 
                         label="Color" 
                         icon="color-palette-outline" 
@@ -393,12 +392,19 @@ function Sidebar() {
 }
 
 function MobileHeader() {
+  const router = useRouter();
   return (
-    <View style={styles.mobHeader}>
-      <Ionicons name="car" size={32} color={COLORS.primary} />
-      <View>
-        <Text style={styles.mobTitle}>Secretaría Jurídica</Text>
-        <Text style={styles.mobSub}>Solicitud de Parqueadero</Text>
+    <View style={[styles.mobHeader, { paddingRight: 50, flexDirection: 'row', alignItems: 'center' }]}>
+      <TouchableOpacity 
+        onPress={() => router.push('/dashboard')}
+        style={{ marginRight: 10, padding: 8, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: COLORS.line }}
+      >
+        <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+      </TouchableOpacity>
+      <Ionicons name="car" size={28} color={COLORS.primary} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={styles.mobTitle} numberOfLines={1}>Secretaría Jurídica</Text>
+        <Text style={styles.mobSub} numberOfLines={1}>Solicitud de Parqueadero</Text>
       </View>
     </View>
   );

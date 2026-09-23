@@ -1363,36 +1363,86 @@ export default function AdminReports() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             />
-            <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
+            <View style={[styles.heroInner, { paddingHorizontal: isDesktop ? 25 : 14, paddingTop: !isDesktop ? 30 : 0 }]}>
               <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.heroKicker}>SECRETARÍA JURÍDICA DISTRITAL</Text>
-                  <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Analítica & Reportes</Text>
+                  <Text style={[styles.heroTitle, { fontSize: isDesktop ? 32 : 24 }]} numberOfLines={1} adjustsFontSizeToFit>Analítica & Reportes</Text>
                   <Text style={styles.heroSub} numberOfLines={2}>Consola interactiva de monitoreo de servicios administrativos</Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
-                  <TouchableOpacity style={styles.refreshBtn} onPress={handleRefresh} disabled={loading}>
+                <View style={{ flexDirection: 'row', gap: 10, alignSelf: isDesktop ? 'auto' : 'stretch', justifyContent: isDesktop ? 'flex-end' : 'space-between', alignItems: 'center' }}>
+                  <TouchableOpacity style={styles.refreshBtn} onPress={handleRefresh} disabled={loading} accessibilityLabel="Actualizar métricas">
                     <Ionicons name="refresh" size={20} color={COLORS.white} />
                   </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
-                    onPress={() => router.replace('/dashboard')}
-                  >
-                    <Ionicons name="home" size={22} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity 
+                      style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+                      onPress={() => router.replace('/dashboard')}
+                      accessibilityLabel="Portal Funcionario"
+                    >
+                      <Ionicons name="home" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={styles.logoutBtn} 
-                    onPress={async () => {
-                      await supabase.auth.signOut();
-                      router.replace('/login');
-                    }}
-                  >
-                    <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
-                  </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.logoutBtn} 
+                      onPress={async () => {
+                        await supabase.auth.signOut();
+                        router.replace('/login');
+                      }}
+                      accessibilityLabel="Cerrar sesión"
+                    >
+                      <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
+
+              {!isDesktop && (
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                  <TouchableOpacity
+                    onPress={() => router.push('/admin')}
+                    style={{
+                      flex: 1,
+                      minWidth: 140,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      paddingVertical: 9,
+                      paddingHorizontal: 12,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Ionicons name="speedometer-outline" size={16} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Panel Admin</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => router.push('/admin/manage')}
+                    style={{
+                      flex: 1,
+                      minWidth: 140,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(59, 130, 246, 0.4)',
+                      paddingVertical: 9,
+                      paddingHorizontal: 12,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Ionicons name="file-tray-full-outline" size={16} color="#93C5FD" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Gestionar Solicitudes</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
           
@@ -4211,22 +4261,22 @@ const styles = StyleSheet.create({
   heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
   refreshBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
-  contentPadding: { paddingHorizontal: 26, paddingTop: 26 }, // Padding general incrementado
-  
-  filtersRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25, flexWrap: 'wrap', gap: 12 },
+  contentPadding: { paddingHorizontal: 14, paddingTop: 16 },
+
+  filtersRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 },
   rangeSelector: { flexDirection: 'row', backgroundColor: COLORS.white, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: COLORS.line },
-  rangeBtn: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
+  rangeBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   rangeBtnActive: { backgroundColor: COLORS.accent },
-  rangeText: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
+  rangeText: { fontSize: 11.5, fontWeight: '700', color: COLORS.muted },
   rangeTextActive: { color: COLORS.white },
   
-  downloadDocBtn: { height: 44, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primarySoft, paddingHorizontal: 18, borderRadius: 14, shadowOpacity: 0.1, shadowRadius: 5 },
-  downloadDocText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
+  downloadDocBtn: { height: 42, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primarySoft, paddingHorizontal: 16, borderRadius: 14, shadowOpacity: 0.1, shadowRadius: 5 },
+  downloadDocText: { color: COLORS.white, fontSize: 12.5, fontWeight: '800' },
 
-  monthSelectorCard: { backgroundColor: COLORS.white, borderRadius: 22, padding: 18, borderWidth: 1, borderColor: COLORS.line, marginBottom: 22 },
-  monthSelectorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 14, marginBottom: 14, flexWrap: 'wrap' },
+  monthSelectorCard: { backgroundColor: COLORS.white, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: COLORS.line, marginBottom: 20 },
+  monthSelectorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' },
   monthSelectorKicker: { fontSize: 10, fontWeight: '900', color: COLORS.accent, letterSpacing: 1.5 },
-  monthSelectorTitle: { fontSize: 18, fontWeight: '900', color: COLORS.primary, marginTop: 2 },
+  monthSelectorTitle: { fontSize: 17, fontWeight: '900', color: COLORS.primary, marginTop: 2 },
   monthOptionsRow: { gap: 10, paddingRight: 8 },
   monthOptionBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line },
   monthOptionBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
@@ -4237,8 +4287,8 @@ const styles = StyleSheet.create({
   dbBadgeText: { fontSize: 11, fontWeight: '900', color: COLORS.accent },
   dbBadgeTextError: { color: COLORS.danger },
 
-  mobileTabsContainer: { paddingBottom: 18, gap: 12 },
-  mobTabBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 18, borderRadius: 14, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line },
+  mobileTabsContainer: { paddingBottom: 16, gap: 10 },
+  mobTabBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 42, paddingHorizontal: 16, borderRadius: 14, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.line },
   mobTabBtnActive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   mobTabLabel: { fontSize: 12, fontWeight: '700', color: COLORS.text },
   mobTabLabelActive: { color: COLORS.white, fontWeight: '900' },
@@ -4246,13 +4296,13 @@ const styles = StyleSheet.create({
   loadingContainer: { minHeight: 300, justifyContent: 'center', alignItems: 'center', gap: 12 },
   loadingText: { color: COLORS.muted, fontSize: 13, fontWeight: '600' },
 
-  kpiRow: { flexDirection: 'row', gap: 14, flexWrap: 'wrap' },
+  kpiRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   kpiCard: { 
     flex: 1, 
-    minWidth: 155, 
+    minWidth: 140, 
     backgroundColor: COLORS.white, 
-    borderRadius: 22, 
-    padding: 20, 
+    borderRadius: 20, 
+    padding: 16, 
     borderWidth: 1, 
     borderColor: COLORS.line,
     ...Platform.select({
@@ -4261,13 +4311,13 @@ const styles = StyleSheet.create({
       web: { boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }
     })
   },
-  kpiIcon: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  trendBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  kpiIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  trendBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   trendText: { fontSize: 10, fontWeight: '800' },
-  kpiValue: { fontSize: 28, fontWeight: '900', color: COLORS.primary, marginTop: 14 },
-  kpiLabel: { fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 3 },
+  kpiValue: { fontSize: 24, fontWeight: '900', color: COLORS.primary, marginTop: 10 },
+  kpiLabel: { fontSize: 12, fontWeight: '700', color: COLORS.muted, marginTop: 3 },
 
-  card: { backgroundColor: COLORS.white, borderRadius: 28, padding: 26, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' }, // Padding de tarjeta incrementado a 26px
+  card: { backgroundColor: COLORS.white, borderRadius: 22, padding: 18, borderWidth: 1, borderColor: COLORS.line, overflow: 'hidden' }, // Padding de tarjeta incrementado a 26px
   cardTitle: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
   cardSubtitle: { fontSize: 12, color: COLORS.muted, marginTop: 2, fontWeight: '500' },
 
@@ -4383,9 +4433,9 @@ const styles = StyleSheet.create({
     marginTop: 2
   },
 
-  modalBlurContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalPanel: { backgroundColor: COLORS.white, borderRadius: 28, width: '95%', maxWidth: 900, height: '90%', padding: 25, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10, overflow: 'hidden' },
-  modalPanelExpanded: { width: '98%', maxWidth: 1400, height: '98%', borderRadius: 16, padding: 25 },
+  modalBlurContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 8 },
+  modalPanel: { backgroundColor: COLORS.white, borderRadius: 22, width: '98%', maxWidth: 900, height: '94%', padding: 16, shadowOpacity: 0.25, shadowRadius: 20, elevation: 10, overflow: 'hidden' },
+  modalPanelExpanded: { width: '99%', maxWidth: 1400, height: '98%', borderRadius: 16, padding: 18 },
   expandModalBtn: { padding: 6, borderRadius: 8, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line, marginRight: 4 },
   modalTabSelector: { flexDirection: 'row', gap: 8, paddingBottom: 6 },
   modalTabBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.line },

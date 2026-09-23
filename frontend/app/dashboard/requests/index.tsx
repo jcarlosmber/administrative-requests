@@ -8,6 +8,7 @@ import {
   TextInput, 
   ScrollView, 
   Dimensions, 
+  useWindowDimensions,
   Animated,
   Platform,
   Modal,
@@ -22,9 +23,6 @@ import { BlurView } from 'expo-blur';
 import { requestService, AdministrativeRequest } from '../../../lib/requestService';
 import { settingsService } from '../../../lib/settingsService';
 import { supabase } from '../../../lib/supabase';
-
-const { width } = Dimensions.get('window');
-const isDesktop = width >= 1024;
 
 const COLORS = {
   primary: '#A9301E',
@@ -53,6 +51,9 @@ const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas
 const STATUSES = ['Todos', 'Pendiente', 'En proceso', 'Aprobada', 'Resuelta', 'Rechazada'];
 
 export default function RequestsScreen() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const isSmallScreen = width < 500;
   const params = useLocalSearchParams();
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,9 +156,9 @@ export default function RequestsScreen() {
           <FlatList
             ListHeaderComponent={
               <View style={styles.headerContainer}>
-                <HeroSection />
-                <View style={styles.contentPadding}>
-                  <KPISection stats={stats} />
+                <HeroSection isDesktop={isDesktop} isSmallScreen={isSmallScreen} />
+                <View style={[styles.contentPadding, isSmallScreen && { paddingHorizontal: 12 }]}>
+                  <KPISection stats={stats} isSmallScreen={isSmallScreen} />
                   <SearchBar query={searchQuery} setQuery={setSearchQuery} />
                   
                   <FilterRow 
@@ -271,35 +272,47 @@ function Sidebar() {
   );
 }
 
-function HeroSection() {
+function HeroSection({ isDesktop, isSmallScreen }: { isDesktop?: boolean; isSmallScreen?: boolean }) {
+  const router = useRouter();
   return (
-    <View style={styles.hero}>
+    <View style={[styles.hero, isSmallScreen && { height: 'auto', minHeight: 140, paddingBottom: 15 }]}>
       <LinearGradient 
         colors={[COLORS.primaryDark, '#0F172A']} 
         style={StyleSheet.absoluteFill} 
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={{ x: 0, y: 0 }} 
+        end={{ x: 1, y: 1 }} 
       />
-      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
-        <Text style={styles.heroKicker}>PANEL DE CONTROL</Text>
-        <Text style={styles.heroTitle}>Mis Solicitudes</Text>
-        <Text style={styles.heroSub}>Administre y rastree sus requerimientos</Text>
+      <View style={[styles.heroInner, !isDesktop && { paddingTop: 20 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <Text style={styles.heroKicker}>PANEL DE CONTROL</Text>
+          {!isDesktop && (
+            <TouchableOpacity 
+              onPress={() => router.push('/dashboard')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}
+            >
+              <Ionicons name="arrow-back" size={14} color="#FFF" />
+              <Text style={{ fontSize: 11, color: '#FFF', fontWeight: '800' }}>Inicio</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <Text style={[styles.heroTitle, isSmallScreen && { fontSize: 24 }]}>Mis Solicitudes</Text>
+        <Text style={[styles.heroSub, isSmallScreen && { fontSize: 13 }]}>Administre y rastree sus requerimientos</Text>
       </View>
     </View>
   );
 }
 
-function KPISection({ stats }: { stats: { pendientes: number, aprobadas: number, enCurso: number } }) {
+function KPISection({ stats, isSmallScreen }: { stats: { pendientes: number, aprobadas: number, enCurso: number }; isSmallScreen?: boolean }) {
   return (
-    <View style={styles.kpiRow}>
-      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" bg="#78350f" index={0} />
-      <KPICard label="Aprobadas" value={stats.aprobadas.toString()} color={COLORS.success} icon="checkmark-circle" bg="#064e3b" index={1} />
-      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.blue} icon="sync" bg="#1e3a8a" index={2} />
+    <View style={[styles.kpiRow, isSmallScreen && { gap: 8 }]}>
+      <KPICard label="Pendientes" value={stats.pendientes.toString()} color={COLORS.warning} icon="time" bg="#78350f" index={0} isSmallScreen={isSmallScreen} />
+      <KPICard label="Aprobadas" value={stats.aprobadas.toString()} color={COLORS.success} icon="checkmark-circle" bg="#064e3b" index={1} isSmallScreen={isSmallScreen} />
+      <KPICard label="En Curso" value={stats.enCurso.toString()} color={COLORS.blue} icon="sync" bg="#1e3a8a" index={2} isSmallScreen={isSmallScreen} />
     </View>
   );
 }
 
-function KPICard({ label, value, color, icon, bg, index = 0 }: any) {
+function KPICard({ label, value, color, icon, bg, index = 0, isSmallScreen }: any) {
   const hoverAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -351,20 +364,21 @@ function KPICard({ label, value, color, icon, bg, index = 0 }: any) {
           transform: [{ translateY }, { scale }],
           borderTopWidth: 4,
           borderTopColor: color,
+          padding: isSmallScreen ? 12 : 20,
         }
       ]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
           <View>
-            <Text style={styles.kpiValue}>{value}</Text>
-            <Text style={styles.kpiLabel}>{label}</Text>
+            <Text style={[styles.kpiValue, isSmallScreen && { fontSize: 20 }]}>{value}</Text>
+            <Text style={[styles.kpiLabel, isSmallScreen && { fontSize: 11 }]}>{label}</Text>
           </View>
-          <View style={[styles.kpiIcon, { backgroundColor: `${color}25`, width: 50, height: 50, borderRadius: 25 }]}>
-            <Ionicons name={icon} size={24} color={color} />
+          <View style={[styles.kpiIcon, { backgroundColor: `${color}25`, width: isSmallScreen ? 34 : 50, height: isSmallScreen ? 34 : 50, borderRadius: isSmallScreen ? 17 : 25 }]}>
+            <Ionicons name={icon} size={isSmallScreen ? 18 : 24} color={color} />
           </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, width: '100%', gap: 4 }}>
-          <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.5)" />
-          <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: '600' }}>Actualizado ahora</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: isSmallScreen ? 6 : 12, width: '100%', gap: 4 }}>
+          <Ionicons name="time-outline" size={10} color="rgba(255,255,255,0.5)" />
+          <Text style={{ fontSize: isSmallScreen ? 9 : 11, color: "rgba(255,255,255,0.6)", fontWeight: '600' }}>Actualizado</Text>
         </View>
       </Animated.View>
     </Pressable>
@@ -483,7 +497,7 @@ const styles = StyleSheet.create({
   heroTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', marginTop: 5 },
   heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
 
-  contentPadding: { paddingHorizontal: 25 },
+  contentPadding: { paddingHorizontal: 14 },
   kpiRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
   kpiCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.line },
   kpiIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
@@ -506,7 +520,7 @@ const styles = StyleSheet.create({
   resultsTitle: { fontSize: 15, fontWeight: '800', color: COLORS.muted },
 
   listContent: { paddingBottom: 100 },
-  card: { backgroundColor: COLORS.white, borderRadius: 24, flexDirection: 'row', overflow: 'hidden', marginBottom: 16, marginHorizontal: 25, borderWidth: 1, borderColor: COLORS.line, 
+  card: { backgroundColor: COLORS.white, borderRadius: 24, flexDirection: 'row', overflow: 'hidden', marginBottom: 16, marginHorizontal: 12, borderWidth: 1, borderColor: COLORS.line, 
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
       android: { elevation: 3 },

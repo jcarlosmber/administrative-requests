@@ -212,10 +212,14 @@ export default function ManageRequests() {
           phone: selectedDriver.phone || ''
         }
       };
-      await requestService.update(driverModal.item.id, {
-        status: 'resuelto',
-        metadata: updatedMetadata
-      });
+      await requestService.updateStatus(
+        driverModal.item.id,
+        'resuelto',
+        undefined,
+        undefined,
+        undefined,
+        updatedMetadata
+      );
       await fetchRequests();
       setDriverModal({ visible: false, item: null });
       setSelectedDriverId('');
@@ -2214,83 +2218,133 @@ function HeroSection({ isDesktop, totalRequests, pendingCount, inProgressCount, 
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
+      <View style={[styles.heroInner, { paddingHorizontal: isDesktop ? 25 : 16, paddingTop: !isDesktop ? 30 : 0 }]}>
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.heroKicker}>SASGE • ADMINISTRACIÓN CENTRAL</Text>
-            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Gestión de Solicitudes</Text>
+            <Text style={[styles.heroTitle, { fontSize: isDesktop ? 32 : 24 }]} numberOfLines={1} adjustsFontSizeToFit>Gestión de Solicitudes</Text>
             <Text style={styles.heroSub} numberOfLines={2}>
               Supervisión, asignación de despachos y auditoría de requerimientos
             </Text>
           </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
-            {pendingCount > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'stretch', justifyContent: isDesktop ? 'flex-end' : 'space-between', flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {pendingCount > 0 && (
+                <TouchableOpacity 
+                  onPress={() => onSelectStatus && onSelectStatus('Pendiente')}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: 'rgba(245, 158, 11, 0.16)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: 'rgba(245, 158, 11, 0.35)',
+                  }}
+                >
+                  <Ionicons name="alert-circle" size={16} color="#F59E0B" />
+                  <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>
+                    {pendingCount} por atender
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {inProgressCount > 0 && (
+                <TouchableOpacity 
+                  onPress={() => onSelectStatus && onSelectStatus('En Progreso')}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: 'rgba(59, 130, 246, 0.16)',
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: 'rgba(59, 130, 246, 0.35)',
+                  }}
+                >
+                  <Ionicons name="sync" size={16} color="#60A5FA" />
+                  <Text style={{ color: '#93C5FD', fontSize: 12, fontWeight: '800' }}>
+                    {inProgressCount} en progreso
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <TouchableOpacity 
-                onPress={() => onSelectStatus && onSelectStatus('Pendiente')}
-                activeOpacity={0.8}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: 'rgba(245, 158, 11, 0.16)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: 'rgba(245, 158, 11, 0.35)',
-                }}
+                style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+                onPress={() => router.replace('/dashboard')}
+                accessibilityLabel="Portal Funcionario"
               >
-                <Ionicons name="alert-circle" size={16} color="#F59E0B" />
-                <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>
-                  {pendingCount} por atender
-                </Text>
+                <Ionicons name="home" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-            )}
 
-            {inProgressCount > 0 && (
               <TouchableOpacity 
-                onPress={() => onSelectStatus && onSelectStatus('En Progreso')}
-                activeOpacity={0.8}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: 'rgba(59, 130, 246, 0.16)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: 'rgba(59, 130, 246, 0.35)',
+                style={styles.logoutBtn} 
+                onPress={async () => {
+                  await supabase.auth.signOut();
+                  router.replace('/login');
                 }}
+                accessibilityLabel="Cerrar sesión"
               >
-                <Ionicons name="sync" size={16} color="#60A5FA" />
-                <Text style={{ color: '#93C5FD', fontSize: 12, fontWeight: '800' }}>
-                  {inProgressCount} en progreso
-                </Text>
+                <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
               </TouchableOpacity>
-            )}
-
-            <TouchableOpacity 
-              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
-              onPress={() => router.replace('/dashboard')}
-              accessibilityLabel="Portal Funcionario"
-            >
-              <Ionicons name="home" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.logoutBtn} 
-              onPress={async () => {
-                await supabase.auth.signOut();
-                router.replace('/login');
-              }}
-              accessibilityLabel="Cerrar sesión"
-            >
-              <Ionicons name="log-out-outline" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
+
+        {!isDesktop && (
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+            <TouchableOpacity
+              onPress={() => router.push('/admin')}
+              style={{
+                flex: 1,
+                minWidth: 140,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: 12,
+              }}
+            >
+              <Ionicons name="speedometer-outline" size={16} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Panel Admin</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/reports')}
+              style={{
+                flex: 1,
+                minWidth: 140,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: 12,
+              }}
+            >
+              <Ionicons name="bar-chart-outline" size={16} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Reportes</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -2654,6 +2708,8 @@ function QuickFiltersToolbar({
   setViewMode,
 }: any) {
   const [searchFocused, setSearchFocused] = useState(false);
+  const { width } = useWindowDimensions();
+  const isSmallScreen = width < 640;
 
   // Paleta para prioridades
   const getPriorityStyle = (p: string, active: boolean, hovered: boolean) => {
@@ -2678,36 +2734,36 @@ function QuickFiltersToolbar({
       borderRadius: 18,
       borderWidth: 1,
       borderColor: '#E2E8F0',
-      padding: 14,
-      gap: 14,
+      padding: 12,
+      gap: 12,
       marginBottom: 16,
       ...(Platform.OS === 'web' ? { boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)' } : {}),
     }}>
       {/* Fila 1: Buscador + Botón CSV */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flexDirection: isSmallScreen ? 'column' : 'row', alignItems: isSmallScreen ? 'stretch' : 'center', gap: 10 }}>
         <View style={{
           flex: 1,
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: '#F8FAFC',
           borderRadius: 14,
-          paddingHorizontal: 14,
-          height: 46,
+          paddingHorizontal: 12,
+          height: 44,
           borderWidth: 1.5,
           borderColor: searchFocused ? '#3B82F6' : '#E2E8F0',
           ...(Platform.OS === 'web' && searchFocused ? { boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.15)' } : {}),
         }}>
-          <Ionicons name="search" size={19} color={searchFocused ? '#3B82F6' : '#64748B'} />
+          <Ionicons name="search" size={18} color={searchFocused ? '#3B82F6' : '#64748B'} />
           <TextInput
             style={{
               flex: 1,
               paddingHorizontal: 10,
-              fontSize: 14,
+              fontSize: 13.5,
               color: '#0F172A',
               fontWeight: '600',
               ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {} as any),
             }}
-            placeholder="Buscar por radicado, solicitante, placa, visitante, detalle..."
+            placeholder="Buscar por radicado, solicitante, placa..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             onFocus={() => setSearchFocused(true)}
@@ -2727,10 +2783,11 @@ function QuickFiltersToolbar({
             {
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: 8,
               backgroundColor: hovered ? '#047857' : '#059669',
-              paddingHorizontal: 18,
-              height: 46,
+              paddingHorizontal: 16,
+              height: 44,
               borderRadius: 14,
             } as any,
             Platform.OS === 'web' ? { cursor: 'pointer' } : {},
@@ -2738,7 +2795,7 @@ function QuickFiltersToolbar({
           ]}
         >
           <Ionicons name="download-outline" size={18} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '800' }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
             Exportar CSV
           </Text>
         </Pressable>
@@ -4273,12 +4330,14 @@ function RequestListItem({
         {
           backgroundColor: serviceTheme.bg,
           borderWidth: 0,
+          marginHorizontal: isDesktop ? 25 : 10,
+          minWidth: isDesktop ? 455 : 0,
         },
         numCols > 1 && { 
           flex: 1, 
           marginHorizontal: 0, 
           maxWidth: maxCardWidth,
-          minWidth: 455,
+          minWidth: 380,
         }, 
         Platform.OS === 'web' ? ({ 
           boxShadow: `0 4px 18px ${serviceTheme.shadow}`,
@@ -4533,7 +4592,7 @@ const styles = StyleSheet.create({
   heroSub: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 5 },
   logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
-  contentPadding: { paddingHorizontal: 25 },
+  contentPadding: { paddingHorizontal: 12 },
   kpiRow: { flexDirection: 'row', gap: 12, marginTop: 20 },
   kpiCard: { flex: 1, backgroundColor: COLORS.primary, borderRadius: 20, padding: 20, alignItems: 'flex-start', borderWidth: 1, borderColor: COLORS.primarySoft },
   kpiIcon: { justifyContent: 'center', alignItems: 'center' },
@@ -4560,9 +4619,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', 
     borderRadius: 16, 
     marginBottom: 14, 
-    marginHorizontal: 25, 
+    marginHorizontal: 10, 
     borderWidth: 0, 
-    minWidth: 455,
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 10 },
@@ -4628,10 +4686,10 @@ const styles = StyleSheet.create({
   statusPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, gap: 6 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 0, paddingTop: 12, marginTop: 5 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 0, paddingTop: 12, marginTop: 5, flexWrap: 'wrap', gap: 8 },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 12.5, color: '#475569', fontWeight: '700' },
-  actionButtons: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  actionButtons: { flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' },
   actionBtn: { height: 34, paddingHorizontal: 14, borderRadius: 9999, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 6, borderWidth: 0 },
   actionBtnText: { fontSize: 11.5, fontWeight: '800', color: COLORS.white, textTransform: 'uppercase', letterSpacing: 0.5 },
   rejectBtn: { backgroundColor: COLORS.danger, borderColor: COLORS.danger },

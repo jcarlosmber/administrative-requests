@@ -844,8 +844,8 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
   }
 });
 
-// Actualizar una solicitud (los usuarios solo pueden actualizar si está pendiente, admin puede cambiar todo incl. estado)
-app.put('/api/requests/:id', authenticateToken, async (req, res) => {
+// Actualizar una solicitud (soporta PUT y POST para evitar bloqueos por WAF o proxies institucionales)
+const handleUpdateRequest = async (req, res) => {
   const { id } = req.params;
   const { title, description, priority, status, admin_notes, metadata } = req.body;
 
@@ -1040,7 +1040,11 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Error al actualizar la solicitud.' });
   }
-});
+};
+
+app.put('/api/requests/:id', authenticateToken, handleUpdateRequest);
+app.post('/api/requests/:id/update', authenticateToken, handleUpdateRequest);
+app.post('/api/requests/:id', authenticateToken, handleUpdateRequest);
 
 app.post('/api/requests/:id/comment', authenticateToken, async (req, res) => {
   const { id } = req.params;
@@ -1081,7 +1085,7 @@ app.post('/api/requests/:id/comment', authenticateToken, async (req, res) => {
 // Actualizar estado de una solicitud (Admin only) evadiendo falsos positivos de WAF
 app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { status, finalImage, reason } = req.body;
+  const { status, finalImage, reason, metadata } = req.body;
 
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Solo administradores pueden cambiar el estado.' });
@@ -1093,7 +1097,15 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Solicitud no encontrada.' });
     }
 
-    const currentMetadata = checkResult.rows[0].metadata || {};
+    let currentMetadata = checkResult.rows[0].metadata || {};
+    if (typeof currentMetadata === 'string') {
+      try { currentMetadata = JSON.parse(currentMetadata); } catch(e) {}
+    }
+
+    // Integrar metadatos adicionales si vienen en el payload (ej. asignación de conductor)
+    if (metadata && typeof metadata === 'object') {
+      currentMetadata = { ...currentMetadata, ...metadata };
+    }
     
     const statusDetails = {
       pendiente: { title: 'Solicitud Pendiente', desc: 'Requerimiento restablecido a estado pendiente.' },

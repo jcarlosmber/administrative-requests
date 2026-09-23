@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,9 +11,6 @@ import { GuideModalButton } from '../../components/GuideModalButton';
 import { TimePickerModal } from '../../components/TimePickerModal';
 import { requestService } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
-
-const { width } = Dimensions.get('window');
-const isDesktop = width >= 1024;
 
 const COLORS = {
   primary: '#0077B6', // Deep Ocean Blue
@@ -32,6 +29,8 @@ const COLORS = {
 
 export default function TransportRequestScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   
   // Form State
   const [dependency, setDependency] = useState('');
@@ -154,7 +153,7 @@ export default function TransportRequestScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 20, 
+              padding: isDesktop ? 40 : 14, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -281,8 +280,8 @@ export default function TransportRequestScreen() {
                     placeholder="Dirección o punto de llegada" 
                   />
                   
-                  <View style={{ flexDirection: 'row', gap: 15 }}>
-                    <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <View style={styles.field}>
                         <Text style={styles.label}>Hora de Recogida</Text>
                         <TouchableOpacity 
@@ -300,7 +299,7 @@ export default function TransportRequestScreen() {
                         </TouchableOpacity>
                       </View>
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <View style={styles.field}>
                         <Text style={styles.label}>¿Requiere Regreso?</Text>
                         <View style={[styles.inputWrap, { justifyContent: 'space-between' }]}>
@@ -452,12 +451,19 @@ function Sidebar() {
 }
 
 function MobileHeader() {
+  const router = useRouter();
   return (
-    <View style={styles.mobHeader}>
-      <Ionicons name="car-sport" size={32} color={COLORS.primary} />
-      <View>
-        <Text style={styles.mobTitle}>Secretaría Jurídica</Text>
-        <Text style={styles.mobSub}>Solicitud de Transporte</Text>
+    <View style={[styles.mobHeader, { paddingRight: 50, flexDirection: 'row', alignItems: 'center' }]}>
+      <TouchableOpacity 
+        onPress={() => router.push('/dashboard')}
+        style={{ marginRight: 10, padding: 8, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: COLORS.line }}
+      >
+        <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+      </TouchableOpacity>
+      <Ionicons name="car-sport" size={28} color={COLORS.primary} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={styles.mobTitle} numberOfLines={1}>Secretaría Jurídica</Text>
+        <Text style={styles.mobSub} numberOfLines={1}>Solicitud de Transporte</Text>
       </View>
     </View>
   );

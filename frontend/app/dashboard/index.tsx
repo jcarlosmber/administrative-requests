@@ -114,11 +114,12 @@ export default function DashboardScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
+  const isMobile = width < 768;
 
   const getCardWidth = () => {
     if (isDesktop) return (width - 380 - 70 - 40) / 3; // Sidebar (380) + padding (70) + gaps (40)
     if (isTablet) return (width - 70 - 20) / 2;       // Padding (70) + gap (20)
-    return width - 70;                                // Solo restamos el padding (70)
+    return width - 32;                                // Padding horizontal móvil (16*2)
   };
 
   const cardWidth = getCardWidth();
@@ -1032,11 +1033,11 @@ function HeroSection({ isDesktop, user, stats }: any) {
           <View style={[styles.heroTop, { flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start' }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.heroKicker}>SECRETARÍA JURÍDICA DISTRITAL</Text>
-              <Text style={styles.heroTitle}>Bienvenido, {user?.name || '...'}</Text>
+              <Text style={[styles.heroTitle, { fontSize: isDesktop ? 26 : 21 }]} numberOfLines={1} adjustsFontSizeToFit>Bienvenido, {user?.name || '...'}</Text>
               <Text style={styles.heroSub}>¿Qué gestión administrativa realizaremos hoy?</Text>
             </View>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, alignSelf: isDesktop ? 'auto' : 'stretch', justifyContent: isDesktop ? 'flex-end' : 'space-between', flexWrap: 'wrap' }}>
               <View style={styles.statsPanel}>
                 <View style={styles.statItem}>
                   <Text style={styles.statVal}>{stats.total}</Text>
@@ -1049,24 +1050,28 @@ function HeroSection({ isDesktop, user, stats }: any) {
                 </View>
               </View>
 
-              {user?.role === 'admin' && (
-                <TouchableOpacity 
-                  style={[styles.logoutBtn, { backgroundColor: '#FACC15', borderColor: '#F59E0B' }]} 
-                  onPress={() => router.push('/admin')}
-                >
-                  <Ionicons name="settings" size={22} color="#0F172A" />
-                </TouchableOpacity>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {user?.role === 'admin' && (
+                  <TouchableOpacity 
+                    style={[styles.logoutBtn, { backgroundColor: '#FACC15', borderColor: '#F59E0B' }]} 
+                    onPress={() => router.push('/admin')}
+                    accessibilityLabel="Panel Admin"
+                  >
+                    <Ionicons name="settings" size={20} color="#0F172A" />
+                  </TouchableOpacity>
+                )}
 
-              <TouchableOpacity 
-                style={styles.logoutBtn} 
-                onPress={async () => {
-                  await supabase.auth.signOut();
-                  router.replace('/login');
-                }}
-              >
-                <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.logoutBtn} 
+                  onPress={async () => {
+                    await supabase.auth.signOut();
+                    router.replace('/login');
+                  }}
+                  accessibilityLabel="Cerrar sesión"
+                >
+                  <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </SafeAreaView>
@@ -1242,7 +1247,7 @@ function ServiceCard({ item, width, onPress, index = 0 }: any) {
       onHoverOut={handleOut}
     >
       <Animated.View style={{ transform: [{ scale }, { translateY: slideAnim }], opacity: fadeAnim }}>
-        <View style={[styles.serviceCardLight, { width: width }]}>
+        <View style={[styles.serviceCardLight, { width: width, maxWidth: '100%' }]}>
           <LinearGradient
             colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
             locations={[0, 0.7, 1]}
@@ -1330,11 +1335,11 @@ const styles = StyleSheet.create({
   hero: { minHeight: 160, width: '100%', paddingVertical: 15 },
   heroDesktop: { height: 160, paddingVertical: 0, borderBottomRightRadius: 40, overflow: 'hidden' },
   heroBg: { flex: 1 },
-  heroSafe: { flex: 1, paddingHorizontal: 35, justifyContent: 'center' },
+  heroSafe: { flex: 1, paddingHorizontal: 16, justifyContent: 'center' },
   heroKicker: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '900', letterSpacing: 2 },
-  heroTitle: { color: COLORS.white, fontSize: 28, fontWeight: '900', marginTop: 4 },
-  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4 },
-  heroTop: { justifyContent: 'space-between', gap: 20 },
+  heroTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', marginTop: 4 },
+  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 13, marginTop: 4 },
+  heroTop: { justifyContent: 'space-between', gap: 16 },
   logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   statsPanel: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 18, padding: 12, gap: 15, alignItems: 'center' },
   statItem: { alignItems: 'center' },
@@ -1342,11 +1347,11 @@ const styles = StyleSheet.create({
   statLab: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '700' },
   statDiv: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
 
-  content: { paddingHorizontal: 35, paddingVertical: 25 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  content: { paddingHorizontal: 14, paddingVertical: 18 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 6 },
   sectionKicker: { color: COLORS.primary, fontWeight: '900', fontSize: 11, letterSpacing: 2 },
-  sectionTitle: { fontSize: 28, fontWeight: '900', color: COLORS.dark, marginTop: 4 },
-  viewAllText: { color: COLORS.primary, fontWeight: '800', fontSize: 14 },
+  sectionTitle: { fontSize: 22, fontWeight: '900', color: COLORS.dark, marginTop: 4 },
+  viewAllText: { color: COLORS.primary, fontWeight: '800', fontSize: 13 },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 },
   serviceCard: { height: 260, borderRadius: 32, padding: 24, backgroundColor: '#0F172A', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
@@ -1815,14 +1820,14 @@ const modalStyles = StyleSheet.create({
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: 12
   },
   container: {
-    width: '100%',
+    width: '96%',
     maxWidth: 550,
-    maxHeight: '85%',
+    maxHeight: '90%',
     backgroundColor: COLORS.white,
-    borderRadius: 28,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.line,

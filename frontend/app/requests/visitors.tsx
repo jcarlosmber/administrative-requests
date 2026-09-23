@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Dimensions, Modal, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,9 +11,6 @@ import { GuideModalButton } from '../../components/GuideModalButton';
 import { requestService } from '../../lib/requestService';
 import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
-
-const { width } = Dimensions.get('window');
-const isDesktop = width >= 1024;
 
 const COLORS = {
   primary: '#E63946',
@@ -45,6 +42,8 @@ interface Vehicle {
 export default function VisitorsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 1024;
   
   // Form State
   const [visitors, setVisitors] = useState<Visitor[]>([{ id: '1', name: '', document: '' }]);
@@ -267,7 +266,7 @@ export default function VisitorsScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 20, 
+              padding: isDesktop ? 40 : 14, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -453,8 +452,8 @@ export default function VisitorsScreen() {
                 </Card>
 
                 <Card title="Vigencia del Ingreso" icon="calendar">
-                  <View style={{ flexDirection: 'row', gap: 12 }}>
-                    <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={styles.label}>Desde (Fecha)</Text>
                       <TouchableOpacity 
                         style={styles.inputWrap} 
@@ -468,7 +467,7 @@ export default function VisitorsScreen() {
                         <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
                       </TouchableOpacity>
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={styles.label}>Hasta (Fecha)</Text>
                       <TouchableOpacity 
                         style={styles.inputWrap} 
@@ -599,12 +598,19 @@ function Sidebar() {
 }
 
 function MobileHeader() {
+  const router = useRouter();
   return (
-    <View style={styles.mobHeader}>
-      <Ionicons name="shield-checkmark" size={32} color={COLORS.primary} />
-      <View>
-        <Text style={styles.mobTitle}>Secretaría Jurídica</Text>
-        <Text style={styles.mobSub}>Control de Acceso</Text>
+    <View style={[styles.mobHeader, { paddingRight: 50, flexDirection: 'row', alignItems: 'center' }]}>
+      <TouchableOpacity 
+        onPress={() => router.push('/dashboard')}
+        style={{ marginRight: 10, padding: 8, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: COLORS.line }}
+      >
+        <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
+      </TouchableOpacity>
+      <Ionicons name="shield-checkmark" size={28} color={COLORS.primary} />
+      <View style={{ flex: 1, marginLeft: 10 }}>
+        <Text style={styles.mobTitle} numberOfLines={1}>Secretaría Jurídica</Text>
+        <Text style={styles.mobSub} numberOfLines={1}>Control de Acceso</Text>
       </View>
     </View>
   );

@@ -52,7 +52,7 @@ export default function AdminDashboardScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
 
-  const cardWidth = isDesktop ? (width - 450) / 3 : width - 40;
+  const cardWidth = isDesktop ? (width - 450) / 3 : (width < 600 ? width - 32 : (width - 60) / 2);
   const [requests, setRequests] = React.useState<AdministrativeRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -379,15 +379,15 @@ function HeroSection({ isDesktop, efficiency, urgencies }: any) {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={[styles.heroInner, !isDesktop && { paddingTop: 40 }]}>
+      <View style={[styles.heroInner, { paddingHorizontal: isDesktop ? 25 : 16, paddingTop: !isDesktop ? 30 : 0 }]}>
         <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 15 }}>
           <View style={{ flex: 1 }}>
             <Text style={styles.heroKicker}>SISTEMA DE ADMINISTRACIÓN</Text>
-            <Text style={styles.heroTitle} numberOfLines={1} adjustsFontSizeToFit>Control de Gestión</Text>
+            <Text style={[styles.heroTitle, { fontSize: isDesktop ? 32 : 24 }]} numberOfLines={1} adjustsFontSizeToFit>Control de Gestión</Text>
             <Text style={styles.heroSub} numberOfLines={2}>Supervisando la operación administrativa</Text>
           </View>
           
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'stretch', justifyContent: isDesktop ? 'flex-end' : 'space-between', flexWrap: 'wrap' }}>
             <View style={styles.statsPanel}>
               <View style={styles.statItem}>
                 <Text style={styles.statVal}>{efficiency}%</Text>
@@ -400,24 +400,74 @@ function HeroSection({ isDesktop, efficiency, urgencies }: any) {
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
-              onPress={() => router.replace('/dashboard')}
-            >
-              <Ionicons name="home" size={22} color={COLORS.white} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity 
+                style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+                onPress={() => router.replace('/dashboard')}
+                accessibilityLabel="Portal Funcionario"
+              >
+                <Ionicons name="home" size={20} color={COLORS.white} />
+              </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.logoutBtn} 
-              onPress={async () => {
-                await supabase.auth.signOut();
-                router.replace('/login');
-              }}
-            >
-              <Ionicons name="log-out-outline" size={22} color={COLORS.white} />
-            </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.logoutBtn} 
+                onPress={async () => {
+                  await supabase.auth.signOut();
+                  router.replace('/login');
+                }}
+                accessibilityLabel="Cerrar sesión"
+              >
+                <Ionicons name="log-out-outline" size={20} color={COLORS.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
+
+        {!isDesktop && (
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+            <TouchableOpacity
+              onPress={() => router.push('/admin/manage')}
+              style={{
+                flex: 1,
+                minWidth: 140,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                borderWidth: 1,
+                borderColor: 'rgba(59, 130, 246, 0.4)',
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: 12,
+              }}
+            >
+              <Ionicons name="file-tray-full-outline" size={16} color="#93C5FD" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Gestionar Solicitudes</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin/reports')}
+              style={{
+                flex: 1,
+                minWidth: 140,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: 12,
+              }}
+            >
+              <Ionicons name="bar-chart-outline" size={16} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Reportes & Analítica</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -627,41 +677,41 @@ const styles = StyleSheet.create({
   statLab: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '700' },
   statDiv: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.2)' },
 
-  content: { paddingHorizontal: 35, paddingVertical: 25 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 },
+  content: { paddingHorizontal: 16, paddingVertical: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, flexWrap: 'wrap', gap: 8 },
   sectionKicker: { color: COLORS.accent, fontWeight: '900', fontSize: 11, letterSpacing: 2 },
-  sectionTitle: { fontSize: 28, fontWeight: '900', color: COLORS.primary, marginTop: 4 },
+  sectionTitle: { fontSize: 24, fontWeight: '900', color: COLORS.primary, marginTop: 4 },
   viewAllText: { color: COLORS.accent, fontWeight: '800', fontSize: 14 },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 },
-  kpiCard: { height: 200, borderRadius: 32, padding: 24, backgroundColor: COLORS.white, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line,
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  kpiCard: { minHeight: 180, borderRadius: 24, padding: 20, backgroundColor: COLORS.white, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20 },
-      android: { elevation: 10 },
+      android: { elevation: 6 },
       web: { boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }
     })
   },
-  cardInfo: { flexDirection: 'row', gap: 18, alignItems: 'center', marginBottom: 15 },
-  cardIconCircle: { width: 52, height: 52, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  statValueText: { fontSize: 28, fontWeight: '900', color: COLORS.primary },
-  cardTitleText: { fontSize: 14, fontWeight: '800', color: COLORS.muted, marginTop: -2 },
-  cardDescText: { fontSize: 14, color: COLORS.text, lineHeight: 20, opacity: 0.8 },
+  cardInfo: { flexDirection: 'row', gap: 14, alignItems: 'center', marginBottom: 12 },
+  cardIconCircle: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  statValueText: { fontSize: 26, fontWeight: '900', color: COLORS.primary },
+  cardTitleText: { fontSize: 13, fontWeight: '800', color: COLORS.muted, marginTop: -2 },
+  cardDescText: { fontSize: 13, color: COLORS.text, lineHeight: 18, opacity: 0.8 },
   cardBottom: { marginTop: 'auto' },
   trendRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   trendText: { fontSize: 12, fontWeight: '800' },
 
-  activityContainer: { gap: 12 },
-  activityRow: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
-  activityGlass: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 15 },
+  activityContainer: { gap: 10 },
+  activityRow: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)' },
+  activityGlass: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   activityDot: { width: 8, height: 8, borderRadius: 4 },
   activityBody: { flex: 1 },
-  activityUser: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
-  activityType: { fontSize: 13, color: COLORS.muted, marginTop: 2 },
-  statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1.5, backgroundColor: 'rgba(255,255,255,0.8)' },
-  statusPillText: { fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  activityUser: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
+  activityType: { fontSize: 12, color: COLORS.muted, marginTop: 2 },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1.5, backgroundColor: 'rgba(255,255,255,0.8)' },
+  statusPillText: { fontSize: 10.5, fontWeight: '900', textTransform: 'uppercase' },
 
-  reportsBanner: { marginTop: 30, borderRadius: 28, padding: 25, flexDirection: 'row', gap: 20, alignItems: 'center' },
-  bannerIconBox: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-  bannerTitle: { color: COLORS.white, fontSize: 18, fontWeight: '900' },
-  bannerText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, marginTop: 4, lineHeight: 20 }
+  reportsBanner: { marginTop: 24, borderRadius: 22, padding: 18, flexDirection: 'row', gap: 14, alignItems: 'center' },
+  bannerIconBox: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  bannerTitle: { color: COLORS.white, fontSize: 17, fontWeight: '900' },
+  bannerText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 4, lineHeight: 18 }
 });
