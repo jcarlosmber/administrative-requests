@@ -877,13 +877,21 @@ function getMaintenanceEmailContent(request, isUserRecipient, isUpdate, status, 
 
   const { imagesHtml, emailAttachments } = processEmailAttachments(request.attachments, meta.finalImage);
 
-  // CASO: DESTINATARIO ADMINISTRADOR / EQUIPO TÉCNICO
+  // CASO: DESTINATARIO ADMINISTRADOR / SECRETARÍA GENERAL
   if (!isUserRecipient) {
-    const subject = `Reporte de mantenimiento locativo – ${element} – ${location}`;
+    const isProgress = status === 'en_progreso' || isUpdate;
+    const subject = isProgress
+      ? `Solicitud de atención de mantenimiento locativo – ${element} – ${location}`
+      : `Reporte de mantenimiento locativo – ${element} – ${location}`;
+    
+    const introParagraph = isProgress
+      ? 'Desde la Secretaría Jurídica Distrital, nos permitimos remitir a la Secretaría General de la Alcaldía Mayor el siguiente requerimiento de mantenimiento locativo para su correspondiente diagnóstico y atención técnica:'
+      : 'Desde la Secretaría Jurídica Distrital, se ha registrado un nuevo reporte de mantenimiento locativo para su revisión y trámite:';
+
     const html = renderServiceEmailLayout({
       serviceCategory: 'maintenance',
       headerSubTitle: 'Mantenimientos Locativos',
-      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos reportar el siguiente requerimiento de mantenimiento locativo para su correspondiente diagnóstico y atención técnica:',
+      introParagraph,
       cardItems: [
         { label: 'Elemento / Asunto', value: element },
         { label: 'Ubicación Exacta', value: location },
@@ -894,9 +902,10 @@ function getMaintenanceEmailContent(request, isUserRecipient, isUpdate, status, 
       ],
       extraSectionsHtml: imagesHtml,
       closingParagraphs: [
-        'Agradecemos coordinar con el personal técnico o contratista la visita de inspección y labores de reparación correspondientes.'
+        'Agradecemos coordinar con el personal técnico o cuadrilla correspondiente la visita de inspección y labores de reparación.',
+        'Quedamos atentos a cualquier novedad o confirmación técnica del servicio.'
       ],
-      actionButton: {
+      actionButton: isProgress ? null : {
         text: 'Atender Mantenimiento en SASGE',
         url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
       }
@@ -1151,6 +1160,27 @@ async function sendRequestUpdatedNotification(user, request) {
     console.warn('⚠️ [EMAIL CANCELADO] Solicitante sin correo electrónico registrado.');
     return;
   }
+
+  // Si es reserva especial (Auditorio Huitaca) aprobada, SASGE no notifica al solicitante porque Secretaría General le responde directamente
+  if (request.category?.toLowerCase() === 'rooms') {
+    let meta = request.metadata || {};
+    if (typeof meta === 'string') {
+      try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+    }
+    const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+    const isSpecialRoom = meta.requires_secretaria_general === true ||
+                          meta.info === 'Especial' || 
+                          (parseInt(meta.capacity) || 0) >= 100 ||
+                          /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+    const cleanStatus = String(request.status || '').toLowerCase().trim();
+    const isApproved = ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'approved', 'resolved'].includes(cleanStatus);
+
+    if (isSpecialRoom && isApproved) {
+      console.log(`ℹ️ [OMITIDO] Solicitud #${request.id} de Auditorio Huitaca aprobada: La respuesta al solicitante la brinda directamente la Secretaría General.`);
+      return;
+    }
+  }
+
   const emailData = getServiceEmailData({ request, user, isUserRecipient: true, isUpdate: true, triggerStatus: request.status });
   logEmailDispatch('Notificación de Actualización al Solicitante (sendRequestUpdatedNotification)', user.email, emailData.subject, request.category, `Solicitud #${request.id} - Estado: ${request.status}`);
 

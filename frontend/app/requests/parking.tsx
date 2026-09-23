@@ -7,6 +7,7 @@ import { useRouter, Stack } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
+import { GuideModalButton } from '../../components/GuideModalButton';
 import { supabase } from '../../lib/supabase';
 import { requestService } from '../../lib/requestService';
 import { vehicleService } from '../../lib/vehicleService';
@@ -131,6 +132,12 @@ export default function ParkingRequestScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <Stack.Screen options={{ title: 'Cupo de Parqueadero' }} />
+      <GuideModalButton
+        imageSource={require('../../assets/guides/parqueadero.jpg')}
+        title="Guía - Asignación de Parqueadero"
+        subtitle="Flujograma y procedimiento de asignación y registro vehicular"
+        themeColor={COLORS.primary}
+      />
       <LinearGradient colors={['#F1F5F9', '#FFFFFF']} style={{ flex: 1 }}>
         <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
           

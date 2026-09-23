@@ -806,23 +806,13 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     }
 
     try {
-      let adminEmailsRes;
-      if (adminServiceKey === 'rooms_special') {
+      // En radicación, la alerta inicial va a los funcionarios del Proceso de gestión administrativa (manager)
+      let adminEmailsRes = await pool.query(
+        `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'manager'`
+      );
+      if (adminEmailsRes.rows.length === 0) {
         adminEmailsRes = await pool.query(
-          `SELECT email FROM service_emails 
-           WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')
-              OR LOWER(TRIM(service_type)) = 'manager'`
-        );
-        if (adminEmailsRes.rows.length === 0) {
-          adminEmailsRes = await pool.query(
-            `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'rooms'`
-          );
-        }
-      } else {
-        adminEmailsRes = await pool.query(
-          `SELECT email FROM service_emails 
-           WHERE LOWER(TRIM(service_type)) = LOWER(TRIM($1)) 
-              OR LOWER(TRIM(service_type)) IN ('manager', 'secretaria_general', 'secretariageneral', 'secretaria')`,
+          `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = LOWER(TRIM($1))`,
           [adminServiceKey || '']
         );
       }
@@ -845,31 +835,6 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       }
     } catch (adminNotifyErr) {
       console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
-    }
-
-    // 3. Notificación automática a la Oficina de TIC si es solicitud de sala con Proyector y/o Laptop
-    if (createdRequest.category?.toLowerCase() === 'rooms') {
-      const meta = createdRequest.metadata || {};
-      const hasTechEquipment = 
-        (meta.services && (meta.services.projector || meta.services.laptop || meta.services.tech_tic)) ||
-        (Array.isArray(meta.tech_requirements) && meta.tech_requirements.some(t => 
-          /proyector|videobeam|laptop|computador|equipos tic/i.test(t)
-        )) ||
-        (meta.custom_tech_description && meta.custom_tech_description.trim().length > 0);
-
-      if (hasTechEquipment) {
-        try {
-          const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
-          const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-          const uniqueTic = [...new Set(ticEmails)];
-          console.log(`🖥️ [TIC NOTIFY] Encontrados ${uniqueTic.length} correos para TIC:`, uniqueTic);
-          if (uniqueTic.length > 0) {
-            await emailService.sendTicRoomNotification(uniqueTic, createdRequest, currentUserObj || { name: 'Funcionario' });
-          }
-        } catch (ticEmailErr) {
-          console.error('Error enviando notificación automática a TIC:', ticEmailErr);
-        }
-      }
     }
 
     res.status(201).json(createdRequest);
@@ -976,17 +941,33 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
       if (notifyAdmin) {
         try {
           let serviceEmailsRes;
-          if (serviceEmailCategory === 'rooms_special') {
+          if (serviceEmailCategory === 'visitors' && isStatusApprove) {
+            // Aprobación de visitantes: Destinatario ÚNICAMENTE Secretaría General
             serviceEmailsRes = await pool.query(
               `SELECT email FROM service_emails 
-               WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')
-                  OR LOWER(TRIM(service_type)) = 'manager'`
+               WHERE LOWER(TRIM(service_type)) IN ('visitors', 'secretaria_general', 'secretariageneral', 'secretaria')`
+            );
+          } else if (serviceEmailCategory === 'maintenance' && isStatusProgress) {
+            // Mantenimiento al pasar a progreso: Correo automático a la Secretaría General
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) = 'maintenance'`
+            );
+          } else if (serviceEmailCategory === 'rooms_special') {
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')`
             );
             if (serviceEmailsRes.rows.length === 0) {
               serviceEmailsRes = await pool.query(
                 `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'rooms'`
               );
             }
+          } else if (serviceEmailCategory === 'parking' && isStatusApprove) {
+            // Aprobación de parqueadero: Destinatario Portería Manzana Liévano / Parqueaderos
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'parking'`
+            );
           } else {
             serviceEmailsRes = await pool.query(
               `SELECT email FROM service_emails 
@@ -1014,6 +995,42 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a admins:', adminEmailErr);
+        }
+      }
+
+      // Notificar a Oficina de TIC SOLO después de aprobada la sala estándar si requiere equipos tecnológicos
+      if (updatedRequest.category?.toLowerCase() === 'rooms' && isStatusApprove) {
+        let meta = updatedRequest.metadata || {};
+        if (typeof meta === 'string') {
+          try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+        }
+        const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+        const isSpecialRoom = meta.requires_secretaria_general === true ||
+                              meta.info === 'Especial' || 
+                              (parseInt(meta.capacity) || 0) >= 100 ||
+                              /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+        if (!isSpecialRoom) {
+          const hasTechEquipment = 
+            (meta.services && (meta.services.projector || meta.services.laptop || meta.services.tech_tic)) ||
+            (Array.isArray(meta.tech_requirements) && meta.tech_requirements.some(t => 
+              /proyector|videobeam|laptop|computador|equipos tic/i.test(t)
+            )) ||
+            (meta.custom_tech_description && meta.custom_tech_description.trim().length > 0);
+
+          if (hasTechEquipment) {
+            try {
+              const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
+              const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+              const uniqueTic = [...new Set(ticEmails)];
+              if (uniqueTic.length > 0) {
+                const uRes = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+                await emailService.sendTicRoomNotification(uniqueTic, updatedRequest, uRes.rows[0] || { name: 'Funcionario' });
+              }
+            } catch (ticErr) {
+              console.error('Error enviando notificación a TIC al aprobar sala estándar:', ticErr);
+            }
+          }
         }
       }
     }
@@ -1130,9 +1147,9 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       const isStatusApprove = ['resuelto', 'aprobado', 'resuelta', 'aprobada', 'approved', 'resolved'].includes(cleanStatus);
       const isStatusProgress = ['en_progreso', 'en progreso', 'en curso', 'en_curso', 'in_progress'].includes(cleanStatus);
 
-      if (serviceEmailCategory === 'visitors' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
+      if (serviceEmailCategory === 'visitors' && isStatusApprove) notifyAdmin = true;
       if (serviceEmailCategory === 'parking' && isStatusApprove) notifyAdmin = true;
-      if (serviceEmailCategory === 'maintenance' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
+      if (serviceEmailCategory === 'maintenance' && isStatusProgress) notifyAdmin = true;
       if (serviceEmailCategory === 'transport' && (isStatusProgress || isStatusApprove)) notifyAdmin = true;
 
       if (serviceEmailCategory === 'rooms') {
@@ -1161,17 +1178,33 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       if (notifyAdmin) {
         try {
           let serviceEmailsRes;
-          if (serviceEmailCategory === 'rooms_special') {
+          if (serviceEmailCategory === 'visitors' && isStatusApprove) {
+            // Aprobación de visitantes: Destinatario ÚNICAMENTE Secretaría General
             serviceEmailsRes = await pool.query(
               `SELECT email FROM service_emails 
-               WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')
-                  OR LOWER(TRIM(service_type)) = 'manager'`
+               WHERE LOWER(TRIM(service_type)) IN ('visitors', 'secretaria_general', 'secretariageneral', 'secretaria')`
+            );
+          } else if (serviceEmailCategory === 'maintenance' && isStatusProgress) {
+            // Mantenimiento al pasar a progreso: Correo automático a la Secretaría General
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) = 'maintenance'`
+            );
+          } else if (serviceEmailCategory === 'rooms_special') {
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails 
+               WHERE LOWER(TRIM(service_type)) IN ('rooms_special', 'secretaria_general', 'secretariageneral', 'secretaria', 'auditorio')`
             );
             if (serviceEmailsRes.rows.length === 0) {
               serviceEmailsRes = await pool.query(
                 `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'rooms'`
               );
             }
+          } else if (serviceEmailCategory === 'parking' && isStatusApprove) {
+            // Aprobación de parqueadero: Destinatario Portería Manzana Liévano / Parqueaderos
+            serviceEmailsRes = await pool.query(
+              `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'parking'`
+            );
           } else {
             serviceEmailsRes = await pool.query(
               `SELECT email FROM service_emails 
@@ -1199,6 +1232,42 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a administradores en cambio de estado:', adminEmailErr);
+        }
+      }
+
+      // Notificar a Oficina de TIC SOLO después de aprobada la sala estándar si requiere equipos tecnológicos
+      if (updatedRequest.category?.toLowerCase() === 'rooms' && isStatusApprove) {
+        let meta = updatedRequest.metadata || {};
+        if (typeof meta === 'string') {
+          try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+        }
+        const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
+        const isSpecialRoom = meta.requires_secretaria_general === true ||
+                              meta.info === 'Especial' || 
+                              (parseInt(meta.capacity) || 0) >= 100 ||
+                              /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+        if (!isSpecialRoom) {
+          const hasTechEquipment = 
+            (meta.services && (meta.services.projector || meta.services.laptop || meta.services.tech_tic)) ||
+            (Array.isArray(meta.tech_requirements) && meta.tech_requirements.some(t => 
+              /proyector|videobeam|laptop|computador|equipos tic/i.test(t)
+            )) ||
+            (meta.custom_tech_description && meta.custom_tech_description.trim().length > 0);
+
+          if (hasTechEquipment) {
+            try {
+              const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
+              const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+              const uniqueTic = [...new Set(ticEmails)];
+              if (uniqueTic.length > 0) {
+                const uRes = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+                await emailService.sendTicRoomNotification(uniqueTic, updatedRequest, uRes.rows[0] || { name: 'Funcionario' });
+              }
+            } catch (ticErr) {
+              console.error('Error enviando notificación a TIC al aprobar sala estándar:', ticErr);
+            }
+          }
         }
       }
     }

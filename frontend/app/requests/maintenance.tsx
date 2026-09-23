@@ -8,7 +8,9 @@ import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
+import { GuideModalButton } from '../../components/GuideModalButton';
 import { requestService } from '../../lib/requestService';
+import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
@@ -143,12 +145,25 @@ export default function MaintenanceRequestScreen() {
       
       const { data: { user } } = await supabase.auth.getUser();
       
+      let adminEmails: string[] = [];
+      try {
+        const allServiceEmails = await settingsService.getServiceEmails();
+        adminEmails = allServiceEmails
+          .filter(e => e && e.service_type === 'manager' && e.email?.trim())
+          .map(e => e.email.trim());
+      } catch (e) {
+        console.warn('No se pudieron obtener correos locales para mantenimiento:', e);
+      }
+
+      console.log('📤 [FRONTEND SASGE] Radicando mantenimiento. Destinatarios Proceso de Gestión Administrativa:', adminEmails);
+
       await requestService.create({
         user_id: user?.id || null,
         title: title.trim(),
         description: description.trim(),
         category: 'maintenance',
         priority,
+        adminEmails,
         attachments: attachment ? [attachment.uri] : [],
         metadata: {
           location: location.trim(),
@@ -169,6 +184,12 @@ export default function MaintenanceRequestScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <Stack.Screen options={{ title: 'Mantenimientos Locativos' }} />
+      <GuideModalButton
+        imageSource={require('../../assets/guides/mantenimiento.jpg')}
+        title="Guía - Mantenimiento Locativo"
+        subtitle="Flujograma y procedimiento de atención a solicitudes locativas"
+        themeColor={COLORS.primary}
+      />
       <LinearGradient colors={['#F1F5F9', '#FFFFFF']} style={{ flex: 1 }}>
         <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
           

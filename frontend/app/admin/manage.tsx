@@ -1398,11 +1398,12 @@ export default function ManageRequests() {
         // Verificar si aplica notificación a Secretaría General / Equipo Gestor
         let secGenEmail: string | null = null;
         let secGenEmailList: string[] = [];
+        let serviceKey = confirmModal.category || '';
+
         if (
           confirmModal.category && 
           (confirmModal.newStatus === 'en_progreso' || confirmModal.newStatus === 'resuelto')
         ) {
-          let serviceKey = confirmModal.category;
           const meta = confirmModal.item?.metadata || {};
           const roomName = (meta.room && typeof meta.room === 'object' ? meta.room.name : meta.room) || '';
           const isSpecial = meta.requires_secretaria_general === true ||
@@ -1415,10 +1416,51 @@ export default function ManageRequests() {
           }
 
           let matchingEmails: string[] = [];
-          if (serviceKey === 'rooms_special') {
-            matchingEmails = serviceEmails
-              .filter(e => e && (['rooms_special', 'rooms'].includes(e.service_type) || e.service_type === 'manager') && e.email?.trim())
-              .map(e => e.email.trim());
+          if (serviceKey === 'visitors') {
+            if (confirmModal.newStatus === 'resuelto') {
+              // Aprobación de visitantes: Destinatario ÚNICAMENTE Secretaría General
+              matchingEmails = serviceEmails
+                .filter(e => e && (e.service_type === 'visitors' || (e.service_type as string) === 'secretaria_general') && e.email?.trim())
+                .map(e => e.email.trim());
+            } else {
+              // Otros estados: Proceso de gestión administrativa
+              matchingEmails = serviceEmails
+                .filter(e => e && e.service_type === 'manager' && e.email?.trim())
+                .map(e => e.email.trim());
+            }
+          } else if (serviceKey === 'maintenance') {
+            if (confirmModal.newStatus === 'en_progreso') {
+              // Al pasar a progreso: Correo automático a la Secretaría General
+              matchingEmails = serviceEmails
+                .filter(e => e && e.service_type === 'maintenance' && e.email?.trim())
+                .map(e => e.email.trim());
+            } else {
+              matchingEmails = serviceEmails
+                .filter(e => e && (e.service_type === 'maintenance' || e.service_type === 'manager') && e.email?.trim())
+                .map(e => e.email.trim());
+            }
+          } else if (serviceKey === 'rooms_special') {
+            if (confirmModal.newStatus === 'resuelto') {
+              // Aprobación Auditorio Huitaca: Destinatario Secretaría General Alcaldía Mayor
+              matchingEmails = serviceEmails
+                .filter(e => e && (e.service_type === 'rooms_special' || (e.service_type as string) === 'secretaria_general' || e.service_type === 'rooms') && e.email?.trim())
+                .map(e => e.email.trim());
+            } else {
+              matchingEmails = serviceEmails
+                .filter(e => e && (['rooms_special', 'rooms'].includes(e.service_type) || e.service_type === 'manager') && e.email?.trim())
+                .map(e => e.email.trim());
+            }
+          } else if (serviceKey === 'parking') {
+            if (confirmModal.newStatus === 'resuelto') {
+              // Aprobación Parqueaderos: Destinatario Portería Manzana Liévano
+              matchingEmails = serviceEmails
+                .filter(e => e && e.service_type === 'parking' && e.email?.trim())
+                .map(e => e.email.trim());
+            } else {
+              matchingEmails = serviceEmails
+                .filter(e => e && (e.service_type === 'parking' || e.service_type === 'manager') && e.email?.trim())
+                .map(e => e.email.trim());
+            }
           } else {
             matchingEmails = serviceEmails
               .filter(e => e && (e.service_type === serviceKey || e.service_type === 'manager') && e.email?.trim())
@@ -1555,7 +1597,15 @@ export default function ManageRequests() {
                         <Ionicons name="mail" size={13} color="#1D4ED8" />
                       </View>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                        Notificación a Equipo Gestor {secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}
+                        {confirmModal.category === 'visitors' && confirmModal.newStatus === 'resuelto'
+                          ? `Notificación a Secretaría General ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
+                          : confirmModal.category === 'maintenance' && confirmModal.newStatus === 'en_progreso'
+                          ? `Notificación a Secretaría General ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
+                          : serviceKey === 'rooms_special' && confirmModal.newStatus === 'resuelto'
+                          ? `Notificación a Secretaría General Alcaldía Mayor ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
+                          : confirmModal.category === 'parking' && confirmModal.newStatus === 'resuelto'
+                          ? `Notificación a Portería Manzana Liévano ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
+                          : `Notificación a Equipo Gestor ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 12, color: '#334155', lineHeight: 17, marginBottom: 8 }}>

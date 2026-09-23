@@ -53,6 +53,14 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
+          name="requests/maintenance" 
+          options={{ 
+            presentation: 'modal',
+            title: 'Mantenimiento',
+            headerShown: false
+          }} 
+        />
+        <Stack.Screen 
           name="requests/parking" 
           options={{ 
             presentation: 'modal',
