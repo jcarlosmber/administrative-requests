@@ -1114,23 +1114,39 @@ function getServiceEmailData({ request, user, isUserRecipient, isUpdate, trigger
   }
 }
 
+function logEmailDispatch(flowName, toRecipients, subject, category, extraInfo = '') {
+  console.log('\n==================== 📧 DISPARO DE CORREO SALIENTE ====================');
+  console.log(`📍 ORIGEN / EVENTO:   ${flowName}`);
+  console.log(`🏷️  CATEGORÍA:        ${category || 'General'}`);
+  console.log(`📤 REMITENTE (FROM):  ${FROM_EMAIL}`);
+  console.log(`📥 DESTINO (TO):      ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
+  console.log(`📝 ASUNTO:            ${subject}`);
+  if (extraInfo) console.log(`ℹ️  DETALLES:          ${extraInfo}`);
+  console.log('========================================================================\n');
+}
+
 /**
  * Envía correo al funcionario confirmando la creación de su solicitud
  */
 async function sendRequestCreatedNotification(user, request) {
-  if (!user?.email) return;
+  if (!user?.email) {
+    console.warn('⚠️ [EMAIL CANCELADO] Solicitante sin correo electrónico registrado.');
+    return;
+  }
   const emailData = getServiceEmailData({ request, user, isUserRecipient: true, isUpdate: false });
+  logEmailDispatch('Confirmación de Radicación al Solicitante (sendRequestCreatedNotification)', user.email, emailData.subject, request.category, `Solicitud #${request.id}`);
+
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
       to: user.email,
       subject: emailData.subject,
       html: emailData.html,
       attachments: emailData.attachments || []
     });
-    console.log(`📧 Correo de radicación enviado al solicitante: ${user.email} (${request.category})`);
+    console.log(`✅ [ÉXITO] Correo de radicación entregado al solicitante: ${user.email} (MessageId: ${info?.messageId || 'N/A'})`);
   } catch (error) {
-    console.error('Error al enviar correo de creación de solicitud:', error);
+    console.error(`❌ [FALLO] Error enviando correo de radicación a ${user.email}:`, error);
   }
 }
 
@@ -1138,19 +1154,24 @@ async function sendRequestCreatedNotification(user, request) {
  * Envía correo al funcionario notificando la actualización de su solicitud
  */
 async function sendRequestUpdatedNotification(user, request) {
-  if (!user?.email) return;
+  if (!user?.email) {
+    console.warn('⚠️ [EMAIL CANCELADO] Solicitante sin correo electrónico registrado.');
+    return;
+  }
   const emailData = getServiceEmailData({ request, user, isUserRecipient: true, isUpdate: true, triggerStatus: request.status });
+  logEmailDispatch('Notificación de Actualización al Solicitante (sendRequestUpdatedNotification)', user.email, emailData.subject, request.category, `Solicitud #${request.id} - Estado: ${request.status}`);
+
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
       to: user.email,
       subject: emailData.subject,
       html: emailData.html,
       attachments: emailData.attachments || []
     });
-    console.log(`📧 Correo de actualización enviado al solicitante: ${user.email} (${request.category} - ${request.status})`);
+    console.log(`✅ [ÉXITO] Correo de actualización entregado al solicitante: ${user.email} (Estado: ${request.status}, MessageId: ${info?.messageId || 'N/A'})`);
   } catch (error) {
-    console.error('Error al enviar correo de actualización de solicitud:', error);
+    console.error(`❌ [FALLO] Error enviando correo de actualización a ${user.email}:`, error);
   }
 }
 
@@ -1166,23 +1187,25 @@ function normalizeRecipients(recipients) {
 async function sendAdminServiceNotification(adminEmail, request, triggerStatus) {
   const toList = normalizeRecipients(adminEmail);
   if (toList.length === 0) {
-    console.warn('⚠️ [EMAIL SERVICE] Sin destinatarios válidos para sendAdminServiceNotification');
+    console.warn('⚠️ [EMAIL CANCELADO] Sin destinatarios válidos para sendAdminServiceNotification');
     return;
   }
   const toRecipients = toList.length === 1 ? toList[0] : toList;
   const emailData = getServiceEmailData({ request, user: null, isUserRecipient: false, isUpdate: true, triggerStatus });
 
+  logEmailDispatch('Notificación de Trámite/Aprobación a Encargados (sendAdminServiceNotification)', toRecipients, emailData.subject, request.category, `Solicitud #${request.id} - Estado: ${triggerStatus || request.status}`);
+
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
       to: toRecipients,
       subject: emailData.subject,
       html: emailData.html,
       attachments: emailData.attachments || []
     });
-    console.log(`📧 Correo administrativo de servicio enviado a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
+    console.log(`✅ [ÉXITO] Correo administrativo de servicio entregado a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients} (MessageId: ${info?.messageId || 'N/A'})`);
   } catch (error) {
-    console.error('Error al enviar correo administrativo:', error);
+    console.error('❌ [FALLO] Error al enviar correo administrativo de servicio:', error);
   }
 }
 
@@ -1192,23 +1215,25 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus) 
 async function sendAdminNewRequestNotification(adminEmails, request, user) {
   const toList = normalizeRecipients(adminEmails);
   if (toList.length === 0) {
-    console.warn('⚠️ [ADMIN EMAIL] Sin destinatarios válidos para sendAdminNewRequestNotification');
+    console.warn('⚠️ [EMAIL CANCELADO] Sin destinatarios válidos para sendAdminNewRequestNotification');
     return;
   }
   const toRecipients = toList.length === 1 ? toList[0] : toList;
   const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: false });
 
+  logEmailDispatch('Alerta de Nueva Solicitud a Encargados/Gestores (sendAdminNewRequestNotification)', toRecipients, emailData.subject, request.category, `Solicitud #${request.id} radicada por ${user?.name || 'Funcionario'}`);
+
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
       to: toRecipients,
       subject: emailData.subject,
       html: emailData.html,
       attachments: emailData.attachments || []
     });
-    console.log(`📧 Correo de nueva solicitud enviado a encargados: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
+    console.log(`✅ [ÉXITO] Correo de nueva solicitud entregado a encargados: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients} (MessageId: ${info?.messageId || 'N/A'})`);
   } catch (error) {
-    console.error('Error al enviar correo de nueva solicitud a encargados:', error);
+    console.error('❌ [FALLO] Error al enviar correo de nueva solicitud a encargados:', error);
   }
 }
 
@@ -1279,22 +1304,25 @@ async function sendTicRoomNotification(ticEmail, request, user) {
     }
   });
 
+  const toList = normalizeRecipients(ticEmail);
+  if (toList.length === 0) {
+    console.warn('⚠️ [EMAIL CANCELADO] Sin destinatarios válidos para TIC');
+    return;
+  }
+  const toRecipients = toList.length === 1 ? toList[0] : toList;
+
+  logEmailDispatch('Notificación de Alistamiento a Oficina TIC (sendTicRoomNotification)', toRecipients, subject, 'rooms', `Sala: ${roomName} ${roomFloor}`);
+
   try {
-    const toList = normalizeRecipients(ticEmail);
-    if (toList.length === 0) {
-      console.warn('⚠️ [TIC EMAIL] Sin destinatarios válidos para sendTicRoomNotification');
-      return;
-    }
-    const toRecipients = toList.length === 1 ? toList[0] : toList;
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: FROM_EMAIL,
       to: toRecipients,
       subject: subject,
       html: html
     });
-    console.log(`📧 [TIC] Notificación de equipos para sala enviada a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients}`);
+    console.log(`✅ [ÉXITO] Notificación TIC entregada a: ${Array.isArray(toRecipients) ? toRecipients.join(', ') : toRecipients} (MessageId: ${info?.messageId || 'N/A'})`);
   } catch (error) {
-    console.error(`Error al enviar notificación a TIC (${ticEmail}):`, error);
+    console.error(`❌ [FALLO] Error al enviar notificación a TIC (${ticEmail}):`, error);
   }
 }
 

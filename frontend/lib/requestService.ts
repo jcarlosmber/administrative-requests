@@ -17,6 +17,7 @@ export interface AdministrativeRequest {
 
 type CreateRequestInput = Omit<AdministrativeRequest, 'id' | 'created_at' | 'updated_at' | 'status'> & {
   status?: AdministrativeRequest['status'];
+  adminEmails?: string[];
 };
 
 const getHeaders = async () => {

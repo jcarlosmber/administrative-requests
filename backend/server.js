@@ -827,8 +827,19 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
         );
       }
       const adminEmails = adminEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-      let uniqueAdminEmails = [...new Set(adminEmails)];
-      console.log(`📧 [ADMIN NOTIFY] Encontrados ${uniqueAdminEmails.length} correos para (${adminServiceKey}, manager):`, uniqueAdminEmails);
+      const clientEmails = Array.isArray(req.body?.adminEmails)
+        ? req.body.adminEmails.map(e => String(e).trim()).filter(Boolean)
+        : [];
+      let uniqueAdminEmails = [...new Set([...adminEmails, ...clientEmails])];
+
+      console.log(`\n🔍 [CREACIÓN REQ #${createdRequest.id}] Buscando destinatarios para categoría "${adminServiceKey}":`);
+      console.log(`   📂 Desde Base de Datos (service_emails): [${adminEmails.join(', ') || 'NINGUNO'}]`);
+      console.log(`   🌐 Desde Cliente Frontend (adminEmails): [${clientEmails.join(', ') || 'NINGUNO'}]`);
+      console.log(`   🎯 Destinatarios finales consolidados:   [${uniqueAdminEmails.join(', ') || 'VACÍO'}]`);
+      if (uniqueAdminEmails.length === 0) {
+        console.warn(`   ⚠️ [ADVERTENCIA] No hay correos asignados a "${adminServiceKey}". La notificación a encargados no se enviará.`);
+      }
+
       if (uniqueAdminEmails.length > 0) {
         await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
       }
@@ -990,7 +1001,14 @@ app.put('/api/requests/:id', authenticateToken, async (req, res) => {
             : [];
           let uniqueEmails = [...new Set([...dbEmails, ...clientEmails])];
 
-          console.log(`📧 [ADMIN NOTIFY STATUS] Encontrados ${uniqueEmails.length} correos para (${serviceEmailCategory}):`, uniqueEmails);
+          console.log(`\n🔍 [ACTUALIZACIÓN REQ #${updatedRequest.id} (PUT)] Destinatarios para categoría "${serviceEmailCategory}":`);
+          console.log(`   📂 Desde Base de Datos (service_emails): [${dbEmails.join(', ') || 'NINGUNO'}]`);
+          console.log(`   🌐 Desde Cliente Frontend (adminEmails): [${clientEmails.join(', ') || 'NINGUNO'}]`);
+          console.log(`   🎯 Destinatarios finales consolidados:   [${uniqueEmails.join(', ') || 'VACÍO'}]`);
+          if (uniqueEmails.length === 0) {
+            console.warn(`   ⚠️ [ADVERTENCIA] No hay correos asignados a "${serviceEmailCategory}". La notificación de actualización/aprobación no se enviará.`);
+          }
+
           if (uniqueEmails.length > 0) {
             await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }
@@ -1168,7 +1186,14 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
             : [];
           let uniqueEmails = [...new Set([...dbEmails, ...clientEmails])];
 
-          console.log(`📧 [ADMIN NOTIFY STATUS POST] Encontrados ${uniqueEmails.length} correos para (${serviceEmailCategory}):`, uniqueEmails);
+          console.log(`\n🔍 [CAMBIO ESTADO REQ #${updatedRequest.id} (POST /status)] Destinatarios para categoría "${serviceEmailCategory}":`);
+          console.log(`   📂 Desde Base de Datos (service_emails): [${dbEmails.join(', ') || 'NINGUNO'}]`);
+          console.log(`   🌐 Desde Cliente Frontend (adminEmails): [${clientEmails.join(', ') || 'NINGUNO'}]`);
+          console.log(`   🎯 Destinatarios finales consolidados:   [${uniqueEmails.join(', ') || 'VACÍO'}]`);
+          if (uniqueEmails.length === 0) {
+            console.warn(`   ⚠️ [ADVERTENCIA] No hay correos asignados a "${serviceEmailCategory}". La notificación de cambio de estado a encargados no se enviará.`);
+          }
+
           if (uniqueEmails.length > 0) {
             await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
           }

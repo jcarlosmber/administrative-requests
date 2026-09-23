@@ -256,6 +256,7 @@ export default function ManageRequests() {
   ) => {
     try {
       setLoading(true);
+      console.log(`📤 [FRONTEND SASGE] Actualizando estado de #${id} a "${newStatus}". Correos gestores adjuntados:`, adminEmails);
       await requestService.updateStatus(id, newStatus, finalImage || undefined, reason, adminEmails);
       await fetchRequests();
       let actionName = 'procesada';

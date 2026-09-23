@@ -8,6 +8,7 @@ import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
 import { requestService } from '../../lib/requestService';
+import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
@@ -204,13 +205,26 @@ export default function VisitorsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       
       const visitorNames = validVisitors.map(v => v.name).join(', ');
+
+      let adminEmails: string[] = [];
+      try {
+        const allServiceEmails = await settingsService.getServiceEmails();
+        adminEmails = allServiceEmails
+          .filter(e => e && (e.service_type === 'visitors' || e.service_type === 'manager' || (e.service_type as string) === 'secretaria_general') && e.email?.trim())
+          .map(e => e.email.trim());
+      } catch (e) {
+        console.warn('No se pudieron obtener correos de servicio locales para visitantes:', e);
+      }
       
+      console.log('📤 [FRONTEND SASGE] Radicando solicitud de ingreso de visitantes. Destinatarios de gestión adjuntados:', adminEmails);
+
       await requestService.create({
         user_id: user?.id || null,
         title: `Ingreso: ${visitorNames}`,
         description: `Motivo: ${trimmedReason} | Visita para ${trimmedResponsibleName} en ${trimmedResponsibleDependency} desde ${fromDate} hasta ${toDate}`,
         category: 'visitors',
         priority: 'media',
+        adminEmails,
         metadata: {
           visitors: validVisitors,
           hasVehicle,
