@@ -1614,6 +1614,26 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
               <Text style={modalStyles.infoSectionTitle}>MOTIVO DEL TRASLADO</Text>
               <Text style={modalStyles.descriptionText}>{metadata.reason || request.description || 'Sin justificación'}</Text>
             </View>
+
+            {metadata.driver ? (
+              <View style={[modalStyles.infoBlock, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Text style={[modalStyles.infoSectionTitle, { color: '#1D4ED8' }]}>CONDUCTOR OFICIAL ASIGNADO</Text>
+                <View style={modalStyles.fieldRow}>
+                  <Ionicons name="person-outline" size={16} color="#1D4ED8" />
+                  <Text style={[modalStyles.fieldValue, { fontWeight: '700', color: '#1E3A8A' }]}>
+                    {metadata.driver.name}
+                  </Text>
+                </View>
+                {metadata.driver.phone ? (
+                  <View style={modalStyles.fieldRow}>
+                    <Ionicons name="call-outline" size={16} color="#1D4ED8" />
+                    <Text style={[modalStyles.fieldValue, { color: '#1E3A8A' }]}>
+                      Tel: {metadata.driver.phone}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         );
 

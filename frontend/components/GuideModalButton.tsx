@@ -6,13 +6,11 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  StyleSheet,
   Dimensions,
   Platform,
   ImageSourcePropType,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface GuideModalButtonProps {
   imageSource: ImageSourcePropType;
@@ -23,6 +21,28 @@ interface GuideModalButtonProps {
   floating?: boolean;
 }
 
+const resolveSourceUri = (source: any): string | null => {
+  if (!source) return null;
+  if (typeof source === 'string') return source;
+  if (typeof source === 'object') {
+    if (typeof source.uri === 'string') return source.uri;
+    if (source.default) {
+      if (typeof source.default === 'string') return source.default;
+      if (typeof source.default.uri === 'string') return source.default.uri;
+    }
+  }
+  try {
+    const resolver = (Image as any)?.resolveAssetSource;
+    if (typeof resolver === 'function') {
+      const res = resolver(source);
+      if (res?.uri) return res.uri;
+    }
+  } catch (e) {
+    // Si falla la resolución de asset nativo, retornar null de forma segura
+  }
+  return null;
+};
+
 export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
   imageSource,
   title,
@@ -32,26 +52,36 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
   floating = true,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 
   // Dimensiones calculadas para el contenedor de la imagen en modal
-  const modalWidth = Math.min(windowWidth * 0.94, 1000);
+  const modalWidth = Math.min(windowWidth * 0.95, 1100);
   const modalHeight = Math.min(windowHeight * 0.88, 850);
   const isDesktop = windowWidth >= 1024;
 
   const handleOpenImageInNewTab = () => {
     if (Platform.OS === 'web') {
       try {
-        const resolvedUri = Image.resolveAssetSource(imageSource)?.uri;
-        if (resolvedUri) {
-          window.open(resolvedUri, '_blank');
+        const uri = resolveSourceUri(imageSource);
+        if (uri) {
+          window.open(uri, '_blank');
+        } else {
+          // Si no hay URI directa expuesta, aumentar el zoom al máximo
+          setZoomLevel((prev) => Math.min(prev + 0.5, 3));
         }
       } catch (err) {
         console.warn('No se pudo abrir la imagen en nueva pestaña:', err);
       }
     }
   };
+
+  const handleZoomIn = () => setZoomLevel((prev) => Math.min(Number((prev + 0.3).toFixed(1)), 3));
+  const handleZoomOut = () => setZoomLevel((prev) => Math.max(Number((prev - 0.3).toFixed(1)), 0.8));
+  const handleZoomReset = () => setZoomLevel(1);
+
+  const baseImageWidth = modalWidth - 40;
+  const baseImageHeight = modalHeight - 140;
 
   return (
     <>
@@ -70,7 +100,10 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
       >
         <TouchableOpacity
           activeOpacity={0.8}
-          onPress={() => setModalVisible(true)}
+          onPress={() => {
+            setZoomLevel(1);
+            setModalVisible(true);
+          }}
           accessibilityLabel={`Guía de ${title}`}
           accessibilityRole="button"
           style={{
@@ -131,7 +164,7 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
         <View
           style={{
             flex: 1,
-            backgroundColor: 'rgba(15, 23, 42, 0.82)',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)',
             justifyContent: 'center',
             alignItems: 'center',
             padding: 16,
@@ -203,8 +236,47 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
                 </View>
               </View>
 
-              {/* Acciones de la Cabecera */}
+              {/* Acciones de la Cabecera (Controles de Zoom y Cerrar) */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {/* Controles de Zoom */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#EDE9FE',
+                    borderRadius: 10,
+                    paddingHorizontal: 4,
+                    paddingVertical: 2,
+                    gap: 2,
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={handleZoomOut}
+                    style={{ padding: 6 }}
+                    accessibilityLabel="Reducir zoom"
+                  >
+                    <Ionicons name="remove" size={16} color="#4C1D95" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleZoomReset}
+                    style={{ paddingHorizontal: 6 }}
+                    accessibilityLabel="Restablecer zoom"
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#4C1D95' }}>
+                      {Math.round(zoomLevel * 100)}%
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={handleZoomIn}
+                    style={{ padding: 6 }}
+                    accessibilityLabel="Aumentar zoom"
+                  >
+                    <Ionicons name="add" size={16} color="#4C1D95" />
+                  </TouchableOpacity>
+                </View>
+
                 {Platform.OS === 'web' && (
                   <TouchableOpacity
                     onPress={handleOpenImageInNewTab}
@@ -247,18 +319,17 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
               </View>
             </View>
 
-            {/* Contenedor Visualizador de la Guía */}
+            {/* Contenedor Visualizador de la Guía con Scroll Bidireccional */}
             <View
               style={{
                 flex: 1,
                 backgroundColor: '#0F172A',
-                justifyContent: 'center',
-                alignItems: 'center',
+                overflow: 'hidden',
               }}
             >
               <ScrollView
                 maximumZoomScale={3}
-                minimumZoomScale={1}
+                minimumZoomScale={0.8}
                 bouncesZoom={true}
                 showsVerticalScrollIndicator={true}
                 showsHorizontalScrollIndicator={true}
@@ -266,7 +337,7 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
                   flexGrow: 1,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  padding: 12,
+                  padding: 16,
                 }}
               >
                 <ScrollView
@@ -281,11 +352,9 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
                   <Image
                     source={imageSource}
                     resizeMode="contain"
-                    onLoad={() => setImageLoaded(true)}
                     style={{
-                      width: modalWidth - 32,
-                      height: modalHeight - 130,
-                      maxWidth: '100%',
+                      width: baseImageWidth * zoomLevel,
+                      height: baseImageHeight * zoomLevel,
                     }}
                   />
                 </ScrollView>
@@ -308,9 +377,7 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Ionicons name="bulb-outline" size={16} color="#64748B" />
                 <Text style={{ fontSize: 12, color: '#64748B' }}>
-                  {Platform.OS === 'web'
-                    ? 'Puedes usar "Ver original" para abrir la imagen en alta definición'
-                    : 'Puedes pellizcar para hacer zoom en la imagen'}
+                  Usa los botones de zoom (+ / -) y desplázate para explorar todo el flujograma
                 </Text>
               </View>
 
@@ -319,7 +386,7 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
                 style={{
                   backgroundColor: themeColor,
                   paddingVertical: 8,
-                  paddingHorizontal: 20,
+                  paddingHorizontal: 22,
                   borderRadius: 12,
                 }}
               >

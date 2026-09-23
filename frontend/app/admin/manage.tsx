@@ -24,7 +24,7 @@ import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
 import * as DocumentPicker from 'expo-document-picker';
-import { settingsService, ServiceEmail } from '../../lib/settingsService';
+import { settingsService, ServiceEmail, Driver } from '../../lib/settingsService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -168,9 +168,10 @@ export default function ManageRequests() {
     rejectReason?: string;
   } | null>(null);
   const [driverModal, setDriverModal] = useState<{ visible: boolean; item: AdministrativeRequest | null }>({ visible: false, item: null });
-  const [driverName, setDriverName] = useState('');
-  const [driverPhone, setDriverPhone] = useState('');
-  const [driverPlate, setDriverPlate] = useState('');
+  const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('');
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
+  const [driverError, setDriverError] = useState('');
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [serviceEmails, setServiceEmails] = useState<ServiceEmail[]>([]);
   const [drawerItem, setDrawerItem] = useState<any | null>(null);
@@ -196,14 +197,19 @@ export default function ManageRequests() {
 
   const handleApproveTransport = async () => {
     if (!driverModal.item) return;
+    const selectedDriver = availableDrivers.find(d => d.id === selectedDriverId);
+    if (!selectedDriver) {
+      setDriverError('Por favor selecciona un conductor de la lista.');
+      return;
+    }
     try {
       setLoading(true);
       const updatedMetadata = {
         ...(driverModal.item.metadata || {}),
         driver: {
-          name: driverName.trim() || 'Conductor Asignado',
-          phone: driverPhone.trim(),
-          plate: driverPlate.trim()
+          id: selectedDriver.id,
+          name: selectedDriver.name,
+          phone: selectedDriver.phone || ''
         }
       };
       await requestService.update(driverModal.item.id, {
@@ -212,16 +218,40 @@ export default function ManageRequests() {
       });
       await fetchRequests();
       setDriverModal({ visible: false, item: null });
-      setDriverName('');
-      setDriverPhone('');
-      setDriverPlate('');
-      setSuccessModal({ visible: true, message: 'Solicitud aprobada exitosamente con conductor asignado.' });
+      setSelectedDriverId('');
+      setSuccessModal({ 
+        visible: true, 
+        message: `Solicitud aprobada exitosamente. Conductor asignado: ${selectedDriver.name}` 
+      });
     } catch (err: any) {
       console.error('Error al aprobar transporte:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (driverModal.visible) {
+      setLoadingDrivers(true);
+      setDriverError('');
+      settingsService.getDrivers()
+        .then((drvs) => {
+          setAvailableDrivers(drvs);
+          const activeOnes = drvs.filter(d => d.is_active !== false);
+          if (activeOnes.length > 0) {
+            setSelectedDriverId(activeOnes[0].id);
+          } else if (drvs.length > 0) {
+            setSelectedDriverId(drvs[0].id);
+          }
+        })
+        .catch((err) => {
+          console.error('Error al cargar conductores para aprobación:', err);
+        })
+        .finally(() => {
+          setLoadingDrivers(false);
+        });
+    }
+  }, [driverModal.visible]);
 
   useEffect(() => {
     settingsService.getServiceEmails().then(setServiceEmails).catch(console.error);
@@ -681,7 +711,12 @@ export default function ManageRequests() {
         { label: 'Hora de Recogida', value: item.metadata.pickupTime || 'N/A', icon: 'time-outline' },
         { label: 'Requiere Retorno', value: item.metadata.requiresReturn ? `Sí (Hora: ${item.metadata.returnTime || 'N/A'})` : 'No', icon: 'repeat-outline' },
         { label: 'Dependencia Solicitante', value: item.metadata.dependency || 'N/A', icon: 'business-outline' },
-        { label: 'Motivo del Traslado', value: item.metadata.reason || 'N/A', icon: 'document-text-outline' }
+        { label: 'Motivo del Traslado', value: item.metadata.reason || 'N/A', icon: 'document-text-outline' },
+        ...(item.metadata.driver?.name ? [{
+          label: 'Conductor Asignado',
+          value: item.metadata.driver.name + (item.metadata.driver.phone ? ` (Tel: ${item.metadata.driver.phone})` : ''),
+          icon: 'car-sport-outline' as any
+        }] : [])
       ];
     }
 
@@ -1247,7 +1282,7 @@ export default function ManageRequests() {
       <Modal visible={driverModal.visible} transparent animationType="fade" onRequestClose={() => setDriverModal({ visible: false, item: null })}>
         <View style={styles.modalOverlay}>
           <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { maxWidth: 480 }]}>
             <TouchableOpacity 
               style={styles.modalCloseBtn}
               onPress={() => setDriverModal({ visible: false, item: null })}
@@ -1260,40 +1295,131 @@ export default function ManageRequests() {
               <Ionicons name="car-sport" size={34} color={COLORS.accent} />
             </View>
             <Text style={styles.modalTitle}>Aprobar Traslado</Text>
-            <Text style={styles.modalMessage}>Asigna el conductor y vehículo que prestará el servicio de transporte.</Text>
+            <Text style={styles.modalMessage}>Selecciona el conductor de la lista oficial registrada en el sistema.</Text>
             
-            <View style={{ width: '100%', gap: 12, marginBottom: 20 }}>
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 5 }}>Nombre del Conductor *</Text>
-                <TextInput
-                  style={[styles.searchInput, { height: 46, borderRadius: 12 }]}
-                  placeholder="Ej. Carlos Pérez"
-                  placeholderTextColor={COLORS.muted}
-                  value={driverName}
-                  onChangeText={setDriverName}
-                />
+            {loadingDrivers ? (
+              <View style={{ paddingVertical: 30, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <ActivityIndicator size="small" color="#2563EB" />
+                <Text style={{ fontSize: 13, color: COLORS.muted }}>Cargando conductores disponibles...</Text>
               </View>
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 5 }}>Teléfono de Contacto</Text>
-                <TextInput
-                  style={[styles.searchInput, { height: 46, borderRadius: 12 }]}
-                  placeholder="Ej. 3109876543"
-                  placeholderTextColor={COLORS.muted}
-                  value={driverPhone}
-                  onChangeText={setDriverPhone}
-                />
+            ) : availableDrivers.length === 0 ? (
+              <View style={{
+                backgroundColor: '#FFFBEB',
+                borderWidth: 1,
+                borderColor: '#FDE68A',
+                borderRadius: 14,
+                padding: 16,
+                marginBottom: 20,
+                alignItems: 'center',
+                gap: 6
+              }}>
+                <Ionicons name="alert-circle" size={24} color="#D97706" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#92400E', textAlign: 'center' }}>
+                  No hay conductores registrados en el sistema
+                </Text>
+                <Text style={{ fontSize: 12, color: '#B45309', textAlign: 'center' }}>
+                  Puedes agregar conductores en Configuración &gt; Gestión de Conductores.
+                </Text>
               </View>
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted, marginBottom: 5 }}>Placa del Vehículo / Datos</Text>
-                <TextInput
-                  style={[styles.searchInput, { height: 46, borderRadius: 12 }]}
-                  placeholder="Ej. ABC-123 (Camioneta Oficial)"
-                  placeholderTextColor={COLORS.muted}
-                  value={driverPlate}
-                  onChangeText={setDriverPlate}
-                />
+            ) : (
+              <View style={{ width: '100%', marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.muted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Conductores Disponibles ({availableDrivers.length})
+                </Text>
+                
+                <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={true}>
+                  <View style={{ gap: 8 }}>
+                    {availableDrivers.map((drv) => {
+                      const isSelected = selectedDriverId === drv.id;
+                      const isActive = drv.is_active !== false;
+
+                      return (
+                        <TouchableOpacity
+                          key={drv.id}
+                          onPress={() => {
+                            setSelectedDriverId(drv.id);
+                            setDriverError('');
+                          }}
+                          activeOpacity={0.7}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: 12,
+                            borderRadius: 14,
+                            borderWidth: isSelected ? 2 : 1,
+                            borderColor: isSelected ? '#2563EB' : '#E2E8F0',
+                            backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                            <View style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 12,
+                              backgroundColor: isSelected ? '#DBEAFE' : '#F1F5F9',
+                              justifyContent: 'center',
+                              alignItems: 'center'
+                            }}>
+                              <Ionicons 
+                                name="person" 
+                                size={20} 
+                                color={isSelected ? '#2563EB' : '#64748B'} 
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <Text style={{ 
+                                  fontSize: 14, 
+                                  fontWeight: '800', 
+                                  color: isSelected ? '#1E3A8A' : '#0F172A' 
+                                }}>
+                                  {drv.name}
+                                </Text>
+                                {isActive ? (
+                                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#16A34A' }}>Disponible</Text>
+                                  </View>
+                                ) : (
+                                  <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>Inactivo</Text>
+                                  </View>
+                                )}
+                              </View>
+                              {drv.phone ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                                  <Ionicons name="call-outline" size={12} color="#64748B" />
+                                  <Text style={{ fontSize: 12, color: '#64748B' }}>{drv.phone}</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+
+                          <View style={{
+                            width: 22,
+                            height: 22,
+                            borderRadius: 11,
+                            borderWidth: 2,
+                            borderColor: isSelected ? '#2563EB' : '#CBD5E1',
+                            backgroundColor: isSelected ? '#2563EB' : 'transparent',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                          }}>
+                            {isSelected && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
               </View>
-            </View>
+            )}
+
+            {driverError ? (
+              <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '600', marginBottom: 12, textAlign: 'center' }}>
+                {driverError}
+              </Text>
+            ) : null}
 
             <View style={{ flexDirection: 'row', gap: 12, width: '100%' }}>
               <TouchableOpacity 
@@ -1304,8 +1430,17 @@ export default function ManageRequests() {
                 <Text style={[styles.modalBtnText, { color: '#64748B' }]}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalBtn, { flex: 1.2, backgroundColor: 'transparent', overflow: 'hidden' }]} 
+                style={[
+                  styles.modalBtn, 
+                  { 
+                    flex: 1.2, 
+                    backgroundColor: 'transparent', 
+                    overflow: 'hidden',
+                    opacity: (!selectedDriverId || availableDrivers.length === 0) ? 0.6 : 1
+                  }
+                ]} 
                 onPress={handleApproveTransport}
+                disabled={!selectedDriverId || availableDrivers.length === 0}
                 activeOpacity={0.8}
               >
                 <LinearGradient
