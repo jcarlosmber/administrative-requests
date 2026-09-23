@@ -440,7 +440,8 @@ function renderServiceEmailLayout({
 
           <p style="margin: 20px 0 0 0; font-size: 14px; line-height: 1.6;">
             Cordialmente,<br>
-            <strong>Secretaría Jurídica Distrital</strong>
+            <strong>Secretaría Jurídica Distrital</strong><br>
+            <span style="color: #475569; font-size: 13px;">Proceso de gestión administrativa</span>
           </p>
 
           ${btnHtml}
@@ -530,11 +531,7 @@ function getVisitorsEmailContent(request, isUserRecipient, isUpdate, status, use
       closingParagraphs: [
         'Agradecemos autorizar el ingreso del visitante relacionado, de acuerdo con los protocolos establecidos para el acceso a las instalaciones.',
         'Quedamos atentos a cualquier información adicional que se requiera para gestionar el ingreso.'
-      ],
-      actionButton: {
-        text: 'Ver Solicitud en SASGE',
-        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
-      }
+      ]
     });
     return { subject, html };
   }
@@ -691,7 +688,7 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
       introParagraph,
       cardItems,
       closingParagraphs,
-      actionButton: {
+      actionButton: isSecGeneral ? null : {
         text: 'Gestionar Reserva en SASGE',
         url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
       }
@@ -986,11 +983,7 @@ function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user
       closingParagraphs: [
         'Agradecemos verificar la disponibilidad y asignación de cupo conforme a la reglamentación y lineamientos de la Manzana Liévano.',
         'Quedamos atentos a la confirmación del trámite.'
-      ],
-      actionButton: {
-        text: 'Gestionar Parqueadero en SASGE',
-        url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
-      }
+      ]
     });
     return { subject, html };
   }
