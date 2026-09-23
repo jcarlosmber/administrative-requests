@@ -1252,28 +1252,27 @@ function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
         {isMobile ? (
           <View style={[styles.serviceCardSquare, { width: width, height: width }]}>
             <LinearGradient
-              colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
-              locations={[0, 0.7, 1]}
+              colors={['#FFFFFF', '#F8FAFC', `${item.color}14`]}
+              locations={[0, 0.65, 1]}
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.cardWatermarkSquare}>
-              <Ionicons name={item.icon} size={68} color={`${item.color}10`} />
+              <Ionicons name={item.icon} size={84} color={`${item.color}0A`} />
             </View>
 
-            <View style={{ flex: 1, justifyContent: 'space-between' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            {/* Ilustración protagonista centrada con suficiente espacio */}
+            <View style={styles.cardCenterHero}>
+              <View style={[styles.cardIconOuterGlow, { backgroundColor: `${item.color}15`, borderColor: `${item.color}25` }]}>
                 <View style={[styles.cardIconCircleSquare, { backgroundColor: item.color, shadowColor: item.color }]}>
-                  <Ionicons name={item.icon} size={22} color={COLORS.white} />
-                </View>
-                <View style={[styles.miniActionChip, { backgroundColor: `${item.color}18` }]}>
-                  <Ionicons name="arrow-forward" size={13} color={item.color} />
+                  <Ionicons name={item.icon} size={28} color={COLORS.white} />
                 </View>
               </View>
+            </View>
 
-              <View>
-                <Text style={styles.cardTitleSquare} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.cardSubSquare, { color: item.color }]} numberOfLines={1}>{item.subtitle}</Text>
-              </View>
+            {/* Título y subtítulo inferiores centrados */}
+            <View style={styles.cardBottomSquare}>
+              <Text style={styles.cardTitleSquare} numberOfLines={1}>{item.title}</Text>
+              <Text style={[styles.cardSubSquare, { color: item.color }]} numberOfLines={1}>{item.subtitle}</Text>
             </View>
           </View>
         ) : (
@@ -1400,40 +1399,74 @@ const styles = StyleSheet.create({
     })
   },
   serviceCardSquare: {
-    borderRadius: 22,
-    padding: 14,
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingTop: 16,
+    paddingBottom: 14,
     backgroundColor: COLORS.white,
     overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    alignItems: 'center',
     justifyContent: 'space-between',
     ...Platform.select({
-      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 },
+      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.06, shadowRadius: 12 },
       android: { elevation: 3 },
       web: { boxShadow: '0 6px 18px rgba(15,23,42,0.06)' }
     })
   },
-  cardWatermarkSquare: { position: 'absolute', right: -12, top: -12, transform: [{ rotate: '-15deg' }] },
-  cardIconCircleSquare: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  cardCenterHero: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
+    width: '100%',
+  },
+  cardIconOuterGlow: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardIconCircleSquare: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 6
   },
-  miniActionChip: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
+  cardBottomSquare: {
+    width: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
-  cardTitleSquare: { fontSize: 15, fontWeight: '900', color: COLORS.dark, letterSpacing: -0.2 },
-  cardSubSquare: { fontSize: 11, fontWeight: '800', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.3 },
+  cardTitleSquare: { 
+    fontSize: 15, 
+    fontWeight: '900', 
+    color: COLORS.dark, 
+    letterSpacing: -0.2, 
+    textAlign: 'center' 
+  },
+  cardSubSquare: { 
+    fontSize: 11, 
+    fontWeight: '800', 
+    marginTop: 2, 
+    textTransform: 'uppercase', 
+    letterSpacing: 0.4, 
+    textAlign: 'center' 
+  },
+  cardWatermarkSquare: { 
+    position: 'absolute', 
+    right: -14, 
+    top: -14, 
+    transform: [{ rotate: '-15deg' }] 
+  },
   cardWatermark: { position: 'absolute', right: -20, top: -20, transform: [{ rotate: '-15deg' }] },
   cardInfo: { flexDirection: 'row', gap: 15, alignItems: 'center', marginBottom: 20 },
   cardIconCircle: { width: 56, height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 12 },
