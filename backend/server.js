@@ -752,9 +752,26 @@ app.get('/api/requests', authenticateToken, async (req, res) => {
   try {
     let result;
     if (req.user.role === 'admin') {
-      result = await pool.query('SELECT ar.*, u.name as user_name FROM administrative_requests ar LEFT JOIN users u ON ar.user_id = u.id ORDER BY ar.created_at DESC');
+      result = await pool.query(`
+        SELECT ar.*, 
+               COALESCE(u.full_name, u.name, TRIM(CONCAT(u.first_name, ' ', u.last_name))) as user_name,
+               u.email as user_email,
+               u.dependency as user_dependency
+        FROM administrative_requests ar 
+        LEFT JOIN users u ON ar.user_id = u.id 
+        ORDER BY ar.created_at DESC
+      `);
     } else {
-      result = await pool.query('SELECT ar.*, u.name as user_name FROM administrative_requests ar LEFT JOIN users u ON ar.user_id = u.id WHERE ar.user_id = $1 ORDER BY ar.created_at DESC', [req.user.id]);
+      result = await pool.query(`
+        SELECT ar.*, 
+               COALESCE(u.full_name, u.name, TRIM(CONCAT(u.first_name, ' ', u.last_name))) as user_name,
+               u.email as user_email,
+               u.dependency as user_dependency
+        FROM administrative_requests ar 
+        LEFT JOIN users u ON ar.user_id = u.id 
+        WHERE ar.user_id = $1 
+        ORDER BY ar.created_at DESC
+      `, [req.user.id]);
     }
     res.json(result.rows);
   } catch (err) {
@@ -778,13 +795,16 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     
     // Obtener información del usuario para enviar el correo de notificación
     const createdRequest = result.rows[0];
-    const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [req.user.id]);
+    const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email, dependency FROM users WHERE id = $1', [req.user.id]);
     let currentUserObj = null;
     if (userResult.rows.length > 0) {
       const u = userResult.rows[0];
-      const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
+      const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name || (u.email ? u.email.split('@')[0] : 'Funcionario Solicitante');
       u.name = displayName;
       currentUserObj = u;
+      createdRequest.user_name = displayName;
+      createdRequest.user_email = u.email;
+      createdRequest.user_dependency = u.dependency;
       await emailService.sendRequestCreatedNotification(u, createdRequest).catch(e => console.error('Error enviando correo de creación al solicitante:', e));
     }
 
@@ -831,7 +851,7 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       }
 
       if (uniqueAdminEmails.length > 0) {
-        await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: 'Funcionario' });
+        await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: createdRequest.user_name || 'Funcionario Solicitante' });
       }
     } catch (adminNotifyErr) {
       console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
@@ -894,13 +914,31 @@ const handleUpdateRequest = async (req, res) => {
     const updatedRequest = updateResult.rows[0];
 
     // Obtener información del usuario para enviar el correo de actualización
+    let requesterUser = null;
     if (updatedRequest) {
-      const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+      const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email, dependency FROM users WHERE id = $1', [updatedRequest.user_id]);
       if (userResult.rows.length > 0) {
         const u = userResult.rows[0];
-        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
+        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name || (u.email ? u.email.split('@')[0] : 'Funcionario Solicitante');
         u.name = displayName;
+        requesterUser = u;
+        updatedRequest.user_name = displayName;
+        updatedRequest.user_email = u.email;
+        updatedRequest.user_dependency = u.dependency;
         emailService.sendRequestUpdatedNotification(u, updatedRequest);
+      } else if (updatedRequest.metadata) {
+        let m = updatedRequest.metadata;
+        if (typeof m === 'string') try { m = JSON.parse(m); } catch (e) {}
+        const mName = m.requester_name || m.requesterName || m.user_name || m.userName || m.responsible_name;
+        if (mName) {
+          requesterUser = {
+            name: mName,
+            full_name: mName,
+            email: m.requester_email || m.email || '',
+            dependency: m.dependency || ''
+          };
+          updatedRequest.user_name = mName;
+        }
       }
 
       // Send email to admins based on category and status
@@ -991,7 +1029,7 @@ const handleUpdateRequest = async (req, res) => {
           }
 
           if (uniqueEmails.length > 0) {
-            await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
+            await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status, requesterUser);
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a admins:', adminEmailErr);
@@ -1021,11 +1059,20 @@ const handleUpdateRequest = async (req, res) => {
           if (hasTechEquipment) {
             try {
               const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
-              const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-              const uniqueTic = [...new Set(ticEmails)];
+              const dbTic = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+              const clientTic = Array.isArray(req.body?.ticEmails)
+                ? req.body.ticEmails.map(e => String(e).trim()).filter(Boolean)
+                : [];
+              const uniqueTic = [...new Set([...dbTic, ...clientTic])];
+              console.log(`\n🔍 [ALISTAMIENTO TIC REQ #${updatedRequest.id} (UPDATE)] Destinatarios Oficina TIC:`);
+              console.log(`   📂 Desde Base de Datos: [${dbTic.join(', ') || 'NINGUNO'}]`);
+              console.log(`   🌐 Desde Cliente:       [${clientTic.join(', ') || 'NINGUNO'}]`);
+              console.log(`   🎯 Finales TIC:         [${uniqueTic.join(', ') || 'VACÍO'}]`);
               if (uniqueTic.length > 0) {
                 const uRes = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
                 await emailService.sendTicRoomNotification(uniqueTic, updatedRequest, uRes.rows[0] || { name: 'Funcionario' });
+              } else {
+                console.warn('   ⚠️ [ADVERTENCIA] No hay correos asignados a "rooms_tic". La notificación a Oficina TIC no se enviará.');
               }
             } catch (ticErr) {
               console.error('Error enviando notificación a TIC al aprobar sala estándar:', ticErr);
@@ -1143,13 +1190,31 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
 
     const updatedRequest = updateResult.rows[0];
 
+    let requesterUser = null;
     if (updatedRequest) {
-      const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
+      const userResult = await pool.query('SELECT name, full_name, first_name, last_name, email, dependency FROM users WHERE id = $1', [updatedRequest.user_id]);
       if (userResult.rows.length > 0) {
         const u = userResult.rows[0];
-        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name;
+        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name || (u.email ? u.email.split('@')[0] : 'Funcionario Solicitante');
         u.name = displayName;
+        requesterUser = u;
+        updatedRequest.user_name = displayName;
+        updatedRequest.user_email = u.email;
+        updatedRequest.user_dependency = u.dependency;
         emailService.sendRequestUpdatedNotification(u, updatedRequest);
+      } else if (updatedRequest.metadata) {
+        let m = updatedRequest.metadata;
+        if (typeof m === 'string') try { m = JSON.parse(m); } catch (e) {}
+        const mName = m.requester_name || m.requesterName || m.user_name || m.userName || m.responsible_name;
+        if (mName) {
+          requesterUser = {
+            name: mName,
+            full_name: mName,
+            email: m.requester_email || m.email || '',
+            dependency: m.dependency || ''
+          };
+          updatedRequest.user_name = mName;
+        }
       }
 
       // Notificar a equipo de servicio y gestores si pasa a en_progreso o resuelto
@@ -1240,7 +1305,7 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
           }
 
           if (uniqueEmails.length > 0) {
-            await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status);
+            await emailService.sendAdminServiceNotification(uniqueEmails, updatedRequest, status, requesterUser);
           }
         } catch (adminEmailErr) {
           console.error('Error enviando correo a administradores en cambio de estado:', adminEmailErr);
@@ -1270,11 +1335,20 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
           if (hasTechEquipment) {
             try {
               const ticEmailsRes = await pool.query("SELECT email FROM service_emails WHERE service_type = 'rooms_tic'");
-              const ticEmails = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
-              const uniqueTic = [...new Set(ticEmails)];
+              const dbTic = ticEmailsRes.rows.map(r => r.email?.trim()).filter(Boolean);
+              const clientTic = Array.isArray(req.body?.ticEmails)
+                ? req.body.ticEmails.map(e => String(e).trim()).filter(Boolean)
+                : [];
+              const uniqueTic = [...new Set([...dbTic, ...clientTic])];
+              console.log(`\n🔍 [ALISTAMIENTO TIC REQ #${updatedRequest.id} (STATUS)] Destinatarios Oficina TIC:`);
+              console.log(`   📂 Desde Base de Datos: [${dbTic.join(', ') || 'NINGUNO'}]`);
+              console.log(`   🌐 Desde Cliente:       [${clientTic.join(', ') || 'NINGUNO'}]`);
+              console.log(`   🎯 Finales TIC:         [${uniqueTic.join(', ') || 'VACÍO'}]`);
               if (uniqueTic.length > 0) {
                 const uRes = await pool.query('SELECT name, full_name, first_name, last_name, email FROM users WHERE id = $1', [updatedRequest.user_id]);
                 await emailService.sendTicRoomNotification(uniqueTic, updatedRequest, uRes.rows[0] || { name: 'Funcionario' });
+              } else {
+                console.warn('   ⚠️ [ADVERTENCIA] No hay correos asignados a "rooms_tic". La notificación a Oficina TIC no se enviará.');
               }
             } catch (ticErr) {
               console.error('Error enviando notificación a TIC al aprobar sala estándar:', ticErr);

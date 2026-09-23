@@ -867,13 +867,43 @@ function getTransportEmailContent(request, isUserRecipient, isUpdate, status, us
  * 4. MANTENIMIENTOS LOCATIVOS (maintenance)
  */
 function getMaintenanceEmailContent(request, isUserRecipient, isUpdate, status, user) {
-  const meta = request.metadata || {};
+  let meta = request.metadata || {};
+  if (typeof meta === 'string') {
+    try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+  }
   const element = meta.element || request.title?.replace(/^Mantenimiento:\s*/i, '') || 'Mantenimiento locativo';
-  const location = `${meta.floor ? 'Piso ' + meta.floor : ''} ${meta.room ? '- ' + meta.room : ''} ${meta.locationDetail ? '(' + meta.locationDetail + ')' : ''}`.trim() || 'Sede SJD';
+  const floorVal = meta.floor || meta.location || '';
+  const location = `${floorVal ? (String(floorVal).toLowerCase().includes('piso') ? floorVal : 'Piso ' + floorVal) : ''} ${meta.room ? (floorVal ? '- ' : '') + meta.room : ''} ${meta.locationDetail ? '(' + meta.locationDetail + ')' : ''}`.trim() || 'Sede SJD';
   const urgency = meta.urgency || meta.priority || request.priority || 'Normal';
   const description = request.description || meta.description || 'Sin descripción adicional';
-  const requester = user?.name || request.user_name || 'Funcionario';
-  const dependency = user?.dependency || meta.dependency || 'Secretaría Jurídica Distrital';
+
+  // Resolver nombre del funcionario que reporta
+  let rawRequester = meta.requester_name || 
+                     meta.requesterName || 
+                     meta.user_name || 
+                     meta.userName || 
+                     meta.responsible_name || 
+                     meta.responsibleName || 
+                     user?.full_name || 
+                     user?.name || 
+                     (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) || 
+                     request.user_name || 
+                     request.userName;
+
+  if (!rawRequester || rawRequester.trim().toLowerCase() === 'funcionario') {
+    if (user?.email) {
+      rawRequester = user.email.split('@')[0].replace(/[._]/g, ' ');
+    } else if (request?.user_email) {
+      rawRequester = request.user_email.split('@')[0].replace(/[._]/g, ' ');
+    } else if (meta.requester_email || meta.email) {
+      rawRequester = (meta.requester_email || meta.email).split('@')[0].replace(/[._]/g, ' ');
+    } else {
+      rawRequester = 'Funcionario Solicitante';
+    }
+  }
+
+  const requester = rawRequester;
+  const dependency = user?.dependency || meta.dependency || request.user_dependency || 'Secretaría Jurídica Distrital';
 
   const { imagesHtml, emailAttachments } = processEmailAttachments(request.attachments, meta.finalImage);
 
@@ -885,8 +915,8 @@ function getMaintenanceEmailContent(request, isUserRecipient, isUpdate, status, 
       : `Reporte de mantenimiento locativo – ${element} – ${location}`;
     
     const introParagraph = isProgress
-      ? 'Desde la Secretaría Jurídica Distrital, nos permitimos remitir a la Secretaría General de la Alcaldía Mayor el siguiente requerimiento de mantenimiento locativo para su correspondiente diagnóstico y atención técnica:'
-      : 'Desde la Secretaría Jurídica Distrital, se ha registrado un nuevo reporte de mantenimiento locativo para su revisión y trámite:';
+      ? `Desde la Secretaría Jurídica Distrital, nos permitimos remitir a la Secretaría General de la Alcaldía Mayor el siguiente requerimiento de mantenimiento locativo reportado por <strong>${requester}</strong> (${dependency}) para su correspondiente diagnóstico y atención técnica:`
+      : `Desde la Secretaría Jurídica Distrital, se ha registrado un nuevo reporte de mantenimiento locativo por parte de <strong>${requester}</strong> para su revisión y trámite:`;
 
     const html = renderServiceEmailLayout({
       serviceCategory: 'maintenance',
@@ -1207,14 +1237,14 @@ function normalizeRecipients(recipients) {
 /**
  * Envía correo al equipo administrador (service_emails) informando que deben gestionar un servicio
  */
-async function sendAdminServiceNotification(adminEmail, request, triggerStatus) {
+async function sendAdminServiceNotification(adminEmail, request, triggerStatus, user = null) {
   const toList = normalizeRecipients(adminEmail);
   if (toList.length === 0) {
     console.warn('⚠️ [EMAIL CANCELADO] Sin destinatarios válidos para sendAdminServiceNotification');
     return;
   }
   const toRecipients = toList.length === 1 ? toList[0] : toList;
-  const emailData = getServiceEmailData({ request, user: null, isUserRecipient: false, isUpdate: true, triggerStatus });
+  const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: true, triggerStatus });
 
   logEmailDispatch('Notificación de Trámite/Aprobación a Encargados (sendAdminServiceNotification)', toRecipients, emailData.subject, request.category, `Solicitud #${request.id} - Estado: ${triggerStatus || request.status}`);
 

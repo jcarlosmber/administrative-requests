@@ -119,7 +119,8 @@ export default function DashboardScreen() {
   const getCardWidth = () => {
     if (isDesktop) return (width - 380 - 70 - 40) / 3; // Sidebar (380) + padding (70) + gaps (40)
     if (isTablet) return (width - 70 - 20) / 2;       // Padding (70) + gap (20)
-    return width - 32;                                // Padding horizontal móvil (16*2)
+    // Celular o pantalla pequeña: 2 cuadrados por fila (paddingHorizontal: 14*2 = 28, gap: 12)
+    return Math.floor((width - 28 - 12) / 2);
   };
 
   const cardWidth = getCardWidth();
@@ -483,13 +484,14 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            <View style={[styles.grid, { justifyContent: 'center' }]}>
+            <View style={[styles.grid, { justifyContent: isMobile ? 'flex-start' : 'center', gap: isMobile ? 12 : 20 }]}>
               {SERVICES.map((item, index) => (
                 <ServiceCard 
                   key={item.id} 
                   item={item} 
                   width={cardWidth} 
                   index={index}
+                  isMobile={isMobile}
                   onPress={() => router.push(item.route)} 
                 />
               ))}
@@ -1206,7 +1208,7 @@ function PendingEvaluationCard({ req, isDesktop, onPress }: { req: Administrativ
   );
 }
 
-function ServiceCard({ item, width, onPress, index = 0 }: any) {
+function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
   const scale = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -1230,7 +1232,7 @@ function ServiceCard({ item, width, onPress, index = 0 }: any) {
   }, [index]);
 
   const handleIn = () => {
-    Animated.spring(scale, { toValue: 1.05, useNativeDriver: true }).start();
+    Animated.spring(scale, { toValue: isMobile ? 1.03 : 1.05, useNativeDriver: true }).start();
   };
 
   const handleOut = () => {
@@ -1247,35 +1249,64 @@ function ServiceCard({ item, width, onPress, index = 0 }: any) {
       onHoverOut={handleOut}
     >
       <Animated.View style={{ transform: [{ scale }, { translateY: slideAnim }], opacity: fadeAnim }}>
-        <View style={[styles.serviceCardLight, { width: width, maxWidth: '100%' }]}>
-          <LinearGradient
-            colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
-            locations={[0, 0.7, 1]}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.cardWatermark}>
-            <Ionicons name={item.icon} size={120} color={`${item.color}10`} />
-          </View>
-          
-          <View style={styles.cardInfo}>
-            <View style={[styles.cardIconCircle, { backgroundColor: item.color, shadowColor: item.color }]}>
-              <Ionicons name={item.icon} size={28} color={COLORS.white} />
+        {isMobile ? (
+          <View style={[styles.serviceCardSquare, { width: width, height: width }]}>
+            <LinearGradient
+              colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
+              locations={[0, 0.7, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.cardWatermarkSquare}>
+              <Ionicons name={item.icon} size={68} color={`${item.color}10`} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitleLight}>{item.title}</Text>
-              <Text style={[styles.cardSub, { color: item.color, opacity: 1 }]}>{item.subtitle}</Text>
-            </View>
-          </View>
 
-          <Text style={styles.cardDescLight} numberOfLines={2}>{item.desc}</Text>
+            <View style={{ flex: 1, justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <View style={[styles.cardIconCircleSquare, { backgroundColor: item.color, shadowColor: item.color }]}>
+                  <Ionicons name={item.icon} size={22} color={COLORS.white} />
+                </View>
+                <View style={[styles.miniActionChip, { backgroundColor: `${item.color}18` }]}>
+                  <Ionicons name="arrow-forward" size={13} color={item.color} />
+                </View>
+              </View>
 
-          <View style={styles.cardBottom}>
-            <View style={[styles.glassButtonLight, { borderColor: item.color, backgroundColor: item.color }]}>
-              <Text style={[styles.glassButtonTextLight, { color: COLORS.white }]}>Solicitar ahora</Text>
-              <Ionicons name="add-circle" size={18} color={COLORS.white} />
+              <View>
+                <Text style={styles.cardTitleSquare} numberOfLines={1}>{item.title}</Text>
+                <Text style={[styles.cardSubSquare, { color: item.color }]} numberOfLines={1}>{item.subtitle}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        ) : (
+          <View style={[styles.serviceCardLight, { width: width, maxWidth: '100%' }]}>
+            <LinearGradient
+              colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
+              locations={[0, 0.7, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.cardWatermark}>
+              <Ionicons name={item.icon} size={120} color={`${item.color}10`} />
+            </View>
+            
+            <View style={styles.cardInfo}>
+              <View style={[styles.cardIconCircle, { backgroundColor: item.color, shadowColor: item.color }]}>
+                <Ionicons name={item.icon} size={28} color={COLORS.white} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardTitleLight}>{item.title}</Text>
+                <Text style={[styles.cardSub, { color: item.color, opacity: 1 }]}>{item.subtitle}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.cardDescLight} numberOfLines={2}>{item.desc}</Text>
+
+            <View style={styles.cardBottom}>
+              <View style={[styles.glassButtonLight, { borderColor: item.color, backgroundColor: item.color }]}>
+                <Text style={[styles.glassButtonTextLight, { color: COLORS.white }]}>Solicitar ahora</Text>
+                <Ionicons name="add-circle" size={18} color={COLORS.white} />
+              </View>
+            </View>
+          </View>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -1368,6 +1399,41 @@ const styles = StyleSheet.create({
       web: { boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }
     })
   },
+  serviceCardSquare: {
+    borderRadius: 22,
+    padding: 14,
+    backgroundColor: COLORS.white,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.05, shadowRadius: 12 },
+      android: { elevation: 3 },
+      web: { boxShadow: '0 6px 18px rgba(15,23,42,0.06)' }
+    })
+  },
+  cardWatermarkSquare: { position: 'absolute', right: -12, top: -12, transform: [{ rotate: '-15deg' }] },
+  cardIconCircleSquare: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6
+  },
+  miniActionChip: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardTitleSquare: { fontSize: 15, fontWeight: '900', color: COLORS.dark, letterSpacing: -0.2 },
+  cardSubSquare: { fontSize: 11, fontWeight: '800', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.3 },
   cardWatermark: { position: 'absolute', right: -20, top: -20, transform: [{ rotate: '-15deg' }] },
   cardInfo: { flexDirection: 'row', gap: 15, alignItems: 'center', marginBottom: 20 },
   cardIconCircle: { width: 56, height: 56, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 12 },

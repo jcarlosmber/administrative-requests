@@ -96,13 +96,16 @@ export default function MaintenanceRequestScreen() {
     }
   };
 
+  const [requesterName, setRequesterName] = useState('');
+
   // Efecto para auto-completar dependencia desde LDAP
   useEffect(() => {
     const fetchUserLdapData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user && user.dependency) {
-          setDependency(user.dependency);
+        if (user) {
+          if (user.dependency) setDependency(user.dependency);
+          if (user.name || user.full_name) setRequesterName(user.full_name || user.name);
         }
       } catch (err) {
         console.error('Error fetching user for maintenance prefill:', err);
@@ -156,6 +159,8 @@ export default function MaintenanceRequestScreen() {
 
       console.log('📤 [FRONTEND SASGE] Radicando mantenimiento. Destinatarios Proceso de Gestión Administrativa:', adminEmails);
 
+      const resolvedRequester = requesterName || user?.name || user?.full_name || (user?.email ? user.email.split('@')[0] : 'Funcionario Solicitante');
+
       await requestService.create({
         user_id: user?.id || null,
         title: title.trim(),
@@ -167,7 +172,9 @@ export default function MaintenanceRequestScreen() {
         metadata: {
           location: location.trim(),
           room: room.trim(),
-          dependency: dependency.trim()
+          dependency: dependency.trim(),
+          requester_name: resolvedRequester,
+          requester_email: user?.email || ''
         }
       });
 

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 260" width="100%" height="100%">
+  <defs>
+    <linearGradient id="emblemGradTrans" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#C53926" />
+      <stop offset="100%" stop-color="#8F2516" />
+    </linearGradient>
+
+    <filter id="softGlowTrans" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#A9301E" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <g transform="translate(15, 15)">
+    <!-- Isotipo (Emblema redondeado) -->
+    <rect x="0" y="0" width="230" height="230" rx="52" fill="url(#emblemGradTrans)" filter="url(#softGlowTrans)" />
+    <rect x="0" y="0" width="230" height="230" rx="52" fill="none" stroke="rgba(255, 255, 255, 0.3)" stroke-width="3" />
+
+    <!-- Ícono Institucional Edificio de Gobierno -->
+    <g transform="translate(45, 45)" fill="#FFFFFF">
+      <polygon points="70,12 10,48 130,48" />
+      <circle cx="70" cy="36" r="6" fill="#A9301E" />
+      <rect x="14" y="52" width="112" height="10" rx="3" />
+      <rect x="22" y="66" width="16" height="52" rx="4" />
+      <rect x="48" y="66" width="16" height="52" rx="4" />
+      <rect x="76" y="66" width="16" height="52" rx="4" />
+      <rect x="102" y="66" width="16" height="52" rx="4" />
+      <rect x="12" y="122" width="116" height="10" rx="3" />
+      <rect x="6" y="134" width="128" height="8" rx="2" />
+    </g>
+
+    <!-- Título Servicios Generales 2.0 -->
+    <text x="280" y="115" 
+          font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="76" 
+          font-weight="900" 
+          letter-spacing="-1" 
+          fill="#FFF8F6">
+      Servicios Generales 2.0
+    </text>
+
+    <!-- Subtítulo Secretaría Jurídica Distrital -->
+    <text x="284" y="172" 
+          font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+          font-size="34" 
+          font-weight="500" 
+          letter-spacing="0.5" 
+          fill="#F7B7AA">
+      Secretaría Jurídica Distrital
+    </text>
+
+    <!-- Badge SASGE 2.0 -->
+    <g transform="translate(284, 195)">
+      <rect x="0" y="0" width="150" height="34" rx="8" fill="rgba(255, 255, 255, 0.12)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="1.5" />
+      <text x="75" y="23" 
+            font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+            font-size="16" 
+            font-weight="700" 
+            letter-spacing="2" 
+            fill="#FFFFFF" 
+            text-anchor="middle">
+        SASGE 2.0
+      </text>
+    </g>
+  </g>
+</svg>

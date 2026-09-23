@@ -286,12 +286,13 @@ export default function ManageRequests() {
     newStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado', 
     finalImage?: string | null, 
     reason?: string,
-    adminEmails?: string[]
+    adminEmails?: string[],
+    ticEmails?: string[]
   ) => {
     try {
       setLoading(true);
-      console.log(`📤 [FRONTEND SASGE] Actualizando estado de #${id} a "${newStatus}". Correos gestores adjuntados:`, adminEmails);
-      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason, adminEmails);
+      console.log(`📤 [FRONTEND SASGE] Actualizando estado de #${id} a "${newStatus}". Correos gestores adjuntados:`, adminEmails, 'Correos TIC:', ticEmails);
+      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason, adminEmails, undefined, ticEmails);
       await fetchRequests();
       let actionName = 'procesada';
       if (newStatus === 'resuelto') actionName = 'aprobada / finalizada';
@@ -1537,6 +1538,9 @@ export default function ManageRequests() {
         // Verificar si aplica notificación a Secretaría General / Equipo Gestor
         let secGenEmail: string | null = null;
         let secGenEmailList: string[] = [];
+        let ticEmailList: string[] = [];
+        let hasTechEquipment = false;
+        let techEquipmentSummary = '';
         let serviceKey = confirmModal.category || '';
 
         if (
@@ -1552,6 +1556,45 @@ export default function ManageRequests() {
 
           if (confirmModal.category === 'rooms' && isSpecial) {
             serviceKey = 'rooms_special';
+          }
+
+          // Detección de requerimientos TIC en salas estándar al aprobar
+          if (confirmModal.category === 'rooms' && !isSpecial && confirmModal.newStatus === 'resuelto') {
+            const hasProjector = !!(meta.services?.projector);
+            const hasLaptop = !!(meta.services?.laptop);
+            const hasTechTic = !!(meta.services?.tech_tic);
+            const hasTechArray = Array.isArray(meta.tech_requirements) && meta.tech_requirements.some((t: string) => 
+              /proyector|videobeam|laptop|computador|equipos tic/i.test(t)
+            );
+            const hasCustomTech = !!(meta.custom_tech_description && meta.custom_tech_description.trim().length > 0);
+
+            hasTechEquipment = hasProjector || hasLaptop || hasTechTic || hasTechArray || hasCustomTech;
+
+            if (hasTechEquipment) {
+              const items: string[] = [];
+              if (hasProjector && hasLaptop) {
+                items.push('Equipos TIC (Proyector y Laptop)');
+              } else {
+                if (hasProjector) items.push('Proyector');
+                if (hasLaptop) items.push('Computador / Laptop');
+              }
+              if (hasTechTic && !items.length) items.push('Equipos TIC');
+              if (Array.isArray(meta.tech_requirements) && meta.tech_requirements.length > 0) {
+                meta.tech_requirements.forEach((t: string) => {
+                  if (!items.includes(t)) items.push(t);
+                });
+              }
+              if (hasCustomTech) {
+                items.push(meta.custom_tech_description.trim());
+              }
+              techEquipmentSummary = items.join(', ') || 'Equipos TIC';
+
+              ticEmailList = Array.from(new Set(
+                serviceEmails
+                  .filter(e => e && e.service_type === 'rooms_tic' && e.email?.trim())
+                  .map(e => e.email.trim())
+              ));
+            }
           }
 
           let matchingEmails: string[] = [];
@@ -1744,6 +1787,8 @@ export default function ManageRequests() {
                           ? `Notificación a Secretaría General Alcaldía Mayor ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
                           : confirmModal.category === 'parking' && confirmModal.newStatus === 'resuelto'
                           ? `Notificación a Portería Manzana Liévano ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
+                          : confirmModal.category === 'rooms'
+                          ? `Notificación a Equipo Gestor de Salas ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`
                           : `Notificación a Equipo Gestor ${secGenEmailList.length > 1 ? `(${secGenEmailList.length} correos)` : ''}`}
                       </Text>
                     </View>
@@ -1771,6 +1816,75 @@ export default function ManageRequests() {
                         </View>
                       ))}
                     </View>
+                  </View>
+                )}
+
+                {/* Aviso Destacado de Servicios Adicionales (Oficina TIC) */}
+                {hasTechEquipment && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#F0F9FF',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: '#BAE6FD',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+                      <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: '#E0F2FE', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="laptop-outline" size={14} color="#0284C7" />
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#0369A1', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                        {`Notificación a Oficina TIC (Servicios Adicionales)${ticEmailList.length > 1 ? ` (${ticEmailList.length} correos)` : ''}`}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#0369A1' }}>
+                        ⚡ Alistamiento: {techEquipmentSummary}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#334155', lineHeight: 17, marginBottom: 8 }}>
+                      {ticEmailList.length > 1 
+                        ? 'Se enviará notificación automática a la Oficina TIC a los siguientes correos para el alistamiento de equipos:' 
+                        : 'Se enviará notificación automática a la Oficina TIC para el alistamiento previo de los equipos en la sala:'}
+                    </Text>
+                    {ticEmailList.length > 0 ? (
+                      <View style={{
+                        flexDirection: 'column',
+                        gap: 6,
+                        backgroundColor: '#FFFFFF',
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#BAE6FD',
+                      }}>
+                        {ticEmailList.map((em, idx) => (
+                          <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Ionicons name="at-outline" size={14} color="#0284C7" />
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#0369A1', flex: 1, lineHeight: 18 }}>
+                              {em}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={{
+                        backgroundColor: '#FEF3C7',
+                        padding: 10,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#FDE68A',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6
+                      }}>
+                        <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
+                        <Text style={{ fontSize: 11, color: '#92400E', fontWeight: '600', flex: 1 }}>
+                          No hay correo asignado a "Equipos TIC (Salas)" en Ajustes. La alerta no podrá enviarse a TIC.
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 )}
 
@@ -2003,7 +2117,14 @@ export default function ManageRequests() {
                         disabled={isBlocked}
                         onPress={() => {
                           if (confirmModal) {
-                            updateStatus(confirmModal.reqId, confirmModal.newStatus, confirmModal.finalImage, confirmModal.rejectReason?.trim(), secGenEmailList);
+                            updateStatus(
+                              confirmModal.reqId, 
+                              confirmModal.newStatus, 
+                              confirmModal.finalImage, 
+                              confirmModal.rejectReason?.trim(), 
+                              secGenEmailList,
+                              ticEmailList
+                            );
                             setConfirmModal(null);
                           }
                         }}

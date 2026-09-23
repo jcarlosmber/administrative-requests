@@ -244,11 +244,43 @@ const mapRequestToUI = (item: AdministrativeRequest) => {
     rechazada: COLORS.primary
   } as Record<string, string>)[item.status.toLowerCase()] || COLORS.muted;
 
+  let meta = item.metadata || {};
+  if (typeof meta === 'string') {
+    try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+  }
+
+  // Extraer horario para Salas (ej. 11:00 - 14:00) y transporte
+  let timeStr = '';
+  if (item.category === 'rooms') {
+    if (meta.time) {
+      timeStr = meta.time;
+    } else if (meta.booking_hours) {
+      timeStr = meta.booking_hours;
+    } else if (meta.start_hour !== undefined && meta.end_hour !== undefined && meta.start_hour !== null && meta.end_hour !== null) {
+      const sh = String(meta.start_hour).padStart(2, '0') + ':00';
+      const eh = String(meta.end_hour).padStart(2, '0') + ':00';
+      timeStr = `${sh} - ${eh}`;
+    } else if (meta.start_time && meta.end_time) {
+      timeStr = `${meta.start_time} - ${meta.end_time}`;
+    } else if (meta.event_start_hour && meta.event_end_hour) {
+      timeStr = `${meta.event_start_hour} - ${meta.event_end_hour}`;
+    }
+  } else if (item.category === 'transport') {
+    timeStr = meta.pickupTime || '';
+  }
+
+  // Extraer fecha del evento para salas si existe en metadatos
+  let dateStr = new Date(item.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  if (item.category === 'rooms' && meta.date) {
+    dateStr = meta.date;
+  }
+
   return {
     ...item,
     cat: typeLabel,
     status: item.status.charAt(0).toUpperCase() + item.status.slice(1).replace('_', ' '),
-    date: new Date(item.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+    date: dateStr,
+    time: timeStr,
     color: statusColor
   };
 };
@@ -465,9 +497,17 @@ function RequestCard({ item, evalCategories, onPress }: any) {
           </View>
           
           <View style={styles.cardFooter}>
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
-              <Text style={styles.metaText}>{item.date}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, flex: 1, marginRight: 8 }}>
+              <View style={styles.metaItem}>
+                <Ionicons name="calendar-outline" size={14} color={COLORS.muted} />
+                <Text style={styles.metaText}>{item.date}</Text>
+              </View>
+              {item.time ? (
+                <View style={[styles.metaItem, { backgroundColor: `${item.color}15`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }]}>
+                  <Ionicons name="time-outline" size={13} color={item.color} />
+                  <Text style={[styles.metaText, { fontWeight: '800', color: item.color, fontSize: 12 }]}>{item.time}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.actionLink}>
               <Text style={styles.actionLinkText}>Ver detalles</Text>
