@@ -440,6 +440,47 @@ export default function ParkingRequestScreen() {
                     </View>
                   </View>
 
+                  {/* Resumen de Celda Asignada del Usuario */}
+                  {(() => {
+                    const fixedVehicle = registeredVehicles.find(v => v.spot_code);
+                    if (!fixedVehicle && registeredVehicles.length === 0) return null;
+
+                    return (
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        padding: 12,
+                        borderRadius: 14,
+                        backgroundColor: fixedVehicle ? '#EFF6FF' : '#F1F5F9',
+                        borderWidth: 1,
+                        borderColor: fixedVehicle ? '#BFDBFE' : '#E2E8F0',
+                        marginBottom: 12
+                      }}>
+                        <View style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          backgroundColor: fixedVehicle ? '#2563EB' : '#64748B',
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}>
+                          <Ionicons name={fixedVehicle ? "key" : "infinite"} size={20} color="#FFFFFF" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: fixedVehicle ? '#1E40AF' : '#1E293B' }}>
+                            {fixedVehicle ? `Tu Celda Fija Asignada: ${fixedVehicle.spot_code}` : 'Modalidad de Ingreso: Parqueadero de Uso Libre'}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: fixedVehicle ? '#3B82F6' : '#64748B', marginTop: 1 }}>
+                            {fixedVehicle 
+                              ? `Asignada a tu vehículo placa ${fixedVehicle.plate}. Tienes prioridad de estacionamiento en esta celda.`
+                              : 'Tus vehículos registrados y activos pueden ingresar y ocupar cualquier celda disponible de uso general.'}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })()}
+
                   {/* Listado de Vehículos */}
                   {registeredVehicles.length === 0 ? (
                     <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>

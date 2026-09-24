@@ -1242,9 +1242,35 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       try { currentMetadata = JSON.parse(currentMetadata); } catch(e) {}
     }
 
-    // Integrar metadatos adicionales si vienen en el payload (ej. asignación de conductor)
+    // Integrar metadatos adicionales si vienen en el payload (ej. asignación de conductor o celda)
     if (metadata && typeof metadata === 'object') {
       currentMetadata = { ...currentMetadata, ...metadata };
+    }
+
+    // Si se aprueba una solicitud de parqueadero con celda asignada
+    if (status === 'resuelto' && currentMetadata.assigned_spot_id) {
+      try {
+        const spotId = currentMetadata.assigned_spot_id;
+        const spotCheck = await pool.query('SELECT code, spot_type FROM parking_spots WHERE id = $1', [spotId]);
+        if (spotCheck.rows.length > 0) {
+          currentMetadata.assigned_spot_code = spotCheck.rows[0].code;
+          currentMetadata.spot_type = spotCheck.rows[0].spot_type || 'fija';
+          const userName = currentMetadata.name || currentMetadata.requester_name || 'Funcionario';
+          await pool.query(
+            `UPDATE parking_spots SET status = 'ocupada', assigned_user_id = $1, assigned_user_name = $2, updated_at = NOW() WHERE id = $3`,
+            [checkResult.rows[0].user_id || null, userName, spotId]
+          );
+          if (currentMetadata.plate) {
+            const normPlate = currentMetadata.plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            await pool.query(
+              `UPDATE user_vehicles SET assigned_spot_id = $1, is_active = true, updated_at = NOW() WHERE UPPER(REPLACE(plate, '-', '')) = $2`,
+              [spotId, normPlate]
+            );
+          }
+        }
+      } catch (spotErr) {
+        console.warn('Error al vincular celda en aprobación de solicitud:', spotErr);
+      }
     }
     
     const statusDetails = {

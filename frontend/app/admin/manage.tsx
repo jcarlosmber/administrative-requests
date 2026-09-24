@@ -25,7 +25,7 @@ import { requestService, AdministrativeRequest } from '../../lib/requestService'
 import { supabase } from '../../lib/supabase';
 import * as DocumentPicker from 'expo-document-picker';
 import { settingsService, ServiceEmail, Driver } from '../../lib/settingsService';
-import { vehicleService } from '../../lib/vehicleService';
+import { vehicleService, ParkingSpot } from '../../lib/vehicleService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -189,6 +189,11 @@ export default function ManageRequests() {
     maxLimit: number;
   }>({ loading: false, vehicles: [], count: 0, activeCount: 0, maxLimit: 3 });
 
+  // Estado para selección de celda al aprobar solicitudes de parqueadero
+  const [approvalSpots, setApprovalSpots] = useState<ParkingSpot[]>([]);
+  const [selectedSpotType, setSelectedSpotType] = useState<'libre' | 'fija'>('libre');
+  const [selectedSpotId, setSelectedSpotId] = useState<string>('');
+
   useEffect(() => {
     if (confirmModal?.visible && confirmModal.category === 'parking' && confirmModal.item) {
       const identifier = confirmModal.item.user_id || confirmModal.item.metadata?.doc || confirmModal.item.metadata?.name;
@@ -203,12 +208,40 @@ export default function ManageRequests() {
               activeCount: res.activeCount || 0,
               maxLimit: res.maxLimit || 3
             });
+            // Si el usuario ya tiene algún vehículo con celda asignada, pre-seleccionarla
+            const vehicleWithSpot = res.vehicles?.find((v: any) => v.assigned_spot_id);
+            if (vehicleWithSpot?.assigned_spot_id) {
+              setSelectedSpotType('fija');
+              setSelectedSpotId(vehicleWithSpot.assigned_spot_id);
+            }
           })
           .catch(err => {
             console.warn('Error al cargar vehículos para aprobación:', err);
             setParkingApprovalData(prev => ({ ...prev, loading: false }));
           });
       }
+
+      // Cargar catálogo de celdas
+      vehicleService.getSpots()
+        .then(spots => {
+          setApprovalSpots(spots || []);
+          const existingSpotId = confirmModal.item?.metadata?.assigned_spot_id;
+          const existingSpotType = confirmModal.item?.metadata?.spot_type;
+          if (existingSpotType === 'fija' && existingSpotId) {
+            setSelectedSpotType('fija');
+            setSelectedSpotId(existingSpotId);
+          } else if (!confirmModal.item?.metadata?.assigned_spot_id) {
+            // Mantener estado libre por defecto si no venía fija
+            if (existingSpotType === 'libre') {
+              setSelectedSpotType('libre');
+              setSelectedSpotId('');
+            }
+          }
+        })
+        .catch(err => console.warn('Error al cargar celdas:', err));
+    } else {
+      setSelectedSpotType('libre');
+      setSelectedSpotId('');
     }
   }, [confirmModal?.visible, confirmModal?.item]);
 
@@ -320,12 +353,13 @@ export default function ManageRequests() {
     finalImage?: string | null, 
     reason?: string,
     adminEmails?: string[],
-    ticEmails?: string[]
+    ticEmails?: string[],
+    extraMetadata?: any
   ) => {
     try {
       setLoading(true);
       console.log(`📤 [FRONTEND SASGE] Actualizando estado de #${id} a "${newStatus}". Correos gestores adjuntados:`, adminEmails, 'Correos TIC:', ticEmails);
-      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason, adminEmails, undefined, ticEmails);
+      await requestService.updateStatus(id, newStatus, finalImage || undefined, reason, adminEmails, extraMetadata, ticEmails);
       await fetchRequests();
       let actionName = 'procesada';
       if (newStatus === 'resuelto') actionName = 'aprobada / finalizada';
@@ -1898,6 +1932,186 @@ export default function ManageRequests() {
                   </View>
                 )}
 
+                {/* Asignación de Celda de Parqueadero (Solo al aprobar solicitudes de parqueadero) */}
+                {confirmModal.category === 'parking' && confirmModal.newStatus === 'resuelto' && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    marginBottom: 12,
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                        <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="car-sport" size={14} color="#2563EB" />
+                        </View>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          Asignación de Celda
+                        </Text>
+                      </View>
+                      <View style={{
+                        backgroundColor: selectedSpotType === 'fija' ? '#DBEAFE' : '#EDE9FE',
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6
+                      }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: selectedSpotType === 'fija' ? '#1D4ED8' : '#6B21A8' }}>
+                          {selectedSpotType === 'fija' ? 'Modalidad: Fija' : 'Modalidad: Uso Libre'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={{ fontSize: 12, color: '#475569', marginBottom: 10, lineHeight: 16 }}>
+                      Selecciona si autorizas el ingreso bajo la modalidad de uso rotativo libre o si le asignas una celda fija exclusiva:
+                    </Text>
+
+                    {/* Botones de Modalidad */}
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setSelectedSpotType('libre');
+                          setSelectedSpotId('');
+                        }}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 10,
+                          paddingHorizontal: 12,
+                          borderRadius: 10,
+                          backgroundColor: selectedSpotType === 'libre' ? '#2563EB' : '#FFFFFF',
+                          borderWidth: 1.5,
+                          borderColor: selectedSpotType === 'libre' ? '#2563EB' : '#E2E8F0',
+                        }}
+                      >
+                        <Ionicons name="infinite-outline" size={16} color={selectedSpotType === 'libre' ? '#FFFFFF' : '#475569'} />
+                        <Text style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: selectedSpotType === 'libre' ? '#FFFFFF' : '#475569',
+                        }}>
+                          Uso Libre / Rotativo
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setSelectedSpotType('fija')}
+                        activeOpacity={0.7}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 10,
+                          paddingHorizontal: 12,
+                          borderRadius: 10,
+                          backgroundColor: selectedSpotType === 'fija' ? '#0F172A' : '#FFFFFF',
+                          borderWidth: 1.5,
+                          borderColor: selectedSpotType === 'fija' ? '#0F172A' : '#E2E8F0',
+                        }}
+                      >
+                        <Ionicons name="pin-outline" size={16} color={selectedSpotType === 'fija' ? '#FFFFFF' : '#475569'} />
+                        <Text style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: selectedSpotType === 'fija' ? '#FFFFFF' : '#475569',
+                        }}>
+                          Celda Fija
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Selector de Celdas si es Fija */}
+                    {selectedSpotType === 'fija' && (
+                      <View style={{ backgroundColor: '#FFFFFF', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#334155', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          Elige la Celda Fija a Asignar:
+                        </Text>
+                        
+                        {approvalSpots.length === 0 ? (
+                          <View style={{ padding: 12, backgroundColor: '#FFFBEB', borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A' }}>
+                            <Text style={{ fontSize: 12, color: '#B45309', lineHeight: 16 }}>
+                              No hay celdas registradas en el sistema. Puedes configurarlas en la pestaña de Ajustes {'->'} Celdas.
+                            </Text>
+                          </View>
+                        ) : (
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', marginBottom: 8 }}>
+                            <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 2 }}>
+                              {approvalSpots.map(spot => {
+                                const isSelected = selectedSpotId === spot.id;
+                                const isAvailable = spot.status === 'disponible';
+                                const isCurrentOccupant = confirmModal.item?.metadata?.name && spot.assigned_user_name === confirmModal.item.metadata.name;
+
+                                return (
+                                  <TouchableOpacity
+                                    key={spot.id}
+                                    onPress={() => setSelectedSpotId(spot.id)}
+                                    activeOpacity={0.7}
+                                    style={{
+                                      paddingHorizontal: 12,
+                                      paddingVertical: 8,
+                                      borderRadius: 10,
+                                      backgroundColor: isSelected ? '#1E293B' : isCurrentOccupant ? '#EFF6FF' : isAvailable ? '#FFFFFF' : '#F8FAFC',
+                                      borderWidth: isSelected ? 2 : 1,
+                                      borderColor: isSelected ? '#0F172A' : isCurrentOccupant ? '#3B82F6' : isAvailable ? '#CBD5E1' : '#E2E8F0',
+                                      alignItems: 'center',
+                                      minWidth: 80
+                                    }}
+                                  >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                      <Text style={{
+                                        fontSize: 13,
+                                        fontWeight: '900',
+                                        color: isSelected ? '#FFFFFF' : '#0F172A'
+                                      }}>
+                                        {spot.code}
+                                      </Text>
+                                      {spot.spot_type === 'fija' && (
+                                        <Ionicons name="pin" size={10} color={isSelected ? '#93C5FD' : '#2563EB'} />
+                                      )}
+                                    </View>
+                                    <Text style={{
+                                      fontSize: 9,
+                                      fontWeight: '800',
+                                      color: isSelected ? '#93C5FD' : isCurrentOccupant ? '#2563EB' : isAvailable ? '#16A34A' : '#64748B',
+                                      marginTop: 2
+                                    }}>
+                                      {isSelected ? '✓ Seleccionada' : isCurrentOccupant ? 'Su Celda' : isAvailable ? 'Disponible' : spot.status}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </ScrollView>
+                        )}
+
+                        {selectedSpotId ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                            <Text style={{ fontSize: 12, color: '#16A34A', fontWeight: '700' }}>
+                              Celda asignada: {approvalSpots.find(s => s.id === selectedSpotId)?.code}. Al aprobar, se actualizará el parqueadero y el vehículo.
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+                            <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '700' }}>
+                              Debes seleccionar una celda para continuar con la modalidad fija.
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 {/* Aviso Destacado de Secretaría General / Equipo Gestor */}
                 {secGenEmail && (
                   <View style={{
@@ -2212,7 +2426,8 @@ export default function ManageRequests() {
                 {/* Botones Cancelar / Confirmar */}
                 {(() => {
                   const isMissingRejectReason = isReject && (!confirmModal.rejectReason || !confirmModal.rejectReason.trim());
-                  const isBlocked = isMissingMaintenancePhoto || isMissingRejectReason;
+                  const isMissingParkingCell = confirmModal.category === 'parking' && confirmModal.newStatus === 'resuelto' && selectedSpotType === 'fija' && !selectedSpotId;
+                  const isBlocked = isMissingMaintenancePhoto || isMissingRejectReason || isMissingParkingCell;
 
                   return (
                     <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
@@ -2252,13 +2467,24 @@ export default function ManageRequests() {
                         disabled={isBlocked}
                         onPress={() => {
                           if (confirmModal) {
+                            let extraMeta: any = undefined;
+                            if (confirmModal.category === 'parking' && confirmModal.newStatus === 'resuelto') {
+                              const chosenSpot = approvalSpots.find(s => s.id === selectedSpotId);
+                              extraMeta = {
+                                spot_type: selectedSpotType,
+                                assigned_spot_id: selectedSpotType === 'fija' ? selectedSpotId : null,
+                                assigned_spot_code: selectedSpotType === 'fija' ? (chosenSpot?.code || null) : null
+                              };
+                            }
+
                             updateStatus(
                               confirmModal.reqId, 
                               confirmModal.newStatus, 
                               confirmModal.finalImage, 
                               confirmModal.rejectReason?.trim(), 
                               secGenEmailList,
-                              ticEmailList
+                              ticEmailList,
+                              extraMeta
                             );
                             setConfirmModal(null);
                           }

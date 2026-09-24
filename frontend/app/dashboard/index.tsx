@@ -1705,6 +1705,48 @@ function DetailModal({ visible, request, onClose }: { visible: boolean; request:
                 <Text style={modalStyles.fieldValue}>Color: {metadata.color || 'N/A'}</Text>
               </View>
             </View>
+
+            {/* Asignación de Celda / Modalidad de Parqueadero */}
+            {(metadata.assigned_spot_code || metadata.spot_type || request.status === 'resuelto') && (
+              <View style={[
+                modalStyles.infoBlock, 
+                { 
+                  backgroundColor: metadata.assigned_spot_code ? '#EFF6FF' : '#F8FAFC',
+                  borderColor: metadata.assigned_spot_code ? '#93C5FD' : '#E2E8F0',
+                  borderWidth: 1.5
+                }
+              ]}>
+                <Text style={[modalStyles.infoSectionTitle, { color: metadata.assigned_spot_code ? '#1D4ED8' : '#475569' }]}>
+                  CELDA / MODALIDAD ASIGNADA
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                  <View style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 12,
+                    backgroundColor: metadata.assigned_spot_code ? '#1D4ED8' : '#475569',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}>
+                    <Ionicons 
+                      name={metadata.assigned_spot_code ? "key" : "infinite"} 
+                      size={20} 
+                      color="#FFFFFF" 
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: metadata.assigned_spot_code ? '#1E3A8A' : '#1E293B' }}>
+                      {metadata.assigned_spot_code ? `Celda Fija: ${metadata.assigned_spot_code}` : 'Uso Libre / Rotativo'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: metadata.assigned_spot_code ? '#2563EB' : '#64748B', marginTop: 2 }}>
+                      {metadata.assigned_spot_code 
+                        ? 'Tienes asignada esta celda exclusiva para tu vehículo.' 
+                        : 'Acceso autorizado según disponibilidad general de celdas libres.'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         );
 

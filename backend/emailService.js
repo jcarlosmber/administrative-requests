@@ -1098,6 +1098,12 @@ function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user
       cardItems: [
         { label: 'Placa Autorizada', value: plate },
         { label: 'Vehículo', value: vehicleInfo },
+        { 
+          label: 'Celda / Modalidad', 
+          value: meta.assigned_spot_code 
+            ? `Celda Fija: ${meta.assigned_spot_code}` 
+            : (meta.spot_type === 'fija' ? 'Celda Fija Asignada' : 'Parqueadero de Uso Libre / Rotativo') 
+        },
         { label: 'Servidor', value: name },
         { label: 'Estado', value: statusText }
       ],
