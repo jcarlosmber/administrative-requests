@@ -3388,6 +3388,20 @@ const getCategoryCardTheme = (category?: string, type?: string) => {
   };
 };
 
+export const checkIsSpecialRoom = (item: any) => {
+  if (!item || item.category !== 'rooms') return false;
+  const meta = item.metadata || {};
+  const roomName = (typeof meta.room === 'object' ? meta.room?.name : meta.room) || '';
+  return (
+    meta.requires_secretaria_general === true ||
+    meta.info === 'Especial' ||
+    (parseInt(meta.capacity) || 0) >= 100 ||
+    /huitaca|secretar[ií]a\s*general|auditorio|magno/i.test(
+      roomName || item.title || item.description || item.detail || ''
+    )
+  );
+};
+
 function RequestTableHeader() {
   return (
     <View style={{
@@ -3442,6 +3456,7 @@ function RequestTableRow({
 
   const isPending = (item.status || '').toLowerCase() === 'pendiente';
   const isInProgress = ['en_progreso', 'en progreso', 'en curso'].includes((item.status || '').toLowerCase());
+  const isSpecialRoom = checkIsSpecialRoom(item);
 
   return (
     <Pressable
@@ -3585,7 +3600,7 @@ function RequestTableRow({
       <View style={{ width: 175, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
         {isPending && (
           <>
-            {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
+            {(item.category === 'maintenance' || isSpecialRoom) && (
               <Pressable
                 onPress={(e: any) => {
                   e?.stopPropagation?.();
@@ -3610,7 +3625,7 @@ function RequestTableRow({
               </Pressable>
             )}
 
-            {(item.category === 'visitors' || item.category === 'parking' || item.category === 'rooms') && (
+            {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !isSpecialRoom)) && (
               <Pressable
                 onPress={(e: any) => {
                   e?.stopPropagation?.();
@@ -3660,26 +3675,28 @@ function RequestTableRow({
               </Pressable>
             )}
 
-            <Pressable
-              onPress={(e: any) => {
-                e?.stopPropagation?.();
-                onUpdateStatus(item, 'rechazado');
-              }}
-              style={({ hovered }: any) => [
-                {
-                  backgroundColor: hovered ? '#DC2626' : '#EF4444',
-                  borderWidth: 0,
-                  width: 30,
-                  height: 30,
-                  borderRadius: 15,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                },
-                Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
-              ]}
-            >
-              <Ionicons name="close" size={15} color="#FFFFFF" />
-            </Pressable>
+            {!isSpecialRoom && (
+              <Pressable
+                onPress={(e: any) => {
+                  e?.stopPropagation?.();
+                  onUpdateStatus(item, 'rechazado');
+                }}
+                style={({ hovered }: any) => [
+                  {
+                    backgroundColor: hovered ? '#DC2626' : '#EF4444',
+                    borderWidth: 0,
+                    width: 30,
+                    height: 30,
+                    borderRadius: 15,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  },
+                  Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                ]}
+              >
+                <Ionicons name="close" size={15} color="#FFFFFF" />
+              </Pressable>
+            )}
           </>
         )}
 
@@ -3761,6 +3778,7 @@ function RequestDetailModal({
   const isPending = (item.status || '').toLowerCase() === 'pendiente';
   const isInProgress = ['en_progreso', 'en progreso', 'en curso'].includes((item.status || '').toLowerCase());
   const isClosed = ['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes((item.status || '').toLowerCase());
+  const isSpecialRoom = checkIsSpecialRoom(item);
 
   const handleAddComment = async () => {
     if (!comment.trim() || commentLoading) return;
@@ -4263,7 +4281,7 @@ function RequestDetailModal({
               {/* Acciones principales según estado (a la izquierda) */}
               {isPending && (
                 <>
-                  {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
+                  {(item.category === 'maintenance' || isSpecialRoom) && (
                     <Pressable
                       onPress={() => {
                         onClose();
@@ -4288,7 +4306,7 @@ function RequestDetailModal({
                     </Pressable>
                   )}
 
-                  {(item.category === 'visitors' || item.category === 'parking' || item.category === 'rooms') && (
+                  {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !isSpecialRoom)) && (
                     <Pressable
                       onPress={() => {
                         onClose();
@@ -4366,7 +4384,7 @@ function RequestDetailModal({
               )}
 
               {/* Rechazar (a la derecha) */}
-              {!isClosed && (
+              {!isClosed && !isSpecialRoom && (
                 <Pressable
                   onPress={() => {
                     onClose();
@@ -4443,6 +4461,7 @@ function RequestListItem({
   const isPending = item.status.toLowerCase() === 'pendiente';
   const isInProgress = ['en_progreso', 'en progreso', 'en curso'].includes(item.status.toLowerCase());
   const isClosed = ['resuelto', 'completada', 'aprobada', 'aprobado', 'rechazado', 'rechazada'].includes(item.status.toLowerCase());
+  const isSpecialRoom = checkIsSpecialRoom(item);
 
   return (
     <Animated.View 
@@ -4572,7 +4591,7 @@ function RequestListItem({
               {isPending && (
                 <>
                   {/* Grupo 1: Mantenimiento, Sala Especial -> Procesar */}
-                  {(item.category === 'maintenance' || (item.category === 'rooms' && item.metadata?.requires_secretaria_general)) && (
+                  {(item.category === 'maintenance' || isSpecialRoom) && (
                     <Pressable 
                       style={({ hovered }: any) => [
                         styles.actionBtn, 
@@ -4592,8 +4611,8 @@ function RequestListItem({
                     </Pressable>
                   )}
 
-                  {/* Grupo 2: Visitantes, Parqueadero, Salas (Estándar y Especiales) -> Aprobar directo */}
-                  {(item.category === 'visitors' || item.category === 'parking' || item.category === 'rooms') && (
+                  {/* Grupo 2: Visitantes, Parqueadero, Salas Estándar -> Aprobar directo */}
+                  {(item.category === 'visitors' || item.category === 'parking' || (item.category === 'rooms' && !isSpecialRoom)) && (
                     <Pressable 
                       style={({ hovered }: any) => [
                         styles.actionBtn, 
@@ -4657,7 +4676,7 @@ function RequestListItem({
               )}
 
               {/* Botón de Rechazo estilo cápsula */}
-              {!isClosed && (
+              {!isClosed && !isSpecialRoom && (
                 <Pressable 
                   style={({ hovered }: any) => [
                     styles.actionBtn, 
