@@ -43,16 +43,16 @@ const RoomManualInfo = ({ roomName }: { roomName: string }) => {
   if (!isBarule && !isHuitaca) return null;
 
   return (
-    <View style={{ marginTop: 15, backgroundColor: '#F0F9FF', borderRadius: 10, padding: 15, borderWidth: 1, borderColor: '#BAE6FD' }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-        <Ionicons name="information-circle" size={24} color="#0284C7" />
-        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0369A1', marginLeft: 8 }}>
+    <View style={{ marginTop: 15, backgroundColor: '#F0F9FF', borderRadius: 12, padding: 18, borderWidth: 1.5, borderColor: '#BAE6FD' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <Ionicons name="information-circle" size={26} color="#0284C7" />
+        <Text style={{ fontSize: 16, fontWeight: '900', color: '#0369A1', marginLeft: 8, letterSpacing: 0.3 }}>
           {isBarule ? 'MANUAL DE AULAS BARULÉ' : 'REQUISITOS AUDITORIO HUITACA'}
         </Text>
       </View>
-      <View style={{ maxHeight: 200 }}>
+      <View style={{ maxHeight: 280 }}>
         <ScrollView nestedScrollEnabled showsVerticalScrollIndicator>
-          <Text style={{ fontSize: 12, color: '#0C4A6E', lineHeight: 18, textAlign: 'justify' }}>
+          <Text style={{ fontSize: 14.5, color: '#0C4A6E', lineHeight: 22, textAlign: 'justify', fontWeight: '500' }}>
             {isBarule ? (
               <>El aula múltiple en su interior cuenta equipos de proyección y sonido.{'\n'}En caso de requerir estación de café la misma debe ser solicitada por medio del aplicativo GLPI por parte del gestor de la dependencia.{'\n'}Las Aulas Barulé cuentan con un aforo restringido debido a los protocolos de Bioseguridad del COVID-19; estos aforos se relacionan a continuación:{'\n'}Aulas Barulé 1 y 2: Máximo 40 personas.{'\n'}Aulas Barulé 4: Máximo 20 personas.{'\n'}Para los usuarios de la secretaria general que requieran el préstamo de portátil en las aulas deben solicitarlo por lo menos con un día de anterioridad por el correo: oticsoporte@alcaldiabogota.gov.co indicando hora, fecha, y funcionario responsable del préstamo del equipo, las demás entidades del distrito u organización deben traer sus propios equipos. Así mismo debe solicitar soporte para conectar a usuarios externos al wifi de la secretaria general ya que NO CONTAMOS con las contraseñas de dichas redes{'\n'}La entidad externa solicitante debe traer el portátil y con salida HDMI para la proyección.{'\n'}En las aulas múltiples está prohibido pegar o fijar cartulinas, carteles, entre otros, en los módulos, paredes y muros de las instalaciones, además distribuir, consumir alimentos y fumar adentro de este espacio.{'\n'}En caso de entregarse algún refrigerio y/o bebidas calientes la entidad o dependencias podrán ubicarse en las áreas aledañas a las aulas. Adicionalmente, deben suministrar los insumos de cafetería y aseo que se requieran para el evento.{'\n'}Como medida de seguridad para el ingreso a las instalaciones de la Alcaldía Mayor de Bogotá, debe ser por la carrera 8 No. 10-65, las entidades o dependencias deben enviar correo electrónico antes de las 4:00 PM con un día de anterioridad al evento, con la relación de los asistentes y personal logístico; debe incluir nombres y apellidos y numero de cedula al correo: subdireccionadministrativa@alcaldiabogota.gov.co{'\n'}Deben ubicar una persona en la entra principal con el listado de los asistentes para realizar el registro.{'\n'}Para el ingreso a la Alcaldía Mayor UNICAMENTE se podrá hacer presentando la cedula de ciudadanía.{'\n'}Las Aulas son específicamente para reuniones, no es un espacio para realizar eventos musicales, teatro, entre otros que permitan incomodar con las reuniones que están conjuntas.{'\n'}Persona o entidad que no utilice las aulas el día asignado para realizar la reunión debe notificar con anterioridad, de lo contrario no se le podrá asignar aulas para siguientes actividades.{'\n\n'}NOTA: La secretaria general entregará formalmente el inventario, las aulas Múltiple Finalizado el evento deberá restituirlo en las mismas condiciones en que fue recibido. Este despacho estará atento a resolver cualquier duda que se presente al respecto.</>
             ) : (
@@ -118,7 +118,8 @@ export default function RoomsRequestScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [timePickerTarget, setTimePickerTarget] = useState<'bookingStart' | 'bookingEnd' | 'eventStart' | 'eventEnd'>('bookingStart');
   
-  const [meetingType, setMeetingType] = useState<'Presencial' | 'Híbrida' | 'Virtual'>('Presencial');
+  const [meetingType, setMeetingType] = useState<string>('Presencial');
+  const [virtualPlatform, setVirtualPlatform] = useState('Microsoft Teams');
   const [manifestationAccepted, setManifestationAccepted] = useState(false);
 
   // Selection from Cronograma
@@ -360,6 +361,7 @@ export default function RoomsRequestScreen() {
           tech_requirements: selectedTech,
           custom_tech_description: customTechDescription,
           meeting_type: meetingType,
+          virtual_platform: (meetingType.includes('Mixta') || meetingType.includes('Híbrida') || meetingType.includes('Virtual')) ? virtualPlatform.trim() : 'No aplica',
           manifestation_express: manifestationAccepted,
           requires_secretaria_general: true,
           date_iso: selectedDay !== null ? weekDates[selectedDay].toISOString().split('T')[0] : null,
@@ -826,9 +828,9 @@ export default function RoomsRequestScreen() {
                     </View>
                     
                     <View style={styles.field}>
-                      <Text style={styles.label}>Tipo de Reunión</Text>
+                      <Text style={styles.label}>Indicar el tipo de reunión</Text>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
-                        {['Presencial', 'Híbrida', 'Virtual'].map((type) => (
+                        {['Presencial', 'Mixta (Virtual y presencial)'].map((type) => (
                           <TouchableOpacity 
                             key={type}
                             style={[
@@ -840,15 +842,16 @@ export default function RoomsRequestScreen() {
                                 borderRadius: 14,
                                 height: 48,
                                 justifyContent: 'center',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                paddingHorizontal: 6
                               },
                               meetingType === type && { borderColor: COLORS.primary, backgroundColor: COLORS.soft }
                             ]}
-                            onPress={() => setMeetingType(type as any)}
+                            onPress={() => setMeetingType(type)}
                           >
                             <Text 
                               style={[
-                                { fontSize: 13, fontWeight: '800', color: COLORS.muted },
+                                { fontSize: 13, fontWeight: '800', color: COLORS.muted, textAlign: 'center' },
                                 meetingType === type && { color: COLORS.primary }
                               ]}
                             >
@@ -858,6 +861,19 @@ export default function RoomsRequestScreen() {
                         ))}
                       </View>
                     </View>
+
+                    {(meetingType.includes('Mixta') || meetingType.includes('Híbrida') || meetingType.includes('Virtual')) && (
+                      <View style={[styles.field, { marginTop: 15 }]}>
+                        <Text style={styles.label}>Plataforma de la reunión virtual (en caso de que la reunión fuera mixta)</Text>
+                        <TextInput 
+                          style={styles.input} 
+                          placeholder="Ej: Microsoft Teams, Zoom, Google Meet" 
+                          placeholderTextColor="#94A3B8" 
+                          value={virtualPlatform}
+                          onChangeText={setVirtualPlatform}
+                        />
+                      </View>
+                    )}
                   </Card>
 
                   {/* CARD 4: MANIFESTACIÓN OBLIGATORIA */}
@@ -1677,18 +1693,14 @@ const styles = StyleSheet.create({
 const SERVICE_OPTIONS = [
   'Cafetería / Coffee Break',
   'Servicio de Brigadistas',
-  'Acomodación / Sillas Especiales',
-  'Servicio de Sonido / Micrófonos',
-  'Estación de Agua permanente',
-  'Decoración / Logística'
+  'Servicio de Sonido / Micrófonos'
 ];
 
 const TECH_OPTIONS = [
   'Equipos TIC (Proyector y Laptop)',
   'Conexión a Internet (WiFi)',
   'Cable HDMI / Adaptadores',
-  'Grabación de Audio / Video',
-  'Traducción Simultánea'
+  'Grabación de Audio / Video'
 ];
 
 function TimePickerModal({ visible, onClose, title, value, onSelect }: any) {

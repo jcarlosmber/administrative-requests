@@ -645,22 +645,33 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
       introParagraph = 'Una reserva de sala ha sido aprobada y se requiere la coordinación o ejecución logística del espacio:';
     }
 
+    const startTimeDisplay = meta.event_start_hour || meta.startTime || (time.includes('-') ? time.split('-')[0].trim() : (time.includes(' a ') ? time.split(' a ')[0].trim() : time));
+    const endTimeDisplay = meta.event_end_hour || meta.endTime || (time.includes('-') ? time.split('-')[1].trim() : (time.includes(' a ') ? time.split(' a ')[1].trim() : time));
+    const additionalServicesCombined = [
+      meta.services_description,
+      Array.isArray(meta.tech_requirements) && meta.tech_requirements.length > 0 ? meta.tech_requirements.join(', ') : null,
+      meta.custom_tech_description
+    ].filter(Boolean).join('; ') || servicesText || 'Ninguno';
+
+    const isVirtualOrMixed = ['Mixta (Virtual y presencial)', 'Híbrida', 'Virtual'].includes(meta.meeting_type) || String(meta.meeting_type).toLowerCase().includes('mixt') || String(meta.meeting_type).toLowerCase().includes('virtual');
+    const virtualPlatformDisplay = meta.virtual_platform ? meta.virtual_platform : (isVirtualOrMixed ? 'Microsoft Teams' : 'No aplica');
+
     const cardItems = isSecGeneral ? [
-      { label: 'Espacio Especial', value: roomName },
-      { label: 'Fecha del Evento', value: date },
-      { label: 'Horario Reserva (Montaje)', value: time },
-      { label: 'Horario Real del Evento', value: (meta.event_start_hour && meta.event_end_hour) ? `${meta.event_start_hour} - ${meta.event_end_hour}` : time },
-      { label: 'Entidad Solicitante', value: meta.entity_name || dependency },
-      { label: 'Actividad / Evento', value: activity },
-      { label: 'Descripción', value: meta.activity_description || request.description },
-      { label: 'Responsable', value: organizer },
-      { label: 'Cargo Responsable', value: meta.responsible_role || 'Funcionario' },
-      { label: 'Teléfono Contacto', value: phone },
-      { label: 'Aforo / Asistentes', value: `${attendees} persona(s)` },
-      { label: 'Modalidad', value: meta.meeting_type || 'Presencial' },
-      { label: 'Servicios Logísticos', value: meta.services_description || servicesText },
-      { label: 'Requerimientos Técnicos', value: Array.isArray(meta.tech_requirements) ? meta.tech_requirements.join(', ') : 'Ninguno' },
-      { label: 'Declaración y Póliza SJD', value: meta.manifestation_express ? 'Aceptada y Acreditada' : 'Aceptada' }
+      { label: 'Nombre de la entidad y dependencia solicitante', value: meta.entity_name ? `${meta.entity_name} – ${meta.dependency || dependency}` : dependency },
+      { label: 'Nombre y cargo del responsable del evento', value: `${organizer}${meta.responsible_role ? ' – ' + meta.responsible_role : ''}` },
+      { label: 'Número telefónico de contacto', value: phone },
+      { label: 'Nombre de la actividad o evento', value: activity },
+      { label: 'Descripción del evento', value: meta.activity_description || request.description || 'Sin descripción adicional' },
+      { label: 'Espacio requerido', value: roomName },
+      { label: 'Número de participantes', value: `${attendees} persona(s)` },
+      { label: 'Fecha del evento', value: date },
+      { label: 'Horario de reserva', value: time },
+      { label: 'Hora de inicio', value: startTimeDisplay },
+      { label: 'Hora de finalización', value: endTimeDisplay },
+      { label: 'Descripción de los servicios adicionales solicitados', value: additionalServicesCombined },
+      { label: 'Indicar el tipo de reunión (Presencial, Mixta (Virtual y presencial)', value: meta.meeting_type || 'Presencial' },
+      { label: 'Plataforma de la reunión virtual (en caso de que la reunión fuera mixta)', value: virtualPlatformDisplay },
+      { label: 'Manifestación expresa que el evento está relacionado con la misión y/o las funciones de la dependencia o entidad pública solicitante y que no es de carácter político, religioso o comercial', value: meta.manifestation_express !== false ? 'Aceptada y Acreditada' : 'Aceptada' }
     ] : [
       { label: 'Espacio Solicitado', value: roomName },
       { label: 'Fecha de la Reserva', value: date },
@@ -668,7 +679,7 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
       { label: 'Actividad / Evento', value: activity },
       { label: 'Funcionario Organizador', value: organizer },
       { label: 'Dependencia', value: dependency },
-      { label: 'Teléfono / Contacto', value: phone },
+      ...(phone && phone !== 'No registrado' ? [{ label: 'Teléfono / Contacto', value: phone }] : []),
       { label: 'Asistentes Previstos', value: `${attendees} persona(s)` },
       { label: 'Servicios Logísticos / TIC', value: servicesText }
     ];
@@ -1345,7 +1356,7 @@ async function sendTicRoomNotification(ticEmail, request, user) {
       { label: 'Horario de Uso', value: timeVal },
       { label: 'Organizador', value: organizerName },
       { label: 'Dependencia', value: dependency },
-      { label: 'Contacto', value: contactPhone }
+      ...(contactPhone && contactPhone !== 'No registrado' ? [{ label: 'Contacto', value: contactPhone }] : [])
     ],
     extraSectionsHtml: techSectionsHtml,
     closingParagraphs: [

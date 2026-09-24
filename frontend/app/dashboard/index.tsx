@@ -1249,63 +1249,94 @@ function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
       onHoverOut={handleOut}
     >
       <Animated.View style={{ transform: [{ scale }, { translateY: slideAnim }], opacity: fadeAnim }}>
-        {isMobile ? (
-          <View style={[styles.serviceCardSquare, { width: width, height: width }]}>
-            <LinearGradient
-              colors={['#FFFFFF', '#F8FAFC', `${item.color}14`]}
-              locations={[0, 0.65, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.cardWatermarkSquare}>
-              <Ionicons name={item.icon} size={84} color={`${item.color}0A`} />
+        <View style={[
+          styles.serviceCardLight, 
+          { 
+            width: width, 
+            maxWidth: '100%',
+            height: isMobile ? 245 : 260,
+            padding: isMobile ? 14 : 24,
+            borderRadius: isMobile ? 24 : 32,
+            justifyContent: 'space-between',
+          }
+        ]}>
+          <LinearGradient
+            colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
+            locations={[0, 0.7, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[styles.cardWatermark, isMobile && { right: -15, top: -15 }]}>
+            <Ionicons name={item.icon} size={isMobile ? 85 : 120} color={`${item.color}10`} />
+          </View>
+          
+          <View style={[styles.cardInfo, isMobile && { gap: 10, marginBottom: 8 }]}>
+            <View style={[
+              styles.cardIconCircle, 
+              { 
+                backgroundColor: item.color, 
+                shadowColor: item.color,
+                width: isMobile ? 42 : 56,
+                height: isMobile ? 42 : 56,
+                borderRadius: isMobile ? 15 : 20,
+              }
+            ]}>
+              <Ionicons name={item.icon} size={isMobile ? 22 : 28} color={COLORS.white} />
             </View>
-
-            {/* Ilustración protagonista centrada con suficiente espacio */}
-            <View style={styles.cardCenterHero}>
-              <View style={[styles.cardIconOuterGlow, { backgroundColor: `${item.color}15`, borderColor: `${item.color}25` }]}>
-                <View style={[styles.cardIconCircleSquare, { backgroundColor: item.color, shadowColor: item.color }]}>
-                  <Ionicons name={item.icon} size={28} color={COLORS.white} />
-                </View>
-              </View>
-            </View>
-
-            {/* Título y subtítulo inferiores centrados */}
-            <View style={styles.cardBottomSquare}>
-              <Text style={styles.cardTitleSquare} numberOfLines={1}>{item.title}</Text>
-              <Text style={[styles.cardSubSquare, { color: item.color }]} numberOfLines={1}>{item.subtitle}</Text>
+            <View style={{ flex: 1 }}>
+              <Text 
+                style={[
+                  styles.cardTitleLight, 
+                  isMobile && { fontSize: 13.5, lineHeight: 17, letterSpacing: -0.2 }
+                ]}
+                numberOfLines={isMobile ? 2 : 1}
+              >
+                {item.title}
+              </Text>
+              <Text 
+                style={[
+                  styles.cardSub, 
+                  { color: item.color, opacity: 1 },
+                  isMobile && { fontSize: 9.5, marginTop: 2, letterSpacing: 0.3 }
+                ]}
+                numberOfLines={1}
+              >
+                {item.subtitle}
+              </Text>
             </View>
           </View>
-        ) : (
-          <View style={[styles.serviceCardLight, { width: width, maxWidth: '100%' }]}>
-            <LinearGradient
-              colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
-              locations={[0, 0.7, 1]}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.cardWatermark}>
-              <Ionicons name={item.icon} size={120} color={`${item.color}10`} />
-            </View>
-            
-            <View style={styles.cardInfo}>
-              <View style={[styles.cardIconCircle, { backgroundColor: item.color, shadowColor: item.color }]}>
-                <Ionicons name={item.icon} size={28} color={COLORS.white} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitleLight}>{item.title}</Text>
-                <Text style={[styles.cardSub, { color: item.color, opacity: 1 }]}>{item.subtitle}</Text>
-              </View>
-            </View>
 
-            <Text style={styles.cardDescLight} numberOfLines={2}>{item.desc}</Text>
+          <Text 
+            style={[
+              styles.cardDescLight, 
+              isMobile && { fontSize: 11, lineHeight: 15, marginVertical: 4 }
+            ]} 
+            numberOfLines={2}
+          >
+            {item.desc}
+          </Text>
 
-            <View style={styles.cardBottom}>
-              <View style={[styles.glassButtonLight, { borderColor: item.color, backgroundColor: item.color }]}>
-                <Text style={[styles.glassButtonTextLight, { color: COLORS.white }]}>Solicitar ahora</Text>
-                <Ionicons name="add-circle" size={18} color={COLORS.white} />
-              </View>
+          <View style={[styles.cardBottom, isMobile && { marginTop: 'auto' }]}>
+            <View style={[
+              styles.glassButtonLight, 
+              { 
+                borderColor: item.color, 
+                backgroundColor: item.color,
+                paddingVertical: isMobile ? 9 : 12,
+                borderRadius: isMobile ? 14 : 16,
+                gap: isMobile ? 6 : 10,
+              }
+            ]}>
+              <Text style={[
+                styles.glassButtonTextLight, 
+                { color: COLORS.white },
+                isMobile && { fontSize: 12, fontWeight: '800' }
+              ]}>
+                Solicitar ahora
+              </Text>
+              <Ionicons name="add-circle" size={isMobile ? 15 : 18} color={COLORS.white} />
             </View>
           </View>
-        )}
+        </View>
       </Animated.View>
     </Pressable>
   );
