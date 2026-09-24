@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +10,7 @@ import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
 import { supabase } from '../../lib/supabase';
 import { requestService } from '../../lib/requestService';
-import { vehicleService } from '../../lib/vehicleService';
+import { vehicleService, resolveVehicleLimitByCharge } from '../../lib/vehicleService';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
 const COLORS = {
@@ -83,12 +83,12 @@ export default function ParkingRequestScreen() {
   const loadUserVehiclesAndLimit = async () => {
     try {
       setLoadingVehicles(true);
-      const [vehiclesData, limitVal] = await Promise.all([
-        vehicleService.getAll(),
-        vehicleService.getMaxLimit()
-      ]);
+      const vehiclesData = await vehicleService.getAll();
       setRegisteredVehicles(vehiclesData || []);
-      setMaxLimit(limitVal || 3);
+      const vWithCharge = vehiclesData?.find((v: any) => v.charge && v.charge.trim());
+      if (vWithCharge?.charge) {
+        setCharge(prev => prev || vWithCharge.charge || '');
+      }
     } catch (err) {
       console.warn('Error al cargar vehículos del usuario:', err);
     } finally {
@@ -110,6 +110,10 @@ export default function ParkingRequestScreen() {
           if (allReqs) {
             const parks = allReqs.filter(r => r.category === 'parking');
             setMyVehicles(parks);
+            const firstWithCharge = parks.find(p => p.metadata?.charge);
+            if (firstWithCharge?.metadata?.charge) {
+              setCharge(prev => prev || firstWithCharge.metadata.charge || '');
+            }
           }
         }
       } catch (err) {
@@ -124,16 +128,33 @@ export default function ParkingRequestScreen() {
     return registeredVehicles.filter(v => v.is_active !== false).length;
   }, [registeredVehicles]);
 
+  const chargeLimitInfo = useMemo(() => {
+    return resolveVehicleLimitByCharge(charge);
+  }, [charge]);
+
+  const submittingVehicleRef = useRef(false);
+
   const openCreateVehicleModal = () => {
-    if (activeVehiclesCount >= maxLimit) {
+    if (!chargeLimitInfo.canRegister || chargeLimitInfo.maxLimit === 0) {
       setInfoModal({
         visible: true,
-        title: 'Límite de Vehículos Alcanzado',
-        message: `Has alcanzado el límite máximo permitido de ${maxLimit} vehículos activos registrados. Si deseas agregar uno nuevo, por favor inactiva o elimina un vehículo que ya no utilices.`,
+        title: 'Asignación No Habilitada',
+        message: chargeLimitInfo.reason || 'Según los lineamientos institucionales, el parqueadero permanente es de uso exclusivo para funcionarios de planta, directores y asesores. El personal contratista no cuenta con asignación de cupo permanente.',
         isError: true
       });
       return;
     }
+
+    if (!chargeLimitInfo.isUnlimited && activeVehiclesCount >= chargeLimitInfo.maxLimit) {
+      setInfoModal({
+        visible: true,
+        title: 'Cupo Máximo Alcanzado',
+        message: `Para cargos de ${chargeLimitInfo.label}, el cupo máximo permitido es de ${chargeLimitInfo.maxLimit} vehículo activo. Si tienes un nuevo vehículo, por favor inactiva tu vehículo actual registrado antes de continuar.`,
+        isError: true
+      });
+      return;
+    }
+
     setEditingVehicle(null);
     setVPlate('');
     setVBrand('');
@@ -149,18 +170,29 @@ export default function ParkingRequestScreen() {
     setVBrand(v.brand || '');
     setVModel(v.model || '');
     setVColor(v.color || '');
+    if (v.name) setName(v.name);
+    if (v.doc) setDoc(v.doc);
+    if (v.charge) setCharge(v.charge);
+    if (v.dependency) setDependency(v.dependency);
     setVError('');
     setVehicleModalVisible(true);
   };
 
   const handleSaveVehicle = async () => {
+    if (submittingVehicleRef.current || vSaving) return;
+
     try {
       setVError('');
       const cleanPlate = vPlate.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       const cleanBrand = vBrand.trim();
+      const cleanName = name.trim();
+      const cleanDoc = doc.trim();
+      const cleanCharge = charge.trim();
+      const cleanDep = dependency.trim();
+      const limitInfo = resolveVehicleLimitByCharge(cleanCharge);
 
       if (!cleanPlate || !cleanBrand) {
-        setVError('La placa y la marca son obligatorias.');
+        setVError('La placa y la marca del vehículo son obligatorias.');
         return;
       }
 
@@ -169,43 +201,156 @@ export default function ParkingRequestScreen() {
         return;
       }
 
+      if (!editingVehicle) {
+        if (!cleanName || !cleanDoc || !cleanCharge || !cleanDep) {
+          setVError('Por favor completa el nombre, cédula, cargo y dependencia del conductor.');
+          return;
+        }
+
+        if (!limitInfo.canRegister || limitInfo.maxLimit === 0) {
+          setVError(limitInfo.reason || 'El personal contratista no tiene habilitada asignación de parqueadero permanente.');
+          return;
+        }
+
+        if (!limitInfo.isUnlimited && activeVehiclesCount >= limitInfo.maxLimit) {
+          setVError(`Para ${limitInfo.label}s, el límite máximo permitido es de ${limitInfo.maxLimit} vehículo activo. Por favor inactiva tu vehículo actual antes de inscribir uno nuevo.`);
+          return;
+        }
+
+        const duplicateInList = registeredVehicles.some(
+          v => v.plate.toUpperCase().replace(/[^A-Z0-9]/g, '') === cleanPlate
+        );
+        if (duplicateInList) {
+          setVError(`Ya tienes registrado un vehículo con la placa ${cleanPlate}.`);
+          return;
+        }
+      }
+
+      submittingVehicleRef.current = true;
       setVSaving(true);
+
       if (editingVehicle) {
         await vehicleService.update(editingVehicle.id, {
           plate: cleanPlate,
           brand: cleanBrand,
           model: vModel.trim() || undefined,
-          color: vColor.trim() || undefined
+          color: vColor.trim() || undefined,
+          name: cleanName || undefined,
+          doc: cleanDoc || undefined,
+          charge: cleanCharge || undefined,
+          dependency: cleanDep || undefined
         });
+        setVehicleModalVisible(false);
+        await loadUserVehiclesAndLimit();
         setInfoModal({
           visible: true,
           title: 'Vehículo Actualizado',
           message: `El vehículo con placa ${cleanPlate} ha sido actualizado correctamente.`
         });
       } else {
+        // 1. Inscribir vehículo en perfil (con estado pendiente de aprobación)
         await vehicleService.create({
           plate: cleanPlate,
           brand: cleanBrand,
           model: vModel.trim() || undefined,
           color: vColor.trim() || undefined,
-          name: name.trim() || undefined,
-          doc: doc.trim() || undefined,
-          dependency: dependency.trim() || undefined
+          name: cleanName,
+          doc: cleanDoc,
+          charge: cleanCharge,
+          dependency: cleanDep
         });
+
+        // 2. Radicar solicitud administrativa de cupo de parqueadero
+        const { data: { user } } = await supabase.auth.getUser();
+        await requestService.create({
+          user_id: user?.id || null,
+          title: `Parqueadero: ${cleanPlate}`,
+          description: `Solicitud de cupo para vehículo ${cleanBrand} (${vColor.trim() || 'Sin color'}) - Conductor: ${cleanName}`,
+          category: 'parking',
+          priority: 'media',
+          metadata: {
+            name: cleanName,
+            doc: cleanDoc,
+            dependency: cleanDep,
+            charge: cleanCharge,
+            plate: cleanPlate,
+            brand: cleanBrand,
+            model: vModel.trim() || undefined,
+            color: vColor.trim() || undefined
+          }
+        });
+
+        setVehicleModalVisible(false);
+        await loadUserVehiclesAndLimit();
         setInfoModal({
           visible: true,
-          title: 'Vehículo Registrado',
-          message: `El vehículo con placa ${cleanPlate} se ha registrado exitosamente en tu perfil.`
+          title: '¡Vehículo Registrado y Solicitud Radicada!',
+          message: `El vehículo con placa ${cleanPlate} ha sido inscrito en tu perfil y tu solicitud de parqueadero quedó en estado "Pendiente de Aprobación". Servicios Generales evaluará la solicitud y te notificará por correo institucional.`
         });
       }
-
-      setVehicleModalVisible(false);
-      await loadUserVehiclesAndLimit();
     } catch (err: any) {
       console.error('Error al guardar vehículo:', err);
       setVError(err.message || 'No se pudo guardar el vehículo. Intente nuevamente.');
     } finally {
       setVSaving(false);
+      submittingVehicleRef.current = false;
+    }
+  };
+
+  const handleRequestForExistingVehicle = async (v: any) => {
+    if (submittingVehicleRef.current || loading) return;
+
+    const isPending = v.approval_status === 'pendiente' || v.status === 'pendiente';
+    if (isPending) {
+      setInfoModal({
+        visible: true,
+        title: 'Solicitud en Trámite',
+        message: `El vehículo con placa ${v.plate} ya tiene una solicitud pendiente de aprobación en el sistema.`,
+      });
+      return;
+    }
+
+    try {
+      submittingVehicleRef.current = true;
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      await requestService.create({
+        user_id: user?.id || null,
+        title: `Parqueadero: ${v.plate}`,
+        description: `Solicitud de cupo para vehículo ${v.brand} (${v.color || 'Sin color'}) - Conductor: ${v.name || name}`,
+        category: 'parking',
+        priority: 'media',
+        metadata: {
+          name: v.name || name,
+          doc: v.doc || doc,
+          dependency: v.dependency || dependency,
+          charge: charge,
+          plate: v.plate,
+          brand: v.brand,
+          model: v.model,
+          color: v.color
+        }
+      });
+
+      await vehicleService.update(v.id, { approval_status: 'pendiente' });
+      await loadUserVehiclesAndLimit();
+
+      setInfoModal({
+        visible: true,
+        title: '¡Solicitud Radicada!',
+        message: `Se ha enviado la solicitud de parqueadero para el vehículo placa ${v.plate}. Su estado actual es "Pendiente de Aprobación".`
+      });
+    } catch (err: any) {
+      console.error('Error al radicar solicitud para vehículo existente:', err);
+      setInfoModal({
+        visible: true,
+        title: 'Error',
+        message: err.message || 'No se pudo radicar la solicitud. Intente nuevamente.',
+        isError: true
+      });
+    } finally {
+      setLoading(false);
+      submittingVehicleRef.current = false;
     }
   };
 
@@ -220,59 +365,36 @@ export default function ParkingRequestScreen() {
         setInfoModal({
           visible: true,
           title: 'Vehículo Eliminado',
-          message: `El vehículo con placa ${vehicle.plate} ha sido eliminado permanentemente.`
+          message: `El vehículo con placa ${vehicle.plate} ha sido eliminado.`
         });
       } else if (type === 'inactivate') {
         await vehicleService.toggleActive(vehicle.id, false);
         setInfoModal({
           visible: true,
           title: 'Vehículo Inactivado',
-          message: `El vehículo con placa ${vehicle.plate} ha sido inactivado. Ya no ocupará cupo en tu límite activo.`
+          message: `El vehículo con placa ${vehicle.plate} ha sido inactivado.`
         });
       } else if (type === 'activate') {
-        if (activeVehiclesCount >= maxLimit) {
-          setInfoModal({
-            visible: true,
-            title: 'Límite Superado',
-            message: `No es posible reactivar este vehículo porque ya cuentas con el máximo de ${maxLimit} vehículos activos.`,
-            isError: true
-          });
-          setVehicleActionModal({ visible: false, type: 'inactivate', vehicle: null });
-          setLoading(false);
-          return;
-        }
         await vehicleService.toggleActive(vehicle.id, true);
         setInfoModal({
           visible: true,
           title: 'Vehículo Reactivado',
-          message: `El vehículo con placa ${vehicle.plate} ha sido reactivado exitosamente.`
+          message: `El vehículo con placa ${vehicle.plate} ha sido reactivado.`
         });
       }
-
       setVehicleActionModal({ visible: false, type: 'inactivate', vehicle: null });
       await loadUserVehiclesAndLimit();
     } catch (err: any) {
-      console.error('Error en acción de vehículo:', err);
+      console.error('Error al ejecutar acción sobre vehículo:', err);
       setInfoModal({
         visible: true,
         title: 'Error',
-        message: err.message || 'No se pudo completar la acción sobre el vehículo.',
+        message: err.message || 'No se pudo completar la acción.',
         isError: true
       });
     } finally {
       setLoading(false);
     }
-  };
-
-  const applyVehicleToForm = (v: any) => {
-    setPlate(v.plate || '');
-    setBrand(v.brand || '');
-    setColor(v.color || '');
-    setInfoModal({
-      visible: true,
-      title: 'Datos Cargados',
-      message: `Se completaron los datos del formulario con el vehículo placa ${v.plate}. Ahora puedes enviar la solicitud de cupo.`
-    });
   };
 
   const progress = useMemo(() => {
@@ -384,38 +506,92 @@ export default function ParkingRequestScreen() {
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 6,
-                        backgroundColor: COLORS.primary,
+                        backgroundColor: !chargeLimitInfo.canRegister 
+                          ? '#94A3B8' 
+                          : (!chargeLimitInfo.isUnlimited && activeVehiclesCount >= chargeLimitInfo.maxLimit)
+                          ? '#F59E0B'
+                          : COLORS.primary,
                         paddingHorizontal: 12,
                         paddingVertical: 7,
                         borderRadius: 10,
                       }}
                       onPress={openCreateVehicleModal}
                     >
-                      <Ionicons name="add-circle" size={16} color={COLORS.white} />
+                      <Ionicons 
+                        name={!chargeLimitInfo.canRegister ? "lock-closed" : "add-circle"} 
+                        size={16} 
+                        color={COLORS.white} 
+                      />
                       <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 12 }}>
-                        + Agregar Vehículo
+                        {!chargeLimitInfo.canRegister 
+                          ? 'No Habilitado (Contratista)' 
+                          : (!chargeLimitInfo.isUnlimited && activeVehiclesCount >= chargeLimitInfo.maxLimit)
+                          ? '+ Registrar (Cupo 1/1)'
+                          : '+ Registrar Nuevo Vehículo'}
                       </Text>
                     </TouchableOpacity>
                   }
                 >
-                  {/* Contador de cupo permitido */}
+                  {/* Contador dinámico de cupo según cargo */}
                   <View style={{ 
-                    backgroundColor: '#F8FAFC', 
+                    backgroundColor: chargeLimitInfo.type === 'directivo' 
+                      ? '#EFF6FF' 
+                      : chargeLimitInfo.type === 'contratista' 
+                      ? '#FEF2F2' 
+                      : '#F8FAFC', 
                     borderRadius: 14, 
                     padding: 12, 
                     marginBottom: 14,
                     borderWidth: 1,
-                    borderColor: COLORS.line 
+                    borderColor: chargeLimitInfo.type === 'directivo' 
+                      ? '#BFDBFE' 
+                      : chargeLimitInfo.type === 'contratista' 
+                      ? '#FECACA' 
+                      : COLORS.line 
                   }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="speedometer-outline" size={16} color={COLORS.muted} />
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>
-                          Capacidad Permitida por Servidor:
+                        <Ionicons 
+                          name={
+                            chargeLimitInfo.type === 'directivo' 
+                              ? 'ribbon' 
+                              : chargeLimitInfo.type === 'contratista' 
+                              ? 'alert-circle' 
+                              : 'speedometer-outline'
+                          } 
+                          size={16} 
+                          color={
+                            chargeLimitInfo.type === 'directivo' 
+                              ? '#2563EB' 
+                              : chargeLimitInfo.type === 'contratista' 
+                              ? '#DC2626' 
+                              : COLORS.muted
+                          } 
+                        />
+                        <Text style={{ 
+                          fontSize: 12, 
+                          fontWeight: '800', 
+                          color: chargeLimitInfo.type === 'directivo' 
+                            ? '#1E40AF' 
+                            : chargeLimitInfo.type === 'contratista' 
+                            ? '#B91C1C' 
+                            : COLORS.muted 
+                        }}>
+                          {chargeLimitInfo.type === 'directivo'
+                            ? `Capacidad: Directivo (${charge || 'Directivo'})`
+                            : chargeLimitInfo.type === 'contratista'
+                            ? `Capacidad: Contratista (${charge || 'Contratista'})`
+                            : `Capacidad: ${chargeLimitInfo.label} (${charge || 'Planta'})`}
                         </Text>
                       </View>
                       <View style={{
-                        backgroundColor: activeVehiclesCount >= maxLimit ? '#FEE2E2' : '#EFF6FF',
+                        backgroundColor: chargeLimitInfo.type === 'directivo'
+                          ? '#DBEAFE'
+                          : chargeLimitInfo.type === 'contratista'
+                          ? '#FEE2E2'
+                          : activeVehiclesCount >= 1
+                          ? '#FEE2E2'
+                          : '#EFF6FF',
                         paddingHorizontal: 8,
                         paddingVertical: 3,
                         borderRadius: 8,
@@ -423,21 +599,48 @@ export default function ParkingRequestScreen() {
                         <Text style={{ 
                           fontSize: 12, 
                           fontWeight: '900', 
-                          color: activeVehiclesCount >= maxLimit ? '#DC2626' : '#2563EB' 
+                          color: chargeLimitInfo.type === 'directivo'
+                            ? '#1D4ED8'
+                            : chargeLimitInfo.type === 'contratista'
+                            ? '#DC2626'
+                            : activeVehiclesCount >= 1
+                            ? '#DC2626'
+                            : '#2563EB' 
                         }}>
-                          {activeVehiclesCount} / {maxLimit} Activos
+                          {chargeLimitInfo.type === 'directivo'
+                            ? `${activeVehiclesCount} Activos • Sin Límite 🌟`
+                            : chargeLimitInfo.type === 'contratista'
+                            ? `0 Cupos • No Habilitado ⛔`
+                            : `${activeVehiclesCount} / 1 Activo`}
                         </Text>
                       </View>
                     </View>
-                    
+
                     {/* Barra de progreso de cupo */}
-                    <View style={{ height: 6, backgroundColor: '#E2E8F0', borderRadius: 6, overflow: 'hidden' }}>
-                      <View style={{ 
-                        height: '100%', 
-                        width: `${Math.min(100, (activeVehiclesCount / Math.max(1, maxLimit)) * 100)}%`,
-                        backgroundColor: activeVehiclesCount >= maxLimit ? '#EF4444' : COLORS.primary
-                      }} />
-                    </View>
+                    {chargeLimitInfo.type === 'directivo' ? (
+                      <Text style={{ fontSize: 11, color: '#3B82F6', marginTop: 2 }}>
+                        Los cargos directivos no tienen límite en el número de vehículos activos registrados en el sistema.
+                      </Text>
+                    ) : chargeLimitInfo.type === 'contratista' ? (
+                      <Text style={{ fontSize: 11, color: '#DC2626', marginTop: 2 }}>
+                        De acuerdo con los lineamientos distritales, el parqueadero permanente es exclusivo para funcionarios de planta, directores y asesores.
+                      </Text>
+                    ) : (
+                      <>
+                        <View style={{ height: 6, backgroundColor: '#E2E8F0', borderRadius: 6, overflow: 'hidden', marginTop: 4 }}>
+                          <View style={{ 
+                            height: '100%', 
+                            width: `${Math.min(100, (activeVehiclesCount / 1) * 100)}%`,
+                            backgroundColor: activeVehiclesCount >= 1 ? '#EF4444' : '#10B981'
+                          }} />
+                        </View>
+                        <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 4 }}>
+                          {activeVehiclesCount >= 1 
+                            ? 'Has alcanzado el límite máximo de 1 vehículo activo. Para registrar otro automotor debes inactivar el actual.' 
+                            : 'Tienes disponible el cupo para registrar tu vehículo institucional (máximo 1 vehículo activo).'}
+                        </Text>
+                      </>
+                    )}
                   </View>
 
                   {/* Resumen de Celda Asignada del Usuario */}
@@ -483,19 +686,38 @@ export default function ParkingRequestScreen() {
 
                   {/* Listado de Vehículos */}
                   {registeredVehicles.length === 0 ? (
-                    <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                      <Ionicons name="car-outline" size={38} color="#94A3B8" style={{ marginBottom: 6 }} />
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text, textAlign: 'center' }}>
+                    <View style={{ padding: 24, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <Ionicons name="car-outline" size={42} color="#94A3B8" style={{ marginBottom: 8 }} />
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.text, textAlign: 'center' }}>
                         No tienes vehículos registrados
                       </Text>
-                      <Text style={{ fontSize: 12, color: COLORS.muted, textAlign: 'center', marginTop: 4, maxWidth: 300 }}>
-                        Haz clic en "+ Agregar Vehículo" para inscribir los vehículos que utilizas habitualmente para ingresar a la sede.
+                      <Text style={{ fontSize: 13, color: COLORS.muted, textAlign: 'center', marginTop: 4, marginBottom: 16, maxWidth: 360, lineHeight: 18 }}>
+                        Para solicitar cupo de parqueadero, inscribe tu vehículo completando los datos del conductor y del automotor.
                       </Text>
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: COLORS.primary,
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 12,
+                        }}
+                        onPress={openCreateVehicleModal}
+                      >
+                        <Ionicons name="add-circle" size={18} color={COLORS.white} />
+                        <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 13 }}>
+                          + Registrar Nuevo Vehículo
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     <View style={{ gap: 10 }}>
                       {registeredVehicles.map((v) => {
                         const isVehicleActive = v.is_active !== false;
+                        const isPending = v.approval_status === 'pendiente' || v.status === 'pendiente';
+                        const isRejected = v.approval_status === 'rechazado';
                         const hasFixedSpot = !!v.spot_code;
                         
                         return (
@@ -558,20 +780,20 @@ export default function ParkingRequestScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 {/* Badge Estado */}
                                 <View style={{
-                                  backgroundColor: isVehicleActive ? '#ECFDF5' : '#F1F5F9',
+                                  backgroundColor: isPending ? '#FEF3C7' : isRejected ? '#FEE2E2' : isVehicleActive ? '#ECFDF5' : '#F1F5F9',
                                   paddingHorizontal: 8,
                                   paddingVertical: 4,
                                   borderRadius: 8,
                                   borderWidth: 1,
-                                  borderColor: isVehicleActive ? '#A7F3D0' : '#CBD5E1'
+                                  borderColor: isPending ? '#FDE68A' : isRejected ? '#FECACA' : isVehicleActive ? '#A7F3D0' : '#CBD5E1'
                                 }}>
                                   <Text style={{
                                     fontSize: 10,
                                     fontWeight: '800',
-                                    color: isVehicleActive ? '#065F46' : '#64748B',
+                                    color: isPending ? '#B45309' : isRejected ? '#DC2626' : isVehicleActive ? '#065F46' : '#64748B',
                                     textTransform: 'uppercase'
                                   }}>
-                                    {isVehicleActive ? '● Activo' : '○ Inactivo'}
+                                    {isPending ? '⏳ Pendiente de Aprobación' : isRejected ? '✕ Rechazado' : isVehicleActive ? '● Activo' : '○ Inactivo'}
                                   </Text>
                                 </View>
 
@@ -606,25 +828,44 @@ export default function ParkingRequestScreen() {
                               borderTopWidth: 1, 
                               borderTopColor: '#F1F5F9' 
                             }}>
-                              <TouchableOpacity
-                                style={{
+                              {isPending ? (
+                                <View style={{
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   gap: 5,
-                                  backgroundColor: '#FFF7ED',
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 6,
+                                  backgroundColor: '#FEF3C7',
+                                  paddingHorizontal: 9,
+                                  paddingVertical: 5,
                                   borderRadius: 8,
                                   borderWidth: 1,
-                                  borderColor: '#FED7AA'
-                                }}
-                                onPress={() => applyVehicleToForm(v)}
-                              >
-                                <Ionicons name="flash-outline" size={14} color={COLORS.primaryDark} />
-                                <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primaryDark }}>
-                                  Usar en Solicitud
-                                </Text>
-                              </TouchableOpacity>
+                                  borderColor: '#FDE68A'
+                                }}>
+                                  <Ionicons name="time-outline" size={13} color="#B45309" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
+                                    En trámite de aprobación
+                                  </Text>
+                                </View>
+                              ) : isVehicleActive ? (
+                                <TouchableOpacity
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    backgroundColor: '#EFF6FF',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 6,
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    borderColor: '#BFDBFE'
+                                  }}
+                                  onPress={() => handleRequestForExistingVehicle(v)}
+                                >
+                                  <Ionicons name="key-outline" size={13} color="#2563EB" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>
+                                    Solicitar Cupo
+                                  </Text>
+                                </TouchableOpacity>
+                              ) : null}
 
                               <TouchableOpacity
                                 style={{
@@ -687,41 +928,6 @@ export default function ParkingRequestScreen() {
                   )}
                 </Card>
 
-                {/* 2. SOLICITUDES DE PARQUEADERO EN TRÁMITE */}
-                {myVehicles.length > 0 && (
-                  <Card title="Tus Solicitudes de Parqueadero" icon="car">
-                    {myVehicles.map((v, index) => (
-                      <View key={v.id || index} style={{ 
-                        flexDirection: 'row', 
-                        alignItems: 'center', 
-                        padding: 12, 
-                        backgroundColor: COLORS.bg, 
-                        borderRadius: 12, 
-                        marginBottom: 8,
-                        borderWidth: 1,
-                        borderColor: COLORS.line
-                      }}>
-                        <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: COLORS.white, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                          <Ionicons name="car" size={24} color={COLORS.primary} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontWeight: 'bold', color: COLORS.text }}>
-                            Placa: {v.metadata?.plate || 'S/N'}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                            {v.metadata?.brand || 'Sin marca'} • {v.metadata?.color || 'Sin color'}
-                          </Text>
-                        </View>
-                        <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(244, 162, 97, 0.1)' }}>
-                          <Text style={{ fontSize: 10, fontWeight: 'bold', color: COLORS.primaryDark }}>
-                            EN SISTEMA
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                  </Card>
-                )}
-
                 <Card title="Lineamientos de Parqueadero" icon="document-text">
                   <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20, marginBottom: 12, fontWeight: '500' }}>
                     Conozca los lineamientos y normas de tránsito vigentes para el uso de los parqueaderos en la Manzana Liévano y Archivo Distrital.
@@ -747,81 +953,6 @@ export default function ParkingRequestScreen() {
                   </TouchableOpacity>
                 </Card>
 
-                <Card title="Información del Conductor" icon="person">
-                  <Field 
-                    label="Nombre Completo" 
-                    icon="person-outline" 
-                    value={name} 
-                    onChangeText={setName} 
-                    placeholder="Ej. Juan Pérez" 
-                  />
-                  <Field 
-                    label="Cargo" 
-                    icon="briefcase-outline" 
-                    value={charge} 
-                    onChangeText={setCharge} 
-                    placeholder="Ej. Profesional Especializado, Director, Asesor" 
-                  />
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Field 
-                        label="Cédula / ID" 
-                        icon="card-outline" 
-                        value={doc} 
-                        onChangeText={setDoc} 
-                        placeholder="1.000.000" 
-                      />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={styles.label}>Dependencia</Text>
-                      <TouchableOpacity 
-                        style={styles.inputWrap} 
-                        onPress={() => setShowDeps(true)}
-                      >
-                        <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                        <Text 
-                          style={[styles.input, !dependency && { color: '#94A3B8' }]} 
-                          numberOfLines={1}
-                        >
-                          {dependency || "Seleccionar"}
-                        </Text>
-                        <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Card>
-
-                <Card title="Datos del Vehículo" icon="car">
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Field 
-                        label="Placa" 
-                        icon="barcode-outline" 
-                        value={plate} 
-                        onChangeText={(txt: string) => setPlate(txt.toUpperCase())} 
-                        placeholder="ABC123"
-                        maxLength={6}
-                      />
-                    </View>
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Field 
-                        label="Color" 
-                        icon="color-palette-outline" 
-                        value={color} 
-                        onChangeText={setColor} 
-                        placeholder="Ej. Gris" 
-                      />
-                    </View>
-                  </View>
-                  <Field 
-                    label="Marca / Modelo" 
-                    icon="construct-outline" 
-                    value={brand} 
-                    onChangeText={setBrand} 
-                    placeholder="Ej. Renault Duster 2024" 
-                  />
-                </Card>
-
                 <View style={styles.warningBox}>
                   <Ionicons name="information-circle" size={22} color="#1E40AF" />
                   <View style={{ flex: 1 }}>
@@ -840,22 +971,6 @@ export default function ParkingRequestScreen() {
                     <Text style={styles.errorText}>{errorMessage}</Text>
                   </View>
                 ) : null}
-
-                <TouchableOpacity 
-                  style={[styles.mainBtn, (progress < 80) && { opacity: 0.5 }]} 
-                  onPress={() => setIsConfirmModalVisible(true)}
-                  disabled={loading || progress < 80}
-                >
-                  <LinearGradient 
-                    colors={[COLORS.primary, COLORS.primaryDark]} 
-                    start={{ x: 0, y: 0 }} 
-                    end={{ x: 1, y: 0 }} 
-                    style={styles.btnGradient}
-                  >
-                    <Text style={styles.btnText}>{loading ? 'Procesando...' : 'Solicitar Acceso'}</Text>
-                    <Ionicons name="key" size={20} color={COLORS.white} />
-                  </LinearGradient>
-                </TouchableOpacity>
               </View>
             </ResponsiveContainer>
           </ScrollView>
@@ -902,78 +1017,309 @@ export default function ParkingRequestScreen() {
       >
         <View style={styles.modalBlur}>
           <BlurView intensity={25} style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalPanel, { maxWidth: 480, padding: 24 }]}>
+          <View style={[styles.modalPanel, { maxWidth: 540, width: '92%', padding: 22, maxHeight: '90%' }]}>
+            {/* Header del Modal */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="car-sport" size={20} color={COLORS.primary} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="car-sport" size={22} color={COLORS.primary} />
                 </View>
-                <Text style={[styles.modalTitle, { fontSize: 18 }]}>
-                  {editingVehicle ? 'Editar Vehículo' : 'Registrar Nuevo Vehículo'}
-                </Text>
+                <View>
+                  <Text style={[styles.modalTitle, { fontSize: 18, marginBottom: 2 }]}>
+                    {editingVehicle ? 'Editar Vehículo' : 'Registrar Nuevo Vehículo'}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                    {editingVehicle ? 'Actualiza los datos registrados' : 'Inscripción y solicitud de cupo de parqueadero'}
+                  </Text>
+                </View>
               </View>
-              <TouchableOpacity onPress={() => setVehicleModalVisible(false)}>
-                <Ionicons name="close" size={22} color="#64748B" />
+              <TouchableOpacity 
+                style={{ padding: 6, borderRadius: 8, backgroundColor: '#F1F5F9' }} 
+                onPress={() => setVehicleModalVisible(false)}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-              <View style={{ gap: 14 }}>
-                <View>
-                  <Text style={styles.label}>Placa del Vehículo *</Text>
-                  <View style={styles.inputWrap}>
-                    <Ionicons name="barcode-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={styles.input}
-                      value={vPlate}
-                      onChangeText={(t) => setVPlate(t.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                      placeholder="ABC123"
-                      placeholderTextColor="#94A3B8"
-                      maxLength={7}
-                      autoCapitalize="characters"
-                    />
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
+              <View style={{ gap: 16 }}>
+                
+                {/* SECCIÓN 1: INFORMACIÓN DEL CONDUCTOR */}
+                <View style={{ 
+                  backgroundColor: '#F8FAFC', 
+                  borderRadius: 14, 
+                  padding: 14, 
+                  borderWidth: 1, 
+                  borderColor: '#E2E8F0',
+                  gap: 12 
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Ionicons name="person" size={16} color={COLORS.primary} />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      1. Información del Conductor
+                    </Text>
                   </View>
-                </View>
 
-                <View>
-                  <Text style={styles.label}>Marca *</Text>
-                  <View style={styles.inputWrap}>
-                    <Ionicons name="construct-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                    <TextInput
-                      style={styles.input}
-                      value={vBrand}
-                      onChangeText={setVBrand}
-                      placeholder="Ej. Chevrolet, Renault, Toyota"
-                      placeholderTextColor="#94A3B8"
-                    />
-                  </View>
-                </View>
-
-                <View style={{ flexDirection: 'row', gap: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Línea / Modelo</Text>
+                  <View>
+                    <Text style={styles.label}>Nombre Completo *</Text>
                     <View style={styles.inputWrap}>
+                      <Ionicons name="person-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                       <TextInput
                         style={styles.input}
-                        value={vModel}
-                        onChangeText={setVModel}
-                        placeholder="Ej. Duster, Onix"
+                        value={name}
+                        onChangeText={setName}
+                        placeholder="Ej. Juan Pérez"
                         placeholderTextColor="#94A3B8"
                       />
                     </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.label}>Color</Text>
-                    <View style={styles.inputWrap}>
-                      <TextInput
-                        style={styles.input}
-                        value={vColor}
-                        onChangeText={setVColor}
-                        placeholder="Ej. Gris, Rojo"
-                        placeholderTextColor="#94A3B8"
-                      />
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Cédula *</Text>
+                      <View style={styles.inputWrap}>
+                        <Ionicons name="card-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <TextInput
+                          style={styles.input}
+                          value={doc}
+                          onChangeText={setDoc}
+                          placeholder="Cédula / ID"
+                          placeholderTextColor="#94A3B8"
+                          keyboardType="numeric"
+                        />
+                      </View>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Cargo *</Text>
+                      <View style={styles.inputWrap}>
+                        <Ionicons name="briefcase-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <TextInput
+                          style={styles.input}
+                          value={charge}
+                          onChangeText={setCharge}
+                          placeholder="Ej. Asesor, Director"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
                     </View>
                   </View>
+
+                  {/* Chips de selección rápida de tipo de cargo */}
+                  <View>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.muted, marginBottom: 6 }}>
+                      Selección Rápida de Tipo de Cargo / Vinculación:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          backgroundColor: chargeLimitInfo.type === 'directivo' ? '#DBEAFE' : '#FFFFFF',
+                          borderColor: chargeLimitInfo.type === 'directivo' ? '#2563EB' : '#CBD5E1'
+                        }}
+                        onPress={() => setCharge('Directivo')}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: chargeLimitInfo.type === 'directivo' ? '#1D4ED8' : '#64748B' }}>
+                          👑 Directivo (Sin Límite)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          backgroundColor: chargeLimitInfo.type === 'funcionario_asesor' ? '#EFF6FF' : '#FFFFFF',
+                          borderColor: chargeLimitInfo.type === 'funcionario_asesor' ? '#2563EB' : '#CBD5E1'
+                        }}
+                        onPress={() => setCharge('Funcionario / Asesor')}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: chargeLimitInfo.type === 'funcionario_asesor' ? '#1D4ED8' : '#64748B' }}>
+                          💼 Funcionario / Asesor (1 Cupo)
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          backgroundColor: chargeLimitInfo.type === 'contratista' ? '#FEE2E2' : '#FFFFFF',
+                          borderColor: chargeLimitInfo.type === 'contratista' ? '#DC2626' : '#CBD5E1'
+                        }}
+                        onPress={() => setCharge('Contratista')}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: chargeLimitInfo.type === 'contratista' ? '#B91C1C' : '#64748B' }}>
+                          📋 Contratista (0 Cupos)
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Banner explicativo del cargo seleccionado */}
+                  <View style={{
+                    padding: 8,
+                    borderRadius: 8,
+                    backgroundColor: chargeLimitInfo.type === 'directivo'
+                      ? '#EFF6FF'
+                      : chargeLimitInfo.type === 'contratista'
+                      ? '#FEF2F2'
+                      : activeVehiclesCount >= 1 && !editingVehicle
+                      ? '#FFFBEB'
+                      : '#F0FDF4',
+                    borderWidth: 1,
+                    borderColor: chargeLimitInfo.type === 'directivo'
+                      ? '#BFDBFE'
+                      : chargeLimitInfo.type === 'contratista'
+                      ? '#FECACA'
+                      : activeVehiclesCount >= 1 && !editingVehicle
+                      ? '#FDE68A'
+                      : '#BBF7D0'
+                  }}>
+                    <Text style={{
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: chargeLimitInfo.type === 'directivo'
+                        ? '#1E40AF'
+                        : chargeLimitInfo.type === 'contratista'
+                        ? '#B91C1C'
+                        : activeVehiclesCount >= 1 && !editingVehicle
+                        ? '#B45309'
+                        : '#15803D'
+                    }}>
+                      {chargeLimitInfo.type === 'directivo'
+                        ? '🌟 Cargos directivos cuentan con cupo ilimitado para registro de vehículos.'
+                        : chargeLimitInfo.type === 'contratista'
+                        ? '⛔ Los contratistas no tienen habilitado el registro de cupo de parqueadero permanente.'
+                        : activeVehiclesCount >= 1 && !editingVehicle
+                        ? '⚠️ Ya tienes 1 vehículo activo registrado. Debes inactivar el actual antes de inscribir uno nuevo.'
+                        : '💼 Cupo permitido para funcionarios y asesores: 1 vehículo activo.'}
+                    </Text>
+                  </View>
+
+                  <View>
+                    <Text style={styles.label}>Dependencia *</Text>
+                    <TouchableOpacity
+                      style={[styles.inputWrap, { justifyContent: 'space-between', backgroundColor: '#FFFFFF' }]}
+                      onPress={() => setShowDeps(true)}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <Text 
+                          numberOfLines={1} 
+                          style={[styles.input, { color: dependency ? COLORS.text : '#94A3B8', paddingTop: 10 }]}
+                        >
+                          {dependency || 'Seleccionar Dependencia...'}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-down" size={18} color={COLORS.muted} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* SECCIÓN 2: DATOS DEL VEHÍCULO */}
+                <View style={{ 
+                  backgroundColor: '#F8FAFC', 
+                  borderRadius: 14, 
+                  padding: 14, 
+                  borderWidth: 1, 
+                  borderColor: '#E2E8F0',
+                  gap: 12 
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Ionicons name="car" size={16} color={COLORS.primary} />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.text, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      2. Datos del Vehículo
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Placa del Vehículo *</Text>
+                      <View style={styles.inputWrap}>
+                        <Ionicons name="barcode-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <TextInput
+                          style={styles.input}
+                          value={vPlate}
+                          onChangeText={(t) => setVPlate(t.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                          placeholder="ABC123"
+                          placeholderTextColor="#94A3B8"
+                          maxLength={7}
+                          autoCapitalize="characters"
+                        />
+                      </View>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Marca *</Text>
+                      <View style={styles.inputWrap}>
+                        <Ionicons name="construct-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                        <TextInput
+                          style={styles.input}
+                          value={vBrand}
+                          onChangeText={setVBrand}
+                          placeholder="Ej. Chevrolet"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Línea / Modelo</Text>
+                      <View style={styles.inputWrap}>
+                        <TextInput
+                          style={styles.input}
+                          value={vModel}
+                          onChangeText={setVModel}
+                          placeholder="Ej. Duster"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.label}>Color</Text>
+                      <View style={styles.inputWrap}>
+                        <TextInput
+                          style={styles.input}
+                          value={vColor}
+                          onChangeText={setVColor}
+                          placeholder="Ej. Gris"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Nota de estado inicial */}
+                <View style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  gap: 8, 
+                  backgroundColor: '#FEF3C7', 
+                  padding: 10, 
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#FDE68A'
+                }}>
+                  <Ionicons name="time" size={18} color="#D97706" />
+                  <Text style={{ fontSize: 12, color: '#92400E', flex: 1, lineHeight: 16 }}>
+                    Tu vehículo quedará registrado en estado <Text style={{ fontWeight: '800' }}>Pendiente de Aprobación</Text> hasta que la solicitud sea evaluada por Servicios Generales.
+                  </Text>
                 </View>
 
                 {vError ? (
@@ -985,7 +1331,7 @@ export default function ParkingRequestScreen() {
               </View>
             </ScrollView>
 
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
               <TouchableOpacity
                 style={{
                   flex: 1,
@@ -1001,22 +1347,40 @@ export default function ParkingRequestScreen() {
                 <Text style={{ fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  height: 48,
-                  borderRadius: 12,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: COLORS.primary
-                }}
-                onPress={handleSaveVehicle}
-                disabled={vSaving}
-              >
-                <Text style={{ fontWeight: '800', color: COLORS.white }}>
-                  {vSaving ? 'Guardando...' : (editingVehicle ? 'Actualizar' : 'Guardar')}
-                </Text>
-              </TouchableOpacity>
+              {(() => {
+                const isContractorBlocked = !editingVehicle && (!chargeLimitInfo.canRegister || chargeLimitInfo.maxLimit === 0);
+                const isLimitReached = !editingVehicle && !chargeLimitInfo.isUnlimited && activeVehiclesCount >= chargeLimitInfo.maxLimit;
+                const isActionDisabled = vSaving || isContractorBlocked || isLimitReached;
+
+                return (
+                  <TouchableOpacity
+                    style={{
+                      flex: 1.5,
+                      height: 48,
+                      borderRadius: 12,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: isContractorBlocked 
+                        ? '#CBD5E1' 
+                        : isLimitReached 
+                        ? '#F59E0B' 
+                        : COLORS.primary
+                    }}
+                    onPress={handleSaveVehicle}
+                    disabled={isActionDisabled}
+                  >
+                    <Text style={{ fontWeight: '800', color: COLORS.white }}>
+                      {vSaving 
+                        ? 'Procesando...' 
+                        : isContractorBlocked
+                        ? 'No Habilitado (Contratista)'
+                        : isLimitReached
+                        ? 'Cupo Lleno (Máx 1)'
+                        : (editingVehicle ? 'Actualizar Vehículo' : 'Registrar y Solicitar Cupo')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
           </View>
         </View>

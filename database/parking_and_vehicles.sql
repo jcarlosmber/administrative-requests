@@ -18,8 +18,10 @@ CREATE TABLE IF NOT EXISTS public.parking_spots (
 -- 2. Asegurar campos en la tabla de vehículos
 ALTER TABLE public.user_vehicles 
     ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+    ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pendiente',
     ADD COLUMN IF NOT EXISTS assigned_spot_id UUID REFERENCES public.parking_spots(id) ON DELETE SET NULL,
-    ADD COLUMN IF NOT EXISTS notes TEXT;
+    ADD COLUMN IF NOT EXISTS notes TEXT,
+    ADD COLUMN IF NOT EXISTS charge TEXT;
 
 -- Índice para asegurar búsqueda rápida e insensibilidad a mayúsculas en placas
 CREATE INDEX IF NOT EXISTS idx_user_vehicles_plate ON public.user_vehicles (UPPER(TRIM(plate)));

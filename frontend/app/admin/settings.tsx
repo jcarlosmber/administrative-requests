@@ -86,9 +86,10 @@ const generateUUID = () => {
 };
 
 export default function AdminSettings() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
-  const [activeTab, setActiveTab] = useState<'all' | 'rooms' | 'dependencies' | 'users' | 'drivers' | 'parking_spots' | 'emails' | 'evaluations' | 'preferences' | 'deployment'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'dependencies' | 'emails' | 'preferences' | 'deployment'>('all');
   
   const [rooms, setRooms] = useState<any[]>([]);
   const [dependencies, setDependencies] = useState<any[]>([]);
@@ -1367,70 +1368,49 @@ export default function AdminSettings() {
           ) : (
             <View style={styles.contentPadding}>
               
-              {/* Gestión de Espacios */}
-              {(activeTab === 'all' || activeTab === 'rooms') && (
-                <>
-                  <SectionHeader title="Gestión de Espacios" kicker="INFRAESTRUCTURA" />
-                  <View style={[styles.cardList, isDesktop && { flexDirection: 'row', flexWrap: 'wrap', gap: 20 }]}>
-                    {rooms.map(room => (
-                      <View key={room.id} style={[styles.roomCard, isDesktop && { width: '48%' }]}>
-                        <TouchableOpacity onPress={() => openEditModal(room, 'room')} activeOpacity={0.7} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                          {/* Icon */}
-                          <View style={{ width: 44, height: 44, borderRadius: 16, backgroundColor: '#7209B7', justifyContent: 'center', alignItems: 'center' }}>
-                            <Ionicons name="business" size={20} color="#FFF" />
-                          </View>
-                          
-                          {/* Title & Info */}
-                          <View style={{ flex: 1, minWidth: 0 }}>
-                            <Text style={[styles.roomNameInput, { backgroundColor: 'transparent', borderWidth: 0, paddingHorizontal: 0, paddingVertical: 0, fontSize: 16, fontWeight: '900', color: '#1E293B', flex: 1 }]}>
-                              {room.name || 'Sin nombre'}
-                            </Text>
-                            
-                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Ionicons name="people" size={14} color="#64748B" />
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>
-                                  {room.capacity || '0'} pers.
-                                </Text>
-                              </View>
-                              
-                              <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center' }} />
-                              
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Ionicons name="location" size={14} color="#64748B" />
-                                <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B' }}>
-                                  {room.floor || 'Sin ubicación'}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-
-                        {/* Footer */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
-                            ESPACIO {room.info === 'Especial' ? 'ESPECIAL' : 'ESTÁNDAR'}
-                          </Text>
-                          
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                            <TouchableOpacity onPress={() => openEditModal(room, 'room')} style={{ padding: 4 }}>
-                              <Ionicons name="pencil" size={16} color="#3B82F6" />
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={() => openDeleteConfirmation(room)} style={{ padding: 4 }}>
-                              <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                    
-                    <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addRoom}>
-                      <Ionicons name="add" size={24} color={COLORS.muted} />
-                      <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Espacio</Text>
-                    </TouchableOpacity>
+              {/* Banner de Acceso a Gestión de Espacios, Celdas, Conductores y Evaluaciones */}
+              <View style={{
+                backgroundColor: '#EFF6FF',
+                borderRadius: 18,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: '#BFDBFE',
+                marginBottom: 28,
+                flexDirection: isDesktop ? 'row' : 'column',
+                alignItems: isDesktop ? 'center' : 'flex-start',
+                justifyContent: 'space-between',
+                gap: 16
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                  <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: '#DBEAFE', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="briefcase" size={24} color="#2563EB" />
                   </View>
-                </>
-              )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E40AF' }}>
+                      Módulos Operativos Reubicados en «Gestión»
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#3B82F6', marginTop: 2, lineHeight: 17 }}>
+                      La administración de <Text style={{ fontWeight: '700' }}>Celdas y Parqueaderos</Text>, <Text style={{ fontWeight: '700' }}>Gestión de Espacios</Text>, <Text style={{ fontWeight: '700' }}>Gestión de Conductores</Text> y <Text style={{ fontWeight: '700' }}>Evaluaciones de Calidad</Text> ahora se encuentran organizadas en la nueva pestaña independiente «Gestión».
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push('/admin/gestion')}
+                  style={{
+                    backgroundColor: '#2563EB',
+                    paddingHorizontal: 18,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Ir a Gestión</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
 
               {/* Gestión de Dependencias */}
               {(activeTab === 'all' || activeTab === 'dependencies') && (
@@ -1535,804 +1515,6 @@ export default function AdminSettings() {
                         {saving ? <ActivityIndicator size="small" color={COLORS.white} /> : <Text style={styles.saveText}>GUARDAR USUARIOS</Text>}
                       </LinearGradient>
                     </TouchableOpacity>
-                  </View>
-                </>
-              )}
-
-              {/* Gestión de Conductores */}
-              {(activeTab === 'all' || activeTab === 'drivers') && (
-                <>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 70, marginBottom: 20 }}>
-                    <View>
-                      <Text style={styles.sectionKicker}>LOGÍSTICA DE TRANSPORTE</Text>
-                      <Text style={styles.sectionTitle}>Gestión de Conductores</Text>
-                    </View>
-                    <TouchableOpacity 
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 8,
-                        backgroundColor: '#2563EB',
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        borderRadius: 14,
-                        ...Platform.select({
-                          web: { boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)' }
-                        })
-                      }}
-                      onPress={addDriver}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="add" size={20} color={COLORS.white} />
-                      <Text style={{ color: COLORS.white, fontSize: 13, fontWeight: '800' }}>
-                        Agregar Conductor
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={{ flexDirection: 'column', gap: 14 }}>
-                    {drivers.map(drv => (
-                      <View 
-                        key={drv.id} 
-                        style={{
-                          width: '100%',
-                          backgroundColor: COLORS.white,
-                          borderRadius: 22,
-                          paddingVertical: 18,
-                          paddingHorizontal: 22,
-                          borderWidth: 1,
-                          borderColor: '#E2E8F0',
-                          flexDirection: isDesktop ? 'row' : 'column',
-                          alignItems: isDesktop ? 'center' : 'stretch',
-                          justifyContent: 'space-between',
-                          gap: 16,
-                          ...Platform.select({
-                            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10 },
-                            android: { elevation: 2 },
-                            web: { boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)' }
-                          })
-                        }}
-                      >
-                        {/* 1. Información del Conductor (Izquierda) */}
-                        <TouchableOpacity 
-                          onPress={() => openEditModal(drv, 'driver')} 
-                          activeOpacity={0.7} 
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 14,
-                            flex: isDesktop ? 1.2 : undefined,
-                            minWidth: 220
-                          }}
-                        >
-                          <View style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 16,
-                            backgroundColor: '#EFF6FF',
-                            borderWidth: 1,
-                            borderColor: '#DBEAFE',
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                          }}>
-                            <Ionicons name="car-sport" size={26} color="#2563EB" />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{
-                              fontSize: 17,
-                              fontWeight: '900',
-                              color: COLORS.primary,
-                              letterSpacing: -0.2
-                            }}>
-                              {drv.name || 'Sin nombre'}
-                            </Text>
-                            <Text style={{ fontSize: 12, fontWeight: '600', color: COLORS.muted, marginTop: 2 }}>
-                              Conductor Oficial • Secretaría Jurídica Distrital
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-
-                        {/* 2. Bloque de Contacto y Disponibilidad (Centro) */}
-                        <View style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 12,
-                          flex: isDesktop ? 1 : undefined,
-                          flexWrap: 'wrap'
-                        }}>
-                          <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 8,
-                            backgroundColor: '#F8FAFC',
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 12,
-                            borderWidth: 1,
-                            borderColor: '#E2E8F0'
-                          }}>
-                            <Ionicons name="call" size={15} color="#2563EB" />
-                            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primary }}>
-                              {drv.phone || 'Sin teléfono'}
-                            </Text>
-                          </View>
-
-                          <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
-                            backgroundColor: drv.is_active !== false ? '#ECFDF5' : '#F1F5F9',
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 10,
-                            borderWidth: 1,
-                            borderColor: drv.is_active !== false ? '#A7F3D0' : '#E2E8F0'
-                          }}>
-                            <View style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 4,
-                              backgroundColor: drv.is_active !== false ? '#10B981' : '#94A3B8'
-                            }} />
-                            <Text style={{
-                              fontSize: 11,
-                              fontWeight: '800',
-                              letterSpacing: 0.6,
-                              color: drv.is_active !== false ? '#059669' : '#64748B',
-                              textTransform: 'uppercase'
-                            }}>
-                              {drv.is_active !== false ? 'Activo / En Servicio' : 'Inactivo'}
-                            </Text>
-                          </View>
-                        </View>
-
-                        {/* 3. Acciones (Derecha) */}
-                        <View style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: isDesktop ? 'flex-end' : 'space-between',
-                          gap: 10,
-                          borderTopWidth: isDesktop ? 0 : 1,
-                          borderTopColor: '#F1F5F9',
-                          paddingTop: isDesktop ? 0 : 12
-                        }}>
-                          <TouchableOpacity 
-                            onPress={() => openEditModal(drv, 'driver')} 
-                            activeOpacity={0.7}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 6,
-                              paddingHorizontal: 14,
-                              paddingVertical: 8,
-                              borderRadius: 12,
-                              backgroundColor: '#EFF6FF',
-                              borderWidth: 1,
-                              borderColor: '#DBEAFE'
-                            }}
-                          >
-                            <Ionicons name="pencil" size={15} color="#2563EB" />
-                            <Text style={{ fontSize: 13, fontWeight: '800', color: '#2563EB' }}>Editar</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity 
-                            onPress={() => openDriverDeleteConfirmation(drv)} 
-                            activeOpacity={0.7}
-                            style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 12,
-                              backgroundColor: '#FEF2F2',
-                              borderWidth: 1,
-                              borderColor: '#FEE2E2',
-                              justifyContent: 'center',
-                              alignItems: 'center'
-                            }}
-                          >
-                            <Ionicons name="trash-outline" size={16} color={COLORS.danger} />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                    
-                    {drivers.length === 0 && (
-                      <View style={{
-                        padding: 30,
-                        backgroundColor: COLORS.white,
-                        borderRadius: 20,
-                        borderWidth: 1,
-                        borderColor: '#E2E8F0',
-                        alignItems: 'center',
-                        gap: 10
-                      }}>
-                        <Ionicons name="car-outline" size={36} color={COLORS.muted} />
-                        <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.muted }}>
-                          No hay conductores registrados en el sistema.
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </>
-              )}
-
-              {/* Gestión Integral de Celdas de Parqueadero y Vehículos */}
-              {(activeTab === 'all' || activeTab === 'parking_spots') && (
-                <>
-                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start', justifyContent: 'space-between', gap: 12, marginTop: 70, marginBottom: 20 }}>
-                    <View>
-                      <Text style={styles.sectionKicker}>CONTROL DE ACCESO Y SÓTANOS</Text>
-                      <Text style={styles.sectionTitle}>Administración de Celdas y Parqueadero</Text>
-                    </View>
-                    <TouchableOpacity 
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 8,
-                        backgroundColor: '#EA580C',
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        borderRadius: 14,
-                        ...Platform.select({
-                          web: { boxShadow: '0 4px 12px rgba(234, 88, 12, 0.25)' }
-                        })
-                      }}
-                      onPress={openCreateSpotModal}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons name="add" size={20} color={COLORS.white} />
-                      <Text style={{ color: COLORS.white, fontSize: 13, fontWeight: '800' }}>
-                        + Nueva Celda
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Panel de Métricas de Parqueadero */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                    {[
-                      { label: 'Total Celdas', val: parkingSpots.length, icon: 'grid', color: '#0F172A', bg: '#F1F5F9' },
-                      { label: 'Disponibles', val: parkingSpots.filter(s => s.status === 'disponible').length, icon: 'checkmark-circle', color: '#059669', bg: '#ECFDF5' },
-                      { label: 'Ocupadas', val: parkingSpots.filter(s => s.status === 'ocupada').length, icon: 'lock-closed', color: '#DC2626', bg: '#FEF2F2' },
-                      { label: 'Celdas Fijas', val: parkingSpots.filter(s => s.spot_type === 'fija').length, icon: 'person-pin', color: '#2563EB', bg: '#EFF6FF' },
-                      { label: 'Uso Libre', val: parkingSpots.filter(s => s.spot_type === 'libre').length, icon: 'refresh', color: '#7C3AED', bg: '#F5F3FF' },
-                      { label: 'Vehículos Activos', val: allVehicles.filter(v => v.is_active !== false).length, icon: 'car-sport', color: '#EA580C', bg: '#FFF7ED' },
-                    ].map((card, idx) => (
-                      <View 
-                        key={idx} 
-                        style={{
-                          flex: 1,
-                          minWidth: isDesktop ? 140 : '46%',
-                          backgroundColor: card.bg,
-                          padding: 14,
-                          borderRadius: 16,
-                          borderWidth: 1,
-                          borderColor: `${card.color}20`,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 12
-                        }}
-                      >
-                        <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
-                          <Ionicons name={card.icon as any} size={20} color={card.color} />
-                        </View>
-                        <View>
-                          <Text style={{ fontSize: 18, fontWeight: '900', color: card.color }}>{card.val}</Text>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>{card.label}</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Configuración de Regla: Límite Máximo de Vehículos por Usuario */}
-                  <View style={{
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 20,
-                    padding: 20,
-                    borderWidth: 1,
-                    borderColor: '#E2E8F0',
-                    marginBottom: 24,
-                    flexDirection: isDesktop ? 'row' : 'column',
-                    alignItems: isDesktop ? 'center' : 'flex-start',
-                    justifyContent: 'space-between',
-                    gap: 16
-                  }}>
-                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center' }}>
-                        <Ionicons name="speedometer-outline" size={24} color="#2563EB" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.text }}>
-                          Límite Máximo de Vehículos Activos por Usuario
-                        </Text>
-                        <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
-                          Controla la cantidad máxima de vehículos simultáneos que un funcionario o contratista puede tener en estado activo.
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', padding: 4 }}>
-                        <TouchableOpacity
-                          style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
-                          onPress={() => maxVehiclesLimit > 1 && handleSaveMaxLimit(maxVehiclesLimit - 1)}
-                        >
-                          <Ionicons name="remove" size={16} color="#334155" />
-                        </TouchableOpacity>
-                        <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.text, marginHorizontal: 16, minWidth: 20, textAlign: 'center' }}>
-                          {maxVehiclesLimit}
-                        </Text>
-                        <TouchableOpacity
-                          style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}
-                          onPress={() => maxVehiclesLimit < 10 && handleSaveMaxLimit(maxVehiclesLimit + 1)}
-                        >
-                          <Ionicons name="add" size={16} color="#334155" />
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>vehículos máx.</Text>
-                    </View>
-                  </View>
-
-                  {/* Barra de Filtros y Búsqueda para Celdas */}
-                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12, marginBottom: 16, alignItems: isDesktop ? 'center' : 'stretch' }}>
-                    <View style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: 14,
-                      paddingHorizontal: 14,
-                      height: 46,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0'
-                    }}>
-                      <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
-                      <TextInput
-                        style={{ flex: 1, fontSize: 13, color: COLORS.text }}
-                        placeholder="Buscar por código de celda, titular o placa..."
-                        placeholderTextColor="#94A3B8"
-                        value={spotSearch}
-                        onChangeText={setSpotSearch}
-                      />
-                      {spotSearch.length > 0 && (
-                        <TouchableOpacity onPress={() => setSpotSearch('')}>
-                          <Ionicons name="close-circle" size={18} color="#94A3B8" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-
-                    {/* Filtros rápidos */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      {[
-                        { id: 'all', label: 'Todas' },
-                        { id: 'fija', label: 'Celdas Fijas' },
-                        { id: 'libre', label: 'Uso Libre' },
-                        { id: 'disponible', label: 'Disponibles' },
-                        { id: 'ocupada', label: 'Ocupadas' },
-                      ].map(f => (
-                        <TouchableOpacity
-                          key={f.id}
-                          style={{
-                            paddingHorizontal: 14,
-                            paddingVertical: 9,
-                            borderRadius: 12,
-                            backgroundColor: spotFilter === f.id ? '#0F172A' : '#FFFFFF',
-                            borderWidth: 1,
-                            borderColor: spotFilter === f.id ? '#0F172A' : '#E2E8F0'
-                          }}
-                          onPress={() => setSpotFilter(f.id as any)}
-                        >
-                          <Text style={{
-                            fontSize: 12,
-                            fontWeight: '800',
-                            color: spotFilter === f.id ? '#FFFFFF' : '#64748B'
-                          }}>
-                            {f.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  </View>
-
-                  {/* Listado de Celdas de Parqueadero */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 40 }}>
-                    {parkingSpots
-                      .filter(s => {
-                        const term = spotSearch.trim().toLowerCase();
-                        const matchSearch = !term || 
-                          s.code.toLowerCase().includes(term) ||
-                          (s.assigned_user_name_resolved && s.assigned_user_name_resolved.toLowerCase().includes(term)) ||
-                          (s.notes && s.notes.toLowerCase().includes(term)) ||
-                          (s.assigned_vehicles && s.assigned_vehicles.some((v: any) => v.plate.toLowerCase().includes(term)));
-                        
-                        if (!matchSearch) return false;
-                        if (spotFilter === 'fija') return s.spot_type === 'fija';
-                        if (spotFilter === 'libre') return s.spot_type === 'libre';
-                        if (spotFilter === 'disponible') return s.status === 'disponible';
-                        if (spotFilter === 'ocupada') return s.status === 'ocupada';
-                        return true;
-                      })
-                      .map(spot => {
-                        const isFixed = spot.spot_type === 'fija';
-                        const isOccupied = spot.status === 'ocupada';
-                        const hasVehicles = spot.assigned_vehicles && spot.assigned_vehicles.length > 0;
-
-                        return (
-                          <View
-                            key={spot.id}
-                            style={{
-                              width: isDesktop ? '31.8%' : '100%',
-                              backgroundColor: '#FFFFFF',
-                              borderRadius: 20,
-                              padding: 16,
-                              borderWidth: 1.5,
-                              borderColor: isOccupied ? '#FCA5A5' : (spot.status === 'disponible' ? '#86EFAC' : '#E2E8F0'),
-                              shadowColor: '#000',
-                              shadowOpacity: 0.03,
-                              shadowRadius: 8,
-                              elevation: 1
-                            }}
-                          >
-                            {/* Cabecera de Celda */}
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <View style={{
-                                  backgroundColor: '#0F172A',
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 5,
-                                  borderRadius: 8,
-                                }}>
-                                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 }}>
-                                    {spot.code}
-                                  </Text>
-                                </View>
-                                <View style={{
-                                  backgroundColor: isFixed ? '#EFF6FF' : '#F5F3FF',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 4,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: isFixed ? '#BFDBFE' : '#DDD6FE'
-                                }}>
-                                  <Text style={{ fontSize: 10, fontWeight: '800', color: isFixed ? '#1D4ED8' : '#6D28D9' }}>
-                                    {isFixed ? 'Celda Fija' : 'Uso Libre'}
-                                  </Text>
-                                </View>
-                              </View>
-
-                              {/* Badge Estado */}
-                              <View style={{
-                                backgroundColor: spot.status === 'disponible' ? '#ECFDF5' : (spot.status === 'ocupada' ? '#FEF2F2' : '#FFFBEB'),
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 8,
-                                borderWidth: 1,
-                                borderColor: spot.status === 'disponible' ? '#A7F3D0' : (spot.status === 'ocupada' ? '#FECACA' : '#FDE68A')
-                              }}>
-                                <Text style={{
-                                  fontSize: 10,
-                                  fontWeight: '800',
-                                  color: spot.status === 'disponible' ? '#065F46' : (spot.status === 'ocupada' ? '#B91C1C' : '#92400E'),
-                                  textTransform: 'uppercase'
-                                }}>
-                                  {spot.status}
-                                </Text>
-                              </View>
-                            </View>
-
-                            {/* Titular Asignado (si es fija) */}
-                            {isFixed && (
-                              <View style={{ backgroundColor: '#F8FAFC', padding: 10, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F1F5F9' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
-                                  Persona Titular Asignada:
-                                </Text>
-                                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', marginTop: 2 }}>
-                                  {spot.assigned_user_name_resolved || spot.assigned_user_name || 'Sin titular vinculado'}
-                                </Text>
-                                {spot.assigned_user_dependency && (
-                                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
-                                    {spot.assigned_user_dependency}
-                                  </Text>
-                                )}
-                              </View>
-                            )}
-
-                            {/* Vehículo(s) Ocupante(s) */}
-                            <View style={{ marginBottom: 10 }}>
-                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: 4 }}>
-                                Vehículo(s) Asociados ({spot.assigned_vehicles?.length || 0}):
-                              </Text>
-                              {hasVehicles ? (
-                                <View style={{ gap: 6 }}>
-                                  {spot.assigned_vehicles?.map((vh: any) => (
-                                    <View key={vh.id} style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      justifyContent: 'space-between',
-                                      backgroundColor: '#F8FAFC',
-                                      padding: 8,
-                                      borderRadius: 10,
-                                      borderWidth: 1,
-                                      borderColor: '#E2E8F0'
-                                    }}>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                        <View style={{ backgroundColor: '#FEF08A', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#000' }}>
-                                          <Text style={{ fontSize: 11, fontWeight: '900', color: '#000' }}>{vh.plate}</Text>
-                                        </View>
-                                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#1E293B' }}>{vh.brand}</Text>
-                                      </View>
-                                      <TouchableOpacity
-                                        onPress={async () => {
-                                          await vehicleService.releaseSpot(spot.id, { vehicle_id: vh.id });
-                                          await loadParkingData();
-                                        }}
-                                        accessibilityLabel="Desvincular este vehículo"
-                                      >
-                                        <Ionicons name="close-circle-outline" size={18} color="#DC2626" />
-                                      </TouchableOpacity>
-                                    </View>
-                                  ))}
-                                </View>
-                              ) : (
-                                <Text style={{ fontSize: 12, color: '#94A3B8', fontStyle: 'italic' }}>
-                                  Sin vehículo asignado actualmente
-                                </Text>
-                              )}
-                            </View>
-
-                            {/* Notas / Ubicación */}
-                            {spot.notes && (
-                              <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 12 }}>
-                                📍 {spot.notes}
-                              </Text>
-                            )}
-
-                            {/* Acciones de la Celda */}
-                            <View style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 6,
-                              paddingTop: 10,
-                              borderTopWidth: 1,
-                              borderTopColor: '#F1F5F9'
-                            }}>
-                              <TouchableOpacity
-                                style={{
-                                  flex: 1,
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: 4,
-                                  backgroundColor: '#EFF6FF',
-                                  paddingVertical: 7,
-                                  borderRadius: 10,
-                                  borderWidth: 1,
-                                  borderColor: '#BFDBFE'
-                                }}
-                                onPress={() => handleOpenAssignModal(spot)}
-                              >
-                                <Ionicons name="link-outline" size={14} color="#1D4ED8" />
-                                <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>
-                                  Asignar
-                                </Text>
-                              </TouchableOpacity>
-
-                              {hasVehicles && (
-                                <TouchableOpacity
-                                  style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 4,
-                                    backgroundColor: '#FEF3C7',
-                                    paddingVertical: 7,
-                                    borderRadius: 10,
-                                    borderWidth: 1,
-                                    borderColor: '#FDE68A'
-                                  }}
-                                  onPress={() => handleOpenReleaseModal(spot)}
-                                >
-                                  <Ionicons name="lock-open-outline" size={14} color="#B45309" />
-                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309' }}>
-                                    Liberar
-                                  </Text>
-                                </TouchableOpacity>
-                              )}
-
-                              <TouchableOpacity
-                                style={{ padding: 7, borderRadius: 10, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }}
-                                onPress={() => openEditSpotModal(spot)}
-                              >
-                                <Ionicons name="pencil-outline" size={15} color="#334155" />
-                              </TouchableOpacity>
-
-                              <TouchableOpacity
-                                style={{ padding: 7, borderRadius: 10, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' }}
-                                onPress={() => handleOpenDeleteSpotModal(spot)}
-                              >
-                                <Ionicons name="trash-outline" size={15} color="#DC2626" />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        );
-                      })}
-                  </View>
-
-                  {/* Subsección: Control Global de Vehículos e Historial de Auditoría */}
-                  <View style={{ marginTop: 20, marginBottom: 30 }}>
-                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', alignItems: isDesktop ? 'center' : 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-                      <View>
-                        <Text style={styles.sectionKicker}>REGISTRO Y TRAZABILIDAD</Text>
-                        <Text style={styles.sectionTitle}>Control Global de Vehículos y Auditoría</Text>
-                      </View>
-                      <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        height: 42,
-                        borderWidth: 1,
-                        borderColor: '#E2E8F0',
-                        minWidth: 260
-                      }}>
-                        <Ionicons name="search" size={16} color="#94A3B8" style={{ marginRight: 6 }} />
-                        <TextInput
-                          style={{ flex: 1, fontSize: 13, color: COLORS.text }}
-                          placeholder="Buscar por placa, conductor, doc..."
-                          placeholderTextColor="#94A3B8"
-                          value={vehicleSearch}
-                          onChangeText={setVehicleSearch}
-                        />
-                        {vehicleSearch.length > 0 && (
-                          <TouchableOpacity onPress={() => setVehicleSearch('')}>
-                            <Ionicons name="close-circle" size={16} color="#94A3B8" />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-
-                    {/* Tarjetas de Vehículos del Sistema */}
-                    <View style={{ gap: 10 }}>
-                      {allVehicles
-                        .filter(v => {
-                          const term = vehicleSearch.trim().toLowerCase();
-                          if (!term) return true;
-                          return (
-                            v.plate.toLowerCase().includes(term) ||
-                            (v.name && v.name.toLowerCase().includes(term)) ||
-                            (v.doc && v.doc.toLowerCase().includes(term)) ||
-                            (v.brand && v.brand.toLowerCase().includes(term)) ||
-                            (v.dependency && v.dependency.toLowerCase().includes(term))
-                          );
-                        })
-                        .map(veh => {
-                          const isVehActive = veh.is_active !== false;
-
-                          return (
-                            <View
-                              key={veh.id}
-                              style={{
-                                backgroundColor: isVehActive ? '#FFFFFF' : '#F8FAFC',
-                                borderRadius: 16,
-                                padding: 14,
-                                borderWidth: 1,
-                                borderColor: isVehActive ? '#E2E8F0' : '#CBD5E1',
-                                flexDirection: isDesktop ? 'row' : 'column',
-                                alignItems: isDesktop ? 'center' : 'stretch',
-                                justifyContent: 'space-between',
-                                gap: 12
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                                {/* Badge Matrícula */}
-                                <View style={{
-                                  backgroundColor: '#FDE047',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 4,
-                                  borderRadius: 6,
-                                  borderWidth: 1.5,
-                                  borderColor: '#000000',
-                                  minWidth: 75,
-                                  alignItems: 'center'
-                                }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#000000', letterSpacing: 1 }}>
-                                    {veh.plate}
-                                  </Text>
-                                </View>
-
-                                <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.text }}>
-                                    {veh.name || veh.owner_name || 'Conductor no especificado'}
-                                  </Text>
-                                  <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                                    {veh.brand} {veh.model ? `• ${veh.model}` : ''} • Doc: {veh.doc || 'S/N'} • {veh.dependency || 'Sin dependencia'}
-                                  </Text>
-                                </View>
-                              </View>
-
-                              {/* Badges y Acciones */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: isDesktop ? 'flex-end' : 'flex-start' }}>
-                                {/* Badge Celda */}
-                                <View style={{
-                                  backgroundColor: veh.spot_code ? '#EFF6FF' : '#F5F3FF',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 4,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: veh.spot_code ? '#BFDBFE' : '#DDD6FE'
-                                }}>
-                                  <Text style={{ fontSize: 11, fontWeight: '800', color: veh.spot_code ? '#1D4ED8' : '#6D28D9' }}>
-                                    {veh.spot_code ? `Celda ${veh.spot_code}` : 'Uso Libre'}
-                                  </Text>
-                                </View>
-
-                                {/* Badge Estado */}
-                                <View style={{
-                                  backgroundColor: isVehActive ? '#ECFDF5' : '#F1F5F9',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 4,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: isVehActive ? '#A7F3D0' : '#CBD5E1'
-                                }}>
-                                  <Text style={{ fontSize: 11, fontWeight: '800', color: isVehActive ? '#065F46' : '#64748B' }}>
-                                    {isVehActive ? 'Activo' : 'Inactivo'}
-                                  </Text>
-                                </View>
-
-                                {/* Historial Button */}
-                                <TouchableOpacity
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 5,
-                                    backgroundColor: '#F1F5F9',
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 6,
-                                    borderRadius: 8,
-                                    borderWidth: 1,
-                                    borderColor: '#E2E8F0'
-                                  }}
-                                  onPress={() => handleOpenHistory(veh)}
-                                >
-                                  <Ionicons name="time-outline" size={14} color="#334155" />
-                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#334155' }}>
-                                    Historial
-                                  </Text>
-                                </TouchableOpacity>
-
-                                {/* Editar */}
-                                <TouchableOpacity
-                                  style={{ padding: 6, borderRadius: 8, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' }}
-                                  onPress={() => handleAdminEditVehicle(veh)}
-                                  accessibilityLabel="Editar"
-                                >
-                                  <Ionicons name="pencil-outline" size={15} color="#2563EB" />
-                                </TouchableOpacity>
-
-                                {/* Inactivar / Activar */}
-                                <TouchableOpacity
-                                  style={{ padding: 6, borderRadius: 8, backgroundColor: isVehActive ? '#FEF3C7' : '#DCFCE7', borderWidth: 1, borderColor: isVehActive ? '#FDE68A' : '#BBF7D0' }}
-                                  onPress={() => handleAdminToggleVehicleActive(veh)}
-                                  accessibilityLabel={isVehActive ? 'Inactivar' : 'Activar'}
-                                >
-                                  <Ionicons name={isVehActive ? 'eye-off-outline' : 'checkmark-circle-outline'} size={15} color={isVehActive ? '#B45309' : '#15803D'} />
-                                </TouchableOpacity>
-
-                                {/* Eliminar */}
-                                <TouchableOpacity
-                                  style={{ padding: 6, borderRadius: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA' }}
-                                  onPress={() => handleAdminDeleteVehicle(veh)}
-                                  accessibilityLabel="Eliminar"
-                                >
-                                  <Ionicons name="trash-outline" size={15} color="#DC2626" />
-                                </TouchableOpacity>
-                              </View>
-                            </View>
-                          );
-                        })}
-                    </View>
                   </View>
                 </>
               )}
@@ -2487,36 +1669,6 @@ export default function AdminSettings() {
                         )}
                       </LinearGradient>
                     </TouchableOpacity>
-                  </View>
-                </>
-              )}
-
-              {/* Evaluación de Servicios */}
-              {(activeTab === 'all' || activeTab === 'evaluations') && (
-                <>
-                  <SectionHeader title="Evaluación de Servicios" kicker="CONTROL DE CALIDAD" />
-                  <View style={styles.configCard}>
-                    {[
-                      { id: 'maintenance', label: 'Mantenimiento Locativo' },
-                      { id: 'visitors', label: 'Control de Visitantes' },
-                      { id: 'rooms', label: 'Reserva de Salas' },
-                      { id: 'parking', label: 'Cupo de Parqueadero' },
-                      { id: 'transport', label: 'Transporte Oficial' }
-                    ].map((item, index, arr) => (
-                      <React.Fragment key={item.id}>
-                        <ConfigToggle 
-                          label={item.label} 
-                          desc={`Solicitar evaluación obligatoria al completar servicios de ${item.label.toLowerCase()}.`}
-                          value={evalCategories.includes(item.id)}
-                          onValueChange={(val: boolean) => {
-                            setPendingEvalToggle({ id: item.id, label: item.label, newValue: val });
-                            setShowEvalConfirmModal(true);
-                          }}
-                          icon="star"
-                        />
-                        {index < arr.length - 1 && <View style={styles.configDivider} />}
-                      </React.Fragment>
-                    ))}
                   </View>
                 </>
               )}
@@ -4929,13 +4081,9 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveTab:
 
   const TABS = [
     { id: 'all', label: 'Todas las Secciones', icon: 'grid' },
-    { id: 'rooms', label: 'Gestión de Espacios', icon: 'business' },
-    { id: 'dependencies', label: 'Dependencias', icon: 'people-circle' },
     { id: 'users', label: 'Usuarios y Roles', icon: 'people' },
-    { id: 'drivers', label: 'Gestión Conductores', icon: 'car-sport' },
-    { id: 'parking_spots', label: 'Celdas y Parqueadero', icon: 'car' },
+    { id: 'dependencies', label: 'Dependencias', icon: 'people-circle' },
     { id: 'emails', label: 'Correos de Servicio', icon: 'mail' },
-    { id: 'evaluations', label: 'Evaluación Servicios', icon: 'star' },
     { id: 'preferences', label: 'Preferencias Sistema', icon: 'options' },
     { id: 'deployment', label: 'Servidor & Despliegue', icon: 'server' },
   ];
@@ -4963,7 +4111,15 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveTab:
           ))}
         </View>
 
-        <View style={{ marginTop: 'auto', width: '100%', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)' }}>
+        <View style={{ marginTop: 'auto', width: '100%', paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.1)', gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => router.push('/admin/gestion')}
+            style={[styles.sideBackBtn, { backgroundColor: 'rgba(59, 130, 246, 0.15)', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12 }]}
+          >
+            <Ionicons name="briefcase" size={18} color="#93C5FD" />
+            <Text style={{ color: '#93C5FD', fontSize: 13, fontWeight: '800' }}>Gestión Operativa</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => router.replace('/dashboard')}
             style={styles.sideBackBtn}

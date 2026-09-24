@@ -207,8 +207,10 @@ const initDatabase = async () => {
     // Columnas adicionales para user_vehicles si ya existía la tabla
     await pool.query(`
       ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pendiente';
       ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS assigned_spot_id UUID REFERENCES public.parking_spots(id) ON DELETE SET NULL;
       ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS notes TEXT;
+      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS charge TEXT;
     `).catch(err => console.error('Error alterando user_vehicles:', err.message));
 
     // Límite de vehículos por defecto
@@ -877,6 +879,51 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
   }
 
   try {
+    // 1. Prevención de solicitudes duplicadas para parqueadero (misma placa pendiente) y validación de contratistas
+    if (category === 'parking') {
+      const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+      if (metadata?.charge && !isAdmin) {
+        const limitCheck = resolveVehicleLimit(metadata.charge, req.user?.role);
+        if (!limitCheck.canRegister || limitCheck.maxLimit === 0) {
+          return res.status(403).json({
+            error: 'No es posible radicar la solicitud: el parqueadero permanente es de uso exclusivo para funcionarios de planta, directivos y asesores. El personal contratista no cuenta con cupo permanente.'
+          });
+        }
+      }
+
+      const plate = metadata?.plate ? String(metadata.plate).trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : null;
+      if (plate) {
+        const existingPending = await pool.query(
+          `SELECT * FROM administrative_requests 
+           WHERE user_id = $1 
+             AND category = 'parking' 
+             AND status = 'pendiente' 
+             AND UPPER(REGEXP_REPLACE(metadata->>'plate', '[^A-Za-z0-9]', '', 'g')) = $2
+           ORDER BY created_at DESC LIMIT 1`,
+          [req.user.id, plate]
+        );
+        if (existingPending.rows.length > 0) {
+          console.log(`[DUPLICATE PREVENTED] Solicitud pendiente de parqueadero ya existe para placa ${plate} (Req #${existingPending.rows[0].id})`);
+          return res.status(200).json(existingPending.rows[0]);
+        }
+      }
+    }
+
+    // 2. Prevención general contra clics múltiples / envío en ráfaga (menos de 10 segundos)
+    const burstCheck = await pool.query(
+      `SELECT * FROM administrative_requests 
+       WHERE user_id = $1 
+         AND category = $2 
+         AND title = $3 
+         AND created_at >= NOW() - INTERVAL '10 seconds'
+       ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id, category, title]
+    );
+    if (burstCheck.rows.length > 0) {
+      console.log(`[BURST PREVENTED] Envío repetido en ráfaga prevenido para usuario ${req.user.id}`);
+      return res.status(200).json(burstCheck.rows[0]);
+    }
+
     const result = await pool.query(
       'INSERT INTO administrative_requests (user_id, title, description, category, priority, attachments, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
       [req.user.id, title, description, category, priority || 'media', attachments || [], metadata || {}]
@@ -1247,29 +1294,51 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
       currentMetadata = { ...currentMetadata, ...metadata };
     }
 
-    // Si se aprueba una solicitud de parqueadero con celda asignada
-    if (status === 'resuelto' && currentMetadata.assigned_spot_id) {
+    // Si se aprueba o rechaza una solicitud de parqueadero
+    if (status === 'resuelto' && checkResult.rows[0].category === 'parking') {
       try {
         const spotId = currentMetadata.assigned_spot_id;
-        const spotCheck = await pool.query('SELECT code, spot_type FROM parking_spots WHERE id = $1', [spotId]);
-        if (spotCheck.rows.length > 0) {
-          currentMetadata.assigned_spot_code = spotCheck.rows[0].code;
-          currentMetadata.spot_type = spotCheck.rows[0].spot_type || 'fija';
-          const userName = currentMetadata.name || currentMetadata.requester_name || 'Funcionario';
-          await pool.query(
-            `UPDATE parking_spots SET status = 'ocupada', assigned_user_id = $1, assigned_user_name = $2, updated_at = NOW() WHERE id = $3`,
-            [checkResult.rows[0].user_id || null, userName, spotId]
-          );
-          if (currentMetadata.plate) {
-            const normPlate = currentMetadata.plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (spotId) {
+          const spotCheck = await pool.query('SELECT code, spot_type FROM parking_spots WHERE id = $1', [spotId]);
+          if (spotCheck.rows.length > 0) {
+            currentMetadata.assigned_spot_code = spotCheck.rows[0].code;
+            currentMetadata.spot_type = spotCheck.rows[0].spot_type || 'fija';
+            const userName = currentMetadata.name || currentMetadata.requester_name || 'Funcionario';
             await pool.query(
-              `UPDATE user_vehicles SET assigned_spot_id = $1, is_active = true, updated_at = NOW() WHERE UPPER(REPLACE(plate, '-', '')) = $2`,
-              [spotId, normPlate]
+              `UPDATE parking_spots SET status = 'ocupada', assigned_user_id = $1, assigned_user_name = $2, updated_at = NOW() WHERE id = $3`,
+              [checkResult.rows[0].user_id || null, userName, spotId]
             );
           }
         }
+        if (currentMetadata.plate) {
+          const normPlate = currentMetadata.plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+          await pool.query(
+            `UPDATE user_vehicles 
+             SET approval_status = 'aprobado', 
+                 is_active = true, 
+                 assigned_spot_id = COALESCE($1, assigned_spot_id), 
+                 updated_at = NOW() 
+             WHERE UPPER(REGEXP_REPLACE(plate, '[^A-Za-z0-9]', '', 'g')) = $2`,
+            [spotId || null, normPlate]
+          );
+        }
       } catch (spotErr) {
-        console.warn('Error al vincular celda en aprobación de solicitud:', spotErr);
+        console.warn('Error al vincular celda y activar vehículo en aprobación de solicitud:', spotErr);
+      }
+    } else if (status === 'rechazado' && checkResult.rows[0].category === 'parking') {
+      try {
+        if (currentMetadata.plate) {
+          const normPlate = currentMetadata.plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+          await pool.query(
+            `UPDATE user_vehicles 
+             SET approval_status = 'rechazado', 
+                 updated_at = NOW() 
+             WHERE UPPER(REGEXP_REPLACE(plate, '[^A-Za-z0-9]', '', 'g')) = $1 AND approval_status = 'pendiente'`,
+            [normPlate]
+          );
+        }
+      } catch (rejErr) {
+        console.warn('Error al actualizar estado del vehículo tras rechazo:', rejErr);
       }
     }
     
@@ -1556,6 +1625,62 @@ app.delete('/api/requests/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// --- RESOLUCIÓN DE LÍMITES DE VEHÍCULOS POR CARGO / VINCULACIÓN ---
+function resolveVehicleLimit(charge, role) {
+  const text = `${charge || ''} ${role || ''}`.toLowerCase().trim();
+
+  // 1. Contratistas: 0 vehículos (no habilitado para parqueadero permanente)
+  if (
+    text.includes('contratista') ||
+    text.includes('prestacion de servicios') ||
+    text.includes('prestación de servicios') ||
+    text.includes('apoyo a la gestion') ||
+    text.includes('apoyo a la gestión') ||
+    text.includes('ops') ||
+    text.includes('honorarios')
+  ) {
+    return {
+      type: 'contratista',
+      label: 'Contratista',
+      maxLimit: 0,
+      isUnlimited: false,
+      canRegister: false,
+      reason: 'Según los lineamientos institucionales, el parqueadero permanente no está habilitado para personal contratista.'
+    };
+  }
+
+  // 2. Directivos: sin límite (Directores, Secretarios, Subsecretarios, etc.)
+  if (
+    text.includes('director') ||
+    text.includes('directora') ||
+    text.includes('secretario') ||
+    text.includes('secretaria') ||
+    text.includes('subsecretario') ||
+    text.includes('subsecretaria') ||
+    text.includes('directivo') ||
+    text.includes('jefe') ||
+    text.includes('alcalde') ||
+    text.includes('ministro')
+  ) {
+    return {
+      type: 'directivo',
+      label: 'Directivo',
+      maxLimit: 999,
+      isUnlimited: true,
+      canRegister: true
+    };
+  }
+
+  // 3. Funcionarios y Asesores de planta: máximo 1 vehículo activo
+  return {
+    type: 'funcionario_asesor',
+    label: text.includes('asesor') ? 'Asesor' : 'Funcionario',
+    maxLimit: 1,
+    isUnlimited: false,
+    canRegister: true
+  };
+}
+
 // --- ENDPOINTS DE VEHÍCULOS Y CELDAS DE PARQUEADERO ---
 
 // Obtener vehículos (usuario actual o todos si es administrador)
@@ -1631,15 +1756,34 @@ app.get('/api/vehicles/by-user/:identifier', authenticateToken, async (req, res)
     `;
     const result = await pool.query(query, [identifier.trim()]);
 
-    // Obtener límite configurado
-    const limitRes = await pool.query("SELECT value FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
-    const maxLimit = limitRes.rows.length > 0 ? parseInt(limitRes.rows[0].value, 10) : 3;
+    // Detectar cargo del usuario (de sus vehículos o de solicitudes previas)
+    let detectedCharge = '';
+    const vWithCharge = result.rows.find(v => v.charge && v.charge.trim());
+    if (vWithCharge) {
+      detectedCharge = vWithCharge.charge;
+    } else {
+      const reqChargeRes = await pool.query(
+        "SELECT metadata->>'charge' as charge FROM administrative_requests WHERE (user_id::text = $1 OR metadata->>'doc' = $1) AND metadata->>'charge' IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+        [identifier.trim()]
+      );
+      if (reqChargeRes.rows.length > 0 && reqChargeRes.rows[0].charge) {
+        detectedCharge = reqChargeRes.rows[0].charge;
+      }
+    }
+
+    const limitInfo = resolveVehicleLimit(detectedCharge, '');
 
     res.json({
       vehicles: result.rows,
       count: result.rows.length,
       activeCount: result.rows.filter(v => v.is_active !== false).length,
-      maxLimit: isNaN(maxLimit) ? 3 : maxLimit
+      maxLimit: limitInfo.maxLimit,
+      isUnlimited: limitInfo.isUnlimited,
+      employmentType: limitInfo.type,
+      employmentLabel: limitInfo.label,
+      canRegister: limitInfo.canRegister,
+      reason: limitInfo.reason,
+      charge: detectedCharge
     });
   } catch (err) {
     console.error('Error al obtener vehículos por usuario:', err);
@@ -1649,7 +1793,7 @@ app.get('/api/vehicles/by-user/:identifier', authenticateToken, async (req, res)
 
 // Crear un vehículo
 app.post('/api/vehicles', authenticateToken, async (req, res) => {
-  const { plate, brand, model, color, name, doc, dependency, notes, target_user_id } = req.body;
+  const { plate, brand, model, color, name, doc, dependency, charge, notes, target_user_id } = req.body;
   if (!plate || !brand) {
     return res.status(400).json({ error: 'La placa y la marca del vehículo son obligatorias.' });
   }
@@ -1663,37 +1807,56 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
     const targetUserId = (isAdmin && target_user_id) ? target_user_id : req.user.id;
 
-    // 1. Validar que no exista la placa activa en el sistema
+    // 1. Si el usuario ya tiene este vehículo registrado, retornarlo directamente (evitar errores por doble clic)
+    const existingSameUser = await pool.query(
+      'SELECT * FROM public.user_vehicles WHERE user_id = $1 AND UPPER(TRIM(plate)) = $2',
+      [targetUserId, cleanPlate]
+    );
+    if (existingSameUser.rows.length > 0) {
+      return res.status(200).json(existingSameUser.rows[0]);
+    }
+
+    // 1b. Validar que no exista la placa activa en el sistema asignada a OTRO usuario
     const existingPlate = await pool.query(
-      'SELECT id, plate, is_active FROM public.user_vehicles WHERE UPPER(TRIM(plate)) = $1 AND is_active = true',
-      [cleanPlate]
+      'SELECT id, plate, is_active FROM public.user_vehicles WHERE UPPER(TRIM(plate)) = $1 AND is_active = true AND user_id != $2',
+      [cleanPlate, targetUserId]
     );
     if (existingPlate.rows.length > 0) {
-      return res.status(400).json({ error: `La placa ${cleanPlate} ya se encuentra registrada y activa en el sistema.` });
+      return res.status(400).json({ error: `La placa ${cleanPlate} ya se encuentra registrada por otro usuario en el sistema.` });
     }
 
-    // 2. Validar límite máximo de vehículos permitidos por usuario
-    const limitRes = await pool.query("SELECT value FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
-    const maxLimit = limitRes.rows.length > 0 ? parseInt(limitRes.rows[0].value, 10) : 3;
-    const resolvedLimit = isNaN(maxLimit) ? 3 : maxLimit;
+    // 2. Validar límite máximo de vehículos permitidos según el cargo del usuario
+    const userCharge = (charge || '').trim();
+    const limitInfo = resolveVehicleLimit(userCharge, req.user?.role);
 
-    const countRes = await pool.query(
-      'SELECT COUNT(*) FROM public.user_vehicles WHERE user_id = $1 AND is_active = true',
-      [targetUserId]
-    );
-    const currentActive = parseInt(countRes.rows[0].count, 10);
+    if (!isAdmin) {
+      if (!limitInfo.canRegister || limitInfo.maxLimit === 0) {
+        return res.status(403).json({ 
+          error: limitInfo.reason || 'Los contratistas no tienen habilitada la asignación de cupo de parqueadero permanente según los lineamientos institucionales.' 
+        });
+      }
 
-    if (currentActive >= resolvedLimit && !isAdmin) {
-      return res.status(400).json({ 
-        error: `Has alcanzado el límite máximo permitido de ${resolvedLimit} vehículos registrados activos por usuario.` 
-      });
+      if (!limitInfo.isUnlimited) {
+        const countRes = await pool.query(
+          'SELECT COUNT(*) FROM public.user_vehicles WHERE user_id = $1 AND is_active = true',
+          [targetUserId]
+        );
+        const currentActive = parseInt(countRes.rows[0].count, 10);
+
+        if (currentActive >= limitInfo.maxLimit) {
+          return res.status(400).json({ 
+            error: `Para ${limitInfo.label.toLowerCase()}s, el límite máximo permitido es de ${limitInfo.maxLimit} vehículo activo. Si tienes un nuevo vehículo, por favor inactiva tu vehículo actual primero.` 
+          });
+        }
+      }
     }
 
-    // 3. Insertar vehículo
+    // 3. Insertar vehículo con estado inicial 'pendiente' (a menos que lo registre un administrador)
+    const initialApprovalStatus = isAdmin ? 'aprobado' : 'pendiente';
     const result = await pool.query(
       `INSERT INTO public.user_vehicles 
-       (user_id, plate, brand, model, color, name, doc, dependency, is_active, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9) 
+       (user_id, plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10, $11) 
        RETURNING *`,
       [
         targetUserId,
@@ -1704,6 +1867,8 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
         name ? name.trim() : null,
         doc ? doc.trim() : null,
         dependency ? dependency.trim() : null,
+        charge ? charge.trim() : null,
+        initialApprovalStatus,
         notes ? notes.trim() : null
       ]
     );
@@ -1722,9 +1887,11 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
         JSON.stringify({
           brand: newVehicle.brand,
           model: newVehicle.model,
+          charge: newVehicle.charge,
           color: newVehicle.color,
           doc: newVehicle.doc,
-          dependency: newVehicle.dependency
+          dependency: newVehicle.dependency,
+          status: initialApprovalStatus
         })
       ]
     );
@@ -1739,7 +1906,7 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
 // Actualizar un vehículo
 app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { plate, brand, model, color, name, doc, dependency, is_active, notes, assigned_spot_id } = req.body;
+  const { plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes, assigned_spot_id } = req.body;
 
   try {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
@@ -1770,21 +1937,32 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // Si se está activando nuevamente, verificar cupo máximo
+    // Si se está activando nuevamente, verificar cupo máximo según su cargo
     if (is_active === true && currentVehicle.is_active === false && !isAdmin) {
-      const limitRes = await pool.query("SELECT value FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
-      const maxLimit = limitRes.rows.length > 0 ? parseInt(limitRes.rows[0].value, 10) : 3;
-      const countRes = await pool.query(
-        'SELECT COUNT(*) FROM public.user_vehicles WHERE user_id = $1 AND is_active = true',
-        [currentVehicle.user_id]
-      );
-      if (parseInt(countRes.rows[0].count, 10) >= (isNaN(maxLimit) ? 3 : maxLimit)) {
-        return res.status(400).json({ error: 'No puedes reactivar este vehículo porque ya alcanzaste el límite máximo permitido.' });
+      const targetCharge = (charge || currentVehicle.charge || '').trim();
+      const limitInfo = resolveVehicleLimit(targetCharge, req.user?.role);
+
+      if (!limitInfo.canRegister || limitInfo.maxLimit === 0) {
+        return res.status(403).json({ error: limitInfo.reason || 'Personal contratista no tiene habilitada asignación de parqueadero permanente.' });
+      }
+
+      if (!limitInfo.isUnlimited) {
+        const countRes = await pool.query(
+          'SELECT COUNT(*) FROM public.user_vehicles WHERE user_id = $1 AND is_active = true',
+          [currentVehicle.user_id]
+        );
+        const currentActive = parseInt(countRes.rows[0].count, 10);
+        if (currentActive >= limitInfo.maxLimit) {
+          return res.status(400).json({ 
+            error: `Para ${limitInfo.label.toLowerCase()}s, el límite máximo permitido es de ${limitInfo.maxLimit} vehículo activo. Inactiva primero el otro vehículo registrado.` 
+          });
+        }
       }
     }
 
     const newIsActive = is_active !== undefined ? is_active : currentVehicle.is_active;
     const newAssignedSpotId = assigned_spot_id !== undefined ? assigned_spot_id : currentVehicle.assigned_spot_id;
+    const newApprovalStatus = approval_status !== undefined ? approval_status : currentVehicle.approval_status;
 
     const result = await pool.query(
       `UPDATE public.user_vehicles 
@@ -1795,11 +1973,13 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
            name = COALESCE($5, name),
            doc = COALESCE($6, doc),
            dependency = COALESCE($7, dependency),
-           is_active = $8,
-           assigned_spot_id = $9,
-           notes = COALESCE($10, notes),
+           charge = COALESCE($8, charge),
+           is_active = $9,
+           assigned_spot_id = $10,
+           notes = COALESCE($11, notes),
+           approval_status = COALESCE($12, approval_status),
            updated_at = NOW()
-       WHERE id = $11 RETURNING *`,
+       WHERE id = $13 RETURNING *`,
       [
         cleanPlate,
         brand ? brand.trim() : null,
@@ -1808,9 +1988,11 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
         name !== undefined ? name : currentVehicle.name,
         doc !== undefined ? doc : currentVehicle.doc,
         dependency !== undefined ? dependency : currentVehicle.dependency,
+        charge !== undefined ? charge : currentVehicle.charge,
         newIsActive,
         newAssignedSpotId,
         notes !== undefined ? notes : currentVehicle.notes,
+        newApprovalStatus,
         id
       ]
     );

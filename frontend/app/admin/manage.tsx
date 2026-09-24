@@ -187,7 +187,9 @@ export default function ManageRequests() {
     count: number;
     activeCount: number;
     maxLimit: number;
-  }>({ loading: false, vehicles: [], count: 0, activeCount: 0, maxLimit: 3 });
+    isUnlimited?: boolean;
+    employmentLabel?: string;
+  }>({ loading: false, vehicles: [], count: 0, activeCount: 0, maxLimit: 1 });
 
   // Estado para selección de celda al aprobar solicitudes de parqueadero
   const [approvalSpots, setApprovalSpots] = useState<ParkingSpot[]>([]);
@@ -206,7 +208,9 @@ export default function ManageRequests() {
               vehicles: res.vehicles || [],
               count: res.count || 0,
               activeCount: res.activeCount || 0,
-              maxLimit: res.maxLimit || 3
+              maxLimit: res.maxLimit || 1,
+              isUnlimited: !!res.isUnlimited,
+              employmentLabel: res.employmentLabel || ''
             });
             // Si el usuario ya tiene algún vehículo con celda asignada, pre-seleccionarla
             const vehicleWithSpot = res.vehicles?.find((v: any) => v.assigned_spot_id);
@@ -1851,15 +1855,35 @@ export default function ManageRequests() {
                         </Text>
                       </View>
                       <View style={{
-                        backgroundColor: '#FFEDD5',
+                        backgroundColor: parkingApprovalData.isUnlimited 
+                          ? '#EFF6FF' 
+                          : parkingApprovalData.maxLimit === 0
+                          ? '#FEE2E2'
+                          : '#FFEDD5',
                         paddingHorizontal: 8,
                         paddingVertical: 3,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: '#FDBA74'
+                        borderColor: parkingApprovalData.isUnlimited 
+                          ? '#BFDBFE' 
+                          : parkingApprovalData.maxLimit === 0
+                          ? '#FECACA'
+                          : '#FDBA74'
                       }}>
-                        <Text style={{ fontSize: 11, fontWeight: '900', color: '#C2410C' }}>
-                          {parkingApprovalData.activeCount} / {parkingApprovalData.maxLimit} Activos
+                        <Text style={{ 
+                          fontSize: 11, 
+                          fontWeight: '900', 
+                          color: parkingApprovalData.isUnlimited 
+                            ? '#1D4ED8' 
+                            : parkingApprovalData.maxLimit === 0
+                            ? '#DC2626'
+                            : '#C2410C' 
+                        }}>
+                          {parkingApprovalData.isUnlimited 
+                            ? `${parkingApprovalData.activeCount} Activos • Sin Límite (${parkingApprovalData.employmentLabel || 'Directivo'})` 
+                            : parkingApprovalData.maxLimit === 0
+                            ? '0 Cupos • Contratista'
+                            : `${parkingApprovalData.activeCount} / ${parkingApprovalData.maxLimit} Activos (${parkingApprovalData.employmentLabel || 'Funcionario'})`}
                         </Text>
                       </View>
                     </View>
@@ -1915,13 +1939,35 @@ export default function ManageRequests() {
                               </View>
 
                               <View style={{
-                                backgroundColor: vh.is_active !== false ? '#DCFCE7' : '#F1F5F9',
+                                backgroundColor: vh.approval_status === 'pendiente' 
+                                  ? '#FEF3C7' 
+                                  : vh.approval_status === 'rechazado'
+                                  ? '#FEE2E2'
+                                  : vh.is_active !== false 
+                                  ? '#DCFCE7' 
+                                  : '#F1F5F9',
                                 paddingHorizontal: 6,
                                 paddingVertical: 2,
                                 borderRadius: 6
                               }}>
-                                <Text style={{ fontSize: 10, fontWeight: '800', color: vh.is_active !== false ? '#15803D' : '#64748B' }}>
-                                  {vh.is_active !== false ? 'Activo' : 'Inactivo'}
+                                <Text style={{ 
+                                  fontSize: 10, 
+                                  fontWeight: '800', 
+                                  color: vh.approval_status === 'pendiente'
+                                    ? '#D97706'
+                                    : vh.approval_status === 'rechazado'
+                                    ? '#DC2626'
+                                    : vh.is_active !== false 
+                                    ? '#15803D' 
+                                    : '#64748B' 
+                                }}>
+                                  {vh.approval_status === 'pendiente'
+                                    ? '⏳ Pendiente'
+                                    : vh.approval_status === 'rechazado'
+                                    ? '✕ Rechazado'
+                                    : vh.is_active !== false 
+                                    ? '● Activo' 
+                                    : '○ Inactivo'}
                                 </Text>
                               </View>
                             </View>

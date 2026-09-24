@@ -10,7 +10,9 @@ export interface UserVehicle {
   name?: string;
   doc?: string;
   dependency?: string;
+  charge?: string | null;
   is_active?: boolean;
+  approval_status?: 'pendiente' | 'aprobado' | 'rechazado' | string | null;
   assigned_spot_id?: string | null;
   spot_code?: string | null;
   spot_type?: 'fija' | 'libre' | string | null;
@@ -68,6 +70,76 @@ export interface UserVehiclesSummary {
   count: number;
   activeCount: number;
   maxLimit: number;
+  isUnlimited?: boolean;
+  employmentType?: 'directivo' | 'funcionario_asesor' | 'contratista' | string;
+  employmentLabel?: string;
+  canRegister?: boolean;
+  reason?: string;
+  charge?: string;
+}
+
+export type UserEmploymentType = 'directivo' | 'funcionario_asesor' | 'contratista';
+
+export function resolveVehicleLimitByCharge(chargeOrRole?: string | null): {
+  type: UserEmploymentType;
+  label: string;
+  maxLimit: number; // 999 para ilimitado, 1 para funcionario/asesor, 0 para contratista
+  isUnlimited: boolean;
+  canRegister: boolean;
+  reason?: string;
+} {
+  const text = (chargeOrRole || '').toLowerCase().trim();
+
+  // 1. Contratistas: 0 vehículos
+  if (
+    text.includes('contratista') ||
+    text.includes('prestacion de servicios') ||
+    text.includes('prestación de servicios') ||
+    text.includes('apoyo a la gestion') ||
+    text.includes('apoyo a la gestión') ||
+    text.includes('ops') ||
+    text.includes('honorarios')
+  ) {
+    return {
+      type: 'contratista',
+      label: 'Contratista',
+      maxLimit: 0,
+      isUnlimited: false,
+      canRegister: false,
+      reason: 'Según los lineamientos institucionales, el parqueadero permanente no está habilitado para personal contratista.'
+    };
+  }
+
+  // 2. Directivos: sin límite (Directores, Secretarios, Subsecretarios, etc.)
+  if (
+    text.includes('director') ||
+    text.includes('directora') ||
+    text.includes('secretario') ||
+    text.includes('secretaria') ||
+    text.includes('subsecretario') ||
+    text.includes('subsecretaria') ||
+    text.includes('directivo') ||
+    text.includes('jefe') ||
+    text.includes('alcalde') ||
+    text.includes('ministro')
+  ) {
+    return {
+      type: 'directivo',
+      label: 'Directivo',
+      maxLimit: 999,
+      isUnlimited: true,
+      canRegister: true
+    };
+  }
+
+  // 3. Funcionarios y Asesores de planta: 1 vehículo
+  return {
+    type: 'funcionario_asesor',
+    label: text.includes('asesor') ? 'Asesor' : 'Funcionario',
+    maxLimit: 1,
+    isUnlimited: false,
+    canRegister: true
+  };
 }
 
 const getHeaders = async () => {
@@ -120,6 +192,7 @@ export const vehicleService = {
     name?: string;
     doc?: string;
     dependency?: string;
+    charge?: string;
     notes?: string;
     target_user_id?: string;
   }): Promise<UserVehicle> {
