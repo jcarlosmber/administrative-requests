@@ -2173,10 +2173,86 @@ const getParkingSpotsHandler = async (req, res) => {
 app.get('/api/parking-spots', authenticateToken, getParkingSpotsHandler);
 app.get('/api/parking_spots', authenticateToken, getParkingSpotsHandler);
 
+// Auxiliares de validación y sanitización para celdas de parqueadero
+const isValidUuid = (val) => {
+  if (!val || typeof val !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+};
+
+const sanitizeAssignedUserId = async (userId) => {
+  if (!userId || typeof userId !== 'string' || !userId.trim() || userId.trim() === 'null' || userId.trim() === 'undefined') {
+    return null;
+  }
+  const cleanId = userId.trim();
+  if (!isValidUuid(cleanId)) {
+    return null;
+  }
+  try {
+    const userRes = await pool.query('SELECT id FROM public.users WHERE id = $1', [cleanId]);
+    return userRes.rows.length > 0 ? cleanId : null;
+  } catch (err) {
+    return null;
+  }
+};
+
+// Obtener una celda específica por ID
+const getParkingSpotByIdHandler = async (req, res) => {
+  const { id } = req.params;
+  if (!isValidUuid(id)) {
+    return res.status(400).json({ error: 'Identificador de celda inválido.' });
+  }
+
+  try {
+    const query = `
+      SELECT 
+        ps.*,
+        u.name as assigned_user_name_resolved,
+        u.email as assigned_user_email,
+        u.dependency as assigned_user_dependency,
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object(
+              'id', uv.id,
+              'plate', uv.plate,
+              'brand', uv.brand,
+              'model', uv.model,
+              'color', uv.color,
+              'is_active', uv.is_active,
+              'name', uv.name,
+              'doc', uv.doc
+            ))
+            FROM public.user_vehicles uv
+            WHERE uv.assigned_spot_id = ps.id
+          ),
+          '[]'::json
+        ) as assigned_vehicles,
+        (
+          SELECT COUNT(*) 
+          FROM public.user_vehicles uv 
+          WHERE uv.assigned_spot_id = ps.id AND uv.is_active = true
+        )::int as active_vehicles_count
+      FROM public.parking_spots ps
+      LEFT JOIN public.users u ON ps.assigned_user_id = u.id
+      WHERE ps.id = $1
+    `;
+    const result = await pool.query(query, [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Celda no encontrada.' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al obtener celda:', err);
+    res.status(500).json({ error: err.message || 'Error al obtener la celda.' });
+  }
+};
+
+app.get('/api/parking-spots/:id', authenticateToken, getParkingSpotByIdHandler);
+app.get('/api/parking_spots/:id', authenticateToken, getParkingSpotByIdHandler);
+
 // Crear una celda de parqueadero
 const createParkingSpotHandler = async (req, res) => {
   const { code, spot_type, status, assigned_user_id, assigned_user_name, notes } = req.body;
-  if (!code) {
+  if (!code || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ error: 'El código de la celda es obligatorio.' });
   }
 
@@ -2188,6 +2264,8 @@ const createParkingSpotHandler = async (req, res) => {
       return res.status(400).json({ error: `Ya existe una celda de parqueadero con el código ${cleanCode}.` });
     }
 
+    const sanitizedUserId = await sanitizeAssignedUserId(assigned_user_id);
+
     const result = await pool.query(
       `INSERT INTO public.parking_spots 
        (code, spot_type, status, assigned_user_id, assigned_user_name, notes) 
@@ -2197,16 +2275,16 @@ const createParkingSpotHandler = async (req, res) => {
         cleanCode,
         spot_type || 'libre',
         status || 'disponible',
-        assigned_user_id || null,
-        assigned_user_name || null,
-        notes || null
+        sanitizedUserId,
+        assigned_user_name ? assigned_user_name.trim() : null,
+        notes ? notes.trim() : null
       ]
     );
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Error al crear celda de parqueadero:', err);
-    res.status(500).json({ error: 'Error al crear la celda de parqueadero.' });
+    res.status(500).json({ error: err.message || 'Error al crear la celda de parqueadero.' });
   }
 };
 
@@ -2218,6 +2296,10 @@ const updateParkingSpotHandler = async (req, res) => {
   const { id } = req.params;
   const { code, spot_type, status, assigned_user_id, assigned_user_name, notes } = req.body;
 
+  if (!isValidUuid(id)) {
+    return res.status(400).json({ error: 'Identificador de celda inválido.' });
+  }
+
   try {
     const checkResult = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);
     if (checkResult.rows.length === 0) {
@@ -2226,7 +2308,7 @@ const updateParkingSpotHandler = async (req, res) => {
 
     const currentSpot = checkResult.rows[0];
     let cleanCode = currentSpot.code;
-    if (code) {
+    if (code && typeof code === 'string' && code.trim()) {
       cleanCode = code.trim().toUpperCase();
       if (cleanCode !== currentSpot.code) {
         const codeCheck = await pool.query(
@@ -2237,6 +2319,11 @@ const updateParkingSpotHandler = async (req, res) => {
           return res.status(400).json({ error: `Ya existe otra celda con el código ${cleanCode}.` });
         }
       }
+    }
+
+    let finalAssignedUserId = currentSpot.assigned_user_id;
+    if (assigned_user_id !== undefined) {
+      finalAssignedUserId = await sanitizeAssignedUserId(assigned_user_id);
     }
 
     const result = await pool.query(
@@ -2253,9 +2340,9 @@ const updateParkingSpotHandler = async (req, res) => {
         cleanCode,
         spot_type !== undefined ? spot_type : currentSpot.spot_type,
         status !== undefined ? status : currentSpot.status,
-        assigned_user_id !== undefined ? assigned_user_id : currentSpot.assigned_user_id,
-        assigned_user_name !== undefined ? assigned_user_name : currentSpot.assigned_user_name,
-        notes !== undefined ? notes : currentSpot.notes,
+        finalAssignedUserId,
+        assigned_user_name !== undefined ? (assigned_user_name ? assigned_user_name.trim() : null) : currentSpot.assigned_user_name,
+        notes !== undefined ? (notes ? notes.trim() : null) : currentSpot.notes,
         id
       ]
     );
@@ -2263,7 +2350,7 @@ const updateParkingSpotHandler = async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error al actualizar celda de parqueadero:', err);
-    res.status(500).json({ error: 'Error al actualizar la celda.' });
+    res.status(500).json({ error: err.message || 'Error al actualizar la celda.' });
   }
 };
 
@@ -2273,14 +2360,23 @@ app.put('/api/parking_spots/:id', authenticateToken, updateParkingSpotHandler);
 // Eliminar una celda
 const deleteParkingSpotHandler = async (req, res) => {
   const { id } = req.params;
+  if (!isValidUuid(id)) {
+    return res.status(400).json({ error: 'Identificador de celda inválido.' });
+  }
+
   try {
+    const checkSpot = await pool.query('SELECT id, code FROM public.parking_spots WHERE id = $1', [id]);
+    if (checkSpot.rows.length === 0) {
+      return res.status(404).json({ error: 'Celda no encontrada o ya eliminada.' });
+    }
+
     // Desvincular vehículos asignados a esta celda
     await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE assigned_spot_id = $1', [id]);
     await pool.query('DELETE FROM public.parking_spots WHERE id = $1', [id]);
-    res.json({ message: 'Celda eliminada exitosamente.' });
+    res.json({ message: 'Celda eliminada exitosamente.', id });
   } catch (err) {
     console.error('Error al eliminar celda:', err);
-    res.status(500).json({ error: 'Error al eliminar la celda.' });
+    res.status(500).json({ error: err.message || 'Error al eliminar la celda.' });
   }
 };
 
@@ -2292,6 +2388,10 @@ app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) =>
   const { id } = req.params;
   const { vehicle_id, user_id, user_name, notes } = req.body;
 
+  if (!isValidUuid(id)) {
+    return res.status(400).json({ error: 'Identificador de celda inválido.' });
+  }
+
   try {
     const spotRes = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);
     if (spotRes.rows.length === 0) {
@@ -2301,6 +2401,9 @@ app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) =>
 
     // Si viene vehículo a asignar
     if (vehicle_id) {
+      if (!isValidUuid(vehicle_id)) {
+        return res.status(400).json({ error: 'Identificador de vehículo inválido.' });
+      }
       const vehRes = await pool.query('SELECT * FROM public.user_vehicles WHERE id = $1', [vehicle_id]);
       if (vehRes.rows.length === 0) {
         return res.status(404).json({ error: 'Vehículo no encontrado.' });
@@ -2311,8 +2414,9 @@ app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) =>
       await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = $1 WHERE id = $2', [id, vehicle_id]);
 
       // Si es celda fija y no tiene usuario asignado, asignar el del vehículo
-      const finalUserId = spot.assigned_user_id || user_id || vehicle.user_id;
-      const finalUserName = spot.assigned_user_name || user_name || vehicle.name;
+      const rawUserId = spot.assigned_user_id || user_id || vehicle.user_id;
+      const finalUserId = await sanitizeAssignedUserId(rawUserId);
+      const finalUserName = spot.assigned_user_name || (user_name ? user_name.trim() : null) || vehicle.name;
 
       await pool.query(
         `UPDATE public.parking_spots 
@@ -2339,13 +2443,14 @@ app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) =>
       );
     } else if (user_id) {
       // Asignación de titular a celda fija sin vehículo específico todavía
+      const finalUserId = await sanitizeAssignedUserId(user_id);
       await pool.query(
         `UPDATE public.parking_spots 
          SET assigned_user_id = $1, 
              assigned_user_name = $2,
              updated_at = NOW() 
          WHERE id = $3`,
-        [user_id, user_name || null, id]
+        [finalUserId, user_name ? user_name.trim() : null, id]
       );
     }
 
@@ -2353,7 +2458,7 @@ app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) =>
     res.json(updated.rows[0]);
   } catch (err) {
     console.error('Error al asignar celda:', err);
-    res.status(500).json({ error: 'Error al asignar vehículo a la celda.' });
+    res.status(500).json({ error: err.message || 'Error al asignar vehículo a la celda.' });
   }
 });
 
@@ -2361,6 +2466,10 @@ app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) =>
 app.post('/api/parking-spots/:id/release', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { vehicle_id } = req.body;
+
+  if (!isValidUuid(id)) {
+    return res.status(400).json({ error: 'Identificador de celda inválido.' });
+  }
 
   try {
     const spotRes = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);

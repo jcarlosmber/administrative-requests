@@ -362,9 +362,20 @@ export default function AdminGestion() {
     });
   }, [roomReservations]);
 
-  // Salas activas filtradas para mostrar en el calendario
+  // Salas estándar institucionales (se excluyen explícitamente salas especiales y auditorios)
+  const standardRooms = useMemo(() => {
+    return rooms.filter(r => {
+      const isSpecial = r.info === 'Especial' || 
+        (parseInt(r.capacity) || 0) >= 100 || 
+        (r.name && r.name.toLowerCase().includes('auditorio')) ||
+        r.isLargeScale;
+      return !isSpecial;
+    });
+  }, [rooms]);
+
+  // Salas activas filtradas para mostrar en el calendario (exclusivamente salas estándar)
   const calendarRooms = useMemo(() => {
-    let result = rooms;
+    let result = standardRooms;
     if (calendarRoomFilter !== 'all') {
       result = result.filter(r => r.id === calendarRoomFilter || r.name === calendarRoomFilter);
     }
@@ -373,7 +384,7 @@ export default function AdminGestion() {
       result = result.filter(r => r.name.toLowerCase().includes(q) || (r.floor && r.floor.toLowerCase().includes(q)));
     }
     return result;
-  }, [rooms, calendarRoomFilter, calendarSearch]);
+  }, [standardRooms, calendarRoomFilter, calendarSearch]);
 
   // Reservas del día seleccionado
   const dayReservations = useMemo(() => {
@@ -395,12 +406,12 @@ export default function AdminGestion() {
     });
   };
 
-  // Contadores de métricas del día
+  // Contadores de métricas del día (calculados exclusivamente sobre salas estándar)
   const calendarMetrics = useMemo(() => {
-    const totalSlots = rooms.length * OPERATING_HOURS.length;
+    const totalSlots = standardRooms.length * OPERATING_HOURS.length;
     let occupiedSlots = 0;
     
-    rooms.forEach(r => {
+    standardRooms.forEach(r => {
       OPERATING_HOURS.forEach(h => {
         if (getSlotReservation(r, h.hour)) {
           occupiedSlots++;
@@ -411,14 +422,23 @@ export default function AdminGestion() {
     const freeSlots = Math.max(0, totalSlots - occupiedSlots);
     const availabilityRate = totalSlots > 0 ? Math.round((freeSlots / totalSlots) * 100) : 100;
 
+    // Solo contabilizar reservas que pertenezcan a salas estándar
+    const standardDayReservations = dayReservations.filter(res => 
+      standardRooms.some(sr => 
+        (res.parsed.roomId && sr.id === res.parsed.roomId) || 
+        (res.parsed.roomName && sr.name.toLowerCase().trim() === res.parsed.roomName.toLowerCase().trim()) ||
+        (res.title && res.title.toLowerCase().includes(sr.name.toLowerCase()))
+      )
+    );
+
     return {
-      totalRooms: rooms.length,
-      dayReservationsCount: dayReservations.length,
+      totalRooms: standardRooms.length,
+      dayReservationsCount: standardDayReservations.length,
       occupiedSlots,
       freeSlots,
       availabilityRate
     };
-  }, [rooms, OPERATING_HOURS, dayReservations, parsedReservations, calendarDateIso]);
+  }, [standardRooms, OPERATING_HOURS, dayReservations, parsedReservations, calendarDateIso]);
 
   // Navegación de fecha
   const handlePrevDay = () => {
@@ -741,9 +761,9 @@ export default function AdminGestion() {
           code: cleanCode,
           spot_type: spotType,
           status: spotStatus,
-          assigned_user_id: spotUserId || null,
-          assigned_user_name: spotUserName || null,
-          notes: spotNotes.trim() || null
+          assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
+          assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
+          notes: spotNotes?.trim() ? spotNotes.trim() : null
         });
         setNoticeModal({
           visible: true,
@@ -755,9 +775,9 @@ export default function AdminGestion() {
           code: cleanCode,
           spot_type: spotType,
           status: spotStatus,
-          assigned_user_id: spotUserId || null,
-          assigned_user_name: spotUserName || null,
-          notes: spotNotes.trim() || null
+          assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
+          assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
+          notes: spotNotes?.trim() ? spotNotes.trim() : null
         });
         setNoticeModal({
           visible: true,
@@ -1228,7 +1248,7 @@ export default function AdminGestion() {
                   {/* Tarjetas de Métricas de Disponibilidad */}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                     {[
-                      { label: 'Salas Activas', val: calendarMetrics.totalRooms, icon: 'business', color: '#7209B7', bg: '#F5F3FF' },
+                      { label: 'Salas Estándar', val: calendarMetrics.totalRooms, icon: 'business', color: '#7209B7', bg: '#F5F3FF' },
                       { label: 'Reservas del Día', val: calendarMetrics.dayReservationsCount, icon: 'bookmark', color: '#2563EB', bg: '#EFF6FF' },
                       { label: 'Franjas Ocupadas', val: `${calendarMetrics.occupiedSlots} hrs`, icon: 'time', color: '#EA580C', bg: '#FFF7ED' },
                       { label: 'Franjas Disponibles', val: `${calendarMetrics.freeSlots} hrs`, icon: 'checkmark-circle', color: '#059669', bg: '#ECFDF5' },
@@ -1396,11 +1416,11 @@ export default function AdminGestion() {
                         }}
                       >
                         <Text style={{ fontSize: 12, fontWeight: '700', color: calendarRoomFilter === 'all' ? '#FFFFFF' : COLORS.text }}>
-                          Todas las Salas ({rooms.length})
+                          Todas las Salas ({standardRooms.length})
                         </Text>
                       </TouchableOpacity>
 
-                      {rooms.map(room => (
+                      {standardRooms.map(room => (
                         <TouchableOpacity
                           key={room.id}
                           onPress={() => setCalendarRoomFilter(room.id)}
@@ -1809,28 +1829,21 @@ export default function AdminGestion() {
                       </View>
                     </View>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>Límite Base:</Text>
-                      {[1, 2, 3, 5].map(num => (
-                        <TouchableOpacity
-                          key={num}
-                          onPress={() => handleSaveMaxLimit(num)}
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 10,
-                            backgroundColor: maxVehiclesLimit === num ? '#2563EB' : '#F1F5F9',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            borderWidth: 1,
-                            borderColor: maxVehiclesLimit === num ? '#2563EB' : '#E2E8F0'
-                          }}
-                        >
-                          <Text style={{ fontSize: 13, fontWeight: '800', color: maxVehiclesLimit === num ? '#FFFFFF' : COLORS.text }}>
-                            {num}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: '#ECFDF5',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#A7F3D0'
+                    }}>
+                      <Ionicons name="shield-checkmark" size={16} color="#059669" />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#059669' }}>
+                        Regla Automática por Cargo
+                      </Text>
                     </View>
                   </View>
 

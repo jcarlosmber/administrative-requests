@@ -430,9 +430,9 @@ export default function AdminSettings() {
           code: cleanCode,
           spot_type: spotType,
           status: spotStatus,
-          assigned_user_id: spotUserId || null,
-          assigned_user_name: spotUserName || null,
-          notes: spotNotes.trim() || null
+          assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
+          assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
+          notes: spotNotes?.trim() ? spotNotes.trim() : null
         });
         setSettingsNoticeModal({
           visible: true,
@@ -444,9 +444,9 @@ export default function AdminSettings() {
           code: cleanCode,
           spot_type: spotType,
           status: spotStatus,
-          assigned_user_id: spotUserId || null,
-          assigned_user_name: spotUserName || null,
-          notes: spotNotes.trim() || null
+          assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
+          assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
+          notes: spotNotes?.trim() ? spotNotes.trim() : null
         });
         setSettingsNoticeModal({
           visible: true,
