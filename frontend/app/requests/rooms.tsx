@@ -76,6 +76,22 @@ const cleanTitle = (title?: string) => {
   return cleaned.trim() || 'Ocupado';
 };
 
+const subtractOneHour = (timeStr: string) => {
+  const [hStr, mStr] = (timeStr || '08:00').split(':');
+  let h = parseInt(hStr, 10);
+  if (isNaN(h)) h = 8;
+  h = (h - 1 + 24) % 24;
+  return `${String(h).padStart(2, '0')}:${mStr || '00'}`;
+};
+
+const addOneHour = (timeStr: string) => {
+  const [hStr, mStr] = (timeStr || '16:00').split(':');
+  let h = parseInt(hStr, 10);
+  if (isNaN(h)) h = 16;
+  h = (h + 1) % 24;
+  return `${String(h).padStart(2, '0')}:${mStr || '00'}`;
+};
+
 export default function RoomsRequestScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -692,41 +708,15 @@ export default function RoomsRequestScreen() {
                       })}
                     </View>
 
-                    {/* Horarios con selector modal táctil */}
-                    <Text style={styles.label}>Horario de Reserva (Montaje / Desmontaje)</Text>
-                    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.label, { fontSize: 11, marginLeft: 4, marginTop: 0 }]}>Montaje Desde</Text>
-                        <TouchableOpacity 
-                          style={styles.inputWrap} 
-                          onPress={() => {
-                            setTimePickerTarget('bookingStart');
-                            setShowTimePicker(true);
-                          }}
-                        >
-                          <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                          <Text style={styles.input}>{bookingStartHour}</Text>
-                          <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
-                        </TouchableOpacity>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.label, { fontSize: 11, marginLeft: 4, marginTop: 0 }]}>Desmontaje Hasta</Text>
-                        <TouchableOpacity 
-                          style={styles.inputWrap} 
-                          onPress={() => {
-                            setTimePickerTarget('bookingEnd');
-                            setShowTimePicker(true);
-                          }}
-                        >
-                          <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                          <Text style={styles.input}>{bookingEndHour}</Text>
-                          <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
-                        </TouchableOpacity>
+                    {/* 1. Duración del Evento Real (Primero) */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={[styles.label, { marginBottom: 0 }]}>Duración del Evento Real</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                        <Ionicons name="sparkles" size={12} color="#2563EB" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#1D4ED8' }}>Sincroniza montaje automático</Text>
                       </View>
                     </View>
-
-                    <Text style={styles.label}>Duración del Evento Real</Text>
-                    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
+                    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.label, { fontSize: 11, marginLeft: 4, marginTop: 0 }]}>Hora Inicio Evento</Text>
                         <TouchableOpacity 
@@ -736,8 +726,8 @@ export default function RoomsRequestScreen() {
                             setShowTimePicker(true);
                           }}
                         >
-                          <Ionicons name="play-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                          <Text style={styles.input}>{eventStartHour}</Text>
+                          <Ionicons name="play-outline" size={18} color="#2563EB" style={{ marginRight: 10 }} />
+                          <Text style={[styles.input, { fontWeight: '700' }]}>{eventStartHour}</Text>
                           <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
                         </TouchableOpacity>
                       </View>
@@ -750,8 +740,44 @@ export default function RoomsRequestScreen() {
                             setShowTimePicker(true);
                           }}
                         >
-                          <Ionicons name="stop-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
-                          <Text style={styles.input}>{eventEndHour}</Text>
+                          <Ionicons name="stop-outline" size={18} color="#2563EB" style={{ marginRight: 10 }} />
+                          <Text style={[styles.input, { fontWeight: '700' }]}>{eventEndHour}</Text>
+                          <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* 2. Horario de Reserva (Montaje / Desmontaje) - Automático -1h y +1h */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={[styles.label, { marginBottom: 0 }]}>Horario de Reserva (Montaje / Desmontaje)</Text>
+                      <Text style={{ fontSize: 10, color: COLORS.muted, fontWeight: '600' }}>(-1h montaje / +1h desmontaje)</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.label, { fontSize: 11, marginLeft: 4, marginTop: 0 }]}>Montaje Desde (-1h)</Text>
+                        <TouchableOpacity 
+                          style={[styles.inputWrap, { backgroundColor: '#F8FAFC' }]} 
+                          onPress={() => {
+                            setTimePickerTarget('bookingStart');
+                            setShowTimePicker(true);
+                          }}
+                        >
+                          <Ionicons name="construct-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                          <Text style={styles.input}>{bookingStartHour}</Text>
+                          <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.label, { fontSize: 11, marginLeft: 4, marginTop: 0 }]}>Desmontaje Hasta (+1h)</Text>
+                        <TouchableOpacity 
+                          style={[styles.inputWrap, { backgroundColor: '#F8FAFC' }]} 
+                          onPress={() => {
+                            setTimePickerTarget('bookingEnd');
+                            setShowTimePicker(true);
+                          }}
+                        >
+                          <Ionicons name="checkmark-done-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                          <Text style={styles.input}>{bookingEndHour}</Text>
                           <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
                         </TouchableOpacity>
                       </View>
@@ -1189,10 +1215,17 @@ export default function RoomsRequestScreen() {
           timePickerTarget === 'eventStart' ? eventStartHour : eventEndHour
         }
         onSelect={(val: string) => {
-          if (timePickerTarget === 'bookingStart') setBookingStartHour(val);
-          else if (timePickerTarget === 'bookingEnd') setBookingEndHour(val);
-          else if (timePickerTarget === 'eventStart') setEventStartHour(val);
-          else if (timePickerTarget === 'eventEnd') setEventEndHour(val);
+          if (timePickerTarget === 'bookingStart') {
+            setBookingStartHour(val);
+          } else if (timePickerTarget === 'bookingEnd') {
+            setBookingEndHour(val);
+          } else if (timePickerTarget === 'eventStart') {
+            setEventStartHour(val);
+            setBookingStartHour(subtractOneHour(val));
+          } else if (timePickerTarget === 'eventEnd') {
+            setEventEndHour(val);
+            setBookingEndHour(addOneHour(val));
+          }
           setShowTimePicker(false);
         }}
       />
