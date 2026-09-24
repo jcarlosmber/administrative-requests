@@ -20,6 +20,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { requestService } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
+import { settingsService } from '../../lib/settingsService';
+import { vehicleService, ParkingSpot, UserVehicle } from '../../lib/vehicleService';
 
 // Paleta de Colores de Diseño Premium
 
@@ -105,6 +107,31 @@ export default function AdminReports() {
   const [modalTarget, setModalTarget] = useState<'from' | 'to'>('from');
   const [reportTab, setReportTab] = useState<'consolidated' | 'visitors' | 'maintenance' | 'parking' | 'rooms' | 'transport' | 'satisfaction'>('consolidated');
   const [isModalExpanded, setIsModalExpanded] = useState(false);
+  const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
+
+  // Control Integral de Celdas y Vehículos para Reportes
+  const [parkingSpots, setParkingSpots] = useState<ParkingSpot[]>([]);
+  const [reportVehicles, setReportVehicles] = useState<UserVehicle[]>([]);
+  const [parkingFilterType, setParkingFilterType] = useState<'all' | 'fixed' | 'free' | 'spots'>('all');
+
+  useEffect(() => {
+    const loadEvalSettings = async () => {
+      try {
+        const cats = await settingsService.getSystemSetting('eval_categories');
+        if (Array.isArray(cats)) {
+          setEvalCategories(cats);
+        }
+      } catch (err) {
+        console.warn('Error al cargar eval_categories en reportes:', err);
+      }
+    };
+    loadEvalSettings();
+  }, []);
+
+  const isEvalActive = useCallback((category?: string) => {
+    if (!category) return false;
+    return evalCategories.includes(category.toLowerCase().trim());
+  }, [evalCategories]);
 
   const selectedMonthOption = useMemo(
     () => monthOptions.find(option => option.value === selectedMonth) || monthOptions[0],
@@ -174,6 +201,19 @@ export default function AdminReports() {
       const rows = data || [];
       setDbData(rows);
       setDataSource(rows.length > 0 ? 'database' : 'empty');
+
+      // Cargar celdas de parqueadero y vehículos registrados
+      try {
+        const [spots, vehicles] = await Promise.all([
+          vehicleService.getSpots().catch(() => []),
+          vehicleService.getAll({ all: true }).catch(() => [])
+        ]);
+        setParkingSpots(spots || []);
+        setReportVehicles(vehicles || []);
+      } catch (pErr) {
+        console.warn('Error cargando celdas/vehículos en analítica:', pErr);
+      }
+
       return rows;
     } catch (error) {
       console.warn('Error cargando analítica desde Supabase:', error);
@@ -473,7 +513,7 @@ export default function AdminReports() {
     };
   }, [dbData]);
 
-  // Módulo de Parqueadero Específico
+  // Módulo de Parqueadero Específico con Control Integral de Celdas y Vehículos
   const parkingStats = useMemo(() => {
     const parkingRequests = dbData.filter(d => d.category === 'parking');
     const validParking = parkingRequests.filter(d => !isRejectedStatus(d.status));
@@ -493,7 +533,52 @@ export default function AdminReports() {
     });
 
     const plates = validParking.map(r => r.metadata?.plate).filter(Boolean);
-    const occupancyRate = Math.min(100, Math.round((approved / Math.max(1, total)) * 100));
+
+    // Resumen de Celdas
+    const totalSpots = parkingSpots.length;
+    const availableSpots = parkingSpots.filter(s => s.status === 'disponible').length;
+    const occupiedSpots = parkingSpots.filter(s => s.status === 'ocupada').length;
+    const assignedSpots = parkingSpots.filter(s => s.assigned_user_id || s.assigned_user_name || s.status === 'ocupada').length;
+    const freeSpots = parkingSpots.filter(s => s.spot_type === 'libre').length;
+    const fixedSpots = parkingSpots.filter(s => s.spot_type === 'fija').length;
+    const maintenanceSpots = parkingSpots.filter(s => s.status === 'mantenimiento').length;
+    const reservedSpots = parkingSpots.filter(s => s.status === 'reservada').length;
+    const occupancyRate = totalSpots > 0 ? Math.round((assignedSpots / totalSpots) * 100) : Math.min(100, Math.round((approved / Math.max(1, total)) * 100));
+
+    // Apartado 1: Vehículos con Celda Fija
+    const fixedCellVehicles = reportVehicles.filter(v => 
+      Boolean(v.spot_code) || v.spot_type === 'fija' || Boolean(v.assigned_spot_id)
+    );
+
+    // Apartado 2: Vehículos sin Celda Fija (Uso Libre / Rotativo)
+    const knownFixedPlates = new Set(fixedCellVehicles.map(v => (v.plate || '').toUpperCase()));
+    const knownFreeVehicles = reportVehicles.filter(v => 
+      !v.spot_code && v.spot_type !== 'fija' && !v.assigned_spot_id
+    );
+
+    // Complementar con solicitudes aprobadas si su placa no estaba registrada en la tabla de vehículos
+    const allReportPlates = new Set(reportVehicles.map(v => (v.plate || '').toUpperCase()));
+    const synthFreeVehicles: UserVehicle[] = [];
+    validParking.forEach(req => {
+      const reqPlate = (req.metadata?.plate || '').trim().toUpperCase();
+      if (reqPlate && !allReportPlates.has(reqPlate) && !knownFixedPlates.has(reqPlate)) {
+        allReportPlates.add(reqPlate);
+        synthFreeVehicles.push({
+          id: req.id,
+          plate: reqPlate,
+          brand: req.metadata?.brand || 'Vehículo institucional',
+          model: req.metadata?.model || '',
+          color: req.metadata?.color || '',
+          name: req.metadata?.name || req.profiles?.full_name || req.user_name || 'Servidor',
+          doc: req.metadata?.doc || req.metadata?.identification || req.profiles?.doc || '',
+          dependency: req.metadata?.dependency || req.profiles?.dependency?.name || req.profiles?.dependency || 'Secretaría Jurídica Distrital',
+          is_active: req.status === 'resuelto',
+          spot_type: 'libre'
+        });
+      }
+    });
+
+    const freeUseVehicles = [...knownFreeVehicles, ...synthFreeVehicles];
 
     return {
       total,
@@ -504,9 +589,19 @@ export default function AdminReports() {
       bikes,
       occupancyRate,
       plates: plates.slice(0, 8),
-      recentList: dbData.filter(d => d.category === 'parking').slice(0, 8)
+      recentList: dbData.filter(d => d.category === 'parking').slice(0, 8),
+      totalSpots,
+      availableSpots,
+      occupiedSpots,
+      assignedSpots,
+      freeSpots,
+      fixedSpots,
+      maintenanceSpots,
+      reservedSpots,
+      fixedCellVehicles,
+      freeUseVehicles
     };
-  }, [dbData]);
+  }, [dbData, parkingSpots, reportVehicles]);
 
   // Módulo de Transporte Específico
   const transportStats = useMemo(() => {
@@ -562,25 +657,91 @@ export default function AdminReports() {
   };
 
   const handleExportExcel = useCallback(() => {
-    const exportRows = dbData.map(row => ({
-      id: row.id,
-      titulo: row.title || '',
-      categoria: row.category || '',
-      estado: row.status || '',
-      prioridad: row.priority || '',
-      fecha_creacion: row.created_at || '',
-      dependencia: row.metadata?.responsible?.dependency || row.metadata?.dependency || row.profiles?.dependency?.name || '',
-      solicitante: row.profiles?.full_name || '',
-      calificacion: row.metadata?.evaluation?.rating != null ? `${row.metadata.evaluation.rating} / 5` : 'Sin calificar',
-      comentario_evaluacion: row.metadata?.evaluation?.comment || '',
-      servicio_prestado: row.metadata?.evaluation ? (row.metadata.evaluation.serviceTaken ? 'Sí' : 'No') : '',
-      fecha_evaluacion: row.metadata?.evaluation?.date || '',
-      descripcion: row.description || ''
-    }));
+    const exportRows = dbData.map(row => {
+      const cat = (row.category || '').toLowerCase();
+      const isEvalCat = isEvalActive(cat);
+      const isParking = cat === 'parking';
+
+      const dep = row.metadata?.dependency || row.metadata?.responsible?.dependency || row.profiles?.dependency?.name || row.user_dependency || 'Secretaría Jurídica Distrital';
+      const sol = row.metadata?.name || row.profiles?.full_name || row.user_name || 'Servidor';
+
+      const base: any = {
+        id: row.id,
+        titulo: row.title || '',
+        categoria: row.category || '',
+        estado: row.status || '',
+        prioridad: row.priority || '',
+        fecha_creacion: row.created_at || '',
+        dependencia: dep,
+        solicitante: sol,
+      };
+
+      if (isParking) {
+        base.placa = row.metadata?.plate || '';
+        base.vehiculo_modelo = [row.metadata?.brand, row.metadata?.model].filter(Boolean).join(' ') || row.metadata?.vehicleType || row.title || '';
+        base.color = row.metadata?.color || '';
+      }
+
+      if (isEvalCat) {
+        base.calificacion = row.metadata?.evaluation?.rating != null ? `${row.metadata.evaluation.rating} / 5` : 'Sin calificar';
+        base.comentario_evaluacion = row.metadata?.evaluation?.comment || '';
+        base.servicio_prestado = row.metadata?.evaluation ? (row.metadata.evaluation.serviceTaken ? 'Sí' : 'No') : '';
+        base.fecha_evaluacion = row.metadata?.evaluation?.date || '';
+      }
+
+      base.descripcion = row.description || '';
+      return base;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte General');
+
+    // Hojas Específicas de Control de Parqueadero
+    if (parkingSpots.length > 0) {
+      const spotRows = parkingSpots.map(s => ({
+        Codigo_Celda: s.code,
+        Tipo_Uso: s.spot_type === 'fija' ? 'Celda Fija' : 'Uso Libre / Rotativa',
+        Estado: s.status?.toUpperCase() || 'DISPONIBLE',
+        Asignado_A: s.assigned_user_name || 'Sin asignar',
+        ID_Usuario: s.assigned_user_id || '',
+        Observaciones: s.notes || ''
+      }));
+      const wsSpots = XLSX.utils.json_to_sheet(spotRows);
+      XLSX.utils.book_append_sheet(workbook, wsSpots, 'Ocupación Celdas');
+    }
+
+    if (parkingStats.fixedCellVehicles.length > 0) {
+      const fixedRows = parkingStats.fixedCellVehicles.map(v => ({
+        Persona: v.name || v.owner_name || 'Servidor',
+        Identificacion: v.doc || 'S/N',
+        Placa: v.plate,
+        Vehiculo: `${v.brand} ${v.model || ''}`.trim(),
+        Color: v.color || '',
+        Celda_Asignada: v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija',
+        Estado: v.is_active !== false ? 'ACTIVO' : 'INACTIVO',
+        Autorizacion: v.is_active !== false ? 'Autorizado (Cupo Fijo)' : 'Inactivo',
+        Dependencia: v.dependency || ''
+      }));
+      const wsFixed = XLSX.utils.json_to_sheet(fixedRows);
+      XLSX.utils.book_append_sheet(workbook, wsFixed, 'Vehículos Celda Fija');
+    }
+
+    if (parkingStats.freeUseVehicles.length > 0) {
+      const freeRows = parkingStats.freeUseVehicles.map(v => ({
+        Persona: v.name || v.owner_name || 'Servidor',
+        Identificacion: v.doc || 'S/N',
+        Placa: v.plate,
+        Vehiculo: `${v.brand} ${v.model || ''}`.trim(),
+        Color: v.color || '',
+        Tipo_Parqueadero: 'Parqueadero de Uso Libre / Rotativo',
+        Estado: v.is_active !== false ? 'ACTIVO' : 'INACTIVO',
+        Autorizacion: v.is_active !== false ? 'Autorizado (Uso Libre)' : 'Inactivo',
+        Dependencia: v.dependency || ''
+      }));
+      const wsFree = XLSX.utils.json_to_sheet(freeRows);
+      XLSX.utils.book_append_sheet(workbook, wsFree, 'Vehículos Uso Libre');
+    }
 
     const excelBuffer = XLSX.write(workbook, {
       bookType: 'xlsx',
@@ -594,10 +755,10 @@ export default function AdminReports() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `reporte_${selectedMonth || 'general'}.xlsx`;
+    link.download = `reporte_general_${selectedMonth || 'periodo'}.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
-  }, [dbData, selectedMonth]);
+  }, [dbData, selectedMonth, parkingSpots, parkingStats]);
 
   const triggerPdfGeneration = () => {
     setIsGeneratingPdf(true);
@@ -725,54 +886,49 @@ export default function AdminReports() {
           <div class="section-title">2. Diagnóstico de Mantenimiento e Infraestructura</div>
           <p>Se registraron <strong>${maintenanceStats.total}</strong> incidencias técnicas locativas. ${maintenanceStats.highPriorityPending > 0 ? `<span style="color:#B91C1C;font-weight:700;">Atención requerida:</span> Existen <strong>${maintenanceStats.highPriorityPending}</strong> casos de prioridad ALTA pendientes de cierre.` : 'No se registran casos críticos pendientes en la infraestructura física de la sede.'}</p>
           <div class="section-title">3. Evaluación de Calidad y Satisfacción del Usuario (CSAT)</div>
-          <p>El índice de satisfacción promedio alcanzado en el periodo es de <strong>${stats.averageRating} / 5.0 estrellas</strong>, con un <strong>${stats.favorablePercent}%</strong> de calificaciones altamente favorables (4 y 5 estrellas) sobre un total de <strong>${stats.totalEvaluated}</strong> solicitudes evaluadas formalmente por los funcionarios.</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Módulo Operativo</th>
-                <th class="text-center">Evaluaciones Recibidas</th>
-                <th class="text-center">Calificación Promedio</th>
-                <th class="text-center">Percepción de Calidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Control de Acceso (Visitantes)</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.visitors.count}</td>
-                <td class="text-center">${stats.moduleEvaluations.visitors.avg > 0 ? stats.moduleEvaluations.visitors.avg + ' / 5.0' : 'Sin evaluar'}</td>
-                <td class="text-center">${stats.moduleEvaluations.visitors.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.visitors.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
-              </tr>
-              <tr>
-                <td><strong>Mantenimiento Locativo</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.maintenance.count}</td>
-                <td class="text-center">${stats.moduleEvaluations.maintenance.avg > 0 ? stats.moduleEvaluations.maintenance.avg + ' / 5.0' : 'Sin evaluar'}</td>
-                <td class="text-center">${stats.moduleEvaluations.maintenance.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.maintenance.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
-              </tr>
-              <tr>
-                <td><strong>Cupo de Parqueadero</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.parking.count}</td>
-                <td class="text-center">${stats.moduleEvaluations.parking.avg > 0 ? stats.moduleEvaluations.parking.avg + ' / 5.0' : 'Sin evaluar'}</td>
-                <td class="text-center">${stats.moduleEvaluations.parking.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.parking.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
-              </tr>
-              <tr>
-                <td><strong>Reserva de Salas de Juntas</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.rooms.count}</td>
-                <td class="text-center">${stats.moduleEvaluations.rooms.avg > 0 ? stats.moduleEvaluations.rooms.avg + ' / 5.0' : 'Sin evaluar'}</td>
-                <td class="text-center">${stats.moduleEvaluations.rooms.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.rooms.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
-              </tr>
-              <tr>
-                <td><strong>Transporte Oficial</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.transport.count}</td>
-                <td class="text-center">${stats.moduleEvaluations.transport.avg > 0 ? stats.moduleEvaluations.transport.avg + ' / 5.0' : 'Sin evaluar'}</td>
-                <td class="text-center">${stats.moduleEvaluations.transport.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.transport.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
-              </tr>
-            </tbody>
-          </table>
+          ${(() => {
+            const evalModules = [
+              { key: 'visitors', name: 'Control de Acceso (Visitantes)', eval: stats.moduleEvaluations.visitors },
+              { key: 'maintenance', name: 'Mantenimiento Locativo', eval: stats.moduleEvaluations.maintenance },
+              { key: 'parking', name: 'Cupo de Parqueadero', eval: stats.moduleEvaluations.parking },
+              { key: 'rooms', name: 'Reserva de Salas de Juntas', eval: stats.moduleEvaluations.rooms },
+              { key: 'transport', name: 'Transporte Oficial', eval: stats.moduleEvaluations.transport },
+            ].filter(m => isEvalActive(m.key));
+
+            if (evalModules.length === 0) {
+              return '<p style="color:#64748B;font-style:italic;">Actualmente la evaluación de satisfacción no se encuentra habilitada para los servicios operativos.</p>';
+            }
+
+            return `
+              <p>El índice de satisfacción promedio alcanzado en el periodo es de <strong>${stats.averageRating} / 5.0 estrellas</strong>, con un <strong>${stats.favorablePercent}%</strong> de calificaciones altamente favorables (4 y 5 estrellas) sobre un total de <strong>${stats.totalEvaluated}</strong> solicitudes evaluadas formalmente por los funcionarios.</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Módulo Operativo</th>
+                    <th class="text-center">Evaluaciones Recibidas</th>
+                    <th class="text-center">Calificación Promedio</th>
+                    <th class="text-center">Percepción de Calidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${evalModules.map(m => `
+                    <tr>
+                      <td><strong>${m.name}</strong></td>
+                      <td class="text-center">${m.eval.count}</td>
+                      <td class="text-center">${m.eval.avg > 0 ? m.eval.avg + ' / 5.0' : 'Sin evaluar'}</td>
+                      <td class="text-center">${m.eval.avg >= 4.0 ? 'Excelente' : m.eval.avg >= 3.0 ? 'Aceptable' : 'Por evaluar'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          })()}
           <div class="section-title">4. Conclusiones y Recomendaciones de Gestión</div>
           <p>Se aconseja mantener la periodicidad de seguimiento a los reportes en curso, priorizando las solicitudes de mantenimiento técnico y el control vehicular de parqueaderos para conservar los estándares institucionales de la Secretaría Jurídica Distrital.</p>
         `;
       } else if (reportTab === 'visitors') {
         const visitorRows = dbData.filter(d => d.category === 'visitors');
+        const showVisitorEval = isEvalActive('visitors');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -810,7 +966,7 @@ export default function AdminReports() {
                 <th>Dependencia</th>
                 <th class="text-center">Personas</th>
                 <th class="text-center">Estado</th>
-                <th class="text-center">Calificación</th>
+                ${showVisitorEval ? '<th class="text-center">Calificación</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -821,14 +977,15 @@ export default function AdminReports() {
                   <td>${r.metadata?.responsible?.dependency || r.profiles?.dependency?.name || 'General'}</td>
                   <td class="text-center">${r.metadata?.visitors?.length || 1}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
-                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
+                  ${showVisitorEval ? `<td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>` : ''}
                 </tr>
-              `).join('') || '<tr><td colspan="6" class="text-center">No se registran visitas en el periodo</td></tr>'}
+              `).join('') || `<tr><td colspan="${showVisitorEval ? 6 : 5}" class="text-center">No se registran visitas en el periodo</td></tr>`}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'maintenance') {
         const maintenanceRows = dbData.filter(d => d.category === 'maintenance');
+        const showMaintEval = isEvalActive('maintenance');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -866,7 +1023,7 @@ export default function AdminReports() {
                 <th>Ubicación</th>
                 <th class="text-center">Prioridad</th>
                 <th class="text-center">Estado</th>
-                <th class="text-center">Calificación</th>
+                ${showMaintEval ? '<th class="text-center">Calificación</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -877,49 +1034,149 @@ export default function AdminReports() {
                   <td>${r.metadata?.location || 'General'}</td>
                   <td class="text-center"><strong style="color:${isHighPriority(r.priority) ? '#DC2626' : '#2563EB'}">${r.priority?.toUpperCase() || 'MEDIA'}</strong></td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
-                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
+                  ${showMaintEval ? `<td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>` : ''}
                 </tr>
-              `).join('') || '<tr><td colspan="6" class="text-center">Sin solicitudes registradas</td></tr>'}
+              `).join('') || `<tr><td colspan="${showMaintEval ? 6 : 5}" class="text-center">Sin solicitudes registradas</td></tr>`}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'parking') {
         const parkingRows = dbData.filter(d => d.category === 'parking');
+        const showParkingEval = isEvalActive('parking');
+        const fixedList = parkingStats.fixedCellVehicles || [];
+        const freeList = parkingStats.freeUseVehicles || [];
+        const spotsList = parkingSpots || [];
+
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
             <div class="meta-item"><strong>Fecha Emisión:</strong> ${todayStr}</div>
-            <div class="meta-item"><strong>Cupos Activos Autorizados:</strong> ${parkingStats.approved}</div>
-            <div class="meta-item"><strong>En Espera de Cupo:</strong> ${parkingStats.pending}</div>
+            <div class="meta-item"><strong>Total Celdas Físicas:</strong> ${parkingStats.totalSpots} celdas</div>
+            <div class="meta-item"><strong>Celdas Disponibles:</strong> ${parkingStats.availableSpots} celdas</div>
+            <div class="meta-item"><strong>Celdas Asignadas / Ocupadas:</strong> ${parkingStats.assignedSpots} celdas</div>
+            <div class="meta-item"><strong>Celdas Fijas:</strong> ${parkingStats.fixedSpots} | <strong>Uso Libre:</strong> ${parkingStats.freeSpots}</div>
+            <div class="meta-item"><strong>Tasa de Ocupación:</strong> ${parkingStats.occupancyRate}%</div>
           </div>
-          <div class="section-title">1. Resumen Operativo de Parqueadero</div>
-          <p>Se registraron <strong>${parkingStats.total}</strong> solicitudes de estacionamiento institucional, manteniendo <strong>${parkingStats.approved}</strong> autorizaciones vigentes con control de placa vehicular y <strong>${parkingStats.pending}</strong> en lista de espera para asignación conforme a disponibilidad física en sótanos.</p>
-          <div class="section-title">2. Registro Completo de Placas con Autorización Vigente</div>
+
+          <div class="section-title">1. Reporte de Ocupación de Celdas de Parqueadero</div>
+          <p>El parqueadero institucional cuenta con un inventario de <strong>${parkingStats.totalSpots}</strong> celdas registradas: <strong>${parkingStats.availableSpots}</strong> disponibles para asignación o rotación inmediata, <strong>${parkingStats.assignedSpots}</strong> asignadas/ocupadas, <strong>${parkingStats.fixedSpots}</strong> de asignación fija y <strong>${parkingStats.freeSpots}</strong> de uso libre rotativo.</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 80px;">Código</th>
+                <th>Tipo de Uso</th>
+                <th class="text-center">Estado Actual</th>
+                <th>Titular / Persona Asignada</th>
+                <th>Observaciones / Ubicación</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${spotsList.map(s => `
+                <tr>
+                  <td><strong>${s.code}</strong></td>
+                  <td>${s.spot_type === 'fija' ? '<span style="color:#2563EB; font-weight:bold;">Celda Fija</span>' : '<span style="color:#7C3AED; font-weight:bold;">Uso Libre</span>'}</td>
+                  <td class="text-center"><strong>${(s.status || 'disponible').toUpperCase()}</strong></td>
+                  <td>${s.assigned_user_name || '—'}</td>
+                  <td>${s.notes || '—'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="5" class="text-center">No hay celdas registradas en el sistema</td></tr>'}
+            </tbody>
+          </table>
+
+          <div class="section-title">2. Apartado 1: Vehículos con Celda Fija</div>
+          <p>Vehículos institucionales o de funcionarios vinculados formalmente a una celda de parqueadero asignada exclusivamente:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Persona Titular</th>
+                <th>Identificación</th>
+                <th>Placa</th>
+                <th>Vehículo / Modelo</th>
+                <th>Celda Asignada</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Autorización</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fixedList.map(v => `
+                <tr>
+                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
+                  <td>${v.doc || 'S/N'}</td>
+                  <td><strong>${v.plate}</strong></td>
+                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
+                  <td><strong>${v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}</strong></td>
+                  <td class="text-center">${v.is_active !== false ? '<span style="color:#059669; font-weight:bold;">ACTIVO</span>' : '<span style="color:#DC2626; font-weight:bold;">INACTIVO</span>'}</td>
+                  <td class="text-center">${v.is_active !== false ? 'Autorizado (Cupo Fijo)' : 'Suspendido'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="7" class="text-center">No se registran vehículos con celda fija asignada</td></tr>'}
+            </tbody>
+          </table>
+
+          <div class="section-title">3. Apartado 2: Vehículos sin Celda Fija (Parqueadero de Uso Libre)</div>
+          <p>Vehículos autorizados para el ingreso institucional que utilizan las celdas rotativas y de uso libre del parqueadero conforme a disponibilidad diaria:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Identificación</th>
+                <th>Placa</th>
+                <th>Vehículo / Modelo</th>
+                <th>Modalidad de Estacionamiento</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Autorización</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${freeList.map(v => `
+                <tr>
+                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
+                  <td>${v.doc || 'S/N'}</td>
+                  <td><strong>${v.plate}</strong></td>
+                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
+                  <td><em style="color:#7C3AED;">Utiliza parqueadero de uso libre</em></td>
+                  <td class="text-center">${v.is_active !== false ? '<span style="color:#059669; font-weight:bold;">ACTIVO</span>' : '<span style="color:#DC2626; font-weight:bold;">INACTIVO</span>'}</td>
+                  <td class="text-center">${v.is_active !== false ? 'Autorizado (Uso Libre)' : 'En trámite / Inactivo'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="7" class="text-center">No se registran vehículos en modalidad de uso libre</td></tr>'}
+            </tbody>
+          </table>
+
+          <div class="section-title">4. Historial de Solicitudes de Parqueadero del Periodo</div>
           <table>
             <thead>
               <tr>
                 <th>Fecha</th>
                 <th>Placa Vehicular</th>
-                <th>Vehículo / Solicitante</th>
-                <th class="text-center">Estado</th>
-                <th class="text-center">Calificación</th>
+                <th>Vehículo / Modelo</th>
+                <th>Solicitante</th>
+                <th>Dependencia</th>
+                <th class="text-center">Estado Trámite</th>
+                ${showParkingEval ? '<th class="text-center">Calificación</th>' : ''}
               </tr>
             </thead>
             <tbody>
-              ${parkingRows.map(r => `
-                <tr>
-                  <td>${new Date(r.created_at).toLocaleDateString('es-CO')}</td>
-                  <td><strong>${r.metadata?.plate || 'Sin placa'}</strong></td>
-                  <td>${r.title || r.metadata?.vehicleType || 'Vehículo institucional'}</td>
-                  <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
-                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
-                </tr>
-              `).join('') || '<tr><td colspan="5" class="text-center">No hay registros de parqueadero en el periodo</td></tr>'}
+              ${parkingRows.map(r => {
+                const vModel = [r.metadata?.brand, r.metadata?.model].filter(Boolean).join(' ') || r.metadata?.vehicleType || r.title || 'Vehículo particular';
+                const reqName = r.metadata?.name || r.profiles?.full_name || r.user_name || 'Servidor';
+                const depName = r.metadata?.dependency || r.profiles?.dependency?.name || r.profiles?.dependency || r.user_dependency || 'Secretaría Jurídica Distrital';
+                return `
+                  <tr>
+                    <td>${new Date(r.created_at).toLocaleDateString('es-CO')}</td>
+                    <td><strong>${r.metadata?.plate || 'Sin placa'}</strong></td>
+                    <td>${vModel}</td>
+                    <td>${reqName}</td>
+                    <td>${depName}</td>
+                    <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                    ${showParkingEval ? `<td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>` : ''}
+                  </tr>
+                `;
+              }).join('') || `<tr><td colspan="${showParkingEval ? 7 : 6}" class="text-center">No hay solicitudes de parqueadero registradas en el periodo</td></tr>`}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'rooms') {
         const roomRows = dbData.filter(d => d.category === 'rooms');
+        const showRoomEval = isEvalActive('rooms');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -957,7 +1214,7 @@ export default function AdminReports() {
                 <th>Sala</th>
                 <th class="text-center">Asistentes</th>
                 <th class="text-center">Estado</th>
-                <th class="text-center">Calificación</th>
+                ${showRoomEval ? '<th class="text-center">Calificación</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -968,14 +1225,15 @@ export default function AdminReports() {
                   <td>${r.metadata?.room?.name || 'Sala general'}</td>
                   <td class="text-center">${r.metadata?.attendees || '-'}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
-                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
+                  ${showRoomEval ? `<td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>` : ''}
                 </tr>
-              `).join('') || '<tr><td colspan="6" class="text-center">No hay reuniones en el periodo</td></tr>'}
+              `).join('') || `<tr><td colspan="${showRoomEval ? 6 : 5}" class="text-center">No hay reuniones en el periodo</td></tr>`}
             </tbody>
           </table>
         `;
       } else if (reportTab === 'transport') {
         const transportRows = dbData.filter(d => d.category === 'transport');
+        const showTransportEval = isEvalActive('transport');
         bodySections = `
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
@@ -1011,7 +1269,7 @@ export default function AdminReports() {
                 <th>Ruta</th>
                 <th class="text-center">Pasajeros</th>
                 <th class="text-center">Estado</th>
-                <th class="text-center">Calificación</th>
+                ${showTransportEval ? '<th class="text-center">Calificación</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -1022,9 +1280,9 @@ export default function AdminReports() {
                   <td>${r.metadata?.origin || 'Origen'} - ${r.metadata?.destination || 'Destino'}</td>
                   <td class="text-center">${r.metadata?.passengers || 1}</td>
                   <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
-                  <td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>
+                  ${showTransportEval ? `<td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>` : ''}
                 </tr>
-              `).join('') || '<tr><td colspan="6" class="text-center">No hay comisiones en el periodo</td></tr>'}
+              `).join('') || `<tr><td colspan="${showTransportEval ? 6 : 5}" class="text-center">No hay comisiones en el periodo</td></tr>`}
             </tbody>
           </table>
         `;
@@ -1082,48 +1340,42 @@ export default function AdminReports() {
             </tbody>
           </table>
           <div class="section-title">3. Calidad y Satisfacción por Servicio Operativo</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Servicio / Módulo</th>
-                <th class="text-center">Encuestas</th>
-                <th class="text-center">Calificación Promedio</th>
-                <th class="text-center">Estado de Calidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>Control de Acceso y Visitantes</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.visitors.count}</td>
-                <td class="text-center"><strong>${stats.moduleEvaluations.visitors.count > 0 ? `★ ${stats.moduleEvaluations.visitors.avg.toFixed(1)}` : '—'}</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.visitors.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.visitors.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.visitors.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
-              </tr>
-              <tr>
-                <td><strong>Mantenimiento Locativo</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.maintenance.count}</td>
-                <td class="text-center"><strong>${stats.moduleEvaluations.maintenance.count > 0 ? `★ ${stats.moduleEvaluations.maintenance.avg.toFixed(1)}` : '—'}</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.maintenance.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.maintenance.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.maintenance.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
-              </tr>
-              <tr>
-                <td><strong>Acceso Parqueadero</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.parking.count}</td>
-                <td class="text-center"><strong>${stats.moduleEvaluations.parking.count > 0 ? `★ ${stats.moduleEvaluations.parking.avg.toFixed(1)}` : '—'}</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.parking.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.parking.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.parking.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
-              </tr>
-              <tr>
-                <td><strong>Reserva de Salas de Juntas</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.rooms.count}</td>
-                <td class="text-center"><strong>${stats.moduleEvaluations.rooms.count > 0 ? `★ ${stats.moduleEvaluations.rooms.avg.toFixed(1)}` : '—'}</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.rooms.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.rooms.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.rooms.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
-              </tr>
-              <tr>
-                <td><strong>Transporte Oficial</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.transport.count}</td>
-                <td class="text-center"><strong>${stats.moduleEvaluations.transport.count > 0 ? `★ ${stats.moduleEvaluations.transport.avg.toFixed(1)}` : '—'}</strong></td>
-                <td class="text-center">${stats.moduleEvaluations.transport.count === 0 ? 'Sin evaluar' : stats.moduleEvaluations.transport.avg >= 4.0 ? 'Excelente' : stats.moduleEvaluations.transport.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
-              </tr>
-            </tbody>
-          </table>
+          ${(() => {
+            const activeModules = [
+              { key: 'visitors', name: 'Control de Acceso y Visitantes', eval: stats.moduleEvaluations.visitors },
+              { key: 'maintenance', name: 'Mantenimiento Locativo', eval: stats.moduleEvaluations.maintenance },
+              { key: 'parking', name: 'Acceso Parqueadero', eval: stats.moduleEvaluations.parking },
+              { key: 'rooms', name: 'Reserva de Salas de Juntas', eval: stats.moduleEvaluations.rooms },
+              { key: 'transport', name: 'Transporte Oficial', eval: stats.moduleEvaluations.transport },
+            ].filter(m => isEvalActive(m.key));
+
+            if (activeModules.length === 0) {
+              return '<p style="color:#64748B;font-style:italic;">No hay servicios operativos con evaluación de satisfacción habilitada.</p>';
+            }
+
+            return `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Servicio / Módulo</th>
+                    <th class="text-center">Encuestas</th>
+                    <th class="text-center">Calificación Promedio</th>
+                    <th class="text-center">Estado de Calidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${activeModules.map(m => `
+                    <tr>
+                      <td><strong>${m.name}</strong></td>
+                      <td class="text-center">${m.eval.count}</td>
+                      <td class="text-center"><strong>${m.eval.count > 0 ? `★ ${m.eval.avg.toFixed(1)}` : '—'}</strong></td>
+                      <td class="text-center">${m.eval.count === 0 ? 'Sin evaluar' : m.eval.avg >= 4.0 ? 'Excelente' : m.eval.avg >= 3.0 ? 'Aceptable' : 'Oportunidad de Mejora'}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+          })()}
           <div class="section-title">4. Comentarios y Observaciones Cualitativas de los Usuarios</div>
           <table>
             <thead>
@@ -1135,14 +1387,14 @@ export default function AdminReports() {
               </tr>
             </thead>
             <tbody>
-              ${stats.recentEvaluations.map(r => `
+              ${stats.recentEvaluations.filter(r => isEvalActive(r.category)).map(r => `
                 <tr>
                   <td>${r.metadata?.evaluation?.date ? new Date(r.metadata.evaluation.date).toLocaleDateString('es-CO') : new Date(r.created_at).toLocaleDateString('es-CO')}</td>
                   <td><strong>${getModuleMeta(r.category).name}</strong></td>
                   <td class="text-center" style="color:#B45309"><strong>★ ${r.metadata?.evaluation?.rating}</strong></td>
                   <td><em>"${r.metadata?.evaluation?.comment || ''}"</em></td>
                 </tr>
-              `).join('') || '<tr><td colspan="4" class="text-center">No hay comentarios registrados en el periodo</td></tr>'}
+              `).join('') || '<tr><td colspan="4" class="text-center">No hay comentarios registrados en el periodo para los servicios con evaluación activa</td></tr>'}
             </tbody>
           </table>
         `;
@@ -1991,7 +2243,7 @@ export default function AdminReports() {
                               { key: 'parking', name: 'Cupo de Parqueadero', icon: 'car', color: COLORS.purple },
                               { key: 'rooms', name: 'Reserva de Salas', icon: 'easel', color: COLORS.warning },
                               { key: 'transport', name: 'Transporte Oficial', icon: 'car-sport', color: COLORS.success },
-                            ].map((mod) => {
+                            ].filter(mod => isEvalActive(mod.key)).map((mod) => {
                               const modData = (stats.moduleEvaluations as any)[mod.key];
                               const avg = modData?.avg || 0;
                               const count = modData?.count || 0;
@@ -2179,7 +2431,11 @@ export default function AdminReports() {
                                     <StatusBadge status={req.status} />
                                   </View>
                                   <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                    <RatingBadge rating={evalRating} status={req.status} />
+                                    {isEvalActive(req.category) ? (
+                                      <RatingBadge rating={evalRating} status={req.status} />
+                                    ) : (
+                                      <Text style={{ fontSize: 11, color: COLORS.muted }}>—</Text>
+                                    )}
                                   </View>
                                 </TouchableOpacity>
                               );
@@ -2204,13 +2460,15 @@ export default function AdminReports() {
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
-                    <ModuleCSATCard 
-                      moduleName="Control de Acceso y Visitantes" 
-                      category="visitors" 
-                      stats={stats} 
-                      color={COLORS.danger} 
-                      onPressComment={(id) => navigateToManage({ id })}
-                    />
+                    {isEvalActive('visitors') && (
+                      <ModuleCSATCard 
+                        moduleName="Control de Acceso y Visitantes" 
+                        category="visitors" 
+                        stats={stats} 
+                        color={COLORS.danger} 
+                        onPressComment={(id) => navigateToManage({ id })}
+                      />
+                    )}
 
                     {/* 2 Columnas: Dependencias Receptoras y Modalidad de Acceso */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -2278,7 +2536,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 890 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : (isEvalActive('visitors') ? 890 : 780) }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>ASUNTO / MOTIVO</Text>
@@ -2286,7 +2544,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>PERSONAS</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>MODALIDAD</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            {isEvalActive('visitors') && (
+                              <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            )}
                           </View>
 
                           {visitorStats.recentList.length > 0 ? (
@@ -2310,9 +2570,11 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
-                                </View>
+                                {isEvalActive('visitors') && (
+                                  <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                    <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                  </View>
+                                )}
                               </TouchableOpacity>
                             ))
                           ) : (
@@ -2355,13 +2617,15 @@ export default function AdminReports() {
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
-                    <ModuleCSATCard 
-                      moduleName="Mantenimiento Locativo" 
-                      category="maintenance" 
-                      stats={stats} 
-                      color={COLORS.accent} 
-                      onPressComment={(id) => navigateToManage({ id })}
-                    />
+                    {isEvalActive('maintenance') && (
+                      <ModuleCSATCard 
+                        moduleName="Mantenimiento Locativo" 
+                        category="maintenance" 
+                        stats={stats} 
+                        color={COLORS.accent} 
+                        onPressComment={(id) => navigateToManage({ id })}
+                      />
+                    )}
 
                     {/* Fila 2 columnas: Pipeline y Especialidades Técnicas */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -2448,7 +2712,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 910 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : (isEvalActive('maintenance') ? 910 : 800) }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 200 }]}>INCIDENCIA / DAÑO</Text>
@@ -2456,7 +2720,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>PRIORIDAD</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SOLICITANTE</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            {isEvalActive('maintenance') && (
+                              <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            )}
                           </View>
 
                           {maintenanceStats.recentList.length > 0 ? (
@@ -2477,9 +2743,11 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
-                                </View>
+                                {isEvalActive('maintenance') && (
+                                  <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                    <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                  </View>
+                                )}
                               </TouchableOpacity>
                             ))
                           ) : (
@@ -2491,24 +2759,457 @@ export default function AdminReports() {
                   </View>
                 )}
 
-                {/* --- TAB PARQUEADERO AMPLIADO --- */}
+                {/* --- TAB PARQUEADERO AMPLIADO: CONTROL INTEGRAL DE CELDAS Y VEHÍCULOS --- */}
                 {activeTab === 'parking' && (
                   <View style={{ gap: 25 }}>
+                    {/* KPIs de Ocupación y Control */}
                     <View style={styles.kpiRow}>
-                      <KPICard label="Cupos Activos" value={parkingStats.approved.toString()} color={COLORS.success} icon="checkmark-circle" trend="Autorizaciones vigentes" onPress={() => navigateToManage({ service: 'Parqueadero', status: 'resuelto' })} />
-                      <KPICard label="En Espera" value={parkingStats.pending.toString()} color={COLORS.warning} icon="hourglass" trend="Solicitudes en trámite" onPress={() => navigateToManage({ service: 'Parqueadero', status: 'pendiente' })} />
-                      <KPICard label="Total Registros" value={parkingStats.total.toString()} color={COLORS.accent} icon="car" trend="Historial solicitudes" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
-                      <KPICard label="Tasa de Ocupación" value={`${parkingStats.occupancyRate}%`} color={COLORS.purple} icon="pie-chart" trend="Capacidad sótanos" onPress={() => navigateToManage({ service: 'Parqueadero' })} />
+                      <KPICard 
+                        label="Celdas Totales" 
+                        value={parkingStats.totalSpots.toString()} 
+                        color={COLORS.primary} 
+                        icon="grid" 
+                        trend="Inventario físico" 
+                        onPress={() => router.push('/admin/settings')} 
+                      />
+                      <KPICard 
+                        label="Disponibles" 
+                        value={parkingStats.availableSpots.toString()} 
+                        color={COLORS.success} 
+                        icon="checkmark-circle" 
+                        trend="Listas para uso" 
+                        onPress={() => setParkingFilterType('spots')} 
+                      />
+                      <KPICard 
+                        label="Ocupadas / Asignadas" 
+                        value={parkingStats.assignedSpots.toString()} 
+                        color={COLORS.accent} 
+                        icon="lock-closed" 
+                        trend="En uso actual" 
+                        onPress={() => setParkingFilterType('spots')} 
+                      />
+                      <KPICard 
+                        label="Celdas Fijas" 
+                        value={parkingStats.fixedSpots.toString()} 
+                        color="#2563EB" 
+                        icon="person-pin" 
+                        trend="Asignadas a personas" 
+                        onPress={() => setParkingFilterType('fixed')} 
+                      />
+                      <KPICard 
+                        label="Celdas Uso Libre" 
+                        value={parkingStats.freeSpots.toString()} 
+                        color={COLORS.purple} 
+                        icon="refresh" 
+                        trend="Parqueo rotativo" 
+                        onPress={() => setParkingFilterType('free')} 
+                      />
+                      <KPICard 
+                        label="Tasa de Ocupación" 
+                        value={`${parkingStats.occupancyRate}%`} 
+                        color={COLORS.warning} 
+                        icon="pie-chart" 
+                        trend="Capacidad sótanos" 
+                      />
+                    </View>
+
+                    {/* Filtros de Navegación Rápida del Módulo */}
+                    <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.muted }}>Filtrar vista:</Text>
+                      {[
+                        { id: 'all', label: 'Todo el Módulo', icon: 'grid-outline' },
+                        { id: 'spots', label: `Ocupación de Celdas (${parkingStats.totalSpots})`, icon: 'car-outline' },
+                        { id: 'fixed', label: `Vehículos Celda Fija (${(parkingStats.fixedCellVehicles || []).length})`, icon: 'person-pin-outline' },
+                        { id: 'free', label: `Vehículos Uso Libre (${(parkingStats.freeUseVehicles || []).length})`, icon: 'refresh-outline' }
+                      ].map(f => {
+                        const active = parkingFilterType === f.id;
+                        return (
+                          <TouchableOpacity
+                            key={f.id}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 12,
+                              backgroundColor: active ? COLORS.primary : '#FFFFFF',
+                              borderWidth: 1,
+                              borderColor: active ? COLORS.primary : '#E2E8F0'
+                            }}
+                            onPress={() => setParkingFilterType(f.id as any)}
+                          >
+                            <Ionicons name={f.icon as any} size={15} color={active ? '#FFFFFF' : COLORS.muted} />
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: active ? '#FFFFFF' : COLORS.primary }}>
+                              {f.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
-                    <ModuleCSATCard 
-                      moduleName="Cupos de Parqueadero" 
-                      category="parking" 
-                      stats={stats} 
-                      color={COLORS.purple} 
-                      onPressComment={(id) => navigateToManage({ id })}
-                    />
+                    {isEvalActive('parking') && (
+                      <ModuleCSATCard 
+                        moduleName="Cupos de Parqueadero" 
+                        category="parking" 
+                        stats={stats} 
+                        color={COLORS.purple} 
+                        onPressComment={(id) => navigateToManage({ id })}
+                      />
+                    )}
+
+                    {/* --- REPORTE DE OCUPACIÓN DE CELDAS --- */}
+                    {(parkingFilterType === 'all' || parkingFilterType === 'spots') && (
+                      <View style={styles.card}>
+                        <View style={styles.cardSectionHeader}>
+                          <View>
+                            <Text style={styles.cardTitle}>Reporte de Ocupación de Celdas de Parqueadero</Text>
+                            <Text style={styles.cardSubtitle}>
+                              Visualización integral de celdas disponibles, asignadas, ocupadas y de uso libre rotativo
+                            </Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <TouchableOpacity 
+                              style={[styles.cardSectionAction, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} 
+                              onPress={() => router.push('/admin/settings')}
+                            >
+                              <Ionicons name="settings-outline" size={14} color="#2563EB" />
+                              <Text style={[styles.cardSectionActionText, { color: '#2563EB' }]}>Gestionar Celdas en Ajustes</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
+                              <Ionicons name="print-outline" size={14} color={COLORS.accent} />
+                              <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        {/* Barra de Distribución y Capacidad */}
+                        <View style={{ padding: 16, backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginTop: 10, gap: 10 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
+                              Estado de Ocupación Físico ({parkingStats.assignedSpots} de {parkingStats.totalSpots} celdas en uso)
+                            </Text>
+                            <Text style={{ fontSize: 13, fontWeight: '900', color: parkingStats.occupancyRate > 80 ? COLORS.danger : COLORS.success }}>
+                              {parkingStats.occupancyRate}% Ocupado
+                            </Text>
+                          </View>
+                          <View style={{ height: 10, backgroundColor: '#E2E8F0', borderRadius: 999, overflow: 'hidden', flexDirection: 'row' }}>
+                            <View style={{ width: `${parkingStats.occupancyRate}%`, backgroundColor: parkingStats.occupancyRate > 80 ? COLORS.danger : COLORS.accent, height: '100%' }} />
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', marginTop: 4 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' }} />
+                              <Text style={{ fontSize: 12, color: COLORS.muted }}>Disponibles: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{parkingStats.availableSpots}</Text></Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444' }} />
+                              <Text style={{ fontSize: 12, color: COLORS.muted }}>Ocupadas: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{parkingStats.occupiedSpots}</Text></Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#2563EB' }} />
+                              <Text style={{ fontSize: 12, color: COLORS.muted }}>Celdas Fijas: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{parkingStats.fixedSpots}</Text></Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#7C3AED' }} />
+                              <Text style={{ fontSize: 12, color: COLORS.muted }}>Uso Libre: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{parkingStats.freeSpots}</Text></Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Grilla de Celdas */}
+                        <View style={{ marginTop: 16 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 12 }}>
+                            Celdas Registradas en el Sistema
+                          </Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                            {parkingSpots.length > 0 ? (
+                              parkingSpots.map((spot, idx) => {
+                                const isAvailable = spot.status === 'disponible';
+                                const isOccupied = spot.status === 'ocupada';
+                                const isFixed = spot.spot_type === 'fija';
+                                const cardBorder = isAvailable ? '#A7F3D0' : (isOccupied ? '#FECACA' : '#FED7AA');
+                                const cardBg = isAvailable ? '#ECFDF5' : (isOccupied ? '#FEF2F2' : '#FFF7ED');
+
+                                return (
+                                  <View
+                                    key={spot.id || idx}
+                                    style={{
+                                      minWidth: isDesktop ? 220 : '100%',
+                                      flex: isDesktop ? 1 : undefined,
+                                      padding: 14,
+                                      borderRadius: 16,
+                                      backgroundColor: cardBg,
+                                      borderWidth: 1.5,
+                                      borderColor: cardBorder,
+                                      gap: 8
+                                    }}
+                                  >
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <View style={{ backgroundColor: COLORS.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                                        <Text style={{ fontSize: 14, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 }}>
+                                          {spot.code}
+                                        </Text>
+                                      </View>
+                                      <View style={{
+                                        backgroundColor: isFixed ? '#EFF6FF' : '#F5F3FF',
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 3,
+                                        borderRadius: 6,
+                                        borderWidth: 1,
+                                        borderColor: isFixed ? '#BFDBFE' : '#DDD6FE'
+                                      }}>
+                                        <Text style={{ fontSize: 10, fontWeight: '800', color: isFixed ? '#1D4ED8' : '#6D28D9' }}>
+                                          {isFixed ? 'Celda Fija' : 'Uso Libre'}
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    <View>
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.muted }}>
+                                        Estado: <Text style={{ textTransform: 'uppercase', color: isAvailable ? '#059669' : (isOccupied ? '#DC2626' : '#D97706'), fontWeight: '900' }}>{spot.status || 'Disponible'}</Text>
+                                      </Text>
+                                      {spot.assigned_user_name ? (
+                                        <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginTop: 2 }} numberOfLines={1}>
+                                          Titular: {spot.assigned_user_name}
+                                        </Text>
+                                      ) : (
+                                        <Text style={{ fontSize: 11, fontStyle: 'italic', color: COLORS.muted, marginTop: 2 }}>
+                                          {isFixed ? 'Sin titular asignado' : 'Disponible para rotación'}
+                                        </Text>
+                                      )}
+                                      {spot.notes ? (
+                                        <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 2 }} numberOfLines={1}>
+                                          {spot.notes}
+                                        </Text>
+                                      ) : null}
+                                    </View>
+                                  </View>
+                                );
+                              })
+                            ) : (
+                              <Text style={styles.noDataText}>No hay celdas registradas en la base de datos.</Text>
+                            )}
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* --- APARTADO 1: VEHÍCULOS CON CELDA FIJA --- */}
+                    {(parkingFilterType === 'all' || parkingFilterType === 'fixed') && (
+                      <View style={styles.card}>
+                        <View style={styles.cardSectionHeader}>
+                          <View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#2563EB' }} />
+                              <Text style={styles.cardTitle}>Apartado 1: Vehículos con Celda Fija</Text>
+                            </View>
+                            <Text style={styles.cardSubtitle}>
+                              Vehículos vinculados a una persona titular que cuenta con una celda fija de parqueadero asignada
+                            </Text>
+                          </View>
+                          <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1D4ED8' }}>
+                              {(parkingStats.fixedCellVehicles || []).length} Vehículos
+                            </Text>
+                          </View>
+                        </View>
+
+                        <ScrollView 
+                          horizontal 
+                          showsHorizontalScrollIndicator={true}
+                          contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                          style={{ width: '100%', marginTop: 8 }}
+                        >
+                          <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 920 }}>
+                            <View style={styles.tableHeaderRowDark}>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 170 }]}>PERSONA TITULAR</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 110 }]}>IDENTIFICACIÓN</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 100 }]}>PLACA</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { flex: 1.2, minWidth: 160 }]}>VEHÍCULO / MODELO</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 120 }]}>CELDA ASIGNADA</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 95, textAlign: 'center' }]}>ESTADO</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 130, textAlign: 'center' }]}>AUTORIZACIÓN</Text>
+                            </View>
+
+                            {(parkingStats.fixedCellVehicles || []).length > 0 ? (
+                              parkingStats.fixedCellVehicles.map((v, idx) => (
+                                <View key={v.id || idx} style={styles.tableRowDark}>
+                                  <Text style={[styles.tableCellTxtBold, { width: 170, color: COLORS.primary }]} numberOfLines={1}>
+                                    {v.name || v.owner_name || 'Servidor institucional'}
+                                  </Text>
+                                  <Text style={[styles.tableCellTxt, { width: 110 }]} numberOfLines={1}>
+                                    {v.doc || 'S/N'}
+                                  </Text>
+                                  <View style={{ width: 100 }}>
+                                    <View style={{
+                                      backgroundColor: '#FDE047',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 2,
+                                      borderRadius: 5,
+                                      borderWidth: 1,
+                                      borderColor: '#000000',
+                                      alignSelf: 'flex-start'
+                                    }}>
+                                      <Text style={{ fontSize: 12, fontWeight: '900', color: '#000000', letterSpacing: 0.5 }}>
+                                        {v.plate}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <Text style={[styles.tableCellTxt, { flex: 1.2, minWidth: 160 }]} numberOfLines={1}>
+                                    {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                                  </Text>
+                                  <View style={{ width: 120 }}>
+                                    <View style={{
+                                      backgroundColor: '#EFF6FF',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 4,
+                                      borderRadius: 8,
+                                      borderWidth: 1,
+                                      borderColor: '#BFDBFE',
+                                      alignSelf: 'flex-start'
+                                    }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>
+                                        {v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <View style={{ width: 95, alignItems: 'center' }}>
+                                    <View style={{
+                                      backgroundColor: v.is_active !== false ? '#ECFDF5' : '#FEF2F2',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: v.is_active !== false ? '#A7F3D0' : '#FECACA'
+                                    }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: v.is_active !== false ? '#065F46' : '#DC2626' }}>
+                                        {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <View style={{ width: 130, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: v.is_active !== false ? '#059669' : '#64748B' }}>
+                                      {v.is_active !== false ? 'Cupo Fijo Vigente' : 'Inactivo'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              ))
+                            ) : (
+                              <Text style={styles.noDataText}>No se registran vehículos con celda fija asignada</Text>
+                            )}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    )}
+
+                    {/* --- APARTADO 2: VEHÍCULOS SIN CELDA FIJA (USO LIBRE) --- */}
+                    {(parkingFilterType === 'all' || parkingFilterType === 'free') && (
+                      <View style={styles.card}>
+                        <View style={styles.cardSectionHeader}>
+                          <View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#7C3AED' }} />
+                              <Text style={styles.cardTitle}>Apartado 2: Vehículos sin Celda Fija (Uso Libre)</Text>
+                            </View>
+                            <Text style={styles.cardSubtitle}>
+                              Vehículos autorizados que ingresan y utilizan cualquiera de las celdas de parqueadero de uso libre rotativo
+                            </Text>
+                          </View>
+                          <View style={{ backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#DDD6FE' }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: '#6D28D9' }}>
+                              {(parkingStats.freeUseVehicles || []).length} Vehículos
+                            </Text>
+                          </View>
+                        </View>
+
+                        <ScrollView 
+                          horizontal 
+                          showsHorizontalScrollIndicator={true}
+                          contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
+                          style={{ width: '100%', marginTop: 8 }}
+                        >
+                          <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 940 }}>
+                            <View style={styles.tableHeaderRowDark}>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 170 }]}>PERSONA TITULAR</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 110 }]}>IDENTIFICACIÓN</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 100 }]}>PLACA</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { flex: 1.2, minWidth: 160 }]}>VEHÍCULO / MODELO</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 180 }]}>MODALIDAD DE PARQUEO</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 95, textAlign: 'center' }]}>ESTADO</Text>
+                              <Text style={[styles.tableHeaderTxtDark, { width: 130, textAlign: 'center' }]}>AUTORIZACIÓN</Text>
+                            </View>
+
+                            {(parkingStats.freeUseVehicles || []).length > 0 ? (
+                              parkingStats.freeUseVehicles.map((v, idx) => (
+                                <View key={v.id || idx} style={styles.tableRowDark}>
+                                  <Text style={[styles.tableCellTxtBold, { width: 170, color: COLORS.primary }]} numberOfLines={1}>
+                                    {v.name || v.owner_name || 'Servidor institucional'}
+                                  </Text>
+                                  <Text style={[styles.tableCellTxt, { width: 110 }]} numberOfLines={1}>
+                                    {v.doc || 'S/N'}
+                                  </Text>
+                                  <View style={{ width: 100 }}>
+                                    <View style={{
+                                      backgroundColor: '#FDE047',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 2,
+                                      borderRadius: 5,
+                                      borderWidth: 1,
+                                      borderColor: '#000000',
+                                      alignSelf: 'flex-start'
+                                    }}>
+                                      <Text style={{ fontSize: 12, fontWeight: '900', color: '#000000', letterSpacing: 0.5 }}>
+                                        {v.plate}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <Text style={[styles.tableCellTxt, { flex: 1.2, minWidth: 160 }]} numberOfLines={1}>
+                                    {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                                  </Text>
+                                  <View style={{ width: 180 }}>
+                                    <View style={{
+                                      backgroundColor: '#F5F3FF',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 4,
+                                      borderRadius: 8,
+                                      borderWidth: 1,
+                                      borderColor: '#DDD6FE',
+                                      alignSelf: 'flex-start'
+                                    }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#7C3AED' }}>
+                                        Uso Libre / Rotativo
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <View style={{ width: 95, alignItems: 'center' }}>
+                                    <View style={{
+                                      backgroundColor: v.is_active !== false ? '#ECFDF5' : '#FEF2F2',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: v.is_active !== false ? '#A7F3D0' : '#FECACA'
+                                    }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: v.is_active !== false ? '#065F46' : '#DC2626' }}>
+                                        {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <View style={{ width: 130, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: v.is_active !== false ? '#059669' : '#64748B' }}>
+                                      {v.is_active !== false ? 'Autorizado (Rotativo)' : 'Inactivo'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              ))
+                            ) : (
+                              <Text style={styles.noDataText}>No se registran vehículos en modalidad de uso libre</Text>
+                            )}
+                          </View>
+                        </ScrollView>
+                      </View>
+                    )}
 
                     {/* Fila 2 Columnas: Tipología Vehicular y Reglamento */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -2547,36 +3248,12 @@ export default function AdminReports() {
                       </View>
                     </View>
 
-                    {/* Placas Recientes Autorizadas */}
-                    <View style={styles.card}>
-                      <Text style={styles.cardTitle}>Placas Recientes Autorizadas</Text>
-                      <Text style={styles.cardSubtitle}>Vehículos con permiso activo registrados en el sistema de seguridad vehicular</Text>
-                      
-                      <View style={styles.platesGrid}>
-                        {parkingStats.plates.length > 0 ? (
-                          parkingStats.plates.map((plate, idx) => (
-                            <TouchableOpacity 
-                              key={idx} 
-                              style={[styles.plateCard, { cursor: 'pointer' } as any]}
-                              activeOpacity={0.75}
-                              onPress={() => navigateToManage({ service: 'Parqueadero' })}
-                            >
-                              <Text style={styles.plateText}>{plate}</Text>
-                              <View style={styles.plateBadge}><Text style={styles.plateBadgeText}>ACTIVO</Text></View>
-                            </TouchableOpacity>
-                          ))
-                        ) : (
-                          <Text style={styles.noDataText}>No hay placas autorizadas en el periodo</Text>
-                        )}
-                      </View>
-                    </View>
-
                     {/* Tabla de Asignación y Solicitudes de Parqueadero */}
                     <View style={styles.card}>
                       <View style={styles.cardSectionHeader}>
                         <View>
-                          <Text style={styles.cardTitle}>Registro y Control de Cupos Vehiculares</Text>
-                          <Text style={styles.cardSubtitle}>Historial de asignaciones de estacionamiento por placa (clic para abrir detalle)</Text>
+                          <Text style={styles.cardTitle}>Historial de Solicitudes de Parqueadero del Periodo</Text>
+                          <Text style={styles.cardSubtitle}>Historial de requerimientos y trámites de acceso (clic para abrir detalle)</Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                           <TouchableOpacity 
@@ -2599,38 +3276,50 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 870 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : (isEvalActive('parking') ? 955 : 855) }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110 }]}>PLACA</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>VEHÍCULO / MODELO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>SOLICITANTE</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 150 }]}>DEPENDENCIA</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 100 }]}>PLACA</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { flex: 1.2, minWidth: 160 }]}>VEHÍCULO / MODELO</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 100 }]}>COLOR</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SOLICITANTE</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>DEPENDENCIA</Text>
+                            <Text style={[styles.tableHeaderTxtDark, { width: 100, textAlign: 'center' }]}>ESTADO</Text>
+                            {isEvalActive('parking') && (
+                              <Text style={[styles.tableHeaderTxtDark, { width: 100, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            )}
                           </View>
 
                           {parkingStats.recentList.length > 0 ? (
-                            parkingStats.recentList.map((r, idx) => (
-                              <TouchableOpacity 
-                                key={r.id || idx} 
-                                style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
-                                activeOpacity={0.75}
-                                onPress={() => navigateToManage({ id: r.id })}
-                              >
-                                <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
-                                <Text style={[styles.tableCellTxtBold, { width: 110, color: COLORS.primary }]}>{r.metadata?.plate || 'Sin placa'}</Text>
-                                <Text style={[styles.tableCellTxt, { flex: 1, minWidth: 180 }]} numberOfLines={1}>{r.title || r.metadata?.vehicleType || 'Vehículo institucional'}</Text>
-                                <Text style={[styles.tableCellTxt, { width: 160 }]} numberOfLines={1}>{r.profiles?.full_name || 'Servidor'}</Text>
-                                <Text style={[styles.tableCellTxt, { width: 150 }]} numberOfLines={1}>{r.profiles?.dependency?.name || 'General'}</Text>
-                                <View style={{ width: 110, alignItems: 'center' }}>
-                                  <StatusBadge status={r.status} />
-                                </View>
-                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
-                                </View>
-                              </TouchableOpacity>
-                            ))
+                            parkingStats.recentList.map((r, idx) => {
+                              const vehiculoModelo = [r.metadata?.brand, r.metadata?.model].filter(Boolean).join(' ') || r.metadata?.vehicleType || r.title || 'Vehículo particular';
+                              const color = r.metadata?.color || 'No registrado';
+                              const solicitante = r.metadata?.name || r.profiles?.full_name || r.user_name || 'Servidor';
+                              const dependencia = r.metadata?.dependency || r.profiles?.dependency?.name || r.profiles?.dependency || r.user_dependency || 'Secretaría Jurídica Distrital';
+                              return (
+                                <TouchableOpacity 
+                                  key={r.id || idx} 
+                                  style={[styles.tableRowDark, { cursor: 'pointer' } as any]}
+                                  activeOpacity={0.75}
+                                  onPress={() => navigateToManage({ id: r.id })}
+                                >
+                                  <Text style={[styles.tableCellTxt, { width: 95 }]}>{formatDisplayDate(r.created_at)}</Text>
+                                  <Text style={[styles.tableCellTxtBold, { width: 100, color: COLORS.primary }]}>{r.metadata?.plate || 'Sin placa'}</Text>
+                                  <Text style={[styles.tableCellTxt, { flex: 1.2, minWidth: 160 }]} numberOfLines={1}>{vehiculoModelo}</Text>
+                                  <Text style={[styles.tableCellTxt, { width: 100 }]} numberOfLines={1}>{color}</Text>
+                                  <Text style={[styles.tableCellTxt, { width: 140 }]} numberOfLines={1}>{solicitante}</Text>
+                                  <Text style={[styles.tableCellTxt, { width: 160 }]} numberOfLines={1}>{dependencia}</Text>
+                                  <View style={{ width: 100, alignItems: 'center' }}>
+                                    <StatusBadge status={r.status} />
+                                  </View>
+                                  {isEvalActive('parking') && (
+                                    <View style={{ width: 100, alignItems: 'center', justifyContent: 'center' }}>
+                                      <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                    </View>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            })
                           ) : (
                             <Text style={styles.noDataText}>No hay registros de parqueadero</Text>
                           )}
@@ -2651,13 +3340,15 @@ export default function AdminReports() {
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
-                    <ModuleCSATCard 
-                      moduleName="Reserva de Salas de Juntas" 
-                      category="rooms" 
-                      stats={stats} 
-                      color={COLORS.warning} 
-                      onPressComment={(id) => navigateToManage({ id })}
-                    />
+                    {isEvalActive('rooms') && (
+                      <ModuleCSATCard 
+                        moduleName="Reserva de Salas de Juntas" 
+                        category="rooms" 
+                        stats={stats} 
+                        color={COLORS.warning} 
+                        onPressComment={(id) => navigateToManage({ id })}
+                      />
+                    )}
 
                     {/* Fila 2 Columnas: Salas y Servicios */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -2737,7 +3428,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 890 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : (isEvalActive('rooms') ? 890 : 780) }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SALA</Text>
@@ -2745,7 +3436,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 160 }]}>DEPENDENCIA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 90, textAlign: 'center' }]}>ASISTENTES</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            {isEvalActive('rooms') && (
+                              <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            )}
                           </View>
 
                           {roomStats.recentList.length > 0 ? (
@@ -2764,9 +3457,11 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
-                                </View>
+                                {isEvalActive('rooms') && (
+                                  <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                    <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                  </View>
+                                )}
                               </TouchableOpacity>
                             ))
                           ) : (
@@ -2789,13 +3484,15 @@ export default function AdminReports() {
                     </View>
 
                     {/* Calidad y Satisfacción del Módulo */}
-                    <ModuleCSATCard 
-                      moduleName="Transporte Institucional" 
-                      category="transport" 
-                      stats={stats} 
-                      color={COLORS.success} 
-                      onPressComment={(id) => navigateToManage({ id })}
-                    />
+                    {isEvalActive('transport') && (
+                      <ModuleCSATCard 
+                        moduleName="Transporte Institucional" 
+                        category="transport" 
+                        stats={stats} 
+                        color={COLORS.success} 
+                        onPressComment={(id) => navigateToManage({ id })}
+                      />
+                    )}
 
                     {/* Fila 2 Columnas: Rutas y Modalidades */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 20 }}>
@@ -2871,7 +3568,7 @@ export default function AdminReports() {
                         contentContainerStyle={{ flexGrow: 1, width: '100%', minWidth: '100%' }}
                         style={{ width: '100%' }}
                       >
-                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : 910 }}>
+                        <View style={{ flex: 1, width: '100%', minWidth: isDesktop ? '100%' : (isEvalActive('transport') ? 910 : 800) }}>
                           <View style={styles.tableHeaderRowDark}>
                             <Text style={[styles.tableHeaderTxtDark, { width: 95 }]}>FECHA</Text>
                             <Text style={[styles.tableHeaderTxtDark, { flex: 1, minWidth: 180 }]}>ASUNTO / MISIÓN</Text>
@@ -2879,7 +3576,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableHeaderTxtDark, { width: 80, textAlign: 'center' }]}>PASAJEROS</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 140 }]}>SOLICITANTE</Text>
                             <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>ESTADO</Text>
-                            <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            {isEvalActive('transport') && (
+                              <Text style={[styles.tableHeaderTxtDark, { width: 110, textAlign: 'center' }]}>CALIFICACIÓN</Text>
+                            )}
                           </View>
 
                           {transportStats.recentList.length > 0 ? (
@@ -2900,9 +3599,11 @@ export default function AdminReports() {
                                 <View style={{ width: 110, alignItems: 'center' }}>
                                   <StatusBadge status={r.status} />
                                 </View>
-                                <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
-                                  <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
-                                </View>
+                                {isEvalActive('transport') && (
+                                  <View style={{ width: 110, alignItems: 'center', justifyContent: 'center' }}>
+                                    <RatingBadge rating={r.metadata?.evaluation?.rating} status={r.status} />
+                                  </View>
+                                )}
                               </TouchableOpacity>
                             ))
                           ) : (
@@ -3165,7 +3866,9 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>MOTIVO / ASUNTO</Text>
                           <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>DEPENDENCIA</Text>
                           <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          {isEvalActive('visitors') && (
+                            <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          )}
                         </View>
                         {dbData.filter(d => d.category === 'visitors').map((r, idx) => (
                           <TouchableOpacity 
@@ -3178,7 +3881,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableCell, { flex: 2, color: COLORS.primary, fontWeight: '700' }]}>{r.title || 'Visita oficial'}</Text>
                             <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.text }]}>{r.metadata?.responsible?.dependency || r.profiles?.dependency?.name || 'General'}</Text>
                             <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            {isEvalActive('visitors') && (
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            )}
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -3237,7 +3942,9 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>UBICACIÓN</Text>
                           <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>PRIORIDAD</Text>
                           <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          {isEvalActive('maintenance') && (
+                            <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          )}
                         </View>
                         {dbData.filter(d => d.category === 'maintenance').map((r, idx) => (
                           <TouchableOpacity 
@@ -3251,7 +3958,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>{r.metadata?.location || 'General'}</Text>
                             <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: isHighPriority(r.priority) ? COLORS.danger : COLORS.accent, fontWeight: '800' }]}>{r.priority?.toUpperCase() || 'MEDIA'}</Text>
                             <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            {isEvalActive('maintenance') && (
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            )}
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -3262,46 +3971,193 @@ export default function AdminReports() {
                   {reportTab === 'parking' && (
                     <View>
                       <Text style={styles.reportDocTitle}>
-                        REPORTE DE ASIGNACIÓN Y GESTIÓN DE CUPOS DE PARQUEADERO
+                        CONTROL INTEGRAL DE VEHÍCULOS Y CELDAS DE PARQUEADERO
                       </Text>
                       <View style={styles.docDivider} />
 
                       <View style={styles.reportDocMetaGrid}>
                         <Text style={styles.reportMetaLabel}>Periodo Evaluado: <Text style={{fontWeight:'400'}}>{reportPeriodLabel}</Text></Text>
-                        <Text style={styles.reportMetaLabel}>Total Solicitudes de Cupo: <Text style={{fontWeight:'400'}}>{parkingStats.total}</Text></Text>
-                        <Text style={styles.reportMetaLabel}>Cupos Activos Aprobados: <Text style={{fontWeight:'400'}}>{parkingStats.approved}</Text></Text>
-                        <Text style={styles.reportMetaLabel}>Solicitudes en Lista de Espera: <Text style={{fontWeight:'400'}}>{parkingStats.pending}</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Total Celdas Físicas: <Text style={{fontWeight:'400'}}>{parkingStats.totalSpots} celdas</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Celdas Disponibles: <Text style={{fontWeight:'400', color: COLORS.success}}>{parkingStats.availableSpots} celdas</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Celdas Asignadas / Ocupadas: <Text style={{fontWeight:'400', color: COLORS.accent}}>{parkingStats.assignedSpots} celdas</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Celdas Fijas: <Text style={{fontWeight:'400'}}>{parkingStats.fixedSpots} | Libres: {parkingStats.freeSpots}</Text></Text>
+                        <Text style={styles.reportMetaLabel}>Tasa de Ocupación: <Text style={{fontWeight:'400'}}>{parkingStats.occupancyRate}%</Text></Text>
                       </View>
 
-                      <Text style={styles.reportSectionTitle}>1. CONTROL DE ESTACIONAMIENTO INSTITUCIONAL</Text>
+                      {/* 1. Reporte de Ocupación de Celdas */}
+                      <Text style={styles.reportSectionTitle}>1. REPORTE DE OCUPACIÓN DE CELDAS DE PARQUEADERO</Text>
                       <Text style={styles.reportParagraph}>
-                        El parqueadero de la Secretaría Jurídica Distrital mantiene **{parkingStats.approved}** asignaciones vehiculares activas con placa autorizada. Se cuenta con **{parkingStats.pending}** solicitudes en trámite de validación conforme a disponibilidad de espacios en sótanos.
+                        Capacidad física inventariada de **{parkingStats.totalSpots}** celdas: **{parkingStats.availableSpots}** disponibles, **{parkingStats.assignedSpots}** ocupadas o asignadas, **{parkingStats.fixedSpots}** fijas y **{parkingStats.freeSpots}** de uso libre rotativo.
                       </Text>
+                      <View style={styles.reportTable}>
+                        <View style={styles.reportTableHeader}>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800' }]}>CÓDIGO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>TIPO USO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>TITULAR ASIGNADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>OBSERVACIONES / UBICACIÓN</Text>
+                        </View>
+                        {parkingSpots.length > 0 ? (
+                          parkingSpots.map((spot, idx) => (
+                            <View key={spot.id || idx} style={styles.reportTableRow}>
+                              <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '900', color: COLORS.primary }]}>{spot.code}</Text>
+                              <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '700', color: spot.spot_type === 'fija' ? '#1D4ED8' : '#6D28D9' }]}>
+                                {spot.spot_type === 'fija' ? 'Celda Fija' : 'Uso Libre'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.0, textAlign: 'center', fontWeight: '800', color: spot.status === 'disponible' ? '#059669' : (spot.status === 'ocupada' ? '#DC2626' : '#D97706') }]}>
+                                {(spot.status || 'disponible').toUpperCase()}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.8, color: COLORS.text }]}>
+                                {spot.assigned_user_name || 'Sin asignar'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.8, color: COLORS.muted }]}>
+                                {spot.notes || '—'}
+                              </Text>
+                            </View>
+                          ))
+                        ) : (
+                          <View style={{ padding: 14 }}>
+                            <Text style={styles.noDataText}>No hay celdas registradas en el sistema</Text>
+                          </View>
+                        )}
+                      </View>
 
-                      <Text style={styles.reportSectionTitle}>2. REGISTRO COMPLETO DE PLACAS Y CUPOS AUTORIZADOS</Text>
-                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier vehículo para abrir su solicitud detallada</Text>
+                      {/* 2. Apartado 1: Vehículos con Celda Fija */}
+                      <Text style={[styles.reportSectionTitle, { marginTop: 24 }]}>2. APARTADO 1: VEHÍCULOS CON CELDA FIJA</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>
+                        Vehículos vinculados a una persona titular con celda exclusiva asignada
+                      </Text>
+                      <View style={styles.reportTable}>
+                        <View style={styles.reportTableHeader}>
+                          <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>PERSONA TITULAR</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>IDENTIFICACIÓN</Text>
+                          <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800' }]}>PLACA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>VEHÍCULO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800' }]}>CELDA ASIGNADA</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800', textAlign: 'center' }]}>AUTORIZACIÓN</Text>
+                        </View>
+                        {(parkingStats.fixedCellVehicles || []).length > 0 ? (
+                          parkingStats.fixedCellVehicles.map((v, idx) => (
+                            <View key={v.id || idx} style={styles.reportTableRow}>
+                              <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.primary, fontWeight: '700' }]}>
+                                {v.name || v.owner_name || 'Servidor'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>
+                                {v.doc || 'S/N'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '900', color: COLORS.primary }]}>
+                                {v.plate}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.text }]}>
+                                {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800', color: '#1D4ED8' }]}>
+                                {v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
+                                {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.2, textAlign: 'center', color: v.is_active !== false ? '#059669' : '#64748B', fontWeight: '700' }]}>
+                                {v.is_active !== false ? 'Cupo Fijo Vigente' : 'Inactivo'}
+                              </Text>
+                            </View>
+                          ))
+                        ) : (
+                          <View style={{ padding: 14 }}>
+                            <Text style={styles.noDataText}>No se registran vehículos con celda fija asignada</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* 3. Apartado 2: Vehículos sin Celda Fija (Uso Libre) */}
+                      <Text style={[styles.reportSectionTitle, { marginTop: 24 }]}>3. APARTADO 2: VEHÍCULOS SIN CELDA FIJA (USO LIBRE)</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>
+                        Vehículos autorizados para estacionamiento que utilizan parqueadero de uso libre rotativo
+                      </Text>
+                      <View style={styles.reportTable}>
+                        <View style={styles.reportTableHeader}>
+                          <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>PERSONA TITULAR</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>IDENTIFICACIÓN</Text>
+                          <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800' }]}>PLACA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>VEHÍCULO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>MODALIDAD DE PARQUEO</Text>
+                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.2, fontWeight: '800', textAlign: 'center' }]}>AUTORIZACIÓN</Text>
+                        </View>
+                        {(parkingStats.freeUseVehicles || []).length > 0 ? (
+                          parkingStats.freeUseVehicles.map((v, idx) => (
+                            <View key={v.id || idx} style={styles.reportTableRow}>
+                              <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.primary, fontWeight: '700' }]}>
+                                {v.name || v.owner_name || 'Servidor'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>
+                                {v.doc || 'S/N'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '900', color: COLORS.primary }]}>
+                                {v.plate}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.text }]}>
+                                {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.8, color: '#7C3AED', fontWeight: '700' }]}>
+                                Parqueadero de Uso Libre / Rotativo
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
+                                {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                              </Text>
+                              <Text style={[styles.tableCell, { flex: 1.2, textAlign: 'center', color: v.is_active !== false ? '#059669' : '#64748B', fontWeight: '700' }]}>
+                                {v.is_active !== false ? 'Autorizado (Rotativo)' : 'Inactivo'}
+                              </Text>
+                            </View>
+                          ))
+                        ) : (
+                          <View style={{ padding: 14 }}>
+                            <Text style={styles.noDataText}>No se registran vehículos en modalidad de uso libre</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* 4. Solicitudes de Parqueadero del Periodo */}
+                      <Text style={[styles.reportSectionTitle, { marginTop: 24 }]}>4. SOLICITUDES DE PARQUEADERO DEL PERIODO</Text>
+                      <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>Haz clic sobre cualquier solicitud para abrir su gestión detallada</Text>
                       <View style={styles.reportTable}>
                         <View style={styles.reportTableHeader}>
                           <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>FECHA</Text>
-                          <Text style={[styles.tableCell, { flex: 1.3, fontWeight: '800' }]}>PLACA</Text>
-                          <Text style={[styles.tableCell, { flex: 2, fontWeight: '800' }]}>DESCRIPCIÓN / VEHÍCULO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>PLACA</Text>
+                          <Text style={[styles.tableCell, { flex: 1.6, fontWeight: '800' }]}>VEHÍCULO / MODELO</Text>
+                          <Text style={[styles.tableCell, { flex: 1.3, fontWeight: '800' }]}>SOLICITANTE</Text>
+                          <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>DEPENDENCIA</Text>
                           <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          {isEvalActive('parking') && (
+                            <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          )}
                         </View>
-                        {dbData.filter(d => d.category === 'parking').map((r, idx) => (
-                          <TouchableOpacity 
-                            key={r.id || idx} 
-                            style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
-                            activeOpacity={0.7}
-                            onPress={() => navigateToManage({ id: r.id })}
-                          >
-                            <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
-                            <Text style={[styles.tableCell, { flex: 1.3, color: COLORS.primary, fontWeight: '900' }]}>{r.metadata?.plate || 'Sin placa'}</Text>
-                            <Text style={[styles.tableCell, { flex: 2, color: COLORS.text }]}>{r.title || r.metadata?.vehicleType || 'Vehículo autorizado'}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
-                          </TouchableOpacity>
-                        ))}
+                        {dbData.filter(d => d.category === 'parking').map((r, idx) => {
+                          const vModel = [r.metadata?.brand, r.metadata?.model].filter(Boolean).join(' ') || r.metadata?.vehicleType || r.title || 'Vehículo particular';
+                          const reqName = r.metadata?.name || r.profiles?.full_name || r.user_name || 'Servidor';
+                          const depName = r.metadata?.dependency || r.profiles?.dependency?.name || r.profiles?.dependency || r.user_dependency || 'Secretaría Jurídica Distrital';
+                          return (
+                            <TouchableOpacity 
+                              key={r.id || idx} 
+                              style={[styles.reportTableRow, { cursor: 'pointer' } as any]}
+                              activeOpacity={0.7}
+                              onPress={() => navigateToManage({ id: r.id })}
+                            >
+                              <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.text }]}>{new Date(r.created_at).toLocaleDateString('es-CO')}</Text>
+                              <Text style={[styles.tableCell, { flex: 1.1, color: COLORS.primary, fontWeight: '900' }]}>{r.metadata?.plate || 'Sin placa'}</Text>
+                              <Text style={[styles.tableCell, { flex: 1.6, color: COLORS.text }]}>{vModel}</Text>
+                              <Text style={[styles.tableCell, { flex: 1.3, color: COLORS.text }]}>{reqName}</Text>
+                              <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.text }]}>{depName}</Text>
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
+                              {isEvalActive('parking') && (
+                                <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>
+                                  {r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}
+                                </Text>
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     </View>
                   )}
@@ -3358,7 +4214,9 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1.3, fontWeight: '800' }]}>SALA</Text>
                           <Text style={[styles.tableCell, { flex: 0.7, fontWeight: '800', textAlign: 'center' }]}>ASIST.</Text>
                           <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          {isEvalActive('rooms') && (
+                            <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          )}
                         </View>
                         {dbData.filter(d => d.category === 'rooms').map((r, idx) => (
                           <TouchableOpacity 
@@ -3372,7 +4230,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableCell, { flex: 1.3, color: COLORS.text }]}>{r.metadata?.room?.name || 'General'}</Text>
                             <Text style={[styles.tableCell, { flex: 0.7, textAlign: 'center', color: COLORS.text }]}>{r.metadata?.attendees || '-'}</Text>
                             <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            {isEvalActive('rooms') && (
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            )}
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -3427,7 +4287,9 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 1.8, fontWeight: '800' }]}>RUTA</Text>
                           <Text style={[styles.tableCell, { flex: 0.7, fontWeight: '800', textAlign: 'center' }]}>PASAJ.</Text>
                           <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                          <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          {isEvalActive('transport') && (
+                            <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
+                          )}
                         </View>
                         {dbData.filter(d => d.category === 'transport').map((r, idx) => (
                           <TouchableOpacity 
@@ -3441,7 +4303,9 @@ export default function AdminReports() {
                             <Text style={[styles.tableCell, { flex: 1.8, color: COLORS.text }]}>{r.metadata?.origin || 'Origen'} - {r.metadata?.destination || 'Destino'}</Text>
                             <Text style={[styles.tableCell, { flex: 0.7, textAlign: 'center', color: COLORS.text }]}>{r.metadata?.passengers || 1}</Text>
                             <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: COLORS.text, fontWeight: '700' }]}>{r.status?.toUpperCase()}</Text>
-                            <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            {isEvalActive('transport') && (
+                              <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', color: '#B45309', fontWeight: '800' }]}>{r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</Text>
+                            )}
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -3510,7 +4374,7 @@ export default function AdminReports() {
                           { key: 'parking', name: 'Acceso Parqueadero', srv: 'Parqueadero' },
                           { key: 'rooms', name: 'Reserva de Salas de Juntas', srv: 'Salas' },
                           { key: 'transport', name: 'Transporte Oficial', srv: 'Transporte' },
-                        ].map((mod) => {
+                        ].filter(mod => isEvalActive(mod.key)).map((mod) => {
                           const modEval = stats.moduleEvaluations[mod.key as keyof typeof stats.moduleEvaluations];
                           const avg = modEval?.avg || 0;
                           const count = modEval?.count || 0;
@@ -3544,7 +4408,7 @@ export default function AdminReports() {
                           <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>CALIF.</Text>
                           <Text style={[styles.tableCell, { flex: 3, fontWeight: '800' }]}>COMENTARIO / OBSERVACIÓN</Text>
                         </View>
-                        {dbData.filter(d => d.metadata?.evaluation?.comment).map((r, idx) => {
+                        {dbData.filter(d => isEvalActive(d.category) && d.metadata?.evaluation?.comment).map((r, idx) => {
                           const meta = getModuleMeta(r.category);
                           return (
                             <TouchableOpacity 

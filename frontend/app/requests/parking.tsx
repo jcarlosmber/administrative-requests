@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,6 +52,50 @@ export default function ParkingRequestScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const [myVehicles, setMyVehicles] = useState<any[]>([]);
 
+  // Estados de Control de Vehículos
+  const [registeredVehicles, setRegisteredVehicles] = useState<any[]>([]);
+  const [maxLimit, setMaxLimit] = useState<number>(3);
+  const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
+  const [vehicleModalVisible, setVehicleModalVisible] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
+  const [vPlate, setVPlate] = useState('');
+  const [vBrand, setVBrand] = useState('');
+  const [vModel, setVModel] = useState('');
+  const [vColor, setVColor] = useState('');
+  const [vError, setVError] = useState('');
+  const [vSaving, setVSaving] = useState(false);
+
+  // Modal de Confirmación para Vehículos (Inactivar, Activar, Eliminar)
+  const [vehicleActionModal, setVehicleActionModal] = useState<{
+    visible: boolean;
+    type: 'inactivate' | 'activate' | 'delete';
+    vehicle: any | null;
+  }>({ visible: false, type: 'inactivate', vehicle: null });
+
+  // Modal Informativo / Alerta personalizada (reemplazo de alert)
+  const [infoModal, setInfoModal] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    isError?: boolean;
+  }>({ visible: false, title: '', message: false as any });
+
+  const loadUserVehiclesAndLimit = async () => {
+    try {
+      setLoadingVehicles(true);
+      const [vehiclesData, limitVal] = await Promise.all([
+        vehicleService.getAll(),
+        vehicleService.getMaxLimit()
+      ]);
+      setRegisteredVehicles(vehiclesData || []);
+      setMaxLimit(limitVal || 3);
+    } catch (err) {
+      console.warn('Error al cargar vehículos del usuario:', err);
+    } finally {
+      setLoadingVehicles(false);
+    }
+  };
+
   // Efecto para auto-completar nombre y dependencia desde LDAP, y cargar vehículos
   useEffect(() => {
     const fetchUserLdapDataAndVehicles = async () => {
@@ -73,7 +117,163 @@ export default function ParkingRequestScreen() {
       }
     };
     fetchUserLdapDataAndVehicles();
+    loadUserVehiclesAndLimit();
   }, []);
+
+  const activeVehiclesCount = useMemo(() => {
+    return registeredVehicles.filter(v => v.is_active !== false).length;
+  }, [registeredVehicles]);
+
+  const openCreateVehicleModal = () => {
+    if (activeVehiclesCount >= maxLimit) {
+      setInfoModal({
+        visible: true,
+        title: 'Límite de Vehículos Alcanzado',
+        message: `Has alcanzado el límite máximo permitido de ${maxLimit} vehículos activos registrados. Si deseas agregar uno nuevo, por favor inactiva o elimina un vehículo que ya no utilices.`,
+        isError: true
+      });
+      return;
+    }
+    setEditingVehicle(null);
+    setVPlate('');
+    setVBrand('');
+    setVModel('');
+    setVColor('');
+    setVError('');
+    setVehicleModalVisible(true);
+  };
+
+  const openEditVehicleModal = (v: any) => {
+    setEditingVehicle(v);
+    setVPlate(v.plate || '');
+    setVBrand(v.brand || '');
+    setVModel(v.model || '');
+    setVColor(v.color || '');
+    setVError('');
+    setVehicleModalVisible(true);
+  };
+
+  const handleSaveVehicle = async () => {
+    try {
+      setVError('');
+      const cleanPlate = vPlate.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanBrand = vBrand.trim();
+
+      if (!cleanPlate || !cleanBrand) {
+        setVError('La placa y la marca son obligatorias.');
+        return;
+      }
+
+      if (cleanPlate.length < 5 || cleanPlate.length > 7) {
+        setVError('La placa debe tener entre 5 y 7 caracteres alfanuméricos.');
+        return;
+      }
+
+      setVSaving(true);
+      if (editingVehicle) {
+        await vehicleService.update(editingVehicle.id, {
+          plate: cleanPlate,
+          brand: cleanBrand,
+          model: vModel.trim() || undefined,
+          color: vColor.trim() || undefined
+        });
+        setInfoModal({
+          visible: true,
+          title: 'Vehículo Actualizado',
+          message: `El vehículo con placa ${cleanPlate} ha sido actualizado correctamente.`
+        });
+      } else {
+        await vehicleService.create({
+          plate: cleanPlate,
+          brand: cleanBrand,
+          model: vModel.trim() || undefined,
+          color: vColor.trim() || undefined,
+          name: name.trim() || undefined,
+          doc: doc.trim() || undefined,
+          dependency: dependency.trim() || undefined
+        });
+        setInfoModal({
+          visible: true,
+          title: 'Vehículo Registrado',
+          message: `El vehículo con placa ${cleanPlate} se ha registrado exitosamente en tu perfil.`
+        });
+      }
+
+      setVehicleModalVisible(false);
+      await loadUserVehiclesAndLimit();
+    } catch (err: any) {
+      console.error('Error al guardar vehículo:', err);
+      setVError(err.message || 'No se pudo guardar el vehículo. Intente nuevamente.');
+    } finally {
+      setVSaving(false);
+    }
+  };
+
+  const handleConfirmVehicleAction = async () => {
+    const { type, vehicle } = vehicleActionModal;
+    if (!vehicle) return;
+
+    try {
+      setLoading(true);
+      if (type === 'delete') {
+        await vehicleService.delete(vehicle.id);
+        setInfoModal({
+          visible: true,
+          title: 'Vehículo Eliminado',
+          message: `El vehículo con placa ${vehicle.plate} ha sido eliminado permanentemente.`
+        });
+      } else if (type === 'inactivate') {
+        await vehicleService.toggleActive(vehicle.id, false);
+        setInfoModal({
+          visible: true,
+          title: 'Vehículo Inactivado',
+          message: `El vehículo con placa ${vehicle.plate} ha sido inactivado. Ya no ocupará cupo en tu límite activo.`
+        });
+      } else if (type === 'activate') {
+        if (activeVehiclesCount >= maxLimit) {
+          setInfoModal({
+            visible: true,
+            title: 'Límite Superado',
+            message: `No es posible reactivar este vehículo porque ya cuentas con el máximo de ${maxLimit} vehículos activos.`,
+            isError: true
+          });
+          setVehicleActionModal({ visible: false, type: 'inactivate', vehicle: null });
+          setLoading(false);
+          return;
+        }
+        await vehicleService.toggleActive(vehicle.id, true);
+        setInfoModal({
+          visible: true,
+          title: 'Vehículo Reactivado',
+          message: `El vehículo con placa ${vehicle.plate} ha sido reactivado exitosamente.`
+        });
+      }
+
+      setVehicleActionModal({ visible: false, type: 'inactivate', vehicle: null });
+      await loadUserVehiclesAndLimit();
+    } catch (err: any) {
+      console.error('Error en acción de vehículo:', err);
+      setInfoModal({
+        visible: true,
+        title: 'Error',
+        message: err.message || 'No se pudo completar la acción sobre el vehículo.',
+        isError: true
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyVehicleToForm = (v: any) => {
+    setPlate(v.plate || '');
+    setBrand(v.brand || '');
+    setColor(v.color || '');
+    setInfoModal({
+      visible: true,
+      title: 'Datos Cargados',
+      message: `Se completaron los datos del formulario con el vehículo placa ${v.plate}. Ahora puedes enviar la solicitud de cupo.`
+    });
+  };
 
   const progress = useMemo(() => {
     let p = 10;
@@ -90,7 +290,7 @@ export default function ParkingRequestScreen() {
       const trimmedDoc = doc.trim();
       const trimmedCharge = charge.trim();
       const trimmedDependency = dependency.trim();
-      const trimmedPlate = plate.trim();
+      const trimmedPlate = plate.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       const trimmedBrand = brand.trim();
 
       if (!trimmedName || !trimmedDoc || !trimmedCharge || !trimmedDependency || !trimmedPlate || !trimmedBrand) {
@@ -117,6 +317,24 @@ export default function ParkingRequestScreen() {
           color: color.trim()
         }
       });
+
+      // Si el vehículo aún no está en la lista de vehículos, registrarlo o asegurar su existencia
+      const alreadyHasVehicle = registeredVehicles.some(
+        v => v.plate.toUpperCase() === trimmedPlate
+      );
+      if (!alreadyHasVehicle && activeVehiclesCount < maxLimit) {
+        try {
+          await vehicleService.create({
+            plate: trimmedPlate,
+            brand: trimmedBrand,
+            color: color.trim() || undefined,
+            name: trimmedName,
+            doc: trimmedDoc,
+            dependency: trimmedDependency
+          });
+          await loadUserVehiclesAndLimit();
+        } catch (_) {}
+      }
 
       setLoading(false);
       setIsSuccessModalVisible(true);
@@ -156,6 +374,279 @@ export default function ParkingRequestScreen() {
               <Hero progress={progress} />
 
               <View style={{ gap: 18 }}>
+                {/* 1. SECCIÓN DE GESTIÓN INTEGRAL DE VEHÍCULOS DEL USUARIO */}
+                <Card 
+                  title="Mis Vehículos Registrados" 
+                  icon="car-sport"
+                  right={
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: COLORS.primary,
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 10,
+                      }}
+                      onPress={openCreateVehicleModal}
+                    >
+                      <Ionicons name="add-circle" size={16} color={COLORS.white} />
+                      <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 12 }}>
+                        + Agregar Vehículo
+                      </Text>
+                    </TouchableOpacity>
+                  }
+                >
+                  {/* Contador de cupo permitido */}
+                  <View style={{ 
+                    backgroundColor: '#F8FAFC', 
+                    borderRadius: 14, 
+                    padding: 12, 
+                    marginBottom: 14,
+                    borderWidth: 1,
+                    borderColor: COLORS.line 
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="speedometer-outline" size={16} color={COLORS.muted} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.muted }}>
+                          Capacidad Permitida por Servidor:
+                        </Text>
+                      </View>
+                      <View style={{
+                        backgroundColor: activeVehiclesCount >= maxLimit ? '#FEE2E2' : '#EFF6FF',
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 8,
+                      }}>
+                        <Text style={{ 
+                          fontSize: 12, 
+                          fontWeight: '900', 
+                          color: activeVehiclesCount >= maxLimit ? '#DC2626' : '#2563EB' 
+                        }}>
+                          {activeVehiclesCount} / {maxLimit} Activos
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {/* Barra de progreso de cupo */}
+                    <View style={{ height: 6, backgroundColor: '#E2E8F0', borderRadius: 6, overflow: 'hidden' }}>
+                      <View style={{ 
+                        height: '100%', 
+                        width: `${Math.min(100, (activeVehiclesCount / Math.max(1, maxLimit)) * 100)}%`,
+                        backgroundColor: activeVehiclesCount >= maxLimit ? '#EF4444' : COLORS.primary
+                      }} />
+                    </View>
+                  </View>
+
+                  {/* Listado de Vehículos */}
+                  {registeredVehicles.length === 0 ? (
+                    <View style={{ padding: 20, alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <Ionicons name="car-outline" size={38} color="#94A3B8" style={{ marginBottom: 6 }} />
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.text, textAlign: 'center' }}>
+                        No tienes vehículos registrados
+                      </Text>
+                      <Text style={{ fontSize: 12, color: COLORS.muted, textAlign: 'center', marginTop: 4, maxWidth: 300 }}>
+                        Haz clic en "+ Agregar Vehículo" para inscribir los vehículos que utilizas habitualmente para ingresar a la sede.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={{ gap: 10 }}>
+                      {registeredVehicles.map((v) => {
+                        const isVehicleActive = v.is_active !== false;
+                        const hasFixedSpot = !!v.spot_code;
+                        
+                        return (
+                          <View 
+                            key={v.id} 
+                            style={{ 
+                              padding: 14, 
+                              backgroundColor: isVehicleActive ? '#FFFFFF' : '#F8FAFC', 
+                              borderRadius: 16, 
+                              borderWidth: 1, 
+                              borderColor: isVehicleActive ? COLORS.line : '#CBD5E1',
+                              opacity: isVehicleActive ? 1 : 0.75
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                              {/* Placa y descripción */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 220 }}>
+                                {/* Badge Placa Colombiana */}
+                                <View style={{
+                                  backgroundColor: '#FDE047',
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 5,
+                                  borderRadius: 8,
+                                  borderWidth: 1.5,
+                                  borderColor: '#000000',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  minWidth: 85,
+                                  shadowColor: '#000',
+                                  shadowOpacity: 0.08,
+                                  shadowRadius: 2,
+                                  elevation: 1
+                                }}>
+                                  <Text style={{
+                                    fontSize: 14,
+                                    fontWeight: '900',
+                                    color: '#000000',
+                                    letterSpacing: 1.2,
+                                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace'
+                                  }}>
+                                    {v.plate}
+                                  </Text>
+                                  <Text style={{ fontSize: 8, fontWeight: '800', color: '#334155', textTransform: 'uppercase', marginTop: -2 }}>
+                                    BOGOTÁ D.C.
+                                  </Text>
+                                </View>
+
+                                {/* Datos de Marca y Modelo */}
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.text }}>
+                                    {v.brand} {v.model ? `• ${v.model}` : ''}
+                                  </Text>
+                                  <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                                    Color: {v.color || 'No especificado'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Badges de Estado y Celda */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                {/* Badge Estado */}
+                                <View style={{
+                                  backgroundColor: isVehicleActive ? '#ECFDF5' : '#F1F5F9',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: isVehicleActive ? '#A7F3D0' : '#CBD5E1'
+                                }}>
+                                  <Text style={{
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                    color: isVehicleActive ? '#065F46' : '#64748B',
+                                    textTransform: 'uppercase'
+                                  }}>
+                                    {isVehicleActive ? '● Activo' : '○ Inactivo'}
+                                  </Text>
+                                </View>
+
+                                {/* Badge Celda */}
+                                <View style={{
+                                  backgroundColor: hasFixedSpot ? '#EFF6FF' : '#F5F3FF',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: hasFixedSpot ? '#BFDBFE' : '#DDD6FE'
+                                }}>
+                                  <Text style={{
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                    color: hasFixedSpot ? '#1D4ED8' : '#6D28D9'
+                                  }}>
+                                    {hasFixedSpot ? `Celda Fija: ${v.spot_code}` : 'Uso Libre'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            {/* Botones de acción del vehículo */}
+                            <View style={{ 
+                              flexDirection: 'row', 
+                              justifyContent: 'flex-end', 
+                              alignItems: 'center', 
+                              gap: 8, 
+                              marginTop: 12, 
+                              paddingTop: 10, 
+                              borderTopWidth: 1, 
+                              borderTopColor: '#F1F5F9' 
+                            }}>
+                              <TouchableOpacity
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  backgroundColor: '#FFF7ED',
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 6,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: '#FED7AA'
+                                }}
+                                onPress={() => applyVehicleToForm(v)}
+                              >
+                                <Ionicons name="flash-outline" size={14} color={COLORS.primaryDark} />
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primaryDark }}>
+                                  Usar en Solicitud
+                                </Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{
+                                  padding: 7,
+                                  borderRadius: 8,
+                                  backgroundColor: '#F8FAFC',
+                                  borderWidth: 1,
+                                  borderColor: COLORS.line
+                                }}
+                                onPress={() => openEditVehicleModal(v)}
+                                accessibilityLabel="Editar"
+                              >
+                                <Ionicons name="pencil-outline" size={16} color="#334155" />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{
+                                  padding: 7,
+                                  borderRadius: 8,
+                                  backgroundColor: isVehicleActive ? '#FEF3C7' : '#DCFCE7',
+                                  borderWidth: 1,
+                                  borderColor: isVehicleActive ? '#FDE68A' : '#BBF7D0'
+                                }}
+                                onPress={() => setVehicleActionModal({
+                                  visible: true,
+                                  type: isVehicleActive ? 'inactivate' : 'activate',
+                                  vehicle: v
+                                })}
+                                accessibilityLabel={isVehicleActive ? 'Inactivar vehículo' : 'Reactivar vehículo'}
+                              >
+                                <Ionicons 
+                                  name={isVehicleActive ? 'eye-off-outline' : 'checkmark-circle-outline'} 
+                                  size={16} 
+                                  color={isVehicleActive ? '#B45309' : '#15803D'} 
+                                />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={{
+                                  padding: 7,
+                                  borderRadius: 8,
+                                  backgroundColor: '#FEF2F2',
+                                  borderWidth: 1,
+                                  borderColor: '#FECACA'
+                                }}
+                                onPress={() => setVehicleActionModal({
+                                  visible: true,
+                                  type: 'delete',
+                                  vehicle: v
+                                })}
+                                accessibilityLabel="Eliminar vehículo"
+                              >
+                                <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </Card>
+
+                {/* 2. SOLICITUDES DE PARQUEADERO EN TRÁMITE */}
                 {myVehicles.length > 0 && (
                   <Card title="Tus Solicitudes de Parqueadero" icon="car">
                     {myVehicles.map((v, index) => (
@@ -360,6 +851,256 @@ export default function ParkingRequestScreen() {
         onSelect={setDependency} 
         selectedValue={dependency}
       />
+
+      {/* MODAL PARA AGREGAR / EDITAR VEHÍCULO */}
+      <Modal
+        visible={vehicleModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVehicleModalVisible(false)}
+      >
+        <View style={styles.modalBlur}>
+          <BlurView intensity={25} style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalPanel, { maxWidth: 480, padding: 24 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="car-sport" size={20} color={COLORS.primary} />
+                </View>
+                <Text style={[styles.modalTitle, { fontSize: 18 }]}>
+                  {editingVehicle ? 'Editar Vehículo' : 'Registrar Nuevo Vehículo'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setVehicleModalVisible(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+              <View style={{ gap: 14 }}>
+                <View>
+                  <Text style={styles.label}>Placa del Vehículo *</Text>
+                  <View style={styles.inputWrap}>
+                    <Ionicons name="barcode-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                    <TextInput
+                      style={styles.input}
+                      value={vPlate}
+                      onChangeText={(t) => setVPlate(t.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                      placeholder="ABC123"
+                      placeholderTextColor="#94A3B8"
+                      maxLength={7}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                </View>
+
+                <View>
+                  <Text style={styles.label}>Marca *</Text>
+                  <View style={styles.inputWrap}>
+                    <Ionicons name="construct-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
+                    <TextInput
+                      style={styles.input}
+                      value={vBrand}
+                      onChangeText={setVBrand}
+                      placeholder="Ej. Chevrolet, Renault, Toyota"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Línea / Modelo</Text>
+                    <View style={styles.inputWrap}>
+                      <TextInput
+                        style={styles.input}
+                        value={vModel}
+                        onChangeText={setVModel}
+                        placeholder="Ej. Duster, Onix"
+                        placeholderTextColor="#94A3B8"
+                      />
+                    </View>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Color</Text>
+                    <View style={styles.inputWrap}>
+                      <TextInput
+                        style={styles.input}
+                        value={vColor}
+                        onChangeText={setVColor}
+                        placeholder="Ej. Gris, Rojo"
+                        placeholderTextColor="#94A3B8"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {vError ? (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#B91C1C" />
+                    <Text style={styles.errorText}>{vError}</Text>
+                  </View>
+                ) : null}
+              </View>
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#F1F5F9'
+                }}
+                onPress={() => setVehicleModalVisible(false)}
+                disabled={vSaving}
+              >
+                <Text style={{ fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 48,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: COLORS.primary
+                }}
+                onPress={handleSaveVehicle}
+                disabled={vSaving}
+              >
+                <Text style={{ fontWeight: '800', color: COLORS.white }}>
+                  {vSaving ? 'Guardando...' : (editingVehicle ? 'Actualizar' : 'Guardar')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE CONFIRMACIÓN DE ACCIÓN SOBRE VEHÍCULO */}
+      <Modal
+        visible={vehicleActionModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVehicleActionModal({ visible: false, type: 'inactivate', vehicle: null })}
+      >
+        <View style={styles.modalBlur}>
+          <BlurView intensity={25} style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalPanel, { maxWidth: 440, padding: 24 }]}>
+            <View style={{ alignItems: 'center', marginBottom: 14 }}>
+              <View style={{
+                width: 52,
+                height: 52,
+                borderRadius: 26,
+                backgroundColor: vehicleActionModal.type === 'delete' ? '#FEE2E2' : '#FEF3C7',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 12
+              }}>
+                <Ionicons
+                  name={vehicleActionModal.type === 'delete' ? 'trash' : (vehicleActionModal.type === 'inactivate' ? 'eye-off' : 'checkmark-circle')}
+                  size={26}
+                  color={vehicleActionModal.type === 'delete' ? '#DC2626' : (vehicleActionModal.type === 'inactivate' ? '#D97706' : '#16A34A')}
+                />
+              </View>
+              <Text style={[styles.modalTitle, { fontSize: 18, textAlign: 'center' }]}>
+                {vehicleActionModal.type === 'delete' ? '¿Eliminar Vehículo?' : (vehicleActionModal.type === 'inactivate' ? '¿Inactivar Vehículo?' : '¿Reactivar Vehículo?')}
+              </Text>
+              <Text style={{ fontSize: 14, color: COLORS.muted, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+                {vehicleActionModal.type === 'delete' 
+                  ? `Esta acción eliminará permanentemente el vehículo con placa ${vehicleActionModal.vehicle?.plate}.`
+                  : vehicleActionModal.type === 'inactivate'
+                  ? `El vehículo con placa ${vehicleActionModal.vehicle?.plate} quedará inactivo y liberará un cupo en tu cuenta.`
+                  : `El vehículo con placa ${vehicleActionModal.vehicle?.plate} volverá a estar activo para el uso del parqueadero.`}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 46,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#F1F5F9'
+                }}
+                onPress={() => setVehicleActionModal({ visible: false, type: 'inactivate', vehicle: null })}
+              >
+                <Text style={{ fontWeight: '700', color: '#64748B' }}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  height: 46,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: vehicleActionModal.type === 'delete' ? '#DC2626' : COLORS.primary
+                }}
+                onPress={handleConfirmVehicleAction}
+              >
+                <Text style={{ fontWeight: '800', color: COLORS.white }}>
+                  {vehicleActionModal.type === 'delete' ? 'Eliminar' : (vehicleActionModal.type === 'inactivate' ? 'Inactivar' : 'Reactivar')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL INFORMATIVO PERSONALIZADO (REEMPLAZO DE ALERTS) */}
+      <Modal
+        visible={infoModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInfoModal({ visible: false, title: '', message: '' })}
+      >
+        <View style={styles.modalBlur}>
+          <BlurView intensity={25} style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalPanel, { maxWidth: 420, padding: 24, alignItems: 'center' }]}>
+            <View style={{
+              width: 50,
+              height: 50,
+              borderRadius: 25,
+              backgroundColor: infoModal.isError ? '#FEE2E2' : '#ECFDF5',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 12
+            }}>
+              <Ionicons
+                name={infoModal.isError ? 'alert-circle' : 'checkmark-circle'}
+                size={28}
+                color={infoModal.isError ? '#DC2626' : '#10B981'}
+              />
+            </View>
+            <Text style={[styles.modalTitle, { fontSize: 18, textAlign: 'center', marginBottom: 8 }]}>
+              {infoModal.title}
+            </Text>
+            <Text style={{ fontSize: 13, color: COLORS.muted, textAlign: 'center', lineHeight: 19, marginBottom: 18 }}>
+              {infoModal.message}
+            </Text>
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                height: 46,
+                borderRadius: 12,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: COLORS.primary
+              }}
+              onPress={() => setInfoModal({ visible: false, title: '', message: '' })}
+            >
+              <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 14 }}>Entendido</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

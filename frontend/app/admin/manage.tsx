@@ -25,6 +25,7 @@ import { requestService, AdministrativeRequest } from '../../lib/requestService'
 import { supabase } from '../../lib/supabase';
 import * as DocumentPicker from 'expo-document-picker';
 import { settingsService, ServiceEmail, Driver } from '../../lib/settingsService';
+import { vehicleService } from '../../lib/vehicleService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -178,6 +179,38 @@ export default function ManageRequests() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+
+  // Estado para visualización de vehículos y límite al aprobar solicitudes de parqueadero
+  const [parkingApprovalData, setParkingApprovalData] = useState<{
+    loading: boolean;
+    vehicles: any[];
+    count: number;
+    activeCount: number;
+    maxLimit: number;
+  }>({ loading: false, vehicles: [], count: 0, activeCount: 0, maxLimit: 3 });
+
+  useEffect(() => {
+    if (confirmModal?.visible && confirmModal.category === 'parking' && confirmModal.item) {
+      const identifier = confirmModal.item.user_id || confirmModal.item.metadata?.doc || confirmModal.item.metadata?.name;
+      if (identifier) {
+        setParkingApprovalData(prev => ({ ...prev, loading: true }));
+        vehicleService.getByUser(identifier)
+          .then(res => {
+            setParkingApprovalData({
+              loading: false,
+              vehicles: res.vehicles || [],
+              count: res.count || 0,
+              activeCount: res.activeCount || 0,
+              maxLimit: res.maxLimit || 3
+            });
+          })
+          .catch(err => {
+            console.warn('Error al cargar vehículos para aprobación:', err);
+            setParkingApprovalData(prev => ({ ...prev, loading: false }));
+          });
+      }
+    }
+  }, [confirmModal?.visible, confirmModal?.item]);
 
   // Cálculo responsivo adaptado para cards 30% más anchas
   const numCardCols = useMemo(() => {
@@ -1760,6 +1793,108 @@ export default function ManageRequests() {
                         #{confirmModal.reqId.slice(0, 6).toUpperCase()}
                       </Text>
                     </View>
+                  </View>
+                )}
+
+                {/* Control Integral de Vehículos del Solicitante (Categoría Parqueadero) */}
+                {confirmModal.category === 'parking' && (
+                  <View style={{
+                    width: '100%',
+                    backgroundColor: '#FFF7ED',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1.5,
+                    borderColor: '#FED7AA',
+                    marginBottom: 12
+                  }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: '#FFEDD5', justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="car-sport" size={14} color="#EA580C" />
+                        </View>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#9A3412', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          Vehículos Registrados del Solicitante
+                        </Text>
+                      </View>
+                      <View style={{
+                        backgroundColor: '#FFEDD5',
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#FDBA74'
+                      }}>
+                        <Text style={{ fontSize: 11, fontWeight: '900', color: '#C2410C' }}>
+                          {parkingApprovalData.activeCount} / {parkingApprovalData.maxLimit} Activos
+                        </Text>
+                      </View>
+                    </View>
+
+                    {parkingApprovalData.loading ? (
+                      <ActivityIndicator size="small" color="#EA580C" style={{ marginVertical: 8 }} />
+                    ) : parkingApprovalData.vehicles.length === 0 ? (
+                      <Text style={{ fontSize: 12, color: '#9A3412', fontStyle: 'italic', marginVertical: 4 }}>
+                        El solicitante no tiene otros vehículos registrados previamente en el sistema.
+                      </Text>
+                    ) : (
+                      <View style={{ gap: 6, marginTop: 4 }}>
+                        {parkingApprovalData.vehicles.map((vh, i) => (
+                          <View key={vh.id || i} style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            backgroundColor: '#FFFFFF',
+                            paddingHorizontal: 10,
+                            paddingVertical: 7,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: '#FED7AA'
+                          }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                              <View style={{
+                                backgroundColor: '#FEF08A',
+                                borderWidth: 1,
+                                borderColor: '#000000',
+                                borderRadius: 5,
+                                paddingHorizontal: 6,
+                                paddingVertical: 2
+                              }}>
+                                <Text style={{ fontSize: 11, fontWeight: '900', color: '#000000', letterSpacing: 0.5 }}>
+                                  {vh.plate}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B', flex: 1 }} numberOfLines={1}>
+                                {vh.brand} {vh.model ? `• ${vh.model}` : ''}
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                              <View style={{
+                                backgroundColor: vh.spot_code ? '#DBEAFE' : '#F3E8FF',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 6
+                              }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: vh.spot_code ? '#1E40AF' : '#6B21A8' }}>
+                                  {vh.spot_code ? `Celda ${vh.spot_code}` : 'Uso Libre'}
+                                </Text>
+                              </View>
+
+                              <View style={{
+                                backgroundColor: vh.is_active !== false ? '#DCFCE7' : '#F1F5F9',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 6
+                              }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: vh.is_active !== false ? '#15803D' : '#64748B' }}>
+                                  {vh.is_active !== false ? 'Activo' : 'Inactivo'}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 )}
 

@@ -595,7 +595,7 @@ function getVisitorsEmailContent(request, isUserRecipient, isUpdate, status, use
 /**
  * 2. RESERVA DE SALAS (rooms)
  */
-function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) {
+function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user, adminEmails = []) {
   let meta = request.metadata || {};
   if (typeof meta === 'string') {
     try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
@@ -609,6 +609,20 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
   const phone = meta.contact_phone || user?.phone || 'No registrado';
   const attendees = meta.participants_count || meta.attendees || '4';
   const activity = meta.activity_name || request.title?.replace(/^Reserva:\s*/i, '') || 'Reunión de trabajo';
+
+  const requesterEmail = user?.email || request.user_email || meta.requester_email || meta.email || (meta.user && meta.user.email) || 'No registrado';
+  const requesterName = user?.name || user?.full_name || request.user_name || organizer;
+
+  let adminEmailsList = [];
+  if (Array.isArray(adminEmails)) {
+    adminEmailsList = adminEmails.filter(Boolean);
+  } else if (adminEmails) {
+    adminEmailsList = String(adminEmails).split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (adminEmailsList.length === 0 && meta.adminEmails && Array.isArray(meta.adminEmails)) {
+    adminEmailsList = meta.adminEmails.filter(Boolean);
+  }
+  const adminEmailsText = adminEmailsList.length > 0 ? adminEmailsList.join(', ') : 'Equipo de Gestión administrativa de SJD';
 
   // Servicios
   const srvList = [];
@@ -638,7 +652,7 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
         ? `Reserva Aprobada – ${roomName} (${date})`
         : `Solicitud de reserva de espacio – ${roomName} (${date})`;
       introParagraph = isApproved
-        ? 'Nos permitimos informar a la Secretaría General de la Alcaldía Mayor de Bogotá que la siguiente reserva de espacio ha sido APROBADA en SASGE:'
+        ? 'Nos permitimos informar que la reserva de espacio fue APROBADA:'
         : 'Desde la Secretaría Jurídica Distrital, nos permitimos remitir la solicitud de reserva para el siguiente espacio de la Secretaría General:';
     } else if (isApproved) {
       subject = `Alerta de Servicio: Reserva Aprobada – ${roomName} (${date})`;
@@ -659,6 +673,8 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
     const cardItems = isSecGeneral ? [
       { label: 'Nombre de la entidad y dependencia solicitante', value: meta.entity_name ? `${meta.entity_name} – ${meta.dependency || dependency}` : dependency },
       { label: 'Nombre y cargo del responsable del evento', value: `${organizer}${meta.responsible_role ? ' – ' + meta.responsible_role : ''}` },
+      { label: 'Correo del solicitante', value: requesterEmail },
+      { label: 'Equipo de Gestión administrativa de SJD', value: adminEmailsText },
       { label: 'Número telefónico de contacto', value: phone },
       { label: 'Nombre de la actividad o evento', value: activity },
       { label: 'Descripción del evento', value: meta.activity_description || request.description || 'Sin descripción adicional' },
@@ -678,6 +694,8 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
       { label: 'Horario', value: time },
       { label: 'Actividad / Evento', value: activity },
       { label: 'Funcionario Organizador', value: organizer },
+      { label: 'Correo del Solicitante', value: requesterEmail },
+      { label: 'Equipo de Gestión administrativa de SJD', value: adminEmailsText },
       { label: 'Dependencia', value: dependency },
       ...(phone && phone !== 'No registrado' ? [{ label: 'Teléfono / Contacto', value: phone }] : []),
       { label: 'Asistentes Previstos', value: `${attendees} persona(s)` },
@@ -685,19 +703,24 @@ function getRoomsEmailContent(request, isUserRecipient, isUpdate, status, user) 
     ];
 
     const closingParagraphs = isSecGeneral && isApproved ? [
-      'Se solicita formalizar la reserva en la agenda del Auditorio Huitaca y coordinar el inventario para la entrega del espacio.',
-      'La entidad solicitante entregará el listado de asistentes y del personal de apoyo logístico y brigadistas con antelación conforme a los lineamientos establecidos.',
       'Quedamos atentos a cualquier inquietud adicional.'
     ] : [
-      'Agradecemos verificar la agenda del espacio y formalizar la aprobación y alistamiento correspondiente.',
       'Quedamos atentos a cualquier inquietud o coordinación logística.'
     ];
+
+    const emailsControlHtml = `
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #CBD5E1; font-size: 13.5px; line-height: 1.6;">
+        <p style="margin: 4px 0;"><strong style="color: #0F172A;">Correo del solicitante (usuario logueado):</strong> <span style="color: #2563EB;">${requesterEmail}</span></p>
+        <p style="margin: 4px 0;"><strong style="color: #0F172A;">Equipo de Gestión administrativa de SJD:</strong> <span style="color: #059669;">${adminEmailsText}</span></p>
+      </div>
+    `;
 
     const html = renderServiceEmailLayout({
       serviceCategory: 'rooms',
       headerSubTitle,
       introParagraph,
       cardItems,
+      extraSectionsHtml: emailsControlHtml,
       closingParagraphs,
       actionButton: isSecGeneral ? null : {
         text: 'Gestionar Reserva en SASGE',
@@ -1139,13 +1162,13 @@ function getGenericEmailContent(request, isUserRecipient, isUpdate, status, user
 /**
  * Enrutador principal que despacha al generador correspondiente
  */
-function getServiceEmailData({ request, user, isUserRecipient, isUpdate, triggerStatus }) {
+function getServiceEmailData({ request, user, isUserRecipient, isUpdate, triggerStatus, adminEmails = [] }) {
   const category = request.category?.toLowerCase();
   switch (category) {
     case 'visitors':
       return getVisitorsEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
     case 'rooms':
-      return getRoomsEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
+      return getRoomsEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user, adminEmails);
     case 'transport':
       return getTransportEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
     case 'maintenance':
@@ -1255,7 +1278,7 @@ async function sendAdminServiceNotification(adminEmail, request, triggerStatus, 
     return;
   }
   const toRecipients = toList.length === 1 ? toList[0] : toList;
-  const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: true, triggerStatus });
+  const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: true, triggerStatus, adminEmails: toList });
 
   logEmailDispatch('Notificación de Trámite/Aprobación a Encargados (sendAdminServiceNotification)', toRecipients, emailData.subject, request.category, `Solicitud #${request.id} - Estado: ${triggerStatus || request.status}`);
 
@@ -1283,7 +1306,7 @@ async function sendAdminNewRequestNotification(adminEmails, request, user) {
     return;
   }
   const toRecipients = toList.length === 1 ? toList[0] : toList;
-  const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: false });
+  const emailData = getServiceEmailData({ request, user, isUserRecipient: false, isUpdate: false, adminEmails: toList });
 
   logEmailDispatch('Alerta de Nueva Solicitud a Encargados/Gestores (sendAdminNewRequestNotification)', toRecipients, emailData.subject, request.category, `Solicitud #${request.id} radicada por ${user?.name || 'Funcionario'}`);
 

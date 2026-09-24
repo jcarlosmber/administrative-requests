@@ -161,6 +161,87 @@ const initDatabase = async () => {
       `);
     }
 
+    // 3. Tablas y migraciones para Control de Parqueadero y Vehículos
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.parking_spots (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          code TEXT NOT NULL UNIQUE,
+          spot_type TEXT NOT NULL DEFAULT 'libre',
+          status TEXT NOT NULL DEFAULT 'disponible',
+          assigned_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+          assigned_user_name TEXT,
+          notes TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.user_vehicles (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+          plate TEXT NOT NULL,
+          brand TEXT NOT NULL,
+          model TEXT,
+          color TEXT,
+          name TEXT,
+          doc TEXT,
+          dependency TEXT,
+          is_active BOOLEAN DEFAULT true,
+          assigned_spot_id UUID REFERENCES public.parking_spots(id) ON DELETE SET NULL,
+          notes TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS public.vehicle_history (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          vehicle_id UUID,
+          plate TEXT NOT NULL,
+          action TEXT NOT NULL,
+          performed_by_id UUID,
+          performed_by_name TEXT,
+          details JSONB DEFAULT '{}'::jsonb,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Columnas adicionales para user_vehicles si ya existía la tabla
+    await pool.query(`
+      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS assigned_spot_id UUID REFERENCES public.parking_spots(id) ON DELETE SET NULL;
+      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS notes TEXT;
+    `).catch(err => console.error('Error alterando user_vehicles:', err.message));
+
+    // Límite de vehículos por defecto
+    const maxVehiclesCheck = await pool.query("SELECT COUNT(*) FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
+    if (parseInt(maxVehiclesCheck.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO public.system_settings (key, value) VALUES 
+        ('max_vehicles_per_user', '3'::jsonb)
+        ON CONFLICT (key) DO NOTHING;
+      `);
+    }
+
+    // Celdas iniciales de parqueadero si la tabla está vacía
+    const spotsCount = await pool.query('SELECT COUNT(*) FROM public.parking_spots');
+    if (parseInt(spotsCount.rows[0].count) === 0) {
+      await pool.query(`
+        INSERT INTO public.parking_spots (code, spot_type, status, notes) VALUES 
+        ('C-01', 'fija', 'disponible', 'Sótano 1 - Sector Dirección'),
+        ('C-02', 'fija', 'disponible', 'Sótano 1 - Sector Dirección'),
+        ('C-03', 'fija', 'disponible', 'Sótano 1 - Sector Subsecretaría'),
+        ('C-04', 'fija', 'disponible', 'Sótano 1 - Sector Asesores'),
+        ('C-05', 'fija', 'disponible', 'Sótano 1 - Sector Planta'),
+        ('C-06', 'libre', 'disponible', 'Sótano 1 - Zona Rotativa General'),
+        ('C-07', 'libre', 'disponible', 'Sótano 1 - Zona Rotativa General'),
+        ('C-08', 'libre', 'disponible', 'Sótano 1 - Zona Rotativa General'),
+        ('C-09', 'libre', 'disponible', 'Sótano 1 - Zona Rotativa General'),
+        ('C-10', 'libre', 'disponible', 'Sótano 1 - Zona Rotativa General'),
+        ('C-11', 'libre', 'disponible', 'Sótano 2 - Zona Rotativa'),
+        ('C-12', 'libre', 'disponible', 'Sótano 2 - Zona Rotativa')
+        ON CONFLICT (code) DO NOTHING;
+      `);
+    }
+
     console.log('Base de datos inicializada y migrada exitosamente.');
   } catch (err) {
     console.error('Error al inicializar la base de datos:', err);
@@ -219,26 +300,34 @@ app.get('/api/settings/:key', async (req, res) => {
   }
 });
 
-app.put('/api/settings/:key', authenticateToken, async (req, res) => {
+const updateSettingHandler = async (req, res) => {
   try {
     const { key } = req.params;
     const { value } = req.body;
     
-    // Solo admins pueden modificar configuración general
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Permisos insuficientes.' });
+    // Solo admins/gestores pueden modificar configuración general
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Permisos insuficientes para modificar la configuración.' });
     }
+
+    const valToSave = typeof value === 'object' ? JSON.stringify(value) : JSON.stringify(value);
 
     const result = await pool.query(
       'INSERT INTO public.system_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value RETURNING *',
-      [key, JSON.stringify(value)]
+      [key, valToSave]
     );
     res.json(result.rows[0].value);
   } catch (err) {
     console.error('Error actualizando configuración:', err);
-    res.status(500).json({ error: 'Error del servidor.' });
+    res.status(500).json({ error: 'Error del servidor al actualizar configuración.' });
   }
-});
+};
+
+app.put('/api/settings/:key', authenticateToken, updateSettingHandler);
+app.post('/api/settings/:key', authenticateToken, updateSettingHandler);
+app.put('/api/system-settings/:key', authenticateToken, updateSettingHandler);
+app.post('/api/system-settings/:key', authenticateToken, updateSettingHandler);
 
 // --- FUNCIONES AUXILIARES PARA ESTADÍSTICAS DEL SERVIDOR ---
 const getDiskUsage = () => {
@@ -851,7 +940,11 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       }
 
       if (uniqueAdminEmails.length > 0) {
-        await emailService.sendAdminNewRequestNotification(uniqueAdminEmails, createdRequest, currentUserObj || { name: createdRequest.user_name || 'Funcionario Solicitante' });
+        await emailService.sendAdminNewRequestNotification(
+          uniqueAdminEmails, 
+          createdRequest, 
+          currentUserObj || { name: createdRequest.user_name || 'Funcionario Solicitante', email: createdRequest.user_email }
+        );
       }
     } catch (adminNotifyErr) {
       console.error('Error enviando notificación de nueva solicitud a administradores:', adminNotifyErr);
@@ -1437,69 +1530,736 @@ app.delete('/api/requests/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// --- ENDPOINTS DE VEHÍCULOS ---
+// --- ENDPOINTS DE VEHÍCULOS Y CELDAS DE PARQUEADERO ---
 
-// Obtener vehículos del usuario
+// Obtener vehículos (usuario actual o todos si es administrador)
 app.get('/api/vehicles', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM user_vehicles WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+    const { all, userId, doc, plate } = req.query;
+
+    let query = `
+      SELECT 
+        uv.*,
+        ps.code as spot_code,
+        ps.spot_type as spot_type,
+        ps.status as spot_status,
+        u.name as owner_name,
+        u.email as owner_email
+      FROM public.user_vehicles uv
+      LEFT JOIN public.parking_spots ps ON uv.assigned_spot_id = ps.id
+      LEFT JOIN public.users u ON uv.user_id = u.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (isAdmin && all === 'true') {
+      // Admin solicitando todos
+      if (userId) {
+        params.push(userId);
+        query += ` AND uv.user_id = $${params.length}`;
+      }
+      if (doc) {
+        params.push(doc.trim());
+        query += ` AND (uv.doc = $${params.length} OR u.doc = $${params.length})`;
+      }
+      if (plate) {
+        params.push(`%${plate.trim().toUpperCase()}%`);
+        query += ` AND UPPER(uv.plate) LIKE $${params.length}`;
+      }
+    } else {
+      // Usuario común o admin sin all=true: solo sus propios vehículos
+      params.push(req.user.id);
+      query += ` AND uv.user_id = $${params.length}`;
+    }
+
+    query += ` ORDER BY uv.created_at DESC`;
+
+    const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener vehículos:', err);
     res.status(500).json({ error: 'Error al obtener vehículos.' });
+  }
+});
+
+// Obtener vehículos de una persona por user_id o cédula (para modal de aprobación)
+app.get('/api/vehicles/by-user/:identifier', authenticateToken, async (req, res) => {
+  try {
+    const { identifier } = req.params;
+    if (!identifier) {
+      return res.status(400).json({ error: 'Identificador requerido.' });
+    }
+
+    // Buscar por user_id (UUID) o por doc
+    let query = `
+      SELECT 
+        uv.*,
+        ps.code as spot_code,
+        ps.spot_type,
+        ps.status as spot_status
+      FROM public.user_vehicles uv
+      LEFT JOIN public.parking_spots ps ON uv.assigned_spot_id = ps.id
+      WHERE (uv.user_id::text = $1 OR uv.doc = $1)
+      ORDER BY uv.created_at DESC
+    `;
+    const result = await pool.query(query, [identifier.trim()]);
+
+    // Obtener límite configurado
+    const limitRes = await pool.query("SELECT value FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
+    const maxLimit = limitRes.rows.length > 0 ? parseInt(limitRes.rows[0].value, 10) : 3;
+
+    res.json({
+      vehicles: result.rows,
+      count: result.rows.length,
+      activeCount: result.rows.filter(v => v.is_active !== false).length,
+      maxLimit: isNaN(maxLimit) ? 3 : maxLimit
+    });
+  } catch (err) {
+    console.error('Error al obtener vehículos por usuario:', err);
+    res.status(500).json({ error: 'Error al obtener vehículos de la persona.' });
   }
 });
 
 // Crear un vehículo
 app.post('/api/vehicles', authenticateToken, async (req, res) => {
-  const { plate, brand, model, color, name, doc, dependency } = req.body;
+  const { plate, brand, model, color, name, doc, dependency, notes, target_user_id } = req.body;
   if (!plate || !brand) {
-    return res.status(400).json({ error: 'Placa y marca son obligatorios.' });
+    return res.status(400).json({ error: 'La placa y la marca del vehículo son obligatorias.' });
+  }
+
+  const cleanPlate = plate.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (cleanPlate.length < 5 || cleanPlate.length > 7) {
+    return res.status(400).json({ error: 'La placa ingresada no tiene un formato válido (5-7 caracteres alfanuméricos).' });
   }
 
   try {
-    const result = await pool.query(
-      'INSERT INTO user_vehicles (user_id, plate, brand, model, color, name, doc, dependency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [req.user.id, plate, brand, model || null, color || null, name || null, doc || null, dependency || null]
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+    const targetUserId = (isAdmin && target_user_id) ? target_user_id : req.user.id;
+
+    // 1. Validar que no exista la placa activa en el sistema
+    const existingPlate = await pool.query(
+      'SELECT id, plate, is_active FROM public.user_vehicles WHERE UPPER(TRIM(plate)) = $1 AND is_active = true',
+      [cleanPlate]
     );
-    res.status(201).json(result.rows[0]);
+    if (existingPlate.rows.length > 0) {
+      return res.status(400).json({ error: `La placa ${cleanPlate} ya se encuentra registrada y activa en el sistema.` });
+    }
+
+    // 2. Validar límite máximo de vehículos permitidos por usuario
+    const limitRes = await pool.query("SELECT value FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
+    const maxLimit = limitRes.rows.length > 0 ? parseInt(limitRes.rows[0].value, 10) : 3;
+    const resolvedLimit = isNaN(maxLimit) ? 3 : maxLimit;
+
+    const countRes = await pool.query(
+      'SELECT COUNT(*) FROM public.user_vehicles WHERE user_id = $1 AND is_active = true',
+      [targetUserId]
+    );
+    const currentActive = parseInt(countRes.rows[0].count, 10);
+
+    if (currentActive >= resolvedLimit && !isAdmin) {
+      return res.status(400).json({ 
+        error: `Has alcanzado el límite máximo permitido de ${resolvedLimit} vehículos registrados activos por usuario.` 
+      });
+    }
+
+    // 3. Insertar vehículo
+    const result = await pool.query(
+      `INSERT INTO public.user_vehicles 
+       (user_id, plate, brand, model, color, name, doc, dependency, is_active, notes) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9) 
+       RETURNING *`,
+      [
+        targetUserId,
+        cleanPlate,
+        brand.trim(),
+        model ? model.trim() : null,
+        color ? color.trim() : null,
+        name ? name.trim() : null,
+        doc ? doc.trim() : null,
+        dependency ? dependency.trim() : null,
+        notes ? notes.trim() : null
+      ]
+    );
+    const newVehicle = result.rows[0];
+
+    // 4. Registrar en historial de auditoría
+    await pool.query(
+      `INSERT INTO public.vehicle_history 
+       (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+       VALUES ($1, $2, 'creacion', $3, $4, $5)`,
+      [
+        newVehicle.id,
+        cleanPlate,
+        req.user.id,
+        req.user.name || req.user.email || 'Usuario',
+        JSON.stringify({
+          brand: newVehicle.brand,
+          model: newVehicle.model,
+          color: newVehicle.color,
+          doc: newVehicle.doc,
+          dependency: newVehicle.dependency
+        })
+      ]
+    );
+
+    res.status(201).json(newVehicle);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al registrar el vehículo.' });
+    console.error('Error al registrar el vehículo:', err);
+    res.status(500).json({ error: 'Error al registrar el vehículo en el sistema.' });
   }
 });
 
 // Actualizar un vehículo
 app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { plate, brand, model, color, name, doc, dependency } = req.body;
+  const { plate, brand, model, color, name, doc, dependency, is_active, notes, assigned_spot_id } = req.body;
 
   try {
-    const checkResult = await pool.query('SELECT * FROM user_vehicles WHERE id = $1', [id]);
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+
+    const checkResult = await pool.query('SELECT * FROM public.user_vehicles WHERE id = $1', [id]);
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Vehículo no encontrado.' });
     }
 
-    if (checkResult.rows[0].user_id !== req.user.id) {
+    const currentVehicle = checkResult.rows[0];
+
+    if (currentVehicle.user_id !== req.user.id && !isAdmin) {
       return res.status(403).json({ error: 'No tienes permisos para modificar este vehículo.' });
     }
 
+    let cleanPlate = currentVehicle.plate;
+    if (plate) {
+      cleanPlate = plate.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (cleanPlate !== currentVehicle.plate) {
+        // Verificar duplicidad si cambió la placa
+        const plateCheck = await pool.query(
+          'SELECT id FROM public.user_vehicles WHERE UPPER(TRIM(plate)) = $1 AND id != $2 AND is_active = true',
+          [cleanPlate, id]
+        );
+        if (plateCheck.rows.length > 0) {
+          return res.status(400).json({ error: `La placa ${cleanPlate} ya está registrada en otro vehículo activo.` });
+        }
+      }
+    }
+
+    // Si se está activando nuevamente, verificar cupo máximo
+    if (is_active === true && currentVehicle.is_active === false && !isAdmin) {
+      const limitRes = await pool.query("SELECT value FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
+      const maxLimit = limitRes.rows.length > 0 ? parseInt(limitRes.rows[0].value, 10) : 3;
+      const countRes = await pool.query(
+        'SELECT COUNT(*) FROM public.user_vehicles WHERE user_id = $1 AND is_active = true',
+        [currentVehicle.user_id]
+      );
+      if (parseInt(countRes.rows[0].count, 10) >= (isNaN(maxLimit) ? 3 : maxLimit)) {
+        return res.status(400).json({ error: 'No puedes reactivar este vehículo porque ya alcanzaste el límite máximo permitido.' });
+      }
+    }
+
+    const newIsActive = is_active !== undefined ? is_active : currentVehicle.is_active;
+    const newAssignedSpotId = assigned_spot_id !== undefined ? assigned_spot_id : currentVehicle.assigned_spot_id;
+
     const result = await pool.query(
-      `UPDATE user_vehicles 
+      `UPDATE public.user_vehicles 
        SET plate = COALESCE($1, plate), 
            brand = COALESCE($2, brand), 
            model = COALESCE($3, model), 
            color = COALESCE($4, color),
            name = COALESCE($5, name),
            doc = COALESCE($6, doc),
-           dependency = COALESCE($7, dependency)
-       WHERE id = $8 RETURNING *`,
-      [plate, brand, model, color, name, doc, dependency, id]
+           dependency = COALESCE($7, dependency),
+           is_active = $8,
+           assigned_spot_id = $9,
+           notes = COALESCE($10, notes),
+           updated_at = NOW()
+       WHERE id = $11 RETURNING *`,
+      [
+        cleanPlate,
+        brand ? brand.trim() : null,
+        model !== undefined ? model : currentVehicle.model,
+        color !== undefined ? color : currentVehicle.color,
+        name !== undefined ? name : currentVehicle.name,
+        doc !== undefined ? doc : currentVehicle.doc,
+        dependency !== undefined ? dependency : currentVehicle.dependency,
+        newIsActive,
+        newAssignedSpotId,
+        notes !== undefined ? notes : currentVehicle.notes,
+        id
+      ]
     );
+
+    const updatedVehicle = result.rows[0];
+
+    // Auditoría de cambios
+    const actions = [];
+    if (cleanPlate !== currentVehicle.plate) actions.push(`cambio_placa:${currentVehicle.plate}->${cleanPlate}`);
+    if (newIsActive !== currentVehicle.is_active) actions.push(newIsActive ? 'activacion' : 'inactivacion');
+    if (newAssignedSpotId !== currentVehicle.assigned_spot_id) {
+      actions.push(newAssignedSpotId ? 'asignacion_celda' : 'liberacion_celda');
+    }
+    const finalAction = actions.length > 0 ? actions[0] : 'actualizacion';
+
+    await pool.query(
+      `INSERT INTO public.vehicle_history 
+       (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        id,
+        cleanPlate,
+        finalAction,
+        req.user.id,
+        req.user.name || req.user.email || 'Usuario',
+        JSON.stringify({
+          previous: {
+            plate: currentVehicle.plate,
+            is_active: currentVehicle.is_active,
+            assigned_spot_id: currentVehicle.assigned_spot_id
+          },
+          updated: {
+            plate: updatedVehicle.plate,
+            is_active: updatedVehicle.is_active,
+            assigned_spot_id: updatedVehicle.assigned_spot_id
+          }
+        })
+      ]
+    );
+
+    res.json(updatedVehicle);
+  } catch (err) {
+    console.error('Error al actualizar el vehículo:', err);
+    res.status(500).json({ error: 'Error al actualizar el vehículo.' });
+  }
+});
+
+// Eliminar un vehículo
+app.delete('/api/vehicles/:id', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+
+    const checkResult = await pool.query('SELECT * FROM public.user_vehicles WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Vehículo no encontrado.' });
+    }
+
+    const vehicle = checkResult.rows[0];
+    if (vehicle.user_id !== req.user.id && !isAdmin) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar este vehículo.' });
+    }
+
+    // Si tenía celda asignada, actualizar celda a disponible si queda libre
+    if (vehicle.assigned_spot_id) {
+      const remainingVehicles = await pool.query(
+        'SELECT COUNT(*) FROM public.user_vehicles WHERE assigned_spot_id = $1 AND id != $2',
+        [vehicle.assigned_spot_id, id]
+      );
+      if (parseInt(remainingVehicles.rows[0].count, 10) === 0) {
+        await pool.query(
+          "UPDATE public.parking_spots SET status = 'disponible' WHERE id = $1 AND status = 'ocupada'",
+          [vehicle.assigned_spot_id]
+        );
+      }
+    }
+
+    // Registrar en auditoría antes de eliminar
+    await pool.query(
+      `INSERT INTO public.vehicle_history 
+       (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+       VALUES ($1, $2, 'eliminacion', $3, $4, $5)`,
+      [
+        id,
+        vehicle.plate,
+        req.user.id,
+        req.user.name || req.user.email || 'Usuario',
+        JSON.stringify(vehicle)
+      ]
+    );
+
+    await pool.query('DELETE FROM public.user_vehicles WHERE id = $1', [id]);
+    res.json({ message: 'Vehículo eliminado exitosamente.' });
+  } catch (err) {
+    console.error('Error al eliminar vehículo:', err);
+    res.status(500).json({ error: 'Error al eliminar el vehículo.' });
+  }
+});
+
+// Historial de un vehículo específico
+app.get('/api/vehicles/:id/history', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM public.vehicle_history WHERE vehicle_id = $1 ORDER BY created_at DESC',
+      [id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener historial del vehículo:', err);
+    res.status(500).json({ error: 'Error al obtener historial del vehículo.' });
+  }
+});
+
+// Historial global de auditoría de vehículos (solo administradores)
+app.get('/api/vehicles/history', authenticateToken, async (req, res) => {
+  try {
+    const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Acceso no autorizado al registro global de auditoría.' });
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM public.vehicle_history ORDER BY created_at DESC LIMIT 300'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al consultar historial global de vehículos:', err);
+    res.status(500).json({ error: 'Error al consultar historial de vehículos.' });
+  }
+});
+
+// --- ENDPOINTS PARA CELDAS DE PARQUEADERO (PARKING SPOTS) ---
+
+const getParkingSpotsHandler = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        ps.*,
+        u.name as assigned_user_name_resolved,
+        u.email as assigned_user_email,
+        u.dependency as assigned_user_dependency,
+        COALESCE(
+          (
+            SELECT json_agg(json_build_object(
+              'id', uv.id,
+              'plate', uv.plate,
+              'brand', uv.brand,
+              'model', uv.model,
+              'color', uv.color,
+              'is_active', uv.is_active,
+              'name', uv.name,
+              'doc', uv.doc
+            ))
+            FROM public.user_vehicles uv
+            WHERE uv.assigned_spot_id = ps.id
+          ),
+          '[]'::json
+        ) as assigned_vehicles,
+        (
+          SELECT COUNT(*) 
+          FROM public.user_vehicles uv 
+          WHERE uv.assigned_spot_id = ps.id AND uv.is_active = true
+        )::int as active_vehicles_count
+      FROM public.parking_spots ps
+      LEFT JOIN public.users u ON ps.assigned_user_id = u.id
+      ORDER BY ps.code ASC
+    `;
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener celdas de parqueadero:', err);
+    res.status(500).json({ error: 'Error al obtener celdas de parqueadero.' });
+  }
+};
+
+app.get('/api/parking-spots', authenticateToken, getParkingSpotsHandler);
+app.get('/api/parking_spots', authenticateToken, getParkingSpotsHandler);
+
+// Crear una celda de parqueadero
+const createParkingSpotHandler = async (req, res) => {
+  const { code, spot_type, status, assigned_user_id, assigned_user_name, notes } = req.body;
+  if (!code) {
+    return res.status(400).json({ error: 'El código de la celda es obligatorio.' });
+  }
+
+  const cleanCode = code.trim().toUpperCase();
+
+  try {
+    const checkExists = await pool.query('SELECT id FROM public.parking_spots WHERE UPPER(TRIM(code)) = $1', [cleanCode]);
+    if (checkExists.rows.length > 0) {
+      return res.status(400).json({ error: `Ya existe una celda de parqueadero con el código ${cleanCode}.` });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO public.parking_spots 
+       (code, spot_type, status, assigned_user_id, assigned_user_name, notes) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [
+        cleanCode,
+        spot_type || 'libre',
+        status || 'disponible',
+        assigned_user_id || null,
+        assigned_user_name || null,
+        notes || null
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error al crear celda de parqueadero:', err);
+    res.status(500).json({ error: 'Error al crear la celda de parqueadero.' });
+  }
+};
+
+app.post('/api/parking-spots', authenticateToken, createParkingSpotHandler);
+app.post('/api/parking_spots', authenticateToken, createParkingSpotHandler);
+
+// Actualizar una celda
+const updateParkingSpotHandler = async (req, res) => {
+  const { id } = req.params;
+  const { code, spot_type, status, assigned_user_id, assigned_user_name, notes } = req.body;
+
+  try {
+    const checkResult = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Celda no encontrada.' });
+    }
+
+    const currentSpot = checkResult.rows[0];
+    let cleanCode = currentSpot.code;
+    if (code) {
+      cleanCode = code.trim().toUpperCase();
+      if (cleanCode !== currentSpot.code) {
+        const codeCheck = await pool.query(
+          'SELECT id FROM public.parking_spots WHERE UPPER(TRIM(code)) = $1 AND id != $2',
+          [cleanCode, id]
+        );
+        if (codeCheck.rows.length > 0) {
+          return res.status(400).json({ error: `Ya existe otra celda con el código ${cleanCode}.` });
+        }
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE public.parking_spots 
+       SET code = COALESCE($1, code),
+           spot_type = COALESCE($2, spot_type),
+           status = COALESCE($3, status),
+           assigned_user_id = $4,
+           assigned_user_name = $5,
+           notes = COALESCE($6, notes),
+           updated_at = NOW()
+       WHERE id = $7 RETURNING *`,
+      [
+        cleanCode,
+        spot_type !== undefined ? spot_type : currentSpot.spot_type,
+        status !== undefined ? status : currentSpot.status,
+        assigned_user_id !== undefined ? assigned_user_id : currentSpot.assigned_user_id,
+        assigned_user_name !== undefined ? assigned_user_name : currentSpot.assigned_user_name,
+        notes !== undefined ? notes : currentSpot.notes,
+        id
+      ]
+    );
+
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error al actualizar el vehículo.' });
+    console.error('Error al actualizar celda de parqueadero:', err);
+    res.status(500).json({ error: 'Error al actualizar la celda.' });
+  }
+};
+
+app.put('/api/parking-spots/:id', authenticateToken, updateParkingSpotHandler);
+app.put('/api/parking_spots/:id', authenticateToken, updateParkingSpotHandler);
+
+// Eliminar una celda
+const deleteParkingSpotHandler = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Desvincular vehículos asignados a esta celda
+    await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE assigned_spot_id = $1', [id]);
+    await pool.query('DELETE FROM public.parking_spots WHERE id = $1', [id]);
+    res.json({ message: 'Celda eliminada exitosamente.' });
+  } catch (err) {
+    console.error('Error al eliminar celda:', err);
+    res.status(500).json({ error: 'Error al eliminar la celda.' });
+  }
+};
+
+app.delete('/api/parking-spots/:id', authenticateToken, deleteParkingSpotHandler);
+app.delete('/api/parking_spots/:id', authenticateToken, deleteParkingSpotHandler);
+
+// Asignar vehículo o persona a una celda
+app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { vehicle_id, user_id, user_name, notes } = req.body;
+
+  try {
+    const spotRes = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);
+    if (spotRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Celda de parqueadero no encontrada.' });
+    }
+    const spot = spotRes.rows[0];
+
+    // Si viene vehículo a asignar
+    if (vehicle_id) {
+      const vehRes = await pool.query('SELECT * FROM public.user_vehicles WHERE id = $1', [vehicle_id]);
+      if (vehRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Vehículo no encontrado.' });
+      }
+      const vehicle = vehRes.rows[0];
+
+      // Asignar vehículo a la celda
+      await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = $1 WHERE id = $2', [id, vehicle_id]);
+
+      // Si es celda fija y no tiene usuario asignado, asignar el del vehículo
+      const finalUserId = spot.assigned_user_id || user_id || vehicle.user_id;
+      const finalUserName = spot.assigned_user_name || user_name || vehicle.name;
+
+      await pool.query(
+        `UPDATE public.parking_spots 
+         SET status = 'ocupada', 
+             assigned_user_id = $1, 
+             assigned_user_name = $2,
+             updated_at = NOW() 
+         WHERE id = $3`,
+        [finalUserId, finalUserName, id]
+      );
+
+      // Registrar auditoría
+      await pool.query(
+        `INSERT INTO public.vehicle_history 
+         (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+         VALUES ($1, $2, 'asignacion_celda', $3, $4, $5)`,
+        [
+          vehicle_id,
+          vehicle.plate,
+          req.user.id,
+          req.user.name || req.user.email || 'Admin',
+          JSON.stringify({ spot_code: spot.code, spot_id: id, spot_type: spot.spot_type })
+        ]
+      );
+    } else if (user_id) {
+      // Asignación de titular a celda fija sin vehículo específico todavía
+      await pool.query(
+        `UPDATE public.parking_spots 
+         SET assigned_user_id = $1, 
+             assigned_user_name = $2,
+             updated_at = NOW() 
+         WHERE id = $3`,
+        [user_id, user_name || null, id]
+      );
+    }
+
+    const updated = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);
+    res.json(updated.rows[0]);
+  } catch (err) {
+    console.error('Error al asignar celda:', err);
+    res.status(500).json({ error: 'Error al asignar vehículo a la celda.' });
+  }
+});
+
+// Liberar vehículo o celda
+app.post('/api/parking-spots/:id/release', authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { vehicle_id } = req.body;
+
+  try {
+    const spotRes = await pool.query('SELECT * FROM public.parking_spots WHERE id = $1', [id]);
+    if (spotRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Celda no encontrada.' });
+    }
+    const spot = spotRes.rows[0];
+
+    if (vehicle_id) {
+      // Liberar vehículo específico
+      const vehRes = await pool.query('SELECT * FROM public.user_vehicles WHERE id = $1', [vehicle_id]);
+      await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE id = $1', [vehicle_id]);
+
+      if (vehRes.rows.length > 0) {
+        await pool.query(
+          `INSERT INTO public.vehicle_history 
+           (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+           VALUES ($1, $2, 'liberacion_celda', $3, $4, $5)`,
+          [
+            vehicle_id,
+            vehRes.rows[0].plate,
+            req.user.id,
+            req.user.name || req.user.email || 'Admin',
+            JSON.stringify({ spot_code: spot.code })
+          ]
+        );
+      }
+    } else {
+      // Liberar todos los vehículos asignados a esta celda
+      const vehs = await pool.query('SELECT id, plate FROM public.user_vehicles WHERE assigned_spot_id = $1', [id]);
+      await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE assigned_spot_id = $1', [id]);
+
+      for (const v of vehs.rows) {
+        await pool.query(
+          `INSERT INTO public.vehicle_history 
+           (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+           VALUES ($1, $2, 'liberacion_celda', $3, $4, $5)`,
+          [
+            v.id,
+            v.plate,
+            req.user.id,
+            req.user.name || req.user.email || 'Admin',
+            JSON.stringify({ spot_code: spot.code })
+          ]
+        );
+      }
+    }
+
+    // Verificar si quedan vehículos activos en la celda
+    const remaining = await pool.query(
+      'SELECT COUNT(*) FROM public.user_vehicles WHERE assigned_spot_id = $1 AND is_active = true',
+      [id]
+    );
+
+    if (parseInt(remaining.rows[0].count, 10) === 0) {
+      await pool.query(
+        "UPDATE public.parking_spots SET status = 'disponible', updated_at = NOW() WHERE id = $1",
+        [id]
+      );
+    }
+
+    res.json({ message: 'Celda liberada exitosamente.' });
+  } catch (err) {
+    console.error('Error al liberar celda:', err);
+    res.status(500).json({ error: 'Error al liberar la celda.' });
+  }
+});
+
+// Estadísticas de ocupación de parqueadero
+app.get('/api/parking-spots/stats', authenticateToken, async (req, res) => {
+  try {
+    const totalSpotsRes = await pool.query('SELECT COUNT(*) FROM public.parking_spots');
+    const availableSpotsRes = await pool.query("SELECT COUNT(*) FROM public.parking_spots WHERE status = 'disponible'");
+    const occupiedSpotsRes = await pool.query("SELECT COUNT(*) FROM public.parking_spots WHERE status = 'ocupada'");
+    const maintSpotsRes = await pool.query("SELECT COUNT(*) FROM public.parking_spots WHERE status = 'mantenimiento'");
+    const fixedSpotsRes = await pool.query("SELECT COUNT(*) FROM public.parking_spots WHERE spot_type = 'fija'");
+    const freeSpotsRes = await pool.query("SELECT COUNT(*) FROM public.parking_spots WHERE spot_type = 'libre'");
+
+    const totalVehiclesRes = await pool.query('SELECT COUNT(*) FROM public.user_vehicles WHERE is_active = true');
+    const fixedVehiclesRes = await pool.query(`
+      SELECT COUNT(DISTINCT uv.id) 
+      FROM public.user_vehicles uv 
+      JOIN public.parking_spots ps ON uv.assigned_spot_id = ps.id 
+      WHERE uv.is_active = true AND ps.spot_type = 'fija'
+    `);
+    const freeVehiclesRes = await pool.query(`
+      SELECT COUNT(*) 
+      FROM public.user_vehicles uv 
+      WHERE uv.is_active = true AND (uv.assigned_spot_id IS NULL OR uv.assigned_spot_id IN (
+        SELECT id FROM public.parking_spots WHERE spot_type = 'libre'
+      ))
+    `);
+
+    res.json({
+      totalSpots: parseInt(totalSpotsRes.rows[0].count, 10),
+      availableSpots: parseInt(availableSpotsRes.rows[0].count, 10),
+      occupiedSpots: parseInt(occupiedSpotsRes.rows[0].count, 10),
+      maintenanceSpots: parseInt(maintSpotsRes.rows[0].count, 10),
+      fixedSpots: parseInt(fixedSpotsRes.rows[0].count, 10),
+      freeSpots: parseInt(freeSpotsRes.rows[0].count, 10),
+      activeVehicles: parseInt(totalVehiclesRes.rows[0].count, 10),
+      vehiclesWithFixedSpot: parseInt(fixedVehiclesRes.rows[0].count, 10),
+      vehiclesFreeUse: parseInt(freeVehiclesRes.rows[0].count, 10)
+    });
+  } catch (err) {
+    console.error('Error al obtener estadísticas de celdas:', err);
+    res.status(500).json({ error: 'Error al obtener estadísticas de ocupación.' });
   }
 });
 
