@@ -21,6 +21,7 @@ import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
 import { settingsService, Driver, ServiceEmail, ServerStats } from '../../lib/settingsService';
 import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
+import { DependencySelector } from '../../components/DependencySelector';
 
 const COLORS = {
   primary: '#0F172A',
@@ -143,6 +144,7 @@ export default function AdminSettings() {
   const [adminVName, setAdminVName] = useState('');
   const [adminVDoc, setAdminVDoc] = useState('');
   const [adminVDependency, setAdminVDependency] = useState('');
+  const [adminVDependencySelectorVisible, setAdminVDependencySelectorVisible] = useState(false);
   const [adminVIsActive, setAdminVIsActive] = useState(true);
   const [adminVError, setAdminVError] = useState('');
 
@@ -4035,11 +4037,34 @@ export default function AdminSettings() {
                 {/* Dependencia */}
                 <View>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>DEPENDENCIA</Text>
-                  <TextInput
-                    style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                    value={adminVDependency}
-                    onChangeText={setAdminVDependency}
-                  />
+                  <TouchableOpacity
+                    onPress={() => setAdminVDependencySelectorVisible(true)}
+                    activeOpacity={0.7}
+                    style={{ 
+                      backgroundColor: '#F8FAFC', 
+                      borderRadius: 10, 
+                      borderWidth: 1, 
+                      borderColor: '#E2E8F0', 
+                      paddingHorizontal: 12, 
+                      paddingVertical: 10, 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between' 
+                    }}
+                  >
+                    <Text 
+                      numberOfLines={1} 
+                      style={{ 
+                        fontSize: 14, 
+                        color: adminVDependency ? COLORS.primary : COLORS.muted,
+                        fontWeight: adminVDependency ? '600' : '400',
+                        flex: 1 
+                      }}
+                    >
+                      {adminVDependency || 'Seleccionar dependencia...'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Switch Estado Activo / Inactivo */}
@@ -4080,6 +4105,15 @@ export default function AdminSettings() {
           </View>
         </View>
       </Modal>
+
+      {/* Selector de Dependencia para Vehículo en Ajustes */}
+      <DependencySelector
+        visible={adminVDependencySelectorVisible}
+        onClose={() => setAdminVDependencySelectorVisible(false)}
+        onSelect={(dep: string) => setAdminVDependency(dep)}
+        selectedValue={adminVDependency}
+        dependencies={dependencies}
+      />
 
       {/* Modal Ver Historial de Auditoría del Vehículo */}
       <Modal

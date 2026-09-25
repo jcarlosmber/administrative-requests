@@ -20,6 +20,7 @@ import { supabase } from '../../lib/supabase';
 import { settingsService, Driver } from '../../lib/settingsService';
 import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
+import { DependencySelector } from '../../components/DependencySelector';
 
 const COLORS = {
   primary: '#0F172A',
@@ -325,6 +326,7 @@ export default function AdminGestion() {
   const [adminVName, setAdminVName] = useState('');
   const [adminVDoc, setAdminVDoc] = useState('');
   const [adminVDependency, setAdminVDependency] = useState('');
+  const [adminVDependencySelectorVisible, setAdminVDependencySelectorVisible] = useState(false);
   const [adminVIsActive, setAdminVIsActive] = useState(true);
   const [adminVError, setAdminVError] = useState('');
 
@@ -3582,11 +3584,35 @@ export default function AdminGestion() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modalInputLabel}>Dependencia</Text>
-                  <TextInput 
-                    value={adminVDependency}
-                    onChangeText={setAdminVDependency}
-                    style={styles.modalInput}
-                  />
+                  <TouchableOpacity 
+                    onPress={() => setAdminVDependencySelectorVisible(true)}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.modalInput, 
+                      { 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        backgroundColor: '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        paddingHorizontal: 12
+                      }
+                    ]}
+                  >
+                    <Text 
+                      numberOfLines={1} 
+                      style={{ 
+                        fontSize: 13, 
+                        color: adminVDependency ? COLORS.text : '#94A3B8',
+                        fontWeight: adminVDependency ? '600' : '400',
+                        flex: 1 
+                      }}
+                    >
+                      {adminVDependency || 'Seleccionar...'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={16} color={COLORS.muted} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -3607,6 +3633,14 @@ export default function AdminGestion() {
           </View>
         </View>
       </Modal>
+
+      {/* SELECTOR DE DEPENDENCIA PARA VEHÍCULO */}
+      <DependencySelector
+        visible={adminVDependencySelectorVisible}
+        onClose={() => setAdminVDependencySelectorVisible(false)}
+        onSelect={(dep: string) => setAdminVDependency(dep)}
+        selectedValue={adminVDependency}
+      />
 
       {/* MODAL HISTORIAL DE AUDITORÍA DE VEHÍCULO */}
       <Modal visible={historyModalVisible} transparent animationType="fade" onRequestClose={() => setHistoryModalVisible(false)}>

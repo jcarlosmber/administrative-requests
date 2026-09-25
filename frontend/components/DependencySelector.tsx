@@ -29,7 +29,7 @@ const safeStorage = {
   }
 };
 
-export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }: any) => {
+export const DependencySelector = ({ visible, onClose, onSelect, selectedValue, dependencies: initialDeps }: any) => {
   const [q, setQ] = useState('');
   const [deps, setDeps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +38,16 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
 
   useEffect(() => {
     if (!visible) return;
+    setQ('');
+
+    if (initialDeps && initialDeps.length > 0) {
+      const normalized = initialDeps.map((d: any) => typeof d === 'string' ? d : d.name).filter(Boolean);
+      if (normalized.length > 0) {
+        setDeps(normalized);
+        setLoading(false);
+        return;
+      }
+    }
 
     const loadDeps = async () => {
       try {
@@ -56,7 +66,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
           const local = await safeStorage.getItem('local_dependencies');
           if (local) {
             const parsed = JSON.parse(local);
-            setDeps(parsed.map((d: any) => d.name));
+            setDeps(parsed.map((d: any) => typeof d === 'string' ? d : d.name));
           } else {
             setDeps(INITIAL_DEPENDENCIES);
           }
@@ -67,7 +77,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
         if (local) {
           try {
             const parsed = JSON.parse(local);
-            setDeps(parsed.map((d: any) => d.name));
+            setDeps(parsed.map((d: any) => typeof d === 'string' ? d : d.name));
           } catch {
             setDeps(INITIAL_DEPENDENCIES);
           }
@@ -80,12 +90,12 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
     };
 
     loadDeps();
-  }, [visible]);
+  }, [visible, initialDeps]);
 
   const data = useMemo(() => deps.filter(x => x.toLowerCase().includes(q.toLowerCase())), [deps, q]);
 
   return (
-    <Modal visible={visible} transparent animationType='fade'>
+    <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose}>
       <View style={d.overlay}>
         <View style={[d.sheet, desktop && d.sheetDesk]}>
           <View style={d.head}>
@@ -98,7 +108,8 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
           <View style={d.search}>
             <Ionicons name='search' size={18} color='#64748B' />
             <TextInput 
-              placeholder='Buscar...' 
+              placeholder='Buscar dependencia...' 
+              placeholderTextColor='#94A3B8'
               value={q} 
               onChangeText={setQ} 
               style={d.input} 
@@ -113,7 +124,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
           ) : (
             <FlatList 
               data={data} 
-              keyExtractor={i => i} 
+              keyExtractor={(item, index) => `${item}-${index}`} 
               renderItem={({ item }) => (
                 <TouchableOpacity 
                   style={[d.row, selectedValue === item && d.rowOn]} 
@@ -123,6 +134,23 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
                   {selectedValue === item && <Ionicons name='checkmark-circle' size={20} color='#A9301E' />}
                 </TouchableOpacity>
               )} 
+              ListEmptyComponent={() => (
+                <View style={{ padding: 24, alignItems: 'center' }}>
+                  <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>
+                    No se encontraron dependencias que coincidan con la búsqueda.
+                  </Text>
+                  {q.trim() ? (
+                    <TouchableOpacity
+                      onPress={() => { onSelect(q.trim()); onClose(); }}
+                      style={{ marginTop: 14, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: '#EFF6FF', borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}
+                    >
+                      <Text style={{ color: '#1D4ED8', fontWeight: '700', fontSize: 13 }}>
+                        Usar "{q.trim()}"
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
             />
           )}
         </View>
@@ -132,13 +160,13 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue }
 };
 
 const d = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.55)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.55)', justifyContent: 'flex-end', zIndex: 99999 },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '85%', padding: 20 },
   sheetDesk: { maxWidth: 700, alignSelf: 'center', width: '100%', borderRadius: 28, marginBottom: 30 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   tt: { fontSize: 20, fontWeight: '900', color: '#0F172A' },
   search: { height: 52, borderWidth: 1, borderColor: '#E5EAF1', borderRadius: 16, paddingHorizontal: 14, alignItems: 'center', flexDirection: 'row', marginBottom: 14 },
-  input: { flex: 1, paddingLeft: 10 },
+  input: { flex: 1, paddingLeft: 10, fontSize: 14, color: '#0F172A' },
   row: { paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   rowOn: { backgroundColor: '#FFF5F3' },
   tx: { flex: 1, color: '#334155', fontWeight: '700' },

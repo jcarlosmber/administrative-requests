@@ -2251,37 +2251,46 @@ const deleteVehicleHandler = async (req, res) => {
 
     // 1. Si tenía celda asignada, actualizar celda a disponible si queda libre
     if (vehicle.assigned_spot_id) {
-      const remainingVehicles = await client.query(
-        'SELECT COUNT(*) FROM public.user_vehicles WHERE assigned_spot_id = $1 AND id != $2',
-        [vehicle.assigned_spot_id, id]
-      );
-      if (parseInt(remainingVehicles.rows[0].count, 10) === 0) {
-        await client.query(
-          "UPDATE public.parking_spots SET status = 'disponible' WHERE id = $1 AND status = 'ocupada'",
-          [vehicle.assigned_spot_id]
+      try {
+        const remainingVehicles = await client.query(
+          'SELECT COUNT(*) FROM public.user_vehicles WHERE assigned_spot_id = $1 AND id != $2',
+          [vehicle.assigned_spot_id, id]
         );
+        if (parseInt(remainingVehicles.rows[0].count, 10) === 0) {
+          await client.query(
+            "UPDATE public.parking_spots SET status = 'disponible' WHERE id = $1 AND status = 'ocupada'",
+            [vehicle.assigned_spot_id]
+          );
+        }
+      } catch (spotErr) {
+        console.warn('Nota al liberar celda en eliminación de vehículo:', spotErr.message);
       }
     }
 
-    // 2. Desvincular vehicle_id en vehicle_history para preservar la auditoría sin violar FK
-    await client.query('UPDATE public.vehicle_history SET vehicle_id = NULL WHERE vehicle_id = $1', [id]);
+    // 2. Desvincular en vehicle_history y registrar auditoría con SAVEPOINT aislado
+    await client.query('SAVEPOINT sp_audit_veh');
+    try {
+      await client.query('UPDATE public.vehicle_history SET vehicle_id = NULL WHERE vehicle_id = $1', [id]);
 
-    // 3. Registrar en auditoría antes de eliminar (con vehicle_id = NULL)
-    const performedById = isValidUuid(req.user?.id) ? req.user.id : null;
-    const performedByName = req.user?.name || req.user?.email || 'Usuario';
-    await client.query(
-      `INSERT INTO public.vehicle_history 
-       (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
-       VALUES (NULL, $1, 'eliminacion', $2, $3, $4)`,
-      [
-        vehicle.plate,
-        performedById,
-        performedByName,
-        JSON.stringify(vehicle)
-      ]
-    );
+      const performedById = isValidUuid(req.user?.id) ? req.user.id : null;
+      const performedByName = req.user?.name || req.user?.email || 'Usuario';
+      await client.query(
+        `INSERT INTO public.vehicle_history 
+         (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+         VALUES (NULL, $1, 'eliminacion', $2, $3, $4)`,
+        [
+          vehicle.plate,
+          performedById,
+          performedByName,
+          JSON.stringify(vehicle)
+        ]
+      );
+    } catch (auditErr) {
+      console.warn('Nota en auditoría de eliminación de vehículo (se preserva la eliminación):', auditErr.message);
+      await client.query('ROLLBACK TO SAVEPOINT sp_audit_veh');
+    }
 
-    // 4. Eliminar el vehículo
+    // 3. Eliminar el vehículo físicamente
     await client.query('DELETE FROM public.user_vehicles WHERE id = $1', [id]);
 
     await client.query('COMMIT');
@@ -2312,6 +2321,7 @@ const deleteVehicleHandler = async (req, res) => {
 
 app.delete('/api/vehicles/:id', authenticateToken, deleteVehicleHandler);
 app.post('/api/vehicles/:id/delete', authenticateToken, deleteVehicleHandler);
+app.post('/api/vehicles/:id', authenticateToken, deleteVehicleHandler);
 
 // Historial de un vehículo específico
 app.get('/api/vehicles/:id/history', authenticateToken, async (req, res) => {

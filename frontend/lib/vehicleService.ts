@@ -274,10 +274,23 @@ export const vehicleService = {
       headers,
     });
     if (!res.ok) {
-      const fallbackRes = await fetch(`${API_URL}/api/vehicles/${id}/delete`, {
+      // 1. Probar POST a la misma URL con X-HTTP-Method-Override (compatibilidad con Express middleware)
+      let fallbackRes = await fetch(`${API_URL}/api/vehicles/${id}`, {
         method: 'POST',
         headers: { ...headers, 'X-HTTP-Method-Override': 'DELETE' },
       }).catch(() => null);
+
+      // 2. Si falla o da 404/405, probar endpoint dedicado /delete
+      if (!fallbackRes || !fallbackRes.ok) {
+        const dedicatedRes = await fetch(`${API_URL}/api/vehicles/${id}/delete`, {
+          method: 'POST',
+          headers: { ...headers, 'X-HTTP-Method-Override': 'DELETE' },
+        }).catch(() => null);
+
+        if (dedicatedRes && dedicatedRes.ok) {
+          fallbackRes = dedicatedRes;
+        }
+      }
 
       if (fallbackRes && fallbackRes.ok) {
         res = fallbackRes;
@@ -388,10 +401,23 @@ export const vehicleService = {
       headers,
     });
     if (!res.ok) {
-      const fallbackRes = await fetch(`${API_URL}/api/parking-spots/${id}/delete`, {
+      // 1. Probar POST a la misma URL con X-HTTP-Method-Override
+      let fallbackRes = await fetch(`${API_URL}/api/parking-spots/${id}`, {
         method: 'POST',
         headers: { ...headers, 'X-HTTP-Method-Override': 'DELETE' },
       }).catch(() => null);
+
+      // 2. Si falla, probar con /delete
+      if (!fallbackRes || !fallbackRes.ok) {
+        const dedicatedRes = await fetch(`${API_URL}/api/parking-spots/${id}/delete`, {
+          method: 'POST',
+          headers: { ...headers, 'X-HTTP-Method-Override': 'DELETE' },
+        }).catch(() => null);
+
+        if (dedicatedRes && dedicatedRes.ok) {
+          fallbackRes = dedicatedRes;
+        }
+      }
 
       if (fallbackRes && fallbackRes.ok) {
         res = fallbackRes;

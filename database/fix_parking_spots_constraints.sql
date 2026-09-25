@@ -110,6 +110,7 @@ BEGIN
 END $$;
 
 -- Permitir que el historial conserve la auditoría con vehicle_id en NULL al eliminar el vehículo
+ALTER TABLE public.vehicle_history ALTER COLUMN vehicle_id DROP NOT NULL;
 ALTER TABLE public.vehicle_history 
     ADD CONSTRAINT vehicle_history_vehicle_id_fkey 
     FOREIGN KEY (vehicle_id) 
