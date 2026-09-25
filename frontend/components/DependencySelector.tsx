@@ -160,7 +160,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue, 
 };
 
 const d = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.55)', justifyContent: 'flex-end', zIndex: 99999 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,.55)', justifyContent: 'flex-end', zIndex: 999999, elevation: 999 },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '85%', padding: 20 },
   sheetDesk: { maxWidth: 700, alignSelf: 'center', width: '100%', borderRadius: 28, marginBottom: 30 },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },

@@ -1030,13 +1030,6 @@ export default function ParkingRequestScreen() {
         visible={showGuidelines} 
         onClose={() => setShowGuidelines(false)} 
       />
-      
-      <DependencySelector 
-        visible={showDeps} 
-        onClose={() => setShowDeps(false)} 
-        onSelect={setDependency} 
-        selectedValue={dependency}
-      />
 
       {/* MODAL PARA AGREGAR / EDITAR VEHÍCULO */}
       <Modal
@@ -1471,6 +1464,14 @@ export default function ParkingRequestScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* SELECTOR DE DEPENDENCIA PARA VEHÍCULO */}
+      <DependencySelector 
+        visible={showDeps} 
+        onClose={() => setShowDeps(false)} 
+        onSelect={setDependency} 
+        selectedValue={dependency}
+      />
 
       {/* MODAL DE CONFIRMACIÓN DE ACCIÓN SOBRE VEHÍCULO */}
       <Modal
