@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../lib/supabase';
+import { IntroVideoModal } from '../components/IntroVideoModal';
 
 const COLORS = {
   primary: '#BE1F2D', // Rojo BOGOTÁ
@@ -76,6 +77,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -169,6 +171,19 @@ export default function LoginPage() {
               <Text style={styles.backText}>Volver al portal</Text>
             </Pressable>
 
+            {/* Botón Flotante Superior: Video de Introducción */}
+            <Pressable
+              style={styles.videoHeaderButton}
+              onPress={() => setShowVideoModal(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Ver video de introducción"
+            >
+              <View style={styles.videoHeaderIconBox}>
+                <Ionicons name="play" size={13} color="#FFFFFF" />
+              </View>
+              <Text style={styles.videoHeaderText}>Video de Introducción</Text>
+            </Pressable>
+
             {/* Contenedor Principal (Adaptable en Pantallas Grandes) */}
             <View
               style={[
@@ -198,6 +213,28 @@ export default function LoginPage() {
                     BIENVENIDOS AL SISTEMA DE ADMINISTRACIÓN DE SERVICIOS GENERALES
                   </Text>
                 </View>
+
+                {/* Botón Destacado de Introducción / Inducción en el Hero */}
+                <Pressable
+                  style={styles.heroVideoButton}
+                  onPress={() => setShowVideoModal(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reproducir video de introducción SASGE 2.0"
+                >
+                  <View style={styles.heroVideoPlayCircle}>
+                    <Ionicons name="play" size={18} color="#FFFFFF" />
+                  </View>
+                  <View style={styles.heroVideoInfo}>
+                    <Text style={styles.heroVideoTitle}>Ver Video de Introducción</Text>
+                    <Text style={styles.heroVideoSubtitle}>
+                      Conoce las funciones y novedades de SASGE 2.0
+                    </Text>
+                  </View>
+                  <View style={styles.heroVideoPill}>
+                    <Ionicons name="videocam" size={13} color="#FFFFFF" />
+                    <Text style={styles.heroVideoPillText}>Ver ahora</Text>
+                  </View>
+                </Pressable>
 
                 {/* Cuadrícula de Módulos (Visible en Pantallas Grandes como la imagen de referencia) */}
                 {isDesktop && (
@@ -447,6 +484,12 @@ export default function LoginPage() {
                 </View>
               </View>
             </Modal>
+
+            {/* Modal de Video Introductorio */}
+            <IntroVideoModal
+              visible={showVideoModal}
+              onClose={() => setShowVideoModal(false)}
+            />
           </KeyboardAvoidingView>
         </SafeAreaView>
       </LinearGradient>
@@ -491,6 +534,100 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  videoHeaderButton: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 999,
+    backgroundColor: 'rgba(190, 31, 45, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: '#BE1F2D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+    zIndex: 10,
+  },
+  videoHeaderIconBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoHeaderText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  heroVideoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 18,
+    marginBottom: 8,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  heroVideoPlayCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  heroVideoInfo: {
+    flex: 1,
+  },
+  heroVideoTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  heroVideoSubtitle: {
+    color: 'rgba(255, 255, 255, 0.72)',
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 15,
+  },
+  heroVideoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  heroVideoPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
 
   /* Contenedor Principal */

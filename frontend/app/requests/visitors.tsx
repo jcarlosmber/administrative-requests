@@ -51,6 +51,27 @@ export default function VisitorsScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([{ id: '1', plate: '', brand: '' }]);
   const [responsible, setResponsible] = useState({ name: '', phone: '', dependency: '' });
   const [visitReason, setVisitReason] = useState('');
+  const [autoApproveVisitors, setAutoApproveVisitors] = useState(false);
+
+  // Efecto para cargar preferencia global de auto-aprobación de visitantes
+  useEffect(() => {
+    const loadAutoApproveSetting = async () => {
+      try {
+        const val = await settingsService.getSystemSetting('auto_approve_visitors');
+        if (val !== null && val !== undefined) {
+          setAutoApproveVisitors(typeof val === 'boolean' ? val : val === 'true' || val === 1);
+        } else if (typeof window !== 'undefined' && window.localStorage) {
+          const localVal = localStorage.getItem('auto_approve_visitors');
+          if (localVal !== null) {
+            setAutoApproveVisitors(localVal === 'true');
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading auto_approve_visitors setting:', err);
+      }
+    };
+    loadAutoApproveSetting();
+  }, []);
 
   // Efecto para auto-completar responsable desde LDAP
   useEffect(() => {
@@ -218,11 +239,15 @@ export default function VisitorsScreen() {
       
       console.log('📤 [FRONTEND SASGE] Radicando solicitud de ingreso de visitantes. Destinatarios Proceso de Gestión Administrativa:', adminEmails);
 
+      const finalStatus: 'pendiente' | 'en_progreso' | 'resuelto' | 'rechazado' = 
+        autoApproveVisitors ? 'resuelto' : 'pendiente';
+
       await requestService.create({
         user_id: user?.id || null,
         title: `Ingreso: ${visitorNames}`,
         description: `Motivo: ${trimmedReason} | Visita para ${trimmedResponsibleName} en ${trimmedResponsibleDependency} desde ${fromDate} hasta ${toDate}`,
         category: 'visitors',
+        status: finalStatus,
         priority: 'media',
         adminEmails,
         metadata: {
@@ -237,7 +262,8 @@ export default function VisitorsScreen() {
           visitReason: trimmedReason,
           reason: trimmedReason,
           fromDate,
-          toDate
+          toDate,
+          approved_automatically: autoApproveVisitors
         }
       });
 

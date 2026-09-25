@@ -161,6 +161,15 @@ const initDatabase = async () => {
       `);
     }
 
+    // Asegurar preferencias globales iniciales
+    await pool.query(`
+      INSERT INTO public.system_settings (key, value) VALUES 
+      ('auto_approve', 'false'::jsonb),
+      ('auto_approve_visitors', 'false'::jsonb),
+      ('push_notifications', 'true'::jsonb)
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
     // 3. Tablas y migraciones para Control de Parqueadero y Vehículos
     await pool.query(`
       CREATE TABLE IF NOT EXISTS public.parking_spots (
@@ -738,9 +747,9 @@ app.get('/api/admin/database/table/:tableName', authenticateToken, async (req, r
 // --- ENDPOINT DE CONTROL Y DESPLIEGUE GIT ---
 app.post('/api/admin/git', authenticateToken, async (req, res) => {
   try {
-    // Validar permisos de administrador o superadministrador
-    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      return res.status(403).json({ error: 'Solo los administradores del sistema pueden ejecutar operaciones de despliegue y Git.' });
+    // Validar permisos exclusivos de Super Administrador
+    if (req.user?.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Solo el Super Administrador puede ejecutar operaciones de despliegue y reinicio del backend.' });
     }
 
     const { action = 'pull' } = req.body;
@@ -1205,9 +1214,52 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
       return res.status(200).json(burstCheck.rows[0]);
     }
 
+    // 3. Evaluar estado inicial y reglas de aprobación automática del sistema
+    let finalStatus = req.body.status || 'pendiente';
+    let requestMetadata = metadata || {};
+    if (typeof requestMetadata === 'string') {
+      try { requestMetadata = JSON.parse(requestMetadata); } catch (e) { requestMetadata = {}; }
+    }
+
+    try {
+      if (category === 'rooms' && finalStatus !== 'resuelto') {
+        const roomName = (requestMetadata.room && typeof requestMetadata.room === 'object' ? requestMetadata.room.name : requestMetadata.room) || '';
+        const isSpecialRoom = requestMetadata.requires_secretaria_general === true ||
+                              requestMetadata.info === 'Especial' || 
+                              (parseInt(requestMetadata.capacity) || 0) >= 100 ||
+                              /huitaca|secretar[ií]a\s*general|auditorio/i.test(roomName);
+
+        if (!isSpecialRoom) {
+          const autoSetting = await pool.query("SELECT value FROM public.system_settings WHERE key = 'auto_approve'");
+          if (autoSetting.rows.length > 0) {
+            const val = autoSetting.rows[0].value;
+            const isEnabled = val === true || val === 'true' || val === 1 || val === '1';
+            if (isEnabled) {
+              finalStatus = 'resuelto';
+              requestMetadata.approved_automatically = true;
+              console.log(`⚡ [AUTO-APROBACIÓN] Solicitud de salas auto-aprobada por configuración del sistema.`);
+            }
+          }
+        }
+      } else if (category === 'visitors' && finalStatus !== 'resuelto') {
+        const autoSetting = await pool.query("SELECT value FROM public.system_settings WHERE key = 'auto_approve_visitors'");
+        if (autoSetting.rows.length > 0) {
+          const val = autoSetting.rows[0].value;
+          const isEnabled = val === true || val === 'true' || val === 1 || val === '1';
+          if (isEnabled) {
+            finalStatus = 'resuelto';
+            requestMetadata.approved_automatically = true;
+            console.log(`⚡ [AUTO-APROBACIÓN] Solicitud de visitantes auto-aprobada por configuración del sistema.`);
+          }
+        }
+      }
+    } catch (evalErr) {
+      console.warn('Error al evaluar auto-aprobación global:', evalErr.message);
+    }
+
     const result = await pool.query(
-      'INSERT INTO administrative_requests (user_id, title, description, category, priority, attachments, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [req.user.id, title, description, category, priority || 'media', attachments || [], metadata || {}]
+      'INSERT INTO administrative_requests (user_id, title, description, category, status, priority, attachments, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [req.user.id, title, description, category, finalStatus, priority || 'media', attachments || [], requestMetadata]
     );
     
     // Obtener información del usuario para enviar el correo de notificación
@@ -1243,6 +1295,20 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
     }
 
     try {
+      // Verificar si las notificaciones push / avisos al administrador están activadas en preferencias
+      let adminNotificationsActive = true;
+      try {
+        const pushSetting = await pool.query("SELECT value FROM public.system_settings WHERE key = 'push_notifications'");
+        if (pushSetting.rows.length > 0) {
+          const pVal = pushSetting.rows[0].value;
+          if (pVal === false || pVal === 'false' || pVal === 0 || pVal === '0') {
+            adminNotificationsActive = false;
+          }
+        }
+      } catch (pushErr) {
+        console.warn('Error consultando push_notifications:', pushErr.message);
+      }
+
       // En radicación, la alerta inicial va a los funcionarios del Proceso de gestión administrativa (manager)
       let adminEmailsRes = await pool.query(
         `SELECT email FROM service_emails WHERE LOWER(TRIM(service_type)) = 'manager'`
@@ -1267,7 +1333,9 @@ app.post('/api/requests', authenticateToken, async (req, res) => {
         console.warn(`   ⚠️ [ADVERTENCIA] No hay correos asignados a "${adminServiceKey}". La notificación a encargados no se enviará.`);
       }
 
-      if (uniqueAdminEmails.length > 0) {
+      if (!adminNotificationsActive) {
+        console.log('🔕 [PREFERENCIAS] Aviso al administrador silenciado por configuración global de Notificaciones Push.');
+      } else if (uniqueAdminEmails.length > 0) {
         await emailService.sendAdminNewRequestNotification(
           uniqueAdminEmails, 
           createdRequest, 
@@ -3745,8 +3813,8 @@ app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
 
 // --- ENDPOINTS PARA OPERACIONES GIT Y DESPLIEGUE ---
 app.post('/api/admin/git', authenticateToken, async (req, res) => {
-  if (req.user?.role !== 'admin' && req.user?.role !== 'superadmin') {
-    return res.status(403).json({ error: 'Acceso no autorizado para operaciones Git.' });
+  if (req.user?.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Solo el Super Administrador puede ejecutar operaciones de despliegue y reinicio del backend.' });
   }
 
   const { action } = req.body;

@@ -9,6 +9,7 @@ import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
 import { requestService } from '../../lib/requestService';
+import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
 
 const COLORS = {
@@ -189,11 +190,25 @@ export default function RoomsRequestScreen() {
           }
         }
 
-        // 2. Cargar regla de Aprobación Automática
-        if (Platform.OS === 'web') {
-          const savedAuto = localStorage.getItem('auto_approve');
-          if (savedAuto !== null) {
-            setAutoApprove(savedAuto === 'true');
+        // 2. Cargar regla de Aprobación Automática desde Backend / DB
+        try {
+          const dbAuto = await settingsService.getSystemSetting('auto_approve');
+          if (dbAuto !== null && dbAuto !== undefined) {
+            const isAuto = typeof dbAuto === 'boolean' ? dbAuto : dbAuto === 'true' || dbAuto === 1;
+            setAutoApprove(isAuto);
+          } else if (Platform.OS === 'web') {
+            const savedAuto = localStorage.getItem('auto_approve');
+            if (savedAuto !== null) {
+              setAutoApprove(savedAuto === 'true');
+            }
+          }
+        } catch (autoErr) {
+          console.warn('Error al obtener preferencia de auto-aprobación de salas:', autoErr);
+          if (Platform.OS === 'web') {
+            const savedAuto = localStorage.getItem('auto_approve');
+            if (savedAuto !== null) {
+              setAutoApprove(savedAuto === 'true');
+            }
           }
         }
       } catch (err) {

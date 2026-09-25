@@ -213,6 +213,7 @@ export default function AdminSettings() {
   const [loadingTablePreview, setLoadingTablePreview] = useState(false);
   const [tablePreviewTab, setTablePreviewTab] = useState<'data' | 'structure'>('data');
   const [tableSearchQuery, setTableSearchQuery] = useState('');
+  const [previewSearchQuery, setPreviewSearchQuery] = useState('');
 
   // Modals States
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -230,7 +231,7 @@ export default function AdminSettings() {
   const [showEvalConfirmModal, setShowEvalConfirmModal] = useState(false);
   const [pendingEvalToggle, setPendingEvalToggle] = useState<{ id: string, label: string, newValue: boolean } | null>(null);
   const [showSystemConfirmModal, setShowSystemConfirmModal] = useState(false);
-  const [pendingSystemToggle, setPendingSystemToggle] = useState<{ key: 'autoApprove' | 'autoApproveVisitors', label: string, desc: string, newValue: boolean } | null>(null);
+  const [pendingSystemToggle, setPendingSystemToggle] = useState<{ key: 'autoApprove' | 'autoApproveVisitors' | 'notifications', label: string, desc: string, newValue: boolean } | null>(null);
 
   // Edit Modal States
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -258,13 +259,27 @@ export default function AdminSettings() {
       try {
         setLoading(true);
 
-        // 0. Cargar el usuario actual
+        // 0. Cargar el usuario actual y su rol en la aplicación
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
           setCurrentUserEmail(user.email);
         }
         if (user?.role) {
           setCurrentUserRole(user.role);
+        }
+        if (user?.id) {
+          try {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('role')
+              .eq('id', user.id)
+              .maybeSingle();
+            if (profileData?.role) {
+              setCurrentUserRole(profileData.role);
+            }
+          } catch (profileErr) {
+            console.warn('No se pudo cargar el rol desde profiles:', profileErr);
+          }
         }
 
         // 1. Cargar Salas desde Supabase
@@ -316,14 +331,47 @@ export default function AdminSettings() {
         const dbEmails = await settingsService.getServiceEmails();
         setServiceEmails(dbEmails);
 
-        // 5. Cargar configuraciones del sistema desde localStorage
-        const savedPush = await safeStorage.getItem('push_notifications');
-        const savedAuto = await safeStorage.getItem('auto_approve');
-        const savedAutoVisitors = await safeStorage.getItem('auto_approve_visitors');
+        // 5. Cargar configuraciones del sistema desde Base de Datos (con safeStorage como fallback)
+        try {
+          const [dbAuto, dbAutoVisitors, dbPush] = await Promise.allSettled([
+            settingsService.getSystemSetting('auto_approve'),
+            settingsService.getSystemSetting('auto_approve_visitors'),
+            settingsService.getSystemSetting('push_notifications')
+          ]);
 
-        if (savedPush !== null) setNotifications(savedPush === 'true');
-        if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
-        if (savedAutoVisitors !== null) setAutoApproveVisitors(savedAutoVisitors === 'true');
+          if (dbAuto.status === 'fulfilled' && dbAuto.value !== null && dbAuto.value !== undefined) {
+            const v = dbAuto.value;
+            setAutoApprove(typeof v === 'boolean' ? v : v === 'true' || v === 1);
+          } else {
+            const savedAuto = await safeStorage.getItem('auto_approve');
+            if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
+          }
+
+          if (dbAutoVisitors.status === 'fulfilled' && dbAutoVisitors.value !== null && dbAutoVisitors.value !== undefined) {
+            const v = dbAutoVisitors.value;
+            setAutoApproveVisitors(typeof v === 'boolean' ? v : v === 'true' || v === 1);
+          } else {
+            const savedAutoVisitors = await safeStorage.getItem('auto_approve_visitors');
+            if (savedAutoVisitors !== null) setAutoApproveVisitors(savedAutoVisitors === 'true');
+          }
+
+          if (dbPush.status === 'fulfilled' && dbPush.value !== null && dbPush.value !== undefined) {
+            const v = dbPush.value;
+            setNotifications(typeof v === 'boolean' ? v : v === 'true' || v === 1);
+          } else {
+            const savedPush = await safeStorage.getItem('push_notifications');
+            if (savedPush !== null) setNotifications(savedPush === 'true');
+          }
+        } catch (settingsErr) {
+          console.warn('Error al cargar preferencias del sistema desde backend:', settingsErr);
+          const savedPush = await safeStorage.getItem('push_notifications');
+          const savedAuto = await safeStorage.getItem('auto_approve');
+          const savedAutoVisitors = await safeStorage.getItem('auto_approve_visitors');
+
+          if (savedPush !== null) setNotifications(savedPush === 'true');
+          if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
+          if (savedAutoVisitors !== null) setAutoApproveVisitors(savedAutoVisitors === 'true');
+        }
 
         // 6. Cargar configuración global del sistema (Evaluación)
         const dbEvalCategories = await settingsService.getSystemSetting('eval_categories');
@@ -393,6 +441,15 @@ export default function AdminSettings() {
 
     loadConfigAndData();
   }, []);
+
+  // Redirigir de pestaña si el usuario no tiene rol superadmin e intenta entrar a deployment o database
+  useEffect(() => {
+    if (currentUserRole && currentUserRole !== 'superadmin') {
+      if (activeTab === 'deployment' || activeTab === 'database') {
+        setActiveTab('all');
+      }
+    }
+  }, [currentUserRole, activeTab]);
 
   const loadParkingData = async () => {
     try {
@@ -1076,15 +1133,27 @@ export default function AdminSettings() {
       setSaving(true);
       if (pendingSystemToggle.key === 'autoApprove') {
         setAutoApprove(pendingSystemToggle.newValue);
-        await safeStorage.setItem('auto_approve', pendingSystemToggle.newValue.toString());
+        await Promise.allSettled([
+          safeStorage.setItem('auto_approve', pendingSystemToggle.newValue.toString()),
+          settingsService.updateSystemSetting('auto_approve', pendingSystemToggle.newValue)
+        ]);
       } else if (pendingSystemToggle.key === 'autoApproveVisitors') {
         setAutoApproveVisitors(pendingSystemToggle.newValue);
-        await safeStorage.setItem('auto_approve_visitors', pendingSystemToggle.newValue.toString());
+        await Promise.allSettled([
+          safeStorage.setItem('auto_approve_visitors', pendingSystemToggle.newValue.toString()),
+          settingsService.updateSystemSetting('auto_approve_visitors', pendingSystemToggle.newValue)
+        ]);
+      } else if (pendingSystemToggle.key === 'notifications') {
+        setNotifications(pendingSystemToggle.newValue);
+        await Promise.allSettled([
+          safeStorage.setItem('push_notifications', pendingSystemToggle.newValue.toString()),
+          settingsService.updateSystemSetting('push_notifications', pendingSystemToggle.newValue)
+        ]);
       }
       setShowSystemConfirmModal(false);
       setPendingSystemToggle(null);
     } catch (err) {
-      console.error('Error:', err);
+      console.error('Error al actualizar preferencia del sistema:', err);
     } finally {
       setSaving(false);
     }
@@ -1318,6 +1387,13 @@ export default function AdminSettings() {
           await safeStorage.setItem('ldap_sync_field', ldapSyncField);
           await safeStorage.setItem('ldap_comments', ldapComments);
           await safeStorage.setItem('ldap_relay', ldapRelay);
+
+          // Sincronizar de forma no bloqueante con el backend central
+          await Promise.allSettled([
+            settingsService.updateSystemSetting('push_notifications', notifications),
+            settingsService.updateSystemSetting('auto_approve', autoApprove),
+            settingsService.updateSystemSetting('auto_approve_visitors', autoApproveVisitors)
+          ]);
         } catch (e) {
           console.error(e);
         }
@@ -1332,6 +1408,16 @@ export default function AdminSettings() {
   ]);
 
   const triggerGitAction = (action: 'pull' | 'pull_and_build' | 'restart_backend') => {
+    if (currentUserRole !== 'superadmin') {
+      setSettingsNoticeModal({
+        visible: true,
+        title: 'Acceso Restringido',
+        message: 'Solo el perfil de Super Administrador puede ejecutar operaciones de despliegue y reinicio del servidor.',
+        isError: true
+      });
+      return;
+    }
+
     let title = '¿Ejecutar Git Pull?';
     let desc = 'Esta acción sincronizará el repositorio local del servidor con la última versión de la rama main en GitHub.';
     let icon = 'cloud-download';
@@ -1352,6 +1438,16 @@ export default function AdminSettings() {
 
   const handleExecuteGitAction = async (action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status') => {
     setShowGitConfirmModal(false);
+    if (currentUserRole !== 'superadmin') {
+      setSettingsNoticeModal({
+        visible: true,
+        title: 'Acceso Restringido',
+        message: 'Solo el perfil de Super Administrador puede ejecutar operaciones de despliegue y reinicio del servidor.',
+        isError: true
+      });
+      return;
+    }
+
     try {
       setGitExecuting(true);
       setGitActionRunning(action);
@@ -1385,10 +1481,10 @@ export default function AdminSettings() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'all' || activeTab === 'deployment') {
+    if (currentUserRole === 'superadmin' && (activeTab === 'all' || activeTab === 'deployment')) {
       loadServerStats();
     }
-  }, [activeTab, loadServerStats]);
+  }, [activeTab, currentUserRole, loadServerStats]);
 
   const loadDatabaseOverview = useCallback(async () => {
     try {
@@ -1403,10 +1499,10 @@ export default function AdminSettings() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'all' || activeTab === 'database') {
+    if (currentUserRole === 'superadmin' && (activeTab === 'all' || activeTab === 'database')) {
       loadDatabaseOverview();
     }
-  }, [activeTab, loadDatabaseOverview]);
+  }, [activeTab, currentUserRole, loadDatabaseOverview]);
 
   const handleOpenTablePreview = async (tableName: string) => {
     if (currentUserRole !== 'superadmin') {
@@ -1422,6 +1518,7 @@ export default function AdminSettings() {
       setLoadingTablePreview(true);
       setTableModalVisible(true);
       setTablePreviewTab('data');
+      setPreviewSearchQuery('');
       const preview = await settingsService.getTablePreview(tableName);
       setSelectedTablePreview(preview);
     } catch (err: any) {
@@ -1436,6 +1533,115 @@ export default function AdminSettings() {
       setLoadingTablePreview(false);
     }
   };
+
+  const exportTablePreviewToExcel = () => {
+    if (!selectedTablePreview || !selectedTablePreview.rows || selectedTablePreview.rows.length === 0) {
+      setSettingsNoticeModal({
+        visible: true,
+        title: 'Sin datos para exportar',
+        message: 'No hay registros cargados para exportar.',
+        isError: true,
+      });
+      return;
+    }
+
+    try {
+      const dataToExport = selectedTablePreview.rows.map(row => {
+        const item: Record<string, any> = {};
+        selectedTablePreview.columns.forEach(col => {
+          const val = row[col.column_name];
+          item[col.column_name] = val === null || val === undefined ? '' : typeof val === 'object' ? JSON.stringify(val) : val;
+        });
+        return item;
+      });
+
+      const excelColumns = selectedTablePreview.columns.map(col => ({
+        header: col.column_name.toUpperCase(),
+        key: col.column_name,
+        width: Math.max(16, Math.min(35, Math.round((tableColumnWidths.widths[col.column_name] || 160) / 9)))
+      }));
+
+      const ws = createStyledSheet({
+        sheetName: selectedTablePreview.tableName.substring(0, 31),
+        title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+        subtitle: `EXPLORADOR DE BASE DE DATOS — TABLA: ${selectedTablePreview.tableName.toUpperCase()}`,
+        metaInfo: `Fecha de Emisión: ${new Date().toLocaleDateString('es-CO')} | Registros Exportados: ${dataToExport.length} | Esquema: public`,
+        columns: excelColumns,
+        data: dataToExport
+      });
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, selectedTablePreview.tableName.substring(0, 31));
+      downloadWorkbook(wb, `Reporte_Tabla_${selectedTablePreview.tableName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch (err: any) {
+      console.error('Error al exportar tabla a Excel:', err);
+    }
+  };
+
+  // Cálculo exacto y determinista de anchos de columna para el visor relacional
+  const tableColumnWidths = useMemo(() => {
+    if (!selectedTablePreview?.columns) return { widths: {} as Record<string, number>, totalWidth: 600 };
+
+    const widths: Record<string, number> = {};
+    const INDEX_COL_WIDTH = 48;
+    let total = INDEX_COL_WIDTH;
+
+    selectedTablePreview.columns.forEach(col => {
+      const colName = col.column_name;
+      const lowerName = colName.toLowerCase();
+      const lowerType = (col.data_type || '').toLowerCase();
+
+      // Ancho base por tipo semántico
+      let baseWidth = 160;
+      if (lowerName === 'id' || lowerName.endsWith('_id') || lowerType.includes('uuid')) {
+        baseWidth = 270; // UUIDs estándar
+      } else if (lowerType.includes('timestamp') || lowerType.includes('date') || lowerType.includes('time')) {
+        baseWidth = 220; // Fechas ISO
+      } else if (lowerType.includes('bool')) {
+        baseWidth = 110;
+      } else if (lowerType.includes('int') || lowerType.includes('numeric') || lowerType.includes('float') || lowerType.includes('real')) {
+        baseWidth = 130;
+      } else if (lowerType.includes('json') || lowerType.includes('array')) {
+        baseWidth = 290;
+      } else if (lowerName.includes('description') || lowerName.includes('notes') || lowerName.includes('details') || lowerName.includes('motivo') || lowerName.includes('observacion')) {
+        baseWidth = 340;
+      } else if (lowerName.includes('title') || lowerName.includes('name') || lowerName.includes('email') || lowerName.includes('address') || lowerName.includes('dependenc')) {
+        baseWidth = 240;
+      }
+
+      // Medir contenido real en las filas para dar el espacio óptimo
+      let maxLen = Math.max(colName.length, (col.data_type || '').length);
+      if (selectedTablePreview.rows && selectedTablePreview.rows.length > 0) {
+        for (const r of selectedTablePreview.rows) {
+          const val = r[colName];
+          if (val !== null && val !== undefined) {
+            const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+            if (str.length > maxLen) maxLen = str.length;
+          }
+        }
+      }
+
+      // Estimar píxeles necesarios (aprox 8.2px por carácter + 28px de padding)
+      const calculatedWidth = Math.min(Math.max(baseWidth, Math.round(maxLen * 8.2 + 28)), 400);
+      widths[colName] = calculatedWidth;
+      total += calculatedWidth;
+    });
+
+    return { widths, totalWidth: Math.max(total, 750) };
+  }, [selectedTablePreview]);
+
+  const filteredPreviewRows = useMemo(() => {
+    if (!selectedTablePreview?.rows) return [];
+    if (!previewSearchQuery.trim()) return selectedTablePreview.rows;
+    const q = previewSearchQuery.trim().toLowerCase();
+    return selectedTablePreview.rows.filter(row => {
+      return Object.values(row).some(val => {
+        if (val === null || val === undefined) return false;
+        const str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+        return str.toLowerCase().includes(q);
+      });
+    });
+  }, [selectedTablePreview, previewSearchQuery]);
 
   return (
     <View style={styles.container}>
@@ -1817,7 +2023,15 @@ export default function AdminSettings() {
                       label="Notificaciones Push"
                       desc="Enviar avisos al administrador por cada nueva solicitud."
                       value={notifications}
-                      onValueChange={setNotifications}
+                      onValueChange={(val: boolean) => {
+                        setPendingSystemToggle({
+                          key: 'notifications',
+                          label: 'Notificaciones Push',
+                          desc: val ? 'activar los avisos y notificaciones de nuevas solicitudes al administrador' : 'desactivar los avisos y notificaciones de nuevas solicitudes al administrador',
+                          newValue: val
+                        });
+                        setShowSystemConfirmModal(true);
+                      }}
                       icon="notifications"
                     />
                     <View style={styles.configDivider} />
@@ -1891,8 +2105,8 @@ export default function AdminSettings() {
                 </>
               )}
 
-              {/* Sección de Infraestructura y Servidor */}
-              {(activeTab === 'all' || activeTab === 'deployment') && (
+              {/* Sección de Infraestructura y Servidor (Exclusivo Superadmin) */}
+              {(currentUserRole === 'superadmin' && (activeTab === 'all' || activeTab === 'deployment')) && (
                 <>
                   <SectionHeader title="Infraestructura y Servidor" kicker="MONITOREO DE HARDWARE" />
                   <View style={styles.statsCard}>
@@ -2123,7 +2337,7 @@ export default function AdminSettings() {
 
                   <View style={{ height: 24 }} />
 
-                  <SectionHeader title="Despliegue y Control de Versiones" kicker="ACTUALIZACIÓN DEL SISTEMA" />
+                  <SectionHeader title="Despliegue y Control de Versiones" kicker="NIVEL SUPERADMIN" />
                   <View style={styles.gitDeployCard}>
                     {/* Cabecera de la tarjeta */}
                     <View style={styles.gitDeployHeader}>
@@ -2131,9 +2345,27 @@ export default function AdminSettings() {
                         <Ionicons name="git-branch" size={24} color={COLORS.accent} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.gitDeployTitle}>Sincronización de Código (Git Pull)</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Text style={styles.gitDeployTitle}>Sincronización de Código (Git Pull) y Reinicio</Text>
+                          <View style={{
+                            backgroundColor: '#FAF5FF',
+                            borderColor: '#D8B4FE',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Ionicons name="shield-half" size={12} color="#7E22CE" />
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#7E22CE', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                              Nivel Superadmin
+                            </Text>
+                          </View>
+                        </View>
                         <Text style={styles.gitDeploySubtitle}>
-                          Actualice el código del portal en producción directamente desde el repositorio oficial de GitHub sin necesidad de comandos SSH manuales.
+                          Actualice el código del portal en producción directamente desde GitHub y reinicie los servicios de backend con privilegios exclusivos de Super Administrador.
                         </Text>
                       </View>
                     </View>
@@ -2251,7 +2483,7 @@ export default function AdminSettings() {
               )}
 
               {/* Sección de Auditoría y Base de Datos (Exclusivo Superadmin) */}
-              {(activeTab === 'all' || activeTab === 'database') && (
+              {(currentUserRole === 'superadmin' && (activeTab === 'all' || activeTab === 'database')) && (
                 <>
                   <SectionHeader title="Auditoría y Explorador de Base de Datos" kicker="POSTGRESQL RELACIONAL" />
                   <View style={styles.statsCard}>
@@ -2428,89 +2660,93 @@ export default function AdminSettings() {
                             borderColor: '#E2E8F0',
                             overflow: 'hidden'
                           }}>
-                            {/* Cabecera */}
-                            <View style={{
-                              flexDirection: 'row',
-                              backgroundColor: '#F8FAFC',
-                              paddingVertical: 10,
-                              paddingHorizontal: 14,
-                              borderBottomWidth: 1,
-                              borderBottomColor: '#E2E8F0'
-                            }}>
-                              <Text style={{ flex: 1.5, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Nombre de Tabla</Text>
-                              <Text style={{ flex: 1, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'center' }}>Registros</Text>
-                              <Text style={{ flex: 1, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'center' }}>Columnas</Text>
-                              <Text style={{ flex: 1, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'center' }}>Peso en Disco</Text>
-                              <Text style={{ flex: 1, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'right' }}>Acción</Text>
-                            </View>
+                            <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
+                              <View style={{ minWidth: 620, width: '100%' }}>
+                                {/* Cabecera */}
+                                <View style={{
+                                  flexDirection: 'row',
+                                  backgroundColor: '#F8FAFC',
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 14,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: '#E2E8F0'
+                                }}>
+                                  <Text style={{ flex: 1.5, minWidth: 180, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Nombre de Tabla</Text>
+                                  <Text style={{ flex: 1, minWidth: 100, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'center' }}>Registros</Text>
+                                  <Text style={{ flex: 1, minWidth: 100, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'center' }}>Columnas</Text>
+                                  <Text style={{ flex: 1, minWidth: 110, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'center' }}>Peso en Disco</Text>
+                                  <Text style={{ flex: 1, minWidth: 100, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft, textAlign: 'right' }}>Acción</Text>
+                                </View>
 
-                            {/* Filas */}
-                            {dbOverview.tables
-                              .filter(t => !tableSearchQuery || t.table_name.toLowerCase().includes(tableSearchQuery.toLowerCase()))
-                              .map((tbl, idx) => (
-                                <View
-                                  key={tbl.table_name}
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    paddingVertical: 12,
-                                    paddingHorizontal: 14,
-                                    borderBottomWidth: idx < dbOverview.tables.length - 1 ? 1 : 0,
-                                    borderBottomColor: '#F1F5F9',
-                                    backgroundColor: idx % 2 === 0 ? COLORS.white : '#FAFAFA'
-                                  }}
-                                >
-                                  <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                    <Ionicons name="grid-outline" size={16} color="#7E22CE" />
-                                    <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                                      {tbl.table_name}
-                                    </Text>
-                                  </View>
-
-                                  <View style={{ flex: 1, alignItems: 'center' }}>
-                                    <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
-                                        {tbl.row_count.toLocaleString()}
-                                      </Text>
-                                    </View>
-                                  </View>
-
-                                  <View style={{ flex: 1, alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                                      {tbl.columns_count} cols
-                                    </Text>
-                                  </View>
-
-                                  <View style={{ flex: 1, alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#2563EB' }}>
-                                      {tbl.size}
-                                    </Text>
-                                  </View>
-
-                                  <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                                    <TouchableOpacity
-                                      onPress={() => handleOpenTablePreview(tbl.table_name)}
+                                {/* Filas */}
+                                {dbOverview.tables
+                                  .filter(t => !tableSearchQuery || t.table_name.toLowerCase().includes(tableSearchQuery.toLowerCase()))
+                                  .map((tbl, idx) => (
+                                    <View
+                                      key={tbl.table_name}
                                       style={{
-                                        backgroundColor: '#FAF5FF',
-                                        borderWidth: 1,
-                                        borderColor: '#D8B4FE',
-                                        paddingHorizontal: 10,
-                                        paddingVertical: 5,
-                                        borderRadius: 8,
                                         flexDirection: 'row',
                                         alignItems: 'center',
-                                        gap: 4
+                                        paddingVertical: 12,
+                                        paddingHorizontal: 14,
+                                        borderBottomWidth: idx < dbOverview.tables.length - 1 ? 1 : 0,
+                                        borderBottomColor: '#F1F5F9',
+                                        backgroundColor: idx % 2 === 0 ? COLORS.white : '#FAFAFA'
                                       }}
-                                      activeOpacity={0.7}
                                     >
-                                      <Ionicons name="eye-outline" size={14} color="#7E22CE" />
-                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#7E22CE' }}>
-                                        Explorar
-                                      </Text>
-                                    </TouchableOpacity>
-                                  </View>
-                                </View>
-                              ))}
+                                      <View style={{ flex: 1.5, minWidth: 180, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Ionicons name="grid-outline" size={16} color="#7E22CE" />
+                                        <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                                          {tbl.table_name}
+                                        </Text>
+                                      </View>
+
+                                      <View style={{ flex: 1, minWidth: 100, alignItems: 'center' }}>
+                                        <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                          <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>
+                                            {tbl.row_count.toLocaleString()}
+                                          </Text>
+                                        </View>
+                                      </View>
+
+                                      <View style={{ flex: 1, minWidth: 100, alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                                          {tbl.columns_count} cols
+                                        </Text>
+                                      </View>
+
+                                      <View style={{ flex: 1, minWidth: 110, alignItems: 'center' }}>
+                                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#2563EB' }}>
+                                          {tbl.size}
+                                        </Text>
+                                      </View>
+
+                                      <View style={{ flex: 1, minWidth: 100, alignItems: 'flex-end' }}>
+                                        <TouchableOpacity
+                                          onPress={() => handleOpenTablePreview(tbl.table_name)}
+                                          style={{
+                                            backgroundColor: '#FAF5FF',
+                                            borderWidth: 1,
+                                            borderColor: '#D8B4FE',
+                                            paddingHorizontal: 10,
+                                            paddingVertical: 5,
+                                            borderRadius: 8,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            gap: 4
+                                          }}
+                                          activeOpacity={0.7}
+                                        >
+                                          <Ionicons name="eye-outline" size={14} color="#7E22CE" />
+                                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#7E22CE' }}>
+                                            Explorar
+                                          </Text>
+                                        </TouchableOpacity>
+                                      </View>
+                                    </View>
+                                  ))}
+                              </View>
+                            </ScrollView>
                           </View>
                         </View>
                       </View>
@@ -4688,254 +4924,507 @@ export default function AdminSettings() {
         onRequestClose={() => setTableModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { maxWidth: 1000, maxHeight: '90%', width: '95%', padding: 20 }]}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={{
+            backgroundColor: COLORS.white,
+            borderRadius: 24,
+            maxWidth: isDesktop ? 1280 : '96%',
+            maxHeight: '92%',
+            width: '96%',
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+            ...Platform.select({
+              ios: { shadowColor: '#0F172A', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.15, shadowRadius: 30 },
+              android: { elevation: 12 },
+              web: { boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)' }
+            })
+          }}>
             {/* Header del Modal */}
             <View style={{
-              flexDirection: 'row',
+              flexDirection: isDesktop ? 'row' : 'column',
               justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingBottom: 14,
+              alignItems: isDesktop ? 'center' : 'flex-start',
+              paddingBottom: 16,
               borderBottomWidth: 1,
-              borderBottomColor: '#E2E8F0'
+              borderBottomColor: '#E2E8F0',
+              gap: 12
             }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                 <View style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
                   backgroundColor: '#FAF5FF',
                   borderColor: '#D8B4FE',
                   borderWidth: 1,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <Ionicons name="cube" size={20} color="#7E22CE" />
+                  <Ionicons name="cube" size={24} color="#7E22CE" />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.primary }}>
-                    Tabla: {selectedTablePreview?.tableName || 'Cargando...'}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: COLORS.muted }}>
-                    Explorador de registros y esquema relacional • Nivel Superadmin
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                      Tabla: {selectedTablePreview?.tableName || 'Cargando...'}
+                    </Text>
+                    {selectedTablePreview && (
+                      <View style={{
+                        backgroundColor: '#FAF5FF',
+                        borderWidth: 1,
+                        borderColor: '#D8B4FE',
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 6
+                      }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#7E22CE' }}>
+                          {selectedTablePreview.columns.length} columnas • {selectedTablePreview.rows.length} registros
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>
+                    Explorador relacional en tiempo real • Acceso de Auditoría Superadmin
                   </Text>
                 </View>
               </View>
 
-              <TouchableOpacity
-                onPress={() => setTableModalVisible(false)}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  backgroundColor: '#F1F5F9',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Ionicons name="close" size={18} color={COLORS.muted} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, alignSelf: isDesktop ? 'auto' : 'flex-end' }}>
+                {selectedTablePreview && selectedTablePreview.rows.length > 0 ? (
+                  <TouchableOpacity
+                    onPress={exportTablePreviewToExcel}
+                    style={{
+                      backgroundColor: '#10B981',
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 10,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="download-outline" size={15} color={COLORS.white} />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.white }}>Excel</Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                <TouchableOpacity
+                  onPress={() => setTableModalVisible(false)}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    backgroundColor: '#F1F5F9',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Ionicons name="close" size={20} color={COLORS.muted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Selector de Pestaña: Datos vs Estructura */}
+            {/* Barra de Controles: Tabs y Buscador en tabla */}
             <View style={{
-              flexDirection: 'row',
-              gap: 8,
-              marginVertical: 12
+              flexDirection: isDesktop ? 'row' : 'column',
+              justifyContent: 'space-between',
+              alignItems: isDesktop ? 'center' : 'stretch',
+              gap: 12,
+              marginVertical: 14
             }}>
-              <TouchableOpacity
-                onPress={() => setTablePreviewTab('data')}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: 8,
-                  backgroundColor: tablePreviewTab === 'data' ? '#7E22CE' : '#F1F5F9'
-                }}
-              >
-                <Text style={{
-                  fontSize: 12,
-                  fontWeight: '700',
-                  color: tablePreviewTab === 'data' ? COLORS.white : COLORS.primarySoft
-                }}>
-                  Registros en Vivo ({selectedTablePreview?.rows?.length || 0})
-                </Text>
-              </TouchableOpacity>
+              {/* Selector de Pestaña: Datos vs Estructura */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setTablePreviewTab('data')}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: tablePreviewTab === 'data' ? '#7E22CE' : '#F1F5F9',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="grid-outline" size={15} color={tablePreviewTab === 'data' ? COLORS.white : COLORS.primarySoft} />
+                  <Text style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: tablePreviewTab === 'data' ? COLORS.white : COLORS.primarySoft
+                  }}>
+                    Registros en Vivo ({filteredPreviewRows.length}{filteredPreviewRows.length !== selectedTablePreview?.rows?.length ? ` de ${selectedTablePreview?.rows?.length}` : ''})
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => setTablePreviewTab('structure')}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: 8,
-                  backgroundColor: tablePreviewTab === 'structure' ? '#7E22CE' : '#F1F5F9'
-                }}
-              >
-                <Text style={{
-                  fontSize: 12,
-                  fontWeight: '700',
-                  color: tablePreviewTab === 'structure' ? COLORS.white : COLORS.primarySoft
+                <TouchableOpacity
+                  onPress={() => setTablePreviewTab('structure')}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: tablePreviewTab === 'structure' ? '#7E22CE' : '#F1F5F9',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="list-outline" size={15} color={tablePreviewTab === 'structure' ? COLORS.white : COLORS.primarySoft} />
+                  <Text style={{
+                    fontSize: 12,
+                    fontWeight: '800',
+                    color: tablePreviewTab === 'structure' ? COLORS.white : COLORS.primarySoft
+                  }}>
+                    Estructura / Columnas ({selectedTablePreview?.columns?.length || 0})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Filtro de registros en tiempo real */}
+              {tablePreviewTab === 'data' && (
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  paddingHorizontal: 10,
+                  height: 36,
+                  width: isDesktop ? 280 : '100%',
+                  gap: 6
                 }}>
-                  Estructura / Columnas ({selectedTablePreview?.columns?.length || 0})
-                </Text>
-              </TouchableOpacity>
+                  <Ionicons name="search" size={15} color={COLORS.muted} />
+                  <TextInput
+                    style={{ flex: 1, fontSize: 12, color: COLORS.primary, outlineStyle: 'none' } as any}
+                    placeholder="Filtrar registros..."
+                    placeholderTextColor={COLORS.muted}
+                    value={previewSearchQuery}
+                    onChangeText={setPreviewSearchQuery}
+                  />
+                  {previewSearchQuery ? (
+                    <TouchableOpacity onPress={() => setPreviewSearchQuery('')}>
+                      <Ionicons name="close-circle" size={15} color={COLORS.muted} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              )}
             </View>
 
+            {/* Contenedor Principal de la Tabla */}
             {loadingTablePreview ? (
-              <View style={{ padding: 40, alignItems: 'center' }}>
+              <View style={{ padding: 60, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator size="large" color="#7E22CE" />
-                <Text style={{ marginTop: 10, fontSize: 13, color: COLORS.muted }}>
+                <Text style={{ marginTop: 14, fontSize: 13, fontWeight: '600', color: COLORS.muted }}>
                   Cargando datos relacionales...
                 </Text>
               </View>
             ) : selectedTablePreview ? (
-              <ScrollView style={{ flex: 1 }} nestedScrollEnabled={true}>
+              <View style={{ flex: 1, minHeight: 380 }}>
                 {tablePreviewTab === 'data' ? (
-                  <ScrollView horizontal={true} nestedScrollEnabled={true}>
-                    <View style={{ minWidth: 600 }}>
-                      {/* Cabecera de columnas */}
-                      <View style={{
-                        flexDirection: 'row',
-                        backgroundColor: '#F8FAFC',
-                        borderBottomWidth: 1,
-                        borderBottomColor: '#CBD5E1'
-                      }}>
-                        {selectedTablePreview.columns.map(col => (
-                          <View
-                            key={col.column_name}
-                            style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 8,
-                              minWidth: 140,
-                              maxWidth: 240,
-                              borderRightWidth: 1,
-                              borderRightColor: '#E2E8F0'
-                            }}
-                          >
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: COLORS.primary }} numberOfLines={1}>
-                              {col.column_name}
-                            </Text>
-                            <Text style={{ fontSize: 10, color: COLORS.muted }}>
-                              {col.data_type}
-                            </Text>
+                  <View style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    overflow: 'hidden',
+                    backgroundColor: COLORS.white
+                  }}>
+                    <ScrollView
+                      horizontal={true}
+                      showsHorizontalScrollIndicator={true}
+                      style={{ flex: 1 }}
+                      nestedScrollEnabled={true}
+                    >
+                      <View style={{ width: tableColumnWidths.totalWidth, flex: 1 }}>
+                        {/* Cabecera Fija / Sticky sincronizada al píxel exacto */}
+                        <View style={{
+                          flexDirection: 'row',
+                          width: tableColumnWidths.totalWidth,
+                          backgroundColor: '#F1F5F9',
+                          borderBottomWidth: 1.5,
+                          borderBottomColor: '#CBD5E1'
+                        }}>
+                          {/* Columna de Índice # */}
+                          <View style={{
+                            width: 48,
+                            minWidth: 48,
+                            maxWidth: 48,
+                            flexShrink: 0,
+                            flexGrow: 0,
+                            paddingHorizontal: 6,
+                            paddingVertical: 10,
+                            borderRightWidth: 1,
+                            borderRightColor: '#CBD5E1',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: '#E2E8F0'
+                          }}>
+                            <Text style={{ fontSize: 11, fontWeight: '900', color: COLORS.primarySoft }}>#</Text>
                           </View>
-                        ))}
-                      </View>
 
-                      {/* Filas */}
-                      {selectedTablePreview.rows.length === 0 ? (
-                        <View style={{ padding: 24, alignItems: 'center' }}>
-                          <Text style={{ color: COLORS.muted, fontSize: 13 }}>
-                            La tabla no contiene registros actualmente.
-                          </Text>
-                        </View>
-                      ) : (
-                        selectedTablePreview.rows.map((row, rIdx) => (
-                          <View
-                            key={rIdx}
-                            style={{
-                              flexDirection: 'row',
-                              backgroundColor: rIdx % 2 === 0 ? COLORS.white : '#F8FAFC',
-                              borderBottomWidth: 1,
-                              borderBottomColor: '#F1F5F9'
-                            }}
-                          >
-                            {selectedTablePreview.columns.map(col => {
-                              const rawVal = row[col.column_name];
-                              let displayVal = rawVal === null || rawVal === undefined ? 'NULL' : typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal);
-                              const isNull = rawVal === null || rawVal === undefined;
-
-                              return (
-                                <View
-                                  key={col.column_name}
-                                  style={{
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 8,
-                                    minWidth: 140,
-                                    maxWidth: 240,
-                                    borderRightWidth: 1,
-                                    borderRightColor: '#F1F5F9',
-                                    justifyContent: 'center'
-                                  }}
-                                >
-                                  <Text
-                                    style={{
-                                      fontSize: 11,
-                                      color: isNull ? '#94A3B8' : COLORS.text,
-                                      fontStyle: isNull ? 'italic' : 'normal'
-                                    }}
-                                    numberOfLines={2}
-                                  >
-                                    {displayVal}
+                          {/* Columnas dinámicas de la cabecera con ancho idéntico a las filas */}
+                          {selectedTablePreview.columns.map(col => {
+                            const cWidth = tableColumnWidths.widths[col.column_name] || 160;
+                            return (
+                              <View
+                                key={col.column_name}
+                                style={{
+                                  width: cWidth,
+                                  minWidth: cWidth,
+                                  maxWidth: cWidth,
+                                  flexShrink: 0,
+                                  flexGrow: 0,
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 10,
+                                  borderRightWidth: 1,
+                                  borderRightColor: '#CBD5E1',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  {col.column_name.toLowerCase() === 'id' ? (
+                                    <Ionicons name="key" size={12} color="#7E22CE" />
+                                  ) : null}
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }} numberOfLines={1}>
+                                    {col.column_name}
                                   </Text>
                                 </View>
-                              );
-                            })}
-                          </View>
-                        ))
-                      )}
-                    </View>
-                  </ScrollView>
-                ) : (
-                  /* Vista de estructura */
-                  <View style={{ borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
-                    <View style={{
-                      flexDirection: 'row',
-                      backgroundColor: '#F8FAFC',
-                      paddingVertical: 10,
-                      paddingHorizontal: 14,
-                      borderBottomWidth: 1,
-                      borderBottomColor: '#E2E8F0'
-                    }}>
-                      <Text style={{ flex: 1.5, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Columna</Text>
-                      <Text style={{ flex: 1, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Tipo de Dato</Text>
-                      <Text style={{ flex: 0.8, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Permite Null</Text>
-                      <Text style={{ flex: 1.2, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Valor por Defecto</Text>
-                    </View>
+                                <Text
+                                  style={{
+                                    fontSize: 10,
+                                    color: COLORS.muted,
+                                    marginTop: 2,
+                                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace'
+                                  }}
+                                  numberOfLines={1}
+                                >
+                                  {col.data_type}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
 
-                    {selectedTablePreview.columns.map((col, cIdx) => (
-                      <View
-                        key={col.column_name}
-                        style={{
+                        {/* Filas con Scroll Vertical */}
+                        <ScrollView
+                          style={{ flex: 1, maxHeight: 460 }}
+                          showsVerticalScrollIndicator={true}
+                          nestedScrollEnabled={true}
+                        >
+                          {filteredPreviewRows.length === 0 ? (
+                            <View style={{ padding: 40, alignItems: 'center', width: tableColumnWidths.totalWidth }}>
+                              <Ionicons name="file-tray-outline" size={36} color="#94A3B8" />
+                              <Text style={{ color: COLORS.muted, fontSize: 13, marginTop: 8, fontWeight: '600' }}>
+                                {previewSearchQuery ? 'No se encontraron registros que coincidan con la búsqueda.' : 'La tabla no contiene registros actualmente.'}
+                              </Text>
+                            </View>
+                          ) : (
+                            filteredPreviewRows.map((row, rIdx) => {
+                              const isEven = rIdx % 2 === 0;
+                              return (
+                                <View
+                                  key={rIdx}
+                                  style={{
+                                    flexDirection: 'row',
+                                    width: tableColumnWidths.totalWidth,
+                                    backgroundColor: isEven ? COLORS.white : '#F8FAFC',
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: '#E2E8F0'
+                                  }}
+                                >
+                                  {/* Celda de Índice # */}
+                                  <View style={{
+                                    width: 48,
+                                    minWidth: 48,
+                                    maxWidth: 48,
+                                    flexShrink: 0,
+                                    flexGrow: 0,
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 10,
+                                    borderRightWidth: 1,
+                                    borderRightColor: '#E2E8F0',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    backgroundColor: isEven ? '#F8FAFC' : '#F1F5F9'
+                                  }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.muted }}>
+                                      {rIdx + 1}
+                                    </Text>
+                                  </View>
+
+                                  {/* Celdas de Datos - Ancho exactamente idéntico al de su columna */}
+                                  {selectedTablePreview.columns.map(col => {
+                                    const cWidth = tableColumnWidths.widths[col.column_name] || 160;
+                                    const rawVal = row[col.column_name];
+                                    const isNull = rawVal === null || rawVal === undefined;
+                                    const isBool = typeof rawVal === 'boolean';
+                                    let displayVal = isNull ? 'NULL' : typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal);
+
+                                    return (
+                                      <View
+                                        key={col.column_name}
+                                        style={{
+                                          width: cWidth,
+                                          minWidth: cWidth,
+                                          maxWidth: cWidth,
+                                          flexShrink: 0,
+                                          flexGrow: 0,
+                                          paddingHorizontal: 12,
+                                          paddingVertical: 10,
+                                          borderRightWidth: 1,
+                                          borderRightColor: '#F1F5F9',
+                                          justifyContent: 'center'
+                                        }}
+                                      >
+                                        {isNull ? (
+                                          <View style={{
+                                            alignSelf: 'flex-start',
+                                            backgroundColor: '#F1F5F9',
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 2,
+                                            borderRadius: 4
+                                          }}>
+                                            <Text style={{ fontSize: 10, fontStyle: 'italic', fontWeight: '700', color: '#94A3B8' }}>
+                                              NULL
+                                            </Text>
+                                          </View>
+                                        ) : isBool ? (
+                                          <View style={{
+                                            alignSelf: 'flex-start',
+                                            backgroundColor: rawVal ? '#ECFDF5' : '#FEF2F2',
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 2,
+                                            borderRadius: 4
+                                          }}>
+                                            <Text style={{ fontSize: 11, fontWeight: '800', color: rawVal ? '#059669' : '#DC2626' }}>
+                                              {rawVal ? 'TRUE' : 'FALSE'}
+                                            </Text>
+                                          </View>
+                                        ) : (
+                                          <Text
+                                            selectable={true}
+                                            style={{
+                                              fontSize: 11,
+                                              color: COLORS.text,
+                                              fontFamily: (col.column_name.toLowerCase().includes('id') || col.data_type.includes('timestamp'))
+                                                ? (Platform.OS === 'ios' ? 'Menlo' : 'monospace')
+                                                : undefined,
+                                              lineHeight: 16
+                                            }}
+                                            numberOfLines={2}
+                                          >
+                                            {displayVal}
+                                          </Text>
+                                        )}
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+                              );
+                            })
+                          )}
+                        </ScrollView>
+                      </View>
+                    </ScrollView>
+                  </View>
+                ) : (
+                  /* Vista de estructura / esquema */
+                  <View style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    overflow: 'hidden',
+                    backgroundColor: COLORS.white
+                  }}>
+                    <ScrollView horizontal={true} showsHorizontalScrollIndicator={true} style={{ flex: 1 }}>
+                      <View style={{ minWidth: 700, flex: 1 }}>
+                        <View style={{
                           flexDirection: 'row',
+                          backgroundColor: '#F1F5F9',
                           paddingVertical: 10,
                           paddingHorizontal: 14,
-                          borderBottomWidth: cIdx < selectedTablePreview.columns.length - 1 ? 1 : 0,
-                          borderBottomColor: '#F1F5F9',
-                          backgroundColor: cIdx % 2 === 0 ? COLORS.white : '#FAFAFA'
-                        }}
-                      >
-                        <Text style={{ flex: 1.5, fontSize: 12, fontWeight: '700', color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                          {col.column_name}
-                        </Text>
-                        <Text style={{ flex: 1, fontSize: 12, color: '#2563EB' }}>
-                          {col.data_type}
-                        </Text>
-                        <Text style={{ flex: 0.8, fontSize: 12, color: col.is_nullable === 'YES' ? '#D97706' : COLORS.muted }}>
-                          {col.is_nullable === 'YES' ? 'Sí' : 'No'}
-                        </Text>
-                        <Text style={{ flex: 1.2, fontSize: 11, color: COLORS.muted }} numberOfLines={1}>
-                          {col.column_default || '—'}
-                        </Text>
+                          borderBottomWidth: 1.5,
+                          borderBottomColor: '#CBD5E1'
+                        }}>
+                          <Text style={{ width: 44, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>#</Text>
+                          <Text style={{ flex: 2, minWidth: 200, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Columna</Text>
+                          <Text style={{ flex: 1.5, minWidth: 150, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Tipo de Dato</Text>
+                          <Text style={{ flex: 1, minWidth: 110, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Permite Null</Text>
+                          <Text style={{ flex: 2, minWidth: 180, fontSize: 12, fontWeight: '800', color: COLORS.primarySoft }}>Valor por Defecto</Text>
+                        </View>
+
+                        <ScrollView style={{ flex: 1, maxHeight: 460 }} showsVerticalScrollIndicator={true} nestedScrollEnabled={true}>
+                          {selectedTablePreview.columns.map((col, cIdx) => (
+                            <View
+                              key={col.column_name}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 10,
+                                paddingHorizontal: 14,
+                                borderBottomWidth: cIdx < selectedTablePreview.columns.length - 1 ? 1 : 0,
+                                borderBottomColor: '#F1F5F9',
+                                backgroundColor: cIdx % 2 === 0 ? COLORS.white : '#FAFAFA'
+                              }}
+                            >
+                              <Text style={{ width: 44, fontSize: 11, fontWeight: '700', color: COLORS.muted }}>
+                                {cIdx + 1}
+                              </Text>
+                              <View style={{ flex: 2, minWidth: 200, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                {col.column_name.toLowerCase() === 'id' ? (
+                                  <Ionicons name="key" size={13} color="#7E22CE" />
+                                ) : (
+                                  <Ionicons name="grid-outline" size={13} color="#94A3B8" />
+                                )}
+                                <Text selectable={true} style={{ fontSize: 12, fontWeight: '700', color: COLORS.primary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                                  {col.column_name}
+                                </Text>
+                              </View>
+                              <View style={{ flex: 1.5, minWidth: 150 }}>
+                                <View style={{ alignSelf: 'flex-start', backgroundColor: '#EFF6FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563EB', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                                    {col.data_type}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View style={{ flex: 1, minWidth: 110 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: col.is_nullable === 'YES' ? '#D97706' : '#10B981' }}>
+                                  {col.is_nullable === 'YES' ? 'Sí' : 'No'}
+                                </Text>
+                              </View>
+                              <Text selectable={true} style={{ flex: 2, minWidth: 180, fontSize: 11, color: col.column_default ? COLORS.text : '#94A3B8', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={2}>
+                                {col.column_default || '—'}
+                              </Text>
+                            </View>
+                          ))}
+                        </ScrollView>
                       </View>
-                    ))}
+                    </ScrollView>
                   </View>
                 )}
-              </ScrollView>
+              </View>
             ) : null}
 
-            {/* Footer con botón de cerrar */}
+            {/* Footer con información y botón de cerrar */}
             <View style={{
               flexDirection: 'row',
-              justifyContent: 'flex-end',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               paddingTop: 14,
               borderTopWidth: 1,
               borderTopColor: '#E2E8F0',
-              marginTop: 10
+              marginTop: 12
             }}>
+              <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                {selectedTablePreview ? `Mostrando ${filteredPreviewRows.length} registros cargados` : ''}
+              </Text>
               <TouchableOpacity
                 onPress={() => setTableModalVisible(false)}
                 style={{
                   backgroundColor: COLORS.primary,
-                  paddingHorizontal: 16,
+                  paddingHorizontal: 18,
                   paddingVertical: 9,
                   borderRadius: 10
                 }}
@@ -4955,14 +5444,18 @@ export default function AdminSettings() {
 function Sidebar({ activeTab, setActiveTab, currentUserRole }: { activeTab: string; setActiveTab: (tab: any) => void; currentUserRole?: string }) {
   const router = useRouter();
 
+  const isSuperAdmin = currentUserRole === 'superadmin';
+
   const TABS = [
     { id: 'all', label: 'Todas las Secciones', icon: 'grid' },
     { id: 'users', label: 'Usuarios y Roles', icon: 'people' },
     { id: 'dependencies', label: 'Dependencias', icon: 'people-circle' },
     { id: 'emails', label: 'Correos de Servicio', icon: 'mail' },
     { id: 'preferences', label: 'Preferencias Sistema', icon: 'options' },
-    { id: 'deployment', label: 'Servidor & Despliegue', icon: 'server' },
-    { id: 'database', label: 'Bases de Datos', icon: 'cube', badge: 'SUPER' },
+    ...(isSuperAdmin ? [
+      { id: 'deployment', label: 'Servidor & Despliegue', icon: 'server', badge: 'SUPER' },
+      { id: 'database', label: 'Bases de Datos', icon: 'cube', badge: 'SUPER' },
+    ] : [])
   ];
 
   return (
