@@ -1090,89 +1090,171 @@ function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user
   const limitInfo = resolveVehicleLimitForEmail(charge, user?.role);
   const plate = meta.plate ? meta.plate.toUpperCase() : 'Por confirmar';
   const vehicleInfo = `${meta.brand || ''} ${meta.color ? '- ' + meta.color : ''}`.trim() || 'Vehículo particular';
+  const spotText = meta.assigned_spot_code 
+    ? `Celda Fija: ${meta.assigned_spot_code}` 
+    : (meta.spot_type === 'fija' ? 'Celda Fija Asignada' : 'Parqueadero de Uso Libre / Rotativo');
 
-  // CASO: DESTINATARIO ADMINISTRADOR / VIGILANCIA
-  if (!isUserRecipient) {
-    const subject = `Solicitud de asignación de parqueadero – ${name} – Placa ${plate}`;
-    const html = renderServiceEmailLayout({
-      serviceCategory: 'parking',
-      headerSubTitle: 'Parqueadero Institucional',
-      introParagraph: 'Desde la Secretaría Jurídica Distrital, nos permitimos solicitar la gestión de cupo de estacionamiento para el siguiente servidor público:',
-      cardItems: [
-        { label: 'Funcionario Solicitante', value: name },
-        { label: 'Documento de Identidad', value: doc },
-        { label: 'Dependencia', value: dependency },
-        { label: 'Cargo Registrado', value: charge },
-        { label: 'Tipo de Cargo / Vinculación', value: `${limitInfo.label} (${limitInfo.limitText})` },
-        { label: 'Placa del Vehículo', value: plate },
-        { label: 'Vehículo (Marca / Color)', value: vehicleInfo }
-      ],
-      closingParagraphs: [
-        'Agradecemos verificar la disponibilidad y asignación de cupo conforme a la reglamentación y lineamientos de la Manzana Liévano.',
-        'Quedamos atentos a la confirmación del trámite.'
-      ]
-    });
-    return { subject, html };
-  }
-
-  // CASO: DESTINATARIO FUNCIONARIO SOLICITANTE
+  // =========================================================================
+  // PASO 1 Y 2: RADICACIÓN INICIAL (isUpdate === false)
+  // =========================================================================
   if (!isUpdate) {
+    // 2. Correo al Manager de Gestión Administrativa
+    if (!isUserRecipient) {
+      const subject = `Alerta de asignación: Cupo de Parqueadero – Placa ${plate}`;
+      const html = renderServiceEmailLayout({
+        serviceCategory: 'parking',
+        headerSubTitle: 'Parqueadero Institucional',
+        introParagraph: `Se ha radicado una nueva solicitud de asignación de cupo de parqueadero pendiente de revisión y validación institucional por parte de Gestión Administrativa:`,
+        cardItems: [
+          { label: 'Funcionario Solicitante', value: name },
+          { label: 'Documento de Identidad', value: doc },
+          { label: 'Dependencia', value: dependency },
+          { label: 'Cargo Registrado', value: charge },
+          { label: 'Tipo de Cargo / Vinculación', value: `${limitInfo.label} (${limitInfo.limitText})` },
+          { label: 'Placa del Vehículo', value: plate },
+          { label: 'Vehículo (Marca / Color)', value: vehicleInfo }
+        ],
+        closingParagraphs: [
+          'La solicitud se encuentra en estado PENDIENTE de validación.',
+          'Puedes ingresar al sistema SASGE para revisar los antecedentes de cupos del servidor y resolver la asignación.'
+        ],
+        actionButton: {
+          text: 'Gestionar Solicitud en SASGE',
+          url: 'https://sasge.secretariajuridica.gov.co/admin/manage'
+        }
+      });
+      return { subject, html };
+    }
+
+    // 1. Correo automático al funcionario solicitante
     const subject = `Solicitud de parqueadero radicada – Placa ${plate}`;
     const html = renderServiceEmailLayout({
       serviceCategory: 'parking',
       headerSubTitle: 'Parqueadero Institucional',
-      introParagraph: `Apreciado(a) <strong>${name}</strong>, tu solicitud de asignación de parqueadero ha sido radicada exitosamente en el sistema:`,
+      introParagraph: `Apreciado(a) <strong>${name}</strong>, tu solicitud de asignación de parqueadero ha sido recibida y se encuentra actualmente en trámite:`,
       cardItems: [
         { label: 'Funcionario', value: name },
         { label: 'Dependencia', value: dependency },
         { label: 'Cargo Registrado', value: charge },
-        { label: 'Tipo de Cargo / Vinculación', value: `${limitInfo.label} (${limitInfo.limitText})` },
+        { label: 'Tipo de Vinculación / Cupo', value: `${limitInfo.label} (${limitInfo.limitText})` },
         { label: 'Placa del Vehículo', value: plate },
-        { label: 'Vehículo', value: vehicleInfo }
+        { label: 'Vehículo', value: vehicleInfo },
+        { label: 'Estado', value: 'PENDIENTE DE REVISIÓN' }
       ],
       closingParagraphs: [
         'La Dirección de Gestión Corporativa evaluará la disponibilidad de cupos conforme a la normatividad interna y te notificará la respuesta oportuna.'
       ]
     });
     return { subject, html };
-  } else {
-    const isApproved = status === 'resuelto' || status === 'aprobado';
-    const isRejected = status === 'rechazado';
-    const statusText = isApproved ? 'AUTORIZADO' : isRejected ? 'NO DISPONIBLE' : (status?.toUpperCase() || 'EN TRÁMITE');
-    const subject = isApproved 
-      ? `Cupo de parqueadero autorizado – Placa ${plate}`
-      : `Actualización de cupo de parqueadero – Placa ${plate} (${statusText})`;
+  }
 
+  // =========================================================================
+  // PASO 3: GESTIÓN ADMINISTRATIVA REVISA LA SOLICITUD (isUpdate === true)
+  // =========================================================================
+  const isApproved = status === 'resuelto' || status === 'aprobado';
+  const isRejected = status === 'rechazado';
+  const reasonText = request.admin_notes || meta.rejection_reason || 'Disponibilidad de cupos en la sede o lineamientos institucionales.';
+
+  // 3a. Correo a Parqueaderos al ser aprobada (Autoriza el ingreso del vehículo y comunica sus datos)
+  if (!isUserRecipient && isApproved) {
+    const subject = `Solicitud de asignación de parqueadero – ${name} – Placa ${plate}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'parking',
+      headerSubTitle: 'Parqueadero Institucional',
+      introParagraph: 'Desde la Dirección de Gestión Corporativa, se informa la <strong>AUTORIZACIÓN</strong> de asignación de parqueadero para el siguiente servidor público y se autoriza el ingreso de su vehículo:',
+      cardItems: [
+        { label: 'Servidor Público', value: name },
+        { label: 'Documento de Identidad', value: doc },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Cargo / Vinculación', value: `${charge} (${limitInfo.label})` },
+        { label: 'Placa Autorizada', value: plate },
+        { label: 'Vehículo (Marca / Color)', value: vehicleInfo },
+        { label: 'Modalidad / Asignación', value: spotText },
+        { label: 'Estado', value: 'AUTORIZADO' }
+      ],
+      closingParagraphs: [
+        'Agradecemos autorizar el ingreso del vehículo y verificar el cumplimiento de las condiciones de uso y asignación en las instalaciones de la Manzana Liévano.'
+      ]
+    });
+    return { subject, html };
+  }
+
+  // 3b. Notificación a administradores si es rechazada (por si se envía copia)
+  if (!isUserRecipient && isRejected) {
+    const subject = `Solicitud de parqueadero rechazada – Placa ${plate}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'parking',
+      headerSubTitle: 'Parqueadero Institucional',
+      introParagraph: `La solicitud de parqueadero para el vehículo placa <strong>${plate}</strong> fue rechazada por Gestión Administrativa:`,
+      cardItems: [
+        { label: 'Servidor', value: name },
+        { label: 'Placa', value: plate },
+        { label: 'Motivo', value: reasonText },
+        { label: 'Estado', value: 'RECHAZADA' }
+      ]
+    });
+    return { subject, html };
+  }
+
+  // 3c. Correo al funcionario solicitante: Asignación de parqueadero AUTORIZADA
+  if (isApproved) {
+    const subject = `Asignación de parqueadero AUTORIZADA – Placa ${plate}`;
     const adminNote = request.admin_notes ? `<p style="margin-top: 10px; color: #78350F; background: #FEF3C7; padding: 10px; border-radius: 6px;"><strong>Observaciones:</strong> ${request.admin_notes}</p>` : '';
 
     const html = renderServiceEmailLayout({
       serviceCategory: 'parking',
       headerSubTitle: 'Parqueadero Institucional',
-      introParagraph: isApproved
-        ? `Te informamos que tu solicitud de cupo de estacionamiento ha sido <strong>APROBADA</strong>:`
-        : `Te informamos sobre la actualización de tu solicitud de parqueadero:`,
+      introParagraph: `Apreciado(a) <strong>${name}</strong>, nos permitimos comunicarte que tu asignación de cupo de parqueadero ha sido <strong>AUTORIZADA</strong>:`,
       cardItems: [
         { label: 'Placa Autorizada', value: plate },
         { label: 'Vehículo', value: vehicleInfo },
-        { 
-          label: 'Celda / Modalidad', 
-          value: meta.assigned_spot_code 
-            ? `Celda Fija: ${meta.assigned_spot_code}` 
-            : (meta.spot_type === 'fija' ? 'Celda Fija Asignada' : 'Parqueadero de Uso Libre / Rotativo') 
-        },
-        { label: 'Servidor', value: name },
-        { label: 'Estado', value: statusText }
+        { label: 'Celda / Modalidad Asignada', value: spotText },
+        { label: 'Servidor Solicitante', value: name },
+        { label: 'Dependencia', value: dependency },
+        { label: 'Estado del Cupo', value: 'AUTORIZADO' }
       ],
       extraSectionsHtml: adminNote,
-      closingParagraphs: isApproved ? [
-        'Por favor ten presentes las normas de acceso: conducir a una velocidad máxima de 10 Km/h, apagar el vehículo al ingresar, portar carnet de la entidad y usar el casco reglamentario en caso de motocicletas.',
-        'Recuerda ubicar el vehículo en el espacio asignado por el personal de vigilancia.'
-      ] : [
-        'En esta ocasión no fue posible asignar cupo por disponibilidad de espacios en la sede.'
+      closingParagraphs: [
+        'Condiciones de uso institucional: Conducir a velocidad máxima de 10 Km/h, apagar el vehículo al ingresar, portar carnet de la entidad y usar el casco reglamentario en motos.',
+        'Al ingresar, la vigilancia entregará la ficha con el número de parqueadero asignado, la cual debe permanecer visible en el vehículo.'
       ]
     });
     return { subject, html };
   }
+
+  // 3d. Correo al funcionario solicitante: Solicitud de parqueadero rechazada
+  if (isRejected) {
+    const subject = `Solicitud de parqueadero rechazada – Placa ${plate}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: 'parking',
+      headerSubTitle: 'Parqueadero Institucional',
+      introParagraph: `Apreciado(a) <strong>${name}</strong>, te informamos que tu solicitud de cupo de estacionamiento para la placa <strong>${plate}</strong> no ha sido aprobada en esta oportunidad:`,
+      cardItems: [
+        { label: 'Placa del Vehículo', value: plate },
+        { label: 'Vehículo', value: vehicleInfo },
+        { label: 'Motivo del Rechazo', value: reasonText },
+        { label: 'Estado', value: 'RECHAZADA' }
+      ],
+      closingParagraphs: [
+        'Agradecemos tu comprensión. Para cualquier inquietud adicional puedes comunicarte con la Dirección de Gestión Corporativa.'
+      ]
+    });
+    return { subject, html };
+  }
+
+  // Fallback si status es otro
+  const subject = `Actualización de cupo de parqueadero – Placa ${plate} (${status?.toUpperCase() || 'EN TRÁMITE'})`;
+  const html = renderServiceEmailLayout({
+    serviceCategory: 'parking',
+    headerSubTitle: 'Parqueadero Institucional',
+    introParagraph: `Te informamos sobre la actualización de tu solicitud de parqueadero:`,
+    cardItems: [
+      { label: 'Placa', value: plate },
+      { label: 'Vehículo', value: vehicleInfo },
+      { label: 'Estado', value: status?.toUpperCase() || 'EN TRÁMITE' }
+    ]
+  });
+  return { subject, html };
 }
 
 /**
