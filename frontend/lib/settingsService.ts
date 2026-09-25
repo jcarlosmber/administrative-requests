@@ -415,8 +415,81 @@ export const settingsService = {
       throw new Error(data.error || 'Error al obtener estadísticas del servidor.');
     }
     return data;
+  },
+
+  // ==========================================
+  // SERVICIO DE AUDITORÍA Y BASE DE DATOS (SUPERADMIN)
+  // ==========================================
+  async getDatabaseOverview(): Promise<DatabaseOverview> {
+    const token = await appStorage.getItem('auth_token');
+    const res = await fetch(`${API_URL}/api/admin/database/overview`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al obtener información de la base de datos.');
+    }
+    return data;
+  },
+
+  async getTablePreview(tableName: string): Promise<TablePreview> {
+    const token = await appStorage.getItem('auth_token');
+    const res = await fetch(`${API_URL}/api/admin/database/table/${encodeURIComponent(tableName)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || `Error al consultar la tabla ${tableName}.`);
+    }
+    return data;
   }
 };
+
+export interface DatabaseTableInfo {
+  table_name: string;
+  row_count: number;
+  size: string;
+  columns_count: number;
+}
+
+export interface DatabaseOverview {
+  database: {
+    database_name: string;
+    database_size: string;
+    pg_version: string;
+  };
+  connections: {
+    total_connections: string;
+    active_connections: string;
+    idle_connections: string;
+  };
+  tables: DatabaseTableInfo[];
+  timestamp: string;
+}
+
+export interface TableColumnInfo {
+  column_name: string;
+  data_type: string;
+  is_nullable: string;
+  column_default: string | null;
+}
+
+export interface TablePreview {
+  tableName: string;
+  columns: TableColumnInfo[];
+  rows: Record<string, any>[];
+  totalReturned: number;
+}
 
 export interface ServerStats {
   hostname: string;

@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
-import { settingsService, Driver, ServiceEmail, ServerStats } from '../../lib/settingsService';
+import { settingsService, Driver, ServiceEmail, ServerStats, DatabaseOverview, TablePreview } from '../../lib/settingsService';
 import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
 import { DependencySelector } from '../../components/DependencySelector';
 
@@ -90,7 +90,7 @@ export default function AdminSettings() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
-  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'dependencies' | 'emails' | 'preferences' | 'deployment'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'users' | 'dependencies' | 'emails' | 'preferences' | 'deployment' | 'database'>('all');
 
   const [rooms, setRooms] = useState<any[]>([]);
   const [dependencies, setDependencies] = useState<any[]>([]);
@@ -203,6 +203,15 @@ export default function AdminSettings() {
   // Estados de Estadísticas e Infraestructura del Servidor
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+
+  // Estados de Base de Datos PostgreSQL (Superadmin)
+  const [dbOverview, setDbOverview] = useState<DatabaseOverview | null>(null);
+  const [loadingDb, setLoadingDb] = useState(false);
+  const [tableModalVisible, setTableModalVisible] = useState(false);
+  const [selectedTablePreview, setSelectedTablePreview] = useState<TablePreview | null>(null);
+  const [loadingTablePreview, setLoadingTablePreview] = useState(false);
+  const [tablePreviewTab, setTablePreviewTab] = useState<'data' | 'structure'>('data');
+  const [tableSearchQuery, setTableSearchQuery] = useState('');
 
   // Modals States
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -1373,6 +1382,53 @@ export default function AdminSettings() {
       loadServerStats();
     }
   }, [activeTab, loadServerStats]);
+
+  const loadDatabaseOverview = useCallback(async () => {
+    try {
+      setLoadingDb(true);
+      const data = await settingsService.getDatabaseOverview();
+      setDbOverview(data);
+    } catch (err: any) {
+      console.warn('Error al cargar métricas de base de datos:', err);
+    } finally {
+      setLoadingDb(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'all' || activeTab === 'database') {
+      loadDatabaseOverview();
+    }
+  }, [activeTab, loadDatabaseOverview]);
+
+  const handleOpenTablePreview = async (tableName: string) => {
+    if (currentUserRole !== 'superadmin') {
+      setSettingsNoticeModal({
+        visible: true,
+        title: 'Acceso Restringido',
+        message: 'Solo el perfil de Super Administrador puede explorar directamente las tablas de la base de datos.',
+        isError: true,
+      });
+      return;
+    }
+    try {
+      setLoadingTablePreview(true);
+      setTableModalVisible(true);
+      setTablePreviewTab('data');
+      const preview = await settingsService.getTablePreview(tableName);
+      setSelectedTablePreview(preview);
+    } catch (err: any) {
+      setSettingsNoticeModal({
+        visible: true,
+        title: 'Error al explorar tabla',
+        message: err.message || 'No fue posible consultar la tabla solicitada.',
+        isError: true,
+      });
+      setTableModalVisible(false);
+    } finally {
+      setLoadingTablePreview(false);
+    }
+  };
 
   return (
     <View style={styles.container}>

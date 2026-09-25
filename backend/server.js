@@ -625,6 +625,116 @@ app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
   }
 });
 
+// --- ENDPOINT DE ESTADÍSTICAS Y EXPLORACIÓN DE BASE DE DATOS (SUPERADMIN) ---
+app.get('/api/admin/database/overview', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo el perfil de Super Administrador puede auditar la base de datos.' });
+    }
+
+    const dbInfo = await pool.query(`
+      SELECT 
+        current_database() as database_name,
+        pg_size_pretty(pg_database_size(current_database())) as database_size,
+        version() as pg_version
+    `);
+
+    const connInfo = await pool.query(`
+      SELECT count(*) as total_connections,
+             count(*) FILTER (WHERE state = 'active') as active_connections,
+             count(*) FILTER (WHERE state = 'idle') as idle_connections
+      FROM pg_stat_activity 
+      WHERE datname = current_database()
+    `);
+
+    const tablesRes = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `);
+
+    const tables = [];
+    for (const row of tablesRes.rows) {
+      try {
+        const countRes = await pool.query(`SELECT count(*) FROM public."${row.table_name}"`);
+        const sizeRes = await pool.query(`SELECT pg_size_pretty(pg_total_relation_size('public."' || $1 || '"')) as size`, [row.table_name]);
+        const colsRes = await pool.query(`
+          SELECT count(*) as col_count 
+          FROM information_schema.columns 
+          WHERE table_schema = 'public' AND table_name = $1
+        `, [row.table_name]);
+
+        tables.push({
+          table_name: row.table_name,
+          row_count: parseInt(countRes.rows[0].count, 10),
+          size: sizeRes.rows[0].size,
+          columns_count: parseInt(colsRes.rows[0].col_count, 10)
+        });
+      } catch (tErr) {
+        console.warn(`Error leyendo stats de tabla ${row.table_name}:`, tErr.message);
+      }
+    }
+
+    res.json({
+      database: dbInfo.rows[0],
+      connections: connInfo.rows[0],
+      tables,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Error consultando base de datos:', err);
+    res.status(500).json({ error: 'Error al consultar la base de datos: ' + err.message });
+  }
+});
+
+app.get('/api/admin/database/table/:tableName', authenticateToken, async (req, res) => {
+  try {
+    if (req.user?.role !== 'superadmin' && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo el perfil de Super Administrador puede visualizar tablas de la base de datos.' });
+    }
+
+    const { tableName } = req.params;
+
+    // Validar nombre de tabla seguro frente a inyecciones
+    const validTableRes = await pool.query(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1`,
+      [tableName]
+    );
+
+    if (validTableRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Tabla no encontrada en el esquema público.' });
+    }
+
+    const colsRes = await pool.query(
+      `SELECT column_name, data_type, is_nullable, column_default 
+       FROM information_schema.columns 
+       WHERE table_schema = 'public' AND table_name = $1 
+       ORDER BY ordinal_position`,
+      [tableName]
+    );
+
+    // Consulta de registros con límite seguro
+    const rowsRes = await pool.query(`SELECT * FROM public."${tableName}" LIMIT 25`);
+    const sanitizedRows = rowsRes.rows.map(row => {
+      const sanitized = { ...row };
+      if ('password_hash' in sanitized) sanitized.password_hash = '•••••••••••••••• [OCULTO]';
+      if ('password' in sanitized) sanitized.password = '•••••••••••••••• [OCULTO]';
+      return sanitized;
+    });
+
+    res.json({
+      tableName,
+      columns: colsRes.rows,
+      rows: sanitizedRows,
+      totalReturned: sanitizedRows.length
+    });
+  } catch (err) {
+    console.error('Error explorando tabla:', err);
+    res.status(500).json({ error: 'Error al explorar la tabla: ' + err.message });
+  }
+});
+
 // --- ENDPOINT DE CONTROL Y DESPLIEGUE GIT ---
 app.post('/api/admin/git', authenticateToken, async (req, res) => {
   try {

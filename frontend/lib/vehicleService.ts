@@ -246,11 +246,22 @@ export const vehicleService = {
       body: JSON.stringify(updates),
     });
     if (!res.ok) {
-      const fallbackRes = await fetch(`${API_URL}/api/vehicles/${id}/update`, {
+      let fallbackRes = await fetch(`${API_URL}/api/vehicles/${id}/update`, {
         method: 'POST',
         headers: { ...headers, 'X-HTTP-Method-Override': 'PUT' },
         body: JSON.stringify(updates),
       }).catch(() => null);
+
+      if (!fallbackRes || !fallbackRes.ok) {
+        const basePost = await fetch(`${API_URL}/api/vehicles/${id}`, {
+          method: 'POST',
+          headers: { ...headers, 'X-HTTP-Method-Override': 'PUT' },
+          body: JSON.stringify(updates),
+        }).catch(() => null);
+        if (basePost && basePost.ok) {
+          fallbackRes = basePost;
+        }
+      }
 
       if (fallbackRes && fallbackRes.ok) {
         res = fallbackRes;
