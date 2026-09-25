@@ -964,13 +964,20 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         top = Math.max(12, rect.top - popoverHeight - 8);
       }
 
-      setLscPopover({
+      setLscPopover(prev => ({
         visible: true,
         term: match,
         top,
         left,
-        pinned
-      });
+        pinned: pinned || prev.pinned
+      }));
+
+      // Darle un tiempo generoso de permanencia de 35 segundos para que la persona sorda pueda observar con calma
+      if (!pinned) {
+        hideLscTimerRef.current = setTimeout(() => {
+          setLscPopover(p => (p.pinned ? p : { ...p, visible: false }));
+        }, 35000); // 35 segundos de permanencia
+      }
     };
 
     const handleMouseOver = (e: MouseEvent) => {
@@ -989,13 +996,8 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     const handleMouseOut = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target) return;
-      setLscPopover(prev => {
-        if (prev.pinned) return prev;
-        hideLscTimerRef.current = setTimeout(() => {
-          setLscPopover(p => (p.pinned ? p : { ...p, visible: false }));
-        }, 400);
-        return prev;
-      });
+      // No cerrar al mover el cursor; el usuario aparta el ratón para ver el video sin obstáculos.
+      // Solo mantener el temporizador extendido de 35s iniciado en showForElement.
     };
 
     const handleFocusIn = (e: FocusEvent) => {
@@ -1004,13 +1006,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     };
 
     const handleFocusOut = () => {
-      setLscPopover(prev => {
-        if (prev.pinned) return prev;
-        hideLscTimerRef.current = setTimeout(() => {
-          setLscPopover(p => (p.pinned ? p : { ...p, visible: false }));
-        }, 400);
-        return prev;
-      });
+      // No cerrar agresivamente en focusout para no interrumpir lectores de pantalla ni navegación por teclado
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -1019,7 +1015,15 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       if (target.closest && target.closest('[data-lsc-popover]')) return;
       const match = findMatch(target);
       if (match) {
+        // Al hacer clic, se fija automáticamente para que no se cierre solo
         showForElement(target, true);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
+        setLscPopover(prev => ({ ...prev, visible: false, pinned: false }));
       }
     };
 
@@ -1028,6 +1032,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     document.addEventListener('focusin', handleFocusIn, true);
     document.addEventListener('focusout', handleFocusOut, true);
     document.addEventListener('click', handleClick, true);
+    document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       document.removeEventListener('mouseover', handleMouseOver, true);
@@ -1035,6 +1040,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       document.removeEventListener('focusin', handleFocusIn, true);
       document.removeEventListener('focusout', handleFocusOut, true);
       document.removeEventListener('click', handleClick, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
       if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
     };
   }, [lscActive]);
@@ -1610,9 +1616,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           }}
           onMouseLeave={() => {
             if (!lscPopover.pinned) {
+              if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
               hideLscTimerRef.current = setTimeout(() => {
                 setLscPopover(p => (p.pinned ? p : { ...p, visible: false }));
-              }, 400);
+              }, 30000); // 30 segundos tras salir del popover
             }
           }}
         >
@@ -1623,14 +1630,39 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
               <Text style={styles.lscPopoverTitle} numberOfLines={1}>
                 {lscPopover.term.title}
               </Text>
+              {lscPopover.pinned && (
+                <View style={{ backgroundColor: '#D97706', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#FFFFFF' }}>FIJADO</Text>
+                </View>
+              )}
             </View>
-            <TouchableOpacity
-              onPress={() => setLscPopover(prev => ({ ...prev, visible: false, pinned: false }))}
-              style={styles.lscPopoverCloseBtn}
-              accessibilityLabel="Cerrar video de señas"
-            >
-              <Ionicons name="close" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {/* Botón Fijar/Desanclar */}
+              <TouchableOpacity
+                onPress={() => setLscPopover(prev => ({ ...prev, pinned: !prev.pinned }))}
+                style={[
+                  styles.lscPopoverCloseBtn,
+                  lscPopover.pinned && { backgroundColor: '#D97706' }
+                ]}
+                accessibilityLabel={lscPopover.pinned ? "Desfijar intérprete" : "Fijar intérprete en pantalla"}
+              >
+                <Ionicons
+                  name={lscPopover.pinned ? "pin" : "pin-outline"}
+                  size={14}
+                  color={lscPopover.pinned ? "#FFFFFF" : "#CBD5E1"}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
+                  setLscPopover(prev => ({ ...prev, visible: false, pinned: false }));
+                }}
+                style={styles.lscPopoverCloseBtn}
+                accessibilityLabel="Cerrar video de señas"
+              >
+                <Ionicons name="close" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Video Player */}
