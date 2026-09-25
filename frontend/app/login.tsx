@@ -158,131 +158,160 @@ export default function LoginPage() {
         <SafeAreaView style={styles.safeArea}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.content}
+            style={{ flex: 1 }}
           >
-            {/* Botón Volver */}
-            <Pressable
-              style={styles.backButton}
-              onPress={() => router.replace('/')}
-              accessibilityRole="button"
-              accessibilityLabel="Volver al portal"
-            >
-              <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-              <Text style={styles.backText}>Volver al portal</Text>
-            </Pressable>
-
-            {/* Botón Flotante Superior: Video de Introducción */}
-            <Pressable
-              style={styles.videoHeaderButton}
-              onPress={() => setShowVideoModal(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Ver video de introducción"
-            >
-              <View style={styles.videoHeaderIconBox}>
-                <Ionicons name="play" size={13} color="#FFFFFF" />
-              </View>
-              <Text style={styles.videoHeaderText}>Video de Introducción</Text>
-            </Pressable>
-
-            {/* Contenedor Principal (Adaptable en Pantallas Grandes) */}
-            <View
-              style={[
-                styles.mainContainer,
-                isDesktop ? styles.mainContainerDesktop : styles.mainContainerMobile,
+            <ScrollView
+              contentContainerStyle={[
+                styles.scrollContainer,
+                isDesktop ? styles.scrollContainerDesktop : styles.scrollContainerMobile,
               ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
             >
-              {/* =========================================
-                  COLUMNA IZQUIERDA: HERO INSTITUCIONAL
-                  (Diseño amplio inspirado en la imagen SIGA)
-                 ========================================= */}
+              {/* Barra Superior Responsiva: Botón Volver y Botón Video */}
               <View
                 style={[
-                  styles.brandPanel,
-                  isDesktop ? styles.brandPanelDesktop : styles.brandPanelMobile,
+                  styles.topBar,
+                  isDesktop ? styles.topBarDesktop : styles.topBarMobile,
                 ]}
               >
-                {/* Cabecera / Identidad SASGE */}
-                <View style={styles.brandHeader}>
-                  <View style={styles.logoRow}>
-                    <Text style={styles.sigaText}>SASGE</Text>
-                    <View style={styles.badge20}>
-                      <Text style={styles.badge20Text}>2.0</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.sigaSubtitle}>
-                    BIENVENIDOS AL SISTEMA DE ADMINISTRACIÓN DE SERVICIOS GENERALES
-                  </Text>
-                </View>
-
-                {/* Botón Destacado de Introducción / Inducción en el Hero */}
                 <Pressable
-                  style={styles.heroVideoButton}
-                  onPress={() => setShowVideoModal(true)}
+                  style={styles.backButton}
+                  onPress={() => router.replace('/')}
                   accessibilityRole="button"
-                  accessibilityLabel="Reproducir video de introducción SASGE 2.0"
+                  accessibilityLabel="Volver al portal"
                 >
-                  <View style={styles.heroVideoPlayCircle}>
-                    <Ionicons name="play" size={18} color="#FFFFFF" />
-                  </View>
-                  <View style={styles.heroVideoInfo}>
-                    <Text style={styles.heroVideoTitle}>Ver Video de Introducción</Text>
-                    <Text style={styles.heroVideoSubtitle}>
-                      Conoce las funciones y novedades de SASGE 2.0
-                    </Text>
-                  </View>
-                  <View style={styles.heroVideoPill}>
-                    <Ionicons name="videocam" size={13} color="#FFFFFF" />
-                    <Text style={styles.heroVideoPillText}>Ver ahora</Text>
-                  </View>
+                  <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
+                  <Text style={styles.backText}>{isDesktop ? 'Volver al portal' : 'Volver'}</Text>
                 </Pressable>
 
-                {/* Cuadrícula de Módulos (Visible en Pantallas Grandes como la imagen de referencia) */}
-                {isDesktop && (
-                  <View style={styles.modulesGrid}>
-                    {SASGE_MODULES.map((item) => (
-                      <View key={item.id} style={styles.moduleCard}>
-                        <View style={styles.moduleIconBox}>
-                          <Ionicons name={item.icon} size={28} color="#FFFFFF" />
-                        </View>
-                        <Text style={styles.moduleCardTitle}>{item.title}</Text>
-                      </View>
-                    ))}
+                <Pressable
+                  style={styles.videoHeaderButton}
+                  onPress={() => setShowVideoModal(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ver video de introducción"
+                >
+                  <View style={styles.videoHeaderIconBox}>
+                    <Ionicons name="play" size={12} color="#FFFFFF" />
                   </View>
-                )}
-
-                {/* Pie Institucional: Logo Oficial Secretaría Jurídica Distrital */}
-                <View style={styles.institutionalFooter}>
-                  <Image
-                    source={require('../assets/logos/sjd blanco amarillo.png')}
-                    style={styles.sjdLogo}
-                    resizeMode="contain"
-                  />
-                </View>
+                  <Text style={styles.videoHeaderText}>
+                    {isDesktop ? 'Video de Introducción' : 'Video Tutorial'}
+                  </Text>
+                </Pressable>
               </View>
 
-              {/* =========================================
-                  COLUMNA DERECHA: FORMULARIO DE ACCESO
-                 ========================================= */}
+              {/* Contenedor Principal (Adaptable en Pantallas Grandes y Celular) */}
               <View
                 style={[
-                  styles.formPanel,
-                  isDesktop ? styles.formPanelDesktop : styles.formPanelMobile,
+                  styles.mainContainer,
+                  isDesktop ? styles.mainContainerDesktop : styles.mainContainerMobile,
                 ]}
               >
-                <View style={styles.formBadge}>
-                  <Ionicons name="shield-checkmark" size={15} color={COLORS.primary} />
-                  <Text style={styles.formBadgeText}>Acceso Institucional Seguro</Text>
+                {/* =========================================
+                    COLUMNA IZQUIERDA: HERO INSTITUCIONAL
+                   ========================================= */}
+                <View
+                  style={[
+                    styles.brandPanel,
+                    isDesktop ? styles.brandPanelDesktop : styles.brandPanelMobile,
+                  ]}
+                >
+                  {/* Cabecera / Identidad SASGE */}
+                  <View style={styles.brandHeader}>
+                    <View style={styles.logoRow}>
+                      <Text style={[styles.sigaText, !isDesktop && styles.sigaTextMobile]}>
+                        SASGE
+                      </Text>
+                      <View style={styles.badge20}>
+                        <Text style={styles.badge20Text}>2.0</Text>
+                      </View>
+                    </View>
+                    <Text
+                      style={[
+                        styles.sigaSubtitle,
+                        !isDesktop && styles.sigaSubtitleMobile,
+                      ]}
+                    >
+                      BIENVENIDOS AL SISTEMA DE ADMINISTRACIÓN DE SERVICIOS GENERALES
+                    </Text>
+                  </View>
+
+                  {/* Botón Destacado de Introducción / Inducción en el Hero */}
+                  <Pressable
+                    style={[
+                      styles.heroVideoButton,
+                      !isDesktop && styles.heroVideoButtonMobile,
+                    ]}
+                    onPress={() => setShowVideoModal(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reproducir video de introducción SASGE 2.0"
+                  >
+                    <View style={[styles.heroVideoPlayCircle, !isDesktop && styles.heroVideoPlayCircleMobile]}>
+                      <Ionicons name="play" size={!isDesktop ? 15 : 18} color="#FFFFFF" />
+                    </View>
+                    <View style={styles.heroVideoInfo}>
+                      <Text style={[styles.heroVideoTitle, !isDesktop && { fontSize: 13 }]}>
+                        Ver Video de Introducción
+                      </Text>
+                      <Text style={[styles.heroVideoSubtitle, !isDesktop && { fontSize: 10, lineHeight: 14 }]}>
+                        Conoce las funciones y novedades de SASGE 2.0
+                      </Text>
+                    </View>
+                    <View style={styles.heroVideoPill}>
+                      <Ionicons name="videocam" size={12} color="#FFFFFF" />
+                      <Text style={[styles.heroVideoPillText, !isDesktop && { fontSize: 10 }]}>Ver ahora</Text>
+                    </View>
+                  </Pressable>
+
+                  {/* Cuadrícula de Módulos (Visible en Pantallas Grandes como la imagen de referencia) */}
+                  {isDesktop && (
+                    <View style={styles.modulesGrid}>
+                      {SASGE_MODULES.map((item) => (
+                        <View key={item.id} style={styles.moduleCard}>
+                          <View style={styles.moduleIconBox}>
+                            <Ionicons name={item.icon} size={28} color="#FFFFFF" />
+                          </View>
+                          <Text style={styles.moduleCardTitle}>{item.title}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* Pie Institucional: Logo Oficial Secretaría Jurídica Distrital */}
+                  <View style={[styles.institutionalFooter, !isDesktop && styles.institutionalFooterMobile]}>
+                    <Image
+                      source={require('../assets/logos/sjd blanco amarillo.png')}
+                      style={[styles.sjdLogo, !isDesktop && styles.sjdLogoMobile]}
+                      resizeMode="contain"
+                    />
+                  </View>
                 </View>
 
-                <Text style={styles.title}>Ingreso al sistema</Text>
-                <Text style={styles.subtitle}>
-                  Accede con tu usuario o correo institucional y la misma contraseña de red.
-                </Text>
+                {/* =========================================
+                    COLUMNA DERECHA: FORMULARIO DE ACCESO
+                   ========================================= */}
+                <View
+                  style={[
+                    styles.formPanel,
+                    isDesktop ? styles.formPanelDesktop : styles.formPanelMobile,
+                  ]}
+                >
+                  <View style={styles.formBadge}>
+                    <Ionicons name="shield-checkmark" size={15} color={COLORS.primary} />
+                    <Text style={styles.formBadgeText}>Acceso Institucional Seguro</Text>
+                  </View>
 
-                <View style={styles.form}>
-                  {/* Campo Usuario */}
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Usuario o Correo Institucional</Text>
+                  <Text style={[styles.title, !isDesktop && styles.titleMobile]}>
+                    Ingreso al sistema
+                  </Text>
+                  <Text style={[styles.subtitle, !isDesktop && styles.subtitleMobile]}>
+                    Accede con tu usuario o correo institucional y la misma contraseña de red.
+                  </Text>
+
+                  <View style={styles.form}>
+                    {/* Campo Usuario */}
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.label}>Usuario o Correo Institucional</Text>
                     <View style={styles.inputShell}>
                       <Ionicons name="person-outline" size={20} color={COLORS.heroMuted} />
                       <TextInput
@@ -398,6 +427,7 @@ export default function LoginPage() {
                 </View>
               </View>
             </View>
+          </ScrollView>
 
             {/* Modal de Política de Privacidad */}
             <Modal
@@ -509,63 +539,81 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  scrollContainer: {
+    flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    width: '100%',
   },
-  backButton: {
-    position: 'absolute',
-    top: 24,
-    left: 24,
+  scrollContainerDesktop: {
+    justifyContent: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+  },
+  scrollContainerMobile: {
+    justifyContent: 'flex-start',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  topBar: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  topBarDesktop: {
+    maxWidth: 1140,
+    marginBottom: 20,
+    paddingHorizontal: 4,
+  },
+  topBarMobile: {
+    maxWidth: 480,
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    zIndex: 10,
   },
   backText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   videoHeaderButton: {
-    position: 'absolute',
-    top: 24,
-    right: 24,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderRadius: 999,
     backgroundColor: 'rgba(190, 31, 45, 0.92)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.35)',
     shadowColor: '#BE1F2D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-    zIndex: 10,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
   },
   videoHeaderIconBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   videoHeaderText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.2,
   },
@@ -586,6 +634,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
   },
+  heroVideoButtonMobile: {
+    marginTop: 12,
+    marginBottom: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 10,
+    width: '100%',
+  },
   heroVideoPlayCircle: {
     width: 40,
     height: 40,
@@ -598,6 +654,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 6,
     elevation: 3,
+  },
+  heroVideoPlayCircleMobile: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   heroVideoInfo: {
     flex: 1,
@@ -652,6 +713,8 @@ const styles = StyleSheet.create({
   mainContainerMobile: {
     maxWidth: 480,
     flexDirection: 'column',
+    marginBottom: 20,
+    borderRadius: 20,
   },
 
   /* =========================================
@@ -668,7 +731,8 @@ const styles = StyleSheet.create({
     borderRightColor: 'rgba(255, 255, 255, 0.1)',
   },
   brandPanelMobile: {
-    padding: 24,
+    paddingVertical: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
@@ -688,6 +752,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 6,
     textTransform: 'uppercase',
+  },
+  sigaTextMobile: {
+    fontSize: 32,
+    letterSpacing: 3,
   },
   badge20: {
     backgroundColor: COLORS.primary,
@@ -711,6 +779,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     maxWidth: 380,
     lineHeight: 18,
+  },
+  sigaSubtitleMobile: {
+    fontSize: 11,
+    letterSpacing: 0.8,
+    lineHeight: 15,
+    marginTop: 6,
+    maxWidth: 290,
   },
 
   /* Cuadrícula de módulos (Estilo SIGA) */
@@ -759,9 +834,17 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 16,
   },
+  institutionalFooterMobile: {
+    paddingTop: 10,
+  },
   sjdLogo: {
     width: 220,
     height: 52,
+  },
+  sjdLogoMobile: {
+    width: 170,
+    height: 40,
+    marginTop: 4,
   },
 
   /* =========================================
@@ -776,7 +859,8 @@ const styles = StyleSheet.create({
     padding: 44,
   },
   formPanelMobile: {
-    padding: 24,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
   },
   formBadge: {
     alignSelf: 'flex-start',
@@ -789,7 +873,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(190, 31, 45, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(190, 31, 45, 0.18)',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   formBadgeText: {
     color: COLORS.primary,
@@ -801,15 +885,23 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '900',
   },
+  titleMobile: {
+    fontSize: 22,
+  },
   subtitle: {
     color: COLORS.heroMuted,
     fontSize: 14,
     lineHeight: 20,
     marginTop: 6,
   },
+  subtitleMobile: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
   form: {
-    marginTop: 24,
-    gap: 16,
+    marginTop: 20,
+    gap: 14,
   },
   inputGroup: {
     gap: 6,
@@ -841,6 +933,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 2,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   rememberControl: {
     flexDirection: 'row',
@@ -872,7 +966,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   policyLink: {
-    minHeight: 38,
+    minHeight: 40,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.line,
@@ -881,7 +975,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   policyLinkAccepted: {
     backgroundColor: 'rgba(16, 185, 129, 0.08)',
@@ -889,11 +984,13 @@ const styles = StyleSheet.create({
   },
   policyLinkText: {
     color: COLORS.heroMuted,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   submitButton: {
-    minHeight: 52,
+    minHeight: 50,
     borderRadius: 14,
     backgroundColor: COLORS.primary,
     flexDirection: 'row',
@@ -912,7 +1009,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
   },
   formFooterNote: {
@@ -920,8 +1017,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 22,
-    paddingTop: 16,
+    marginTop: 18,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
   },
@@ -943,8 +1040,8 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: COLORS.white,
     borderRadius: 20,
-    padding: 24,
-    maxHeight: '80%',
+    padding: 20,
+    maxHeight: '85%',
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
