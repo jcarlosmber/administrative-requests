@@ -240,6 +240,7 @@ export default function AdminSettings() {
   });
 
   const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [currentUserRole, setCurrentUserRole] = useState<string>('admin');
 
   // Load configuration, rooms, dependencies, drivers and service emails
   useEffect(() => {
@@ -251,6 +252,9 @@ export default function AdminSettings() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
           setCurrentUserEmail(user.email);
+        }
+        if (user?.role) {
+          setCurrentUserRole(user.role);
         }
 
         // 1. Cargar Salas desde Supabase
@@ -876,7 +880,7 @@ export default function AdminSettings() {
       telefono: user.phone || '',
       dependencia: dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || '',
       entidad: user.entity || '',
-      rol: user.role === 'admin' ? 'Administrador' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
+      rol: user.role === 'superadmin' ? 'Super Administrador' : user.role === 'admin' ? 'Administrador' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
       activo: user.is_active ? 'Sí' : 'No',
       inicio: user.start_date || '',
       vencimiento: user.end_date || '',
@@ -923,6 +927,16 @@ export default function AdminSettings() {
   };
 
   const openUserEditor = (user: any) => {
+    if (user.role === 'superadmin' && currentUserRole !== 'superadmin') {
+      setSettingsNoticeModal({
+        visible: true,
+        title: 'Acceso Restringido',
+        message: 'Solo los usuarios con rol de Super Administrador pueden modificar los datos y credenciales de otro Super Administrador.',
+        isError: true,
+      });
+      return;
+    }
+
     let fn = user.first_name;
     let ln = user.last_name;
     const displayName = user.full_name || user.name || '';
@@ -1507,7 +1521,12 @@ export default function AdminSettings() {
                         let roleColor = '#334155';
                         let roleBorder = '#E2E8F0';
 
-                        if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
+                        if (normalizedRole === 'superadmin' || normalizedRole === 'super administrador' || normalizedRole === 'super_admin') {
+                          roleLabel = 'Super Administrador';
+                          roleBg = '#FAF5FF';
+                          roleColor = '#7E22CE';
+                          roleBorder = '#D8B4FE';
+                        } else if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
                           roleLabel = 'Administrador';
                           roleBg = '#FEF08A';
                           roleColor = '#854D0E';
@@ -1820,7 +1839,25 @@ export default function AdminSettings() {
                         <Ionicons name="server" size={24} color="#2563EB" />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.gitDeployTitle}>Estado de Infraestructura y Servidor</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Text style={styles.gitDeployTitle}>Estado de Infraestructura y Servidor</Text>
+                          <View style={{
+                            backgroundColor: '#FAF5FF',
+                            borderColor: '#D8B4FE',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Ionicons name="shield-half" size={12} color="#7E22CE" />
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#7E22CE', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                              Superadmin
+                            </Text>
+                          </View>
+                        </View>
                         <Text style={styles.gitDeploySubtitle}>
                           Métricas de hardware en tiempo real: almacenamiento en disco, consumo de memoria RAM, procesador y tiempos de actividad.
                         </Text>
@@ -2488,13 +2525,14 @@ export default function AdminSettings() {
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10, flexWrap: 'wrap' }}>
                   {/* Rol: Funcionario / Usuario */}
                   <TouchableOpacity
                     onPress={() => setUserDraft({ ...userDraft, role: 'funcionario' })}
                     activeOpacity={0.8}
                     style={{
-                      flex: 1,
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 180 : '100%',
                       padding: 14,
                       borderRadius: 14,
                       backgroundColor: (userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#EFF6FF' : COLORS.white,
@@ -2507,7 +2545,7 @@ export default function AdminSettings() {
                       <Ionicons name="person-outline" size={20} color={(userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#2563EB' : '#64748B'} />
                       <Ionicons name={(userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? "radio-button-on" : "radio-button-off"} size={18} color={(userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#2563EB' : '#CBD5E1'} />
                     </View>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: (userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#1E40AF' : COLORS.primary, marginTop: 4 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: (userDraft?.role === 'funcionario' || userDraft?.role === 'user') ? '#1E40AF' : COLORS.primary, marginTop: 4 }}>
                       Funcionario
                     </Text>
                     <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
@@ -2517,10 +2555,22 @@ export default function AdminSettings() {
 
                   {/* Rol: Administrador */}
                   <TouchableOpacity
-                    onPress={() => setUserDraft({ ...userDraft, role: 'admin' })}
+                    onPress={() => {
+                      if (currentUserRole !== 'superadmin' && userDraft?.role !== 'admin') {
+                        setSettingsNoticeModal({
+                          visible: true,
+                          title: 'Privilegio Restringido',
+                          message: 'Solo un Super Administrador puede promover usuarios al rol de Administrador.',
+                          isError: true,
+                        });
+                        return;
+                      }
+                      setUserDraft({ ...userDraft, role: 'admin' });
+                    }}
                     activeOpacity={0.8}
                     style={{
-                      flex: 1,
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 180 : '100%',
                       padding: 14,
                       borderRadius: 14,
                       backgroundColor: userDraft?.role === 'admin' ? '#FEFCE8' : COLORS.white,
@@ -2533,11 +2583,49 @@ export default function AdminSettings() {
                       <Ionicons name="shield-checkmark" size={20} color={userDraft?.role === 'admin' ? '#CA8A04' : '#64748B'} />
                       <Ionicons name={userDraft?.role === 'admin' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'admin' ? '#CA8A04' : '#CBD5E1'} />
                     </View>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: userDraft?.role === 'admin' ? '#854D0E' : COLORS.primary, marginTop: 4 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: userDraft?.role === 'admin' ? '#854D0E' : COLORS.primary, marginTop: 4 }}>
                       Administrador
                     </Text>
                     <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
-                      Control total, gestión de solicitudes y parámetros.
+                      Gestión operativa de solicitudes y asignaciones.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Rol: Super Administrador */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (currentUserRole !== 'superadmin') {
+                        setSettingsNoticeModal({
+                          visible: true,
+                          title: 'Privilegio Restringido',
+                          message: 'Solo un Super Administrador puede otorgar el perfil de Super Administrador.',
+                          isError: true,
+                        });
+                        return;
+                      }
+                      setUserDraft({ ...userDraft, role: 'superadmin' });
+                    }}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 180 : '100%',
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: userDraft?.role === 'superadmin' ? '#FAF5FF' : COLORS.white,
+                      borderWidth: 1.5,
+                      borderColor: userDraft?.role === 'superadmin' ? '#7C3AED' : '#E2E8F0',
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name="shield-half" size={20} color={userDraft?.role === 'superadmin' ? '#7C3AED' : '#64748B'} />
+                      <Ionicons name={userDraft?.role === 'superadmin' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'superadmin' ? '#7C3AED' : '#CBD5E1'} />
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: userDraft?.role === 'superadmin' ? '#6B21A8' : COLORS.primary, marginTop: 4 }}>
+                      Super Admin
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
+                      Servidores, auditoría, roles y control absoluto.
                     </Text>
                   </TouchableOpacity>
 
@@ -2546,7 +2634,8 @@ export default function AdminSettings() {
                     onPress={() => setUserDraft({ ...userDraft, role: 'security' })}
                     activeOpacity={0.8}
                     style={{
-                      flex: 1,
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 180 : '100%',
                       padding: 14,
                       borderRadius: 14,
                       backgroundColor: userDraft?.role === 'security' ? '#F0FDF4' : COLORS.white,
@@ -2559,7 +2648,7 @@ export default function AdminSettings() {
                       <Ionicons name="key-outline" size={20} color={userDraft?.role === 'security' ? '#16A34A' : '#64748B'} />
                       <Ionicons name={userDraft?.role === 'security' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'security' ? '#16A34A' : '#CBD5E1'} />
                     </View>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: userDraft?.role === 'security' ? '#166534' : COLORS.primary, marginTop: 4 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: userDraft?.role === 'security' ? '#166534' : COLORS.primary, marginTop: 4 }}>
                       Seguridad
                     </Text>
                     <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>

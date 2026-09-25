@@ -104,8 +104,8 @@ export default function LoginPage() {
 
       if (error) throw error;
       
-      // Auto-redirect admins to the admin panel
-      if (data?.user?.role === 'admin') {
+      // Auto-redirect admins and superadmins to the admin panel
+      if (data?.user?.role === 'admin' || data?.user?.role === 'superadmin') {
         router.replace('/admin');
       } else {
         router.replace('/dashboard');

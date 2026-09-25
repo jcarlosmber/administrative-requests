@@ -567,7 +567,7 @@ const formatUptime = (seconds) => {
 // --- ENDPOINT DE ESTADÍSTICAS E INFRAESTRUCTURA DEL SERVIDOR ---
 app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ error: 'Solo los administradores pueden consultar métricas del servidor.' });
     }
 
@@ -628,8 +628,8 @@ app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
 // --- ENDPOINT DE CONTROL Y DESPLIEGUE GIT ---
 app.post('/api/admin/git', authenticateToken, async (req, res) => {
   try {
-    // Validar permisos de administrador
-    if (req.user.role !== 'admin') {
+    // Validar permisos de administrador o superadministrador
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ error: 'Solo los administradores del sistema pueden ejecutar operaciones de despliegue y Git.' });
     }
 
@@ -1013,7 +1013,7 @@ app.get('/api/administrative_requests', authenticateToken, async (req, res) => {
 app.get('/api/requests', authenticateToken, async (req, res) => {
   try {
     let result;
-    if (req.user.role === 'admin') {
+    if (req.user.role === 'admin' || req.user.role === 'superadmin') {
       result = await pool.query(`
         SELECT ar.*, 
                COALESCE(u.full_name, u.name, TRIM(CONCAT(u.first_name, ' ', u.last_name))) as user_name,
@@ -1189,11 +1189,12 @@ const handleUpdateRequest = async (req, res) => {
 
     const request = checkResult.rows[0];
 
-    if (req.user.role !== 'admin' && request.user_id !== req.user.id) {
+    const isElevated = req.user.role === 'admin' || req.user.role === 'superadmin';
+    if (!isElevated && request.user_id !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permisos para modificar esta solicitud.' });
     }
 
-    if (req.user.role !== 'admin' && request.status !== 'pendiente') {
+    if (!isElevated && request.status !== 'pendiente') {
       return res.status(400).json({ error: 'No se puede modificar una solicitud que ya no está pendiente.' });
     }
 
@@ -1201,7 +1202,7 @@ const handleUpdateRequest = async (req, res) => {
     let params;
     const metaParam = metadata !== undefined ? JSON.stringify(metadata) : null;
 
-    if (req.user.role === 'admin') {
+    if (isElevated) {
       query = `UPDATE administrative_requests 
                SET title = COALESCE($1, title), 
                    description = COALESCE($2, description), 
@@ -1445,7 +1446,7 @@ app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { status, finalImage, reason, metadata } = req.body;
 
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
     return res.status(403).json({ error: 'Solo administradores pueden cambiar el estado.' });
   }
 
@@ -1741,7 +1742,7 @@ app.post('/api/requests/:id/evaluate', authenticateToken, async (req, res) => {
 
     const request = checkResult.rows[0];
 
-    if (request.user_id !== req.user.id && req.user.role !== 'admin') {
+    if (request.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ error: 'No tienes permisos para evaluar esta solicitud.' });
     }
 
@@ -1784,7 +1785,7 @@ app.delete('/api/requests/:id', authenticateToken, async (req, res) => {
 
     const request = checkResult.rows[0];
 
-    if (req.user.role !== 'admin' && request.user_id !== req.user.id) {
+    if (req.user.role !== 'admin' && req.user.role !== 'superadmin' && request.user_id !== req.user.id) {
       return res.status(403).json({ error: 'No tienes permisos para eliminar esta solicitud.' });
     }
 
@@ -2084,7 +2085,7 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
 });
 
 // Actualizar un vehículo
-app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
+const updateVehicleHandler = async (req, res) => {
   const { id } = req.params;
   const { plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes, assigned_spot_id, vehicle_type } = req.body;
 
@@ -2182,46 +2183,56 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
 
     const updatedVehicle = result.rows[0];
 
-    // Auditoría de cambios
-    const actions = [];
-    if (cleanPlate !== currentVehicle.plate) actions.push(`cambio_placa:${currentVehicle.plate}->${cleanPlate}`);
-    if (newIsActive !== currentVehicle.is_active) actions.push(newIsActive ? 'activacion' : 'inactivacion');
-    if (newAssignedSpotId !== currentVehicle.assigned_spot_id) {
-      actions.push(newAssignedSpotId ? 'asignacion_celda' : 'liberacion_celda');
-    }
-    const finalAction = actions.length > 0 ? actions[0] : 'actualizacion';
+    // Auditoría de cambios protegida
+    try {
+      const actions = [];
+      if (cleanPlate !== currentVehicle.plate) actions.push(`cambio_placa:${currentVehicle.plate}->${cleanPlate}`);
+      if (newIsActive !== currentVehicle.is_active) actions.push(newIsActive ? 'activacion' : 'inactivacion');
+      if (newAssignedSpotId !== currentVehicle.assigned_spot_id) {
+        actions.push(newAssignedSpotId ? 'asignacion_celda' : 'liberacion_celda');
+      }
+      const finalAction = actions.length > 0 ? actions[0] : 'actualizacion';
 
-    await pool.query(
-      `INSERT INTO public.vehicle_history 
-       (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        id,
-        cleanPlate,
-        finalAction,
-        req.user.id,
-        req.user.name || req.user.email || 'Usuario',
-        JSON.stringify({
-          previous: {
-            plate: currentVehicle.plate,
-            is_active: currentVehicle.is_active,
-            assigned_spot_id: currentVehicle.assigned_spot_id
-          },
-          updated: {
-            plate: updatedVehicle.plate,
-            is_active: updatedVehicle.is_active,
-            assigned_spot_id: updatedVehicle.assigned_spot_id
-          }
-        })
-      ]
-    );
+      const performedById = isValidUuid(req.user?.id) ? req.user.id : null;
+      const performedByName = req.user?.name || req.user?.email || 'Usuario';
+
+      await pool.query(
+        `INSERT INTO public.vehicle_history 
+         (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          id,
+          cleanPlate,
+          finalAction,
+          performedById,
+          performedByName,
+          JSON.stringify({
+            previous: {
+              plate: currentVehicle.plate,
+              is_active: currentVehicle.is_active,
+              assigned_spot_id: currentVehicle.assigned_spot_id
+            },
+            updated: {
+              plate: updatedVehicle.plate,
+              is_active: updatedVehicle.is_active,
+              assigned_spot_id: updatedVehicle.assigned_spot_id
+            }
+          })
+        ]
+      );
+    } catch (auditErr) {
+      console.warn('Nota en auditoría de actualización de vehículo:', auditErr.message);
+    }
 
     res.json(updatedVehicle);
   } catch (err) {
     console.error('Error al actualizar el vehículo:', err);
-    res.status(500).json({ error: 'Error al actualizar el vehículo.' });
+    res.status(500).json({ error: 'Error al actualizar el vehículo: ' + (err.message || '') });
   }
-});
+};
+
+app.put('/api/vehicles/:id', authenticateToken, updateVehicleHandler);
+app.post('/api/vehicles/:id/update', authenticateToken, updateVehicleHandler);
 
 // Eliminar un vehículo
 const deleteVehicleHandler = async (req, res) => {
@@ -2321,7 +2332,15 @@ const deleteVehicleHandler = async (req, res) => {
 
 app.delete('/api/vehicles/:id', authenticateToken, deleteVehicleHandler);
 app.post('/api/vehicles/:id/delete', authenticateToken, deleteVehicleHandler);
-app.post('/api/vehicles/:id', authenticateToken, deleteVehicleHandler);
+
+// Dispatcher para POST /api/vehicles/:id (detecta si es delete o update)
+app.post('/api/vehicles/:id', authenticateToken, async (req, res) => {
+  const methodOverride = (req.headers['x-http-method-override'] || '').toUpperCase();
+  if (methodOverride === 'DELETE' || req.query.action === 'delete') {
+    return deleteVehicleHandler(req, res);
+  }
+  return updateVehicleHandler(req, res);
+});
 
 // Historial de un vehículo específico
 app.get('/api/vehicles/:id/history', authenticateToken, async (req, res) => {
@@ -3271,7 +3290,19 @@ app.get('/api/users', authenticateToken, handleProfilesGet);
 app.get('/api/profiles', authenticateToken, handleProfilesGet);
 
 const handleProfilesPost = async (req, res) => {
+  const isSuperAdmin = req.user && req.user.role === 'superadmin';
+  const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin');
+
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'No tienes permisos para crear usuarios.' });
+  }
+
   const { id, full_name, first_name, last_name, name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled } = req.body;
+
+  if ((role === 'superadmin' || role === 'admin') && !isSuperAdmin) {
+    return res.status(403).json({ error: 'Solo un Super Administrador puede crear usuarios con rol de Administrador o Super Administrador.' });
+  }
+
   const resolvedName = (full_name || name || [first_name, last_name].filter(Boolean).join(' ').trim()) || null;
   const { firstName: fn, lastName: ln } = splitFullName(resolvedName);
   const finalFirstName = first_name || fn;
@@ -3295,10 +3326,30 @@ app.post('/api/profiles', authenticateToken, handleProfilesPost);
 
 const handleProfilesPut = async (req, res) => {
   const { id } = req.params;
+  const isSuperAdmin = req.user && req.user.role === 'superadmin';
+  const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin');
+
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'No tienes permisos para actualizar usuarios.' });
+  }
+
   const { full_name, first_name, last_name, name, email, role, username, phone, entity, is_active, dependency, dependency_id, start_date, end_date, ldap_enabled } = req.body;
   const resolvedName = full_name || name || (first_name || last_name ? [first_name, last_name].filter(Boolean).join(' ').trim() : null);
 
   try {
+    const targetCheck = await pool.query('SELECT role FROM users WHERE id = $1', [id]);
+    if (targetCheck.rows.length > 0) {
+      const targetRole = targetCheck.rows[0].role;
+      // Si el objetivo es admin o superadmin, solo un superadmin puede modificarlo (salvo que sea él mismo actualizando sus datos personales)
+      if ((targetRole === 'superadmin' || targetRole === 'admin') && !isSuperAdmin && req.user.id !== id) {
+        return res.status(403).json({ error: 'Solo un Super Administrador puede modificar a otro Administrador o Super Administrador.' });
+      }
+      // Solo un superadmin puede promover a alguien a admin o superadmin
+      if ((role === 'superadmin' || role === 'admin') && !isSuperAdmin && targetRole !== role) {
+        return res.status(403).json({ error: 'Solo un Super Administrador puede otorgar roles de Administrador o Super Administrador.' });
+      }
+    }
+
     const result = await pool.query(
       `UPDATE users 
        SET name = COALESCE($1, name), 
@@ -3330,7 +3381,22 @@ app.put('/api/profiles/:id', authenticateToken, handleProfilesPut);
 
 const handleProfilesDelete = async (req, res) => {
   const { id } = req.params;
+  const isSuperAdmin = req.user && req.user.role === 'superadmin';
+  const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin');
+
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'No tienes permisos para eliminar usuarios.' });
+  }
+
   try {
+    const targetCheck = await pool.query('SELECT role FROM users WHERE id = $1', [id]);
+    if (targetCheck.rows.length > 0) {
+      const targetRole = targetCheck.rows[0].role;
+      if ((targetRole === 'superadmin' || targetRole === 'admin') && !isSuperAdmin) {
+        return res.status(403).json({ error: 'Solo un Super Administrador puede eliminar a un Administrador o Super Administrador.' });
+      }
+    }
+
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
     res.json({ message: 'Usuario eliminado.' });
   } catch (err) {
@@ -3569,7 +3635,7 @@ app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
 
 // --- ENDPOINTS PARA OPERACIONES GIT Y DESPLIEGUE ---
 app.post('/api/admin/git', authenticateToken, async (req, res) => {
-  if (req.user?.role !== 'admin') {
+  if (req.user?.role !== 'admin' && req.user?.role !== 'superadmin') {
     return res.status(403).json({ error: 'Acceso no autorizado para operaciones Git.' });
   }
 

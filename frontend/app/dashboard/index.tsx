@@ -1053,7 +1053,7 @@ function HeroSection({ isDesktop, user, stats }: any) {
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {user?.role === 'admin' && (
+                {(user?.role === 'admin' || user?.role === 'superadmin') && (
                   <TouchableOpacity 
                     style={[styles.logoutBtn, { backgroundColor: '#FACC15', borderColor: '#F59E0B' }]} 
                     onPress={() => router.push('/admin')}
