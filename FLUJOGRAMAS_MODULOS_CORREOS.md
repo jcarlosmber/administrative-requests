@@ -244,3 +244,5 @@ flowchart TD
    * Los correos dirigidos a personal externo o sin cuenta en SASGE (**Secretaría General de la Alcaldía Mayor, Portería de Visitantes y Portería de Parqueaderos de la Manzana Liévano**) **NUNCA** llevan botones de *"Ver Solicitud en SASGE"* ni enlaces que exijan autenticación en la plataforma.
 4. **Respaldo Dinámico:**
    * La lista de destinatarios se obtiene en tiempo real desde la configuración (`service_emails`) y se envía directamente desde la interfaz web activa para garantizar que nunca se pierda un correo aunque la base de datos se esté sincronizando.
+
+Esto es una prueba 
