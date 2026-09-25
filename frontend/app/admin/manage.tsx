@@ -25,7 +25,7 @@ import { requestService, AdministrativeRequest } from '../../lib/requestService'
 import { supabase } from '../../lib/supabase';
 import * as DocumentPicker from 'expo-document-picker';
 import { settingsService, ServiceEmail, Driver } from '../../lib/settingsService';
-import { vehicleService, ParkingSpot } from '../../lib/vehicleService';
+import { vehicleService, ParkingSpot, resolveVehicleLimitByCharge } from '../../lib/vehicleService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -771,13 +771,18 @@ export default function ManageRequests() {
         ];
       }
     } else if (item.category === 'parking' && item.metadata) {
+      const chargeText = item.metadata.charge || 'No especificado';
+      const limitInfo = resolveVehicleLimitByCharge(item.metadata.charge);
+      const vinculacionText = `${limitInfo.label} (${limitInfo.isUnlimited ? 'Cupo Ilimitado' : limitInfo.maxLimit === 0 ? 'Sin Cupo Permanente' : 'Máx 1 Cupo'})`;
       uiMetadata = [
         { label: 'Placa del Vehículo', value: item.metadata.plate || 'N/A', icon: 'barcode-outline' },
         { label: 'Vehículo (Marca/Modelo)', value: item.metadata.brand || 'N/A', icon: 'car-sport-outline' },
         { label: 'Color', value: item.metadata.color || 'N/A', icon: 'color-palette-outline' },
-        { label: 'Conductor', value: item.metadata.name || 'N/A', icon: 'person-outline' },
+        { label: 'Conductor / Solicitante', value: item.metadata.name || 'N/A', icon: 'person-outline' },
         { label: 'Documento Conductor', value: item.metadata.doc || 'N/A', icon: 'card-outline' },
-        { label: 'Dependencia / Área', value: item.metadata.dependency || 'N/A', icon: 'business-outline' }
+        { label: 'Dependencia / Área', value: item.metadata.dependency || 'N/A', icon: 'business-outline' },
+        { label: 'Cargo', value: chargeText, icon: 'briefcase-outline' },
+        { label: 'Tipo de Cargo / Vinculación', value: vinculacionText, icon: 'shield-checkmark-outline' }
       ];
     } else if (item.category === 'transport' && item.metadata) {
       uiMetadata = [
@@ -1833,6 +1838,58 @@ export default function ManageRequests() {
                     </View>
                   </View>
                 )}
+
+                {/* Resumen del Solicitante y Vinculación para Validación (Categoría Parqueadero) */}
+                {confirmModal.category === 'parking' && (() => {
+                  const reqMeta = confirmModal.item?.metadata || {};
+                  const chargeVal = reqMeta.charge || 'No especificado';
+                  const limitInfo = resolveVehicleLimitByCharge(chargeVal);
+                  return (
+                    <View style={{
+                      width: '100%',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 12,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      marginBottom: 10
+                    }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                          Validación de Vinculación
+                        </Text>
+                        <View style={{
+                          backgroundColor: limitInfo.isUnlimited ? '#EFF6FF' : limitInfo.maxLimit === 0 ? '#FEE2E2' : '#F0FDF4',
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                          borderWidth: 1,
+                          borderColor: limitInfo.isUnlimited ? '#BFDBFE' : limitInfo.maxLimit === 0 ? '#FECACA' : '#BBF7D0'
+                        }}>
+                          <Text style={{
+                            fontSize: 11,
+                            fontWeight: '800',
+                            color: limitInfo.isUnlimited ? '#1D4ED8' : limitInfo.maxLimit === 0 ? '#DC2626' : '#15803D'
+                          }}>
+                            {limitInfo.label} ({limitInfo.isUnlimited ? 'Cupo Ilimitado' : limitInfo.maxLimit === 0 ? 'Sin Cupo Permanente' : 'Máx 1 Cupo'})
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                        <View style={{ minWidth: 120 }}>
+                          <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>CARGO REGISTRADO</Text>
+                          <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '700' }}>{chargeVal}</Text>
+                        </View>
+                        {reqMeta.dependency && (
+                          <View style={{ minWidth: 120, flex: 1 }}>
+                            <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>DEPENDENCIA</Text>
+                            <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '600' }} numberOfLines={1}>{reqMeta.dependency}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })()}
 
                 {/* Control Integral de Vehículos del Solicitante (Categoría Parqueadero) */}
                 {confirmModal.category === 'parking' && (

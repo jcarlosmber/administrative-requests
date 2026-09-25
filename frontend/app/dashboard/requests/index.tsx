@@ -23,6 +23,7 @@ import { BlurView } from 'expo-blur';
 import { requestService, AdministrativeRequest } from '../../../lib/requestService';
 import { settingsService } from '../../../lib/settingsService';
 import { supabase } from '../../../lib/supabase';
+import { resolveVehicleLimitByCharge } from '../../../lib/vehicleService';
 
 const COLORS = {
   primary: '#A9301E',
@@ -746,7 +747,9 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
           </View>
         );
 
-      case 'parking':
+      case 'parking': {
+        const chargeVal = metadata.charge || 'No especificado';
+        const limitInfo = resolveVehicleLimitByCharge(chargeVal);
         return (
           <View style={{ gap: 12 }}>
             <View style={modalStyles.infoBlock}>
@@ -762,6 +765,16 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
               <View style={modalStyles.fieldRow}>
                 <Ionicons name="business-outline" size={16} color={COLORS.muted} />
                 <Text style={modalStyles.fieldValue}>Dependencia: {metadata.dependency || 'N/A'}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="briefcase-outline" size={16} color={COLORS.muted} />
+                <Text style={modalStyles.fieldValue}>Cargo: {chargeVal}</Text>
+              </View>
+              <View style={modalStyles.fieldRow}>
+                <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+                <Text style={[modalStyles.fieldValue, { fontWeight: '700' }]}>
+                  Vinculación / Cupo: {limitInfo.label} ({limitInfo.isUnlimited ? 'Cupo Ilimitado' : limitInfo.maxLimit === 0 ? 'Sin cupo permanente' : 'Máx 1 Cupo'})
+                </Text>
               </View>
             </View>
 
@@ -824,6 +837,7 @@ function DetailModal({ visible, request, evalCategories, onClose }: { visible: b
             )}
           </View>
         );
+      }
 
       case 'transport':
         return (

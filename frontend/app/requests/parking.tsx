@@ -279,6 +279,8 @@ export default function ParkingRequestScreen() {
             doc: cleanDoc,
             dependency: cleanDep,
             charge: cleanCharge,
+            employment_type: limitInfo.type,
+            employment_label: limitInfo.label,
             plate: cleanPlate,
             brand: cleanBrand,
             model: vModel.trim() || undefined,
@@ -320,6 +322,7 @@ export default function ParkingRequestScreen() {
       submittingVehicleRef.current = true;
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
+      const existingLimitInfo = resolveVehicleLimitByCharge(charge || v.charge);
       await requestService.create({
         user_id: user?.id || null,
         title: `Parqueadero: ${v.plate}`,
@@ -330,7 +333,9 @@ export default function ParkingRequestScreen() {
           name: v.name || name,
           doc: v.doc || doc,
           dependency: v.dependency || dependency,
-          charge: charge,
+          charge: charge || v.charge,
+          employment_type: existingLimitInfo.type,
+          employment_label: existingLimitInfo.label,
           plate: v.plate,
           brand: v.brand,
           model: v.model,

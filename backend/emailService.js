@@ -191,12 +191,17 @@ function formatMetadataForEmail(request) {
         append('Placas y Vehículos Autorizados', vehList);
       }
       break;
-    case 'parking':
+    case 'parking': {
+      const chargeText = meta.charge || user?.charge || 'No especificado';
+      const lim = resolveVehicleLimitForEmail(chargeText, user?.role);
       append('Funcionario', meta.name);
       append('Dependencia', meta.dependency);
+      append('Cargo', chargeText);
+      append('Tipo de Vinculación / Cupo', `${lim.label} (${lim.limitText})`);
       append('Placa', meta.plate);
       append('Vehículo', (meta.brand || '') + (meta.color ? ' - ' + meta.color : ''));
       break;
+    }
     case 'rooms': {
       const roomObj = meta.room;
       const roomName = (roomObj && typeof roomObj === 'object') ? roomObj.name : roomObj;
@@ -1028,6 +1033,51 @@ function getMaintenanceEmailContent(request, isUserRecipient, isUpdate, status, 
   }
 }
 
+function resolveVehicleLimitForEmail(charge, role) {
+  const text = `${charge || ''} ${role || ''}`.toLowerCase().trim();
+
+  if (
+    text.includes('contratista') ||
+    text.includes('prestacion de servicios') ||
+    text.includes('prestación de servicios') ||
+    text.includes('apoyo a la gestion') ||
+    text.includes('apoyo a la gestión') ||
+    text.includes('ops') ||
+    text.includes('honorarios')
+  ) {
+    return {
+      type: 'contratista',
+      label: 'Contratista',
+      limitText: '0 Cupos (Sin cupo permanente)'
+    };
+  }
+
+  if (
+    text.includes('director') ||
+    text.includes('directora') ||
+    text.includes('secretario') ||
+    text.includes('secretaria') ||
+    text.includes('subsecretario') ||
+    text.includes('subsecretaria') ||
+    text.includes('directivo') ||
+    text.includes('jefe') ||
+    text.includes('alcalde') ||
+    text.includes('ministro')
+  ) {
+    return {
+      type: 'directivo',
+      label: 'Directivo',
+      limitText: 'Cupo Ilimitado'
+    };
+  }
+
+  return {
+    type: 'funcionario_asesor',
+    label: text.includes('asesor') ? 'Asesor' : 'Funcionario',
+    limitText: 'Máximo 1 Vehículo Activo'
+  };
+}
+
 /**
  * 5. PARQUEADERO INSTITUCIONAL (parking)
  */
@@ -1036,6 +1086,8 @@ function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user
   const name = meta.name || user?.name || request.user_name || 'Funcionario';
   const doc = meta.doc || 'No registrado';
   const dependency = meta.dependency || user?.dependency || 'Secretaría Jurídica Distrital';
+  const charge = meta.charge || user?.charge || 'No especificado';
+  const limitInfo = resolveVehicleLimitForEmail(charge, user?.role);
   const plate = meta.plate ? meta.plate.toUpperCase() : 'Por confirmar';
   const vehicleInfo = `${meta.brand || ''} ${meta.color ? '- ' + meta.color : ''}`.trim() || 'Vehículo particular';
 
@@ -1050,6 +1102,8 @@ function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user
         { label: 'Funcionario Solicitante', value: name },
         { label: 'Documento de Identidad', value: doc },
         { label: 'Dependencia', value: dependency },
+        { label: 'Cargo Registrado', value: charge },
+        { label: 'Tipo de Cargo / Vinculación', value: `${limitInfo.label} (${limitInfo.limitText})` },
         { label: 'Placa del Vehículo', value: plate },
         { label: 'Vehículo (Marca / Color)', value: vehicleInfo }
       ],
@@ -1071,6 +1125,8 @@ function getParkingEmailContent(request, isUserRecipient, isUpdate, status, user
       cardItems: [
         { label: 'Funcionario', value: name },
         { label: 'Dependencia', value: dependency },
+        { label: 'Cargo Registrado', value: charge },
+        { label: 'Tipo de Cargo / Vinculación', value: `${limitInfo.label} (${limitInfo.limitText})` },
         { label: 'Placa del Vehículo', value: plate },
         { label: 'Vehículo', value: vehicleInfo }
       ],
