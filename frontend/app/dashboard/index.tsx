@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
+import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
 import { vehicleService, UserVehicle } from '../../lib/vehicleService';
 import { VehicleFormModal } from '../../components/VehicleFormModal';
@@ -127,6 +128,7 @@ export default function DashboardScreen() {
   const [requests, setRequests] = useState<AdministrativeRequest[]>([]);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [evaluationModal, setEvaluationModal] = useState<{ visible: boolean, requestId: string | null, request?: AdministrativeRequest | null }>({ visible: false, requestId: null, request: null });
+  const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
 
   // Estados de Vehículos Registrados
   const [vehicles, setVehicles] = useState<UserVehicle[]>([]);
@@ -154,6 +156,16 @@ export default function DashboardScreen() {
       const allRequests = await requestService.getAll();
       // Filtrar por el usuario actual (suponiendo que requestService.getAll() trae todo o tenemos RLS)
       setRequests(allRequests);
+
+      // Obtener categorías de evaluación activas configuradas en el sistema
+      try {
+        const cats = await settingsService.getSystemSetting('eval_categories');
+        if (Array.isArray(cats)) {
+          setEvalCategories(cats);
+        }
+      } catch (catErr) {
+        console.warn('Error fetching eval_categories in dashboard:', catErr);
+      }
 
       // Obtener vehículos registrados del usuario
       try {
@@ -205,6 +217,9 @@ export default function DashboardScreen() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'administrative_requests' }, () => {
         fetchDashboardData();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_settings' }, () => {
+        fetchDashboardData();
+      })
       .subscribe();
 
     return () => {
@@ -239,7 +254,6 @@ export default function DashboardScreen() {
   }, [requests]);
 
   const pendingEvaluations = useMemo(() => {
-    const evalCategories = ['visitors', 'transport', 'maintenance', 'rooms', 'parking'];
     const todayStr = new Date().toISOString().split('T')[0];
     return requests.filter(req => {
       const isResolved = req.status.toLowerCase() === 'resuelto';
@@ -247,7 +261,7 @@ export default function DashboardScreen() {
       const needsEval = (isResolved || datePassed) && (!req.metadata || !req.metadata.evaluation) && evalCategories.includes(req.category);
       return needsEval;
     });
-  }, [requests]);
+  }, [requests, evalCategories]);
 
   const upcomingRoomBookings = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
