@@ -219,6 +219,14 @@ const isReservationCancelled = (status?: string): boolean => {
   return ['rechazado', 'rechazada', 'cancelado', 'cancelada'].includes(s);
 };
 
+const isSpecialRoom = (r: any): boolean => {
+  if (!r) return false;
+  return r.info === 'Especial' || 
+    (parseInt(r.capacity) || 0) >= 100 || 
+    /huitaca|auditorio|especial|barul[eé]/i.test(r.name || '') ||
+    Boolean(r.isLargeScale);
+};
+
 export default function AdminGestion() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -498,14 +506,7 @@ export default function AdminGestion() {
           }
         };
       });
-  // Helper para verificar si un espacio es sala especial o auditorio
-  const isSpecialRoom = useCallback((r: any): boolean => {
-    if (!r) return false;
-    return r.info === 'Especial' || 
-      (parseInt(r.capacity) || 0) >= 100 || 
-      /huitaca|auditorio|especial|barul[eé]/i.test(r.name || '') ||
-      Boolean(r.isLargeScale);
-  }, []);
+  }, [roomReservations]);
 
   // Salas activas filtradas para mostrar en el calendario (incluye estándar y especiales)
   const calendarRooms = useMemo(() => {
@@ -529,7 +530,7 @@ export default function AdminGestion() {
       );
     }
     return result;
-  }, [rooms, calendarCategoryFilter, calendarRoomFilter, calendarSearch, isSpecialRoom]);
+  }, [rooms, calendarCategoryFilter, calendarRoomFilter, calendarSearch]);
 
   // Reservas del día seleccionado
   const dayReservations = useMemo(() => {
@@ -589,7 +590,7 @@ export default function AdminGestion() {
       freeSlots,
       availabilityRate
     };
-  }, [rooms, OPERATING_HOURS, dayReservations, parsedReservations, calendarDateIso, isSpecialRoom]);sedReservations, calendarDateIso]);
+  }, [rooms, OPERATING_HOURS, dayReservations, parsedReservations, calendarDateIso]);
 
   // Navegación de fecha
   const handlePrevDay = () => {
