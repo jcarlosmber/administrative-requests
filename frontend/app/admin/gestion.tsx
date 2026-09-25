@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { settingsService, Driver } from '../../lib/settingsService';
-import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory } from '../../lib/vehicleService';
+import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
 
 const COLORS = {
@@ -283,12 +283,15 @@ export default function AdminGestion() {
   const [spotSearch, setSpotSearch] = useState('');
   const [spotFilter, setSpotFilter] = useState<'all' | 'fija' | 'libre' | 'disponible' | 'ocupada'>('all');
   const [vehicleSearch, setVehicleSearch] = useState('');
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState<'all' | 'carro' | 'moto'>('all');
+  const [spotVehicleTypeFilter, setSpotVehicleTypeFilter] = useState<'all' | 'carro' | 'moto'>('all');
 
   // Modales de Celdas
   const [spotModalVisible, setSpotModalVisible] = useState(false);
   const [editingSpot, setEditingSpot] = useState<ParkingSpot | null>(null);
   const [spotCode, setSpotCode] = useState('');
   const [spotType, setSpotType] = useState<'fija' | 'libre'>('libre');
+  const [spotVehicleType, setSpotVehicleType] = useState<'carro' | 'moto' | 'mixto'>('carro');
   const [spotStatus, setSpotStatus] = useState<'disponible' | 'ocupada' | 'mantenimiento' | 'reservada'>('disponible');
   const [spotUserId, setSpotUserId] = useState<string>('');
   const [spotUserName, setSpotUserName] = useState<string>('');
@@ -315,6 +318,7 @@ export default function AdminGestion() {
   const [adminVehicleModalVisible, setAdminVehicleModalVisible] = useState(false);
   const [adminEditingVehicle, setAdminEditingVehicle] = useState<UserVehicle | null>(null);
   const [adminVPlate, setAdminVPlate] = useState('');
+  const [adminVType, setAdminVType] = useState<'carro' | 'moto'>('carro');
   const [adminVBrand, setAdminVBrand] = useState('');
   const [adminVModel, setAdminVModel] = useState('');
   const [adminVColor, setAdminVColor] = useState('');
@@ -878,6 +882,7 @@ export default function AdminGestion() {
     setEditingSpot(null);
     setSpotCode('');
     setSpotType('libre');
+    setSpotVehicleType('carro');
     setSpotStatus('disponible');
     setSpotUserId('');
     setSpotUserName('');
@@ -890,6 +895,7 @@ export default function AdminGestion() {
     setEditingSpot(spot);
     setSpotCode(spot.code);
     setSpotType(spot.spot_type);
+    setSpotVehicleType(getSpotVehicleType(spot));
     setSpotStatus(spot.status);
     setSpotUserId(spot.assigned_user_id || '');
     setSpotUserName(spot.assigned_user_name || '');
@@ -912,6 +918,7 @@ export default function AdminGestion() {
         await vehicleService.updateSpot(editingSpot.id, {
           code: cleanCode,
           spot_type: spotType,
+          vehicle_type: spotVehicleType,
           status: spotStatus,
           assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
           assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
@@ -926,6 +933,7 @@ export default function AdminGestion() {
         await vehicleService.createSpot({
           code: cleanCode,
           spot_type: spotType,
+          vehicle_type: spotVehicleType,
           status: spotStatus,
           assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
           assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
@@ -1072,6 +1080,7 @@ export default function AdminGestion() {
   const handleAdminEditVehicle = (veh: UserVehicle) => {
     setAdminEditingVehicle(veh);
     setAdminVPlate(veh.plate);
+    setAdminVType(getVehicleType(veh));
     setAdminVBrand(veh.brand);
     setAdminVModel(veh.model || '');
     setAdminVColor(veh.color || '');
@@ -1094,6 +1103,7 @@ export default function AdminGestion() {
       }
       await vehicleService.update(adminEditingVehicle.id, {
         plate: cleanPlate,
+        vehicle_type: adminVType,
         brand: adminVBrand.trim(),
         model: adminVModel.trim() || undefined,
         color: adminVColor.trim() || undefined,
@@ -1201,13 +1211,23 @@ export default function AdminGestion() {
       else if (spotFilter === 'disponible') matchFilter = spot.status === 'disponible';
       else if (spotFilter === 'ocupada') matchFilter = spot.status === 'ocupada';
 
-      return matchSearch && matchFilter;
+      let matchVehicleType = true;
+      if (spotVehicleTypeFilter !== 'all') {
+        const sType = getSpotVehicleType(spot);
+        matchVehicleType = sType === spotVehicleTypeFilter || sType === 'mixto';
+      }
+
+      return matchSearch && matchFilter && matchVehicleType;
     });
-  }, [parkingSpots, spotSearch, spotFilter]);
+  }, [parkingSpots, spotSearch, spotFilter, spotVehicleTypeFilter]);
 
   // Filtrado de vehículos
   const filteredVehicles = useMemo(() => {
     return allVehicles.filter(veh => {
+      if (vehicleTypeFilter !== 'all') {
+        const vType = getVehicleType(veh);
+        if (vType !== vehicleTypeFilter) return false;
+      }
       const q = vehicleSearch.trim().toLowerCase();
       if (!q) return true;
       return (
@@ -1219,7 +1239,7 @@ export default function AdminGestion() {
         (veh.dependency && veh.dependency.toLowerCase().includes(q))
       );
     });
-  }, [allVehicles, vehicleSearch]);
+  }, [allVehicles, vehicleSearch, vehicleTypeFilter]);
 
   const GESTION_TABS = [
     { id: 'calendar', label: 'Gestión de Calendario', icon: 'calendar' },
@@ -2132,7 +2152,7 @@ export default function AdminGestion() {
                       )}
                     </View>
 
-                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                       {[
                         { id: 'all', label: 'Todas' },
                         { id: 'fija', label: 'Fijas' },
@@ -2157,6 +2177,33 @@ export default function AdminGestion() {
                           </Text>
                         </TouchableOpacity>
                       ))}
+
+                      {/* Separador vertical */}
+                      <View style={{ width: 1, height: 22, backgroundColor: '#CBD5E1', marginHorizontal: 4 }} />
+
+                      {/* Filtro por tipo de vehículo de la celda */}
+                      {[
+                        { id: 'all', label: 'Todos Vehículos' },
+                        { id: 'carro', label: '🚗 Carros' },
+                        { id: 'moto', label: '🏍️ Motos' },
+                      ].map(f => (
+                        <TouchableOpacity
+                          key={f.id}
+                          onPress={() => setSpotVehicleTypeFilter(f.id as any)}
+                          style={{
+                            paddingHorizontal: 11,
+                            paddingVertical: 7,
+                            borderRadius: 10,
+                            backgroundColor: spotVehicleTypeFilter === f.id ? (f.id === 'moto' ? '#EA580C' : '#0284C7') : '#FFFFFF',
+                            borderWidth: 1,
+                            borderColor: spotVehicleTypeFilter === f.id ? (f.id === 'moto' ? '#EA580C' : '#0284C7') : '#E2E8F0'
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: spotVehicleTypeFilter === f.id ? '#FFFFFF' : COLORS.text }}>
+                            {f.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
                   </View>
 
@@ -2173,6 +2220,7 @@ export default function AdminGestion() {
                       filteredSpots.map(spot => {
                         const isDispo = spot.status === 'disponible';
                         const isFija = spot.spot_type === 'fija';
+                        const sVType = getSpotVehicleType(spot);
 
                         return (
                           <View 
@@ -2190,7 +2238,7 @@ export default function AdminGestion() {
                             }}
                           >
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 <View style={{
                                   paddingHorizontal: 10,
                                   paddingVertical: 4,
@@ -2203,8 +2251,26 @@ export default function AdminGestion() {
                                     {spot.code}
                                   </Text>
                                 </View>
+
+                                {/* Badge Carro / Moto / Mixto */}
+                                <View style={{
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                  backgroundColor: sVType === 'moto' ? '#FFF7ED' : sVType === 'mixto' ? '#F5F3FF' : '#F0F9FF',
+                                  borderWidth: 1,
+                                  borderColor: sVType === 'moto' ? '#FDBA74' : sVType === 'mixto' ? '#DDD6FE' : '#BAE6FD',
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: sVType === 'moto' ? '#C2410C' : sVType === 'mixto' ? '#6D28D9' : '#0369A1' }}>
+                                    {sVType === 'moto' ? '🏍️ Moto' : sVType === 'mixto' ? '🔄 Mixto' : '🚗 Carro'}
+                                  </Text>
+                                </View>
+
                                 <Text style={{ fontSize: 11, fontWeight: '800', color: isFija ? '#2563EB' : '#7C3AED', textTransform: 'uppercase' }}>
-                                  {isFija ? 'Celda Fija' : 'Uso Libre'}
+                                  {isFija ? 'Fija' : 'Libre'}
                                 </Text>
                               </View>
 
@@ -2319,29 +2385,57 @@ export default function AdminGestion() {
                         </Text>
                       </View>
 
-                      <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#F8FAFC',
-                        borderRadius: 12,
-                        paddingHorizontal: 12,
-                        borderWidth: 1,
-                        borderColor: '#E2E8F0',
-                        width: isDesktop ? 300 : '100%',
-                        height: 38
-                      }}>
-                        <Ionicons name="search" size={16} color={COLORS.muted} />
-                        <TextInput 
-                          placeholder="Buscar por placa, propietario o documento..."
-                          value={vehicleSearch}
-                          onChangeText={setVehicleSearch}
-                          style={{ flex: 1, marginLeft: 8, fontSize: 12, color: COLORS.text, outlineStyle: 'none' } as any}
-                        />
-                        {vehicleSearch.length > 0 && (
-                          <TouchableOpacity onPress={() => setVehicleSearch('')}>
-                            <Ionicons name="close-circle" size={14} color={COLORS.muted} />
-                          </TouchableOpacity>
-                        )}
+                      <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10, alignItems: isDesktop ? 'center' : 'stretch', width: isDesktop ? 'auto' : '100%' }}>
+                        {/* Selector de filtro Carros / Motos */}
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          {[
+                            { id: 'all', label: 'Todos' },
+                            { id: 'carro', label: '🚗 Carros' },
+                            { id: 'moto', label: '🏍️ Motos' },
+                          ].map(f => (
+                            <TouchableOpacity
+                              key={f.id}
+                              onPress={() => setVehicleTypeFilter(f.id as any)}
+                              style={{
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 8,
+                                backgroundColor: vehicleTypeFilter === f.id ? (f.id === 'moto' ? '#EA580C' : '#0284C7') : '#F1F5F9',
+                                borderWidth: 1,
+                                borderColor: vehicleTypeFilter === f.id ? (f.id === 'moto' ? '#EA580C' : '#0284C7') : '#E2E8F0'
+                              }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: vehicleTypeFilter === f.id ? '#FFFFFF' : COLORS.text }}>
+                                {f.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: 12,
+                          paddingHorizontal: 12,
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          width: isDesktop ? 260 : '100%',
+                          height: 38
+                        }}>
+                          <Ionicons name="search" size={16} color={COLORS.muted} />
+                          <TextInput 
+                            placeholder="Buscar por placa o funcionario..."
+                            value={vehicleSearch}
+                            onChangeText={setVehicleSearch}
+                            style={{ flex: 1, marginLeft: 8, fontSize: 12, color: COLORS.text, outlineStyle: 'none' } as any}
+                          />
+                          {vehicleSearch.length > 0 && (
+                            <TouchableOpacity onPress={() => setVehicleSearch('')}>
+                              <Ionicons name="close-circle" size={14} color={COLORS.muted} />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
                     </View>
 
@@ -2353,6 +2447,7 @@ export default function AdminGestion() {
                       <View style={{ flexDirection: 'column', gap: 10 }}>
                         {filteredVehicles.map(veh => {
                           const isActive = veh.is_active !== false;
+                          const vType = getVehicleType(veh);
 
                           return (
                             <View 
@@ -2380,6 +2475,20 @@ export default function AdminGestion() {
                                 }}>
                                   <Text style={{ fontSize: 13, fontWeight: '900', color: '#F8FAFC', letterSpacing: 1 }}>
                                     {veh.plate}
+                                  </Text>
+                                </View>
+
+                                {/* Badge Carro / Moto */}
+                                <View style={{
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                  backgroundColor: vType === 'moto' ? '#FFF7ED' : '#EFF6FF',
+                                  borderWidth: 1,
+                                  borderColor: vType === 'moto' ? '#FDBA74' : '#BFDBFE'
+                                }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: vType === 'moto' ? '#C2410C' : '#1D4ED8' }}>
+                                    {vType === 'moto' ? '🏍️ Moto' : '🚗 Carro'}
                                   </Text>
                                 </View>
 
@@ -3108,7 +3217,7 @@ export default function AdminGestion() {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.modalInputLabel}>Tipo de Celda</Text>
+                  <Text style={styles.modalInputLabel}>Tipo de Uso</Text>
                   <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
                     {(['libre', 'fija'] as const).map(t => (
                       <TouchableOpacity
@@ -3151,6 +3260,43 @@ export default function AdminGestion() {
                       </TouchableOpacity>
                     ))}
                   </View>
+                </View>
+              </View>
+
+              {/* Selector de Tipo de Vehículo para la Celda */}
+              <View>
+                <Text style={styles.modalInputLabel}>Tipo de Vehículo que Admite la Celda</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                  {[
+                    { id: 'carro', label: '🚗 Carro', color: '#0284C7' },
+                    { id: 'moto', label: '🏍️ Moto', color: '#EA580C' },
+                    { id: 'mixto', label: '🔄 Mixto', color: '#7C3AED' }
+                  ].map(item => {
+                    const isSelected = spotVehicleType === item.id;
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        onPress={() => setSpotVehicleType(item.id as any)}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 9,
+                          borderRadius: 8,
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? item.color : '#E2E8F0',
+                          backgroundColor: isSelected ? `${item.color}15` : '#F8FAFC',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: isSelected ? item.color : COLORS.muted
+                        }}>
+                          {item.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -3323,12 +3469,66 @@ export default function AdminGestion() {
             ) : null}
 
             <View style={{ gap: 10, marginVertical: 16 }}>
+              {/* Selector de Tipo de Vehículo */}
+              <View>
+                <Text style={styles.modalInputLabel}>Tipo de Vehículo</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  <TouchableOpacity
+                    onPress={() => setAdminVType('carro')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: adminVType === 'carro' ? '#0284C7' : '#E2E8F0',
+                      backgroundColor: adminVType === 'carro' ? '#F0F9FF' : '#F8FAFC'
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: adminVType === 'carro' ? '#0284C7' : COLORS.muted }}>
+                      🚗 Carro / Automóvil
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setAdminVType('moto')}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: adminVType === 'moto' ? '#EA580C' : '#E2E8F0',
+                      backgroundColor: adminVType === 'moto' ? '#FFF7ED' : '#F8FAFC'
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: adminVType === 'moto' ? '#EA580C' : COLORS.muted }}>
+                      🏍️ Moto / Motocicleta
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.modalInputLabel}>Placa</Text>
                   <TextInput 
                     value={adminVPlate}
-                    onChangeText={setAdminVPlate}
+                    onChangeText={(val) => {
+                      const clean = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                      setAdminVPlate(clean);
+                      if (/^[A-Z]{3}[0-9]{2}[A-Z]$/.test(clean)) {
+                        setAdminVType('moto');
+                      } else if (/^[A-Z]{3}[0-9]{3}$/.test(clean)) {
+                        setAdminVType('carro');
+                      }
+                    }}
                     autoCapitalize="characters"
                     style={styles.modalInput}
                   />

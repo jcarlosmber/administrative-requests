@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
 import { settingsService, Driver, ServiceEmail, ServerStats } from '../../lib/settingsService';
-import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory } from '../../lib/vehicleService';
+import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
 
 const COLORS = {
   primary: '#0F172A',
@@ -109,6 +109,7 @@ export default function AdminSettings() {
   const [editingSpot, setEditingSpot] = useState<ParkingSpot | null>(null);
   const [spotCode, setSpotCode] = useState('');
   const [spotType, setSpotType] = useState<'fija' | 'libre'>('libre');
+  const [spotVehicleType, setSpotVehicleType] = useState<'carro' | 'moto' | 'mixto'>('carro');
   const [spotStatus, setSpotStatus] = useState<'disponible' | 'ocupada' | 'mantenimiento' | 'reservada'>('disponible');
   const [spotUserId, setSpotUserId] = useState<string>('');
   const [spotUserName, setSpotUserName] = useState<string>('');
@@ -135,6 +136,7 @@ export default function AdminSettings() {
   const [adminVehicleModalVisible, setAdminVehicleModalVisible] = useState(false);
   const [adminEditingVehicle, setAdminEditingVehicle] = useState<UserVehicle | null>(null);
   const [adminVPlate, setAdminVPlate] = useState('');
+  const [adminVType, setAdminVType] = useState<'carro' | 'moto'>('carro');
   const [adminVBrand, setAdminVBrand] = useState('');
   const [adminVModel, setAdminVModel] = useState('');
   const [adminVColor, setAdminVColor] = useState('');
@@ -396,6 +398,7 @@ export default function AdminSettings() {
     setEditingSpot(null);
     setSpotCode('');
     setSpotType('libre');
+    setSpotVehicleType('carro');
     setSpotStatus('disponible');
     setSpotUserId('');
     setSpotUserName('');
@@ -408,6 +411,7 @@ export default function AdminSettings() {
     setEditingSpot(spot);
     setSpotCode(spot.code);
     setSpotType(spot.spot_type);
+    setSpotVehicleType(getSpotVehicleType(spot));
     setSpotStatus(spot.status);
     setSpotUserId(spot.assigned_user_id || '');
     setSpotUserName(spot.assigned_user_name || '');
@@ -430,6 +434,7 @@ export default function AdminSettings() {
         await vehicleService.updateSpot(editingSpot.id, {
           code: cleanCode,
           spot_type: spotType,
+          vehicle_type: spotVehicleType,
           status: spotStatus,
           assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
           assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
@@ -444,6 +449,7 @@ export default function AdminSettings() {
         await vehicleService.createSpot({
           code: cleanCode,
           spot_type: spotType,
+          vehicle_type: spotVehicleType,
           status: spotStatus,
           assigned_user_id: spotUserId?.trim() ? spotUserId.trim() : null,
           assigned_user_name: spotUserName?.trim() ? spotUserName.trim() : null,
@@ -590,6 +596,7 @@ export default function AdminSettings() {
   const handleAdminEditVehicle = (veh: UserVehicle) => {
     setAdminEditingVehicle(veh);
     setAdminVPlate(veh.plate);
+    setAdminVType(getVehicleType(veh));
     setAdminVBrand(veh.brand);
     setAdminVModel(veh.model || '');
     setAdminVColor(veh.color || '');
@@ -612,6 +619,7 @@ export default function AdminSettings() {
       }
       await vehicleService.update(adminEditingVehicle.id, {
         plate: cleanPlate,
+        vehicle_type: adminVType,
         brand: adminVBrand.trim(),
         model: adminVModel.trim() || undefined,
         color: adminVColor.trim() || undefined,
@@ -3505,6 +3513,41 @@ export default function AdminSettings() {
                 </View>
               </View>
 
+              {/* Tipo de Vehículo que Admite la Celda */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  VEHÍCULO PERMITIDO EN ESTA CELDA *
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {[
+                    { id: 'carro', label: '🚗 Carro', color: '#0284C7' },
+                    { id: 'moto', label: '🏍️ Moto', color: '#EA580C' },
+                    { id: 'mixto', label: '🔄 Mixto', color: '#7C3AED' }
+                  ].map(item => {
+                    const isSel = spotVehicleType === item.id;
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: isSel ? item.color : '#E2E8F0',
+                          backgroundColor: isSel ? `${item.color}15` : '#F8FAFC',
+                          alignItems: 'center'
+                        }}
+                        onPress={() => setSpotVehicleType(item.id as any)}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: isSel ? item.color : COLORS.muted }}>
+                          {item.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
               {/* Estado */}
               <View style={{ marginBottom: 14 }}>
                 <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
@@ -3879,6 +3922,46 @@ export default function AdminSettings() {
 
             <ScrollView style={{ width: '100%', maxHeight: 380 }} showsVerticalScrollIndicator={false}>
               <View style={{ gap: 12 }}>
+                {/* Tipo de Vehículo */}
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>TIPO DE VEHÍCULO *</Text>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      onPress={() => setAdminVType('carro')}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: 1.5,
+                        borderColor: adminVType === 'carro' ? '#0284C7' : '#E2E8F0',
+                        backgroundColor: adminVType === 'carro' ? '#F0F9FF' : '#F8FAFC',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: adminVType === 'carro' ? '#0284C7' : COLORS.muted }}>
+                        🚗 Carro
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => setAdminVType('moto')}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        borderWidth: 1.5,
+                        borderColor: adminVType === 'moto' ? '#EA580C' : '#E2E8F0',
+                        backgroundColor: adminVType === 'moto' ? '#FFF7ED' : '#F8FAFC',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: adminVType === 'moto' ? '#EA580C' : COLORS.muted }}>
+                        🏍️ Moto
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
                 {/* Placa y Marca */}
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>
@@ -3886,7 +3969,15 @@ export default function AdminSettings() {
                     <TextInput
                       style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontWeight: '800' }}
                       value={adminVPlate}
-                      onChangeText={setAdminVPlate}
+                      onChangeText={(val) => {
+                        const clean = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        setAdminVPlate(clean);
+                        if (/^[A-Z]{3}[0-9]{2}[A-Z]$/.test(clean)) {
+                          setAdminVType('moto');
+                        } else if (/^[A-Z]{3}[0-9]{3}$/.test(clean)) {
+                          setAdminVType('carro');
+                        }
+                      }}
                       autoCapitalize="characters"
                     />
                   </View>

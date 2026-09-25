@@ -211,7 +211,37 @@ const initDatabase = async () => {
       ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS assigned_spot_id UUID REFERENCES public.parking_spots(id) ON DELETE SET NULL;
       ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS notes TEXT;
       ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS charge TEXT;
-    `).catch(err => console.error('Error alterando user_vehicles:', err.message));
+      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';
+      ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';
+
+      -- Auto-clasificar vehículos existentes como moto si su modelo, notas o formato de placa corresponden a motocicleta
+      UPDATE public.user_vehicles
+      SET vehicle_type = 'moto'
+      WHERE (vehicle_type IS NULL OR vehicle_type = 'carro')
+        AND (
+          model ILIKE '%moto%' 
+          OR notes ILIKE '%moto%' 
+          OR brand ILIKE '%yamaha%' 
+          OR brand ILIKE '%suzuki%' 
+          OR brand ILIKE '%honda%' 
+          OR brand ILIKE '%victory%' 
+          OR brand ILIKE '%kawasaki%' 
+          OR brand ILIKE '%bajaj%' 
+          OR brand ILIKE '%ktm%' 
+          OR brand ILIKE '%akt%' 
+          OR (brand ILIKE '%bmw%' AND model ILIKE '%moto%')
+          OR UPPER(REGEXP_REPLACE(plate, '[^A-Za-z0-9]', '', 'g')) ~ '^[A-Z]{3}[0-9]{2}[A-Z]$'
+        );
+
+      -- Auto-clasificar celdas de moto existentes (M-01 a M-13 o notas alusivas)
+      UPDATE public.parking_spots
+      SET vehicle_type = 'moto'
+      WHERE (vehicle_type IS NULL OR vehicle_type = 'carro')
+        AND (
+          code ILIKE 'M-%' 
+          OR notes ILIKE '%moto%'
+        );
+    `).catch(err => console.error('Error alterando user_vehicles/parking_spots vehicle_type:', err.message));
 
     // Límite de vehículos por defecto
     const maxVehiclesCheck = await pool.query("SELECT COUNT(*) FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
@@ -243,6 +273,66 @@ const initDatabase = async () => {
         ON CONFLICT (code) DO NOTHING;
       `);
     }
+
+    // Asegurar funciones para triggers de timestamp
+    await pool.query(`
+      CREATE OR REPLACE FUNCTION public.update_modified_column()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          NEW.updated_at = NOW();
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          NEW.updated_at = NOW();
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `).catch(err => console.error('Error creando funciones de trigger:', err.message));
+
+    // Reparar claves foráneas en user_vehicles y vehicle_history si causan conflictos al eliminar
+    await pool.query(`
+      DO $$
+      DECLARE
+          r RECORD;
+      BEGIN
+          -- user_vehicles.assigned_spot_id -> parking_spots(id) ON DELETE SET NULL
+          FOR r IN (
+              SELECT conname 
+              FROM pg_constraint 
+              WHERE conrelid = 'public.user_vehicles'::regclass 
+                AND confrelid = 'public.parking_spots'::regclass
+          ) LOOP
+              EXECUTE 'ALTER TABLE public.user_vehicles DROP CONSTRAINT IF EXISTS ' || quote_ident(r.conname);
+          END LOOP;
+
+          ALTER TABLE public.user_vehicles 
+              ADD CONSTRAINT user_vehicles_assigned_spot_id_fkey 
+              FOREIGN KEY (assigned_spot_id) REFERENCES public.parking_spots(id) ON DELETE SET NULL;
+
+          -- vehicle_history.vehicle_id -> user_vehicles(id) ON DELETE SET NULL
+          FOR r IN (
+              SELECT tc.constraint_name 
+              FROM information_schema.table_constraints tc 
+              JOIN information_schema.key_column_usage kcu 
+                ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+              WHERE tc.table_name = 'vehicle_history' 
+                AND kcu.column_name = 'vehicle_id' 
+                AND tc.constraint_type = 'FOREIGN KEY'
+          ) LOOP
+              EXECUTE 'ALTER TABLE public.vehicle_history DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
+          END LOOP;
+
+          ALTER TABLE public.vehicle_history 
+              ADD CONSTRAINT vehicle_history_vehicle_id_fkey 
+              FOREIGN KEY (vehicle_id) REFERENCES public.user_vehicles(id) ON DELETE SET NULL;
+      EXCEPTION WHEN OTHERS THEN
+          NULL;
+      END $$;
+    `).catch(err => console.warn('Advertencia migrando constraints de vehículos/celdas:', err.message));
 
     console.log('Base de datos inicializada y migrada exitosamente.');
   } catch (err) {
@@ -1827,7 +1917,7 @@ app.get('/api/vehicles/by-user/:identifier', authenticateToken, async (req, res)
 
 // Crear un vehículo
 app.post('/api/vehicles', authenticateToken, async (req, res) => {
-  const { plate, brand, model, color, name, doc, dependency, charge, notes, target_user_id } = req.body;
+  const { plate, brand, model, color, name, doc, dependency, charge, notes, target_user_id, vehicle_type } = req.body;
   if (!plate || !brand) {
     return res.status(400).json({ error: 'La placa y la marca del vehículo son obligatorias.' });
   }
@@ -1840,6 +1930,13 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
   try {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
     const targetUserId = (isAdmin && target_user_id) ? target_user_id : req.user.id;
+
+    // Detectar si es carro o moto automáticamente si no se especificó
+    const isMotoPlate = /^[A-Z]{3}[0-9]{2}[A-Z]$/i.test(cleanPlate);
+    const isMotoText = (model || '').toLowerCase().includes('moto') || (brand || '').toLowerCase().includes('moto') || (notes || '').toLowerCase().includes('moto');
+    const resolvedVehicleType = (vehicle_type === 'moto' || vehicle_type === 'carro') 
+      ? vehicle_type 
+      : (isMotoPlate || isMotoText ? 'moto' : 'carro');
 
     // 1. Si el usuario ya tiene este vehículo registrado, retornarlo directamente (evitar errores por doble clic)
     const existingSameUser = await pool.query(
@@ -1889,8 +1986,8 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
     const initialApprovalStatus = isAdmin ? 'aprobado' : 'pendiente';
     const result = await pool.query(
       `INSERT INTO public.user_vehicles 
-       (user_id, plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10, $11) 
+       (user_id, plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes, vehicle_type) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, $10, $11, $12) 
        RETURNING *`,
       [
         targetUserId,
@@ -1903,7 +2000,8 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
         dependency ? dependency.trim() : null,
         charge ? charge.trim() : null,
         initialApprovalStatus,
-        notes ? notes.trim() : null
+        notes ? notes.trim() : null,
+        resolvedVehicleType
       ]
     );
     const newVehicle = result.rows[0];
@@ -1925,6 +2023,7 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
           color: newVehicle.color,
           doc: newVehicle.doc,
           dependency: newVehicle.dependency,
+          vehicle_type: newVehicle.vehicle_type,
           status: initialApprovalStatus
         })
       ]
@@ -1940,7 +2039,7 @@ app.post('/api/vehicles', authenticateToken, async (req, res) => {
 // Actualizar un vehículo
 app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
-  const { plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes, assigned_spot_id } = req.body;
+  const { plate, brand, model, color, name, doc, dependency, charge, is_active, approval_status, notes, assigned_spot_id, vehicle_type } = req.body;
 
   try {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
@@ -1997,6 +2096,7 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
     const newIsActive = is_active !== undefined ? is_active : currentVehicle.is_active;
     const newAssignedSpotId = assigned_spot_id !== undefined ? assigned_spot_id : currentVehicle.assigned_spot_id;
     const newApprovalStatus = approval_status !== undefined ? approval_status : currentVehicle.approval_status;
+    const newVehicleType = vehicle_type !== undefined ? vehicle_type : currentVehicle.vehicle_type;
 
     const result = await pool.query(
       `UPDATE public.user_vehicles 
@@ -2012,8 +2112,9 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
            assigned_spot_id = $10,
            notes = COALESCE($11, notes),
            approval_status = COALESCE($12, approval_status),
+           vehicle_type = COALESCE($13, vehicle_type),
            updated_at = NOW()
-       WHERE id = $13 RETURNING *`,
+       WHERE id = $14 RETURNING *`,
       [
         cleanPlate,
         brand ? brand.trim() : null,
@@ -2027,6 +2128,7 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
         newAssignedSpotId,
         notes !== undefined ? notes : currentVehicle.notes,
         newApprovalStatus,
+        newVehicleType,
         id
       ]
     );
@@ -2075,57 +2177,94 @@ app.put('/api/vehicles/:id', authenticateToken, async (req, res) => {
 });
 
 // Eliminar un vehículo
-app.delete('/api/vehicles/:id', authenticateToken, async (req, res) => {
+const deleteVehicleHandler = async (req, res) => {
   const { id } = req.params;
+  if (!isValidUuid(id)) {
+    return res.status(400).json({ error: 'Identificador de vehículo inválido.' });
+  }
 
+  let client;
   try {
     const isAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'superadmin' || req.user.role === 'gestor');
 
-    const checkResult = await pool.query('SELECT * FROM public.user_vehicles WHERE id = $1', [id]);
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const checkResult = await client.query('SELECT * FROM public.user_vehicles WHERE id = $1', [id]);
     if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Vehículo no encontrado.' });
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Vehículo no encontrado o ya eliminado.' });
     }
 
     const vehicle = checkResult.rows[0];
     if (vehicle.user_id !== req.user.id && !isAdmin) {
+      await client.query('ROLLBACK');
       return res.status(403).json({ error: 'No tienes permisos para eliminar este vehículo.' });
     }
 
-    // Si tenía celda asignada, actualizar celda a disponible si queda libre
+    // 1. Si tenía celda asignada, actualizar celda a disponible si queda libre
     if (vehicle.assigned_spot_id) {
-      const remainingVehicles = await pool.query(
+      const remainingVehicles = await client.query(
         'SELECT COUNT(*) FROM public.user_vehicles WHERE assigned_spot_id = $1 AND id != $2',
         [vehicle.assigned_spot_id, id]
       );
       if (parseInt(remainingVehicles.rows[0].count, 10) === 0) {
-        await pool.query(
+        await client.query(
           "UPDATE public.parking_spots SET status = 'disponible' WHERE id = $1 AND status = 'ocupada'",
           [vehicle.assigned_spot_id]
         );
       }
     }
 
-    // Registrar en auditoría antes de eliminar
-    await pool.query(
+    // 2. Desvincular vehicle_id en vehicle_history para preservar la auditoría sin violar FK
+    await client.query('UPDATE public.vehicle_history SET vehicle_id = NULL WHERE vehicle_id = $1', [id]);
+
+    // 3. Registrar en auditoría antes de eliminar (con vehicle_id = NULL)
+    const performedById = isValidUuid(req.user?.id) ? req.user.id : null;
+    const performedByName = req.user?.name || req.user?.email || 'Usuario';
+    await client.query(
       `INSERT INTO public.vehicle_history 
        (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
-       VALUES ($1, $2, 'eliminacion', $3, $4, $5)`,
+       VALUES (NULL, $1, 'eliminacion', $2, $3, $4)`,
       [
-        id,
         vehicle.plate,
-        req.user.id,
-        req.user.name || req.user.email || 'Usuario',
+        performedById,
+        performedByName,
         JSON.stringify(vehicle)
       ]
     );
 
-    await pool.query('DELETE FROM public.user_vehicles WHERE id = $1', [id]);
-    res.json({ message: 'Vehículo eliminado exitosamente.' });
+    // 4. Eliminar el vehículo
+    await client.query('DELETE FROM public.user_vehicles WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
+    res.json({ message: 'Vehículo eliminado exitosamente.', id, plate: vehicle.plate });
   } catch (err) {
+    if (client) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rbErr) {
+        console.error('Error en ROLLBACK de eliminar vehículo:', rbErr);
+      }
+    }
     console.error('Error al eliminar vehículo:', err);
-    res.status(500).json({ error: 'Error al eliminar el vehículo.' });
+
+    if (err.code === '23503') {
+      return res.status(409).json({
+        error: `No es posible eliminar el vehículo debido a que está referenciado por otra tabla (${err.table || 'dependencia externa'}). Se requiere desvincular dichos registros primero.`
+      });
+    }
+
+    res.status(500).json({ error: err.message || 'Error al eliminar el vehículo.' });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
-});
+};
+
+app.delete('/api/vehicles/:id', authenticateToken, deleteVehicleHandler);
+app.post('/api/vehicles/:id/delete', authenticateToken, deleteVehicleHandler);
 
 // Historial de un vehículo específico
 app.get('/api/vehicles/:id/history', authenticateToken, async (req, res) => {
@@ -2285,7 +2424,7 @@ app.get('/api/parking_spots/:id', authenticateToken, getParkingSpotByIdHandler);
 
 // Crear una celda de parqueadero
 const createParkingSpotHandler = async (req, res) => {
-  const { code, spot_type, status, assigned_user_id, assigned_user_name, notes } = req.body;
+  const { code, spot_type, status, assigned_user_id, assigned_user_name, notes, vehicle_type } = req.body;
   if (!code || typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ error: 'El código de la celda es obligatorio.' });
   }
@@ -2299,11 +2438,14 @@ const createParkingSpotHandler = async (req, res) => {
     }
 
     const sanitizedUserId = await sanitizeAssignedUserId(assigned_user_id);
+    const resolvedSpotVehicleType = (vehicle_type === 'moto' || vehicle_type === 'carro' || vehicle_type === 'mixto') 
+      ? vehicle_type 
+      : (cleanCode.startsWith('M-') || (notes || '').toLowerCase().includes('moto') ? 'moto' : 'carro');
 
     const result = await pool.query(
       `INSERT INTO public.parking_spots 
-       (code, spot_type, status, assigned_user_id, assigned_user_name, notes) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+       (code, spot_type, status, assigned_user_id, assigned_user_name, notes, vehicle_type) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
       [
         cleanCode,
@@ -2311,7 +2453,8 @@ const createParkingSpotHandler = async (req, res) => {
         status || 'disponible',
         sanitizedUserId,
         assigned_user_name ? assigned_user_name.trim() : null,
-        notes ? notes.trim() : null
+        notes ? notes.trim() : null,
+        resolvedSpotVehicleType
       ]
     );
 
@@ -2328,7 +2471,7 @@ app.post('/api/parking_spots', authenticateToken, createParkingSpotHandler);
 // Actualizar una celda
 const updateParkingSpotHandler = async (req, res) => {
   const { id } = req.params;
-  const { code, spot_type, status, assigned_user_id, assigned_user_name, notes } = req.body;
+  const { code, spot_type, status, assigned_user_id, assigned_user_name, notes, vehicle_type } = req.body;
 
   if (!isValidUuid(id)) {
     return res.status(400).json({ error: 'Identificador de celda inválido.' });
@@ -2360,6 +2503,8 @@ const updateParkingSpotHandler = async (req, res) => {
       finalAssignedUserId = await sanitizeAssignedUserId(assigned_user_id);
     }
 
+    const newVehicleType = vehicle_type !== undefined ? vehicle_type : currentSpot.vehicle_type;
+
     const result = await pool.query(
       `UPDATE public.parking_spots 
        SET code = COALESCE($1, code),
@@ -2368,8 +2513,9 @@ const updateParkingSpotHandler = async (req, res) => {
            assigned_user_id = $4,
            assigned_user_name = $5,
            notes = COALESCE($6, notes),
+           vehicle_type = COALESCE($7, vehicle_type),
            updated_at = NOW()
-       WHERE id = $7 RETURNING *`,
+       WHERE id = $8 RETURNING *`,
       [
         cleanCode,
         spot_type !== undefined ? spot_type : currentSpot.spot_type,
@@ -2377,6 +2523,7 @@ const updateParkingSpotHandler = async (req, res) => {
         finalAssignedUserId,
         assigned_user_name !== undefined ? (assigned_user_name ? assigned_user_name.trim() : null) : currentSpot.assigned_user_name,
         notes !== undefined ? (notes ? notes.trim() : null) : currentSpot.notes,
+        newVehicleType,
         id
       ]
     );
@@ -2433,7 +2580,7 @@ const deleteParkingSpotHandler = async (req, res) => {
             [
               v.id,
               v.plate,
-              req.user?.id || null,
+              isValidUuid(req.user?.id) ? req.user.id : null,
               req.user?.name || req.user?.email || 'Administrador',
               JSON.stringify({ motivo: `Desvinculación automática por eliminación de celda ${spot.code}`, spot_code: spot.code })
             ]
@@ -2481,6 +2628,8 @@ const deleteParkingSpotHandler = async (req, res) => {
 
 app.delete('/api/parking-spots/:id', authenticateToken, deleteParkingSpotHandler);
 app.delete('/api/parking_spots/:id', authenticateToken, deleteParkingSpotHandler);
+app.post('/api/parking-spots/:id/delete', authenticateToken, deleteParkingSpotHandler);
+app.post('/api/parking_spots/:id/delete', authenticateToken, deleteParkingSpotHandler);
 
 // Asignar vehículo o persona a una celda
 app.post('/api/parking-spots/:id/assign', authenticateToken, async (req, res) => {

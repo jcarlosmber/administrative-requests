@@ -11,6 +11,7 @@ export interface UserVehicle {
   doc?: string;
   dependency?: string;
   charge?: string | null;
+  vehicle_type?: 'carro' | 'moto' | string;
   is_active?: boolean;
   approval_status?: 'pendiente' | 'aprobado' | 'rechazado' | string | null;
   assigned_spot_id?: string | null;
@@ -28,6 +29,7 @@ export interface ParkingSpot {
   id: string;
   code: string;
   spot_type: 'fija' | 'libre';
+  vehicle_type?: 'carro' | 'moto' | 'mixto' | string;
   status: 'disponible' | 'ocupada' | 'mantenimiento' | 'reservada';
   assigned_user_id?: string | null;
   assigned_user_name?: string | null;
@@ -39,6 +41,33 @@ export interface ParkingSpot {
   active_vehicles_count?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export function getVehicleType(veh?: Partial<UserVehicle> | null): 'carro' | 'moto' {
+  if (!veh) return 'carro';
+  if (veh.vehicle_type === 'moto' || veh.vehicle_type === 'carro') {
+    return veh.vehicle_type;
+  }
+  const cleanPlate = (veh.plate || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (/^[A-Z]{3}[0-9]{2}[A-Z]$/.test(cleanPlate)) {
+    return 'moto';
+  }
+  const text = `${veh.brand || ''} ${veh.model || ''} ${veh.notes || ''}`.toLowerCase();
+  if (text.includes('moto') || text.includes('yamaha') || text.includes('suzuki') || text.includes('honda') || text.includes('victory') || text.includes('pulsar') || text.includes('ktm') || text.includes('bajaj') || text.includes('kawasaki')) {
+    return 'moto';
+  }
+  return 'carro';
+}
+
+export function getSpotVehicleType(spot?: Partial<ParkingSpot> | null): 'carro' | 'moto' | 'mixto' {
+  if (!spot) return 'carro';
+  if (spot.vehicle_type === 'moto' || spot.vehicle_type === 'carro' || spot.vehicle_type === 'mixto') {
+    return spot.vehicle_type;
+  }
+  if ((spot.code || '').toUpperCase().startsWith('M-') || (spot.notes || '').toLowerCase().includes('moto')) {
+    return 'moto';
+  }
+  return 'carro';
 }
 
 export interface VehicleHistory {
@@ -195,6 +224,7 @@ export const vehicleService = {
     charge?: string;
     notes?: string;
     target_user_id?: string;
+    vehicle_type?: 'carro' | 'moto' | string;
   }): Promise<UserVehicle> {
     const res = await fetch(`${API_URL}/api/vehicles`, {
       method: 'POST',
@@ -226,13 +256,20 @@ export const vehicleService = {
   },
 
   async delete(id: string): Promise<void> {
-    const res = await fetch(`${API_URL}/api/vehicles/${id}`, {
+    const headers = await getHeaders();
+    let res = await fetch(`${API_URL}/api/vehicles/${id}`, {
       method: 'DELETE',
-      headers: await getHeaders(),
+      headers,
     });
+    if (!res.ok && (res.status === 404 || res.status === 405)) {
+      res = await fetch(`${API_URL}/api/vehicles/${id}/delete`, {
+        method: 'POST',
+        headers,
+      });
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al eliminar vehículo');
+      throw new Error(err.error || err.message || 'Error al eliminar vehículo');
     }
   },
 
@@ -276,6 +313,7 @@ export const vehicleService = {
   async createSpot(spot: {
     code: string;
     spot_type: 'fija' | 'libre';
+    vehicle_type?: 'carro' | 'moto' | 'mixto' | string;
     status?: 'disponible' | 'ocupada' | 'mantenimiento' | 'reservada';
     assigned_user_id?: string | null;
     assigned_user_name?: string | null;
@@ -307,13 +345,20 @@ export const vehicleService = {
   },
 
   async deleteSpot(id: string): Promise<void> {
-    const res = await fetch(`${API_URL}/api/parking-spots/${id}`, {
+    const headers = await getHeaders();
+    let res = await fetch(`${API_URL}/api/parking-spots/${id}`, {
       method: 'DELETE',
-      headers: await getHeaders(),
+      headers,
     });
+    if (!res.ok && (res.status === 404 || res.status === 405)) {
+      res = await fetch(`${API_URL}/api/parking-spots/${id}/delete`, {
+        method: 'POST',
+        headers,
+      });
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al eliminar celda');
+      throw new Error(err.error || err.message || 'Error al eliminar celda');
     }
   },
 

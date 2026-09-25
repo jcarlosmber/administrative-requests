@@ -10,7 +10,7 @@ import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
 import { supabase } from '../../lib/supabase';
 import { requestService } from '../../lib/requestService';
-import { vehicleService, resolveVehicleLimitByCharge } from '../../lib/vehicleService';
+import { vehicleService, resolveVehicleLimitByCharge, getVehicleType } from '../../lib/vehicleService';
 import ConfirmActionModal from '../../components/ConfirmActionModal';
 
 const COLORS = {
@@ -58,6 +58,7 @@ export default function ParkingRequestScreen() {
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
   const [vehicleModalVisible, setVehicleModalVisible] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
+  const [vType, setVType] = useState<'carro' | 'moto'>('carro');
   const [vPlate, setVPlate] = useState('');
   const [vBrand, setVBrand] = useState('');
   const [vModel, setVModel] = useState('');
@@ -156,6 +157,7 @@ export default function ParkingRequestScreen() {
     }
 
     setEditingVehicle(null);
+    setVType('carro');
     setVPlate('');
     setVBrand('');
     setVModel('');
@@ -166,6 +168,7 @@ export default function ParkingRequestScreen() {
 
   const openEditVehicleModal = (v: any) => {
     setEditingVehicle(v);
+    setVType(getVehicleType(v));
     setVPlate(v.plate || '');
     setVBrand(v.brand || '');
     setVModel(v.model || '');
@@ -238,7 +241,8 @@ export default function ParkingRequestScreen() {
           name: cleanName || undefined,
           doc: cleanDoc || undefined,
           charge: cleanCharge || undefined,
-          dependency: cleanDep || undefined
+          dependency: cleanDep || undefined,
+          vehicle_type: vType
         });
         setVehicleModalVisible(false);
         await loadUserVehiclesAndLimit();
@@ -257,7 +261,9 @@ export default function ParkingRequestScreen() {
           name: cleanName,
           doc: cleanDoc,
           charge: cleanCharge,
-          dependency: cleanDep
+          dependency: cleanDep,
+          vehicle_type: vType,
+          notes: `Vehículo inscrito por el usuario (${vType === 'moto' ? 'Motocicleta' : 'Automóvil'})`
         });
 
         // 2. Radicar solicitud administrativa de cupo de parqueadero
@@ -719,6 +725,7 @@ export default function ParkingRequestScreen() {
                         const isPending = v.approval_status === 'pendiente' || v.status === 'pendiente';
                         const isRejected = v.approval_status === 'rechazado';
                         const hasFixedSpot = !!v.spot_code;
+                        const isMoto = getVehicleType(v) === 'moto';
                         
                         return (
                           <View 
@@ -776,8 +783,31 @@ export default function ParkingRequestScreen() {
                                 </View>
                               </View>
 
-                              {/* Badges de Estado y Celda */}
+                              {/* Badges de Tipo, Estado y Celda */}
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                {/* Badge Tipo Carro / Moto */}
+                                <View style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  backgroundColor: isMoto ? '#FFFBEB' : '#EFF6FF',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: isMoto ? '#FDE68A' : '#BFDBFE'
+                                }}>
+                                  <Ionicons name={isMoto ? 'bicycle' : 'car-sport'} size={12} color={isMoto ? '#D97706' : '#2563EB'} />
+                                  <Text style={{
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                    color: isMoto ? '#D97706' : '#2563EB',
+                                    textTransform: 'uppercase'
+                                  }}>
+                                    {isMoto ? 'Moto' : 'Carro'}
+                                  </Text>
+                                </View>
+
                                 {/* Badge Estado */}
                                 <View style={{
                                   backgroundColor: isPending ? '#FEF3C7' : isRejected ? '#FEE2E2' : isVehicleActive ? '#ECFDF5' : '#F1F5F9',
@@ -1246,6 +1276,54 @@ export default function ParkingRequestScreen() {
                     </Text>
                   </View>
 
+                  {/* Selector Tipo de Automotor (Carro o Moto) */}
+                  <View>
+                    <Text style={styles.label}>Tipo de Automotor *</Text>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                      <TouchableOpacity
+                        onPress={() => setVType('carro')}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          backgroundColor: vType === 'carro' ? '#EFF6FF' : '#FFFFFF',
+                          borderWidth: 1.5,
+                          borderColor: vType === 'carro' ? '#2563EB' : '#CBD5E1',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="car-sport" size={18} color={vType === 'carro' ? '#2563EB' : COLORS.muted} />
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: vType === 'carro' ? '#2563EB' : COLORS.muted }}>
+                          Carro
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setVType('moto')}
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          backgroundColor: vType === 'moto' ? '#FFFBEB' : '#FFFFFF',
+                          borderWidth: 1.5,
+                          borderColor: vType === 'moto' ? '#D97706' : '#CBD5E1',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="bicycle" size={18} color={vType === 'moto' ? '#D97706' : COLORS.muted} />
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: vType === 'moto' ? '#D97706' : COLORS.muted }}>
+                          Moto
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.label}>Placa del Vehículo *</Text>
@@ -1254,8 +1332,16 @@ export default function ParkingRequestScreen() {
                         <TextInput
                           style={styles.input}
                           value={vPlate}
-                          onChangeText={(t) => setVPlate(t.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                          placeholder="ABC123"
+                          onChangeText={(t) => {
+                            const clean = t.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                            setVPlate(clean);
+                            if (/^[A-Z]{3}[0-9]{2}[A-Z]$/.test(clean)) {
+                              setVType('moto');
+                            } else if (/^[A-Z]{3}[0-9]{3}$/.test(clean)) {
+                              setVType('carro');
+                            }
+                          }}
+                          placeholder={vType === 'moto' ? 'Ej. BGE89H' : 'Ej. ABC123'}
                           placeholderTextColor="#94A3B8"
                           maxLength={7}
                           autoCapitalize="characters"
