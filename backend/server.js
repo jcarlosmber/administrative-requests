@@ -825,16 +825,50 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 
 // --- ENDPOINTS DE SOLICITUDES ADMINISTRATIVAS ---
 
-// Obtener disponibilidad de salas (todas las reservas de salas no rechazadas, sin exponer datos sensibles)
+// Obtener disponibilidad de salas (todas las reservas de salas no rechazadas con datos del solicitante y metadata)
 app.get('/api/requests/rooms/availability', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT id, title, metadata, status FROM administrative_requests WHERE category = 'rooms' AND status != 'rechazado'"
-    );
+    const result = await pool.query(`
+      SELECT 
+        ar.id, 
+        ar.title, 
+        ar.description, 
+        ar.metadata, 
+        ar.status, 
+        ar.created_at, 
+        ar.updated_at, 
+        ar.user_id,
+        COALESCE(u.full_name, u.name, TRIM(CONCAT(u.first_name, ' ', u.last_name))) as user_name,
+        u.email as user_email,
+        u.dependency as user_dependency
+      FROM administrative_requests ar
+      LEFT JOIN users u ON ar.user_id = u.id
+      WHERE ar.category = 'rooms' AND ar.status != 'rechazado'
+      ORDER BY ar.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener disponibilidad de salas:', err);
+    res.status(500).json({ error: 'Error al obtener disponibilidad de salas.' });
+  }
+});
+
+// Alias para compatibilidad con clientes que consulten /api/administrative_requests
+app.get('/api/administrative_requests', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT ar.*, 
+             COALESCE(u.full_name, u.name, TRIM(CONCAT(u.first_name, ' ', u.last_name))) as user_name,
+             u.email as user_email,
+             u.dependency as user_dependency
+      FROM administrative_requests ar 
+      LEFT JOIN users u ON ar.user_id = u.id 
+      ORDER BY ar.created_at DESC
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error al obtener disponibilidad de salas.' });
+    res.status(500).json({ error: 'Error al obtener solicitudes.' });
   }
 });
 

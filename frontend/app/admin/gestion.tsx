@@ -80,6 +80,144 @@ const safeStorage = {
   }
 };
 
+// =========================================================
+// UTILIDADES PARA CALENDARIO DE SALAS
+// =========================================================
+const toLocalDateIso = (d: Date): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const MONTH_NAMES_MAP: Record<string, string> = {
+  ene: '01', enero: '01',
+  feb: '02', febrero: '02',
+  mar: '03', marzo: '03',
+  abr: '04', abril: '04',
+  may: '05', mayo: '05',
+  jun: '06', junio: '06',
+  jul: '07', julio: '07',
+  ago: '08', agosto: '08',
+  sep: '09', sept: '09', septiembre: '09',
+  oct: '10', octubre: '10',
+  nov: '11', noviembre: '11',
+  dic: '12', diciembre: '12'
+};
+
+const parseDateToIso = (meta: any, createdAt?: string): string => {
+  if (!meta) return createdAt ? createdAt.split('T')[0] : toLocalDateIso(new Date());
+
+  // 1. date_iso explícito (ej: "2026-09-24" o "2026-09-24T14:00:00Z")
+  if (meta.date_iso && typeof meta.date_iso === 'string') {
+    const clean = meta.date_iso.split('T')[0].trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+  }
+
+  const rawDate = meta.date || meta.booking_date || meta.event_date;
+  if (rawDate && typeof rawDate === 'string') {
+    const trimmed = rawDate.trim();
+
+    // 2. Formato ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    // 3. Formato DD/MM/YYYY o DD-MM-YYYY
+    const slashParts = trimmed.split(/[/|-]/);
+    if (slashParts.length === 3) {
+      if (slashParts[0].length === 4) {
+        return `${slashParts[0]}-${slashParts[1].padStart(2, '0')}-${slashParts[2].padStart(2, '0')}`;
+      } else if (slashParts[2].length === 4) {
+        return `${slashParts[2]}-${slashParts[1].padStart(2, '0')}-${slashParts[0].padStart(2, '0')}`;
+      }
+    }
+
+    // 4. Formato texto en español: ej "miércoles, 24 de sep", "24 de septiembre"
+    const lower = trimmed.toLowerCase();
+    const dayMatch = lower.match(/\b([0-2]?[0-9]|3[01])\b/);
+    if (dayMatch) {
+      const dayNum = dayMatch[1].padStart(2, '0');
+      let foundMonth = '09';
+      for (const [key, val] of Object.entries(MONTH_NAMES_MAP)) {
+        if (lower.includes(key)) {
+          foundMonth = val;
+          break;
+        }
+      }
+      const yearMatch = lower.match(/\b(202\d)\b/);
+      const yearVal = yearMatch ? yearMatch[1] : (createdAt ? createdAt.slice(0, 4) : String(new Date().getFullYear()));
+      return `${yearVal}-${foundMonth}-${dayNum}`;
+    }
+  }
+
+  if (createdAt && typeof createdAt === 'string') {
+    return createdAt.split('T')[0];
+  }
+
+  return toLocalDateIso(new Date());
+};
+
+const parseTimeHour = (timeStr: any, isEnd: boolean = false): number | null => {
+  if (!timeStr) return null;
+  const str = String(timeStr).trim();
+  
+  const separator = str.includes(' - ') ? ' - ' : (str.includes(' a ') ? ' a ' : (str.includes('-') ? '-' : null));
+  let part = str;
+  if (separator) {
+    const parts = str.split(separator);
+    part = isEnd ? parts[1] : parts[0];
+  }
+
+  const ampmMatch = part.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)/i);
+  if (ampmMatch) {
+    let h = parseInt(ampmMatch[1], 10);
+    const meridian = ampmMatch[3].toLowerCase();
+    if (meridian.includes('p') && h < 12) h += 12;
+    if (meridian.includes('a') && h === 12) h = 0;
+    return h;
+  }
+
+  const match24 = part.match(/(\d{1,2}):(\d{2})/);
+  if (match24) {
+    return parseInt(match24[1], 10);
+  }
+
+  const numMatch = part.match(/\b(\d{1,2})\b/);
+  if (numMatch) {
+    return parseInt(numMatch[1], 10);
+  }
+
+  return null;
+};
+
+const normalizeRoomName = (name?: string): string => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+};
+
+const isReservationConfirmed = (status?: string): boolean => {
+  if (!status) return false;
+  const s = status.toLowerCase().trim();
+  return ['resuelto', 'aprobado', 'aprobada', 'confirmada', 'en_progreso'].includes(s);
+};
+
+const isReservationPending = (status?: string): boolean => {
+  if (!status) return false;
+  const s = status.toLowerCase().trim();
+  return ['pendiente', 'en_revision', 'solicitada', 'espera'].includes(s);
+};
+
+const isReservationCancelled = (status?: string): boolean => {
+  if (!status) return false;
+  const s = status.toLowerCase().trim();
+  return ['rechazado', 'rechazada', 'cancelado', 'cancelada'].includes(s);
+};
+
 export default function AdminGestion() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -232,20 +370,29 @@ export default function AdminGestion() {
 
   const loadCalendarReservations = async () => {
     try {
+      // 1. Intentar endpoint especializado de disponibilidad de salas (trae todas las reservas con solicitante)
+      const availabilityData = await requestService.getRoomAvailability().catch(() => null);
+      if (availabilityData && Array.isArray(availabilityData) && availabilityData.length > 0) {
+        setRoomReservations(availabilityData);
+        return;
+      }
+
+      // 2. Intentar supabase administrative_requests
       const { data: dbRequests, error } = await supabase
         .from('administrative_requests')
         .select('*')
         .eq('category', 'rooms')
-        .neq('status', 'rechazado')
         .order('created_at', { ascending: false });
 
       if (!error && dbRequests && dbRequests.length > 0) {
-        setRoomReservations(dbRequests);
-      } else {
-        const apiReqs = await requestService.getAll().catch(() => []);
-        const roomReqs = apiReqs.filter(r => r.category === 'rooms' && r.status !== 'rechazado');
-        setRoomReservations(roomReqs);
+        setRoomReservations(dbRequests.filter((r: any) => !isReservationCancelled(r.status)));
+        return;
       }
+
+      // 3. Fallback a requestService.getAll()
+      const apiReqs = await requestService.getAll().catch(() => []);
+      const roomReqs = apiReqs.filter(r => r.category === 'rooms' && !isReservationCancelled(r.status));
+      setRoomReservations(roomReqs);
     } catch (err) {
       console.warn('Error al cargar reservas de salas:', err);
     }
@@ -273,8 +420,9 @@ export default function AdminGestion() {
   // =========================================================
   // LÓGICA DE PROCESAMIENTO DEL CALENDARIO DE SALAS
   // =========================================================
+  // Fecha en formato local YYYY-MM-DD sin desfase por zona horaria UTC
   const calendarDateIso = useMemo(() => {
-    return calendarDate.toISOString().split('T')[0];
+    return toLocalDateIso(calendarDate);
   }, [calendarDate]);
 
   const displayCalendarDate = useMemo(() => {
@@ -285,7 +433,7 @@ export default function AdminGestion() {
     return `${dayName}, ${calendarDate.getDate()} de ${monthName} de ${calendarDate.getFullYear()}`;
   }, [calendarDate]);
 
-  // Generar 7 días de navegación semanal
+  // Generar 7 días de navegación semanal alineados a la fecha local
   const weekPills = useMemo(() => {
     const list = [];
     const base = new Date(calendarDate);
@@ -293,7 +441,7 @@ export default function AdminGestion() {
     for (let offset = -3; offset <= 3; offset++) {
       const d = new Date(base);
       d.setDate(base.getDate() + offset);
-      const iso = d.toISOString().split('T')[0];
+      const iso = toLocalDateIso(d);
       const dayNames = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
       list.push({
         date: d,
@@ -306,60 +454,47 @@ export default function AdminGestion() {
     return list;
   }, [calendarDate, calendarDateIso]);
 
-  // Parsear reservas de salas para cruzarlas con la cuadrícula
+  // Parsear reservas de salas discriminando Confirmadas, Pendientes y Disponibles
   const parsedReservations = useMemo(() => {
-    return roomReservations.map(res => {
-      const meta = res.metadata || {};
-      let dateIso = meta.date_iso;
-      if (!dateIso && meta.date) {
-        const parts = String(meta.date).split('/');
-        if (parts.length === 3) {
-          dateIso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    return roomReservations
+      .filter(res => !isReservationCancelled(res.status))
+      .map(res => {
+        const meta = res.metadata || {};
+        const dateIso = parseDateToIso(meta, res.created_at);
+
+        let start = typeof meta.start_hour === 'number' ? meta.start_hour : null;
+        let end = typeof meta.end_hour === 'number' ? meta.end_hour : null;
+
+        if (start === null) {
+          start = parseTimeHour(meta.time, false) ?? parseTimeHour(meta.booking_hours, false) ?? parseTimeHour(meta.event_start_hour, false);
         }
-      }
-      if (!dateIso && res.created_at) {
-        dateIso = res.created_at.split('T')[0];
-      }
-
-      let start = typeof meta.start_hour === 'number' ? meta.start_hour : null;
-      let end = typeof meta.end_hour === 'number' ? meta.end_hour : null;
-
-      if (start === null && meta.time) {
-        const m = String(meta.time).match(/(\d{1,2}):(\d{2})/);
-        if (m) start = parseInt(m[1], 10);
-      }
-      if (start === null && meta.booking_hours) {
-        const m = String(meta.booking_hours).match(/(\d{1,2}):(\d{2})/);
-        if (m) start = parseInt(m[1], 10);
-      }
-
-      if (end === null && meta.time) {
-        const m = String(meta.time).match(/-\s*(\d{1,2}):(\d{2})/);
-        if (m) end = parseInt(m[1], 10);
-      }
-      if (end === null && meta.booking_hours) {
-        const m = String(meta.booking_hours).match(/a\s*(\d{1,2}):(\d{2})/);
-        if (m) end = parseInt(m[1], 10);
-      }
-
-      if (start === null) start = 8;
-      if (end === null || end <= start) end = start + 1;
-
-      const rObj = meta.room || {};
-      const rId = rObj.id || null;
-      const rName = rObj.name || (res.title ? String(res.title).replace(/^Reserva:\s*/i, '').split('-')[0].trim() : 'Sala');
-
-      return {
-        ...res,
-        parsed: {
-          dateIso,
-          startHour: start,
-          endHour: end,
-          roomId: rId,
-          roomName: rName,
+        if (end === null) {
+          end = parseTimeHour(meta.time, true) ?? parseTimeHour(meta.booking_hours, true) ?? parseTimeHour(meta.event_end_hour, true);
         }
-      };
-    });
+
+        if (start === null) start = 8;
+        if (end === null || end <= start) end = start + 1;
+
+        const rObj = meta.room || {};
+        const rId = rObj.id || null;
+        const rName = rObj.name || (res.title ? String(res.title).replace(/^Reserva:\s*/i, '').split('-')[0].trim() : 'Sala');
+
+        const isConfirmed = isReservationConfirmed(res.status);
+        const isPending = isReservationPending(res.status) || (!isConfirmed);
+
+        return {
+          ...res,
+          isConfirmed,
+          isPending,
+          parsed: {
+            dateIso,
+            startHour: start,
+            endHour: end,
+            roomId: rId,
+            roomName: rName,
+          }
+        };
+      });
   }, [roomReservations]);
 
   // Salas estándar institucionales (se excluyen explícitamente salas especiales y auditorios)
@@ -397,9 +532,10 @@ export default function AdminGestion() {
       const p = item.parsed;
       if (p.dateIso !== calendarDateIso) return false;
       
+      const targetNorm = normalizeRoomName(room.name);
       const matchRoom = (p.roomId && p.roomId === room.id) || 
-                        (p.roomName && p.roomName.toLowerCase().trim() === room.name.toLowerCase().trim()) ||
-                        (item.title && item.title.toLowerCase().includes(room.name.toLowerCase()));
+                        (p.roomName && normalizeRoomName(p.roomName) === targetNorm) ||
+                        (item.title && normalizeRoomName(item.title).includes(targetNorm));
       
       if (!matchRoom) return false;
       return hour >= p.startHour && hour < p.endHour;
@@ -409,31 +545,41 @@ export default function AdminGestion() {
   // Contadores de métricas del día (calculados exclusivamente sobre salas estándar)
   const calendarMetrics = useMemo(() => {
     const totalSlots = standardRooms.length * OPERATING_HOURS.length;
-    let occupiedSlots = 0;
+    let confirmedSlots = 0;
+    let pendingSlots = 0;
     
     standardRooms.forEach(r => {
       OPERATING_HOURS.forEach(h => {
-        if (getSlotReservation(r, h.hour)) {
-          occupiedSlots++;
+        const res = getSlotReservation(r, h.hour);
+        if (res) {
+          if (res.isConfirmed) {
+            confirmedSlots++;
+          } else {
+            pendingSlots++;
+          }
         }
       });
     });
 
+    const occupiedSlots = confirmedSlots + pendingSlots;
     const freeSlots = Math.max(0, totalSlots - occupiedSlots);
     const availabilityRate = totalSlots > 0 ? Math.round((freeSlots / totalSlots) * 100) : 100;
 
     // Solo contabilizar reservas que pertenezcan a salas estándar
     const standardDayReservations = dayReservations.filter(res => 
-      standardRooms.some(sr => 
-        (res.parsed.roomId && sr.id === res.parsed.roomId) || 
-        (res.parsed.roomName && sr.name.toLowerCase().trim() === res.parsed.roomName.toLowerCase().trim()) ||
-        (res.title && res.title.toLowerCase().includes(sr.name.toLowerCase()))
-      )
+      standardRooms.some(sr => {
+        const targetNorm = normalizeRoomName(sr.name);
+        return (res.parsed.roomId && sr.id === res.parsed.roomId) || 
+               (res.parsed.roomName && normalizeRoomName(res.parsed.roomName) === targetNorm) ||
+               (res.title && normalizeRoomName(res.title).includes(targetNorm));
+      })
     );
 
     return {
       totalRooms: standardRooms.length,
       dayReservationsCount: standardDayReservations.length,
+      confirmedSlots,
+      pendingSlots,
       occupiedSlots,
       freeSlots,
       availabilityRate
@@ -1249,31 +1395,32 @@ export default function AdminGestion() {
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                     {[
                       { label: 'Salas Estándar', val: calendarMetrics.totalRooms, icon: 'business', color: '#7209B7', bg: '#F5F3FF' },
-                      { label: 'Reservas del Día', val: calendarMetrics.dayReservationsCount, icon: 'bookmark', color: '#2563EB', bg: '#EFF6FF' },
-                      { label: 'Franjas Ocupadas', val: `${calendarMetrics.occupiedSlots} hrs`, icon: 'time', color: '#EA580C', bg: '#FFF7ED' },
+                      { label: 'Reservas del Día', val: calendarMetrics.dayReservationsCount, icon: 'bookmark', color: '#0F172A', bg: '#F1F5F9' },
                       { label: 'Franjas Disponibles', val: `${calendarMetrics.freeSlots} hrs`, icon: 'checkmark-circle', color: '#059669', bg: '#ECFDF5' },
-                      { label: 'Disponibilidad Global', val: `${calendarMetrics.availabilityRate}%`, icon: 'pie-chart', color: '#0F172A', bg: '#F1F5F9' },
+                      { label: 'Ocupada (Confirmada)', val: `${calendarMetrics.confirmedSlots} hrs`, icon: 'shield-checkmark', color: '#2563EB', bg: '#EFF6FF' },
+                      { label: 'Pendiente Aprobación', val: `${calendarMetrics.pendingSlots} hrs`, icon: 'time', color: '#D97706', bg: '#FEF3C7' },
+                      { label: 'Disponibilidad Global', val: `${calendarMetrics.availabilityRate}%`, icon: 'pie-chart', color: '#475569', bg: '#F8FAFC' },
                     ].map((metric, idx) => (
                       <View 
                         key={idx}
                         style={{
                           flex: 1,
-                          minWidth: isDesktop ? 140 : '46%',
+                          minWidth: isDesktop ? 130 : '46%',
                           backgroundColor: metric.bg,
                           padding: 14,
                           borderRadius: 16,
                           borderWidth: 1,
-                          borderColor: `${metric.color}20`,
+                          borderColor: `${metric.color}25`,
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 12
+                          gap: 10
                         }}
                       >
                         <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
                           <Ionicons name={metric.icon as any} size={20} color={metric.color} />
                         </View>
                         <View>
-                          <Text style={{ fontSize: 17, fontWeight: '900', color: metric.color }}>{metric.val}</Text>
+                          <Text style={{ fontSize: 16, fontWeight: '900', color: metric.color }}>{metric.val}</Text>
                           <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>{metric.label}</Text>
                         </View>
                       </View>
@@ -1598,7 +1745,8 @@ export default function AdminGestion() {
                             {calendarRooms.map(room => {
                               const res = getSlotReservation(room, hour);
                               const isOccupied = !!res;
-                              const isPending = res?.status === 'pendiente';
+                              const isConfirmed = res?.isConfirmed;
+                              const isPending = res?.isPending || (isOccupied && !isConfirmed);
 
                               return (
                                 <TouchableOpacity
@@ -1612,32 +1760,32 @@ export default function AdminGestion() {
                                     borderRightWidth: 1,
                                     borderRightColor: '#E2E8F0',
                                     backgroundColor: isOccupied 
-                                      ? (isPending ? '#FEF3C7' : '#EFF6FF')
+                                      ? (isConfirmed ? '#EFF6FF' : '#FEF3C7')
                                       : '#FFFFFF',
                                     justifyContent: 'center'
                                   }}
                                 >
                                   {isOccupied ? (
                                     <View style={{
-                                      backgroundColor: isPending ? '#FDE68A' : '#DBEAFE',
+                                      backgroundColor: isConfirmed ? '#DBEAFE' : '#FDE68A',
                                       borderRadius: 8,
                                       padding: 8,
-                                      borderLeftWidth: 3,
-                                      borderLeftColor: isPending ? '#D97706' : '#2563EB'
+                                      borderLeftWidth: 3.5,
+                                      borderLeftColor: isConfirmed ? '#2563EB' : '#D97706'
                                     }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                                         <Text style={{
-                                          fontSize: 10,
+                                          fontSize: 9.5,
                                           fontWeight: '900',
-                                          color: isPending ? '#92400E' : '#1E40AF',
+                                          color: isConfirmed ? '#1E40AF' : '#92400E',
                                           textTransform: 'uppercase'
                                         }}>
-                                          {isPending ? 'Pendiente' : 'Ocupada'}
+                                          {isConfirmed ? 'Ocupada (Confirmada)' : 'Pendiente Aprobación'}
                                         </Text>
                                         <Ionicons 
-                                          name={isPending ? "time-outline" : "checkmark-circle"} 
-                                          size={12} 
-                                          color={isPending ? '#92400E' : '#1E40AF'} 
+                                          name={isConfirmed ? "checkmark-circle" : "time-outline"} 
+                                          size={13} 
+                                          color={isConfirmed ? '#1E40AF' : '#92400E'} 
                                         />
                                       </View>
                                       <Text 
@@ -1661,10 +1809,12 @@ export default function AdminGestion() {
                                       paddingHorizontal: 8,
                                       paddingVertical: 6,
                                       borderRadius: 6,
-                                      backgroundColor: '#F0FDF4'
+                                      backgroundColor: '#F0FDF4',
+                                      borderWidth: 1,
+                                      borderColor: '#DCFCE7'
                                     }}>
-                                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
-                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#059669' }}>
+                                      <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#10B981' }} />
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#059669' }}>
                                         Disponible
                                       </Text>
                                     </View>
@@ -2608,23 +2758,36 @@ export default function AdminGestion() {
                 </View>
 
                 {/* Estado de Aprobación */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderRadius: 12, backgroundColor: selectedReservationModal?.status === 'aprobado' ? '#ECFDF5' : '#FEF3C7' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Ionicons 
-                      name={selectedReservationModal?.status === 'aprobado' ? "checkmark-circle" : "time"} 
-                      size={20} 
-                      color={selectedReservationModal?.status === 'aprobado' ? '#059669' : '#D97706'} 
-                    />
-                    <View>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: selectedReservationModal?.status === 'aprobado' ? '#059669' : '#D97706', textTransform: 'uppercase' }}>
-                        Estado: {selectedReservationModal?.status || 'Pendiente'}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: '#64748B' }}>
-                        {selectedReservationModal?.status === 'aprobado' ? 'Espacio formalmente reservado y asignado' : 'Pendiente de autorización administrativa'}
-                      </Text>
+                {(() => {
+                  const isConf = isReservationConfirmed(selectedReservationModal?.status);
+                  const isPend = isReservationPending(selectedReservationModal?.status);
+                  const bannerBg = isConf ? '#EFF6FF' : (isPend ? '#FEF3C7' : '#F1F5F9');
+                  const bannerBorder = isConf ? '#BFDBFE' : (isPend ? '#FDE68A' : '#E2E8F0');
+                  const badgeColor = isConf ? '#1E40AF' : (isPend ? '#92400E' : '#475569');
+                  const iconName = isConf ? 'checkmark-circle' : (isPend ? 'time' : 'alert-circle');
+                  const statusLabel = isConf ? 'Ocupada (Confirmada)' : (isPend ? 'Pendiente Aprobación' : (selectedReservationModal?.status || 'Registrada'));
+                  const statusDesc = isConf ? 'Espacio formalmente reservado y confirmado' : 'Pendiente de autorización administrativa';
+
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, borderRadius: 12, backgroundColor: bannerBg, borderWidth: 1, borderColor: bannerBorder }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Ionicons 
+                          name={iconName as any} 
+                          size={22} 
+                          color={badgeColor} 
+                        />
+                        <View>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: badgeColor, textTransform: 'uppercase' }}>
+                            Estado: {statusLabel}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: badgeColor, opacity: 0.9, marginTop: 1 }}>
+                            {statusDesc}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </View>
+                  );
+                })()}
               </View>
             </ScrollView>
 

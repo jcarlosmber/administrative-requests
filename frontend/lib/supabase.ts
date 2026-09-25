@@ -137,6 +137,8 @@ class SupabaseClientEmulated {
       route = 'users';
     } else if (tableName === 'service_emails') {
       route = 'service-emails';
+    } else if (tableName === 'administrative_requests') {
+      route = 'requests';
     }
 
     const state = {
