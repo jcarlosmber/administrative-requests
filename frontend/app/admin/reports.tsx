@@ -3238,6 +3238,12 @@ export default function AdminReports() {
                               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#7C3AED' }} />
                               <Text style={{ fontSize: 12, color: COLORS.muted }}>Uso Libre: <Text style={{ fontWeight: '800', color: COLORS.primary }}>{parkingStats.freeSpots}</Text></Text>
                             </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ fontSize: 12, color: COLORS.muted }}>🚗 Cupos Carro: <Text style={{ fontWeight: '800', color: '#1D4ED8' }}>{parkingStats.carSpots}</Text></Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ fontSize: 12, color: COLORS.muted }}>🏍️ Cupos Moto: <Text style={{ fontWeight: '800', color: '#C2410C' }}>{parkingStats.motoSpots}</Text></Text>
+                            </View>
                           </View>
                         </View>
 
@@ -3360,10 +3366,15 @@ export default function AdminReports() {
                               Vehículos vinculados a una persona titular que cuenta con una celda fija de parqueadero asignada
                             </Text>
                           </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#BFDBFE' }}>
                               <Text style={{ fontSize: 12, fontWeight: '800', color: '#1D4ED8' }}>
                                 {filteredReportFixedVehicles.length} de {(parkingStats.fixedCellVehicles || []).length} Vehículos
+                              </Text>
+                            </View>
+                            <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.muted }}>
+                                🚗 {parkingStats.fixedCars} Carros • 🏍️ {parkingStats.fixedMotos} Motos
                               </Text>
                             </View>
                           </View>
@@ -3502,10 +3513,17 @@ export default function AdminReports() {
                               Vehículos autorizados que ingresan y utilizan cualquiera de las celdas de parqueadero de uso libre rotativo
                             </Text>
                           </View>
-                          <View style={{ backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#DDD6FE' }}>
-                            <Text style={{ fontSize: 12, fontWeight: '800', color: '#6D28D9' }}>
-                              {filteredReportFreeVehicles.length} de {(parkingStats.freeUseVehicles || []).length} Vehículos
-                            </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <View style={{ backgroundColor: '#F5F3FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#DDD6FE' }}>
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: '#6D28D9' }}>
+                                {filteredReportFreeVehicles.length} de {(parkingStats.freeUseVehicles || []).length} Vehículos
+                              </Text>
+                            </View>
+                            <View style={{ backgroundColor: '#F8FAFC', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: COLORS.muted }}>
+                                🚗 {parkingStats.freeCars} Carros • 🏍️ {parkingStats.freeMotos} Motos
+                              </Text>
+                            </View>
                           </View>
                         </View>
 
