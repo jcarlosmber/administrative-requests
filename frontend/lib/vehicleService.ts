@@ -239,14 +239,26 @@ export const vehicleService = {
   },
 
   async update(id: string, updates: Partial<UserVehicle>): Promise<UserVehicle> {
-    const res = await fetch(`${API_URL}/api/vehicles/${id}`, {
+    const headers = await getHeaders();
+    let res = await fetch(`${API_URL}/api/vehicles/${id}`, {
       method: 'PUT',
-      headers: await getHeaders(),
+      headers,
       body: JSON.stringify(updates),
     });
     if (!res.ok) {
+      const fallbackRes = await fetch(`${API_URL}/api/vehicles/${id}/update`, {
+        method: 'POST',
+        headers: { ...headers, 'X-HTTP-Method-Override': 'PUT' },
+        body: JSON.stringify(updates),
+      }).catch(() => null);
+
+      if (fallbackRes && fallbackRes.ok) {
+        res = fallbackRes;
+      }
+    }
+    if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al actualizar vehículo');
+      throw new Error(err.error || err.message || 'Error al actualizar vehículo');
     }
     return await res.json() as UserVehicle;
   },
@@ -261,11 +273,15 @@ export const vehicleService = {
       method: 'DELETE',
       headers,
     });
-    if (!res.ok && (res.status === 404 || res.status === 405)) {
-      res = await fetch(`${API_URL}/api/vehicles/${id}/delete`, {
+    if (!res.ok) {
+      const fallbackRes = await fetch(`${API_URL}/api/vehicles/${id}/delete`, {
         method: 'POST',
-        headers,
-      });
+        headers: { ...headers, 'X-HTTP-Method-Override': 'DELETE' },
+      }).catch(() => null);
+
+      if (fallbackRes && fallbackRes.ok) {
+        res = fallbackRes;
+      }
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -332,14 +348,35 @@ export const vehicleService = {
   },
 
   async updateSpot(id: string, updates: Partial<ParkingSpot>): Promise<ParkingSpot> {
-    const res = await fetch(`${API_URL}/api/parking-spots/${id}`, {
+    const headers = await getHeaders();
+    let res = await fetch(`${API_URL}/api/parking-spots/${id}`, {
       method: 'PUT',
-      headers: await getHeaders(),
+      headers,
       body: JSON.stringify(updates),
     });
     if (!res.ok) {
+      const fallbackRes = await fetch(`${API_URL}/api/parking-spots/${id}/update`, {
+        method: 'POST',
+        headers: { ...headers, 'X-HTTP-Method-Override': 'PUT' },
+        body: JSON.stringify(updates),
+      }).catch(() => null);
+
+      if (fallbackRes && fallbackRes.ok) {
+        res = fallbackRes;
+      } else {
+        const postDirectRes = await fetch(`${API_URL}/api/parking-spots/${id}`, {
+          method: 'POST',
+          headers: { ...headers, 'X-HTTP-Method-Override': 'PUT' },
+          body: JSON.stringify(updates),
+        }).catch(() => null);
+        if (postDirectRes && postDirectRes.ok) {
+          res = postDirectRes;
+        }
+      }
+    }
+    if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al actualizar celda');
+      throw new Error(err.error || err.message || 'Error al actualizar celda');
     }
     return await res.json() as ParkingSpot;
   },
@@ -350,11 +387,15 @@ export const vehicleService = {
       method: 'DELETE',
       headers,
     });
-    if (!res.ok && (res.status === 404 || res.status === 405)) {
-      res = await fetch(`${API_URL}/api/parking-spots/${id}/delete`, {
+    if (!res.ok) {
+      const fallbackRes = await fetch(`${API_URL}/api/parking-spots/${id}/delete`, {
         method: 'POST',
-        headers,
-      });
+        headers: { ...headers, 'X-HTTP-Method-Override': 'DELETE' },
+      }).catch(() => null);
+
+      if (fallbackRes && fallbackRes.ok) {
+        res = fallbackRes;
+      }
     }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));

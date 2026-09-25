@@ -204,44 +204,91 @@ const initDatabase = async () => {
       );
     `);
 
-    // Columnas adicionales para user_vehicles si ya existía la tabla
-    await pool.query(`
-      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
-      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pendiente';
-      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS assigned_spot_id UUID REFERENCES public.parking_spots(id) ON DELETE SET NULL;
-      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS notes TEXT;
-      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS charge TEXT;
-      ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';
-      ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';
+    // 4. Migraciones progresivas individuales para Control de Parqueadero y Vehículos
+    const parkingAndVehicleMigrations = [
+      `CREATE OR REPLACE FUNCTION public.update_modified_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;`,
+      `CREATE OR REPLACE FUNCTION public.update_updated_at_column() RETURNS TRIGGER AS $$ BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS spot_type TEXT DEFAULT 'libre';`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'disponible';`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS assigned_user_id UUID;`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS assigned_user_name TEXT;`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS notes TEXT;`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';`,
+      `ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS approval_status TEXT DEFAULT 'pendiente';`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS assigned_spot_id UUID;`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS notes TEXT;`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS charge TEXT;`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';`,
+      `ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`,
+      // Limpiar referencias huérfanas en user_vehicles
+      `UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE assigned_spot_id IS NOT NULL AND assigned_spot_id NOT IN (SELECT id FROM public.parking_spots);`,
+      // Reparar foreign keys de user_vehicles a parking_spots con ON DELETE SET NULL
+      `DO $$
+       DECLARE r RECORD;
+       BEGIN
+         FOR r IN (
+           SELECT conname FROM pg_constraint 
+           WHERE conrelid = 'public.user_vehicles'::regclass 
+             AND confrelid = 'public.parking_spots'::regclass
+         ) LOOP
+           EXECUTE 'ALTER TABLE public.user_vehicles DROP CONSTRAINT IF EXISTS ' || quote_ident(r.conname);
+         END LOOP;
+       END $$;`,
+      `ALTER TABLE public.user_vehicles ADD CONSTRAINT user_vehicles_assigned_spot_id_fkey FOREIGN KEY (assigned_spot_id) REFERENCES public.parking_spots(id) ON DELETE SET NULL;`,
+      // Reparar foreign keys de vehicle_history
+      `DO $$
+       DECLARE r RECORD;
+       BEGIN
+         FOR r IN (
+           SELECT tc.constraint_name 
+           FROM information_schema.table_constraints tc 
+           JOIN information_schema.key_column_usage kcu 
+             ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+           WHERE tc.table_name = 'vehicle_history' 
+             AND kcu.column_name = 'vehicle_id' 
+             AND tc.constraint_type = 'FOREIGN KEY'
+         ) LOOP
+           EXECUTE 'ALTER TABLE public.vehicle_history DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
+         END LOOP;
+       END $$;`,
+      `ALTER TABLE public.vehicle_history ADD CONSTRAINT vehicle_history_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.user_vehicles(id) ON DELETE SET NULL;`,
+      // Auto-clasificar vehículos existentes
+      `UPDATE public.user_vehicles
+       SET vehicle_type = 'moto'
+       WHERE (vehicle_type IS NULL OR vehicle_type = 'carro')
+         AND (
+           model ILIKE '%moto%' 
+           OR notes ILIKE '%moto%' 
+           OR brand ILIKE '%yamaha%' 
+           OR brand ILIKE '%suzuki%' 
+           OR brand ILIKE '%honda%' 
+           OR brand ILIKE '%victory%' 
+           OR brand ILIKE '%kawasaki%' 
+           OR brand ILIKE '%bajaj%' 
+           OR brand ILIKE '%ktm%' 
+           OR brand ILIKE '%akt%' 
+           OR (brand ILIKE '%bmw%' AND model ILIKE '%moto%')
+           OR UPPER(REGEXP_REPLACE(plate, '[^A-Za-z0-9]', '', 'g')) ~ '^[A-Z]{3}[0-9]{2}[A-Z]$'
+         );`,
+      // Auto-clasificar celdas de moto existentes
+      `UPDATE public.parking_spots
+       SET vehicle_type = 'moto'
+       WHERE (vehicle_type IS NULL OR vehicle_type = 'carro')
+         AND (
+           code ILIKE 'M-%' 
+           OR notes ILIKE '%moto%'
+         );`
+    ];
 
-      -- Auto-clasificar vehículos existentes como moto si su modelo, notas o formato de placa corresponden a motocicleta
-      UPDATE public.user_vehicles
-      SET vehicle_type = 'moto'
-      WHERE (vehicle_type IS NULL OR vehicle_type = 'carro')
-        AND (
-          model ILIKE '%moto%' 
-          OR notes ILIKE '%moto%' 
-          OR brand ILIKE '%yamaha%' 
-          OR brand ILIKE '%suzuki%' 
-          OR brand ILIKE '%honda%' 
-          OR brand ILIKE '%victory%' 
-          OR brand ILIKE '%kawasaki%' 
-          OR brand ILIKE '%bajaj%' 
-          OR brand ILIKE '%ktm%' 
-          OR brand ILIKE '%akt%' 
-          OR (brand ILIKE '%bmw%' AND model ILIKE '%moto%')
-          OR UPPER(REGEXP_REPLACE(plate, '[^A-Za-z0-9]', '', 'g')) ~ '^[A-Z]{3}[0-9]{2}[A-Z]$'
-        );
-
-      -- Auto-clasificar celdas de moto existentes (M-01 a M-13 o notas alusivas)
-      UPDATE public.parking_spots
-      SET vehicle_type = 'moto'
-      WHERE (vehicle_type IS NULL OR vehicle_type = 'carro')
-        AND (
-          code ILIKE 'M-%' 
-          OR notes ILIKE '%moto%'
-        );
-    `).catch(err => console.error('Error alterando user_vehicles/parking_spots vehicle_type:', err.message));
+    for (const sqlQuery of parkingAndVehicleMigrations) {
+      try {
+        await pool.query(sqlQuery);
+      } catch (colErr) {
+        console.warn('Nota en migración individual de parqueadero:', colErr.message);
+      }
+    }
 
     // Límite de vehículos por defecto
     const maxVehiclesCheck = await pool.query("SELECT COUNT(*) FROM public.system_settings WHERE key = 'max_vehicles_per_user'");
@@ -2505,28 +2552,64 @@ const updateParkingSpotHandler = async (req, res) => {
 
     const newVehicleType = vehicle_type !== undefined ? vehicle_type : currentSpot.vehicle_type;
 
-    const result = await pool.query(
-      `UPDATE public.parking_spots 
-       SET code = COALESCE($1, code),
-           spot_type = COALESCE($2, spot_type),
-           status = COALESCE($3, status),
-           assigned_user_id = $4,
-           assigned_user_name = $5,
-           notes = COALESCE($6, notes),
-           vehicle_type = COALESCE($7, vehicle_type),
-           updated_at = NOW()
-       WHERE id = $8 RETURNING *`,
-      [
-        cleanCode,
-        spot_type !== undefined ? spot_type : currentSpot.spot_type,
-        status !== undefined ? status : currentSpot.status,
-        finalAssignedUserId,
-        assigned_user_name !== undefined ? (assigned_user_name ? assigned_user_name.trim() : null) : currentSpot.assigned_user_name,
-        notes !== undefined ? (notes ? notes.trim() : null) : currentSpot.notes,
-        newVehicleType,
-        id
-      ]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        `UPDATE public.parking_spots 
+         SET code = COALESCE($1, code),
+             spot_type = COALESCE($2, spot_type),
+             status = COALESCE($3, status),
+             assigned_user_id = $4,
+             assigned_user_name = $5,
+             notes = COALESCE($6, notes),
+             vehicle_type = COALESCE($7, vehicle_type),
+             updated_at = NOW()
+         WHERE id = $8 RETURNING *`,
+        [
+          cleanCode,
+          spot_type !== undefined ? spot_type : currentSpot.spot_type,
+          status !== undefined ? status : currentSpot.status,
+          finalAssignedUserId,
+          assigned_user_name !== undefined ? (assigned_user_name ? assigned_user_name.trim() : null) : currentSpot.assigned_user_name,
+          notes !== undefined ? (notes ? notes.trim() : null) : currentSpot.notes,
+          newVehicleType,
+          id
+        ]
+      );
+    } catch (updateErr) {
+      if (updateErr.code === '42703') { // Columna indefinida (ej. vehicle_type o updated_at)
+        console.warn('Detectada columna faltante en parking_spots, auto-reparando esquema...');
+        await pool.query("ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro'").catch(() => {});
+        await pool.query("ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()").catch(() => {});
+        
+        // Reintentar con columnas base si la versión de la base no reconoce las nuevas aún
+        try {
+          result = await pool.query(
+            `UPDATE public.parking_spots 
+             SET code = COALESCE($1, code),
+                 spot_type = COALESCE($2, spot_type),
+                 status = COALESCE($3, status),
+                 assigned_user_id = $4,
+                 assigned_user_name = $5,
+                 notes = COALESCE($6, notes)
+             WHERE id = $7 RETURNING *`,
+            [
+              cleanCode,
+              spot_type !== undefined ? spot_type : currentSpot.spot_type,
+              status !== undefined ? status : currentSpot.status,
+              finalAssignedUserId,
+              assigned_user_name !== undefined ? (assigned_user_name ? assigned_user_name.trim() : null) : currentSpot.assigned_user_name,
+              notes !== undefined ? (notes ? notes.trim() : null) : currentSpot.notes,
+              id
+            ]
+          );
+        } catch (retryErr) {
+          throw retryErr;
+        }
+      } else {
+        throw updateErr;
+      }
+    }
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -2537,6 +2620,10 @@ const updateParkingSpotHandler = async (req, res) => {
 
 app.put('/api/parking-spots/:id', authenticateToken, updateParkingSpotHandler);
 app.put('/api/parking_spots/:id', authenticateToken, updateParkingSpotHandler);
+app.post('/api/parking-spots/:id/update', authenticateToken, updateParkingSpotHandler);
+app.post('/api/parking_spots/:id/update', authenticateToken, updateParkingSpotHandler);
+app.post('/api/parking-spots/:id', authenticateToken, updateParkingSpotHandler);
+app.post('/api/parking_spots/:id', authenticateToken, updateParkingSpotHandler);
 
 // Eliminar una celda de manera robusta y transaccional
 const deleteParkingSpotHandler = async (req, res) => {
@@ -2557,22 +2644,32 @@ const deleteParkingSpotHandler = async (req, res) => {
     }
     const spot = checkSpot.rows[0];
 
-    // 1. Obtener vehículos que puedan estar vinculados
-    const vehs = await client.query(
-      'SELECT id, plate FROM public.user_vehicles WHERE assigned_spot_id = $1',
-      [id]
-    );
-
-    // 2. Desvincular vehículos asignados a esta celda
-    if (vehs.rows.length > 0) {
-      await client.query(
-        'UPDATE public.user_vehicles SET assigned_spot_id = NULL, updated_at = NOW() WHERE assigned_spot_id = $1',
+    // 1. Obtener vehículos vinculados
+    let vehs = { rows: [] };
+    try {
+      vehs = await client.query(
+        'SELECT id, plate FROM public.user_vehicles WHERE assigned_spot_id = $1',
         [id]
       );
+    } catch (vErr) {
+      console.warn('Nota al consultar vehículos vinculados a la celda:', vErr.message);
+    }
 
-      // Registrar auditoría de liberación forzosa por eliminación
-      for (const v of vehs.rows) {
-        try {
+    // 2. Desvincular vehículos asignados a esta celda de forma limpia sin updated_at para no disparar triggers fallidos
+    try {
+      await client.query(
+        'UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE assigned_spot_id = $1',
+        [id]
+      );
+    } catch (uvErr) {
+      console.warn('Nota al desvincular vehículos de la celda:', uvErr.message);
+    }
+
+    // 3. Registrar auditoría con SAVEPOINT aislado para garantizar que no aborte la transacción
+    if (vehs.rows.length > 0) {
+      await client.query('SAVEPOINT sp_audit_cell');
+      try {
+        for (const v of vehs.rows) {
           await client.query(
             `INSERT INTO public.vehicle_history 
              (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
@@ -2585,19 +2682,20 @@ const deleteParkingSpotHandler = async (req, res) => {
               JSON.stringify({ motivo: `Desvinculación automática por eliminación de celda ${spot.code}`, spot_code: spot.code })
             ]
           );
-        } catch (histErr) {
-          console.warn('Advertencia al registrar auditoría en eliminación de celda:', histErr.message);
         }
+      } catch (histErr) {
+        console.warn('Advertencia al registrar auditoría en eliminación de celda:', histErr.message);
+        await client.query('ROLLBACK TO SAVEPOINT sp_audit_cell');
       }
     }
 
-    // 3. Limpiar cualquier referencia de usuario en la celda
+    // 4. Limpiar cualquier referencia de usuario en la celda
     await client.query(
       'UPDATE public.parking_spots SET assigned_user_id = NULL, assigned_user_name = NULL WHERE id = $1',
       [id]
     );
 
-    // 4. Eliminar la celda
+    // 5. Eliminar la celda físicamente
     await client.query('DELETE FROM public.parking_spots WHERE id = $1', [id]);
 
     await client.query('COMMIT');

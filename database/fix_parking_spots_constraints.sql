@@ -29,7 +29,9 @@ ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS assigned_spot_id UUID;
 ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS notes TEXT;
 ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS charge TEXT;
 ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';
+ALTER TABLE public.user_vehicles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS vehicle_type TEXT DEFAULT 'carro';
+ALTER TABLE public.parking_spots ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- Auto-clasificar vehículos existentes como moto si su modelo, notas o formato de placa corresponden a motocicleta
 UPDATE public.user_vehicles
