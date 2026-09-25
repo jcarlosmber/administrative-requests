@@ -3811,7 +3811,7 @@ export default function AdminReports() {
                           <View>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#2563EB' }} />
-                              <Text style={styles.cardTitle}>Apartado 1: Vehículos con Celda Fija</Text>
+                              <Text style={styles.cardTitle}>Reporte 2: Control de Acceso — Vehículos con Celda Fija (Apartado 1)</Text>
                             </View>
                             <Text style={styles.cardSubtitle}>
                               Vehículos vinculados a una persona titular que cuenta con una celda fija de parqueadero asignada
@@ -3967,7 +3967,7 @@ export default function AdminReports() {
                           <View>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#7C3AED' }} />
-                              <Text style={styles.cardTitle}>Apartado 2: Vehículos sin Celda Fija (Variables / Uso Libre)</Text>
+                              <Text style={styles.cardTitle}>Reporte 2: Control de Acceso — Vehículos sin Celda Fija (Apartado 2)</Text>
                             </View>
                             <Text style={styles.cardSubtitle}>
                               Vehículos autorizados que ingresan y utilizan cualquiera de las celdas de parqueadero de uso libre rotativo
@@ -3984,6 +3984,20 @@ export default function AdminReports() {
                                 🚗 {parkingStats.freeCars} Carros • 🏍️ {parkingStats.freeMotos} Motos
                               </Text>
                             </View>
+                            <TouchableOpacity 
+                              style={[styles.cardSectionAction, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]} 
+                              onPress={handleExportParkingAccessExcel}
+                            >
+                              <Ionicons name="download-outline" size={14} color={COLORS.success} />
+                              <Text style={[styles.cardSectionActionText, { color: COLORS.success }]}>Excel Control Acceso</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                              style={styles.cardSectionAction} 
+                              onPress={() => handleGenerateReport('parking_access')}
+                            >
+                              <Ionicons name="document-text-outline" size={14} color={COLORS.accent} />
+                              <Text style={styles.cardSectionActionText}>Generar Reporte PDF</Text>
+                            </TouchableOpacity>
                           </View>
                         </View>
 
@@ -4148,10 +4162,10 @@ export default function AdminReports() {
                     <View style={styles.card}>
                       <View style={styles.cardSectionHeader}>
                         <View>
-                          <Text style={styles.cardTitle}>Historial de Solicitudes de Parqueadero del Periodo</Text>
+                          <Text style={styles.cardTitle}>Reporte 3: Solicitudes de Parqueadero del Periodo</Text>
                           <Text style={styles.cardSubtitle}>Historial de requerimientos y trámites de acceso (clic para abrir detalle)</Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <TouchableOpacity 
                             style={[styles.cardSectionAction, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]} 
                             onPress={() => navigateToManage({ service: 'Parqueadero' })}
@@ -4159,9 +4173,19 @@ export default function AdminReports() {
                             <Ionicons name="list-outline" size={14} color={COLORS.accent} />
                             <Text style={[styles.cardSectionActionText, { color: COLORS.accent }]}>Ver en Solicitudes</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.cardSectionAction} onPress={handleGenerateReport}>
-                            <Ionicons name="print-outline" size={14} color={COLORS.accent} />
-                            <Text style={styles.cardSectionActionText}>Imprimir Reporte</Text>
+                          <TouchableOpacity 
+                            style={[styles.cardSectionAction, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]} 
+                            onPress={handleExportParkingRequestsExcel}
+                          >
+                            <Ionicons name="download-outline" size={14} color={COLORS.success} />
+                            <Text style={[styles.cardSectionActionText, { color: COLORS.success }]}>Excel Solicitudes</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.cardSectionAction} 
+                            onPress={() => handleGenerateReport('parking_requests')}
+                          >
+                            <Ionicons name="document-text-outline" size={14} color={COLORS.accent} />
+                            <Text style={styles.cardSectionActionText}>Generar Reporte PDF</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
