@@ -2391,26 +2391,91 @@ const updateParkingSpotHandler = async (req, res) => {
 app.put('/api/parking-spots/:id', authenticateToken, updateParkingSpotHandler);
 app.put('/api/parking_spots/:id', authenticateToken, updateParkingSpotHandler);
 
-// Eliminar una celda
+// Eliminar una celda de manera robusta y transaccional
 const deleteParkingSpotHandler = async (req, res) => {
   const { id } = req.params;
   if (!isValidUuid(id)) {
     return res.status(400).json({ error: 'Identificador de celda inválido.' });
   }
 
+  let client;
   try {
-    const checkSpot = await pool.query('SELECT id, code FROM public.parking_spots WHERE id = $1', [id]);
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    const checkSpot = await client.query('SELECT id, code, spot_type, status FROM public.parking_spots WHERE id = $1', [id]);
     if (checkSpot.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Celda no encontrada o ya eliminada.' });
     }
+    const spot = checkSpot.rows[0];
 
-    // Desvincular vehículos asignados a esta celda
-    await pool.query('UPDATE public.user_vehicles SET assigned_spot_id = NULL WHERE assigned_spot_id = $1', [id]);
-    await pool.query('DELETE FROM public.parking_spots WHERE id = $1', [id]);
-    res.json({ message: 'Celda eliminada exitosamente.', id });
+    // 1. Obtener vehículos que puedan estar vinculados
+    const vehs = await client.query(
+      'SELECT id, plate FROM public.user_vehicles WHERE assigned_spot_id = $1',
+      [id]
+    );
+
+    // 2. Desvincular vehículos asignados a esta celda
+    if (vehs.rows.length > 0) {
+      await client.query(
+        'UPDATE public.user_vehicles SET assigned_spot_id = NULL, updated_at = NOW() WHERE assigned_spot_id = $1',
+        [id]
+      );
+
+      // Registrar auditoría de liberación forzosa por eliminación
+      for (const v of vehs.rows) {
+        try {
+          await client.query(
+            `INSERT INTO public.vehicle_history 
+             (vehicle_id, plate, action, performed_by_id, performed_by_name, details) 
+             VALUES ($1, $2, 'liberacion_celda', $3, $4, $5)`,
+            [
+              v.id,
+              v.plate,
+              req.user?.id || null,
+              req.user?.name || req.user?.email || 'Administrador',
+              JSON.stringify({ motivo: `Desvinculación automática por eliminación de celda ${spot.code}`, spot_code: spot.code })
+            ]
+          );
+        } catch (histErr) {
+          console.warn('Advertencia al registrar auditoría en eliminación de celda:', histErr.message);
+        }
+      }
+    }
+
+    // 3. Limpiar cualquier referencia de usuario en la celda
+    await client.query(
+      'UPDATE public.parking_spots SET assigned_user_id = NULL, assigned_user_name = NULL WHERE id = $1',
+      [id]
+    );
+
+    // 4. Eliminar la celda
+    await client.query('DELETE FROM public.parking_spots WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
+    res.json({ message: 'Celda eliminada exitosamente.', id, code: spot.code });
   } catch (err) {
+    if (client) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rbErr) {
+        console.error('Error en ROLLBACK de eliminar celda:', rbErr);
+      }
+    }
     console.error('Error al eliminar celda:', err);
-    res.status(500).json({ error: err.message || 'Error al eliminar la celda.' });
+
+    if (err.code === '23503') {
+      return res.status(409).json({
+        error: `No es posible eliminar la celda debido a que está referenciada por otra tabla (${err.table || 'dependencia externa'}). Se requiere eliminar o desvincular dichos registros primero.`
+      });
+    }
+
+    res.status(500).json({ error: err.message || 'Error al eliminar la celda de parqueadero.' });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 };
 

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as XLSX from 'xlsx';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  useWindowDimensions, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  useWindowDimensions,
   Platform,
   Switch,
   Modal,
@@ -73,12 +73,12 @@ const safeStorage = {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(key, value);
       }
-    } catch {}
+    } catch { }
   }
 };
 
 const generateUUID = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
@@ -90,7 +90,7 @@ export default function AdminSettings() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const [activeTab, setActiveTab] = useState<'all' | 'users' | 'dependencies' | 'emails' | 'preferences' | 'deployment'>('all');
-  
+
   const [rooms, setRooms] = useState<any[]>([]);
   const [dependencies, setDependencies] = useState<any[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -103,7 +103,7 @@ export default function AdminSettings() {
   const [spotSearch, setSpotSearch] = useState('');
   const [spotFilter, setSpotFilter] = useState<'all' | 'fija' | 'libre' | 'disponible' | 'ocupada'>('all');
   const [vehicleSearch, setVehicleSearch] = useState('');
-  
+
   // Modales de Celdas
   const [spotModalVisible, setSpotModalVisible] = useState(false);
   const [editingSpot, setEditingSpot] = useState<ParkingSpot | null>(null);
@@ -129,6 +129,7 @@ export default function AdminSettings() {
   // Modal para Eliminar Celda
   const [deleteSpotModalVisible, setDeleteSpotModalVisible] = useState(false);
   const [selectedSpotForDelete, setSelectedSpotForDelete] = useState<ParkingSpot | null>(null);
+  const [isDeletingSpot, setIsDeletingSpot] = useState(false);
 
   // Modal de Edición de Vehículo por Admin
   const [adminVehicleModalVisible, setAdminVehicleModalVisible] = useState(false);
@@ -169,14 +170,14 @@ export default function AdminSettings() {
   const [ldapUseBind, setLdapUseBind] = useState(true);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [itemToCreate, setItemToCreate] = useState<'room'|'dependency'|'driver'|null>(null);
+  const [itemToCreate, setItemToCreate] = useState<'room' | 'dependency' | 'driver' | null>(null);
   const [ldapRootDn, setLdapRootDn] = useState('SECJUR.GOV.CO/Secretaria Juridica/Servicio/SASGE_SJD');
   const [ldapPassword, setLdapPassword] = useState('');
   const [ldapUserField, setLdapUserField] = useState('samaccountname');
   const [ldapSyncField, setLdapSyncField] = useState('objectguid');
   const [ldapComments, setLdapComments] = useState('Coneccion SSL para Nodo AD 02');
   const [ldapRelay, setLdapRelay] = useState('10.54.80.102');
-  
+
   const [notifications, setNotifications] = useState(true);
   const [autoApprove, setAutoApprove] = useState(false);
   const [autoApproveVisitors, setAutoApproveVisitors] = useState(false);
@@ -198,7 +199,7 @@ export default function AdminSettings() {
   // Estados de Estadísticas e Infraestructura del Servidor
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
-  
+
   // Modals States
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -213,14 +214,14 @@ export default function AdminSettings() {
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [showUserDeleteModal, setShowUserDeleteModal] = useState(false);
   const [showEvalConfirmModal, setShowEvalConfirmModal] = useState(false);
-  const [pendingEvalToggle, setPendingEvalToggle] = useState<{id: string, label: string, newValue: boolean} | null>(null);
+  const [pendingEvalToggle, setPendingEvalToggle] = useState<{ id: string, label: string, newValue: boolean } | null>(null);
   const [showSystemConfirmModal, setShowSystemConfirmModal] = useState(false);
-  const [pendingSystemToggle, setPendingSystemToggle] = useState<{key: 'autoApprove' | 'autoApproveVisitors', label: string, desc: string, newValue: boolean} | null>(null);
+  const [pendingSystemToggle, setPendingSystemToggle] = useState<{ key: 'autoApprove' | 'autoApproveVisitors', label: string, desc: string, newValue: boolean } | null>(null);
 
   // Edit Modal States
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editDraft, setEditDraft] = useState<any>(null);
-  const [editType, setEditType] = useState<'room'|'dependency'|'driver'|null>(null);
+  const [editType, setEditType] = useState<'room' | 'dependency' | 'driver' | null>(null);
 
   // Inputs para añadir correos en tiempo real
   const [emailInputs, setEmailInputs] = useState<Record<string, string>>({
@@ -233,7 +234,7 @@ export default function AdminSettings() {
     rooms_tic: '',
     parking: ''
   });
-  
+
   const [currentUserEmail, setCurrentUserEmail] = useState('');
 
   // Load configuration, rooms, dependencies, drivers and service emails
@@ -241,21 +242,21 @@ export default function AdminSettings() {
     const loadConfigAndData = async () => {
       try {
         setLoading(true);
-        
+
         // 0. Cargar el usuario actual
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.email) {
           setCurrentUserEmail(user.email);
         }
-        
+
         // 1. Cargar Salas desde Supabase
         const { data: dbRooms, error: dbError } = await supabase
           .from('rooms')
           .select('*')
           .order('name');
-        
+
         if (dbError) throw dbError;
-        
+
         if (dbRooms && dbRooms.length > 0) {
           setRooms(dbRooms.map((r: any) => ({ ...r, capacity: r.capacity.toString() })));
         } else {
@@ -293,7 +294,7 @@ export default function AdminSettings() {
         const dbDrivers = await settingsService.getDrivers();
         setDrivers(dbDrivers);
 
-        await settingsService.syncLocalEmails().catch(() => {});
+        await settingsService.syncLocalEmails().catch(() => { });
         const dbEmails = await settingsService.getServiceEmails();
         setServiceEmails(dbEmails);
 
@@ -301,7 +302,7 @@ export default function AdminSettings() {
         const savedPush = await safeStorage.getItem('push_notifications');
         const savedAuto = await safeStorage.getItem('auto_approve');
         const savedAutoVisitors = await safeStorage.getItem('auto_approve_visitors');
-        
+
         if (savedPush !== null) setNotifications(savedPush === 'true');
         if (savedAuto !== null) setAutoApprove(savedAuto === 'true');
         if (savedAutoVisitors !== null) setAutoApproveVisitors(savedAutoVisitors === 'true');
@@ -314,7 +315,7 @@ export default function AdminSettings() {
 
       } catch (err) {
         console.warn('Cargando con almacenamiento de respaldo local:', err);
-        
+
         // Fallback local robusto si la base de datos no está activa
         const localRoomsStr = await safeStorage.getItem('local_rooms');
         if (localRoomsStr) {
@@ -529,23 +530,27 @@ export default function AdminSettings() {
   };
 
   const handleConfirmDeleteSpot = async () => {
-    if (!selectedSpotForDelete) return;
+    if (!selectedSpotForDelete || isDeletingSpot) return;
+    setIsDeletingSpot(true);
     try {
       await vehicleService.deleteSpot(selectedSpotForDelete.id);
       setDeleteSpotModalVisible(false);
       setSettingsNoticeModal({
         visible: true,
         title: 'Celda Eliminada',
-        message: `La celda ${selectedSpotForDelete.code} fue eliminada del sistema.`
+        message: `La celda ${selectedSpotForDelete.code} fue eliminada del sistema exitosamente.`
       });
       await loadParkingData();
     } catch (err: any) {
+      setDeleteSpotModalVisible(false);
       setSettingsNoticeModal({
         visible: true,
-        title: 'Error',
-        message: err.message || 'Error al eliminar la celda.',
+        title: 'Error al Eliminar Celda',
+        message: err.message || 'Error al eliminar la celda del sistema.',
         isError: true
       });
+    } finally {
+      setIsDeletingSpot(false);
     }
   };
 
@@ -694,16 +699,16 @@ export default function AdminSettings() {
           .from('rooms')
           .delete()
           .eq('id', roomToDelete.id);
-        
+
         if (error) throw error;
       }
 
       const updatedRooms = rooms.filter(r => r.id !== roomToDelete.id);
       setRooms(updatedRooms);
-      
+
       // Guardar también en localStorage como respaldo
       await safeStorage.setItem('local_rooms', JSON.stringify(updatedRooms));
-      
+
       setShowDeleteModal(false);
       setRoomToDelete(null);
     } catch (err) {
@@ -747,16 +752,16 @@ export default function AdminSettings() {
           .from('dependencies')
           .delete()
           .eq('id', dependencyToDelete.id);
-        
+
         if (error) throw error;
       }
 
       const updatedDeps = dependencies.filter(d => d.id !== dependencyToDelete.id);
       setDependencies(updatedDeps);
-      
+
       // Guardar también en localStorage como respaldo
       await safeStorage.setItem('local_dependencies', JSON.stringify(updatedDeps));
-      
+
       setShowDepDeleteModal(false);
       setDependencyToDelete(null);
     } catch (err) {
@@ -1100,7 +1105,7 @@ export default function AdminSettings() {
     }
   };
 
-  const openEditModal = (item: any, type: 'room'|'dependency'|'driver') => {
+  const openEditModal = (item: any, type: 'room' | 'dependency' | 'driver') => {
     setEditDraft({ ...item });
     setEditType(type);
     setEditModalVisible(true);
@@ -1158,7 +1163,7 @@ export default function AdminSettings() {
     try {
       setSaving(true);
       const isTemp = driverToDelete.id.startsWith('temp-');
-      
+
       if (!isTemp) {
         await settingsService.deleteDriver(driverToDelete.id);
       }
@@ -1166,7 +1171,7 @@ export default function AdminSettings() {
       const updatedDrivers = drivers.filter(d => d.id !== driverToDelete.id);
       setDrivers(updatedDrivers);
       await safeStorage.setItem('local_drivers', JSON.stringify(updatedDrivers));
-      
+
       setShowDriverDeleteModal(false);
       setDriverToDelete(null);
     } catch (err) {
@@ -1215,7 +1220,7 @@ export default function AdminSettings() {
     try {
       setSaving(true);
       const isTemp = id.startsWith('temp-');
-      
+
       if (!isTemp) {
         await settingsService.deleteServiceEmail(id);
       }
@@ -1281,8 +1286,8 @@ export default function AdminSettings() {
     }, 1000);
     return () => clearTimeout(timer);
   }, [
-    notifications, autoApprove, autoApproveVisitors, ldapBaseDn, ldapPort, ldapUseSsl, ldapServer, 
-    ldapFilter, ldapUseBind, ldapRootDn, ldapUserField, ldapSyncField, 
+    notifications, autoApprove, autoApproveVisitors, ldapBaseDn, ldapPort, ldapUseSsl, ldapServer,
+    ldapFilter, ldapUseBind, ldapRootDn, ldapUserField, ldapSyncField,
     ldapComments, ldapRelay, loading
   ]);
 
@@ -1348,18 +1353,18 @@ export default function AdminSettings() {
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>
-        
+
         {isDesktop && <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />}
 
-        <ScrollView 
+        <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <HeroSection 
-            isDesktop={isDesktop} 
+          <HeroSection
+            isDesktop={isDesktop}
           />
-          
+
           {loading ? (
             <View style={styles.loaderContainer}>
               <ActivityIndicator size="large" color={COLORS.accent} />
@@ -1367,7 +1372,7 @@ export default function AdminSettings() {
             </View>
           ) : (
             <View style={styles.contentPadding}>
-              
+
               {/* Banner de Acceso a Gestión de Espacios, Celdas, Conductores y Evaluaciones */}
               <View style={{
                 backgroundColor: '#EFF6FF',
@@ -1429,7 +1434,7 @@ export default function AdminSettings() {
                             </Text>
                           </View>
                         </TouchableOpacity>
-                        
+
                         {/* Footer */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
                           <Text style={{ fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5, color: '#64748B' }}>
@@ -1446,7 +1451,7 @@ export default function AdminSettings() {
                         </View>
                       </View>
                     ))}
-                    
+
                     <TouchableOpacity style={[styles.addCardBtn, isDesktop && { width: '48%' }]} onPress={addDependency}>
                       <Ionicons name="add" size={24} color={COLORS.muted} />
                       <Text style={[styles.addCardText, { fontSize: 16 }]}>Agregar Dependencia</Text>
@@ -1481,33 +1486,71 @@ export default function AdminSettings() {
                       <View style={styles.userTableHeader}>
                         <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
                         <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
-                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.8 }]}>Rol</Text>
-                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Acciones</Text>
+                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.2, minWidth: 125 }]}>Rol</Text>
+                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9, minWidth: 95 }]}>Acciones</Text>
                       </View>
 
-                      {filteredUsers.map(user => (
-                        <View key={user.id} style={styles.userTableRow}>
-                          <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
-                            <Text style={styles.userNameText}>{user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
-                            <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
-                          </View>
-                          <View style={[styles.userTableCell, { flex: 1.3 }]}>
-                            <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || 'Sin dependencia'}</Text>
-                          </View>
-                          <View style={[styles.userTableCell, { flex: 0.8 }]}>
-                            <View style={{ backgroundColor: user.role === 'admin' ? '#FEF08A' : user.role === 'security' ? '#BFDBFE' : '#F1F5F9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' }}>
-                              <Text style={{ fontSize: 10, fontWeight: '700', color: user.role === 'admin' ? '#854D0E' : user.role === 'security' ? '#1E40AF' : '#475569' }}>
-                                {user.role === 'admin' ? 'Admin' : user.role === 'security' ? 'Seguridad' : 'Func.'}
-                              </Text>
+                      {filteredUsers.map(user => {
+                        const normalizedRole = (user.role || 'funcionario').toLowerCase().trim();
+                        let roleLabel = 'Funcionario';
+                        let roleBg = '#F1F5F9';
+                        let roleColor = '#334155';
+                        let roleBorder = '#E2E8F0';
+
+                        if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
+                          roleLabel = 'Administrador';
+                          roleBg = '#FEF08A';
+                          roleColor = '#854D0E';
+                          roleBorder = '#FDE047';
+                        } else if (normalizedRole === 'security' || normalizedRole === 'seguridad') {
+                          roleLabel = 'Seguridad';
+                          roleBg = '#DBEAFE';
+                          roleColor = '#1E40AF';
+                          roleBorder = '#BFDBFE';
+                        } else if (normalizedRole === 'directivo') {
+                          roleLabel = 'Directivo';
+                          roleBg = '#F3E8FF';
+                          roleColor = '#6B21A8';
+                          roleBorder = '#E9D5FF';
+                        } else if (normalizedRole === 'conductor') {
+                          roleLabel = 'Conductor';
+                          roleBg = '#FFEDD5';
+                          roleColor = '#C2410C';
+                          roleBorder = '#FED7AA';
+                        }
+
+                        return (
+                          <View key={user.id} style={styles.userTableRow}>
+                            <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
+                              <Text style={styles.userNameText}>{user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
+                              <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
+                            </View>
+                            <View style={[styles.userTableCell, { flex: 1.3 }]}>
+                              <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || 'Sin dependencia'}</Text>
+                            </View>
+                            <View style={[styles.userTableCell, { flex: 1.2, minWidth: 125 }]}>
+                              <View style={{
+                                backgroundColor: roleBg,
+                                borderWidth: 1,
+                                borderColor: roleBorder,
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 8,
+                                alignSelf: 'flex-start'
+                              }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: roleColor }}>
+                                  {roleLabel}
+                                </Text>
+                              </View>
+                            </View>
+                            <View style={[styles.userTableCell, { flex: 0.9, minWidth: 95, gap: 6 }]}>
+                              <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
+                                <Text style={styles.userActionBtnText}>Modificar</Text>
+                              </TouchableOpacity>
                             </View>
                           </View>
-                          <View style={[styles.userTableCell, { flex: 1.3, gap: 6 }]}>
-                            <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
-                              <Text style={styles.userActionBtnText}>Modificar</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      ))}
+                        );
+                      })}
                     </View>
 
                     <TouchableOpacity style={styles.saveBtn} onPress={saveUsers} disabled={saving}>
@@ -1527,7 +1570,7 @@ export default function AdminSettings() {
                       <Text style={styles.sectionKicker}>CANALES DE ATENCIÓN</Text>
                       <Text style={styles.sectionTitle}>Correos de Notificación y Gestión</Text>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -1569,21 +1612,21 @@ export default function AdminSettings() {
                       const isHighlight = (itemProps as any).isHighlight;
                       const emails = (serviceEmails || []).filter(e => e && e.service_type === type);
                       return (
-                        <View 
-                          key={type} 
+                        <View
+                          key={type}
                           style={[
-                            { 
-                              backgroundColor: COLORS.white, 
-                              borderRadius: 24, 
-                              padding: 25, 
-                              borderWidth: isHighlight ? 1.8 : 1, 
+                            {
+                              backgroundColor: COLORS.white,
+                              borderRadius: 24,
+                              padding: 25,
+                              borderWidth: isHighlight ? 1.8 : 1,
                               borderColor: isHighlight ? '#3B82F6' : COLORS.line,
                               shadowColor: isHighlight ? '#2563EB' : '#000',
                               shadowOffset: { width: 0, height: 4 },
                               shadowOpacity: isHighlight ? 0.08 : 0.03,
                               shadowRadius: 10,
                               elevation: isHighlight ? 3 : 1
-                            }, 
+                            },
                             isDesktop && { width: isHighlight ? '100%' : '48%' }
                           ]}
                         >
@@ -1639,7 +1682,7 @@ export default function AdminSettings() {
                               keyboardType="email-address"
                               autoCapitalize="none"
                             />
-                            <TouchableOpacity 
+                            <TouchableOpacity
                               style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' }}
                               onPress={() => addServiceEmail(type)}
                             >
@@ -1653,9 +1696,9 @@ export default function AdminSettings() {
 
                   {/* Botón de Guardar al pie de las tarjetas */}
                   <View style={{ marginTop: 20, alignItems: 'center' }}>
-                    <TouchableOpacity 
-                      style={[styles.saveBtn, { maxWidth: 460, width: '100%' }]} 
-                      onPress={handleSaveAllEmails} 
+                    <TouchableOpacity
+                      style={[styles.saveBtn, { maxWidth: 460, width: '100%' }]}
+                      onPress={handleSaveAllEmails}
                       disabled={savingEmails}
                     >
                       <LinearGradient colors={['#1E40AF', '#3B82F6']} style={styles.saveGradient}>
@@ -1678,16 +1721,16 @@ export default function AdminSettings() {
                 <>
                   <SectionHeader title="Preferencias del Sistema" kicker="CONFIGURACIÓN" />
                   <View style={styles.configCard}>
-                    <ConfigToggle 
-                      label="Notificaciones Push" 
+                    <ConfigToggle
+                      label="Notificaciones Push"
                       desc="Enviar avisos al administrador por cada nueva solicitud."
                       value={notifications}
                       onValueChange={setNotifications}
                       icon="notifications"
                     />
                     <View style={styles.configDivider} />
-                    <ConfigToggle 
-                      label="Aprobación Automática Salas" 
+                    <ConfigToggle
+                      label="Aprobación Automática Salas"
                       desc="Aprobar solicitudes de salas estandar si hay disponibilidad inmediata."
                       value={autoApprove}
                       onValueChange={(val: boolean) => {
@@ -1702,8 +1745,8 @@ export default function AdminSettings() {
                       icon="flash"
                     />
                     <View style={styles.configDivider} />
-                    <ConfigToggle 
-                      label="Aprobación Automática Visitantes" 
+                    <ConfigToggle
+                      label="Aprobación Automática Visitantes"
                       desc="Aprobar solicitudes de visitantes de forma automática."
                       value={autoApproveVisitors}
                       onValueChange={(val: boolean) => {
@@ -1721,36 +1764,36 @@ export default function AdminSettings() {
                     {currentUserEmail === 'admin@sasge.com' && (
                       <View style={styles.ldapConfigCard}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                        <Ionicons name="business-outline" size={18} color={COLORS.accent} />
-                        <Text style={styles.toggleLabel}>Directorio Activo</Text>
-                      </View>
-                      <View style={{ gap: 10 }}>
-                        <View style={styles.userRow}>
-                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapServer} onChangeText={setLdapServer} placeholder="Servidor" />
-                          <View style={styles.userSwitchRow}>
-                            <Text style={styles.userSwitchLabel}>SSL</Text>
-                            <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                          <Ionicons name="business-outline" size={18} color={COLORS.accent} />
+                          <Text style={styles.toggleLabel}>Directorio Activo</Text>
+                        </View>
+                        <View style={{ gap: 10 }}>
+                          <View style={styles.userRow}>
+                            <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapServer} onChangeText={setLdapServer} placeholder="Servidor" />
+                            <View style={styles.userSwitchRow}>
+                              <Text style={styles.userSwitchLabel}>SSL</Text>
+                              <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                            </View>
                           </View>
-                        </View>
-                        <View style={styles.userRow}>
-                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapPort} onChangeText={setLdapPort} placeholder="Puerto LDAP" keyboardType="number-pad" />
-                          <View style={styles.userSwitchRow}>
-                            <Text style={styles.userSwitchLabel}>Usar bind</Text>
-                            <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
+                          <View style={styles.userRow}>
+                            <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapPort} onChangeText={setLdapPort} placeholder="Puerto LDAP" keyboardType="number-pad" />
+                            <View style={styles.userSwitchRow}>
+                              <Text style={styles.userSwitchLabel}>Usar bind</Text>
+                              <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
+                            </View>
                           </View>
+                          <TextInput style={styles.userFieldInput} value={ldapComments} onChangeText={setLdapComments} placeholder="Comentarios" />
+                          <TextInput style={styles.userFieldInput} value={ldapFilter} onChangeText={setLdapFilter} placeholder="Filtro de conexión" multiline />
+                          <TextInput style={styles.userFieldInput} value={ldapBaseDn} onChangeText={setLdapBaseDn} placeholder="BaseDN" />
+                          <TextInput style={styles.userFieldInput} value={ldapRootDn} onChangeText={setLdapRootDn} placeholder="RootDN" />
+                          <TextInput style={styles.userFieldInput} value={ldapPassword} onChangeText={setLdapPassword} placeholder="Contraseña" secureTextEntry />
+                          <View style={styles.userRow}>
+                            <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapUserField} onChangeText={setLdapUserField} placeholder="Campo de usuario" />
+                            <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapSyncField} onChangeText={setLdapSyncField} placeholder="Campo de sincronización" />
+                          </View>
+                          <TextInput style={styles.userFieldInput} value={ldapRelay} onChangeText={setLdapRelay} placeholder="Relay correo" />
                         </View>
-                        <TextInput style={styles.userFieldInput} value={ldapComments} onChangeText={setLdapComments} placeholder="Comentarios" />
-                        <TextInput style={styles.userFieldInput} value={ldapFilter} onChangeText={setLdapFilter} placeholder="Filtro de conexión" multiline />
-                        <TextInput style={styles.userFieldInput} value={ldapBaseDn} onChangeText={setLdapBaseDn} placeholder="BaseDN" />
-                        <TextInput style={styles.userFieldInput} value={ldapRootDn} onChangeText={setLdapRootDn} placeholder="RootDN" />
-                        <TextInput style={styles.userFieldInput} value={ldapPassword} onChangeText={setLdapPassword} placeholder="Contraseña" secureTextEntry />
-                        <View style={styles.userRow}>
-                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapUserField} onChangeText={setLdapUserField} placeholder="Campo de usuario" />
-                          <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapSyncField} onChangeText={setLdapSyncField} placeholder="Campo de sincronización" />
-                        </View>
-                        <TextInput style={styles.userFieldInput} value={ldapRelay} onChangeText={setLdapRelay} placeholder="Relay correo" />
                       </View>
-                    </View>
                     )}
                   </View>
                 </>
@@ -1772,8 +1815,8 @@ export default function AdminSettings() {
                           Métricas de hardware en tiempo real: almacenamiento en disco, consumo de memoria RAM, procesador y tiempos de actividad.
                         </Text>
                       </View>
-                      <TouchableOpacity 
-                        style={styles.statsRefreshBtn} 
+                      <TouchableOpacity
+                        style={styles.statsRefreshBtn}
                         onPress={loadServerStats}
                         disabled={loadingStats}
                         activeOpacity={0.8}
@@ -1812,11 +1855,11 @@ export default function AdminSettings() {
                               <Text style={styles.metricSubtitle}>Partición {serverStats.disk.filesystem}</Text>
                             </View>
                             <View style={[
-                              styles.metricBadge, 
+                              styles.metricBadge,
                               { backgroundColor: serverStats.disk.usedPercent > 85 ? '#FEF2F2' : serverStats.disk.usedPercent > 70 ? '#FFFBEB' : '#ECFDF5' }
                             ]}>
                               <Text style={[
-                                styles.metricBadgeText, 
+                                styles.metricBadgeText,
                                 { color: serverStats.disk.usedPercent > 85 ? COLORS.danger : serverStats.disk.usedPercent > 70 ? '#D97706' : COLORS.success }
                               ]}>
                                 {serverStats.disk.usedPercent}% usado
@@ -1831,8 +1874,8 @@ export default function AdminSettings() {
                             </View>
                             <View style={styles.progressBarBg}>
                               <View style={[
-                                styles.progressBarFill, 
-                                { 
+                                styles.progressBarFill,
+                                {
                                   width: `${Math.min(100, Math.max(0, serverStats.disk.usedPercent))}%`,
                                   backgroundColor: serverStats.disk.usedPercent > 85 ? COLORS.danger : serverStats.disk.usedPercent > 70 ? '#F59E0B' : COLORS.success
                                 }
@@ -1859,11 +1902,11 @@ export default function AdminSettings() {
                               <Text style={styles.metricSubtitle}>Total Servidor</Text>
                             </View>
                             <View style={[
-                              styles.metricBadge, 
+                              styles.metricBadge,
                               { backgroundColor: serverStats.memory.usedPercent > 85 ? '#FEF2F2' : serverStats.memory.usedPercent > 70 ? '#FFFBEB' : '#EFF6FF' }
                             ]}>
                               <Text style={[
-                                styles.metricBadgeText, 
+                                styles.metricBadgeText,
                                 { color: serverStats.memory.usedPercent > 85 ? COLORS.danger : serverStats.memory.usedPercent > 70 ? '#D97706' : '#2563EB' }
                               ]}>
                                 {serverStats.memory.usedPercent}% en uso
@@ -1878,8 +1921,8 @@ export default function AdminSettings() {
                             </View>
                             <View style={styles.progressBarBg}>
                               <View style={[
-                                styles.progressBarFill, 
-                                { 
+                                styles.progressBarFill,
+                                {
                                   width: `${Math.min(100, Math.max(0, serverStats.memory.usedPercent))}%`,
                                   backgroundColor: serverStats.memory.usedPercent > 85 ? COLORS.danger : serverStats.memory.usedPercent > 70 ? '#F59E0B' : '#8B5CF6'
                                 }
@@ -2017,8 +2060,8 @@ export default function AdminSettings() {
                     {/* Botonera de acciones */}
                     <View style={styles.gitActionsContainer}>
                       {/* Botón 1: Git Pull Principal */}
-                      <TouchableOpacity 
-                        style={[styles.gitActionBtn, styles.gitActionBtnPrimary]} 
+                      <TouchableOpacity
+                        style={[styles.gitActionBtn, styles.gitActionBtnPrimary]}
                         onPress={() => triggerGitAction('pull')}
                         disabled={gitExecuting}
                         activeOpacity={0.8}
@@ -2032,8 +2075,8 @@ export default function AdminSettings() {
                       </TouchableOpacity>
 
                       {/* Botón 2: Git Pull + Build Frontend */}
-                      <TouchableOpacity 
-                        style={[styles.gitActionBtn, styles.gitActionBtnSuccess]} 
+                      <TouchableOpacity
+                        style={[styles.gitActionBtn, styles.gitActionBtnSuccess]}
                         onPress={() => triggerGitAction('pull_and_build')}
                         disabled={gitExecuting}
                         activeOpacity={0.8}
@@ -2047,8 +2090,8 @@ export default function AdminSettings() {
                       </TouchableOpacity>
 
                       {/* Botón 3: Reiniciar Backend */}
-                      <TouchableOpacity 
-                        style={[styles.gitActionBtn, styles.gitActionBtnSecondary]} 
+                      <TouchableOpacity
+                        style={[styles.gitActionBtn, styles.gitActionBtnSecondary]}
                         onPress={() => triggerGitAction('restart_backend')}
                         disabled={gitExecuting}
                         activeOpacity={0.8}
@@ -2062,8 +2105,8 @@ export default function AdminSettings() {
                       </TouchableOpacity>
 
                       {/* Botón 4: Verificar Estado */}
-                      <TouchableOpacity 
-                        style={[styles.gitActionBtn, styles.gitActionBtnGhost]} 
+                      <TouchableOpacity
+                        style={[styles.gitActionBtn, styles.gitActionBtnGhost]}
                         onPress={() => handleExecuteGitAction('status')}
                         disabled={gitExecuting}
                         activeOpacity={0.8}
@@ -2150,10 +2193,10 @@ export default function AdminSettings() {
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}>
-                  <Ionicons 
-                    name={userDraft?.id?.toString().startsWith('temp-') ? "person-add" : "person"} 
-                    size={22} 
-                    color={userDraft?.id?.toString().startsWith('temp-') ? '#2563EB' : '#7C3AED'} 
+                  <Ionicons
+                    name={userDraft?.id?.toString().startsWith('temp-') ? "person-add" : "person"}
+                    size={22}
+                    color={userDraft?.id?.toString().startsWith('temp-') ? '#2563EB' : '#7C3AED'}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -2161,14 +2204,14 @@ export default function AdminSettings() {
                     {userDraft?.id?.toString().startsWith('temp-') ? 'Crear Nuevo Usuario' : 'Editar Usuario'}
                   </Text>
                   <Text style={{ fontSize: 13, color: COLORS.muted, marginTop: 2, fontWeight: '500' }}>
-                    {userDraft?.id?.toString().startsWith('temp-') 
-                      ? 'Registra un funcionario en la plataforma SASGE' 
+                    {userDraft?.id?.toString().startsWith('temp-')
+                      ? 'Registra un funcionario en la plataforma SASGE'
                       : `Modificando perfil de ${userDraft?.full_name || userDraft?.email || 'usuario'}`}
                   </Text>
                 </View>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={closeUserEditor}
                 activeOpacity={0.7}
                 style={{
@@ -2185,8 +2228,8 @@ export default function AdminSettings() {
             </View>
 
             {/* Cuerpo con Scroll */}
-            <ScrollView 
-              style={{ paddingHorizontal: 28, paddingVertical: 20 }} 
+            <ScrollView
+              style={{ paddingHorizontal: 28, paddingVertical: 20 }}
               showsVerticalScrollIndicator={true}
               contentContainerStyle={{ gap: 20, paddingBottom: 15 }}
             >
@@ -2212,7 +2255,7 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Nombres <Text style={{ color: COLORS.danger }}>*</Text>
                     </Text>
-                    <TextInput 
+                    <TextInput
                       style={{
                         backgroundColor: COLORS.white,
                         borderRadius: 12,
@@ -2225,9 +2268,9 @@ export default function AdminSettings() {
                         color: COLORS.primary
                       }}
                       placeholderTextColor="#94A3B8"
-                      value={userDraft?.first_name || ''} 
-                      onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })} 
-                      placeholder="Ej: Juan Carlos" 
+                      value={userDraft?.first_name || ''}
+                      onChangeText={(val) => setUserDraft({ ...userDraft, first_name: val })}
+                      placeholder="Ej: Juan Carlos"
                     />
                   </View>
 
@@ -2235,7 +2278,7 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Apellidos <Text style={{ color: COLORS.danger }}>*</Text>
                     </Text>
-                    <TextInput 
+                    <TextInput
                       style={{
                         backgroundColor: COLORS.white,
                         borderRadius: 12,
@@ -2248,9 +2291,9 @@ export default function AdminSettings() {
                         color: COLORS.primary
                       }}
                       placeholderTextColor="#94A3B8"
-                      value={userDraft?.last_name || ''} 
-                      onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })} 
-                      placeholder="Ej: Martínez Blanco" 
+                      value={userDraft?.last_name || ''}
+                      onChangeText={(val) => setUserDraft({ ...userDraft, last_name: val })}
+                      placeholder="Ej: Martínez Blanco"
                     />
                   </View>
                 </View>
@@ -2261,7 +2304,7 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Correo Electrónico Institucional <Text style={{ color: COLORS.danger }}>*</Text>
                     </Text>
-                    <TextInput 
+                    <TextInput
                       style={{
                         backgroundColor: COLORS.white,
                         borderRadius: 12,
@@ -2274,11 +2317,11 @@ export default function AdminSettings() {
                         color: COLORS.primary
                       }}
                       placeholderTextColor="#94A3B8"
-                      value={userDraft?.email || ''} 
-                      onChangeText={(val) => setUserDraft({ ...userDraft, email: val })} 
-                      placeholder="usuario@secretariajuridica.gov.co" 
-                      keyboardType="email-address" 
-                      autoCapitalize="none" 
+                      value={userDraft?.email || ''}
+                      onChangeText={(val) => setUserDraft({ ...userDraft, email: val })}
+                      placeholder="usuario@secretariajuridica.gov.co"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
                     />
                   </View>
 
@@ -2286,7 +2329,7 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Teléfono / Extensión
                     </Text>
-                    <TextInput 
+                    <TextInput
                       style={{
                         backgroundColor: COLORS.white,
                         borderRadius: 12,
@@ -2299,10 +2342,10 @@ export default function AdminSettings() {
                         color: COLORS.primary
                       }}
                       placeholderTextColor="#94A3B8"
-                      value={userDraft?.phone || ''} 
-                      onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })} 
-                      placeholder="300 000 0000" 
-                      keyboardType="phone-pad" 
+                      value={userDraft?.phone || ''}
+                      onChangeText={(val) => setUserDraft({ ...userDraft, phone: val })}
+                      placeholder="300 000 0000"
+                      keyboardType="phone-pad"
                     />
                   </View>
                 </View>
@@ -2330,7 +2373,7 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Usuario de Red (Login AD) <Text style={{ color: COLORS.danger }}>*</Text>
                     </Text>
-                    <TextInput 
+                    <TextInput
                       style={{
                         backgroundColor: COLORS.white,
                         borderRadius: 12,
@@ -2343,10 +2386,10 @@ export default function AdminSettings() {
                         color: COLORS.primary
                       }}
                       placeholderTextColor="#94A3B8"
-                      value={userDraft?.username || ''} 
-                      onChangeText={(val) => setUserDraft({ ...userDraft, username: val })} 
-                      placeholder="ej: jcmartinezb" 
-                      autoCapitalize="none" 
+                      value={userDraft?.username || ''}
+                      onChangeText={(val) => setUserDraft({ ...userDraft, username: val })}
+                      placeholder="ej: jcmartinezb"
+                      autoCapitalize="none"
                     />
                   </View>
 
@@ -2354,7 +2397,7 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Entidad
                     </Text>
-                    <TextInput 
+                    <TextInput
                       style={{
                         backgroundColor: COLORS.white,
                         borderRadius: 12,
@@ -2367,9 +2410,9 @@ export default function AdminSettings() {
                         color: COLORS.primary
                       }}
                       placeholderTextColor="#94A3B8"
-                      value={userDraft?.entity || ''} 
-                      onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })} 
-                      placeholder="Secretaría Jurídica Distrital" 
+                      value={userDraft?.entity || ''}
+                      onChangeText={(val) => setUserDraft({ ...userDraft, entity: val })}
+                      placeholder="Secretaría Jurídica Distrital"
                     />
                   </View>
                 </View>
@@ -2379,7 +2422,7 @@ export default function AdminSettings() {
                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 8 }}>
                     Dependencia Asignada <Text style={{ color: COLORS.danger }}>*</Text>
                   </Text>
-                  
+
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {dependencies.map((dep) => {
                       const isSelected = userDraft?.dependency_id === dep.id;
@@ -2400,10 +2443,10 @@ export default function AdminSettings() {
                             borderColor: isSelected ? '#2563EB' : '#E2E8F0',
                           }}
                         >
-                          <Ionicons 
-                            name={isSelected ? "checkmark-circle" : "ellipse-outline"} 
-                            size={16} 
-                            color={isSelected ? '#2563EB' : '#94A3B8'} 
+                          <Ionicons
+                            name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                            size={16}
+                            color={isSelected ? '#2563EB' : '#94A3B8'}
                           />
                           <Text style={{
                             fontSize: 12,
@@ -2437,7 +2480,7 @@ export default function AdminSettings() {
 
                 <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
                   {/* Rol: Funcionario / Usuario */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setUserDraft({ ...userDraft, role: 'funcionario' })}
                     activeOpacity={0.8}
                     style={{
@@ -2463,7 +2506,7 @@ export default function AdminSettings() {
                   </TouchableOpacity>
 
                   {/* Rol: Administrador */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setUserDraft({ ...userDraft, role: 'admin' })}
                     activeOpacity={0.8}
                     style={{
@@ -2489,7 +2532,7 @@ export default function AdminSettings() {
                   </TouchableOpacity>
 
                   {/* Rol: Seguridad */}
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setUserDraft({ ...userDraft, role: 'security' })}
                     activeOpacity={0.8}
                     style={{
@@ -2536,11 +2579,11 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>Cuenta Activa</Text>
                     <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 1 }}>Permite el inicio de sesión</Text>
                   </View>
-                  <Switch 
-                    value={userDraft?.is_active ?? true} 
-                    onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })} 
-                    trackColor={{ false: '#CBD5E1', true: '#10B981' }} 
-                    thumbColor={COLORS.white} 
+                  <Switch
+                    value={userDraft?.is_active ?? true}
+                    onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })}
+                    trackColor={{ false: '#CBD5E1', true: '#10B981' }}
+                    thumbColor={COLORS.white}
                   />
                 </View>
 
@@ -2559,11 +2602,11 @@ export default function AdminSettings() {
                     <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>Directorio Activo (LDAP)</Text>
                     <Text style={{ fontSize: 11, color: COLORS.muted, marginTop: 1 }}>Autenticación centralizada AD</Text>
                   </View>
-                  <Switch 
-                    value={userDraft?.ldap_enabled ?? false} 
-                    onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })} 
-                    trackColor={{ false: '#CBD5E1', true: COLORS.accent }} 
-                    thumbColor={COLORS.white} 
+                  <Switch
+                    value={userDraft?.ldap_enabled ?? false}
+                    onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })}
+                    trackColor={{ false: '#CBD5E1', true: COLORS.accent }}
+                    thumbColor={COLORS.white}
                   />
                 </View>
               </View>
@@ -2581,7 +2624,7 @@ export default function AdminSettings() {
               borderTopColor: '#F1F5F9',
               backgroundColor: '#FFFFFF'
             }}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{
                   paddingHorizontal: 20,
                   height: 48,
@@ -2600,7 +2643,7 @@ export default function AdminSettings() {
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{
                   minWidth: 180,
                   height: 48,
@@ -2612,9 +2655,9 @@ export default function AdminSettings() {
                 disabled={saving}
                 activeOpacity={0.85}
               >
-                <LinearGradient 
-                  colors={['#1E40AF', '#0F172A']} 
-                  start={{ x: 0, y: 0 }} 
+                <LinearGradient
+                  colors={['#1E40AF', '#0F172A']}
+                  start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={{
                     flex: 1,
@@ -2659,7 +2702,7 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Esta acción eliminará al conductor "{driverToDelete?.name}" de la base de datos de transporte. Esta operación no se puede deshacer.
             </Text>
-            
+
             <View style={{ width: '100%', marginBottom: 20 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, textAlign: 'center' }}>
                 Escribe "eliminar" para confirmar:
@@ -2674,8 +2717,8 @@ export default function AdminSettings() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowDriverDeleteModal(false);
                   setDriverToDelete(null);
@@ -2684,8 +2727,8 @@ export default function AdminSettings() {
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]}
                 onPress={confirmDeleteDriver}
                 disabled={saving || deleteConfirmationText !== 'eliminar'}
               >
@@ -2717,7 +2760,7 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Esta acción eliminará físicamente la sala "{roomToDelete?.name}" de la plataforma de administración. Esta operación no se puede deshacer.
             </Text>
-            
+
             <View style={{ width: '100%', marginBottom: 20 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, textAlign: 'center' }}>
                 Escribe "eliminar" para confirmar:
@@ -2732,8 +2775,8 @@ export default function AdminSettings() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowDeleteModal(false);
                   setRoomToDelete(null);
@@ -2742,8 +2785,8 @@ export default function AdminSettings() {
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]}
                 onPress={confirmDeleteRoom}
                 disabled={saving || deleteConfirmationText !== 'eliminar'}
               >
@@ -2775,7 +2818,7 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Esta acción eliminará la dependencia "{dependencyToDelete?.name}" de la lista del sistema. Esta operación no se puede deshacer.
             </Text>
-            
+
             <View style={{ width: '100%', marginBottom: 20 }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, textAlign: 'center' }}>
                 Escribe "eliminar" para confirmar:
@@ -2790,8 +2833,8 @@ export default function AdminSettings() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowDepDeleteModal(false);
                   setDependencyToDelete(null);
@@ -2800,8 +2843,8 @@ export default function AdminSettings() {
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmDeleteButton, deleteConfirmationText !== 'eliminar' && { opacity: 0.5 }]}
                 onPress={confirmDeleteDependency}
                 disabled={saving || deleteConfirmationText !== 'eliminar'}
               >
@@ -2835,8 +2878,8 @@ export default function AdminSettings() {
             </Text>
 
             <View style={[styles.modalActions, { marginTop: 10 }]}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]}
                 onPress={() => {
                   setShowEvalConfirmModal(false);
                   setPendingEvalToggle(null);
@@ -2845,8 +2888,8 @@ export default function AdminSettings() {
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]}
                 onPress={confirmEvalToggle}
                 disabled={saving}
               >
@@ -2882,8 +2925,8 @@ export default function AdminSettings() {
             </Text>
 
             <View style={[styles.modalActions, { marginTop: 10 }]}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.primarySoft }]}
                 onPress={() => {
                   setShowSystemConfirmModal(false);
                   setPendingSystemToggle(null);
@@ -2892,8 +2935,8 @@ export default function AdminSettings() {
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.confirmDeleteButton, { flex: 1, backgroundColor: COLORS.accent }]}
                 onPress={confirmSystemToggle}
                 disabled={saving}
               >
@@ -2931,7 +2974,7 @@ export default function AdminSettings() {
               web: { boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)' }
             })
           }}>
-            
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={{
@@ -2942,10 +2985,10 @@ export default function AdminSettings() {
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}>
-                  <Ionicons 
-                    name={editType === 'room' ? 'business' : editType === 'dependency' ? 'people' : 'car-sport'} 
-                    size={20} 
-                    color="#2563EB" 
+                  <Ionicons
+                    name={editType === 'room' ? 'business' : editType === 'dependency' ? 'people' : 'car-sport'}
+                    size={20}
+                    color="#2563EB"
                   />
                 </View>
                 <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
@@ -2953,7 +2996,7 @@ export default function AdminSettings() {
                 </Text>
               </View>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={closeEditModal}
                 style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}
               >
@@ -3030,14 +3073,14 @@ export default function AdminSettings() {
                   <View>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>Tipo de Sala</Text>
                     <View style={{ flexDirection: 'row', gap: 12 }}>
-                      <TouchableOpacity 
-                        style={[styles.rolePill, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }, editDraft?.info === 'Estándar' && { backgroundColor: '#EFF6FF', borderColor: '#2563EB' }]} 
+                      <TouchableOpacity
+                        style={[styles.rolePill, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }, editDraft?.info === 'Estándar' && { backgroundColor: '#EFF6FF', borderColor: '#2563EB' }]}
                         onPress={() => setEditDraft({ ...editDraft, info: 'Estándar' })}
                       >
                         <Text style={[styles.rolePillText, { color: '#64748B' }, editDraft?.info === 'Estándar' && { color: '#2563EB', fontWeight: '800' }]}>Estándar</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.rolePill, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }, editDraft?.info === 'Especial' && { backgroundColor: '#F5F3FF', borderColor: '#7C3AED' }]} 
+                      <TouchableOpacity
+                        style={[styles.rolePill, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }, editDraft?.info === 'Especial' && { backgroundColor: '#F5F3FF', borderColor: '#7C3AED' }]}
                         onPress={() => setEditDraft({ ...editDraft, info: 'Especial' })}
                       >
                         <Text style={[styles.rolePillText, { color: '#64748B' }, editDraft?.info === 'Especial' && { color: '#7C3AED', fontWeight: '800' }]}>Especial</Text>
@@ -3118,14 +3161,14 @@ export default function AdminSettings() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton, { flex: 1, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0' }]}
                 onPress={closeEditModal}
               >
                 <Text style={[styles.cancelButtonText, { color: '#475569' }]}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, { flex: 1.5, backgroundColor: '#2563EB', borderRadius: 14 }, (!hasEditChanges || !editDraft?.name?.trim()) && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, { flex: 1.5, backgroundColor: '#2563EB', borderRadius: 14 }, (!hasEditChanges || !editDraft?.name?.trim()) && { opacity: 0.5 }]}
                 onPress={saveEditDraft}
                 disabled={!hasEditChanges || !editDraft?.name?.trim()}
               >
@@ -3150,22 +3193,22 @@ export default function AdminSettings() {
               <Ionicons name="add-circle" size={40} color={COLORS.accent} />
             </View>
             <Text style={styles.modalTitle}>
-              {itemToCreate === 'room' ? '¿Agregar nuevo espacio?' : 
-               itemToCreate === 'dependency' ? '¿Agregar nueva dependencia?' : 
-               '¿Agregar nuevo conductor?'}
+              {itemToCreate === 'room' ? '¿Agregar nuevo espacio?' :
+                itemToCreate === 'dependency' ? '¿Agregar nueva dependencia?' :
+                  '¿Agregar nuevo conductor?'}
             </Text>
             <Text style={styles.modalDescription}>
               Se agregará un nuevo registro a la lista. Recuerda llenar sus datos y presionar Guardar Cambios para confirmar de manera definitiva.
             </Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowCreateModal(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.successButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.successButton, { flex: 1, backgroundColor: COLORS.accent }]}
                 onPress={confirmCreate}
               >
                 <Text style={styles.successButtonText}>Confirmar</Text>
@@ -3192,8 +3235,8 @@ export default function AdminSettings() {
             <Text style={styles.modalDescription}>
               Los espacios físicos y las reglas operativas han sido actualizados con éxito en el sistema.
             </Text>
-            <TouchableOpacity 
-              style={styles.successButton} 
+            <TouchableOpacity
+              style={styles.successButton}
               onPress={() => setShowSuccessModal(false)}
               activeOpacity={0.8}
             >
@@ -3215,18 +3258,18 @@ export default function AdminSettings() {
           <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
           <View style={styles.modalContainer}>
             <View style={[styles.modalIconBox, { backgroundColor: emailModalData.isError ? `${COLORS.danger}15` : `${COLORS.success}15` }]}>
-              <Ionicons 
-                name={emailModalData.isError ? "alert-circle" : "checkmark-done-circle"} 
-                size={40} 
-                color={emailModalData.isError ? COLORS.danger : COLORS.success} 
+              <Ionicons
+                name={emailModalData.isError ? "alert-circle" : "checkmark-done-circle"}
+                size={40}
+                color={emailModalData.isError ? COLORS.danger : COLORS.success}
               />
             </View>
             <Text style={styles.modalTitle}>{emailModalData.title}</Text>
             <Text style={styles.modalDescription}>
               {emailModalData.message}
             </Text>
-            <TouchableOpacity 
-              style={[styles.successButton, emailModalData.isError && { backgroundColor: COLORS.danger }]} 
+            <TouchableOpacity
+              style={[styles.successButton, emailModalData.isError && { backgroundColor: COLORS.danger }]}
               onPress={() => setShowEmailModal(false)}
               activeOpacity={0.8}
             >
@@ -3255,14 +3298,14 @@ export default function AdminSettings() {
               {pendingGitAction?.desc}
             </Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => setShowGitConfirmModal(false)}
               >
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.successButton, { flex: 1, backgroundColor: COLORS.accent }]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.successButton, { flex: 1, backgroundColor: COLORS.accent }]}
                 onPress={() => {
                   if (pendingGitAction) {
                     handleExecuteGitAction(pendingGitAction.action);
@@ -3293,9 +3336,9 @@ export default function AdminSettings() {
                 <ActivityIndicator size="large" color={COLORS.accent} style={{ marginBottom: 16 }} />
                 <Text style={styles.modalTitle}>
                   {gitActionRunning === 'pull' ? 'Ejecutando Git Pull...' :
-                   gitActionRunning === 'pull_and_build' ? 'Sincronizando y Compilando...' :
-                   gitActionRunning === 'restart_backend' ? 'Reiniciando Servicios...' :
-                   'Consultando Repositorio...'}
+                    gitActionRunning === 'pull_and_build' ? 'Sincronizando y Compilando...' :
+                      gitActionRunning === 'restart_backend' ? 'Reiniciando Servicios...' :
+                        'Consultando Repositorio...'}
                 </Text>
                 <Text style={[styles.modalDescription, { textAlign: 'center', marginTop: 8 }]}>
                   Procesando operación en el servidor institucional. Por favor no cierre esta ventana.
@@ -3305,10 +3348,10 @@ export default function AdminSettings() {
               <View style={{ width: '100%' }}>
                 <View style={{ alignItems: 'center', marginBottom: 15 }}>
                   <View style={[styles.modalIconBox, { backgroundColor: gitResultStatus === 'success' ? `${COLORS.success}15` : `${COLORS.danger}15` }]}>
-                    <Ionicons 
-                      name={gitResultStatus === 'success' ? 'checkmark-circle' : 'alert-circle'} 
-                      size={40} 
-                      color={gitResultStatus === 'success' ? COLORS.success : COLORS.danger} 
+                    <Ionicons
+                      name={gitResultStatus === 'success' ? 'checkmark-circle' : 'alert-circle'}
+                      size={40}
+                      color={gitResultStatus === 'success' ? COLORS.success : COLORS.danger}
                     />
                   </View>
                   <Text style={styles.modalTitle}>
@@ -3336,8 +3379,8 @@ export default function AdminSettings() {
                   </ScrollView>
                 </View>
 
-                <TouchableOpacity 
-                  style={[styles.successButton, { backgroundColor: COLORS.primary }]} 
+                <TouchableOpacity
+                  style={[styles.successButton, { backgroundColor: COLORS.primary }]}
                   onPress={() => setShowGitResultModal(false)}
                 >
                   <Text style={styles.successButtonText}>Cerrar y Continuar</Text>
@@ -3348,730 +3391,736 @@ export default function AdminSettings() {
         </View>
       </Modal>
 
-        {/* MODALES DEL MÓDULO DE CELDAS Y PARQUEADERO */}
+      {/* MODALES DEL MÓDULO DE CELDAS Y PARQUEADERO */}
 
-        {/* Modal Crear / Editar Celda */}
-        <Modal
-          visible={spotModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSpotModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContainer, { maxWidth: 520 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={[styles.modalIconBox, { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EFF6FF', marginBottom: 0 }]}>
-                    <Ionicons name="car" size={22} color="#2563EB" />
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
-                      {editingSpot ? `Editar Celda ${editingSpot.code}` : 'Nueva Celda de Parqueadero'}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                      Configure el código, tipo de uso y disponibilidad
-                    </Text>
-                  </View>
+      {/* Modal Crear / Editar Celda */}
+      <Modal
+        visible={spotModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSpotModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxWidth: 520 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={[styles.modalIconBox, { width: 44, height: 44, borderRadius: 12, backgroundColor: '#EFF6FF', marginBottom: 0 }]}>
+                  <Ionicons name="car" size={22} color="#2563EB" />
                 </View>
-                <TouchableOpacity onPress={() => setSpotModalVisible(false)} style={{ padding: 6 }}>
-                  <Ionicons name="close" size={22} color={COLORS.muted} />
-                </TouchableOpacity>
-              </View>
-
-              {spotError ? (
-                <View style={{ width: '100%', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700' }}>{spotError}</Text>
-                </View>
-              ) : null}
-
-              <ScrollView style={{ width: '100%', maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-                {/* Código de la Celda */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
-                    CÓDIGO DE LA CELDA *
-                  </Text>
-                  <TextInput
-                    style={{
-                      backgroundColor: '#F8FAFC',
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                      fontSize: 15,
-                      fontWeight: '800',
-                      color: COLORS.primary
-                    }}
-                    placeholder="Ej. C-01, S-12, PB-05"
-                    placeholderTextColor="#94A3B8"
-                    value={spotCode}
-                    onChangeText={setSpotCode}
-                    autoCapitalize="characters"
-                  />
-                </View>
-
-                {/* Tipo de Uso */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
-                    TIPO DE USO DE LA CELDA *
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <TouchableOpacity
-                      style={{
-                        flex: 1,
-                        padding: 12,
-                        borderRadius: 12,
-                        borderWidth: 1.5,
-                        borderColor: spotType === 'fija' ? '#2563EB' : '#E2E8F0',
-                        backgroundColor: spotType === 'fija' ? '#EFF6FF' : '#FFFFFF',
-                        alignItems: 'center',
-                        gap: 4
-                      }}
-                      onPress={() => setSpotType('fija')}
-                    >
-                      <Ionicons name="person" size={20} color={spotType === 'fija' ? '#2563EB' : '#64748B'} />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: spotType === 'fija' ? '#2563EB' : '#64748B' }}>
-                        Celda Fija
-                      </Text>
-                      <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
-                        Asignada a persona fija
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={{
-                        flex: 1,
-                        padding: 12,
-                        borderRadius: 12,
-                        borderWidth: 1.5,
-                        borderColor: spotType === 'libre' ? '#7C3AED' : '#E2E8F0',
-                        backgroundColor: spotType === 'libre' ? '#F5F3FF' : '#FFFFFF',
-                        alignItems: 'center',
-                        gap: 4
-                      }}
-                      onPress={() => setSpotType('libre')}
-                    >
-                      <Ionicons name="refresh" size={20} color={spotType === 'libre' ? '#7C3AED' : '#64748B'} />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: spotType === 'libre' ? '#7C3AED' : '#64748B' }}>
-                        Uso Libre
-                      </Text>
-                      <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
-                        Rotativa / cualquier vehículo
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Estado */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
-                    ESTADO INICIAL *
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                    {(['disponible', 'ocupada', 'mantenimiento', 'reservada'] as const).map(st => {
-                      const isSel = spotStatus === st;
-                      const labels: Record<string, string> = {
-                        disponible: 'Disponible',
-                        ocupada: 'Ocupada',
-                        mantenimiento: 'Mantenimiento',
-                        reservada: 'Reservada'
-                      };
-                      return (
-                        <TouchableOpacity
-                          key={st}
-                          style={{
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 10,
-                            borderWidth: 1,
-                            borderColor: isSel ? COLORS.primary : '#E2E8F0',
-                            backgroundColor: isSel ? COLORS.primary : '#F8FAFC'
-                          }}
-                          onPress={() => setSpotStatus(st)}
-                        >
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: isSel ? '#FFFFFF' : '#64748B', textTransform: 'capitalize' }}>
-                            {labels[st]}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                {/* Si es celda fija: Persona Asignada */}
-                {spotType === 'fija' && (
-                  <View style={{ marginBottom: 14, backgroundColor: '#EFF6FF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BFDBFE' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF', marginBottom: 6 }}>
-                      PERSONA TITULAR ASIGNADA
-                    </Text>
-                    <TextInput
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: '#BFDBFE',
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        fontSize: 14,
-                        fontWeight: '700',
-                        color: COLORS.primary,
-                        marginBottom: 8
-                      }}
-                      placeholder="Nombre del funcionario o titular"
-                      placeholderTextColor="#94A3B8"
-                      value={spotUserName}
-                      onChangeText={setSpotUserName}
-                    />
-                    <TextInput
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: '#BFDBFE',
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        fontSize: 14,
-                        fontWeight: '700',
-                        color: COLORS.primary
-                      }}
-                      placeholder="Cédula o ID de usuario (opcional)"
-                      placeholderTextColor="#94A3B8"
-                      value={spotUserId}
-                      onChangeText={setSpotUserId}
-                    />
-                  </View>
-                )}
-
-                {/* Notas / Ubicación */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
-                    OBSERVACIONES / UBICACIÓN
-                  </Text>
-                  <TextInput
-                    style={{
-                      backgroundColor: '#F8FAFC',
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
-                      fontSize: 14,
-                      color: COLORS.primary,
-                      minHeight: 60,
-                      textAlignVertical: 'top'
-                    }}
-                    placeholder="Ej. Sótano 1, junto a la columna 4, rampa acceso..."
-                    placeholderTextColor="#94A3B8"
-                    multiline
-                    value={spotNotes}
-                    onChangeText={setSpotNotes}
-                  />
-                </View>
-              </ScrollView>
-
-              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setSpotModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: COLORS.accent, flex: 1.4 }]}
-                  onPress={handleSaveSpot}
-                  disabled={spotSaving}
-                >
-                  {spotSaving ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
-                      {editingSpot ? 'Guardar Cambios' : 'Crear Celda'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Modal Asignar / Cambiar Vehículo a Celda */}
-        <Modal
-          visible={assignSpotModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setAssignSpotModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContainer, { maxWidth: 520 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
                 <View>
                   <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
-                    Asignar a Celda {selectedSpotForAssign?.code}
+                    {editingSpot ? `Editar Celda ${editingSpot.code}` : 'Nueva Celda de Parqueadero'}
                   </Text>
                   <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                    Seleccione el vehículo y/o titular que ocupará esta celda
+                    Configure el código, tipo de uso y disponibilidad
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setAssignSpotModalVisible(false)} style={{ padding: 6 }}>
-                  <Ionicons name="close" size={22} color={COLORS.muted} />
-                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => setSpotModalVisible(false)} style={{ padding: 6 }}>
+                <Ionicons name="close" size={22} color={COLORS.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {spotError ? (
+              <View style={{ width: '100%', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700' }}>{spotError}</Text>
+              </View>
+            ) : null}
+
+            <ScrollView style={{ width: '100%', maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              {/* Código de la Celda */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  CÓDIGO DE LA CELDA *
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 15,
+                    fontWeight: '800',
+                    color: COLORS.primary
+                  }}
+                  placeholder="Ej. C-01, S-12, PB-05"
+                  placeholderTextColor="#94A3B8"
+                  value={spotCode}
+                  onChangeText={setSpotCode}
+                  autoCapitalize="characters"
+                />
               </View>
 
-              {assignError ? (
-                <View style={{ width: '100%', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700' }}>{assignError}</Text>
-                </View>
-              ) : null}
+              {/* Tipo de Uso */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  TIPO DE USO DE LA CELDA *
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: spotType === 'fija' ? '#2563EB' : '#E2E8F0',
+                      backgroundColor: spotType === 'fija' ? '#EFF6FF' : '#FFFFFF',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    onPress={() => setSpotType('fija')}
+                  >
+                    <Ionicons name="person" size={20} color={spotType === 'fija' ? '#2563EB' : '#64748B'} />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: spotType === 'fija' ? '#2563EB' : '#64748B' }}>
+                      Celda Fija
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
+                      Asignada a persona fija
+                    </Text>
+                  </TouchableOpacity>
 
-              <ScrollView style={{ width: '100%', maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-                {/* Nombre de Titular */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
-                    TITULAR / CONDUCTOR
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      padding: 12,
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: spotType === 'libre' ? '#7C3AED' : '#E2E8F0',
+                      backgroundColor: spotType === 'libre' ? '#F5F3FF' : '#FFFFFF',
+                      alignItems: 'center',
+                      gap: 4
+                    }}
+                    onPress={() => setSpotType('libre')}
+                  >
+                    <Ionicons name="refresh" size={20} color={spotType === 'libre' ? '#7C3AED' : '#64748B'} />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: spotType === 'libre' ? '#7C3AED' : '#64748B' }}>
+                      Uso Libre
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
+                      Rotativa / cualquier vehículo
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Estado */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  ESTADO INICIAL *
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                  {(['disponible', 'ocupada', 'mantenimiento', 'reservada'] as const).map(st => {
+                    const isSel = spotStatus === st;
+                    const labels: Record<string, string> = {
+                      disponible: 'Disponible',
+                      ocupada: 'Ocupada',
+                      mantenimiento: 'Mantenimiento',
+                      reservada: 'Reservada'
+                    };
+                    return (
+                      <TouchableOpacity
+                        key={st}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: isSel ? COLORS.primary : '#E2E8F0',
+                          backgroundColor: isSel ? COLORS.primary : '#F8FAFC'
+                        }}
+                        onPress={() => setSpotStatus(st)}
+                      >
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: isSel ? '#FFFFFF' : '#64748B', textTransform: 'capitalize' }}>
+                          {labels[st]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Si es celda fija: Persona Asignada */}
+              {spotType === 'fija' && (
+                <View style={{ marginBottom: 14, backgroundColor: '#EFF6FF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF', marginBottom: 6 }}>
+                    PERSONA TITULAR ASIGNADA
                   </Text>
                   <TextInput
                     style={{
-                      backgroundColor: '#F8FAFC',
-                      borderRadius: 12,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: '#E2E8F0',
-                      paddingHorizontal: 14,
-                      paddingVertical: 10,
+                      borderColor: '#BFDBFE',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 14,
+                      fontWeight: '700',
+                      color: COLORS.primary,
+                      marginBottom: 8
+                    }}
+                    placeholder="Nombre del funcionario o titular"
+                    placeholderTextColor="#94A3B8"
+                    value={spotUserName}
+                    onChangeText={setSpotUserName}
+                  />
+                  <TextInput
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
                       fontSize: 14,
                       fontWeight: '700',
                       color: COLORS.primary
                     }}
-                    placeholder="Nombre del funcionario titular"
-                    value={spotUserName}
-                    onChangeText={setSpotUserName}
+                    placeholder="Cédula o ID de usuario (opcional)"
+                    placeholderTextColor="#94A3B8"
+                    value={spotUserId}
+                    onChangeText={setSpotUserId}
+                  />
+                </View>
+              )}
+
+              {/* Notas / Ubicación */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  OBSERVACIONES / UBICACIÓN
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    color: COLORS.primary,
+                    minHeight: 60,
+                    textAlignVertical: 'top'
+                  }}
+                  placeholder="Ej. Sótano 1, junto a la columna 4, rampa acceso..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  value={spotNotes}
+                  onChangeText={setSpotNotes}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setSpotModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: COLORS.accent, flex: 1.4 }]}
+                onPress={handleSaveSpot}
+                disabled={spotSaving}
+              >
+                {spotSaving ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                    {editingSpot ? 'Guardar Cambios' : 'Crear Celda'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Asignar / Cambiar Vehículo a Celda */}
+      <Modal
+        visible={assignSpotModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAssignSpotModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxWidth: 520 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                  Asignar a Celda {selectedSpotForAssign?.code}
+                </Text>
+                <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                  Seleccione el vehículo y/o titular que ocupará esta celda
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setAssignSpotModalVisible(false)} style={{ padding: 6 }}>
+                <Ionicons name="close" size={22} color={COLORS.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {assignError ? (
+              <View style={{ width: '100%', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700' }}>{assignError}</Text>
+              </View>
+            ) : null}
+
+            <ScrollView style={{ width: '100%', maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              {/* Nombre de Titular */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  TITULAR / CONDUCTOR
+                </Text>
+                <TextInput
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: COLORS.primary
+                  }}
+                  placeholder="Nombre del funcionario titular"
+                  value={spotUserName}
+                  onChangeText={setSpotUserName}
+                />
+              </View>
+
+              {/* Lista de Vehículos para Vincular */}
+              <View style={{ marginBottom: 14 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
+                  SELECCIONE VEHÍCULO REGISTRADO
+                </Text>
+                <View style={{ gap: 8 }}>
+                  {allVehicles.length === 0 ? (
+                    <Text style={{ fontSize: 13, color: COLORS.muted, fontStyle: 'italic', padding: 10 }}>
+                      No hay vehículos registrados en el sistema.
+                    </Text>
+                  ) : (
+                    allVehicles
+                      .filter(v => v.is_active !== false)
+                      .slice(0, 15)
+                      .map(veh => {
+                        const isSel = selectedVehicleIdToAssign === veh.id;
+                        return (
+                          <TouchableOpacity
+                            key={veh.id}
+                            style={{
+                              padding: 10,
+                              borderRadius: 12,
+                              borderWidth: 1.5,
+                              borderColor: isSel ? '#2563EB' : '#E2E8F0',
+                              backgroundColor: isSel ? '#EFF6FF' : '#FFFFFF',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between'
+                            }}
+                            onPress={() => {
+                              setSelectedVehicleIdToAssign(veh.id);
+                              if (!spotUserName && (veh.name || veh.owner_name)) {
+                                setSpotUserName(veh.name || veh.owner_name || '');
+                              }
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              <View style={{ backgroundColor: '#FDE047', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#000' }}>
+                                <Text style={{ fontSize: 12, fontWeight: '900', color: '#000' }}>{veh.plate}</Text>
+                              </View>
+                              <View>
+                                <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
+                                  {veh.brand} {veh.model ? `• ${veh.model}` : ''}
+                                </Text>
+                                <Text style={{ fontSize: 11, color: COLORS.muted }}>
+                                  {veh.name || veh.owner_name || 'Sin titular'} {veh.doc ? `• Doc: ${veh.doc}` : ''}
+                                </Text>
+                              </View>
+                            </View>
+                            <Ionicons
+                              name={isSel ? 'radio-button-on' : 'radio-button-off'}
+                              size={18}
+                              color={isSel ? '#2563EB' : '#94A3B8'}
+                            />
+                          </TouchableOpacity>
+                        );
+                      })
+                  )}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setAssignSpotModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#2563EB', flex: 1.4 }]}
+                onPress={handleConfirmAssign}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
+                  Confirmar Asignación
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Liberar Celda */}
+      <Modal
+        visible={releaseSpotModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setReleaseSpotModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="lock-open-outline" size={32} color="#D97706" />
+            </View>
+            <Text style={styles.modalTitle}>Liberar Celda</Text>
+            <Text style={styles.modalDescription}>
+              ¿Está seguro de que desea liberar la celda <Text style={{ fontWeight: '800', color: COLORS.primary }}>{selectedSpotForRelease?.code}</Text>? Los vehículos asignados volverán al estado de uso libre rotativo.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setReleaseSpotModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#D97706' }]}
+                onPress={handleConfirmRelease}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Liberar Celda</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Eliminar Celda */}
+      <Modal
+        visible={deleteSpotModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteSpotModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: '#FEF2F2' }]}>
+              <Ionicons name="trash-outline" size={32} color="#DC2626" />
+            </View>
+            <Text style={styles.modalTitle}>Eliminar Celda</Text>
+            <Text style={styles.modalDescription}>
+              ¿Desea eliminar permanentemente la celda <Text style={{ fontWeight: '800', color: COLORS.primary }}>{selectedSpotForDelete?.code}</Text>? Esta acción no se puede deshacer.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                disabled={isDeletingSpot}
+                style={[styles.modalButton, styles.cancelButton, isDeletingSpot && { opacity: 0.5 }]}
+                onPress={() => setDeleteSpotModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={isDeletingSpot}
+                style={[styles.modalButton, styles.confirmDeleteButton, isDeletingSpot && { opacity: 0.7 }]}
+                onPress={handleConfirmDeleteSpot}
+              >
+                {isDeletingSpot ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.confirmDeleteButtonText}>Eliminar</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Administrar / Editar Vehículo por Admin */}
+      <Modal
+        visible={adminVehicleModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAdminVehicleModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxWidth: 520 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
+                  Editar Vehículo {adminEditingVehicle?.plate}
+                </Text>
+                <Text style={{ fontSize: 12, color: COLORS.muted }}>
+                  Modificación administrativa y control de estado
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setAdminVehicleModalVisible(false)} style={{ padding: 6 }}>
+                <Ionicons name="close" size={22} color={COLORS.muted} />
+              </TouchableOpacity>
+            </View>
+
+            {adminVError ? (
+              <View style={{ width: '100%', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700' }}>{adminVError}</Text>
+              </View>
+            ) : null}
+
+            <ScrollView style={{ width: '100%', maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 12 }}>
+                {/* Placa y Marca */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>PLACA *</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontWeight: '800' }}
+                      value={adminVPlate}
+                      onChangeText={setAdminVPlate}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+                  <View style={{ flex: 1.5 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>MARCA *</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
+                      value={adminVBrand}
+                      onChangeText={setAdminVBrand}
+                    />
+                  </View>
+                </View>
+
+                {/* Modelo y Color */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>MODELO</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
+                      value={adminVModel}
+                      onChangeText={setAdminVModel}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>COLOR</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
+                      value={adminVColor}
+                      onChangeText={setAdminVColor}
+                    />
+                  </View>
+                </View>
+
+                {/* Conductor y Cédula */}
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1.5 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>CONDUCTOR / TITULAR</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
+                      value={adminVName}
+                      onChangeText={setAdminVName}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>CÉDULA / DOC</Text>
+                    <TextInput
+                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
+                      value={adminVDoc}
+                      onChangeText={setAdminVDoc}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                {/* Dependencia */}
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>DEPENDENCIA</Text>
+                  <TextInput
+                    style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
+                    value={adminVDependency}
+                    onChangeText={setAdminVDependency}
                   />
                 </View>
 
-                {/* Lista de Vehículos para Vincular */}
-                <View style={{ marginBottom: 14 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 6 }}>
-                    SELECCIONE VEHÍCULO REGISTRADO
-                  </Text>
-                  <View style={{ gap: 8 }}>
-                    {allVehicles.length === 0 ? (
-                      <Text style={{ fontSize: 13, color: COLORS.muted, fontStyle: 'italic', padding: 10 }}>
-                        No hay vehículos registrados en el sistema.
-                      </Text>
-                    ) : (
-                      allVehicles
-                        .filter(v => v.is_active !== false)
-                        .slice(0, 15)
-                        .map(veh => {
-                          const isSel = selectedVehicleIdToAssign === veh.id;
-                          return (
-                            <TouchableOpacity
-                              key={veh.id}
-                              style={{
-                                padding: 10,
-                                borderRadius: 12,
-                                borderWidth: 1.5,
-                                borderColor: isSel ? '#2563EB' : '#E2E8F0',
-                                backgroundColor: isSel ? '#EFF6FF' : '#FFFFFF',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'space-between'
-                              }}
-                              onPress={() => {
-                                setSelectedVehicleIdToAssign(veh.id);
-                                if (!spotUserName && (veh.name || veh.owner_name)) {
-                                  setSpotUserName(veh.name || veh.owner_name || '');
-                                }
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                <View style={{ backgroundColor: '#FDE047', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#000' }}>
-                                  <Text style={{ fontSize: 12, fontWeight: '900', color: '#000' }}>{veh.plate}</Text>
-                                </View>
-                                <View>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
-                                    {veh.brand} {veh.model ? `• ${veh.model}` : ''}
-                                  </Text>
-                                  <Text style={{ fontSize: 11, color: COLORS.muted }}>
-                                    {veh.name || veh.owner_name || 'Sin titular'} {veh.doc ? `• Doc: ${veh.doc}` : ''}
-                                  </Text>
-                                </View>
-                              </View>
-                              <Ionicons
-                                name={isSel ? 'radio-button-on' : 'radio-button-off'}
-                                size={18}
-                                color={isSel ? '#2563EB' : '#94A3B8'}
-                              />
-                            </TouchableOpacity>
-                          );
-                        })
-                    )}
+                {/* Switch Estado Activo / Inactivo */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
+                      Estado del Vehículo
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted }}>
+                      {adminVIsActive ? 'Vehículo activo y habilitado para acceder' : 'Vehículo inactivado (no podrá solicitar ni ingresar)'}
+                    </Text>
                   </View>
+                  <Switch
+                    value={adminVIsActive}
+                    onValueChange={setAdminVIsActive}
+                    trackColor={{ false: '#CBD5E1', true: '#10B981' }}
+                    thumbColor="#FFFFFF"
+                  />
                 </View>
-              </ScrollView>
-
-              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setAssignSpotModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#2563EB', flex: 1.4 }]}
-                  onPress={handleConfirmAssign}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>
-                    Confirmar Asignación
-                  </Text>
-                </TouchableOpacity>
               </View>
+            </ScrollView>
+
+            <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 14 }}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setAdminVehicleModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: COLORS.accent, flex: 1.4 }]}
+                onPress={handleAdminSaveVehicle}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Guardar Cambios</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
-        {/* Modal Liberar Celda */}
-        <Modal
-          visible={releaseSpotModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setReleaseSpotModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <View style={[styles.modalIconBox, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="lock-open-outline" size={32} color="#D97706" />
-              </View>
-              <Text style={styles.modalTitle}>Liberar Celda</Text>
-              <Text style={styles.modalDescription}>
-                ¿Está seguro de que desea liberar la celda <Text style={{ fontWeight: '800', color: COLORS.primary }}>{selectedSpotForRelease?.code}</Text>? Los vehículos asignados volverán al estado de uso libre rotativo.
-              </Text>
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setReleaseSpotModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: '#D97706' }]}
-                  onPress={handleConfirmRelease}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Liberar Celda</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Modal Eliminar Celda */}
-        <Modal
-          visible={deleteSpotModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setDeleteSpotModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <View style={[styles.modalIconBox, { backgroundColor: '#FEF2F2' }]}>
-                <Ionicons name="trash-outline" size={32} color="#DC2626" />
-              </View>
-              <Text style={styles.modalTitle}>Eliminar Celda</Text>
-              <Text style={styles.modalDescription}>
-                ¿Desea eliminar permanentemente la celda <Text style={{ fontWeight: '800', color: COLORS.primary }}>{selectedSpotForDelete?.code}</Text>? Esta acción no se puede deshacer.
-              </Text>
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setDeleteSpotModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.confirmDeleteButton]}
-                  onPress={handleConfirmDeleteSpot}
-                >
-                  <Text style={styles.confirmDeleteButtonText}>Eliminar</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Modal Administrar / Editar Vehículo por Admin */}
-        <Modal
-          visible={adminVehicleModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setAdminVehicleModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContainer, { maxWidth: 520 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
+      {/* Modal Ver Historial de Auditoría del Vehículo */}
+      <Modal
+        visible={historyModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setHistoryModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxWidth: 600, maxHeight: '85%' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={[styles.modalIconBox, { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', marginBottom: 0 }]}>
+                  <Ionicons name="time" size={22} color="#0F172A" />
+                </View>
                 <View>
-                  <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.primary }}>
-                    Editar Vehículo {adminEditingVehicle?.plate}
+                  <Text style={{ fontSize: 17, fontWeight: '900', color: COLORS.primary }}>
+                    Historial de Auditoría
                   </Text>
                   <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                    Modificación administrativa y control de estado
+                    Placa: {selectedVehicleForHistory?.plate} • {selectedVehicleForHistory?.brand}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => setAdminVehicleModalVisible(false)} style={{ padding: 6 }}>
-                  <Ionicons name="close" size={22} color={COLORS.muted} />
-                </TouchableOpacity>
               </View>
-
-              {adminVError ? (
-                <View style={{ width: '100%', backgroundColor: '#FEF2F2', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 12, color: '#DC2626', fontWeight: '700' }}>{adminVError}</Text>
-                </View>
-              ) : null}
-
-              <ScrollView style={{ width: '100%', maxHeight: 380 }} showsVerticalScrollIndicator={false}>
-                <View style={{ gap: 12 }}>
-                  {/* Placa y Marca */}
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>PLACA *</Text>
-                      <TextInput
-                        style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontWeight: '800' }}
-                        value={adminVPlate}
-                        onChangeText={setAdminVPlate}
-                        autoCapitalize="characters"
-                      />
-                    </View>
-                    <View style={{ flex: 1.5 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>MARCA *</Text>
-                      <TextInput
-                        style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                        value={adminVBrand}
-                        onChangeText={setAdminVBrand}
-                      />
-                    </View>
-                  </View>
-
-                  {/* Modelo y Color */}
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>MODELO</Text>
-                      <TextInput
-                        style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                        value={adminVModel}
-                        onChangeText={setAdminVModel}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>COLOR</Text>
-                      <TextInput
-                        style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                        value={adminVColor}
-                        onChangeText={setAdminVColor}
-                      />
-                    </View>
-                  </View>
-
-                  {/* Conductor y Cédula */}
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <View style={{ flex: 1.5 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>CONDUCTOR / TITULAR</Text>
-                      <TextInput
-                        style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                        value={adminVName}
-                        onChangeText={setAdminVName}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>CÉDULA / DOC</Text>
-                      <TextInput
-                        style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                        value={adminVDoc}
-                        onChangeText={setAdminVDoc}
-                        keyboardType="numeric"
-                      />
-                    </View>
-                  </View>
-
-                  {/* Dependencia */}
-                  <View>
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>DEPENDENCIA</Text>
-                    <TextInput
-                      style={{ backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 }}
-                      value={adminVDependency}
-                      onChangeText={setAdminVDependency}
-                    />
-                  </View>
-
-                  {/* Switch Estado Activo / Inactivo */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                    <View>
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.primary }}>
-                        Estado del Vehículo
-                      </Text>
-                      <Text style={{ fontSize: 11, color: COLORS.muted }}>
-                        {adminVIsActive ? 'Vehículo activo y habilitado para acceder' : 'Vehículo inactivado (no podrá solicitar ni ingresar)'}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={adminVIsActive}
-                      onValueChange={setAdminVIsActive}
-                      trackColor={{ false: '#CBD5E1', true: '#10B981' }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
-                </View>
-              </ScrollView>
-
-              <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 14 }}>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() => setAdminVehicleModalVisible(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancelar</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: COLORS.accent, flex: 1.4 }]}
-                  onPress={handleAdminSaveVehicle}
-                >
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800' }}>Guardar Cambios</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={() => setHistoryModalVisible(false)} style={{ padding: 6 }}>
+                <Ionicons name="close" size={22} color={COLORS.muted} />
+              </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
 
-        {/* Modal Ver Historial de Auditoría del Vehículo */}
-        <Modal
-          visible={historyModalVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setHistoryModalVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modalContainer, { maxWidth: 600, maxHeight: '85%' }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 14 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={[styles.modalIconBox, { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F1F5F9', marginBottom: 0 }]}>
-                    <Ionicons name="time" size={22} color="#0F172A" />
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 17, fontWeight: '900', color: COLORS.primary }}>
-                      Historial de Auditoría
-                    </Text>
-                    <Text style={{ fontSize: 12, color: COLORS.muted }}>
-                      Placa: {selectedVehicleForHistory?.plate} • {selectedVehicleForHistory?.brand}
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => setHistoryModalVisible(false)} style={{ padding: 6 }}>
-                  <Ionicons name="close" size={22} color={COLORS.muted} />
-                </TouchableOpacity>
+            {historyLoading ? (
+              <View style={{ padding: 30, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={COLORS.accent} />
+                <Text style={{ marginTop: 10, fontSize: 12, color: COLORS.muted }}>Cargando registros de auditoría...</Text>
               </View>
+            ) : selectedVehicleHistory.length === 0 ? (
+              <View style={{ padding: 30, alignItems: 'center' }}>
+                <Ionicons name="document-text-outline" size={40} color="#94A3B8" />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.muted, marginTop: 10 }}>
+                  Sin registros de auditoría aún para este vehículo.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={{ width: '100%', maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                <View style={{ gap: 10, paddingRight: 4 }}>
+                  {selectedVehicleHistory.map((item, idx) => {
+                    const actionColors: Record<string, { bg: string; text: string }> = {
+                      CREACION: { bg: '#ECFDF5', text: '#059669' },
+                      EDICION: { bg: '#EFF6FF', text: '#2563EB' },
+                      CAMBIO_CELDA: { bg: '#F5F3FF', text: '#7C3AED' },
+                      INACTIVACION: { bg: '#FEF3C7', text: '#D97706' },
+                      ACTIVACION: { bg: '#DCFCE7', text: '#15803D' },
+                      ELIMINACION: { bg: '#FEF2F2', text: '#DC2626' }
+                    };
+                    const badge = actionColors[item.action] || { bg: '#F1F5F9', text: '#475569' };
+                    const dateStr = item.created_at ? new Date(item.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : 'Fecha desconocida';
 
-              {historyLoading ? (
-                <View style={{ padding: 30, alignItems: 'center' }}>
-                  <ActivityIndicator size="large" color={COLORS.accent} />
-                  <Text style={{ marginTop: 10, fontSize: 12, color: COLORS.muted }}>Cargando registros de auditoría...</Text>
-                </View>
-              ) : selectedVehicleHistory.length === 0 ? (
-                <View style={{ padding: 30, alignItems: 'center' }}>
-                  <Ionicons name="document-text-outline" size={40} color="#94A3B8" />
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.muted, marginTop: 10 }}>
-                    Sin registros de auditoría aún para este vehículo.
-                  </Text>
-                </View>
-              ) : (
-                <ScrollView style={{ width: '100%', maxHeight: 380 }} showsVerticalScrollIndicator={false}>
-                  <View style={{ gap: 10, paddingRight: 4 }}>
-                    {selectedVehicleHistory.map((item, idx) => {
-                      const actionColors: Record<string, { bg: string; text: string }> = {
-                        CREACION: { bg: '#ECFDF5', text: '#059669' },
-                        EDICION: { bg: '#EFF6FF', text: '#2563EB' },
-                        CAMBIO_CELDA: { bg: '#F5F3FF', text: '#7C3AED' },
-                        INACTIVACION: { bg: '#FEF3C7', text: '#D97706' },
-                        ACTIVACION: { bg: '#DCFCE7', text: '#15803D' },
-                        ELIMINACION: { bg: '#FEF2F2', text: '#DC2626' }
-                      };
-                      const badge = actionColors[item.action] || { bg: '#F1F5F9', text: '#475569' };
-                      const dateStr = item.created_at ? new Date(item.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : 'Fecha desconocida';
-
-                      return (
-                        <View
-                          key={item.id || idx}
-                          style={{
-                            padding: 12,
-                            borderRadius: 12,
-                            backgroundColor: '#F8FAFC',
-                            borderWidth: 1,
-                            borderColor: '#E2E8F0',
-                            gap: 6
-                          }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ backgroundColor: badge.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                                <Text style={{ fontSize: 10, fontWeight: '900', color: badge.text }}>
-                                  {item.action}
-                                </Text>
-                              </View>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.primary }}>
-                                Por: {item.performed_by || item.performed_by_name || 'Sistema / Usuario'}
+                    return (
+                      <View
+                        key={item.id || idx}
+                        style={{
+                          padding: 12,
+                          borderRadius: 12,
+                          backgroundColor: '#F8FAFC',
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          gap: 6
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={{ backgroundColor: badge.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '900', color: badge.text }}>
+                                {item.action}
                               </Text>
                             </View>
-                            <Text style={{ fontSize: 11, color: COLORS.muted }}>
-                              {dateStr}
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.primary }}>
+                              Por: {item.performed_by || item.performed_by_name || 'Sistema / Usuario'}
                             </Text>
                           </View>
-                          {item.details ? (
-                            <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>
-                              {item.details}
-                            </Text>
-                          ) : null}
+                          <Text style={{ fontSize: 11, color: COLORS.muted }}>
+                            {dateStr}
+                          </Text>
                         </View>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-              )}
+                        {item.details ? (
+                          <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>
+                            {item.details}
+                          </Text>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
 
-              <TouchableOpacity
-                style={[styles.successButton, { marginTop: 14, backgroundColor: COLORS.primary }]}
-                onPress={() => setHistoryModalVisible(false)}
-              >
-                <Text style={styles.successButtonText}>Cerrar</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.successButton, { marginTop: 14, backgroundColor: COLORS.primary }]}
+              onPress={() => setHistoryModalVisible(false)}
+            >
+              <Text style={styles.successButtonText}>Cerrar</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
-        {/* Modal Informativo Reemplazo de Alerts */}
-        <Modal
-          visible={settingsNoticeModal.visible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setSettingsNoticeModal({ visible: false, title: '', message: '' })}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              <View style={[styles.modalIconBox, { backgroundColor: settingsNoticeModal.isError ? '#FEF2F2' : '#ECFDF5' }]}>
-                <Ionicons
-                  name={settingsNoticeModal.isError ? 'alert-circle' : 'checkmark-circle'}
-                  size={32}
-                  color={settingsNoticeModal.isError ? '#DC2626' : '#059669'}
-                />
-              </View>
-              <Text style={styles.modalTitle}>{settingsNoticeModal.title}</Text>
-              <Text style={styles.modalDescription}>{settingsNoticeModal.message}</Text>
-              <TouchableOpacity
-                style={[styles.successButton, { backgroundColor: settingsNoticeModal.isError ? '#DC2626' : COLORS.primary }]}
-                onPress={() => setSettingsNoticeModal({ visible: false, title: '', message: '' })}
-              >
-                <Text style={styles.successButtonText}>Entendido</Text>
-              </TouchableOpacity>
+      {/* Modal Informativo Reemplazo de Alerts */}
+      <Modal
+        visible={settingsNoticeModal.visible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSettingsNoticeModal({ visible: false, title: '', message: '' })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconBox, { backgroundColor: settingsNoticeModal.isError ? '#FEF2F2' : '#ECFDF5' }]}>
+              <Ionicons
+                name={settingsNoticeModal.isError ? 'alert-circle' : 'checkmark-circle'}
+                size={32}
+                color={settingsNoticeModal.isError ? '#DC2626' : '#059669'}
+              />
             </View>
+            <Text style={styles.modalTitle}>{settingsNoticeModal.title}</Text>
+            <Text style={styles.modalDescription}>{settingsNoticeModal.message}</Text>
+            <TouchableOpacity
+              style={[styles.successButton, { backgroundColor: settingsNoticeModal.isError ? '#DC2626' : COLORS.primary }]}
+              onPress={() => setSettingsNoticeModal({ visible: false, title: '', message: '' })}
+            >
+              <Text style={styles.successButtonText}>Entendido</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -4098,15 +4147,15 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveTab:
         <Text style={styles.sideTitle}>Configuración</Text>
         <Text style={styles.sideSubTitle}>Panel de Administración</Text>
         <View style={styles.sideDivider} />
-        
+
         <View style={{ gap: 6, width: '100%' }}>
           {TABS.map(tab => (
-            <SidebarTabButton 
+            <SidebarTabButton
               key={tab.id}
-              label={tab.label} 
-              icon={tab.icon} 
-              active={activeTab === tab.id} 
-              onPress={() => setActiveTab(tab.id)} 
+              label={tab.label}
+              icon={tab.icon}
+              active={activeTab === tab.id}
+              onPress={() => setActiveTab(tab.id)}
             />
           ))}
         </View>
@@ -4135,8 +4184,8 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string; setActiveTab:
 
 function SidebarTabButton({ label, icon, active, onPress }: any) {
   return (
-    <TouchableOpacity 
-      style={[styles.sideTabBtn, active && styles.sideTabBtnActive]} 
+    <TouchableOpacity
+      style={[styles.sideTabBtn, active && styles.sideTabBtnActive]}
       onPress={onPress}
     >
       <Ionicons name={icon} size={18} color={active ? COLORS.primary : 'rgba(255,255,255,0.7)'} />
@@ -4150,9 +4199,9 @@ function HeroSection({ isDesktop }: any) {
 
   return (
     <View style={styles.hero}>
-      <LinearGradient 
-        colors={[COLORS.primaryDark, '#1E293B']} 
-        style={StyleSheet.absoluteFill} 
+      <LinearGradient
+        colors={[COLORS.primaryDark, '#1E293B']}
+        style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
@@ -4164,15 +4213,15 @@ function HeroSection({ isDesktop }: any) {
             <Text style={styles.heroSub} numberOfLines={2}>Administre los recursos y reglas del portal</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', alignSelf: isDesktop ? 'auto' : 'flex-end', flexWrap: 'wrap' }}>
-            <TouchableOpacity 
-              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]} 
+            <TouchableOpacity
+              style={[styles.logoutBtn, { backgroundColor: '#3B82F6', borderColor: '#2563EB' }]}
               onPress={() => router.replace('/dashboard')}
             >
               <Ionicons name="home" size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.logoutBtn} 
+            <TouchableOpacity
+              style={styles.logoutBtn}
               onPress={async () => {
                 await supabase.auth.signOut();
                 router.replace('/login');
@@ -4206,9 +4255,9 @@ function ConfigToggle({ label, desc, value, onValueChange, icon }: any) {
         <Text style={styles.toggleLabel}>{label}</Text>
         <Text style={styles.toggleDesc}>{desc}</Text>
       </View>
-      <Switch 
-        value={value} 
-        onValueChange={onValueChange} 
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
         trackColor={{ false: COLORS.line, true: COLORS.accent }}
         thumbColor={COLORS.white}
       />
@@ -4248,28 +4297,28 @@ const styles = StyleSheet.create({
   loaderText: { fontSize: 14, color: COLORS.muted, fontWeight: '600' },
 
   cardList: { gap: 12 },
-  roomCard: { 
-    backgroundColor: COLORS.white, 
-    borderRadius: 28, 
+  roomCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 28,
     paddingTop: 24,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'column',
-    borderWidth: 0, 
+    borderWidth: 0,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20 },
       android: { elevation: 4 },
       web: { boxShadow: '0 10px 25px rgba(0, 0, 0, 0.05)' }
     })
   },
-  depCard: { 
-    backgroundColor: COLORS.white, 
-    borderRadius: 28, 
+  depCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 28,
     paddingTop: 24,
     paddingBottom: 20,
     paddingHorizontal: 20,
-    flexDirection: 'column', 
-    borderWidth: 0, 
+    flexDirection: 'column',
+    borderWidth: 0,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.05, shadowRadius: 20 },
       android: { elevation: 4 },
@@ -4326,7 +4375,8 @@ const styles = StyleSheet.create({
   logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   configDivider: { height: 1, backgroundColor: COLORS.line, marginHorizontal: 20 },
 
-  saveBtn: { marginTop: 40, borderRadius: 20, overflow: 'hidden', 
+  saveBtn: {
+    marginTop: 40, borderRadius: 20, overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
       android: { elevation: 8 },
@@ -4348,14 +4398,14 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: COLORS.primarySoft, fontSize: 14, fontWeight: '800' },
   confirmDeleteButton: { backgroundColor: COLORS.danger },
   confirmDeleteButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
-  successButton: { 
-    backgroundColor: COLORS.primary, 
-    width: '100%', 
-    height: 48, 
-    borderRadius: 14, 
-    paddingHorizontal: 20, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  successButton: {
+    backgroundColor: COLORS.primary,
+    width: '100%',
+    height: 48,
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     marginTop: 6,

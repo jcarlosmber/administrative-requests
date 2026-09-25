@@ -42,6 +42,7 @@ const INITIAL_ROOMS = [
   { id: '22222222-2222-2222-2222-222222222222', name: 'Sala de Juntas B', capacity: '8', floor: 'Piso 1', info: 'Estándar' },
   { id: '33333333-3333-3333-3333-333333333333', name: 'Focus Room 4', capacity: '2', floor: 'Piso 3', info: 'Estándar' },
   { id: '44444444-4444-4444-4444-444444444444', name: 'Auditorio Principal', capacity: '50', floor: 'PB', info: 'Especial' },
+  { id: '55555555-5555-5555-5555-555555555555', name: 'Auditorio Huitaca', capacity: '350', floor: 'PB', info: 'Especial', isLargeScale: true },
 ];
 
 const OPERATING_HOURS = [
@@ -234,6 +235,7 @@ export default function AdminGestion() {
   // =========================================================
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const [roomReservations, setRoomReservations] = useState<any[]>([]);
+  const [calendarCategoryFilter, setCalendarCategoryFilter] = useState<'all' | 'standard' | 'special'>('all');
   const [calendarRoomFilter, setCalendarRoomFilter] = useState<'all' | string>('all');
   const [calendarSearch, setCalendarSearch] = useState('');
   const [selectedReservationModal, setSelectedReservationModal] = useState<any | null>(null);
@@ -299,6 +301,7 @@ export default function AdminGestion() {
   // Modal para Eliminar Celda
   const [deleteSpotModalVisible, setDeleteSpotModalVisible] = useState(false);
   const [selectedSpotForDelete, setSelectedSpotForDelete] = useState<ParkingSpot | null>(null);
+  const [isDeletingSpot, setIsDeletingSpot] = useState(false);
 
   // Modal de Edición de Vehículo por Admin
   const [adminVehicleModalVisible, setAdminVehicleModalVisible] = useState(false);
@@ -495,31 +498,38 @@ export default function AdminGestion() {
           }
         };
       });
-  }, [roomReservations]);
+  // Helper para verificar si un espacio es sala especial o auditorio
+  const isSpecialRoom = useCallback((r: any): boolean => {
+    if (!r) return false;
+    return r.info === 'Especial' || 
+      (parseInt(r.capacity) || 0) >= 100 || 
+      /huitaca|auditorio|especial|barul[eé]/i.test(r.name || '') ||
+      Boolean(r.isLargeScale);
+  }, []);
 
-  // Salas estándar institucionales (se excluyen explícitamente salas especiales y auditorios)
-  const standardRooms = useMemo(() => {
-    return rooms.filter(r => {
-      const isSpecial = r.info === 'Especial' || 
-        (parseInt(r.capacity) || 0) >= 100 || 
-        (r.name && r.name.toLowerCase().includes('auditorio')) ||
-        r.isLargeScale;
-      return !isSpecial;
-    });
-  }, [rooms]);
-
-  // Salas activas filtradas para mostrar en el calendario (exclusivamente salas estándar)
+  // Salas activas filtradas para mostrar en el calendario (incluye estándar y especiales)
   const calendarRooms = useMemo(() => {
-    let result = standardRooms;
+    let result = rooms;
+
+    if (calendarCategoryFilter === 'standard') {
+      result = result.filter(r => !isSpecialRoom(r));
+    } else if (calendarCategoryFilter === 'special') {
+      result = result.filter(r => isSpecialRoom(r));
+    }
+
     if (calendarRoomFilter !== 'all') {
       result = result.filter(r => r.id === calendarRoomFilter || r.name === calendarRoomFilter);
     }
     if (calendarSearch.trim()) {
       const q = calendarSearch.trim().toLowerCase();
-      result = result.filter(r => r.name.toLowerCase().includes(q) || (r.floor && r.floor.toLowerCase().includes(q)));
+      result = result.filter(r => 
+        (r.name && r.name.toLowerCase().includes(q)) || 
+        (r.floor && r.floor.toLowerCase().includes(q)) ||
+        (r.info && r.info.toLowerCase().includes(q))
+      );
     }
     return result;
-  }, [standardRooms, calendarRoomFilter, calendarSearch]);
+  }, [rooms, calendarCategoryFilter, calendarRoomFilter, calendarSearch, isSpecialRoom]);
 
   // Reservas del día seleccionado
   const dayReservations = useMemo(() => {
@@ -542,13 +552,13 @@ export default function AdminGestion() {
     });
   };
 
-  // Contadores de métricas del día (calculados exclusivamente sobre salas estándar)
+  // Contadores de métricas del día (calculados sobre todas las salas y espacios del calendario)
   const calendarMetrics = useMemo(() => {
-    const totalSlots = standardRooms.length * OPERATING_HOURS.length;
+    const totalSlots = rooms.length * OPERATING_HOURS.length;
     let confirmedSlots = 0;
     let pendingSlots = 0;
     
-    standardRooms.forEach(r => {
+    rooms.forEach(r => {
       OPERATING_HOURS.forEach(h => {
         const res = getSlotReservation(r, h.hour);
         if (res) {
@@ -565,26 +575,21 @@ export default function AdminGestion() {
     const freeSlots = Math.max(0, totalSlots - occupiedSlots);
     const availabilityRate = totalSlots > 0 ? Math.round((freeSlots / totalSlots) * 100) : 100;
 
-    // Solo contabilizar reservas que pertenezcan a salas estándar
-    const standardDayReservations = dayReservations.filter(res => 
-      standardRooms.some(sr => {
-        const targetNorm = normalizeRoomName(sr.name);
-        return (res.parsed.roomId && sr.id === res.parsed.roomId) || 
-               (res.parsed.roomName && normalizeRoomName(res.parsed.roomName) === targetNorm) ||
-               (res.title && normalizeRoomName(res.title).includes(targetNorm));
-      })
-    );
+    const specialRoomsCount = rooms.filter(r => isSpecialRoom(r)).length;
+    const standardRoomsCount = rooms.length - specialRoomsCount;
 
     return {
-      totalRooms: standardRooms.length,
-      dayReservationsCount: standardDayReservations.length,
+      totalRooms: rooms.length,
+      standardRoomsCount,
+      specialRoomsCount,
+      dayReservationsCount: dayReservations.length,
       confirmedSlots,
       pendingSlots,
       occupiedSlots,
       freeSlots,
       availabilityRate
     };
-  }, [standardRooms, OPERATING_HOURS, dayReservations, parsedReservations, calendarDateIso]);
+  }, [rooms, OPERATING_HOURS, dayReservations, parsedReservations, calendarDateIso, isSpecialRoom]);sedReservations, calendarDateIso]);
 
   // Navegación de fecha
   const handlePrevDay = () => {
@@ -1006,23 +1011,27 @@ export default function AdminGestion() {
   };
 
   const handleConfirmDeleteSpot = async () => {
-    if (!selectedSpotForDelete) return;
+    if (!selectedSpotForDelete || isDeletingSpot) return;
+    setIsDeletingSpot(true);
     try {
       await vehicleService.deleteSpot(selectedSpotForDelete.id);
       setDeleteSpotModalVisible(false);
       setNoticeModal({
         visible: true,
         title: 'Celda Eliminada',
-        message: `La celda ${selectedSpotForDelete.code} fue eliminada del sistema.`
+        message: `La celda ${selectedSpotForDelete.code} fue eliminada del sistema exitosamente.`
       });
       await loadParkingData();
     } catch (err: any) {
+      setDeleteSpotModalVisible(false);
       setNoticeModal({
         visible: true,
-        title: 'Error',
-        message: err.message || 'Error al eliminar la celda.',
+        title: 'Error al Eliminar Celda',
+        message: err.message || 'Error al eliminar la celda del sistema.',
         isError: true
       });
+    } finally {
+      setIsDeletingSpot(false);
     }
   };
 
@@ -1394,12 +1403,12 @@ export default function AdminGestion() {
                   {/* Tarjetas de Métricas de Disponibilidad */}
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                     {[
-                      { label: 'Salas Estándar', val: calendarMetrics.totalRooms, icon: 'business', color: '#7209B7', bg: '#F5F3FF' },
+                      { label: 'Total Espacios', val: calendarMetrics.totalRooms, icon: 'business', color: '#7209B7', bg: '#F5F3FF' },
+                      { label: 'Salas Especiales', val: calendarMetrics.specialRoomsCount, icon: 'sparkles', color: '#D97706', bg: '#FEF3C7' },
                       { label: 'Reservas del Día', val: calendarMetrics.dayReservationsCount, icon: 'bookmark', color: '#0F172A', bg: '#F1F5F9' },
                       { label: 'Franjas Disponibles', val: `${calendarMetrics.freeSlots} hrs`, icon: 'checkmark-circle', color: '#059669', bg: '#ECFDF5' },
                       { label: 'Ocupada (Confirmada)', val: `${calendarMetrics.confirmedSlots} hrs`, icon: 'shield-checkmark', color: '#2563EB', bg: '#EFF6FF' },
-                      { label: 'Pendiente Aprobación', val: `${calendarMetrics.pendingSlots} hrs`, icon: 'time', color: '#D97706', bg: '#FEF3C7' },
-                      { label: 'Disponibilidad Global', val: `${calendarMetrics.availabilityRate}%`, icon: 'pie-chart', color: '#475569', bg: '#F8FAFC' },
+                      { label: 'Pendiente Aprobación', val: `${calendarMetrics.pendingSlots} hrs`, icon: 'time', color: '#D97706', bg: '#FFFBEB' },
                     ].map((metric, idx) => (
                       <View 
                         key={idx}
@@ -1549,50 +1558,116 @@ export default function AdminGestion() {
                     gap: 12,
                     marginBottom: 16
                   }}>
-                    {/* Chips de filtro por sala */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                    {/* Chips de filtro por sala y categoría */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
+                      {/* Categorías Rápidas */}
                       <TouchableOpacity
-                        onPress={() => setCalendarRoomFilter('all')}
+                        onPress={() => {
+                          setCalendarCategoryFilter('all');
+                          setCalendarRoomFilter('all');
+                        }}
                         style={{
                           paddingHorizontal: 12,
                           paddingVertical: 7,
                           borderRadius: 10,
-                          backgroundColor: calendarRoomFilter === 'all' ? COLORS.primary : '#FFFFFF',
+                          backgroundColor: (calendarCategoryFilter === 'all' && calendarRoomFilter === 'all') ? COLORS.primary : '#FFFFFF',
                           borderWidth: 1,
-                          borderColor: calendarRoomFilter === 'all' ? COLORS.primary : '#E2E8F0'
+                          borderColor: (calendarCategoryFilter === 'all' && calendarRoomFilter === 'all') ? COLORS.primary : '#E2E8F0'
                         }}
                       >
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: calendarRoomFilter === 'all' ? '#FFFFFF' : COLORS.text }}>
-                          Todas las Salas ({standardRooms.length})
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: (calendarCategoryFilter === 'all' && calendarRoomFilter === 'all') ? '#FFFFFF' : COLORS.text }}>
+                          Todos los Espacios ({rooms.length})
                         </Text>
                       </TouchableOpacity>
 
-                      {standardRooms.map(room => (
-                        <TouchableOpacity
-                          key={room.id}
-                          onPress={() => setCalendarRoomFilter(room.id)}
-                          style={{
-                            paddingHorizontal: 12,
-                            paddingVertical: 7,
-                            borderRadius: 10,
-                            backgroundColor: calendarRoomFilter === room.id ? COLORS.purple : '#FFFFFF',
-                            borderWidth: 1,
-                            borderColor: calendarRoomFilter === room.id ? COLORS.purple : '#E2E8F0',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6
-                          }}
-                        >
-                          <Ionicons 
-                            name="business" 
-                            size={13} 
-                            color={calendarRoomFilter === room.id ? '#FFFFFF' : COLORS.muted} 
-                          />
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: calendarRoomFilter === room.id ? '#FFFFFF' : COLORS.text }}>
-                            {room.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                      <TouchableOpacity
+                        onPress={() => {
+                          setCalendarCategoryFilter('standard');
+                          setCalendarRoomFilter('all');
+                        }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 10,
+                          backgroundColor: calendarCategoryFilter === 'standard' ? COLORS.purple : '#FFFFFF',
+                          borderWidth: 1,
+                          borderColor: calendarCategoryFilter === 'standard' ? COLORS.purple : '#E2E8F0',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                      >
+                        <Ionicons name="business" size={13} color={calendarCategoryFilter === 'standard' ? '#FFFFFF' : COLORS.purple} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: calendarCategoryFilter === 'standard' ? '#FFFFFF' : COLORS.text }}>
+                          Estándar ({calendarMetrics.standardRoomsCount})
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          setCalendarCategoryFilter('special');
+                          setCalendarRoomFilter('all');
+                        }}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 10,
+                          backgroundColor: calendarCategoryFilter === 'special' ? '#D97706' : '#FFFFFF',
+                          borderWidth: 1,
+                          borderColor: calendarCategoryFilter === 'special' ? '#D97706' : '#FDE68A',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5
+                        }}
+                      >
+                        <Ionicons name="sparkles" size={13} color={calendarCategoryFilter === 'special' ? '#FFFFFF' : '#D97706'} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: calendarCategoryFilter === 'special' ? '#FFFFFF' : '#B45309' }}>
+                          Especiales / Auditorios ({calendarMetrics.specialRoomsCount})
+                        </Text>
+                      </TouchableOpacity>
+
+                      <View style={{ width: 1, height: 20, backgroundColor: '#CBD5E1', marginHorizontal: 4 }} />
+
+                      {/* Lista de salas individuales */}
+                      {rooms.map(room => {
+                        const isSpecial = isSpecialRoom(room);
+                        const isSelected = calendarRoomFilter === room.id;
+                        return (
+                          <TouchableOpacity
+                            key={room.id}
+                            onPress={() => {
+                              setCalendarRoomFilter(isSelected ? 'all' : room.id);
+                            }}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 7,
+                              borderRadius: 10,
+                              backgroundColor: isSelected ? (isSpecial ? '#D97706' : COLORS.purple) : '#FFFFFF',
+                              borderWidth: 1,
+                              borderColor: isSelected ? (isSpecial ? '#D97706' : COLORS.purple) : (isSpecial ? '#FDE68A' : '#E2E8F0'),
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6
+                            }}
+                          >
+                            <Ionicons 
+                              name={isSpecial ? "sparkles" : "business"} 
+                              size={13} 
+                              color={isSelected ? '#FFFFFF' : (isSpecial ? '#D97706' : COLORS.muted)} 
+                            />
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: isSelected ? '#FFFFFF' : (isSpecial ? '#92400E' : COLORS.text) }}>
+                              {room.name}
+                            </Text>
+                            {isSpecial && !isSelected && (
+                              <View style={{ backgroundColor: '#FEF08A', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 8, fontWeight: '800', color: '#854D0E', textTransform: 'uppercase' }}>
+                                  Especial
+                                </Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
                     </ScrollView>
 
                     {/* Buscador de sala */}
@@ -1684,32 +1759,58 @@ export default function AdminGestion() {
                           </View>
 
                           {/* Columnas de salas */}
-                          {calendarRooms.map(room => (
-                            <View 
-                              key={room.id} 
-                              style={{ 
-                                flex: 1, 
-                                minWidth: 180, 
-                                padding: 14, 
-                                borderRightWidth: 1, 
-                                borderRightColor: '#E2E8F0' 
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: '#F3E8FF', justifyContent: 'center', alignItems: 'center' }}>
-                                  <Ionicons name="business" size={14} color={COLORS.purple} />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.text }} numberOfLines={1}>
-                                    {room.name}
-                                  </Text>
-                                  <Text style={{ fontSize: 10, fontWeight: '600', color: COLORS.muted }}>
-                                    {room.floor || 'Sin piso'} • {room.capacity || '0'} pers.
-                                  </Text>
+                          {calendarRooms.map(room => {
+                            const isSpecial = isSpecialRoom(room);
+                            return (
+                              <View 
+                                key={room.id} 
+                                style={{ 
+                                  flex: 1, 
+                                  minWidth: 190, 
+                                  padding: 12, 
+                                  borderRightWidth: 1, 
+                                  borderRightColor: '#E2E8F0',
+                                  backgroundColor: isSpecial ? '#FEFCE8' : '#F8FAFC'
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <View style={{ 
+                                    width: 28, 
+                                    height: 28, 
+                                    borderRadius: 8, 
+                                    backgroundColor: isSpecial ? '#FEF08A' : '#F3E8FF', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center' 
+                                  }}>
+                                    <Ionicons 
+                                      name={isSpecial ? "sparkles" : "business"} 
+                                      size={14} 
+                                      color={isSpecial ? '#A16207' : COLORS.purple} 
+                                    />
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                      <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.text, flexShrink: 1 }} numberOfLines={1}>
+                                        {room.name}
+                                      </Text>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                                      {isSpecial && (
+                                        <View style={{ backgroundColor: '#FEF08A', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                          <Text style={{ fontSize: 9, fontWeight: '800', color: '#854D0E', textTransform: 'uppercase' }}>
+                                            Especial
+                                          </Text>
+                                        </View>
+                                      )}
+                                      <Text style={{ fontSize: 10, fontWeight: '600', color: isSpecial ? '#854D0E' : COLORS.muted }}>
+                                        {room.floor || 'PB'} • {room.capacity || '0'} p.
+                                      </Text>
+                                    </View>
+                                  </View>
                                 </View>
                               </View>
-                            </View>
-                          ))}
+                            );
+                          })}
                         </View>
 
                         {/* Filas: Cada hora de operación */}
@@ -3184,11 +3285,23 @@ export default function AdminGestion() {
             </Text>
 
             <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-              <TouchableOpacity onPress={() => setDeleteSpotModalVisible(false)} style={styles.btnSecondary}>
+              <TouchableOpacity 
+                disabled={isDeletingSpot} 
+                onPress={() => setDeleteSpotModalVisible(false)} 
+                style={[styles.btnSecondary, isDeletingSpot && { opacity: 0.5 }]}
+              >
                 <Text style={styles.btnSecondaryText}>Cancelar</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleConfirmDeleteSpot} style={[styles.btnPrimary, { backgroundColor: '#DC2626' }]}>
-                <Text style={styles.btnPrimaryText}>Eliminar Permanentemente</Text>
+              <TouchableOpacity 
+                disabled={isDeletingSpot} 
+                onPress={handleConfirmDeleteSpot} 
+                style={[styles.btnPrimary, { backgroundColor: '#DC2626' }, isDeletingSpot && { opacity: 0.7 }]}
+              >
+                {isDeletingSpot ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.btnPrimaryText}>Eliminar Permanentemente</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
