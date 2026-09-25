@@ -32,7 +32,7 @@ if (process.env.SMTP_HOST) {
   };
 }
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'solge@secretariajuridica.gov.co';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'SASGE@secretariajuridica.gov.co';
 
 const CATEGORIES = {
   'visitors': 'Ingreso Visitantes',

@@ -232,7 +232,7 @@ flowchart TD
 ## 6. Resumen de Reglas Globales de Correo en SASGE
 
 1. **Remitente Unificado:**
-   * Todos los correos institucionales salen desde: `solge@secretariajuridica.gov.co` (o variable `FROM_EMAIL`).
+   * Todos los correos institucionales salen desde: `SASGE@secretariajuridica.gov.co` (o variable `FROM_EMAIL`).
 2. **Firma Oficial:**
    * Todos los correos del sistema finalizan con:
      ```text
