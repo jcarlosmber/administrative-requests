@@ -4,6 +4,7 @@ import { TouchableOpacity, Platform, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ChatbotModal } from '../components/ChatbotModal';
+import { AccessibilityToolbar } from '../components/AccessibilityToolbar';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -56,32 +57,32 @@ export default function RootLayout() {
           name="requests/maintenance" 
           options={{ 
             presentation: 'modal',
-            title: 'Mantenimiento',
-            headerShown: false
+            title: 'Mantenimientos Locativos',
+            headerShown: true
           }} 
         />
         <Stack.Screen 
           name="requests/parking" 
           options={{ 
             presentation: 'modal',
-            title: 'Parqueadero',
-            headerShown: false
+            title: 'Cupo de Parqueadero',
+            headerShown: true
           }} 
         />
         <Stack.Screen 
           name="requests/transport" 
           options={{ 
             presentation: 'modal',
-            title: 'Transporte',
-            headerShown: false
+            title: 'Transporte Institucional',
+            headerShown: true
           }} 
         />
         <Stack.Screen 
           name="requests/visitors" 
           options={{ 
             presentation: 'modal',
-            title: 'Visitantes',
-            headerShown: false
+            title: 'Ingreso de Visitantes',
+            headerShown: true
           }} 
         />
         <Stack.Screen 
@@ -89,7 +90,7 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             title: 'Reserva de Salas',
-            headerShown: false
+            headerShown: true
           }} 
         />
         <Stack.Screen 
@@ -99,10 +100,19 @@ export default function RootLayout() {
             headerShown: true
           }} 
         />
+        <Stack.Screen 
+          name="requests/correct" 
+          options={{ 
+            presentation: 'modal',
+            title: 'Corregir Solicitud',
+            headerShown: false
+          }} 
+        />
       </Stack>
       <StatusBar style="auto" />
 
       <ChatbotModal />
+      <AccessibilityToolbar />
     </>
   );
 }

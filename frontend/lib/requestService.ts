@@ -125,6 +125,19 @@ export const requestService = {
     return await res.json() as AdministrativeRequest;
   },
 
+  async returnForCorrection(id: string, reason: string) {
+    const res = await fetch(`${API_URL}/api/requests/${id}/return`, {
+      method: 'POST',
+      headers: await getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Error al devolver la solicitud');
+    }
+    return await res.json() as AdministrativeRequest;
+  },
+
   async evaluateRequest(id: string, evaluation: { rating: number; comment?: string; serviceTaken?: boolean }) {
     const res = await fetch(`${API_URL}/api/requests/${id}/evaluate`, {
       method: 'POST',

@@ -1619,6 +1619,81 @@ app.post('/api/requests/:id/comment', authenticateToken, async (req, res) => {
   }
 });
 
+// Devolver una solicitud al funcionario para corrección (solo administradores).
+app.post('/api/requests/:id/return', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Solo administradores pueden devolver solicitudes.' });
+  }
+  const reason = String(req.body?.reason || '').trim();
+  if (!reason) {
+    return res.status(400).json({ error: 'Debes indicar el motivo de la devolución.' });
+  }
+
+  try {
+    const found = await pool.query('SELECT * FROM administrative_requests WHERE id = $1', [req.params.id]);
+    if (!found.rows.length) {
+      return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    }
+
+    const reqItem = found.rows[0];
+    let metadata = reqItem.metadata || {};
+    if (typeof metadata === 'string') {
+      try { metadata = JSON.parse(metadata); } catch (e) { metadata = {}; }
+    }
+
+    metadata.returned_for_correction = true;
+    metadata.return_reason = reason;
+    metadata.returned_at = new Date().toISOString();
+
+    const newStep = {
+      title: 'Devuelta para corrección',
+      date: new Date().toLocaleString('es-ES'),
+      desc: `Motivo: ${reason}`
+    };
+    metadata.timeline = [...(metadata.timeline || []), newStep];
+
+    metadata.notifications = [...(metadata.notifications || []), {
+      id: `return-${Date.now()}`,
+      title: 'Solicitud devuelta para corrección',
+      message: reason,
+      type: 'returned',
+      unread: true,
+      created_at: new Date().toISOString()
+    }];
+
+    const updateResult = await pool.query(
+      "UPDATE administrative_requests SET status = 'pendiente', admin_notes = $1, metadata = $2::jsonb, updated_at = NOW() WHERE id = $3 RETURNING *",
+      [reason, JSON.stringify(metadata), req.params.id]
+    );
+
+    const updatedRequest = updateResult.rows[0];
+
+    // Enviar notificación por correo al funcionario
+    try {
+      const userResult = await pool.query(
+        'SELECT name, full_name, first_name, last_name, email, dependency FROM users WHERE id = $1',
+        [updatedRequest.user_id]
+      );
+      if (userResult.rows.length > 0) {
+        const u = userResult.rows[0];
+        const displayName = u.full_name || (u.first_name && u.last_name ? `${u.first_name} ${u.last_name}` : null) || u.name || (u.email ? u.email.split('@')[0] : 'Funcionario Solicitante');
+        u.name = displayName;
+        updatedRequest.user_name = displayName;
+        updatedRequest.user_email = u.email;
+        updatedRequest.user_dependency = u.dependency;
+        emailService.sendRequestUpdatedNotification(u, updatedRequest);
+      }
+    } catch (emailErr) {
+      console.warn('Advertencia al enviar correo de solicitud devuelta:', emailErr.message);
+    }
+
+    res.json(updatedRequest);
+  } catch (err) {
+    console.error('Error al devolver la solicitud:', err);
+    res.status(500).json({ error: 'Error al devolver la solicitud.' });
+  }
+});
+
 // Actualizar estado de una solicitud (Admin only) evadiendo falsos positivos de WAF
 app.post('/api/requests/:id/status', authenticateToken, async (req, res) => {
   const { id } = req.params;

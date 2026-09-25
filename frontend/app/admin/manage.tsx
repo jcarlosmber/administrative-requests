@@ -169,6 +169,7 @@ export default function ManageRequests() {
     rejectReason?: string;
   } | null>(null);
   const [driverModal, setDriverModal] = useState<{ visible: boolean; item: AdministrativeRequest | null }>({ visible: false, item: null });
+  const [returnModal, setReturnModal] = useState<{ visible: boolean; item: any; reason: string }>({ visible: false, item: null, reason: '' });
   const [availableDrivers, setAvailableDrivers] = useState<Driver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [loadingDrivers, setLoadingDrivers] = useState(false);
@@ -372,6 +373,30 @@ export default function ManageRequests() {
       setSuccessModal({ visible: true, message: `La solicitud fue ${actionName} exitosamente.` });
     } catch (err: any) {
       console.error('Error al actualizar estado:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const askReturn = (item: any) => {
+    setReturnModal({ visible: true, item, reason: '' });
+  };
+
+  const handleReturnSubmit = async () => {
+    if (!returnModal.item) return;
+    const reasonText = returnModal.reason.trim();
+    if (!reasonText) {
+      setSuccessModal({ visible: true, message: 'Debes indicar el motivo de devolución para el funcionario.' });
+      return;
+    }
+    try {
+      setLoading(true);
+      await requestService.returnForCorrection(returnModal.item.id, reasonText);
+      setReturnModal({ visible: false, item: null, reason: '' });
+      await fetchRequests();
+      setSuccessModal({ visible: true, message: 'La solicitud fue devuelta al funcionario para corrección.' });
+    } catch (err: any) {
+      setSuccessModal({ visible: true, message: err.message || 'Error al devolver la solicitud.' });
     } finally {
       setLoading(false);
     }
@@ -915,6 +940,7 @@ export default function ManageRequests() {
                 <RequestTableRow 
                   item={mapRequestToUI(item)} 
                   onUpdateStatus={askConfirmation} 
+                  onReturnRequest={askReturn}
                   onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
                   onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
                 />
@@ -922,6 +948,7 @@ export default function ManageRequests() {
                 <RequestListItem 
                   item={mapRequestToUI(item)} 
                   onUpdateStatus={askConfirmation} 
+                  onReturnRequest={askReturn}
                   onRefresh={fetchRequests} 
                   onSuccessAction={(msg: string) => setSuccessModal({ visible: true, message: msg })} 
                   setViewerImage={setViewerImage} 
@@ -1353,6 +1380,72 @@ export default function ManageRequests() {
                     Aplicar Filtro
                   </Text>
                 </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para Devolver Solicitud para Corrección */}
+      <Modal 
+        visible={returnModal.visible} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setReturnModal({ visible: false, item: null, reason: '' })}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[styles.modalContent, { maxWidth: 500 }]}>
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setReturnModal({ visible: false, item: null, reason: '' })}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+
+            <View style={[styles.modalIconBox, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1.5 }]}>
+              <Ionicons name="return-down-back" size={32} color="#D97706" />
+            </View>
+            <Text style={styles.modalTitle}>Devolver Solicitud</Text>
+            <Text style={styles.modalMessage}>
+              Indica al funcionario solicitante qué información debe ajustar, completar o subsanar en su requerimiento:
+            </Text>
+
+            <TextInput
+              style={{
+                width: '100%',
+                backgroundColor: '#F8FAFC',
+                borderWidth: 1.5,
+                borderColor: '#CBD5E1',
+                borderRadius: 12,
+                padding: 14,
+                fontSize: 13.5,
+                color: '#0F172A',
+                minHeight: 110,
+                textAlignVertical: 'top',
+                marginBottom: 20,
+              }}
+              placeholder="Ej: Por favor adjuntar el documento de identidad legible y especificar la empresa de procedencia..."
+              placeholderTextColor="#94A3B8"
+              value={returnModal.reason}
+              onChangeText={(text) => setReturnModal(prev => ({ ...prev, reason: text }))}
+              multiline
+            />
+
+            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { flex: 1, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' }]}
+                onPress={() => setReturnModal({ visible: false, item: null, reason: '' })}
+              >
+                <Text style={[styles.modalBtnText, { color: '#475569' }]}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { flex: 1.2, backgroundColor: '#D97706' }]}
+                onPress={handleReturnSubmit}
+              >
+                <Ionicons name="return-down-back" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={[styles.modalBtnText, { color: '#FFFFFF' }]}>Confirmar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2661,6 +2754,7 @@ export default function ManageRequests() {
           }
         }}
         onUpdateStatus={askConfirmation}
+        onReturnRequest={askReturn}
         onAssignDriver={(reqItem: any) => {
           setDrawerItem(null);
           if (params.id) {
@@ -3908,6 +4002,7 @@ function RequestTableHeader() {
 function RequestTableRow({
   item,
   onUpdateStatus,
+  onReturnRequest,
   onAssignDriver,
   onOpenDetail,
 }: any) {
@@ -4161,6 +4256,30 @@ function RequestTableRow({
                 <Ionicons name="close" size={15} color="#FFFFFF" />
               </Pressable>
             )}
+
+            {/* Botón Devolver */}
+            <Pressable
+              onPress={(e: any) => {
+                e?.stopPropagation?.();
+                onReturnRequest && onReturnRequest(item);
+              }}
+              style={({ hovered }: any) => [
+                {
+                  backgroundColor: hovered ? '#D97706' : '#F59E0B',
+                  borderWidth: 0,
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Devolver para corrección"
+            >
+              <Ionicons name="return-down-back" size={14} color="#FFFFFF" />
+            </Pressable>
           </>
         )}
 
@@ -4220,6 +4339,7 @@ function RequestDetailModal({
   item,
   onClose,
   onUpdateStatus,
+  onReturnRequest,
   onAssignDriver,
   setViewerImage,
   onRefresh,
@@ -4847,6 +4967,32 @@ function RequestDetailModal({
                 </Pressable>
               )}
 
+              {/* Devolver para corrección */}
+              {!isClosed && (
+                <Pressable
+                  onPress={() => {
+                    onClose();
+                    onReturnRequest && onReturnRequest(item);
+                  }}
+                  style={({ hovered }: any) => [
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 16,
+                      height: 38,
+                      borderRadius: 9999,
+                      backgroundColor: hovered ? '#D97706' : '#F59E0B',
+                      borderWidth: 0,
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
+                >
+                  <Ionicons name="return-down-back" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>DEVOLVER</Text>
+                </Pressable>
+              )}
+
               {/* Rechazar (a la derecha) */}
               {!isClosed && !isSpecialRoom && (
                 <Pressable
@@ -4883,6 +5029,7 @@ function RequestDetailModal({
 function RequestListItem({ 
   item, 
   onUpdateStatus, 
+  onReturnRequest,
   onRefresh, 
   onSuccessAction, 
   setViewerImage, 
@@ -5136,6 +5283,27 @@ function RequestListItem({
                 >
                   <Ionicons name="checkmark-done" size={14} color="#FFFFFF" />
                   <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>FINALIZAR</Text>
+                </Pressable>
+              )}
+
+              {/* Botón Devolver para corrección */}
+              {!isClosed && (
+                <Pressable 
+                  style={({ hovered }: any) => [
+                    styles.actionBtn, 
+                    { 
+                      backgroundColor: hovered ? '#D97706' : '#F59E0B', 
+                      borderWidth: 0, 
+                      borderRadius: 9999,
+                      height: 34, 
+                      paddingHorizontal: 14 
+                    },
+                    Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
+                  ]}
+                  onPress={() => onReturnRequest && onReturnRequest(item)}
+                >
+                  <Ionicons name="return-down-back" size={14} color="#FFFFFF" />
+                  <Text style={[styles.actionBtnText, { color: '#FFFFFF', fontSize: 11.5 }]}>DEVOLVER</Text>
                 </Pressable>
               )}
 

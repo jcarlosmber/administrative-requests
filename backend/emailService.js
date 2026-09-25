@@ -1308,6 +1308,44 @@ function getGenericEmailContent(request, isUserRecipient, isUpdate, status, user
  */
 function getServiceEmailData({ request, user, isUserRecipient, isUpdate, triggerStatus, adminEmails = [] }) {
   const category = request.category?.toLowerCase();
+
+  let meta = request.metadata || {};
+  if (typeof meta === 'string') {
+    try { meta = JSON.parse(meta); } catch (e) { meta = {}; }
+  }
+
+  if (meta.returned_for_correction && isUserRecipient && isUpdate) {
+    const categoryName = CATEGORIES[category] || category || 'General';
+    const reasonText = meta.return_reason || request.admin_notes || 'Información pendiente de ajuste.';
+    const subject = `Solicitud devuelta para corrección – ${categoryName}`;
+    const html = renderServiceEmailLayout({
+      serviceCategory: category,
+      headerSubTitle: categoryName,
+      introParagraph: `Apreciado(a) <strong>${user?.name || 'Funcionario(a)'}</strong>, tu solicitud ha sido <strong>DEVUELTA POR LA ADMINISTRACIÓN</strong> para que corrijas o agregues la información solicitada:`,
+      cardItems: [
+        { label: 'Servicio / Categoría', value: categoryName },
+        { label: 'Asunto de la Solicitud', value: request.title || 'N/A' },
+        { label: 'Motivo de Devolución', value: reasonText },
+        { label: 'Estado', value: 'DEVUELTA PARA CORRECCIÓN' }
+      ],
+      extraSectionsHtml: `
+        <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 12px 16px; margin: 15px 0; border-radius: 4px;">
+          <strong style="color: #92400E; display: block; margin-bottom: 4px;">Instrucción del Administrador:</strong>
+          <span style="color: #78350F; font-size: 13.5px; line-height: 1.5;">${reasonText}</span>
+        </div>
+      `,
+      closingParagraphs: [
+        'Para corregir tu requerimiento, ingresa al aplicativo SASGE, ve a la sección "Mis Solicitudes" y haz clic en "Corregir Solicitud".',
+        'Una vez guardes los cambios, la solicitud volverá automáticamente a la bandeja del administrador para su gestión.'
+      ],
+      actionButton: {
+        text: 'Corregir Solicitud en SASGE',
+        url: 'https://sasge.secretariajuridica.gov.co/dashboard/requests'
+      }
+    });
+    return { subject, html };
+  }
+
   switch (category) {
     case 'visitors':
       return getVisitorsEmailContent(request, isUserRecipient, isUpdate, triggerStatus, user);
