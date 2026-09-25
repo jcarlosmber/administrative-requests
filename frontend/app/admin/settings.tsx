@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
+import { createStyledSheet, downloadWorkbook } from '../../lib/excelExport';
 import {
   View,
   Text,
@@ -890,28 +891,34 @@ export default function AdminSettings() {
       dependencia: dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || '',
       entidad: user.entity || '',
       rol: user.role === 'superadmin' ? 'Super Administrador' : user.role === 'admin' ? 'Administrador' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
-      activo: user.is_active ? 'Sí' : 'No',
+      activo: user.is_active ? 'ACTIVO' : 'INACTIVO',
       inicio: user.start_date || '',
       vencimiento: user.end_date || '',
       ldap: user.ldap_enabled ? 'Sí' : 'No'
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Usuarios');
-
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array'
+    const sheet = createStyledSheet({
+      sheetName: 'Usuarios',
+      title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+      subtitle: 'SISTEMA SASGE — REPORTE DE USUARIOS Y ROLES DEL SISTEMA',
+      metaInfo: `Fecha de Emisión: ${new Date().toLocaleDateString('es-CO')} | Total de Usuarios: ${exportRows.length}`,
+      columns: [
+        { header: 'NOMBRE COMPLETO', key: 'nombre', width: 28 },
+        { header: 'CORREO ELECTRÓNICO', key: 'email', width: 28 },
+        { header: 'USUARIO', key: 'usuario', width: 16, align: 'center' },
+        { header: 'TELÉFONO', key: 'telefono', width: 16, align: 'center' },
+        { header: 'DEPENDENCIA', key: 'dependencia', width: 30 },
+        { header: 'ROL EN SASGE', key: 'rol', width: 22, align: 'center' },
+        { header: 'ESTADO', key: 'activo', width: 14, align: 'center', isStatus: true },
+        { header: 'FECHA INICIO', key: 'inicio', width: 16, align: 'center' },
+        { header: 'FECHA VENCIMIENTO', key: 'vencimiento', width: 18, align: 'center' },
+        { header: 'LDAP / AD', key: 'ldap', width: 14, align: 'center' }
+      ],
+      data: exportRows
     });
-
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'usuarios.xlsx';
-    link.click();
-    URL.revokeObjectURL(url);
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Usuarios');
+    downloadWorkbook(workbook, 'Usuarios_SASGE_Oficial.xlsx');
   }, [filteredUsers, dependencies]);
 
   const addUser = () => {

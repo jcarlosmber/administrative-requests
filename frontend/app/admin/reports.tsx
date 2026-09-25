@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
+import { createStyledSheet, downloadWorkbook } from '../../lib/excelExport';
 import { 
   View, 
   Text, 
@@ -764,6 +765,11 @@ export default function AdminReports() {
   };
 
   const handleExportExcel = useCallback(() => {
+    const workbook = XLSX.utils.book_new();
+    const periodLabel = reportPeriodLabel || 'Periodo';
+    const emissionDate = new Date().toLocaleDateString('es-CO');
+
+    // 1. HOJA 1: Reporte General de Solicitudes Administrativas
     const exportRows = dbData.map(row => {
       const cat = (row.category || '').toLowerCase();
       const isEvalCat = isEvalActive(cat);
@@ -772,117 +778,214 @@ export default function AdminReports() {
       const dep = row.metadata?.dependency || row.metadata?.responsible?.dependency || row.profiles?.dependency?.name || row.user_dependency || 'Secretaría Jurídica Distrital';
       const sol = row.metadata?.name || row.profiles?.full_name || row.user_name || 'Servidor';
 
+      const serviceMap: Record<string, string> = {
+        visitors: 'Control de Acceso / Visitantes',
+        maintenance: 'Mantenimiento Locativo',
+        parking: 'Acceso Parqueadero',
+        rooms: 'Salas de Juntas',
+        transport: 'Movilidad Institucional'
+      };
+
       const base: any = {
-        id: row.id,
+        id: row.id ? String(row.id).slice(0, 8).toUpperCase() : '',
+        fecha: row.created_at ? new Date(row.created_at).toLocaleDateString('es-CO') : '',
+        servicio: serviceMap[cat] || row.category || 'General',
         titulo: row.title || '',
-        categoria: row.category || '',
-        estado: row.status || '',
-        prioridad: row.priority || '',
-        fecha_creacion: row.created_at || '',
-        dependencia: dep,
+        estado: (row.status || '').toUpperCase(),
+        prioridad: (row.priority || '').toUpperCase(),
         solicitante: sol,
+        dependencia: dep,
+        calificacion: isEvalCat && row.metadata?.evaluation?.rating != null ? `${row.metadata.evaluation.rating} / 5` : 'Sin calificar',
+        comentario_evaluacion: isEvalCat ? (row.metadata?.evaluation?.comment || '—') : '—',
+        descripcion: row.description || ''
       };
 
       if (isParking) {
         base.placa = row.metadata?.plate || '';
-        base.vehiculo_modelo = [row.metadata?.brand, row.metadata?.model].filter(Boolean).join(' ') || row.metadata?.vehicleType || row.title || '';
-        base.color = row.metadata?.color || '';
       }
 
-      if (isEvalCat) {
-        base.calificacion = row.metadata?.evaluation?.rating != null ? `${row.metadata.evaluation.rating} / 5` : 'Sin calificar';
-        base.comentario_evaluacion = row.metadata?.evaluation?.comment || '';
-        base.servicio_prestado = row.metadata?.evaluation ? (row.metadata.evaluation.serviceTaken ? 'Sí' : 'No') : '';
-        base.fecha_evaluacion = row.metadata?.evaluation?.date || '';
-      }
-
-      base.descripcion = row.description || '';
       return base;
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte General');
+    const generalSheet = createStyledSheet({
+      sheetName: 'Reporte General',
+      title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+      subtitle: 'SISTEMA SASGE — REPORTE GENERAL DE GESTIÓN OPERATIVA Y SERVICIOS',
+      metaInfo: `Periodo: ${periodLabel} | Fecha de Emisión: ${emissionDate} | Total de Solicitudes: ${exportRows.length}`,
+      columns: [
+        { header: 'RADICADO', key: 'id', width: 14, align: 'center' },
+        { header: 'FECHA', key: 'fecha', width: 13, align: 'center' },
+        { header: 'MÓDULO / SERVICIO', key: 'servicio', width: 26 },
+        { header: 'ASUNTO / TÍTULO', key: 'titulo', width: 34 },
+        { header: 'ESTADO', key: 'estado', width: 16, align: 'center', isStatus: true },
+        { header: 'PRIORIDAD', key: 'prioridad', width: 14, align: 'center' },
+        { header: 'PERSONA SOLICITANTE', key: 'solicitante', width: 26 },
+        { header: 'DEPENDENCIA', key: 'dependencia', width: 30 },
+        { header: 'CALIFICACIÓN', key: 'calificacion', width: 15, align: 'center' },
+        { header: 'RETROALIMENTACIÓN CSAT', key: 'comentario_evaluacion', width: 32 },
+        { header: 'DETALLE / OBSERVACIONES', key: 'descripcion', width: 40 }
+      ],
+      data: exportRows
+    });
+    XLSX.utils.book_append_sheet(workbook, generalSheet, 'Reporte General');
 
-    // Hojas Específicas de Control de Parqueadero
+    // 2. HOJA 2: CARROS AUTORIZADOS (Dividido claramente de motos)
+    const fixedCars = (parkingStats.fixedCellVehicles || []).filter(v => getVehicleType(v) !== 'moto');
+    const freeCars = (parkingStats.freeUseVehicles || []).filter(v => getVehicleType(v) !== 'moto');
+
+    const allCars = [
+      ...fixedCars.map(v => ({ ...v, _modalidad: 'Celda Fija', _celdaAsignada: v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija' })),
+      ...freeCars.map(v => ({ ...v, _modalidad: 'Uso Libre Rotativo', _celdaAsignada: 'Rotativo / Libre' }))
+    ].sort((a, b) => (a.plate || '').localeCompare(b.plate || ''));
+
+    const carDataRows = allCars.map(v => ({
+      placa: v.plate || '',
+      modalidad: v._modalidad,
+      celda: v._celdaAsignada,
+      titular: v.name || v.owner_name || 'Servidor institucional',
+      documento: v.doc || 'S/N',
+      vehiculo: `${v.brand || ''} ${v.model || ''}`.trim() || 'Automóvil',
+      color: v.color || 'No especificado',
+      estado: v.is_active !== false ? 'ACTIVO' : 'INACTIVO',
+      autorizacion: v.is_active !== false ? 'Autorizado para Ingreso' : 'Suspendido / Inactivo',
+      dependencia: v.dependency || 'Secretaría Jurídica Distrital'
+    }));
+
+    const carsSheet = createStyledSheet({
+      sheetName: 'Carros Autorizados',
+      title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+      subtitle: 'CONTROL DE ACCESO A PARQUEADERO — VEHÍCULOS DE CUATRO RUEDAS (CARROS)',
+      metaInfo: `Periodo: ${periodLabel} | Fecha de Emisión: ${emissionDate} | Total Carros Autorizados: ${carDataRows.length} (${fixedCars.length} fijas, ${freeCars.length} uso libre)`,
+      columns: [
+        { header: 'PLACA', key: 'placa', width: 14, align: 'center', isPlate: true },
+        { header: 'MODALIDAD', key: 'modalidad', width: 22, align: 'center', isStatus: true },
+        { header: 'CELDA ASIGNADA', key: 'celda', width: 18, align: 'center' },
+        { header: 'PERSONA TITULAR', key: 'titular', width: 28 },
+        { header: 'IDENTIFICACIÓN', key: 'documento', width: 16, align: 'center' },
+        { header: 'VEHÍCULO / MODELO', key: 'vehiculo', width: 24 },
+        { header: 'COLOR', key: 'color', width: 15, align: 'center' },
+        { header: 'ESTADO', key: 'estado', width: 14, align: 'center', isStatus: true },
+        { header: 'ESTADO DE ACCESO', key: 'autorizacion', width: 24 },
+        { header: 'DEPENDENCIA', key: 'dependencia', width: 30 }
+      ],
+      data: carDataRows
+    });
+    XLSX.utils.book_append_sheet(workbook, carsSheet, 'Carros Autorizados');
+
+    // 3. HOJA 3: MOTOS AUTORIZADAS (Dividido claramente de carros)
+    const fixedMotos = (parkingStats.fixedCellVehicles || []).filter(v => getVehicleType(v) === 'moto');
+    const freeMotos = (parkingStats.freeUseVehicles || []).filter(v => getVehicleType(v) === 'moto');
+
+    const allMotos = [
+      ...fixedMotos.map(v => ({ ...v, _modalidad: 'Cupo Fijo Asignado', _celdaAsignada: v.spot_code ? `Celda ${v.spot_code}` : 'Cupo Fijo' })),
+      ...freeMotos.map(v => ({ ...v, _modalidad: 'Uso Libre Rotativo', _celdaAsignada: 'Rotativo / Libre' }))
+    ].sort((a, b) => (a.plate || '').localeCompare(b.plate || ''));
+
+    const motoDataRows = allMotos.map(v => ({
+      placa: v.plate || '',
+      modalidad: v._modalidad,
+      celda: v._celdaAsignada,
+      titular: v.name || v.owner_name || 'Servidor institucional',
+      documento: v.doc || 'S/N',
+      vehiculo: `${v.brand || ''} ${v.model || ''}`.trim() || 'Motocicleta',
+      color: v.color || 'No especificado',
+      estado: v.is_active !== false ? 'ACTIVO' : 'INACTIVO',
+      autorizacion: v.is_active !== false ? 'Autorizado para Ingreso' : 'Suspendido / Inactivo',
+      dependencia: v.dependency || 'Secretaría Jurídica Distrital'
+    }));
+
+    const motosSheet = createStyledSheet({
+      sheetName: 'Motos Autorizadas',
+      title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+      subtitle: 'CONTROL DE ACCESO A PARQUEADERO — MOTOCICLETAS (MOTOS)',
+      metaInfo: `Periodo: ${periodLabel} | Fecha de Emisión: ${emissionDate} | Total Motos Autorizadas: ${motoDataRows.length} (${fixedMotos.length} cupos fijos, ${freeMotos.length} uso libre)`,
+      columns: [
+        { header: 'PLACA', key: 'placa', width: 14, align: 'center', isPlate: true },
+        { header: 'MODALIDAD', key: 'modalidad', width: 22, align: 'center', isStatus: true },
+        { header: 'CUPO / CELDA', key: 'celda', width: 18, align: 'center' },
+        { header: 'PERSONA TITULAR', key: 'titular', width: 28 },
+        { header: 'IDENTIFICACIÓN', key: 'documento', width: 16, align: 'center' },
+        { header: 'MOTOCICLETA / LÍNEA', key: 'vehiculo', width: 24 },
+        { header: 'COLOR', key: 'color', width: 15, align: 'center' },
+        { header: 'ESTADO', key: 'estado', width: 14, align: 'center', isStatus: true },
+        { header: 'ESTADO DE ACCESO', key: 'autorizacion', width: 24 },
+        { header: 'DEPENDENCIA', key: 'dependencia', width: 30 }
+      ],
+      data: motoDataRows
+    });
+    XLSX.utils.book_append_sheet(workbook, motosSheet, 'Motos Autorizadas');
+
+    // 4. HOJA 4: INVENTARIO FÍSICO DE CELDAS DE PARQUEADERO
     if (parkingSpots.length > 0) {
       const sortedSpots = [...parkingSpots].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true }));
       const spotRows = sortedSpots.map(s => {
         const sType = getSpotVehicleType(s);
         return {
-          Codigo_Celda: s.code,
-          Modalidad_Celda: s.spot_type === 'fija' ? 'Celda Fija' : 'Variable / Libre Rotativa',
-          Vehiculo_Admitido: sType === 'moto' ? 'Moto' : sType === 'mixto' ? 'Mixto (Carro / Moto)' : 'Carro',
-          Estado: s.status?.toUpperCase() || 'DISPONIBLE',
-          Asignado_A: s.assigned_user_name || 'Sin asignar',
-          ID_Usuario: s.assigned_user_id || '',
-          Observaciones: s.notes || ''
+          codigo: s.code,
+          modalidad: s.spot_type === 'fija' ? 'Celda Fija' : 'Uso Libre Rotativo',
+          tipo: sType === 'moto' ? 'Moto' : sType === 'mixto' ? 'Mixto (Carro / Moto)' : 'Carro',
+          estado: (s.status || 'DISPONIBLE').toUpperCase(),
+          titular: s.assigned_user_name || 'Sin asignar / Disponible',
+          observaciones: s.notes || '—'
         };
       });
-      const wsSpots = XLSX.utils.json_to_sheet(spotRows);
-      XLSX.utils.book_append_sheet(workbook, wsSpots, 'Ocupación Celdas');
-    }
 
-    if (parkingStats.fixedCellVehicles.length > 0) {
-      const sortedFixed = [...parkingStats.fixedCellVehicles].sort((a, b) => (a.plate || '').localeCompare(b.plate || ''));
-      const fixedRows = sortedFixed.map(v => {
-        const vType = getVehicleType(v);
-        return {
-          Placa: v.plate,
-          Tipo_Vehiculo: vType === 'moto' ? 'Moto' : 'Carro',
-          Persona: v.name || v.owner_name || 'Servidor',
-          Identificacion: v.doc || 'S/N',
-          Vehiculo: `${v.brand} ${v.model || ''}`.trim(),
-          Color: v.color || '',
-          Modalidad: 'Celda Fija',
-          Celda_Asignada: v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija',
-          Estado: v.is_active !== false ? 'ACTIVO' : 'INACTIVO',
-          Autorizacion: v.is_active !== false ? 'Autorizado (Cupo Fijo)' : 'Inactivo',
-          Dependencia: v.dependency || ''
-        };
+      const spotsSheet = createStyledSheet({
+        sheetName: 'Inventario Celdas',
+        title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+        subtitle: 'INVENTARIO Y CAPACIDAD FÍSICA DE CELDAS DE PARQUEADERO',
+        metaInfo: `Capacidad: ${parkingStats.totalSpots} Celdas (${parkingStats.carSpots} Carros, ${parkingStats.motoSpots} Motos) | Disponibles: ${parkingStats.availableSpots} | Ocupación: ${parkingStats.occupancyRate}%`,
+        columns: [
+          { header: 'CÓDIGO CELDA', key: 'codigo', width: 16, align: 'center' },
+          { header: 'MODALIDAD', key: 'modalidad', width: 22, align: 'center', isStatus: true },
+          { header: 'TIPO ADMITIDO', key: 'tipo', width: 22, align: 'center' },
+          { header: 'ESTADO ACTUAL', key: 'estado', width: 16, align: 'center', isStatus: true },
+          { header: 'TITULAR ASIGNADO', key: 'titular', width: 28 },
+          { header: 'UBICACIÓN / NOTAS', key: 'observaciones', width: 34 }
+        ],
+        data: spotRows
       });
-      const wsFixed = XLSX.utils.json_to_sheet(fixedRows);
-      XLSX.utils.book_append_sheet(workbook, wsFixed, 'Vehículos Celda Fija');
+      XLSX.utils.book_append_sheet(workbook, spotsSheet, 'Inventario Celdas');
     }
 
-    if (parkingStats.freeUseVehicles.length > 0) {
-      const sortedFree = [...parkingStats.freeUseVehicles].sort((a, b) => (a.plate || '').localeCompare(b.plate || ''));
-      const freeRows = sortedFree.map(v => {
-        const vType = getVehicleType(v);
-        return {
-          Placa: v.plate,
-          Tipo_Vehiculo: vType === 'moto' ? 'Moto' : 'Carro',
-          Persona: v.name || v.owner_name || 'Servidor',
-          Identificacion: v.doc || 'S/N',
-          Vehiculo: `${v.brand} ${v.model || ''}`.trim(),
-          Color: v.color || '',
-          Modalidad: 'Variable / Uso Libre Rotativo',
-          Tipo_Parqueadero: 'Parqueadero de Uso Libre / Rotativo',
-          Estado: v.is_active !== false ? 'ACTIVO' : 'INACTIVO',
-          Autorizacion: v.is_active !== false ? 'Autorizado (Uso Libre)' : 'Inactivo',
-          Dependencia: v.dependency || ''
-        };
+    // 5. HOJA 5: SOLICITUDES DE PARQUEADERO DEL PERIODO
+    const parkingRequests = dbData.filter(d => (d.category || '').toLowerCase() === 'parking');
+    if (parkingRequests.length > 0) {
+      const reqRows = parkingRequests.map(r => ({
+        fecha: r.created_at ? new Date(r.created_at).toLocaleDateString('es-CO') : '',
+        placa: r.metadata?.plate || 'S/P',
+        tipo: r.metadata?.vehicleType || (r.metadata?.plate?.length === 5 ? 'Moto' : 'Carro'),
+        vehiculo: [r.metadata?.brand, r.metadata?.model].filter(Boolean).join(' ') || r.title || 'Vehículo',
+        solicitante: r.metadata?.name || r.profiles?.full_name || r.user_name || 'Servidor',
+        dependencia: r.metadata?.dependency || r.profiles?.dependency?.name || r.user_dependency || 'Secretaría Jurídica Distrital',
+        estado: (r.status || '').toUpperCase(),
+        calificacion: r.metadata?.evaluation?.rating != null ? `${r.metadata.evaluation.rating} / 5` : 'Sin calificar'
+      }));
+
+      const reqSheet = createStyledSheet({
+        sheetName: 'Solicitudes Parqueadero',
+        title: 'ALCALDÍA MAYOR DE BOGOTÁ D.C. — SECRETARÍA JURÍDICA DISTRITAL',
+        subtitle: 'HISTORIAL DE SOLICITUDES DE ASIGNACIÓN DE PARQUEADERO',
+        metaInfo: `Periodo: ${periodLabel} | Total Solicitudes: ${reqRows.length}`,
+        columns: [
+          { header: 'FECHA RADICACIÓN', key: 'fecha', width: 18, align: 'center' },
+          { header: 'PLACA', key: 'placa', width: 14, align: 'center', isPlate: true },
+          { header: 'TIPO VEHÍCULO', key: 'tipo', width: 16, align: 'center' },
+          { header: 'VEHÍCULO / MODELO', key: 'vehiculo', width: 26 },
+          { header: 'SOLICITANTE', key: 'solicitante', width: 26 },
+          { header: 'DEPENDENCIA', key: 'dependencia', width: 30 },
+          { header: 'ESTADO TRÁMITE', key: 'estado', width: 16, align: 'center', isStatus: true },
+          { header: 'CALIFICACIÓN', key: 'calificacion', width: 16, align: 'center' }
+        ],
+        data: reqRows
       });
-      const wsFree = XLSX.utils.json_to_sheet(freeRows);
-      XLSX.utils.book_append_sheet(workbook, wsFree, 'Vehículos Uso Libre');
+      XLSX.utils.book_append_sheet(workbook, reqSheet, 'Solicitudes Parqueadero');
     }
 
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: 'xlsx',
-      type: 'array'
-    });
-
-    const blob = new Blob([excelBuffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `reporte_general_${selectedMonth || 'periodo'}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, [dbData, selectedMonth, parkingSpots, parkingStats]);
+    // Descarga con nombre profesional
+    const cleanPeriod = (selectedMonth || 'periodo').replace(/[^a-zA-Z0-9_-]/g, '_');
+    downloadWorkbook(workbook, `Reporte_Oficial_SASGE_${cleanPeriod}.xlsx`);
+  }, [dbData, selectedMonth, reportPeriodLabel, parkingSpots, parkingStats]);
 
   const triggerPdfGeneration = () => {
     setIsGeneratingPdf(true);
@@ -1167,9 +1270,16 @@ export default function AdminReports() {
       } else if (reportTab === 'parking') {
         const parkingRows = dbData.filter(d => d.category === 'parking');
         const showParkingEval = isEvalActive('parking');
-        const fixedList = filteredReportFixedVehicles;
-        const freeList = filteredReportFreeVehicles;
         const spotsList = filteredReportSpots;
+
+        // División explícita de vehículos autorizados en Carros y Motos
+        const fixedCars = filteredReportFixedVehicles.filter(v => getVehicleType(v) !== 'moto');
+        const fixedMotos = filteredReportFixedVehicles.filter(v => getVehicleType(v) === 'moto');
+        const freeCars = filteredReportFreeVehicles.filter(v => getVehicleType(v) !== 'moto');
+        const freeMotos = filteredReportFreeVehicles.filter(v => getVehicleType(v) === 'moto');
+
+        const totalCars = fixedCars.length + freeCars.length;
+        const totalMotos = fixedMotos.length + freeMotos.length;
 
         const cellFilterLabel = parkingCellTypeFilter === 'all' 
           ? 'Todas (Fijas y Uso Libre)' 
@@ -1185,25 +1295,150 @@ export default function AdminReports() {
           <div class="meta-box">
             <div class="meta-item"><strong>Periodo Evaluado:</strong> ${reportPeriodLabel}</div>
             <div class="meta-item"><strong>Fecha Emisión:</strong> ${todayStr}</div>
-            <div class="meta-item"><strong>Total Celdas:</strong> ${parkingStats.totalSpots} (${parkingStats.fixedSpots} fijas, ${parkingStats.freeSpots} rotativas)</div>
-            <div class="meta-item"><strong>Disponibilidad:</strong> ${parkingStats.availableSpots} libres | ${parkingStats.assignedSpots} ocupadas/asignadas</div>
-            <div class="meta-item"><strong>Filtro Modalidad Celda:</strong> ${cellFilterLabel}</div>
-            <div class="meta-item"><strong>Filtro Tipo Vehículo:</strong> ${vTypeFilterLabel}</div>
-            <div class="meta-item"><strong>Orden Vehículos:</strong> ${sortLabel}</div>
+            <div class="meta-item"><strong>Celdas Físicas:</strong> ${parkingStats.totalSpots} (${parkingStats.fixedSpots} fijas, ${parkingStats.freeSpots} rotativas)</div>
+            <div class="meta-item"><strong>Disponibilidad Celdas:</strong> ${parkingStats.availableSpots} libres | ${parkingStats.assignedSpots} ocupadas</div>
+            <div class="meta-item"><strong>Automóviles (Carros):</strong> ${totalCars} autorizados (${fixedCars.length} fijas, ${freeCars.length} uso libre)</div>
+            <div class="meta-item"><strong>Motocicletas (Motos):</strong> ${totalMotos} autorizadas (${fixedMotos.length} cupos fijos, ${freeMotos.length} uso libre)</div>
+            <div class="meta-item"><strong>Filtro Activo:</strong> ${vTypeFilterLabel} • ${cellFilterLabel}</div>
             <div class="meta-item"><strong>Tasa de Ocupación:</strong> ${parkingStats.occupancyRate}%</div>
           </div>
 
-          <div class="section-title">1. Reporte de Ocupación de Celdas de Parqueadero (${spotsList.length} celdas)</div>
-          <p>Inventario de celdas físicas registradas en la sede institucional conforme a los filtros aplicados:</p>
+          <!-- SECCIÓN 1: AUTOMÓVILES (CARROS) -->
+          ${(parkingVehicleTypeFilter === 'all' || parkingVehicleTypeFilter === 'carro') ? `
+          <div class="section-title">1. CONTROL DE ACCESO — PARQUEADERO DE AUTOMÓVILES (CARROS) (${totalCars} vehículos)</div>
+          <p>Relación de vehículos de cuatro ruedas autorizados formalmente para el ingreso y estacionamiento en las instalaciones distritales:</p>
+
+          ${(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'fija') ? `
+          <div class="sub-section-title">1.1 Automóviles con Celda Fija Asignada (${fixedCars.length} carros)</div>
           <table>
             <thead>
               <tr>
-                <th style="width: 80px;">Código</th>
-                <th>Modalidad</th>
-                <th>Tipo Admitido</th>
-                <th class="text-center">Estado Actual</th>
-                <th>Titular / Persona Asignada</th>
-                <th>Observaciones / Ubicación</th>
+                <th style="width: 26%;">Persona Titular</th>
+                <th style="width: 14%;" class="text-center">Identificación</th>
+                <th class="plate-col">Placa</th>
+                <th style="width: 25%;">Vehículo / Modelo</th>
+                <th style="width: 18%;">Celda Asignada</th>
+                <th style="width: 17%;" class="text-center">Estado de Acceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fixedCars.map(v => `
+                <tr>
+                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
+                  <td class="text-center">${v.doc || 'S/N'}</td>
+                  <td class="plate-col"><span class="plate-badge">${v.plate}</span></td>
+                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
+                  <td><strong style="color: #1D4ED8;">${v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}</strong></td>
+                  <td class="text-center">${v.is_active !== false ? '<span class="badge-status-active">ACTIVO</span>' : '<span class="badge-status-inactive">INACTIVO</span>'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="6" class="text-center" style="color:#64748B;">No se registran automóviles con celda fija con los filtros actuales</td></tr>'}
+            </tbody>
+          </table>
+          ` : ''}
+
+          ${(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'libre') ? `
+          <div class="sub-section-title" style="margin-top: 18px;">1.2 Automóviles en Modalidad de Uso Libre Rotativo (${freeCars.length} carros)</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 26%;">Persona Titular</th>
+                <th style="width: 14%;" class="text-center">Identificación</th>
+                <th class="plate-col">Placa</th>
+                <th style="width: 25%;">Vehículo / Modelo</th>
+                <th style="width: 18%;">Modalidad de Parqueo</th>
+                <th style="width: 17%;" class="text-center">Estado de Acceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${freeCars.map(v => `
+                <tr>
+                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
+                  <td class="text-center">${v.doc || 'S/N'}</td>
+                  <td class="plate-col"><span class="plate-badge">${v.plate}</span></td>
+                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
+                  <td><span style="color:#7C3AED; font-weight:700;">Uso Libre Rotativo</span></td>
+                  <td class="text-center">${v.is_active !== false ? '<span class="badge-status-active">ACTIVO</span>' : '<span class="badge-status-inactive">INACTIVO</span>'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="6" class="text-center" style="color:#64748B;">No se registran automóviles en modalidad rotativa con los filtros actuales</td></tr>'}
+            </tbody>
+          </table>
+          ` : ''}
+          ` : ''}
+
+          <!-- SECCIÓN 2: MOTOCICLETAS (MOTOS) -->
+          ${(parkingVehicleTypeFilter === 'all' || parkingVehicleTypeFilter === 'moto') ? `
+          <div class="section-title" style="margin-top: 24px;">2. CONTROL DE ACCESO — PARQUEADERO DE MOTOCICLETAS (MOTOS) (${totalMotos} motos)</div>
+          <p>Relación de motocicletas autorizadas formalmente para el ingreso y uso de las zonas de estacionamiento de dos ruedas:</p>
+
+          ${(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'fija') ? `
+          <div class="sub-section-title">2.1 Motocicletas con Cupo Asignado / Fijo (${fixedMotos.length} motos)</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 26%;">Persona Titular</th>
+                <th style="width: 14%;" class="text-center">Identificación</th>
+                <th class="plate-col">Placa</th>
+                <th style="width: 25%;">Motocicleta / Línea</th>
+                <th style="width: 18%;">Cupo Asignado</th>
+                <th style="width: 17%;" class="text-center">Estado de Acceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fixedMotos.map(v => `
+                <tr>
+                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
+                  <td class="text-center">${v.doc || 'S/N'}</td>
+                  <td class="plate-col"><span class="plate-badge">${v.plate}</span></td>
+                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
+                  <td><strong style="color: #1D4ED8;">${v.spot_code ? `Celda ${v.spot_code}` : 'Cupo Fijo'}</strong></td>
+                  <td class="text-center">${v.is_active !== false ? '<span class="badge-status-active">ACTIVO</span>' : '<span class="badge-status-inactive">INACTIVO</span>'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="6" class="text-center" style="color:#64748B;">No se registran motocicletas con cupo fijo asignado</td></tr>'}
+            </tbody>
+          </table>
+          ` : ''}
+
+          ${(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'libre') ? `
+          <div class="sub-section-title" style="margin-top: 18px;">2.2 Motocicletas en Modalidad de Uso Libre Rotativo (${freeMotos.length} motos)</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 26%;">Persona Titular</th>
+                <th style="width: 14%;" class="text-center">Identificación</th>
+                <th class="plate-col">Placa</th>
+                <th style="width: 25%;">Motocicleta / Línea</th>
+                <th style="width: 18%;">Modalidad</th>
+                <th style="width: 17%;" class="text-center">Estado de Acceso</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${freeMotos.map(v => `
+                <tr>
+                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
+                  <td class="text-center">${v.doc || 'S/N'}</td>
+                  <td class="plate-col"><span class="plate-badge">${v.plate}</span></td>
+                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
+                  <td><span style="color:#7C3AED; font-weight:700;">Uso Libre Rotativo</span></td>
+                  <td class="text-center">${v.is_active !== false ? '<span class="badge-status-active">ACTIVO</span>' : '<span class="badge-status-inactive">INACTIVO</span>'}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="6" class="text-center" style="color:#64748B;">No se registran motocicletas en modalidad rotativa</td></tr>'}
+            </tbody>
+          </table>
+          ` : ''}
+          ` : ''}
+
+          <!-- SECCIÓN 3: INVENTARIO FÍSICO DE CELDAS -->
+          <div class="section-title" style="margin-top: 24px;">3. Inventario y Capacidad Física de Celdas (${spotsList.length} celdas)</div>
+          <p>Distribución de celdas físicas inventariadas en las áreas de parqueo de la entidad:</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 14%;">Código</th>
+                <th style="width: 18%;">Modalidad</th>
+                <th style="width: 16%;" class="text-center">Tipo Admitido</th>
+                <th style="width: 16%;" class="text-center">Estado Actual</th>
+                <th style="width: 20%;">Titular Asignado</th>
+                <th style="width: 16%;">Observaciones</th>
               </tr>
             </thead>
             <tbody>
@@ -1213,8 +1448,8 @@ export default function AdminReports() {
                 <tr>
                   <td><strong>${s.code}</strong></td>
                   <td>${s.spot_type === 'fija' ? '<span style="color:#2563EB; font-weight:bold;">Celda Fija</span>' : '<span style="color:#7C3AED; font-weight:bold;">Uso Libre</span>'}</td>
-                  <td>${sType === 'moto' ? '🏍️ Moto' : sType === 'carro' ? '🚗 Carro' : '🔄 Mixto'}</td>
-                  <td class="text-center"><strong>${(s.status || 'disponible').toUpperCase()}</strong></td>
+                  <td class="text-center"><strong>${sType === 'moto' ? '🏍️ Moto' : sType === 'carro' ? '🚗 Carro' : '🔄 Mixto'}</strong></td>
+                  <td class="text-center">${s.status === 'disponible' ? '<span class="badge-status-active">DISPONIBLE</span>' : '<span class="badge-status-inactive">OCUPADA</span>'}</td>
                   <td>${s.assigned_user_name || '—'}</td>
                   <td>${s.notes || '—'}</td>
                 </tr>
@@ -1223,89 +1458,18 @@ export default function AdminReports() {
             </tbody>
           </table>
 
-          ${(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'fija') ? `
-          <div class="section-title">2. Apartado 1: Vehículos con Celda Fija (${fixedList.length} vehículos)</div>
-          <p>Vehículos institucionales o de funcionarios vinculados formalmente a una celda de parqueadero asignada exclusivamente (ordenados por ${sortLabel}):</p>
+          <!-- SECCIÓN 4: SOLICITUDES DE PARQUEADERO DEL PERIODO -->
+          <div class="section-title" style="margin-top: 24px;">4. Historial de Solicitudes de Parqueadero del Periodo</div>
           <table>
             <thead>
               <tr>
-                <th>Persona Titular</th>
-                <th>Identificación</th>
-                <th>Placa</th>
-                <th class="text-center">Tipo</th>
-                <th>Vehículo / Modelo</th>
-                <th>Celda Asignada</th>
-                <th class="text-center">Estado</th>
-                <th class="text-center">Autorización</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${fixedList.map(v => {
-                const vt = getVehicleType(v);
-                return `
-                <tr>
-                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
-                  <td>${v.doc || 'S/N'}</td>
-                  <td><strong style="background:#FEF08A; padding:2px 6px; border:1px solid #000; border-radius:4px; font-family:monospace;">${v.plate}</strong></td>
-                  <td class="text-center"><strong>${vt === 'moto' ? '🏍️ Moto' : '🚗 Carro'}</strong></td>
-                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
-                  <td><strong>${v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}</strong></td>
-                  <td class="text-center">${v.is_active !== false ? '<span style="color:#059669; font-weight:bold;">ACTIVO</span>' : '<span style="color:#DC2626; font-weight:bold;">INACTIVO</span>'}</td>
-                  <td class="text-center">${v.is_active !== false ? 'Autorizado (Cupo Fijo)' : 'Suspendido'}</td>
-                </tr>
-              `;
-              }).join('') || '<tr><td colspan="8" class="text-center">No se registran vehículos con celda fija asignada bajo los filtros aplicados</td></tr>'}
-            </tbody>
-          </table>
-          ` : ''}
-
-          ${(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'libre') ? `
-          <div class="section-title">3. Apartado 2: Vehículos sin Celda Fija (Parqueadero de Uso Libre) (${freeList.length} vehículos)</div>
-          <p>Vehículos autorizados para el ingreso institucional que utilizan las celdas rotativas y de uso libre conforme a disponibilidad diaria (ordenados por ${sortLabel}):</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Persona</th>
-                <th>Identificación</th>
-                <th>Placa</th>
-                <th class="text-center">Tipo</th>
-                <th>Vehículo / Modelo</th>
-                <th>Modalidad de Estacionamiento</th>
-                <th class="text-center">Estado</th>
-                <th class="text-center">Autorización</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${freeList.map(v => {
-                const vt = getVehicleType(v);
-                return `
-                <tr>
-                  <td><strong>${v.name || v.owner_name || 'Servidor'}</strong></td>
-                  <td>${v.doc || 'S/N'}</td>
-                  <td><strong style="background:#FEF08A; padding:2px 6px; border:1px solid #000; border-radius:4px; font-family:monospace;">${v.plate}</strong></td>
-                  <td class="text-center"><strong>${vt === 'moto' ? '🏍️ Moto' : '🚗 Carro'}</strong></td>
-                  <td>${v.brand} ${v.model || ''} ${v.color ? `(${v.color})` : ''}</td>
-                  <td><em style="color:#7C3AED;">Utiliza parqueadero de uso libre / rotativo</em></td>
-                  <td class="text-center">${v.is_active !== false ? '<span style="color:#059669; font-weight:bold;">ACTIVO</span>' : '<span style="color:#DC2626; font-weight:bold;">INACTIVO</span>'}</td>
-                  <td class="text-center">${v.is_active !== false ? 'Autorizado (Uso Libre)' : 'En trámite / Inactivo'}</td>
-                </tr>
-              `;
-              }).join('') || '<tr><td colspan="8" class="text-center">No se registran vehículos en modalidad de uso libre bajo los filtros aplicados</td></tr>'}
-            </tbody>
-          </table>
-          ` : ''}
-
-          <div class="section-title">4. Historial de Solicitudes de Parqueadero del Periodo</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Placa Vehicular</th>
-                <th>Vehículo / Modelo</th>
-                <th>Solicitante</th>
-                <th>Dependencia</th>
-                <th class="text-center">Estado Trámite</th>
-                ${showParkingEval ? '<th class="text-center">Calificación</th>' : ''}
+                <th style="width: 14%;">Fecha</th>
+                <th class="plate-col">Placa</th>
+                <th style="width: 22%;">Vehículo / Modelo</th>
+                <th style="width: 22%;">Solicitante</th>
+                <th style="width: 22%;">Dependencia</th>
+                <th style="width: 10%;" class="text-center">Estado</th>
+                ${showParkingEval ? '<th style="width: 10%;" class="text-center">Calificación</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -1316,11 +1480,11 @@ export default function AdminReports() {
                 return `
                   <tr>
                     <td>${new Date(r.created_at).toLocaleDateString('es-CO')}</td>
-                    <td><strong>${r.metadata?.plate || 'Sin placa'}</strong></td>
+                    <td class="plate-col"><span class="plate-badge">${r.metadata?.plate || 'S/P'}</span></td>
                     <td>${vModel}</td>
                     <td>${reqName}</td>
                     <td>${depName}</td>
-                    <td class="text-center"><strong>${r.status?.toUpperCase()}</strong></td>
+                    <td class="text-center"><strong>${(r.status || '').toUpperCase()}</strong></td>
                     ${showParkingEval ? `<td class="text-center">${r.metadata?.evaluation?.rating ? `★ ${Number(r.metadata.evaluation.rating).toFixed(1)}` : '—'}</td>` : ''}
                   </tr>
                 `;
@@ -1670,6 +1834,60 @@ export default function AdminReports() {
             .text-center {
               text-align: center;
             }
+            .sub-section-title {
+              font-size: 11px;
+              font-weight: 800;
+              color: #1E3A8A;
+              margin: 14px 0 6px 0;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .plate-col {
+              width: 120px !important;
+              min-width: 110px !important;
+              white-space: nowrap !important;
+              text-align: center !important;
+            }
+            .plate-badge {
+              display: inline-block !important;
+              white-space: nowrap !important;
+              word-break: keep-all !important;
+              letter-spacing: 1.5px !important;
+              font-family: 'Consolas', 'Courier New', monospace !important;
+              font-size: 11.5px !important;
+              font-weight: 800 !important;
+              background-color: #FEF08A !important;
+              color: #0F172A !important;
+              border: 1.5px solid #000000 !important;
+              border-radius: 4px !important;
+              padding: 3px 8px !important;
+              text-align: center !important;
+              box-sizing: border-box !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .badge-status-active {
+              display: inline-block !important;
+              background-color: #DCFCE7 !important;
+              color: #166534 !important;
+              font-weight: 800 !important;
+              padding: 2px 7px !important;
+              border-radius: 4px !important;
+              font-size: 10px !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .badge-status-inactive {
+              display: inline-block !important;
+              background-color: #FEE2E2 !important;
+              color: #991B1B !important;
+              font-weight: 800 !important;
+              padding: 2px 7px !important;
+              border-radius: 4px !important;
+              font-size: 10px !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             .signature-box {
               margin-top: 40px;
               page-break-inside: avoid;
@@ -1701,6 +1919,13 @@ export default function AdminReports() {
             @media print {
               body { padding: 0; }
               .no-print { display: none !important; }
+              table { page-break-inside: auto; width: 100% !important; table-layout: auto !important; }
+              tr { page-break-inside: avoid; page-break-after: auto; }
+              thead { display: table-header-group; }
+              .plate-col { width: 120px !important; min-width: 110px !important; white-space: nowrap !important; }
+              .plate-badge { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              .badge-status-active { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              .badge-status-inactive { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             }
           </style>
         </head>
@@ -4467,125 +4692,223 @@ export default function AdminReports() {
                         )}
                       </View>
 
-                      {/* 2. Apartado 1: Vehículos con Celda Fija */}
-                      {(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'fija') && (
-                        <View>
-                          <Text style={[styles.reportSectionTitle, { marginTop: 24 }]}>
-                            2. APARTADO 1: VEHÍCULOS CON CELDA FIJA ({filteredReportFixedVehicles.length} vehículos)
+                      {/* 2. Apartado: Automóviles (Carros) */}
+                      {(parkingVehicleTypeFilter === 'all' || parkingVehicleTypeFilter === 'carro') && (
+                        <View style={{ marginTop: 24 }}>
+                          <Text style={styles.reportSectionTitle}>
+                            2. CONTROL DE ACCESO — AUTOMÓVILES (CARROS) ({filteredReportFixedVehicles.filter(v => getVehicleType(v) !== 'moto').length + filteredReportFreeVehicles.filter(v => getVehicleType(v) !== 'moto').length} vehículos)
                           </Text>
                           <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>
-                            Vehículos vinculados a una persona titular con celda exclusiva asignada (ordenados por placa / titular)
+                            Automóviles de funcionarios y contratistas autorizados para el ingreso a la sede distrital
                           </Text>
-                          <View style={styles.reportTable}>
-                            <View style={styles.reportTableHeader}>
-                              <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PERSONA TITULAR</Text>
-                              <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800' }]}>IDENTIFICACIÓN</Text>
-                              <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800' }]}>PLACA</Text>
-                              <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>TIPO</Text>
-                              <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>VEHÍCULO</Text>
-                              <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800' }]}>CELDA ASIGNADA</Text>
-                              <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                              <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800', textAlign: 'center' }]}>AUTORIZACIÓN</Text>
-                            </View>
-                            {filteredReportFixedVehicles.length > 0 ? (
-                              filteredReportFixedVehicles.map((v, idx) => {
-                                const vType = getVehicleType(v);
-                                return (
-                                  <View key={v.id || idx} style={styles.reportTableRow}>
-                                    <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '700' }]}>
-                                      {v.name || v.owner_name || 'Servidor'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.0, color: COLORS.text }]}>
-                                      {v.doc || 'S/N'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '900', color: COLORS.primary }]}>
-                                      {v.plate}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', fontWeight: '800', color: vType === 'moto' ? '#C2410C' : '#1D4ED8' }]}>
-                                      {vType === 'moto' ? '🏍️ Moto' : '🚗 Carro'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>
-                                      {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800', color: '#1D4ED8' }]}>
-                                      {v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
-                                      {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.1, textAlign: 'center', color: v.is_active !== false ? '#059669' : '#64748B', fontWeight: '700' }]}>
-                                      {v.is_active !== false ? 'Cupo Fijo Vigente' : 'Inactivo'}
-                                    </Text>
+
+                          {/* 2.1 Carros con Celda Fija */}
+                          {(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'fija') && (
+                            <View style={{ marginBottom: 16 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8', marginBottom: 6 }}>
+                                2.1 AUTOMÓVILES CON CELDA FIJA ASIGNADA ({filteredReportFixedVehicles.filter(v => getVehicleType(v) !== 'moto').length})
+                              </Text>
+                              <View style={styles.reportTable}>
+                                <View style={styles.reportTableHeader}>
+                                  <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PERSONA TITULAR</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>IDENTIFICACIÓN</Text>
+                                  <Text style={[styles.tableCell, { width: 110, minWidth: 105, fontWeight: '800', textAlign: 'center' }]}>PLACA</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>VEHÍCULO</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', textAlign: 'center' }]}>CELDA ASIGNADA</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                                </View>
+                                {filteredReportFixedVehicles.filter(v => getVehicleType(v) !== 'moto').length > 0 ? (
+                                  filteredReportFixedVehicles.filter(v => getVehicleType(v) !== 'moto').map((v, idx) => (
+                                    <View key={v.id || idx} style={styles.reportTableRow}>
+                                      <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '700' }]}>
+                                        {v.name || v.owner_name || 'Servidor'}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.9, color: COLORS.text, textAlign: 'center' }]}>
+                                        {v.doc || 'S/N'}
+                                      </Text>
+                                      <View style={{ width: 110, minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
+                                        <View style={styles.reportPlateBadge}>
+                                          <Text style={styles.reportPlateBadgeText}>{v.plate}</Text>
+                                        </View>
+                                      </View>
+                                      <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>
+                                        {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', color: '#1D4ED8', textAlign: 'center' }]}>
+                                        {v.spot_code ? `Celda ${v.spot_code}` : 'Celda Fija'}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
+                                        {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                                      </Text>
+                                    </View>
+                                  ))
+                                ) : (
+                                  <View style={{ padding: 10 }}>
+                                    <Text style={styles.noDataText}>No se registran automóviles con celda fija con los filtros aplicados</Text>
                                   </View>
-                                );
-                              })
-                            ) : (
-                              <View style={{ padding: 14 }}>
-                                <Text style={styles.noDataText}>No se registran vehículos con celda fija con los filtros aplicados</Text>
+                                )}
                               </View>
-                            )}
-                          </View>
+                            </View>
+                          )}
+
+                          {/* 2.2 Carros Uso Libre */}
+                          {(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'libre') && (
+                            <View>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#6D28D9', marginBottom: 6 }}>
+                                2.2 AUTOMÓVILES EN MODALIDAD DE USO LIBRE ROTATIVO ({filteredReportFreeVehicles.filter(v => getVehicleType(v) !== 'moto').length})
+                              </Text>
+                              <View style={styles.reportTable}>
+                                <View style={styles.reportTableHeader}>
+                                  <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PERSONA TITULAR</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>IDENTIFICACIÓN</Text>
+                                  <Text style={[styles.tableCell, { width: 110, minWidth: 105, fontWeight: '800', textAlign: 'center' }]}>PLACA</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>VEHÍCULO</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', textAlign: 'center' }]}>MODALIDAD</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                                </View>
+                                {filteredReportFreeVehicles.filter(v => getVehicleType(v) !== 'moto').length > 0 ? (
+                                  filteredReportFreeVehicles.filter(v => getVehicleType(v) !== 'moto').map((v, idx) => (
+                                    <View key={v.id || idx} style={styles.reportTableRow}>
+                                      <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '700' }]}>
+                                        {v.name || v.owner_name || 'Servidor'}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.9, color: COLORS.text, textAlign: 'center' }]}>
+                                        {v.doc || 'S/N'}
+                                      </Text>
+                                      <View style={{ width: 110, minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
+                                        <View style={styles.reportPlateBadge}>
+                                          <Text style={styles.reportPlateBadgeText}>{v.plate}</Text>
+                                        </View>
+                                      </View>
+                                      <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>
+                                        {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 1.0, color: '#7C3AED', fontWeight: '700', textAlign: 'center' }]}>
+                                        Uso Libre
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
+                                        {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                                      </Text>
+                                    </View>
+                                  ))
+                                ) : (
+                                  <View style={{ padding: 10 }}>
+                                    <Text style={styles.noDataText}>No se registran automóviles en modalidad rotativa con los filtros aplicados</Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          )}
                         </View>
                       )}
 
-                      {/* 3. Apartado 2: Vehículos sin Celda Fija (Uso Libre) */}
-                      {(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'libre') && (
-                        <View>
-                          <Text style={[styles.reportSectionTitle, { marginTop: 24 }]}>
-                            3. APARTADO 2: VEHÍCULOS SIN CELDA FIJA (USO LIBRE) ({filteredReportFreeVehicles.length} vehículos)
+                      {/* 3. Apartado: Motocicletas (Motos) */}
+                      {(parkingVehicleTypeFilter === 'all' || parkingVehicleTypeFilter === 'moto') && (
+                        <View style={{ marginTop: 24 }}>
+                          <Text style={styles.reportSectionTitle}>
+                            3. CONTROL DE ACCESO — MOTOCICLETAS (MOTOS) ({filteredReportFixedVehicles.filter(v => getVehicleType(v) === 'moto').length + filteredReportFreeVehicles.filter(v => getVehicleType(v) === 'moto').length} motos)
                           </Text>
                           <Text style={[styles.cardSubtitle, { marginBottom: 10 }]}>
-                            Vehículos autorizados para estacionamiento que utilizan parqueadero de uso libre rotativo
+                            Motocicletas autorizadas formalmente para ingreso y parqueo institucional
                           </Text>
-                          <View style={styles.reportTable}>
-                            <View style={styles.reportTableHeader}>
-                              <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PERSONA TITULAR</Text>
-                              <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800' }]}>IDENTIFICACIÓN</Text>
-                              <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800' }]}>PLACA</Text>
-                              <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>TIPO</Text>
-                              <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>VEHÍCULO</Text>
-                              <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>MODALIDAD DE PARQUEO</Text>
-                              <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
-                              <Text style={[styles.tableCell, { flex: 1.1, fontWeight: '800', textAlign: 'center' }]}>AUTORIZACIÓN</Text>
-                            </View>
-                            {filteredReportFreeVehicles.length > 0 ? (
-                              filteredReportFreeVehicles.map((v, idx) => {
-                                const vType = getVehicleType(v);
-                                return (
-                                  <View key={v.id || idx} style={styles.reportTableRow}>
-                                    <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '700' }]}>
-                                      {v.name || v.owner_name || 'Servidor'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.0, color: COLORS.text }]}>
-                                      {v.doc || 'S/N'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '900', color: COLORS.primary }]}>
-                                      {v.plate}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 0.9, textAlign: 'center', fontWeight: '800', color: vType === 'moto' ? '#C2410C' : '#1D4ED8' }]}>
-                                      {vType === 'moto' ? '🏍️ Moto' : '🚗 Carro'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>
-                                      {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.4, color: '#7C3AED', fontWeight: '700' }]}>
-                                      Parqueadero de Uso Libre
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
-                                      {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
-                                    </Text>
-                                    <Text style={[styles.tableCell, { flex: 1.1, textAlign: 'center', color: v.is_active !== false ? '#059669' : '#64748B', fontWeight: '700' }]}>
-                                      {v.is_active !== false ? 'Autorizado (Rotativo)' : 'Inactivo'}
-                                    </Text>
+
+                          {/* 3.1 Motos con Cupo Fijo */}
+                          {(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'fija') && (
+                            <View style={{ marginBottom: 16 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8', marginBottom: 6 }}>
+                                3.1 MOTOCICLETAS CON CUPO ASIGNADO / FIJO ({filteredReportFixedVehicles.filter(v => getVehicleType(v) === 'moto').length})
+                              </Text>
+                              <View style={styles.reportTable}>
+                                <View style={styles.reportTableHeader}>
+                                  <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PERSONA TITULAR</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>IDENTIFICACIÓN</Text>
+                                  <Text style={[styles.tableCell, { width: 110, minWidth: 105, fontWeight: '800', textAlign: 'center' }]}>PLACA</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>MOTOCICLETA / LÍNEA</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', textAlign: 'center' }]}>CUPO ASIGNADO</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                                </View>
+                                {filteredReportFixedVehicles.filter(v => getVehicleType(v) === 'moto').length > 0 ? (
+                                  filteredReportFixedVehicles.filter(v => getVehicleType(v) === 'moto').map((v, idx) => (
+                                    <View key={v.id || idx} style={styles.reportTableRow}>
+                                      <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '700' }]}>
+                                        {v.name || v.owner_name || 'Servidor'}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.9, color: COLORS.text, textAlign: 'center' }]}>
+                                        {v.doc || 'S/N'}
+                                      </Text>
+                                      <View style={{ width: 110, minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
+                                        <View style={styles.reportPlateBadge}>
+                                          <Text style={styles.reportPlateBadgeText}>{v.plate}</Text>
+                                        </View>
+                                      </View>
+                                      <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>
+                                        {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', color: '#1D4ED8', textAlign: 'center' }]}>
+                                        {v.spot_code ? `Celda ${v.spot_code}` : 'Cupo Fijo'}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
+                                        {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                                      </Text>
+                                    </View>
+                                  ))
+                                ) : (
+                                  <View style={{ padding: 10 }}>
+                                    <Text style={styles.noDataText}>No se registran motocicletas con cupo fijo con los filtros aplicados</Text>
                                   </View>
-                                );
-                              })
-                            ) : (
-                              <View style={{ padding: 14 }}>
-                                <Text style={styles.noDataText}>No se registran vehículos en modalidad de uso libre con los filtros aplicados</Text>
+                                )}
                               </View>
-                            )}
-                          </View>
+                            </View>
+                          )}
+
+                          {/* 3.2 Motos Uso Libre */}
+                          {(parkingCellTypeFilter === 'all' || parkingCellTypeFilter === 'libre') && (
+                            <View>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#6D28D9', marginBottom: 6 }}>
+                                3.2 MOTOCICLETAS EN MODALIDAD DE USO LIBRE ROTATIVO ({filteredReportFreeVehicles.filter(v => getVehicleType(v) === 'moto').length})
+                              </Text>
+                              <View style={styles.reportTable}>
+                                <View style={styles.reportTableHeader}>
+                                  <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '800' }]}>PERSONA TITULAR</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.9, fontWeight: '800', textAlign: 'center' }]}>IDENTIFICACIÓN</Text>
+                                  <Text style={[styles.tableCell, { width: 110, minWidth: 105, fontWeight: '800', textAlign: 'center' }]}>PLACA</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.4, fontWeight: '800' }]}>MOTOCICLETA / LÍNEA</Text>
+                                  <Text style={[styles.tableCell, { flex: 1.0, fontWeight: '800', textAlign: 'center' }]}>MODALIDAD</Text>
+                                  <Text style={[styles.tableCell, { flex: 0.8, fontWeight: '800', textAlign: 'center' }]}>ESTADO</Text>
+                                </View>
+                                {filteredReportFreeVehicles.filter(v => getVehicleType(v) === 'moto').length > 0 ? (
+                                  filteredReportFreeVehicles.filter(v => getVehicleType(v) === 'moto').map((v, idx) => (
+                                    <View key={v.id || idx} style={styles.reportTableRow}>
+                                      <Text style={[styles.tableCell, { flex: 1.5, color: COLORS.primary, fontWeight: '700' }]}>
+                                        {v.name || v.owner_name || 'Servidor'}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.9, color: COLORS.text, textAlign: 'center' }]}>
+                                        {v.doc || 'S/N'}
+                                      </Text>
+                                      <View style={{ width: 110, minWidth: 105, alignItems: 'center', justifyContent: 'center' }}>
+                                        <View style={styles.reportPlateBadge}>
+                                          <Text style={styles.reportPlateBadgeText}>{v.plate}</Text>
+                                        </View>
+                                      </View>
+                                      <Text style={[styles.tableCell, { flex: 1.4, color: COLORS.text }]}>
+                                        {v.brand} {v.model ? `• ${v.model}` : ''} {v.color ? `(${v.color})` : ''}
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 1.0, color: '#7C3AED', fontWeight: '700', textAlign: 'center' }]}>
+                                        Uso Libre
+                                      </Text>
+                                      <Text style={[styles.tableCell, { flex: 0.8, textAlign: 'center', fontWeight: '800', color: v.is_active !== false ? '#059669' : '#DC2626' }]}>
+                                        {v.is_active !== false ? 'ACTIVO' : 'INACTIVO'}
+                                      </Text>
+                                    </View>
+                                  ))
+                                ) : (
+                                  <View style={{ padding: 10 }}>
+                                    <Text style={styles.noDataText}>No se registran motocicletas en modalidad rotativa con los filtros aplicados</Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          )}
                         </View>
                       )}
 
@@ -5838,6 +6161,25 @@ const styles = StyleSheet.create({
   miniInfoCardLabel: { fontSize: 11, fontWeight: '800', color: COLORS.muted },
   miniInfoCardValue: { fontSize: 18, fontWeight: '900', color: COLORS.primary, marginTop: 4 },
   miniInfoCardSub: { fontSize: 10, color: COLORS.muted, marginTop: 2 },
+
+  reportPlateBadge: {
+    backgroundColor: '#FEF08A',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: '#000000',
+    minWidth: 85,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  reportPlateBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#000000',
+    letterSpacing: 1,
+    textAlign: 'center'
+  },
 
   infoAlertBox: { flexDirection: 'row', gap: 12, backgroundColor: COLORS.accentLight, padding: 16, borderRadius: 18, borderWidth: 1, borderColor: '#BFDBFE', alignItems: 'center' },
   infoAlertTitle: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
