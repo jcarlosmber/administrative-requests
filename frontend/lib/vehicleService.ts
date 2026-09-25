@@ -82,6 +82,92 @@ export interface VehicleHistory {
   created_at: string;
 }
 
+export function formatVehicleHistoryAction(action?: string): string {
+  if (!action) return 'MODIFICACIÓN';
+  const act = action.toLowerCase().trim();
+  if (act.includes('creacion') || act.includes('registro')) return 'CREACIÓN';
+  if (act.includes('edicion') || act.includes('actualizacion') || act.includes('update')) return 'EDICIÓN';
+  if (act.includes('activacion') && !act.includes('inact')) return 'ACTIVACIÓN';
+  if (act.includes('inactivacion')) return 'INACTIVACIÓN';
+  if (act.includes('eliminacion') || act.includes('borrado')) return 'ELIMINACIÓN';
+  if (act.includes('asignacion_celda_fija') || act.includes('asignacion_celda') || act.includes('cambio_celda')) return 'CAMBIO CELDA';
+  if (act.includes('desasignacion') || act.includes('liberacion_celda')) return 'LIBERACIÓN CELDA';
+  if (act.includes('bloqueo')) return 'BLOQUEO ACCESO';
+  return action.toUpperCase();
+}
+
+export function formatVehicleHistoryDetails(details: any): string {
+  if (!details) return '';
+  let parsed = details;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return parsed;
+    }
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return String(parsed);
+  }
+
+  // Caso con { previous, updated }
+  if (parsed.previous || parsed.updated) {
+    const changes: string[] = [];
+    const prev = parsed.previous || {};
+    const upd = parsed.updated || {};
+
+    if (prev.plate && upd.plate && prev.plate !== upd.plate) {
+      changes.push(`Placa: ${prev.plate} ➔ ${upd.plate}`);
+    }
+    if (prev.is_active !== undefined && upd.is_active !== undefined && prev.is_active !== upd.is_active) {
+      changes.push(`Estado: ${prev.is_active ? 'Activo' : 'Inactivo'} ➔ ${upd.is_active ? 'Activo' : 'Inactivo'}`);
+    }
+    if (prev.assigned_spot_id !== upd.assigned_spot_id) {
+      if (!prev.assigned_spot_id && upd.assigned_spot_id) {
+        changes.push('Celda asignada');
+      } else if (prev.assigned_spot_id && !upd.assigned_spot_id) {
+        changes.push('Celda liberada');
+      } else {
+        changes.push('Celda reasignada');
+      }
+    }
+
+    if (changes.length > 0) {
+      return changes.join(' • ');
+    }
+    return 'Actualización general de datos';
+  }
+
+  // Si tiene razón o motivo
+  if (parsed.reason) {
+    return String(parsed.reason);
+  }
+
+  // Caso asignación celda
+  if (parsed.spot_number) {
+    return `Celda N° ${parsed.spot_number}`;
+  }
+
+  // Caso creación o detalles de vehículo
+  if (parsed.brand || parsed.model || parsed.vehicle_type) {
+    const parts = [parsed.brand, parsed.model, parsed.color].filter(Boolean).join(' ');
+    const tipo = parsed.vehicle_type ? `Tipo: ${parsed.vehicle_type}` : '';
+    return [tipo, parts].filter(Boolean).join(' - ') || 'Vehículo registrado';
+  }
+
+  // Fallback si es cualquier otro objeto
+  try {
+    const entries = Object.entries(parsed).filter(([_, v]) => v !== null && v !== undefined && typeof v !== 'object');
+    if (entries.length > 0) {
+      return entries.map(([k, v]) => `${k}: ${v}`).join(' • ');
+    }
+    return JSON.stringify(parsed);
+  } catch {
+    return '';
+  }
+}
+
 export interface ParkingStats {
   totalSpots: number;
   availableSpots: number;

@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { settingsService, Driver } from '../../lib/settingsService';
-import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
+import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType, formatVehicleHistoryAction, formatVehicleHistoryDetails } from '../../lib/vehicleService';
 import { requestService, AdministrativeRequest } from '../../lib/requestService';
 import { DependencySelector } from '../../components/DependencySelector';
 
@@ -3662,8 +3662,8 @@ export default function AdminGestion() {
                 <ScrollView style={{ maxHeight: 240 }}>
                   {selectedVehicleHistory.map((item, idx) => (
                     <View key={item.id || idx} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.text }}>{item.action || 'Modificación'}</Text>
-                      <Text style={{ fontSize: 11, color: COLORS.muted }}>{item.details || 'Sin detalles adicionales'}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.text }}>{formatVehicleHistoryAction(item.action)}</Text>
+                      <Text style={{ fontSize: 11, color: COLORS.muted }}>{formatVehicleHistoryDetails(item.details) || 'Sin detalles adicionales'}</Text>
                       <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{item.created_at ? new Date(item.created_at).toLocaleString('es-CO') : ''}</Text>
                     </View>
                   ))}

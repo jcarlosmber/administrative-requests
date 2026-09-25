@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
 import { settingsService, Driver, ServiceEmail, ServerStats, DatabaseOverview, TablePreview } from '../../lib/settingsService';
-import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType } from '../../lib/vehicleService';
+import { vehicleService, ParkingSpot, UserVehicle, VehicleHistory, getVehicleType, getSpotVehicleType, formatVehicleHistoryDetails, formatVehicleHistoryAction } from '../../lib/vehicleService';
 import { DependencySelector } from '../../components/DependencySelector';
 
 const COLORS = {
@@ -4583,15 +4583,18 @@ export default function AdminSettings() {
                 <View style={{ gap: 10, paddingRight: 4 }}>
                   {selectedVehicleHistory.map((item, idx) => {
                     const actionColors: Record<string, { bg: string; text: string }> = {
-                      CREACION: { bg: '#ECFDF5', text: '#059669' },
-                      EDICION: { bg: '#EFF6FF', text: '#2563EB' },
-                      CAMBIO_CELDA: { bg: '#F5F3FF', text: '#7C3AED' },
-                      INACTIVACION: { bg: '#FEF3C7', text: '#D97706' },
-                      ACTIVACION: { bg: '#DCFCE7', text: '#15803D' },
-                      ELIMINACION: { bg: '#FEF2F2', text: '#DC2626' }
+                      'CREACIÓN': { bg: '#ECFDF5', text: '#059669' },
+                      'EDICIÓN': { bg: '#EFF6FF', text: '#2563EB' },
+                      'CAMBIO CELDA': { bg: '#F5F3FF', text: '#7C3AED' },
+                      'LIBERACIÓN CELDA': { bg: '#F5F3FF', text: '#7C3AED' },
+                      'INACTIVACIÓN': { bg: '#FEF3C7', text: '#D97706' },
+                      'ACTIVACIÓN': { bg: '#DCFCE7', text: '#15803D' },
+                      'ELIMINACIÓN': { bg: '#FEF2F2', text: '#DC2626' }
                     };
-                    const badge = actionColors[item.action] || { bg: '#F1F5F9', text: '#475569' };
+                    const actionLabel = formatVehicleHistoryAction(item.action);
+                    const badge = actionColors[actionLabel] || { bg: '#F1F5F9', text: '#475569' };
                     const dateStr = item.created_at ? new Date(item.created_at).toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' }) : 'Fecha desconocida';
+                    const detailsText = formatVehicleHistoryDetails(item.details);
 
                     return (
                       <View
@@ -4609,7 +4612,7 @@ export default function AdminSettings() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <View style={{ backgroundColor: badge.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
                               <Text style={{ fontSize: 10, fontWeight: '900', color: badge.text }}>
-                                {item.action}
+                                {actionLabel}
                               </Text>
                             </View>
                             <Text style={{ fontSize: 12, fontWeight: '700', color: COLORS.primary }}>
@@ -4620,9 +4623,9 @@ export default function AdminSettings() {
                             {dateStr}
                           </Text>
                         </View>
-                        {item.details ? (
+                        {detailsText ? (
                           <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>
-                            {item.details}
+                            {detailsText}
                           </Text>
                         ) : null}
                       </View>
