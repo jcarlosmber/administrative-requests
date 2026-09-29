@@ -17,6 +17,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 
+// Portal seguro para Web (garantiza renderizar el intérprete LSC encima de cualquier Modal)
+let ReactDOMPortal: any = null;
+if (Platform.OS === 'web') {
+  try {
+    ReactDOMPortal = require('react-dom');
+  } catch (e) {
+    ReactDOMPortal = null;
+  }
+}
+
 // Términos para el diccionario de lengua de señas
 const DICTIONARY_TERMS = [
   {
@@ -96,6 +106,31 @@ const DICTIONARY_TERMS = [
   }
 ];
 
+// Tipos y gestos diferenciados para Lengua de Señas Colombiana (LSC)
+export type LSCGestureType =
+  | 'steering_wheel'
+  | 'walking_legs'
+  | 'wrench_repair'
+  | 'table_booking'
+  | 'parking_p'
+  | 'speech_waves'
+  | 'camera_photo'
+  | 'star_rating'
+  | 'checkmark_approve'
+  | 'cross_reject'
+  | 'bell_alert'
+  | 'folder_stamp'
+  | 'login_key'
+  | 'hands_fan'
+  | 'rotating_gears'
+  | 'fist_support'
+  | 'magnifier_track'
+  | 'official_badge'
+  | 'capacity_limit'
+  | 'secret_lock'
+  | 'question_gesture'
+  | 'chart_growth';
+
 // Interfaz de término en Lengua de Señas Colombiana (LSC)
 export interface LSCTerm {
   id: string;
@@ -103,17 +138,152 @@ export interface LSCTerm {
   lscWords: string;
   definition: string;
   videoHint: string;
+  gestureType: LSCGestureType;
+  gestureCategory: string;
   keywords: string[];
-  videoUrl?: string; // Permite configurar cualquier video real .mp4
+  videoUrl?: string;
 }
 
-// Catálogo completo de términos con interpretación en Lengua de Señas Colombiana (LSC)
-// La gramática LSC es propia: no utiliza artículos ni preposiciones (Glosa en mayúsculas).
+// Catálogo completo de términos con interpretación y gestos específicos en Lengua de Señas Colombiana (LSC)
 export const LSC_DICTIONARY: LSCTerm[] = [
+  {
+    id: 'transport',
+    title: 'Transporte Institucional',
+    lscWords: 'TRANSPORTE - VEHÍCULO - OFICIAL',
+    gestureType: 'steering_wheel',
+    gestureCategory: '🚗 Conducción Vehicular (Volante)',
+    definition: 'Solicitud de vehículo oficial para desplazamientos laborales y misiones de la entidad.',
+    videoHint: 'Gesto: Ambas manos cerradas a la altura del pecho simulando sujetar un volante y girarlo en curva.',
+    keywords: ['transporte institucional', 'transporte', 'vehículo oficial', 'vehiculo oficial', 'vehículo', 'vehiculo', 'carro', 'traslado', 'conductor', 'placa', 'viaje', 'desplazamiento'],
+    videoUrl: ''
+  },
+  {
+    id: 'visitors',
+    title: 'Ingreso Visitantes',
+    lscWords: 'VISITANTE - ENTRADA - REGISTRO',
+    gestureType: 'walking_legs',
+    gestureCategory: '👥 Caminata de Ingreso (Dedos V)',
+    definition: 'Registro de entrada y control de acceso seguro de personas externas a las sedes.',
+    videoHint: 'Gesto: Dedos índice y medio en V invertida simulando una persona caminando hacia adelante e ingresando por una puerta.',
+    keywords: ['ingreso visitantes', 'ingreso visitante', 'visitantes', 'visitante', 'registro visitantes', 'control de acceso', 'cédula', 'cedula', 'recepción', 'recepcion'],
+    videoUrl: ''
+  },
+  {
+    id: 'maintenance',
+    title: 'Mantenimiento Locativo',
+    lscWords: 'MANTENIMIENTO - REPARAR - DAÑO',
+    gestureType: 'wrench_repair',
+    gestureCategory: '🛠️ Ajuste con Herramienta (Llave)',
+    definition: 'Reporte de arreglos locativos o fallas físicas en la infraestructura de la sede.',
+    videoHint: 'Gesto: Mano derecha en forma de garra o llave inglesa girando sobre el puño izquierdo simulando apretar o reparar.',
+    keywords: ['mantenimiento', 'mantenimiento locativo', 'reparación', 'reparacion', 'daño', 'daños', 'arreglos', 'falla', 'eléctrico', 'electrico', 'plomería', 'pintura', 'tubería'],
+    videoUrl: ''
+  },
+  {
+    id: 'rooms',
+    title: 'Reserva de Salas',
+    lscWords: 'RESERVA - SALA - JUNTAS',
+    gestureType: 'table_booking',
+    gestureCategory: '📅 Trazo de Mesa y Sello de Reserva',
+    definition: 'Apartar salas de juntas o auditorios para reuniones de trabajo institucionales.',
+    videoHint: 'Gesto: Manos extendidas trazando el contorno de una mesa rectangular y bajando el puño derecho como sello de reserva.',
+    keywords: ['reserva de salas', 'reserva salas', 'salas de juntas', 'salas', 'sala', 'auditorio', 'auditorios', 'juntas', 'reunión', 'reunion', 'reuniones', 'espacio'],
+    videoUrl: ''
+  },
+  {
+    id: 'parking',
+    title: 'Parqueadero Institucional',
+    lscWords: 'PARQUEADERO - ESTACIONAR',
+    gestureType: 'parking_p',
+    gestureCategory: '🅿️ Estacionar Letra P sobre Palma',
+    definition: 'Asignación de cupo de estacionamiento vehicular para funcionarios autorizados.',
+    videoHint: 'Gesto: Mano derecha formando la letra P con dedos extendidos sobre la palma izquierda horizontal simulando estacionar.',
+    keywords: ['parqueadero institucional', 'parqueadero', 'parqueaderos', 'cupo parqueadero', 'estacionamiento', 'estacionar', 'cupo vehicular', 'parquear'],
+    videoUrl: ''
+  },
+  {
+    id: 'chatbot',
+    title: 'Asistente Virtual',
+    lscWords: 'ASISTENTE - VIRTUAL - COMPUTADOR',
+    gestureType: 'speech_waves',
+    gestureCategory: '🤖 Ondas de Conversación Digital',
+    definition: 'Herramienta de atención interactiva en línea para resolver preguntas frecuentes y guiar trámites.',
+    videoHint: 'Gesto: Mano frente a la boca emitiendo ondas hacia la pantalla simulando conversación y asistencia digital.',
+    keywords: ['asistente virtual', 'chatbot', 'chat', 'asesor virtual', 'asesor en línea', 'bot', 'ayuda virtual'],
+    videoUrl: ''
+  },
+  {
+    id: 'evidencias',
+    title: 'Evidencias Fotográficas',
+    lscWords: 'FOTOS - EVIDENCIAS - ADJUNTAR',
+    gestureType: 'camera_photo',
+    gestureCategory: '📷 Visor de Cámara y Obturador',
+    definition: 'Carga de fotografías o documentos de soporte que certifiquen el estado o solicitud radicada.',
+    videoHint: 'Gesto: Manos formando el visor rectangular de una cámara fotográfica presionando el obturador con destello.',
+    keywords: ['evidencias fotográficas', 'evidencias fotograficas', 'subir evidencias', 'evidencias', 'fotos', 'adjuntar fotos', 'fotografías', 'fotografias', 'adjuntos', 'adjuntar archivo', 'soporte fotográfico'],
+    videoUrl: ''
+  },
+  {
+    id: 'calificacion',
+    title: 'Calificación del Servicio',
+    lscWords: 'CALIFICACIÓN - EVALUAR - SATISFACCIÓN',
+    gestureType: 'star_rating',
+    gestureCategory: '⭐ Trazo de Estrella y Pulgares Arriba',
+    definition: 'Encuesta de evaluación y nivel de satisfacción del colaborador con respecto al servicio prestado.',
+    videoHint: 'Gesto: Manos trazando una estrella dorada en el aire y finalizando con pulgares arriba de excelencia.',
+    keywords: ['calificación', 'calificacion', 'calificar', 'encuesta', 'evaluar servicio', 'satisfacción', 'satisfaccion', 'estrellas', 'puntuación', 'puntuacion'],
+    videoUrl: ''
+  },
+  {
+    id: 'aprobacion',
+    title: 'Aprobación de Solicitud',
+    lscWords: 'APROBADO - AUTORIZAR - VISTO BUENO',
+    gestureType: 'checkmark_approve',
+    gestureCategory: '✅ Trazo de Visto Bueno (Check)',
+    definition: 'Autorización oficial del jefe o coordinador para dar curso y cumplimiento a la solicitud.',
+    videoHint: 'Gesto: Mano derecha trazando un checkmark verde en el aire con movimiento ascendente de aprobación.',
+    keywords: ['aprobar', 'aprobado', 'aprobada', 'aprobación', 'aprobacion', 'autorizar', 'autorizado', 'visto bueno'],
+    videoUrl: ''
+  },
+  {
+    id: 'rechazo',
+    title: 'Rechazo de Solicitud',
+    lscWords: 'RECHAZADO - NO - DENEGADO',
+    gestureType: 'cross_reject',
+    gestureCategory: '❌ Cruce de Manos en Negativa',
+    definition: 'Solicitud que no cumple requisitos o no cuenta con disponibilidad y requiere corrección o cierre.',
+    videoHint: 'Gesto: Antebrazos o dedos índices cruzándose firmemente en X con movimiento enfático de cabeza.',
+    keywords: ['rechazar', 'rechazado', 'rechazada', 'rechazo', 'denegar', 'denegado', 'cancelar', 'anular'],
+    videoUrl: ''
+  },
+  {
+    id: 'notificaciones',
+    title: 'Notificaciones y Alertas',
+    lscWords: 'AVISO - NOTIFICACIÓN - ALERTA',
+    gestureType: 'bell_alert',
+    gestureCategory: '🔔 Campana de Aviso con Ondas',
+    definition: 'Mensajes y novedades automáticas sobre el cambio de estado de sus trámites.',
+    videoHint: 'Gesto: Manos oscilando como campana institucional con ondas circulares de aviso.',
+    keywords: ['notificaciones', 'notificacion', 'notificación', 'alertas', 'alerta', 'avisos', 'campana', 'mensajes'],
+    videoUrl: ''
+  },
+  {
+    id: 'radicar',
+    title: 'Radicar Solicitud',
+    lscWords: 'RADICAR - REGISTRAR - ENVIAR',
+    gestureType: 'folder_stamp',
+    gestureCategory: '📁 Documento en Carpeta y Sello',
+    definition: 'Envío oficial del formulario para iniciar el proceso de revisión y asignación de recursos.',
+    videoHint: 'Gesto: Mano deslizando hoja en carpeta virtual y aplicando sello de radicación con número.',
+    keywords: ['radicar', 'crear solicitud', 'nueva solicitud', 'enviar solicitud', 'guardar solicitud', 'radicado', 'enviar', 'guardar'],
+    videoUrl: ''
+  },
   {
     id: 'login',
     title: 'Ingresar al sistema',
     lscWords: 'INGRESAR - SISTEMA',
+    gestureType: 'login_key',
+    gestureCategory: '🔑 Tecleo en Teclado y Entrada',
     definition: 'Acceso seguro al portal mediante usuario y contraseña de la entidad.',
     videoHint: 'Gesto: Mano abierta empuja hacia adelante en dirección a la pantalla y los dedos simulan teclear credenciales de acceso.',
     keywords: ['ingresar al sistema', 'ingresar', 'iniciar sesión', 'iniciar sesion', 'login', 'acceder al sistema', 'acceder', 'entrar'],
@@ -123,6 +293,8 @@ export const LSC_DICTIONARY: LSCTerm[] = [
     id: 'services',
     title: 'Ver Servicios',
     lscWords: 'SERVICIOS - ADMINISTRATIVOS',
+    gestureType: 'hands_fan',
+    gestureCategory: '📋 Palmas Abiertas en Abanico',
     definition: 'Catálogo de solicitudes administrativas disponibles en la plataforma institucional.',
     videoHint: 'Gesto: Ambas manos abiertas con palmas hacia arriba abriéndose en abanico horizontal mostrando múltiples opciones.',
     keywords: ['ver servicios', 'servicios administrativos', 'servicios disponibles', 'servicios', 'catálogo de servicios', 'tramites', 'trámites'],
@@ -132,6 +304,8 @@ export const LSC_DICTIONARY: LSCTerm[] = [
     id: 'flow',
     title: 'Cómo funciona',
     lscWords: 'CÓMO - FUNCIONA - PROCESO',
+    gestureType: 'rotating_gears',
+    gestureCategory: '⚙️ Engranajes en Rotación Alternada',
     definition: 'Guía paso a paso para radicar, gestionar y consultar solicitudes.',
     videoHint: 'Gesto: Puños cerrados frente al pecho rotando alternadamente en círculos continuos indicando funcionamiento.',
     keywords: ['cómo funciona', 'como funciona', 'proceso', 'pasos', 'flujo'],
@@ -141,379 +315,749 @@ export const LSC_DICTIONARY: LSCTerm[] = [
     id: 'support',
     title: 'Soporte y Ayuda',
     lscWords: 'SOPORTE - AYUDA',
+    gestureType: 'fist_support',
+    gestureCategory: '🤝 Puño con Palma de Soporte',
     definition: 'Canal de atención para resolución de inquietudes, ayuda técnica y preguntas frecuentes.',
     videoHint: 'Gesto: Puño derecho cerrado apoyado sobre la palma izquierda abierta empujando hacia arriba en señal de respaldo.',
     keywords: ['soporte y ayuda', 'soporte', 'ayuda', 'atención', 'atencion'],
     videoUrl: ''
   },
   {
-    id: 'visitors',
-    title: 'Ingreso Visitantes',
-    lscWords: 'VISITANTE - ENTRADA - REGISTRO',
-    definition: 'Registro de entrada y control de acceso seguro de personas externas a las sedes.',
-    videoHint: 'Gesto: Dedos índice y medio en V invertida simulando una persona caminando hacia adelante e ingresando por una puerta.',
-    keywords: ['ingreso visitantes', 'ingreso visitante', 'visitantes', 'visitante', 'registro visitantes'],
-    videoUrl: ''
-  },
-  {
-    id: 'transport',
-    title: 'Transporte Institucional',
-    lscWords: 'TRANSPORTE - VEHÍCULO - OFICIAL',
-    definition: 'Solicitud de vehículo oficial para desplazamientos laborales y misiones de la entidad.',
-    videoHint: 'Gesto: Ambas manos cerradas a la altura del pecho simulando sujetar un volante y girarlo en curva.',
-    keywords: ['transporte institucional', 'transporte', 'vehículo oficial', 'vehiculo oficial', 'vehículo', 'vehiculo', 'carro', 'traslado'],
-    videoUrl: ''
-  },
-  {
-    id: 'maintenance',
-    title: 'Mantenimiento Locativo',
-    lscWords: 'MANTENIMIENTO - REPARAR - DAÑO',
-    definition: 'Reporte de arreglos locativos o fallas físicas en la infraestructura de la sede.',
-    videoHint: 'Gesto: Mano derecha en forma de garra o llave inglesa girando sobre el puño izquierdo simulando apretar o reparar.',
-    keywords: ['mantenimiento', 'mantenimiento locativo', 'reparación', 'reparacion', 'daño', 'daños', 'arreglos', 'falla'],
-    videoUrl: ''
-  },
-  {
-    id: 'rooms',
-    title: 'Reserva de Salas',
-    lscWords: 'RESERVA - SALA - JUNTAS',
-    definition: 'Apartar salas de juntas o auditorios para reuniones de trabajo institucionales.',
-    videoHint: 'Gesto: Manos extendidas trazando el contorno de una mesa rectangular y bajando el puño derecho como sello de reserva.',
-    keywords: ['reserva de salas', 'reserva salas', 'salas de juntas', 'salas', 'sala', 'auditorio', 'auditorios', 'juntas'],
-    videoUrl: ''
-  },
-  {
-    id: 'parking',
-    title: 'Parqueadero Institucional',
-    lscWords: 'PARQUEADERO - ESTACIONAR',
-    definition: 'Asignación de cupo de estacionamiento vehicular para funcionarios autorizados.',
-    videoHint: 'Gesto: Mano derecha formando la letra P con dedos extendidos sobre la palma izquierda horizontal simulando estacionar.',
-    keywords: ['parqueadero institucional', 'parqueadero', 'parqueaderos', 'cupo parqueadero', 'estacionamiento', 'estacionar'],
-    videoUrl: ''
-  },
-  {
-    id: 'chatbot',
-    title: 'Asistente Virtual',
-    lscWords: 'ASISTENTE - VIRTUAL - COMPUTADOR',
-    definition: 'Herramienta de atención interactiva en línea para resolver preguntas frecuentes y guiar trámites.',
-    videoHint: 'Gesto: Mano frente a la boca emitiendo ondas hacia la pantalla simulando conversación y asistencia digital.',
-    keywords: ['asistente virtual', 'chatbot', 'chat', 'asesor virtual', 'asesor en línea'],
-    videoUrl: ''
-  },
-  {
     id: 'faq_services',
-    title: '¿Qué tipos de servicios puedo solicitar?',
-    lscWords: 'PREGUNTA - SERVICIOS - CUÁLES - SOLICITAR',
-    definition: 'Puede solicitar transporte institucional, parqueadero, salas de juntas y mantenimiento locativo.',
-    videoHint: 'Gesto: Manos abiertas hacia arriba balanceándose en interrogación + dedos índice y medio enumerando opciones.',
-    keywords: ['qué tipos de servicios puedo solicitar', 'que tipos de servicios puedo solicitar', 'tipos de servicios'],
+    title: 'Preguntas Frecuentes',
+    lscWords: 'PREGUNTA - SERVICIOS - CUÁLES',
+    gestureType: 'question_gesture',
+    gestureCategory: '❓ Signo de Interrogación y Pregunta',
+    definition: 'Respuestas a las dudas más comunes de los colaboradores de la entidad.',
+    videoHint: 'Gesto: Dedo índice dibujando un signo de interrogación en el aire y palmas abiertas en consulta.',
+    keywords: ['preguntas frecuentes', 'faq', 'dudas frecuentes', 'qué tipos de servicios puedo solicitar', 'que tipos de servicios puedo solicitar', 'tipos de servicios'],
     videoUrl: ''
   },
   {
     id: 'faq_tracking',
-    title: '¿Cómo hago seguimiento a mi solicitud?',
-    lscWords: 'CÓMO - SEGUIMIENTO - REVISAR - ESTADO',
+    title: 'Seguimiento de Trámites',
+    lscWords: 'CÓMO - SEGUIMIENTO - REVISAR',
+    gestureType: 'magnifier_track',
+    gestureCategory: '🔍 Lupa sobre Línea de Tiempo',
     definition: 'Consulte el estado, historial y respuestas de su trámite desde el panel del funcionario.',
     videoHint: 'Gesto: Mano en forma de lente sobre documento avanzando en línea horizontal revisando avance.',
-    keywords: ['cómo hago seguimiento a mi solicitud', 'como hago seguimiento a mi solicitud', 'seguimiento a mi solicitud'],
-    videoUrl: ''
-  },
-  {
-    id: 'faq_transport',
-    title: '¿Con cuánta antelación debo pedir transporte?',
-    lscWords: 'TIEMPO - ANTES - PEDIR - TRANSPORTE',
-    definition: 'Se recomienda radicar con mínimo 24 a 48 horas de anticipación para coordinar vehículo oficial.',
-    videoHint: 'Gesto: Dedo índice señalando la muñeca simulando reloj + gesto de volante vehicular hacia adelante.',
-    keywords: ['con cuánta antelación debo pedir transporte', 'con cuanta antelacion debo pedir transporte', 'antelación'],
+    keywords: ['cómo hago seguimiento a mi solicitud', 'como hago seguimiento a mi solicitud', 'seguimiento a mi solicitud', 'seguimiento', 'trazabilidad', 'historial'],
     videoUrl: ''
   },
   {
     id: 'gestion',
-    title: 'Gestión simple, visible y medible',
+    title: 'Gestión Institucional',
     lscWords: 'GESTIÓN - CLARA - MEDIBLE',
+    gestureType: 'chart_growth',
+    gestureCategory: '📈 Gráfica de Crecimiento y Control',
     definition: 'Trámites transparentes con trazabilidad total y seguimiento permanente.',
     videoHint: 'Gesto: Manos abiertas hacia el frente trazando línea limpia + pulgares arriba + trazo ascendente de gráfica.',
-    keywords: ['gestión simple, visible y medible', 'gestion simple', 'medible'],
-    videoUrl: ''
-  },
-  {
-    id: 'faq_title',
-    title: 'Preguntas Frecuentes',
-    lscWords: 'PREGUNTAS - FRECUENTES - RESPUESTAS',
-    definition: 'Respuestas a las dudas más comunes de los colaboradores de la entidad.',
-    videoHint: 'Gesto: Dedo índice dibujando un signo de interrogación repetido en el espacio frente al rostro.',
-    keywords: ['preguntas frecuentes', 'faq', 'dudas frecuentes'],
-    videoUrl: ''
-  },
-  {
-    id: 'trazabilidad',
-    title: 'Trazabilidad 100%',
-    lscWords: 'TRAZABILIDAD - HISTORIAL - COMPLETO',
-    definition: 'Control y seguimiento detallado a una solicitud desde su radicación hasta su resolución.',
-    videoHint: 'Gesto: Mano derecha con índice y pulgar trazando una línea continua de principio a fin.',
-    keywords: ['trazabilidad', '100%'],
+    keywords: ['gestión simple, visible y medible', 'gestion simple', 'medible', 'gestion', 'gestión', 'indicadores', 'reportes'],
     videoUrl: ''
   },
   {
     id: 'mision',
     title: 'Misión Oficial',
     lscWords: 'MISIÓN - OFICIAL - TRABAJO',
+    gestureType: 'official_badge',
+    gestureCategory: '👔 Carné Institucional y Avance',
     definition: 'Salida autorizada de la sede institucional para cumplir funciones públicas.',
     videoHint: 'Gesto: Mano en el pecho señalando credencial oficial y avanzando hacia adelante con determinación.',
-    keywords: ['misión oficial', 'mision oficial', 'comisión'],
+    keywords: ['misión oficial', 'mision oficial', 'comisión', 'comision'],
     videoUrl: ''
   },
   {
     id: 'aforo',
     title: 'Aforo de Espacios',
     lscWords: 'AFORO - LÍMITE - PERSONAS',
+    gestureType: 'capacity_limit',
+    gestureCategory: '👥 Límite Superior de Capacidad',
     definition: 'Capacidad máxima de personas autorizadas en un auditorio o sala simultáneamente.',
     videoHint: 'Gesto: Grupo de personas indicado con dedos juntos + mano extendida en tope horizontal indicando límite.',
-    keywords: ['aforo', 'capacidad'],
-    videoUrl: ''
-  },
-  {
-    id: 'usuario',
-    title: 'Usuario Institucional',
-    lscWords: 'USUARIO - CORREO - IDENTIFICACIÓN',
-    definition: 'Credencial o correo institucional asignado para ingresar al sistema.',
-    videoHint: 'Gesto: Mano señalando carné en el pecho y luego tecleando en teclado virtual.',
-    keywords: ['usuario o correo institucional', 'correo institucional', 'usuario'],
+    keywords: ['aforo', 'capacidad', 'cupo máximo', 'cupo maximo'],
     videoUrl: ''
   },
   {
     id: 'password',
     title: 'Contraseña de Acceso',
     lscWords: 'CONTRASEÑA - SECRETO - CLAVE',
+    gestureType: 'secret_lock',
+    gestureCategory: '🔒 Candado Cerrado y Clave',
     definition: 'Clave personal y confidencial para autenticación en la plataforma.',
     videoHint: 'Gesto: Pulgar e índice cerrando candado imaginario frente a la boca y luego tecleo reservado.',
-    keywords: ['misma contraseña del correo', 'contraseña', 'clave'],
-    videoUrl: ''
-  },
-  {
-    id: 'step1',
-    title: 'Ingresa con tu usuario',
-    lscWords: 'USUARIO - INGRESAR',
-    videoHint: 'Gesto: Señalar credencial en pecho y dar un paso adelante.',
-    definition: 'Accede al portal desde una experiencia preparada para web y móvil.',
-    keywords: ['ingresa con tu usuario', 'paso 1'],
-    videoUrl: ''
-  },
-  {
-    id: 'step2',
-    title: 'Elige el servicio',
-    lscWords: 'ELEGIR - SERVICIO',
-    videoHint: 'Gesto: Señalar lista de opciones y marcar con el índice.',
-    definition: 'Completa formularios por tipo de solicitud, con información clara desde el inicio.',
-    keywords: ['elige el servicio', 'paso 2'],
-    videoUrl: ''
-  },
-  {
-    id: 'step3',
-    title: 'Haz seguimiento',
-    lscWords: 'SEGUIMIENTO - REVISAR',
-    videoHint: 'Gesto: Mano como lupa sobre documento avanzando en línea temporal.',
-    definition: 'Consulta estados, novedades y respuestas sin depender de llamadas o correos sueltos.',
-    keywords: ['haz seguimiento', 'paso 3'],
+    keywords: ['misma contraseña del correo', 'contraseña', 'contrasena', 'clave', 'password'],
     videoUrl: ''
   }
 ];
 
+// Pre-cálculo optimizado de términos con palabras clave normalizadas (sin tildes, minúsculas, ordenadas por longitud)
+const PREPARED_LSC_TERMS = LSC_DICTIONARY.map(t => ({
+  ...t,
+  normKeywords: t.keywords
+    .map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim())
+    .sort((a, b) => b.length - a.length),
+}));
+
 // Compatibilidad hacia atrás
 export const LSC_SECTIONS = LSC_DICTIONARY;
 
-// Componente de Reproductor de Video LSC (HTML5 Video + Generador de Stream Audiovisual a 30 FPS)
+// Función de dibujo cinemático de gestos LSC diferenciados
+const drawLscGestureFrame = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  term: LSCTerm,
+  frame: number
+) => {
+  // 1. Fondo de estudio LSC con iluminación cenital
+  ctx.fillStyle = '#0B1120';
+  ctx.fillRect(0, 0, width, height);
+
+  const grad = ctx.createRadialGradient(width / 2, height / 2, 20, width / 2, height / 2, width * 0.7);
+  grad.addColorStop(0, '#1E293B');
+  grad.addColorStop(1, '#0B1120');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Marco de grabación de estudio
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(6, 6, width - 12, height - 12);
+
+  // HUD Superior: REC + Código de Tiempo + Categoría del Gesto
+  ctx.fillStyle = '#EF4444';
+  ctx.beginPath();
+  ctx.arc(20, 20, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#E2E8F0';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillText('LSC VIVO', 30, 24);
+
+  // Categoría específica del gesto con ícono único
+  ctx.fillStyle = '#38BDF8';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(term.gestureCategory, width / 2, 24);
+  ctx.textAlign = 'left';
+
+  // Código de tiempo
+  const sec = Math.floor((frame % 180) / 30);
+  const cent = Math.floor(((frame % 30) / 30) * 100);
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = '10px monospace';
+  ctx.fillText(`00:0${sec}:${cent < 10 ? '0' + cent : cent}`, width - 68, 24);
+
+  // Tiempo armónico
+  const t = frame * 0.07;
+  const wave = Math.sin(t);
+  const cosWave = Math.cos(t);
+
+  const centerX = width / 2; // 180
+  const headY = 66 + wave * 1.2;
+
+  // 2. Avatar: Cabeza con expresión deíctica
+  ctx.fillStyle = '#E0F2FE';
+  ctx.beginPath();
+  ctx.arc(centerX, headY, 20, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Rostro / Mirada según el gesto
+  ctx.fillStyle = '#0369A1';
+  ctx.beginPath();
+  ctx.arc(centerX - 6, headY - 2, 2.2, 0, Math.PI * 2);
+  ctx.arc(centerX + 6, headY - 2, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sonrisa o expresión neutra comunicativa
+  ctx.strokeStyle = '#0369A1';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if (term.gestureType === 'question_gesture') {
+    ctx.arc(centerX, headY + 8, 3.5, 0, Math.PI * 2); // Boca en 'O' de interrogación
+  } else {
+    ctx.arc(centerX, headY + 5, 4.5, 0, Math.PI);
+  }
+  ctx.stroke();
+
+  // Torso profesional de intérprete (ropa oscura uniforme)
+  ctx.fillStyle = '#1E293B';
+  ctx.beginPath();
+  ctx.ellipse(centerX, 132, 36, 40, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#38BDF8';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 3. RENDERIZADO CINEMÁTICO SEGÚN EL TIPO ESPECÍFICO DE GESTO
+  const gType = term.gestureType || 'hands_fan';
+
+  if (gType === 'steering_wheel') {
+    // 🚗 CONDUCCIÓN VEHICULAR: Volante rotatorio con manos sujetando ambos lados
+    const angle = Math.sin(t * 1.5) * 0.45;
+    const wheelY = 112;
+    const wheelR = 34;
+
+    // Aro del volante
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(centerX, wheelY, wheelR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Radios del volante
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(centerX, wheelY);
+    ctx.lineTo(centerX - Math.cos(angle) * wheelR, wheelY - Math.sin(angle) * wheelR);
+    ctx.moveTo(centerX, wheelY);
+    ctx.lineTo(centerX + Math.cos(angle) * wheelR, wheelY + Math.sin(angle) * wheelR);
+    ctx.moveTo(centerX, wheelY);
+    ctx.lineTo(centerX + Math.sin(angle) * wheelR, wheelY + Math.cos(angle) * wheelR);
+    ctx.stroke();
+
+    // Manos sujetando volante
+    const leftX = centerX - Math.cos(angle) * wheelR;
+    const leftY = wheelY - Math.sin(angle) * wheelR;
+    const rightX = centerX + Math.cos(angle) * wheelR;
+    const rightY = wheelY + Math.sin(angle) * wheelR;
+
+    ctx.strokeStyle = '#60A5FA';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 24, 110);
+    ctx.lineTo(leftX, leftY);
+    ctx.moveTo(centerX + 24, 110);
+    ctx.lineTo(rightX, rightY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(leftX, leftY, 7.5, 0, Math.PI * 2);
+    ctx.arc(rightX, rightY, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Flechas curvas de giro
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(centerX, wheelY, wheelR + 10, angle - 0.4, angle + 0.4);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else if (gType === 'walking_legs') {
+    // 👥 INGRESO VISITANTES: Dedos V invertida caminando hacia marco de puerta
+    const doorX = centerX - 45;
+    // Marco de puerta
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(doorX - 16, 75, 32, 65);
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+    ctx.fillRect(doorX - 16, 75, 32, 65);
+
+    // Brazo derecho guiando
+    const handX = centerX + 15 + ((frame % 60) * 0.45);
+    const leg1Y = 120 + Math.sin(t * 3) * 8;
+    const leg2Y = 120 - Math.sin(t * 3) * 8;
+
+    ctx.strokeStyle = '#60A5FA';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(centerX + 20, 105);
+    ctx.lineTo(handX, 108);
+    // Dedos V caminando
+    ctx.lineTo(handX - 10, leg1Y);
+    ctx.moveTo(handX, 108);
+    ctx.lineTo(handX + 6, leg2Y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(handX - 10, leg1Y, 4, 0, Math.PI * 2);
+    ctx.arc(handX + 6, leg2Y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Huellas de pasos
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.6)';
+    ctx.beginPath();
+    ctx.arc(handX - 22, 122, 2.5, 0, Math.PI * 2);
+    ctx.arc(handX - 34, 122, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'wrench_repair') {
+    // 🛠️ MANTENIMIENTO: Tuerca/tubo central y llave inglesa rotando con chispas
+    const boltX = centerX;
+    const boltY = 115;
+    const rot = Math.sin(t * 1.8) * 0.7;
+
+    // Tuerca central
+    ctx.fillStyle = '#94A3B8';
+    ctx.beginPath();
+    ctx.arc(boltX, boltY, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0F172A';
+    ctx.beginPath();
+    ctx.arc(boltX, boltY, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Llave girando
+    ctx.save();
+    ctx.translate(boltX, boltY);
+    ctx.rotate(rot);
+    ctx.strokeStyle = '#FACC15';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(45, 0);
+    ctx.stroke();
+    // Boca de llave
+    ctx.fillStyle = '#FACC15';
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, Math.PI * 0.3, Math.PI * 1.7, false);
+    ctx.fill();
+    ctx.restore();
+
+    // Puño izquierdo sosteniendo la base
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(boltX - 15, boltY + 12, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Chispas de reparación
+    if (Math.abs(wave) > 0.6) {
+      ctx.fillStyle = '#EF4444';
+      ctx.beginPath();
+      ctx.arc(boltX + 16, boltY - 10, 2.5, 0, Math.PI * 2);
+      ctx.arc(boltX - 10, boltY - 14, 2, 0, Math.PI * 2);
+      ctx.arc(boltX + 8, boltY + 16, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (gType === 'table_booking') {
+    // 📅 RESERVA DE SALAS: Trazo de mesa rectangular y sello firme de confirmación
+    const phase = (frame % 80);
+    const tableProgress = Math.min(1, phase / 40);
+
+    // Trazo de mesa en perspectiva
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 45 * tableProgress, 125);
+    ctx.lineTo(centerX + 45 * tableProgress, 125);
+    ctx.lineTo(centerX + 32 * tableProgress, 142);
+    ctx.lineTo(centerX - 32 * tableProgress, 142);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Sello de confirmación descendiendo
+    if (phase > 40) {
+      const stampProgress = (phase - 40) / 40;
+      const stampY = 85 + Math.min(35, stampProgress * 70);
+
+      // Puño con sello
+      ctx.fillStyle = '#F59E0B';
+      ctx.beginPath();
+      ctx.arc(centerX, stampY, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Onda de impacto
+      if (stampProgress > 0.5) {
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, 125, (stampProgress - 0.5) * 40, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  } else if (gType === 'parking_p') {
+    // 🅿️ PARQUEADERO: Palma plana horizontal (bahía) y mano formando P descendiendo
+    // Palma izquierda horizontal
+    ctx.strokeStyle = '#60A5FA';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 40, 130);
+    ctx.lineTo(centerX + 10, 130);
+    ctx.stroke();
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX + 12, 130, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Letra P descendiendo a parquear
+    const parkY = 90 + Math.min(30, (frame % 70) * 0.5);
+    ctx.fillStyle = '#2563EB';
+    ctx.fillRect(centerX - 2, parkY - 14, 26, 26);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillText('P', centerX + 5, parkY + 6);
+
+    // Mano derecha formando letra P
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX - 4, parkY - 2, 7, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'camera_photo') {
+    // 📷 EVIDENCIAS: Encuadre de manos formando cámara y flash de obturador
+    const camW = 60 + Math.sin(t) * 4;
+    const camH = 42 + Math.sin(t) * 3;
+    const camX = centerX - camW / 2;
+    const camY = 100 - camH / 2;
+
+    // Visor de cámara
+    ctx.strokeStyle = '#FACC15';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(camX, camY, camW, camH);
+
+    // Cruz de enfoque
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 8, 100);
+    ctx.lineTo(centerX + 8, 100);
+    ctx.moveTo(centerX, 92);
+    ctx.lineTo(centerX, 108);
+    ctx.stroke();
+
+    // Manos en las esquinas
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(camX, camY, 6, 0, Math.PI * 2);
+    ctx.arc(camX + camW, camY, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Destello de obturador periódico
+    if ((frame % 60) > 50) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.beginPath();
+      ctx.arc(centerX, 100, 28, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (gType === 'speech_waves') {
+    // 🤖 ASISTENTE VIRTUAL: Mano en la boca emitiendo ondas digitales hacia adelante
+    const mouthX = centerX + 18;
+    const mouthY = headY + 6;
+
+    // Mano en la boca
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(mouthX + 6, mouthY, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ondas concéntricas de voz y datos
+    for (let i = 1; i <= 3; i++) {
+      const r = ((frame * 1.8 + i * 16) % 55);
+      const alpha = Math.max(0, 1 - r / 55);
+      ctx.strokeStyle = `rgba(56, 189, 248, ${alpha})`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(mouthX + 10, mouthY, r, -Math.PI * 0.35, Math.PI * 0.35);
+      ctx.stroke();
+    }
+  } else if (gType === 'star_rating') {
+    // ⭐ CALIFICACIÓN: Estrella dorada pulsante y doble pulgar arriba
+    const starR = 20 + Math.sin(t * 2) * 3;
+    ctx.save();
+    ctx.translate(centerX, 105);
+    ctx.fillStyle = '#FACC15';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      ctx.lineTo(Math.cos((18 + i * 72) * Math.PI / 180) * starR, -Math.sin((18 + i * 72) * Math.PI / 180) * starR);
+      ctx.lineTo(Math.cos((54 + i * 72) * Math.PI / 180) * (starR * 0.5), -Math.sin((54 + i * 72) * Math.PI / 180) * (starR * 0.5));
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Pulgares arriba a ambos lados
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX - 42, 105 + wave * 4, 7, 0, Math.PI * 2);
+    ctx.arc(centerX + 42, 105 + wave * 4, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 42, 105 + wave * 4);
+    ctx.lineTo(centerX - 42, 95 + wave * 4);
+    ctx.moveTo(centerX + 42, 105 + wave * 4);
+    ctx.lineTo(centerX + 42, 95 + wave * 4);
+    ctx.stroke();
+  } else if (gType === 'checkmark_approve') {
+    // ✅ APROBACIÓN: Trazo de visto bueno dinámico verde
+    const progress = (frame % 50) / 50;
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(centerX - 24, 110);
+    if (progress > 0.3) {
+      ctx.lineTo(centerX - 6, 124);
+    }
+    if (progress > 0.6) {
+      ctx.lineTo(centerX + 26, 92);
+    }
+    ctx.stroke();
+
+    // Mano trazando
+    const handX = progress < 0.3 ? centerX - 24 : (progress < 0.6 ? centerX - 6 : centerX + 26);
+    const handY = progress < 0.3 ? 110 : (progress < 0.6 ? 124 : 92);
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(handX, handY, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'cross_reject') {
+    // ❌ RECHAZO: Cruce de antebrazos en X firme
+    const swing = Math.sin(t * 2) * 6;
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 28 + swing, 95);
+    ctx.lineTo(centerX + 28 - swing, 135);
+    ctx.moveTo(centerX + 28 - swing, 95);
+    ctx.lineTo(centerX - 28 + swing, 135);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX - 28 + swing, 95, 6, 0, Math.PI * 2);
+    ctx.arc(centerX + 28 - swing, 95, 6, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'bell_alert') {
+    // 🔔 NOTIFICACIONES: Campana oscilante con ondas de alerta
+    const bellAngle = Math.sin(t * 2.5) * 0.35;
+    ctx.save();
+    ctx.translate(centerX, 90);
+    ctx.rotate(bellAngle);
+    ctx.fillStyle = '#FACC15';
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, Math.PI, 0, false);
+    ctx.lineTo(18, 22);
+    ctx.lineTo(-18, 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#D97706';
+    ctx.beginPath();
+    ctx.arc(0, 24, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Manos simulando sonido
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX - 36, 115 + cosWave * 5, 7, 0, Math.PI * 2);
+    ctx.arc(centerX + 36, 115 - cosWave * 5, 7, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'folder_stamp') {
+    // 📁 RADICAR: Hoja en carpeta y sello oficial
+    // Carpeta abierta
+    ctx.strokeStyle = '#38BDF8';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(centerX - 32, 105, 64, 38);
+    // Hoja ingresando
+    const paperY = 88 + Math.min(22, (frame % 60) * 0.4);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(centerX - 20, paperY, 40, 24);
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX + 18, paperY + 6, 7, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'question_gesture') {
+    // ❓ PREGUNTAS FRECUENTES: Dedo trazando '?' en el aire
+    const phase = (frame % 60) / 60;
+    ctx.strokeStyle = '#FACC15';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(centerX, 98, 14, Math.PI * 1.2, Math.PI * 0.1, false);
+    ctx.lineTo(centerX, 116);
+    ctx.stroke();
+    ctx.fillStyle = '#FACC15';
+    ctx.beginPath();
+    ctx.arc(centerX, 126, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dedo índice trazando
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX + Math.cos(phase * Math.PI * 2) * 14, 98 + Math.sin(phase * Math.PI * 2) * 14, 6, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (gType === 'chart_growth') {
+    // 📈 GESTIÓN: Gráfica de barras ascendente y flecha
+    ctx.fillStyle = '#38BDF8';
+    ctx.fillRect(centerX - 36, 125, 12, 16);
+    ctx.fillRect(centerX - 18, 115, 12, 26);
+    ctx.fillRect(centerX, 105, 12, 36);
+    ctx.fillRect(centerX + 18, 92, 12, 49);
+
+    // Flecha ascendente
+    ctx.strokeStyle = '#10B981';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 36, 125);
+    ctx.lineTo(centerX + 30, 88);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(centerX + 30, 88, 7, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // 📋 PALMAS EN ABANICO (Servicios, flujos y catálogo)
+    const leftX = centerX - 32 - Math.abs(wave) * 22;
+    const rightX = centerX + 32 + Math.abs(wave) * 22;
+    const handY = 118 + cosWave * 8;
+
+    ctx.strokeStyle = '#60A5FA';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 20, 110);
+    ctx.lineTo(leftX, handY);
+    ctx.moveTo(centerX + 20, 110);
+    ctx.lineTo(rightX, handY);
+    ctx.stroke();
+
+    ctx.fillStyle = '#FDE68A';
+    ctx.beginPath();
+    ctx.arc(leftX, handY, 7.5, 0, Math.PI * 2);
+    ctx.arc(rightX, handY, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Estela de opciones
+    ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(centerX, 118, 30 + Math.abs(wave) * 16, 0, Math.PI);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 4. Cintillo inferior de Glosa LSC de alta visibilidad
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+  ctx.fillRect(8, height - 32, width - 16, 24);
+  ctx.strokeStyle = '#3B82F6';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(8, height - 32, width - 16, 24);
+
+  ctx.fillStyle = '#FACC15';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`SEÑA LSC: ${term.lscWords}`, width / 2, height - 16);
+  ctx.textAlign = 'left';
+};
+
+// Componente interactivo de Video LSC con Canvas HD y Controles de Pausa/Replay
 export const LSCVideoPlayer: React.FC<{ term: LSCTerm }> = ({ term }) => {
-  const videoRef = useRef<any>(null);
-  const animFrameRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const frameRef = useRef(0);
+  const isPlayingRef = useRef(true);
+  isPlayingRef.current = isPlaying;
+
+  useEffect(() => {
+    frameRef.current = 0;
+    setIsPlaying(true);
+  }, [term]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (term.videoUrl) return;
 
-    // 1. Si existe URL externa de video (archivo .mp4 / .webm)
-    if (term.videoUrl) {
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-        videoRef.current.src = term.videoUrl;
-        videoRef.current.play().catch(() => {});
-      }
-      return;
-    }
-
-    // 2. Si no hay archivo cargado aún, generar stream audiovisual LSC en tiempo real a 30 FPS
-    // Este stream es un video HTML5 real capturado a 30 fps con el intérprete realizando la seña
-    const canvas = document.createElement('canvas');
-    canvas.width = 360;
-    canvas.height = 200;
+    let animId: number;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let frame = 0;
-    let isCancelled = false;
-
     const render = () => {
-      if (isCancelled) return;
-      frame++;
-
-      // Fondo de estudio LSC
-      ctx.fillStyle = '#0F172A';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Gradiente de iluminación de estudio profesional
-      const grad = ctx.createRadialGradient(180, 100, 15, 180, 100, 150);
-      grad.addColorStop(0, '#1E293B');
-      grad.addColorStop(1, '#0F172A');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Marco de grabación de video LSC
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.25)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
-
-      // Indicador REC / Video activo
-      ctx.fillStyle = '#EF4444';
-      ctx.beginPath();
-      ctx.arc(24, 24, 4.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#F8FAFC';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('VIDEO LSC • INTÉRPRETE', 36, 28);
-
-      // Contador de código de tiempo de video
-      const sec = Math.floor((frame % 180) / 30);
-      const cent = Math.floor(((frame % 30) / 30) * 100);
-      ctx.fillStyle = '#94A3B8';
-      ctx.font = '10px monospace';
-      ctx.fillText(`00:0${sec}:${cent < 10 ? '0' + cent : cent}`, canvas.width - 65, 28);
-
-      // Movimiento ondulatorio y armónico de las señas
-      const t = frame * 0.08;
-      const wave = Math.sin(t);
-      const cosWave = Math.cos(t);
-
-      // Cabeza del intérprete
-      ctx.fillStyle = '#DBEAFE';
-      ctx.beginPath();
-      ctx.arc(180, 72 + wave * 1.5, 22, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Expresión facial y mirada deíctica (norma gramatical LSC)
-      ctx.fillStyle = '#1E3A8A';
-      ctx.beginPath();
-      ctx.arc(173, 70 + wave * 1.5, 2, 0, Math.PI * 2);
-      ctx.arc(187, 70 + wave * 1.5, 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(180, 80 + wave * 1.5, 4, 0, Math.PI);
-      ctx.stroke();
-
-      // Torso con indumentaria reglamentaria de intérprete LSC (oscura y neutra)
-      ctx.fillStyle = '#1E293B';
-      ctx.beginPath();
-      ctx.ellipse(180, 138, 38, 42, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#38BDF8';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Brazos y manos ejecutando la seña específica
-      const leftHandX = 135 + wave * 16;
-      const leftHandY = 118 + cosWave * 12;
-      ctx.strokeStyle = '#60A5FA';
-      ctx.lineWidth = 6;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(150, 112);
-      ctx.quadraticCurveTo(125, 128, leftHandX, leftHandY);
-      ctx.stroke();
-
-      ctx.fillStyle = '#FDE68A';
-      ctx.beginPath();
-      ctx.arc(leftHandX, leftHandY, 8.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#D97706';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      const rightHandX = 225 - cosWave * 16;
-      const rightHandY = 114 + wave * 12;
-      ctx.strokeStyle = '#60A5FA';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(210, 112);
-      ctx.quadraticCurveTo(235, 128, rightHandX, rightHandY);
-      ctx.stroke();
-
-      ctx.fillStyle = '#FDE68A';
-      ctx.beginPath();
-      ctx.arc(rightHandX, rightHandY, 8.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#D97706';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Estela cinética de movimiento gestual
-      ctx.strokeStyle = 'rgba(250, 204, 21, 0.4)';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([3, 3]);
-      ctx.beginPath();
-      ctx.arc(180, 115, 26 + Math.abs(wave) * 10, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Cintillo inferior de glosa LSC
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.fillRect(12, canvas.height - 34, canvas.width - 24, 24);
-      ctx.fillStyle = '#FACC15';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`SEÑA LSC: ${term.lscWords}`, canvas.width / 2, canvas.height - 18);
-      ctx.textAlign = 'left';
-
-      animFrameRef.current = requestAnimationFrame(render);
+      if (isPlayingRef.current) {
+        frameRef.current++;
+      }
+      drawLscGestureFrame(ctx, canvas.width, canvas.height, term, frameRef.current);
+      animId = requestAnimationFrame(render);
     };
 
-    render();
-
-    if (typeof (canvas as any).captureStream === 'function' && videoRef.current) {
-      try {
-        const stream = (canvas as any).captureStream(30);
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      } catch (e) {
-        console.warn('captureStream error:', e);
-      }
-    }
-
-    return () => {
-      isCancelled = true;
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    };
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
   }, [term]);
 
+  const togglePlay = () => setIsPlaying(!isPlaying);
+  const handleRestart = () => {
+    frameRef.current = 0;
+    setIsPlaying(true);
+  };
+
+  if (term.videoUrl) {
+    return (
+      <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden' }}>
+        <video
+          src={term.videoUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          controls
+          style={{ width: '100%', height: 185, backgroundColor: '#0F172A', display: 'block', borderRadius: 12 }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div style={{ position: 'relative', width: '100%', borderRadius: 10, overflow: 'hidden' }}>
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        controls
-        style={{
-          width: '100%',
-          height: 180,
-          backgroundColor: '#0F172A',
-          display: 'block',
-          borderRadius: 10,
-          outline: 'none'
-        }}
+    <div style={{ position: 'relative', width: '100%', borderRadius: 12, overflow: 'hidden', backgroundColor: '#0B1120' }}>
+      <canvas
+        ref={canvasRef}
+        width={360}
+        height={210}
+        style={{ width: '100%', height: 'auto', display: 'block', borderRadius: 12 }}
       />
+      {/* Barra de control interactiva para la persona sorda (Pausar o reiniciar) */}
+      <div style={{
+        position: 'absolute',
+        bottom: 7,
+        left: 10,
+        right: 10,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        pointerEvents: 'auto',
+      }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            type="button"
+            onClick={togglePlay}
+            style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.9)',
+              border: '1px solid rgba(56, 189, 248, 0.5)',
+              color: '#FFFFFF',
+              borderRadius: 6,
+              padding: '2px 8px',
+              fontSize: 10.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+            title={isPlaying ? 'Pausar seña para ver detalle' : 'Reanudar video'}
+          >
+            {isPlaying ? '⏸ Pausa' : '▶ Play'}
+          </button>
+          <button
+            type="button"
+            onClick={handleRestart}
+            style={{
+              backgroundColor: 'rgba(30, 41, 59, 0.9)',
+              border: '1px solid rgba(148, 163, 184, 0.5)',
+              color: '#CBD5E1',
+              borderRadius: 6,
+              padding: '2px 8px',
+              fontSize: 10.5,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+            title="Reiniciar seña desde el paso 1"
+          >
+            ↺ Repetir
+          </button>
+        </div>
+        <span style={{ color: '#94A3B8', fontSize: 9.5, fontWeight: 700, fontFamily: 'monospace' }}>
+          LSC • HD
+        </span>
+      </div>
     </div>
   );
 };
@@ -533,6 +1077,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   const pathname = rawPathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isMobile = windowWidth < 1024;
+  const isSmallScreen = windowWidth < 500 || windowHeight < 650;
   const [panelOpen, setOpenPanel] = useState(false);
   const [bannerMinimized, setBannerMinimized] = useState(false);
 
@@ -557,23 +1102,25 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     term: LSCTerm | null;
     top: number;
     left: number;
-    pinned: boolean;
   }>({
     visible: false,
     term: null,
     top: 0,
     left: 0,
-    pinned: false,
   });
   const hideLscTimerRef = useRef<any>(null);
 
-  // Lector de voz y micrófono
+  // Lector de voz y micrófono continuo para ciegos
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [voiceStatusText, setVoiceStatusText] = useState('');
   const [speechRate, setSpeechRate] = useState<number>(1.0);
   const [interactiveReaderEnabled, setInteractiveReaderEnabled] = useState<boolean>(false);
   const lastPathnameRef = useRef(pathname);
+  const recognitionRef = useRef<any>(null);
+  const voiceActiveRef = useRef<boolean>(false);
+  const isSpeakingRef = useRef<boolean>(false);
+  const restartVoiceTimeoutRef = useRef<any>(null);
 
   // Notificación de estado
   const [toastMessage, setToastMessage] = useState('');
@@ -607,14 +1154,15 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         const currentX = (buttonPan.x as any)._value;
         const currentY = (buttonPan.y as any)._value;
 
-        // Ancho aproximado del botón
-        const btnWidth = isMobile ? 48 : 80;
-        const maxLeft = -(width - btnWidth - 16); 
-        const maxRight = 0;
+        // Tamaño y posición base (alineado en la esquina inferior derecha encima del chat)
+        const btnSize = isSmallScreen ? 50 : 64;
+        const baseRight = isSmallScreen ? 16 : 24;
+        const baseBottom = isSmallScreen ? 145 : 100;
 
-        // Límites en Y según si es desktop o móvil
-        const maxUp = isMobile ? -(height - 180) : -(height * 0.38 - 60); 
-        const maxDown = isMobile ? 40 : (height * 0.5 - 80);
+        // Límites en pantalla completa
+        const maxLeft = -(width - btnSize - baseRight - 16); 
+        const maxUp = -(height - btnSize - baseBottom - 40); 
+        const maxDown = baseBottom - 20;
 
         let targetX = currentX;
         let targetY = currentY;
@@ -624,7 +1172,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         if (currentX < middleX) {
           targetX = maxLeft;
         } else {
-          targetX = maxRight;
+          targetX = 0;
         }
 
         // Limitar posición en Y dentro de la pantalla
@@ -639,13 +1187,13 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             toValue: targetX,
             useNativeDriver: false,
             tension: 40,
-            friction: 7,
+            friction: 6,
           }),
           Animated.spring(buttonPan.y, {
             toValue: targetY,
             useNativeDriver: false,
             tension: 40,
-            friction: 7,
+            friction: 6,
           }),
         ]).start();
       },
@@ -969,7 +1517,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     if (activeProfile === 'deaf' || lscActive) {
       setActiveProfile('none');
       setLscActive(false);
-      setLscPopover({ visible: false, term: null, top: 0, left: 0, pinned: false });
+      setLscPopover({ visible: false, term: null, top: 0, left: 0 });
       showToast('Perfil Discapacidad Auditiva: DESACTIVADO');
     } else {
       setActiveProfile('deaf');
@@ -979,18 +1527,19 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     }
   };
 
-  // Escuchador global para Detección de Hover, Focus y Click de Lengua de Señas Colombiana (LSC)
+  // Escuchador global de alta sensibilidad para Detección de Hover, Focus, Click y Touch de Lengua de Señas Colombiana (LSC)
   useEffect(() => {
     if (typeof document === 'undefined') return;
     if (!lscActive) {
-      setLscPopover(prev => ({ ...prev, visible: false, pinned: false }));
+      setLscPopover(prev => ({ ...prev, visible: false }));
       return;
     }
 
+    // Función inteligente de detección de palabras y términos LSC en el DOM
     const findMatch = (el: HTMLElement | null): LSCTerm | null => {
       let curr = el;
       let depth = 0;
-      while (curr && depth < 5) {
+      while (curr && depth < 6) {
         if (curr.hasAttribute && curr.hasAttribute('data-lsc-popover')) return null;
         if (curr.hasAttribute && curr.hasAttribute('data-acc-panel')) return null;
 
@@ -1000,25 +1549,47 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           if (found) return found;
         }
 
-        const raw = (curr.getAttribute ? curr.getAttribute('aria-label') : '') || curr.innerText || curr.textContent || '';
-        const clean = raw.toLowerCase().replace(/\s+/g, ' ').trim();
-        if (clean && clean.length > 0 && clean.length < 180) {
-          // Primero comparar coincidencias exactas o de palabras clave
-          for (const term of LSC_DICTIONARY) {
-            for (const kw of term.keywords) {
-              if (clean.includes(kw)) {
+        // Recolectar textos de múltiples fuentes posibles (aria-label, placeholder, title, alt, innerText, textContent, value)
+        const candidates: string[] = [];
+        if (curr.getAttribute) {
+          const ariaLabel = curr.getAttribute('aria-label');
+          if (ariaLabel) candidates.push(ariaLabel);
+          const title = curr.getAttribute('title');
+          if (title) candidates.push(title);
+          const placeholder = curr.getAttribute('placeholder');
+          if (placeholder) candidates.push(placeholder);
+          const alt = curr.getAttribute('alt');
+          if (alt) candidates.push(alt);
+        }
+        if ((curr as any).value && typeof (curr as any).value === 'string') {
+          candidates.push((curr as any).value);
+        }
+        if (curr.innerText) candidates.push(curr.innerText);
+        if (curr.textContent) candidates.push(curr.textContent);
+
+        for (const raw of candidates) {
+          if (!raw) continue;
+          // Normalización estricta: elimina tildes, mayúsculas y espacios duplicados
+          const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+          if (!clean || clean.length === 0) continue;
+
+          // Buscar coincidencia en diccionario (las palabras clave más largas primero)
+          for (const term of PREPARED_LSC_TERMS) {
+            for (const kw of term.normKeywords) {
+              if (clean === kw || clean.includes(kw)) {
                 return term;
               }
             }
           }
         }
+
         curr = curr.parentElement;
         depth++;
       }
       return null;
     };
 
-    const showForElement = (el: HTMLElement, pinned = false) => {
+    const showForElement = (el: HTMLElement) => {
       const match = findMatch(el);
       if (!match) return;
 
@@ -1029,29 +1600,30 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
       const rect = el.getBoundingClientRect();
       const popoverWidth = 320;
-      const popoverHeight = 360;
+      const popoverHeight = 390;
 
       let top = rect.bottom + 8;
       let left = Math.max(12, Math.min(rect.left, window.innerWidth - popoverWidth - 16));
 
+      // Si no cabe abajo, ubicarlo encima del elemento
       if (top + popoverHeight > window.innerHeight) {
         top = Math.max(12, rect.top - popoverHeight - 8);
       }
+      if (top < 10) {
+        top = 10;
+      }
 
-      setLscPopover(prev => ({
+      setLscPopover({
         visible: true,
         term: match,
         top,
         left,
-        pinned: pinned || prev.pinned
-      }));
+      });
 
-      // Darle un tiempo generoso de permanencia de 35 segundos para que la persona sorda pueda observar con calma
-      if (!pinned) {
-        hideLscTimerRef.current = setTimeout(() => {
-          setLscPopover(p => (p.pinned ? p : { ...p, visible: false }));
-        }, 35000); // 35 segundos de permanencia
-      }
+      // Permanencia generosa de 45 segundos para que la persona sorda pueda observar con calma
+      hideLscTimerRef.current = setTimeout(() => {
+        setLscPopover(p => ({ ...p, visible: false }));
+      }, 45000);
     };
 
     const handleMouseOver = (e: MouseEvent) => {
@@ -1064,56 +1636,54 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         }
         return;
       }
-      showForElement(target, false);
+      showForElement(target);
     };
 
     const handleMouseOut = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target) return;
-      // No cerrar al mover el cursor; el usuario aparta el ratón para ver el video sin obstáculos.
-      // Solo mantener el temporizador extendido de 35s iniciado en showForElement.
+      // No cerrar de inmediato al mover el ratón; el usuario aparta el cursor para ver el video sin obstáculos.
     };
 
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target) showForElement(target, false);
-    };
-
-    const handleFocusOut = () => {
-      // No cerrar agresivamente en focusout para no interrumpir lectores de pantalla ni navegación por teclado
+      if (target) showForElement(target);
     };
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target) return;
       if (target.closest && target.closest('[data-lsc-popover]')) return;
-      const match = findMatch(target);
-      if (match) {
-        // Al hacer clic, se fija automáticamente para que no se cierre solo
-        showForElement(target, true);
-      }
+      showForElement(target);
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target) return;
+      if (target.closest && target.closest('[data-lsc-popover]')) return;
+      showForElement(target);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
-        setLscPopover(prev => ({ ...prev, visible: false, pinned: false }));
+        setLscPopover(prev => ({ ...prev, visible: false }));
       }
     };
 
     document.addEventListener('mouseover', handleMouseOver, true);
     document.addEventListener('mouseout', handleMouseOut, true);
     document.addEventListener('focusin', handleFocusIn, true);
-    document.addEventListener('focusout', handleFocusOut, true);
     document.addEventListener('click', handleClick, true);
+    document.addEventListener('touchstart', handleTouchStart, { passive: true, capture: true });
     document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       document.removeEventListener('mouseover', handleMouseOver, true);
       document.removeEventListener('mouseout', handleMouseOut, true);
       document.removeEventListener('focusin', handleFocusIn, true);
-      document.removeEventListener('focusout', handleFocusOut, true);
       document.removeEventListener('click', handleClick, true);
+      document.removeEventListener('touchstart', handleTouchStart as any, true);
       document.removeEventListener('keydown', handleKeyDown, true);
       if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
     };
@@ -1257,12 +1827,22 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'es-CO';
       utterance.rate = speechRate;
-      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        isSpeakingRef.current = true;
+      };
       utterance.onend = () => {
         setIsSpeaking(false);
+        isSpeakingRef.current = false;
+        if (voiceActiveRef.current) {
+          setVoiceStatusText('🎙️ Te escucho...');
+        }
         if (onEnd) onEnd();
       };
-      utterance.onerror = () => setIsSpeaking(false);
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        isSpeakingRef.current = false;
+      };
       window.speechSynthesis.speak(utterance);
     } else {
       showToast('Lectura por voz no soportada en este navegador');
@@ -1273,12 +1853,34 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      isSpeakingRef.current = false;
     }
   };
 
   const readCurrentPage = () => {
     const textToRead = getPageDescription(pathname);
     speakText(textToRead);
+  };
+
+  // Detener el Asistente de Voz y limpiar reconocimiento
+  const stopVoiceAssistant = () => {
+    voiceActiveRef.current = false;
+    if (restartVoiceTimeoutRef.current) {
+      clearTimeout(restartVoiceTimeoutRef.current);
+      restartVoiceTimeoutRef.current = null;
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    setVoiceStatusText('');
   };
 
   // Alternar Asistente de Voz y Lector de Pantalla para personas ciegas
@@ -1290,8 +1892,8 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       setFontSizeMultiplier(1);
       setUnderlineLinks(false);
       stopSpeech();
-      setIsListening(false);
-      showToast('Lector de voz: DESACTIVADO');
+      stopVoiceAssistant();
+      showToast('Lector de voz y Asistente: DESACTIVADO');
       speakText('Lector de voz y asistente desactivados.');
     } else {
       setInteractiveReaderEnabled(true);
@@ -1301,9 +1903,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       setUnderlineLinks(true);
       setOpenPanel(false);
       showToast('Lector de voz y Asistente: ACTIVADO');
-      const intro = 'Lector de pantalla por voz y asistente activados. Tema oscuro habilitado. Puede presionar la tecla V para pausar en cualquier momento, hacer clic en cualquier texto para escucharlo, o pulsar la tecla M para hablar.';
+      const intro = 'Lector de pantalla por voz y asistente activados. Tema oscuro habilitado. El micrófono permanecerá escuchando continuamente en modo manos libres. Diga cualquier comando o pulse la tecla M para pausar.';
       speakText(intro, () => {
-        readCurrentPage();
+        startVoiceAssistant();
       });
     }
   };
@@ -1345,9 +1947,30 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     setVoiceStatusText(`Escuchó: "${text}"`);
     console.log('🎙️ Comando de voz recibido:', text);
 
+    // 0. Desactivar / Apagar asistente por voz
+    if (
+      text.includes('apagar asistente') ||
+      text.includes('cerrar asistente') ||
+      text.includes('detener asistente') ||
+      text.includes('desactivar asistente') ||
+      text.includes('desactivar microfono') ||
+      text.includes('desactivar micrófono') ||
+      text.includes('apagar microfono') ||
+      text.includes('apagar micrófono') ||
+      text.includes('silencio') ||
+      text.includes('adiós') ||
+      text.includes('adios') ||
+      text.includes('terminar asistente')
+    ) {
+      stopVoiceAssistant();
+      showToast('Asistente de voz: DESACTIVADO');
+      speakText('Asistente por voz desactivado. Puede reactivarlo cuando desee pulsando la tecla M.');
+      return;
+    }
+
     // 1. Ayuda
     if (text.includes('ayuda') || text.includes('comandos') || text.includes('opciones')) {
-      speakText('Comandos de voz disponibles: Puede decir: Ingresar al sistema, Visitantes, Transporte, Mantenimiento, Reserva de Salas, Parqueadero, Inicio, Leer página, o Cerrar sesión.');
+      speakText('Comandos disponibles: Puede decir: Ingresar al sistema, Visitantes, Transporte, Mantenimiento, Reserva de Salas, Parqueadero, Inicio, Leer página, o Apagar asistente.');
       return;
     }
 
@@ -1469,60 +2092,151 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     speakText(`Usted dijo: ${speechResult}. Diga la palabra ayuda para escuchar los comandos disponibles.`);
   };
 
-  // Control por Micrófono (Asistente por Voz para ciegos)
+  // Control por Micrófono Continuo (Asistente por Voz para ciegos en modo manos libres)
   const startVoiceAssistant = () => {
     stopSpeech();
+    voiceActiveRef.current = true;
     setIsListening(true);
-    setVoiceStatusText('Escuchando...');
+    setVoiceStatusText('🎙️ Micrófono activado. Te escucho...');
 
-    speakText('Asistente por voz activo. Diga el lugar al que desea ingresar o el comando deseado.');
+    if (typeof window === 'undefined' || (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window))) {
+      fallbackVoicePrompt();
+      return;
+    }
 
-    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    const initOrRestartRecognition = () => {
+      if (!voiceActiveRef.current) return;
+
+      // Si la síntesis de voz está hablando, posponer el reinicio del micrófono para no escucharse a sí misma
+      if (isSpeakingRef.current) {
+        if (restartVoiceTimeoutRef.current) clearTimeout(restartVoiceTimeoutRef.current);
+        restartVoiceTimeoutRef.current = setTimeout(initOrRestartRecognition, 350);
+        return;
+      }
+
       try {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+
+        // Limpiar instancia previa
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.onstart = null;
+            recognitionRef.current.onresult = null;
+            recognitionRef.current.onerror = null;
+            recognitionRef.current.onend = null;
+            recognitionRef.current.abort();
+          } catch (e) {}
+          recognitionRef.current = null;
+        }
+
         const recognition = new SpeechRecognition();
         recognition.lang = 'es-CO';
-        recognition.interimResults = false;
+        recognition.continuous = true; // Escucha continua sin cerrarse tras una sola frase
+        recognition.interimResults = true; // Feedback en tiempo real mientras el usuario habla
         recognition.maxAlternatives = 1;
 
         recognition.onstart = () => {
+          if (!voiceActiveRef.current) {
+            try { recognition.abort(); } catch (e) {}
+            return;
+          }
           setIsListening(true);
-          setVoiceStatusText('🎙️ Habla ahora...');
+          setVoiceStatusText('🎙️ Escuchando continuo. Te escucho...');
         };
 
         recognition.onresult = (event: any) => {
-          const speechResult = event.results[0][0].transcript;
-          handleVoiceTranscript(speechResult);
+          if (!voiceActiveRef.current || isSpeakingRef.current) return;
+
+          let interim = '';
+          let final = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcript = event.results[i][0]?.transcript || '';
+            if (event.results[i].isFinal) {
+              final += transcript;
+            } else {
+              interim += transcript;
+            }
+          }
+
+          if (interim) {
+            setVoiceStatusText(`Escuchando: "${interim.trim()}"`);
+          }
+
+          if (final.trim()) {
+            const captured = final.trim();
+            setVoiceStatusText(`Comando: "${captured}"`);
+            handleVoiceTranscript(captured);
+          }
         };
 
-        recognition.onerror = (err: any) => {
-          console.warn('Speech error:', err);
-          setIsListening(false);
-          speakText('No se escuchó la palabra. Pulse nuevamente el micrófono o la tecla M para intentar.');
+        recognition.onerror = (event: any) => {
+          console.log('Speech recognition status:', event?.error);
+
+          // Si el usuario ya desactivó el asistente, silenciar
+          if (!voiceActiveRef.current) {
+            setIsListening(false);
+            return;
+          }
+
+          // Error de permisos denegados en el navegador
+          if (event?.error === 'not-allowed' || event?.error === 'service-not-allowed') {
+            voiceActiveRef.current = false;
+            setIsListening(false);
+            setVoiceStatusText('Permiso de micrófono no otorgado');
+            showToast('Permiso de micrófono no otorgado en el navegador');
+            speakText('No se otorgó permiso de acceso al micrófono en su navegador.');
+            return;
+          }
+
+          // Silencio o timeout natural del navegador: auto-reiniciar invisiblemente
+          if (event?.error === 'no-speech' || event?.error === 'network' || event?.error === 'aborted') {
+            if (voiceActiveRef.current && !isSpeakingRef.current) {
+              if (restartVoiceTimeoutRef.current) clearTimeout(restartVoiceTimeoutRef.current);
+              restartVoiceTimeoutRef.current = setTimeout(initOrRestartRecognition, 300);
+            }
+            return;
+          }
+
+          // Otros errores transitorios
+          if (voiceActiveRef.current) {
+            if (restartVoiceTimeoutRef.current) clearTimeout(restartVoiceTimeoutRef.current);
+            restartVoiceTimeoutRef.current = setTimeout(initOrRestartRecognition, 500);
+          }
         };
 
         recognition.onend = () => {
-          setIsListening(false);
+          // El navegador finaliza recognition tras un tiempo de silencio o rotación de buffers.
+          // SI EL ASISTENTE ESTÁ ACTIVO: auto-reiniciar de inmediato para mantenerlo activo permanentemente.
+          if (voiceActiveRef.current) {
+            setIsListening(true);
+            if (!isSpeakingRef.current) {
+              setVoiceStatusText('🎙️ Micrófono abierto...');
+            }
+            if (restartVoiceTimeoutRef.current) clearTimeout(restartVoiceTimeoutRef.current);
+            restartVoiceTimeoutRef.current = setTimeout(initOrRestartRecognition, 200);
+          } else {
+            setIsListening(false);
+          }
         };
 
+        recognitionRef.current = recognition;
         recognition.start();
-      } catch (e) {
-        fallbackVoicePrompt();
+      } catch (err) {
+        console.warn('Error al iniciar reconocimiento continuo:', err);
+        if (voiceActiveRef.current) {
+          if (restartVoiceTimeoutRef.current) clearTimeout(restartVoiceTimeoutRef.current);
+          restartVoiceTimeoutRef.current = setTimeout(initOrRestartRecognition, 800);
+        }
       }
-    } else {
-      fallbackVoicePrompt();
-    }
+    };
+
+    initOrRestartRecognition();
   };
 
   const fallbackVoicePrompt = () => {
-    setTimeout(() => {
-      speakText('Comando reconocido. Abriendo pantalla de ingreso al sistema login. Por favor digite su usuario y contraseña.');
-      setVoiceStatusText('Redirigiendo...');
-      setTimeout(() => {
-        setIsListening(false);
-        router.push('/login');
-      }, 3000);
-    }, 2000);
+    speakText('El reconocimiento de voz por micrófono no está disponible en este navegador. Puede utilizar los controles del lector de pantalla o atajos de teclado.');
   };
 
   // Escuchador global de clics para lector de pantalla interactivo
@@ -1583,10 +2297,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         (activeEl as HTMLElement).isContentEditable
       );
 
-      // Tecla Escape: Silenciar inmediatamente
+      // Tecla Escape: Silenciar inmediatamente y apagar asistente
       if (e.key === 'Escape') {
         stopSpeech();
-        setIsListening(false);
+        stopVoiceAssistant();
         return;
       }
 
@@ -1597,10 +2311,18 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         return;
       }
 
-      // Tecla 'M' (o Alt + M): Activar Micrófono
+      // Tecla 'M' (o Alt + M): Alternar Micrófono / Asistente por Voz
       if ((e.key === 'm' || e.key === 'M' || (e.altKey && (e.key === 'm' || e.key === 'M'))) && !isInput) {
         e.preventDefault();
-        startVoiceAssistant();
+        if (voiceActiveRef.current) {
+          stopVoiceAssistant();
+          stopSpeech();
+          showToast('Asistente por voz: DESACTIVADO');
+          speakText('Asistente por voz desactivado.');
+        } else {
+          showToast('Asistente por voz: ACTIVADO');
+          startVoiceAssistant();
+        }
         return;
       }
     };
@@ -1702,32 +2424,56 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         )}
       </View>
 
-      {/* Botón flotante lateral movible de Accesibilidad (Drag & Drop) */}
+      {/* Botón flotante lateral movible de Accesibilidad (Drag & Drop tipo burbuja flotante como el chat) */}
       <Animated.View
-        style={[
-          styles.floatingButton, 
-          isMobile && styles.floatingButtonMobile,
-          {
-            transform: [{ translateX: buttonPan.x }, { translateY: buttonPan.y }],
-          }
-        ]}
+        style={{
+          position: 'absolute',
+          bottom: isSmallScreen ? 145 : 100,
+          right: isSmallScreen ? 16 : 24,
+          zIndex: 9999,
+          transform: [{ translateX: buttonPan.x }, { translateY: buttonPan.y }],
+        }}
+        pointerEvents="box-none"
         {...buttonPanResponder.panHandlers}
       >
         <TouchableOpacity
           accessible={true}
           accessibilityRole="button"
           onPress={() => setOpenPanel(true)}
-          accessibilityLabel="Menú de Accesibilidad Web"
-          activeOpacity={0.85}
+          accessibilityLabel="Abrir menú de accesibilidad"
+          activeOpacity={0.88}
           style={{
-            alignItems: 'center',
+            backgroundColor: '#1E40AF',
+            width: isSmallScreen ? 50 : 64,
+            height: isSmallScreen ? 50 : 64,
+            borderRadius: isSmallScreen ? 25 : 32,
             justifyContent: 'center',
-            flexDirection: 'column',
-            gap: isMobile ? 0 : 4,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.35,
+            shadowRadius: 6,
+            elevation: 8,
+            borderWidth: 1.5,
+            borderColor: 'rgba(255, 255, 255, 0.25)',
+            ...(Platform.OS === 'web' ? { cursor: 'pointer', userSelect: 'none' } as any : {}),
           }}
         >
-          <Ionicons name="accessibility" size={isMobile ? 22 : 26} color="#FFFFFF" />
-          {!isMobile && <Text style={styles.floatingText}>Accesibilidad</Text>}
+          <Ionicons name="accessibility" size={isSmallScreen ? 24 : 30} color="#FFFFFF" />
+          {!isSmallScreen && (
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontSize: 8.5,
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                letterSpacing: 0.3,
+                marginTop: 1,
+              }}
+            >
+              Accesible
+            </Text>
+          )}
         </TouchableOpacity>
       </Animated.View>
 
@@ -1739,66 +2485,48 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         </View>
       ) : null}
 
-      {/* Popover Flotante de Lengua de Señas Colombiana (LSC) */}
-      {lscActive && lscPopover.visible && lscPopover.term && (
-        <View
-          style={[
-            styles.lscFloatingPopover,
-            {
-              top: lscPopover.top,
-              left: lscPopover.left,
-            }
-          ]}
-          // @ts-ignore
-          dataSet={{ lscPopover: 'true' }}
-          onMouseEnter={() => {
-            if (hideLscTimerRef.current) {
-              clearTimeout(hideLscTimerRef.current);
-              hideLscTimerRef.current = null;
-            }
-          }}
-          onMouseLeave={() => {
-            if (!lscPopover.pinned) {
+      {/* Popover Flotante de Lengua de Señas Colombiana (LSC) - Renderizado vía Portal para estar siempre encima de cualquier modal */}
+      {(() => {
+        if (!lscActive || !lscPopover.visible || !lscPopover.term) return null;
+
+        const popoverElement = (
+          <View
+            style={[
+              styles.lscFloatingPopover,
+              {
+                top: lscPopover.top,
+                left: lscPopover.left,
+                zIndex: 2147483647,
+              }
+            ]}
+            // @ts-ignore
+            dataSet={{ lscPopover: 'true' }}
+            onMouseEnter={() => {
+              if (hideLscTimerRef.current) {
+                clearTimeout(hideLscTimerRef.current);
+                hideLscTimerRef.current = null;
+              }
+            }}
+            onMouseLeave={() => {
               if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
               hideLscTimerRef.current = setTimeout(() => {
-                setLscPopover(p => (p.pinned ? p : { ...p, visible: false }));
-              }, 30000); // 30 segundos tras salir del popover
-            }
-          }}
-        >
-          {/* Header */}
-          <View style={styles.lscPopoverHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-              <Text style={{ fontSize: 16 }}>🖐️</Text>
-              <Text style={styles.lscPopoverTitle} numberOfLines={1}>
-                {lscPopover.term.title}
-              </Text>
-              {lscPopover.pinned && (
-                <View style={{ backgroundColor: '#D97706', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#FFFFFF' }}>FIJADO</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {/* Botón Fijar/Desanclar */}
-              <TouchableOpacity
-                onPress={() => setLscPopover(prev => ({ ...prev, pinned: !prev.pinned }))}
-                style={[
-                  styles.lscPopoverCloseBtn,
-                  lscPopover.pinned && { backgroundColor: '#D97706' }
-                ]}
-                accessibilityLabel={lscPopover.pinned ? "Desfijar intérprete" : "Fijar intérprete en pantalla"}
-              >
-                <Ionicons
-                  name={lscPopover.pinned ? "pin" : "pin-outline"}
-                  size={14}
-                  color={lscPopover.pinned ? "#FFFFFF" : "#CBD5E1"}
-                />
-              </TouchableOpacity>
+                setLscPopover(p => ({ ...p, visible: false }));
+              }, 20000); // 20 segundos tras apartar el ratón
+            }}
+          >
+            {/* Header */}
+            <View style={styles.lscPopoverHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                <Text style={{ fontSize: 16 }}>🖐️</Text>
+                <Text style={styles.lscPopoverTitle} numberOfLines={1}>
+                  {lscPopover.term.title}
+                </Text>
+              </View>
+              {/* Botón Cerrar (se retiró el fijado a solicitud del usuario) */}
               <TouchableOpacity
                 onPress={() => {
                   if (hideLscTimerRef.current) clearTimeout(hideLscTimerRef.current);
-                  setLscPopover(prev => ({ ...prev, visible: false, pinned: false }));
+                  setLscPopover(prev => ({ ...prev, visible: false }));
                 }}
                 style={styles.lscPopoverCloseBtn}
                 accessibilityLabel="Cerrar video de señas"
@@ -1806,30 +2534,35 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 <Ionicons name="close" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Video Player */}
-          <View style={styles.lscPopoverVideoBox}>
-            {Platform.OS === 'web' && <LSCVideoPlayer term={lscPopover.term} />}
-          </View>
-
-          {/* Info LSC */}
-          <View style={styles.lscPopoverDetails}>
-            <View style={styles.lscGlosaBadge}>
-              <Text style={styles.lscGlosaTitle}>Gramática LSC (Glosa):</Text>
-              <Text style={styles.lscGlosaText}>{lscPopover.term.lscWords}</Text>
+            {/* Video Player con animación cinética y props diferenciados para cada término */}
+            <View style={styles.lscPopoverVideoBox}>
+              {Platform.OS === 'web' && <LSCVideoPlayer term={lscPopover.term} />}
             </View>
 
-            <Text style={styles.lscGestureText}>
-              {lscPopover.term.videoHint}
-            </Text>
+            {/* Info LSC */}
+            <View style={styles.lscPopoverDetails}>
+              <View style={styles.lscGlosaBadge}>
+                <Text style={styles.lscGlosaTitle}>Gramática LSC (Glosa):</Text>
+                <Text style={styles.lscGlosaText}>{lscPopover.term.lscWords}</Text>
+              </View>
 
-            <Text style={styles.lscDefText}>
-              {lscPopover.term.definition}
-            </Text>
+              <Text style={styles.lscGestureText}>
+                {lscPopover.term.videoHint}
+              </Text>
+
+              <Text style={styles.lscDefText}>
+                {lscPopover.term.definition}
+              </Text>
+            </View>
           </View>
-        </View>
-      )}
+        );
+
+        if (Platform.OS === 'web' && ReactDOMPortal && typeof document !== 'undefined' && document.body) {
+          return ReactDOMPortal.createPortal(popoverElement, document.body);
+        }
+        return popoverElement;
+      })()}
 
       {/* Barra de Estado LSC Activo en la parte inferior */}
       {lscActive && (
@@ -1854,7 +2587,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
               onPress={() => {
                 setLscActive(false);
                 setActiveProfile('none');
-                setLscPopover({ visible: false, term: null, top: 0, left: 0, pinned: false });
+                setLscPopover({ visible: false, term: null, top: 0, left: 0 });
                 showToast('Perfil Discapacidad Auditiva: DESACTIVADO');
               }}
             >
@@ -1864,17 +2597,65 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         </View>
       )}
 
-      {/* Widget Asistente de Voz Activo para Ciegos */}
-      {isListening && (
-        <View style={styles.voiceAssistantWidget}>
-          <Ionicons name="mic" size={32} color="#EF4444" />
-          <Text style={styles.voiceAssistantTitle}>Asistente de Voz Activo</Text>
-          <Text style={styles.voiceAssistantSub}>{voiceStatusText || 'Diga: "Ingresar al sistema"'}</Text>
-          <TouchableOpacity style={styles.stopVoiceBtn} onPress={() => setIsListening(false)}>
-            <Text style={styles.stopVoiceText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Widget Asistente de Voz Activo para Ciegos (Modo Manos Libres Continuo) */}
+      {(() => {
+        if (!isListening && !voiceActiveRef.current) return null;
+
+        const widgetElement = (
+          <View style={styles.voiceAssistantWidget}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={styles.voiceMicPulse}>
+                  <Ionicons name="mic" size={18} color="#FFFFFF" />
+                </View>
+                <View>
+                  <Text style={styles.voiceAssistantTitle}>Asistente de Voz Continuo</Text>
+                  <Text style={styles.voiceAssistantBadge}>🎙️ MANOS LIBRES ACTIVO</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.voiceCloseBtn}
+                onPress={stopVoiceAssistant}
+                accessibilityLabel="Desactivar asistente de voz"
+              >
+                <Ionicons name="close" size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.voiceStatusBox}>
+              <Text style={styles.voiceAssistantSub} numberOfLines={2}>
+                {voiceStatusText || 'Te escucho... Diga cualquier comando'}
+              </Text>
+            </View>
+
+            <View style={styles.voiceHintsRow}>
+              {['Visitantes', 'Transporte', 'Salas', 'Mantenimiento', 'Ayuda'].map((cmd) => (
+                <TouchableOpacity
+                  key={cmd}
+                  style={styles.voiceHintChip}
+                  onPress={() => handleVoiceTranscript(cmd.toLowerCase())}
+                >
+                  <Text style={styles.voiceHintChipText}>{cmd}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginTop: 2 }}>
+              <Text style={styles.voiceKeyboardHint}>
+                Atajo: Presione M para pausar • Esc para silenciar
+              </Text>
+              <TouchableOpacity style={styles.stopVoiceBtn} onPress={stopVoiceAssistant}>
+                <Text style={styles.stopVoiceText}>Apagar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+
+        if (Platform.OS === 'web' && ReactDOMPortal && typeof document !== 'undefined' && document.body) {
+          return ReactDOMPortal.createPortal(widgetElement, document.body);
+        }
+        return widgetElement;
+      })()}
 
       {/* Modal / Panel Principal de Accesibilidad */}
       <Modal visible={panelOpen} transparent animationType="slide" onRequestClose={() => setOpenPanel(false)}>
@@ -2010,13 +2791,18 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: '#2563EB' }, isMobile && { width: '100%' }]}
-                    onPress={startVoiceAssistant}
+                    style={[
+                      styles.actionBtn,
+                      isListening && styles.actionBtnActive,
+                      { backgroundColor: isListening ? '#DC2626' : '#2563EB' },
+                      isMobile && { width: '100%' }
+                    ]}
+                    onPress={isListening ? stopVoiceAssistant : startVoiceAssistant}
                     accessibilityRole="button"
-                    accessibilityLabel="Asistente por voz con micrófono"
+                    accessibilityLabel="Asistente por voz con micrófono continuo"
                   >
-                    <Ionicons name="mic" size={16} color="#FFFFFF" />
-                    <Text style={styles.actionBtnText}>Asistente por Voz</Text>
+                    <Ionicons name={isListening ? "mic-off" : "mic"} size={16} color="#FFFFFF" />
+                    <Text style={styles.actionBtnText}>{isListening ? "Apagar Asistente" : "Asistente por Voz"}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -2314,7 +3100,6 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                           term: matched,
                           top: 80,
                           left: Math.max(16, (typeof window !== 'undefined' ? window.innerWidth / 2 - 160 : 20)),
-                          pinned: true
                         });
                         setDictionaryVisible(false);
                       }}
@@ -2342,43 +3127,6 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 };
 
 const styles = StyleSheet.create({
-  floatingButton: {
-    position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
-    top: '40%',
-    right: 8,
-    zIndex: 9999,
-    backgroundColor: '#1E40AF',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer', userSelect: 'none' } as any : {}),
-  },
-  floatingButtonMobile: {
-    top: 'auto' as any,
-    bottom: 96,
-    right: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    gap: 0,
-    shadowOpacity: 0.25,
-  },
-  floatingText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   toastContainer: {
     position: 'absolute',
     top: 80,
@@ -2403,7 +3151,7 @@ const styles = StyleSheet.create({
   },
   lscFloatingPopover: {
     position: 'fixed' as any,
-    zIndex: 999999,
+    zIndex: 2147483647,
     width: 320,
     backgroundColor: '#0F172A',
     borderRadius: 18,
@@ -2529,44 +3277,104 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   voiceAssistantWidget: {
-    position: 'absolute',
-    top: '30%',
+    position: 'fixed' as any,
+    top: 20,
+    left: 16,
+    right: 16,
+    maxWidth: 380,
+    marginHorizontal: 'auto',
     alignSelf: 'center',
-    zIndex: 9999,
-    width: 300,
+    zIndex: 2147483647,
     backgroundColor: '#0F172A',
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 20,
+    padding: 14,
     alignItems: 'center',
     gap: 8,
     shadowColor: '#000',
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.6,
     shadowRadius: 20,
-    elevation: 12,
+    elevation: 24,
     borderWidth: 2,
-    borderColor: '#EF4444',
+    borderColor: '#3B82F6',
+  },
+  voiceMicPulse: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#EF4444',
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   },
   voiceAssistantTitle: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '900',
   },
+  voiceAssistantBadge: {
+    color: '#10B981',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  voiceCloseBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+  },
+  voiceStatusBox: {
+    width: '100%',
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+  },
   voiceAssistantSub: {
-    color: '#94A3B8',
-    fontSize: 13,
+    color: '#F8FAFC',
+    fontSize: 12,
+    fontWeight: '700',
     textAlign: 'center',
   },
-  stopVoiceBtn: {
-    backgroundColor: '#334155',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  voiceHintsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  voiceHintChip: {
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.4)',
     borderRadius: 12,
-    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  voiceHintChipText: {
+    color: '#93C5FD',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  voiceKeyboardHint: {
+    color: '#94A3B8',
+    fontSize: 9.5,
+    flex: 1,
+    fontWeight: '600',
+  },
+  stopVoiceBtn: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 10,
   },
   stopVoiceText: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800',
+    fontSize: 11,
   },
   modalOverlay: {
     flex: 1,
