@@ -26,86 +26,6 @@ if (Platform.OS === 'web') {
     ReactDOMPortal = null;
   }
 }
-
-// Términos para el diccionario de lengua de señas
-const DICTIONARY_TERMS = [
-  {
-    term: 'Ingresar al sistema',
-    definition: 'Acceso seguro al portal mediante usuario y contraseña de la entidad.',
-    lscHint: '🔑 INGRESAR SISTEMA (Gesto: Mano empujada hacia adelante + teclear usuario).'
-  },
-  {
-    term: 'Ver Servicios',
-    definition: 'Catálogo de solicitudes administrativas disponibles en la plataforma.',
-    lscHint: '📋 SERVICIOS (Gesto: Manos abiertas hacia arriba mostrando opciones).'
-  },
-  {
-    term: 'Cómo funciona',
-    definition: 'Guía en tres pasos para radicar y consultar solicitudes.',
-    lscHint: '� CÓMO FUNCIONA (Gesto: Círculos giratorios alternados con las manos).'
-  },
-  {
-    term: 'Soporte y Ayuda',
-    definition: 'Atención de inquietudes, ayuda técnica y preguntas frecuentes.',
-    lscHint: '❓ SOPORTE Y AYUDA (Gesto: Puño sobre palma abierta apoyando).'
-  },
-  {
-    term: 'Ingreso visitantes',
-    definition: 'Registro de entrada y control de acceso de personas externas a las sedes.',
-    lscHint: '👥 VISITANTE INGRESAR (Gesto: Dos dedos simulando pasos de persona).'
-  },
-  {
-    term: 'Transporte Institucional',
-    definition: 'Solicitud de vehículo oficial para desplazamientos y misiones institucionales.',
-    lscHint: '🚗 TRANSPORTE VEHÍCULO (Gesto: Manos en forma de volante).'
-  },
-  {
-    term: 'Mantenimiento',
-    definition: 'Reporte de arreglos o fallas en la infraestructura física de la sede.',
-    lscHint: '🛠️ MANTENIMIENTO REPARAR (Gesto: Llave inglesa girando).'
-  },
-  {
-    term: 'Reserva de Salas',
-    definition: 'Apartar salas de juntas o auditorios para reuniones de trabajo.',
-    lscHint: '📅 RESERVA SALA (Gesto: Trazo de mesa rectangular y sello).'
-  },
-  {
-    term: 'Parqueadero',
-    definition: 'Asignación de cupo de estacionamiento para vehículos institucionales.',
-    lscHint: '🅿️ PARQUEADERO ESTACIONAR (Gesto: Letra P con dedos sobre superficie).'
-  },
-  {
-    term: 'Ingresa con tu usuario',
-    definition: 'Paso 1: Accede al portal desde una experiencia preparada para web y móvil.',
-    lscHint: '👤 USUARIO INGRESAR (Gesto: Señalar credencial y entrar).'
-  },
-  {
-    term: 'Elige el servicio',
-    definition: 'Paso 2: Completa formularios por tipo de solicitud, con información clara desde el inicio.',
-    lscHint: '👉 ELEGIR SERVICIO (Gesto: Señalar lista de opciones).'
-  },
-  {
-    term: 'Haz seguimiento',
-    definition: 'Paso 3: Consulta estados, novedades y respuestas sin depender de llamadas o correos sueltos.',
-    lscHint: '� SEGUIMIENTO REVISAR (Gesto: Mano como lupa sobre documento).'
-  },
-  {
-    term: 'Trazabilidad',
-    definition: 'Seguimiento completo a una solicitud desde que se crea hasta que se resuelve.',
-    lscHint: '🖐️ TRAZABILIDAD (Gesto: Línea continua con índice y pulgar).'
-  },
-  {
-    term: 'Misión Oficial',
-    definition: 'Salida de la entidad autorizada para cumplir labores institucionales.',
-    lscHint: '🚗 MISIÓN OFICIAL (Gesto: Automóvil + credencial de trabajo).'
-  },
-  {
-    term: 'Aforo',
-    definition: 'Número máximo de personas autorizadas para estar en un salón simultáneamente.',
-    lscHint: '👥 AFORO (Gesto: Grupo de personas + límite de mano extendida).'
-  }
-];
-
 // Tipos y gestos diferenciados para Lengua de Señas Colombiana (LSC)
 export type LSCGestureType =
   | 'steering_wheel'
@@ -387,8 +307,143 @@ export const LSC_DICTIONARY: LSCTerm[] = [
     videoHint: 'Gesto: Pulgar e índice cerrando candado imaginario frente a la boca y luego tecleo reservado.',
     keywords: ['misma contraseña del correo', 'contraseña', 'contrasena', 'clave', 'password'],
     videoUrl: ''
+  },
+  {
+    id: 'dependencia',
+    title: 'Dependencia / Área Solicitante',
+    lscWords: 'OFICINA - DEPENDENCIA - SECTOR',
+    gestureType: 'official_badge',
+    gestureCategory: '🏛️ Dependencia y Área Solicitante',
+    definition: 'Subdirección, gerencia o área administrativa a la que pertenece el funcionario que radica la solicitud.',
+    videoHint: 'Gesto: Manos trazando columnas institucionales y señalando el sector interno de trabajo.',
+    keywords: ['dependencia solicitante', 'dependencia anfitriona', 'dependencia', 'dependencias', 'área solicitante', 'area solicitante', 'subdirección', 'subdireccion', 'oficina'],
+    videoUrl: ''
+  },
+  {
+    id: 'justificacion',
+    title: 'Justificación / Motivo',
+    lscWords: 'POR QUÉ - MOTIVO - RAZÓN',
+    gestureType: 'folder_stamp',
+    gestureCategory: '📝 Justificación y Motivo de Solicitud',
+    definition: 'Descripción clara de la necesidad laboral o institucional que sustenta la solicitud.',
+    videoHint: 'Gesto: Dedo índice en la sien en pensamiento y luego extendiendo la mano explicando el motivo.',
+    keywords: ['justificación', 'justificacion', 'motivo', 'justificación de la visita', 'justificacion de la visita', 'motivo de la visita', 'justificación de la misión oficial', 'justificacion de la mision oficial', 'descripción detallada', 'descripcion detallada'],
+    videoUrl: ''
+  },
+  {
+    id: 'cedula',
+    title: 'Documento de Identidad',
+    lscWords: 'CÉDULA - DOCUMENTO - IDENTIFICACIÓN',
+    gestureType: 'official_badge',
+    gestureCategory: '🪪 Documento de Identidad y Cédula',
+    definition: 'Cédula de ciudadanía o documento oficial requerido para el control de acceso, registro y validación.',
+    videoHint: 'Gesto: Pulgar e índice formando un rectángulo plano frente al pecho simulando el documento de identidad.',
+    keywords: ['documento de identidad', 'cédula', 'cedula', 'identificación', 'identificacion', 'número de documento', 'numero de documento', 'cédula o documento de identidad'],
+    videoUrl: ''
+  },
+  {
+    id: 'horario',
+    title: 'Fecha y Horario Programado',
+    lscWords: 'FECHA - HORA - CALENDARIO',
+    gestureType: 'table_booking',
+    gestureCategory: '🕒 Fecha y Horario Programado',
+    definition: 'Día, hora de inicio y hora de finalización requerida para el servicio o reserva de espacio.',
+    videoHint: 'Gesto: Dedo índice señalando la muñeca izquierda (reloj) y luego marcando cuadrícula de calendario.',
+    keywords: ['hora de inicio', 'hora de finalización', 'hora de finalizacion', 'hora de recogida', 'fecha de la visita', 'fecha de la reunión', 'fecha de la reunion', 'horario', 'fecha'],
+    videoUrl: ''
+  },
+  {
+    id: 'prioridad',
+    title: 'Prioridad del Requerimiento',
+    lscWords: 'NIVEL - URGENCIA - PRIORIDAD',
+    gestureType: 'chart_growth',
+    gestureCategory: '⚡ Nivel de Urgencia y Prioridad',
+    definition: 'Nivel de criticidad asignado a la solicitud (Alta, Media o Baja) para su pronta atención.',
+    videoHint: 'Gesto: Palma horizontal que asciende rápidamente indicando urgencia o nivel prioritario.',
+    keywords: ['prioridad del mantenimiento', 'prioridad', 'urgencia', 'alta prioridad', 'prioridad alta', 'prioridad media', 'prioridad baja', 'urgente'],
+    videoUrl: ''
+  },
+  {
+    id: 'funcionario',
+    title: 'Funcionario / Servidor Público',
+    lscWords: 'TRABAJADOR - ESTADO - SERVIDOR',
+    gestureType: 'official_badge',
+    gestureCategory: '👔 Servidor Público Institucional',
+    definition: 'Colaborador vinculado a la Secretaría Jurídica Distrital autorizado para gestionar trámites.',
+    videoHint: 'Gesto: Mano derecha en diagonal sobre el pecho simbolizando servicio público y compromiso.',
+    keywords: ['nombre completo del funcionario', 'funcionario', 'funcionarios', 'servidor público', 'servidor publico', 'colaborador', 'empleado'],
+    videoUrl: ''
+  },
+  {
+    id: 'en_proceso',
+    title: 'En Trámite / En Proceso',
+    lscWords: 'PROCESO - TRÁMITE - EN CURSO',
+    gestureType: 'rotating_gears',
+    gestureCategory: '🔄 Estado En Trámite o En Curso',
+    definition: 'Estado que indica que la solicitud está en revisión y ejecución activa por el área designada.',
+    videoHint: 'Gesto: Manos en movimiento fluido hacia adelante indicando avance constante del trámite.',
+    keywords: ['en trámite', 'en tramite', 'en proceso', 'en curso', 'pendiente', 'en revisión', 'en revision'],
+    videoUrl: ''
+  },
+  {
+    id: 'logout',
+    title: 'Cerrar Sesión',
+    lscWords: 'SALIR - TERMINAR - CERRAR',
+    gestureType: 'login_key',
+    gestureCategory: '🚪 Cierre de Sesión y Salida',
+    definition: 'Desconexión segura del portal institucional para resguardar la privacidad del usuario.',
+    videoHint: 'Gesto: Manos cerrándose hacia el cuerpo y deslizando hacia el exterior indicando fin de jornada.',
+    keywords: ['cerrar sesión', 'cerrar sesion', 'salir del sistema', 'salir', 'desconectar'],
+    videoUrl: ''
+  },
+  {
+    id: 'pasajeros',
+    title: 'Pasajeros y Cupos',
+    lscWords: 'PASAJEROS - PERSONAS - CUPO',
+    gestureType: 'capacity_limit',
+    gestureCategory: '👥 Cantidad de Pasajeros y Cupos',
+    definition: 'Número de funcionarios que se desplazarán en el vehículo de transporte institucional.',
+    videoHint: 'Gesto: Dedos contando cantidad de personas e ingresando ordenadamente a un vehículo.',
+    keywords: ['número de pasajeros', 'numero de pasajeros', 'número de pasajeros requeridos', 'pasajeros', 'cupos', 'cantidad estimada de asistentes', 'asistentes'],
+    videoUrl: ''
+  },
+  {
+    id: 'cancelar',
+    title: 'Cancelar Solicitud',
+    lscWords: 'CANCELAR - ANULAR - FRENAR',
+    gestureType: 'cross_reject',
+    gestureCategory: '🛑 Cancelación o Anulación',
+    definition: 'Acción para revocar una solicitud radicada previamente antes de su asignación o atención.',
+    videoHint: 'Gesto: Manos cruzándose con corte horizontal indicando detención o suspensión total.',
+    keywords: ['cancelar solicitud', 'anular solicitud', 'descartar', 'anular', 'cancelar'],
+    videoUrl: ''
+  },
+  {
+    id: 'auditorio',
+    title: 'Auditorios y Salones',
+    lscWords: 'AUDITORIO - SALÓN - REUNIÓN',
+    gestureType: 'table_booking',
+    gestureCategory: '🏛️ Auditorio Barule y Huitaca',
+    definition: 'Espacios institucionales de gran capacidad como Auditorio Barule 1 y 2, o Auditorio Huitaca.',
+    videoHint: 'Gesto: Manos abriéndose en semicírculo amplio simulando la gradería y escenario de un auditorio.',
+    keywords: ['auditorio barule', 'auditorio huitaca', 'auditorio', 'auditorios', 'salón 308', 'salon 308', 'sala de juntas principal'],
+    videoUrl: ''
+  },
+  {
+    id: 'recordarme',
+    title: 'Recordar Sesión',
+    lscWords: 'RECORDAR - MEMORIA - GUARDAR',
+    gestureType: 'secret_lock',
+    gestureCategory: '💾 Recordar Credenciales en Equipo',
+    definition: 'Opción para mantener la sesión iniciada en equipos de uso personal y de confianza.',
+    videoHint: 'Gesto: Dedo índice en la frente y luego cerrando palma en el pecho indicando retener memoria.',
+    keywords: ['recordarme', 'recordar usuario', 'mantener sesión', 'mantener sesion'],
+    videoUrl: ''
   }
 ];
+
+// Función utilitaria para escape de caracteres en expresiones regulares
+const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Pre-cálculo optimizado de términos con palabras clave normalizadas (sin tildes, minúsculas, ordenadas por longitud)
 const PREPARED_LSC_TERMS = LSC_DICTIONARY.map(t => ({
@@ -396,6 +451,14 @@ const PREPARED_LSC_TERMS = LSC_DICTIONARY.map(t => ({
   normKeywords: t.keywords
     .map(kw => kw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim())
     .sort((a, b) => b.length - a.length),
+}));
+
+// Catálogo completo para el Modal Glosario de Personas Sordas generado dinámicamente con todos los términos enriquecidos
+export const DICTIONARY_TERMS = LSC_DICTIONARY.map(t => ({
+  term: t.title,
+  definition: t.definition,
+  lscHint: `${t.gestureCategory} (${t.videoHint.replace('Gesto: ', '')})`,
+  id: t.id,
 }));
 
 // Compatibilidad hacia atrás
@@ -1130,6 +1193,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     setTimeout(() => setToastMessage(''), 3000);
   };
 
+  // Estado de hover para opacidad suave en el botón flotante
+  const [isBtnHovered, setIsBtnHovered] = useState(false);
+
   // Movimiento libre / Drag & Drop para el botón flotante de Accesibilidad
   const buttonPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
@@ -1154,14 +1220,15 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         const currentX = (buttonPan.x as any)._value;
         const currentY = (buttonPan.y as any)._value;
 
-        // Tamaño y posición base (alineado en la esquina inferior derecha encima del chat)
-        const btnSize = isSmallScreen ? 50 : 64;
+        // Tamaño y posición base (alargado en pantallas anchas)
+        const btnWidth = isSmallScreen ? 50 : 138;
+        const btnHeight = isSmallScreen ? 50 : 46;
         const baseRight = isSmallScreen ? 16 : 24;
         const baseBottom = isSmallScreen ? 145 : 100;
 
         // Límites en pantalla completa
-        const maxLeft = -(width - btnSize - baseRight - 16); 
-        const maxUp = -(height - btnSize - baseBottom - 40); 
+        const maxLeft = -(width - btnWidth - baseRight - 16); 
+        const maxUp = -(height - btnHeight - baseBottom - 40); 
         const maxDown = baseBottom - 20;
 
         let targetX = currentX;
@@ -1537,6 +1604,33 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
     // Función inteligente de detección de palabras y términos LSC en el DOM
     const findMatch = (el: HTMLElement | null): LSCTerm | null => {
+      // 1. Verificación prioritaria de texto seleccionado por el usuario en pantalla
+      if (typeof window !== 'undefined' && window.getSelection) {
+        const selObj = window.getSelection();
+        const selText = selObj ? selObj.toString().trim() : '';
+        if (selText && selText.length > 0) {
+          const cleanSel = selText
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          // Buscar si lo seleccionado contiene explícitamente algún término del diccionario
+          for (const term of PREPARED_LSC_TERMS) {
+            for (const kw of term.normKeywords) {
+              const regex = new RegExp(`(^|\\W)${escapeRegex(kw)}($|\\W)`);
+              if (cleanSel === kw || regex.test(cleanSel)) {
+                return term;
+              }
+            }
+          }
+
+          // REGLA DEL USUARIO: Si hay texto seleccionado pero ninguna palabra del glosario coincide, ¡NO ABRIR!
+          return null;
+        }
+      }
+
       let curr = el;
       let depth = 0;
       while (curr && depth < 6) {
@@ -1572,11 +1666,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           // Normalización estricta: elimina tildes, mayúsculas y espacios duplicados
           const clean = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
           if (!clean || clean.length === 0) continue;
+          // Ignorar bloques extensos de texto general (párrafos de más de 75 caracteres) para evitar falsos positivos
+          if (clean.length > 75 && !curr.getAttribute('data-lsc-id')) continue;
 
-          // Buscar coincidencia en diccionario (las palabras clave más largas primero)
+          // Buscar coincidencia en diccionario con límites de palabra precisos
           for (const term of PREPARED_LSC_TERMS) {
             for (const kw of term.normKeywords) {
-              if (clean === kw || clean.includes(kw)) {
+              const regex = new RegExp(`(^|\\W)${escapeRegex(kw)}($|\\W)`);
+              if (clean === kw || regex.test(clean)) {
                 return term;
               }
             }
@@ -2442,36 +2539,47 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           onPress={() => setOpenPanel(true)}
           accessibilityLabel="Abrir menú de accesibilidad"
           activeOpacity={0.88}
+          // @ts-ignore
+          onMouseEnter={() => setIsBtnHovered(true)}
+          // @ts-ignore
+          onMouseLeave={() => setIsBtnHovered(false)}
           style={{
             backgroundColor: '#1E40AF',
-            width: isSmallScreen ? 50 : 64,
-            height: isSmallScreen ? 50 : 64,
-            borderRadius: isSmallScreen ? 25 : 32,
-            justifyContent: 'center',
+            opacity: isBtnHovered ? 1.0 : 0.68,
+            flexDirection: 'row',
             alignItems: 'center',
+            justifyContent: 'center',
+            gap: isSmallScreen ? 0 : 8,
+            paddingHorizontal: isSmallScreen ? 0 : 16,
+            paddingVertical: isSmallScreen ? 0 : 10,
+            width: isSmallScreen ? 50 : undefined,
+            height: isSmallScreen ? 50 : 46,
+            borderRadius: isSmallScreen ? 25 : 23,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.35,
-            shadowRadius: 6,
+            shadowOpacity: isBtnHovered ? 0.45 : 0.25,
+            shadowRadius: 8,
             elevation: 8,
             borderWidth: 1.5,
-            borderColor: 'rgba(255, 255, 255, 0.25)',
-            ...(Platform.OS === 'web' ? { cursor: 'pointer', userSelect: 'none' } as any : {}),
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            ...(Platform.OS === 'web' ? {
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'opacity 0.25s ease, box-shadow 0.2s ease, transform 0.2s ease',
+            } as any : {}),
           }}
         >
-          <Ionicons name="accessibility" size={isSmallScreen ? 24 : 30} color="#FFFFFF" />
+          <Ionicons name="accessibility" size={isSmallScreen ? 24 : 22} color="#FFFFFF" />
           {!isSmallScreen && (
             <Text
               style={{
                 color: '#FFFFFF',
-                fontSize: 8.5,
+                fontSize: 13,
                 fontWeight: '900',
-                textTransform: 'uppercase',
                 letterSpacing: 0.3,
-                marginTop: 1,
               }}
             >
-              Accesible
+              Accesibilidad
             </Text>
           )}
         </TouchableOpacity>
