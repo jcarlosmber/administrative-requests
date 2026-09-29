@@ -876,7 +876,7 @@ export default function ManageRequests() {
           />
         )}
 
-        <View style={{ flex: 1, ...(Platform.OS === 'web' && viewMode === 'table' ? { overflowX: 'auto' } : {}) }}>
+        <View style={{ flex: 1, width: '100%', maxWidth: '100%' }}>
           <FlatList
             key={viewMode === 'table' ? 'table-view' : `cards-${numCardCols}`}
             numColumns={viewMode === 'table' ? 1 : numCardCols}
@@ -927,24 +927,67 @@ export default function ManageRequests() {
                   />
                 </View>
 
-                {/* Cabecera de Tabla si la vista activa es Tabla */}
+                {/* Tabla Responsiva con Scroll Horizontal dedicado */}
                 {viewMode === 'table' && filteredData.length > 0 && (
-                  <RequestTableHeader />
+                  <View style={{ marginBottom: 20 }}>
+                    {!isDesktop && (
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        backgroundColor: '#EFF6FF',
+                        paddingVertical: 9,
+                        paddingHorizontal: 14,
+                        borderRadius: 12,
+                        marginHorizontal: 12,
+                        marginBottom: 10,
+                        borderWidth: 1,
+                        borderColor: '#BFDBFE',
+                      }}>
+                        <Ionicons name="swap-horizontal" size={18} color="#2563EB" />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1D4ED8', flex: 1 }}>
+                          Desliza horizontalmente la tabla para ver todas las columnas y acciones
+                        </Text>
+                      </View>
+                    )}
+
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={true}
+                      persistentScrollbar={true}
+                      bounces={false}
+                      style={{
+                        marginHorizontal: isDesktop ? 25 : 8,
+                        borderRadius: 14,
+                      }}
+                      contentContainerStyle={{
+                        minWidth: 1080,
+                        paddingBottom: 16,
+                      }}
+                    >
+                      <View style={{ width: 1080 }}>
+                        <RequestTableHeader marginHorizontal={0} />
+                        {filteredData.map((item) => (
+                          <RequestTableRow 
+                            key={item.id}
+                            item={mapRequestToUI(item)} 
+                            marginHorizontal={0}
+                            onUpdateStatus={askConfirmation} 
+                            onReturnRequest={askReturn}
+                            onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
+                            onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
+                          />
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
                 )}
               </View>
             }
-            data={filteredData}
+            data={viewMode === 'cards' ? filteredData : []}
             keyExtractor={item => item.id}
             renderItem={({ item }) => (
-              viewMode === 'table' ? (
-                <RequestTableRow 
-                  item={mapRequestToUI(item)} 
-                  onUpdateStatus={askConfirmation} 
-                  onReturnRequest={askReturn}
-                  onAssignDriver={(reqItem: any) => setDriverModal({ visible: true, item: reqItem })}
-                  onOpenDetail={(reqItem: any) => setDrawerItem(reqItem)}
-                />
-              ) : (
+              viewMode === 'cards' ? (
                 <RequestListItem 
                   item={mapRequestToUI(item)} 
                   onUpdateStatus={askConfirmation} 
@@ -957,7 +1000,7 @@ export default function ManageRequests() {
                   maxCardWidth={maxCardWidth}
                   numCols={numCardCols}
                 />
-              )
+              ) : null
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
@@ -1395,7 +1438,7 @@ export default function ManageRequests() {
       >
         <View style={styles.modalOverlay}>
           <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContent, { maxWidth: 500 }]}>
+          <View style={[styles.modalContent, { maxWidth: 500, width: '92%', maxHeight: '90%' }]}>
             <TouchableOpacity 
               style={styles.modalCloseBtn}
               onPress={() => setReturnModal({ visible: false, item: null, reason: '' })}
@@ -1456,7 +1499,7 @@ export default function ManageRequests() {
       <Modal visible={driverModal.visible} transparent animationType="fade" onRequestClose={() => setDriverModal({ visible: false, item: null })}>
         <View style={styles.modalOverlay}>
           <BlurView intensity={25} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[styles.modalContent, { maxWidth: 480 }]}>
+          <View style={[styles.modalContent, { maxWidth: 480, width: '92%', maxHeight: '90%' }]}>
             <TouchableOpacity 
               style={styles.modalCloseBtn}
               onPress={() => setDriverModal({ visible: false, item: null })}
@@ -1840,60 +1883,73 @@ export default function ManageRequests() {
                 styles.modalContent, 
                 { 
                   maxWidth: 440, 
-                  padding: 26,
+                  width: '92%',
+                  maxHeight: '90%',
+                  padding: 0,
                   backgroundColor: modalTheme.cardBg,
                   borderColor: modalTheme.cardBorder,
                   borderWidth: 1.5,
+                  overflow: 'hidden',
                 }
               ]}>
-                {/* Botón cerrar X */}
-                <TouchableOpacity 
-                  style={[styles.modalCloseBtn, { backgroundColor: '#FFFFFF', borderColor: modalTheme.cardBorder }]}
-                  onPress={() => setConfirmModal(null)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="close" size={20} color="#64748B" />
-                </TouchableOpacity>
+                {/* Cabecera Fija */}
+                <View style={{ width: '100%', alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10, position: 'relative' }}>
+                  {/* Botón cerrar X */}
+                  <TouchableOpacity 
+                    style={[styles.modalCloseBtn, { backgroundColor: '#FFFFFF', borderColor: modalTheme.cardBorder, top: 14, right: 14 }]}
+                    onPress={() => setConfirmModal(null)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="close" size={20} color="#64748B" />
+                  </TouchableOpacity>
 
-                {/* Icono con Squircle y Glow */}
-                <View style={[styles.modalIconBox, { 
-                  backgroundColor: modalTheme.bgLight, 
-                  borderColor: modalTheme.borderColor,
-                  borderWidth: 1.5,
-                  marginBottom: 12
-                }]}>
-                  <Ionicons name={modalTheme.icon} size={36} color={modalTheme.color} />
-                </View>
+                  {/* Icono con Squircle y Glow */}
+                  <View style={[styles.modalIconBox, { 
+                    backgroundColor: modalTheme.bgLight, 
+                    borderColor: modalTheme.borderColor,
+                    borderWidth: 1.5,
+                    marginBottom: 10
+                  }]}>
+                    <Ionicons name={modalTheme.icon} size={34} color={modalTheme.color} />
+                  </View>
 
-                {/* Badge de tipo de acción */}
-                <View style={{
-                  backgroundColor: modalTheme.badgeBg,
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  marginBottom: 8,
-                }}>
-                  <Text style={{
-                    fontSize: 11,
-                    fontWeight: '800',
-                    color: modalTheme.badgeColor,
-                    letterSpacing: 0.5,
-                    textTransform: 'uppercase',
+                  {/* Badge de tipo de acción */}
+                  <View style={{
+                    backgroundColor: modalTheme.badgeBg,
+                    paddingHorizontal: 12,
+                    paddingVertical: 3.5,
+                    borderRadius: 12,
+                    marginBottom: 6,
                   }}>
-                    {modalTheme.badgeText}
+                    <Text style={{
+                      fontSize: 11,
+                      fontWeight: '800',
+                      color: modalTheme.badgeColor,
+                      letterSpacing: 0.5,
+                      textTransform: 'uppercase',
+                    }}>
+                      {modalTheme.badgeText}
+                    </Text>
+                  </View>
+
+                  {/* Título */}
+                  <Text style={[styles.modalTitle, { fontSize: 19, marginBottom: 4, textAlign: 'center' }]}>
+                    {modalTheme.titleText}
                   </Text>
                 </View>
 
-                {/* Título y Mensaje */}
-                <Text style={[styles.modalTitle, { fontSize: 20, marginBottom: 6 }]}>
-                  {modalTheme.titleText}
-                </Text>
-                <Text style={[styles.modalMessage, { marginBottom: 12, paddingHorizontal: 4 }]}>
-                  ¿Estás seguro de que deseas {confirmModal.actionName} esta solicitud?
-                </Text>
+                {/* Cuerpo Desplazable para Celulares */}
+                <ScrollView
+                  showsVerticalScrollIndicator={true}
+                  style={{ width: '100%', flexShrink: 1 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14 }}
+                >
+                  <Text style={[styles.modalMessage, { marginBottom: 12, textAlign: 'center' }]}>
+                    ¿Estás seguro de que deseas {confirmModal.actionName} esta solicitud?
+                  </Text>
 
-                {/* Tarjeta de Contexto de la Solicitud */}
-                {confirmModal.item && (
+                  {/* Tarjeta de Contexto de la Solicitud */}
+                  {confirmModal.item && (
                   <View style={{
                     width: '100%',
                     backgroundColor: '#FFFFFF',
@@ -2618,15 +2674,25 @@ export default function ManageRequests() {
                     )}
                   </View>
                 )}
+                </ScrollView>
 
-                {/* Botones Cancelar / Confirmar */}
+                {/* Footer Fijo con Botones Cancelar / Confirmar */}
                 {(() => {
                   const isMissingRejectReason = isReject && (!confirmModal.rejectReason || !confirmModal.rejectReason.trim());
                   const isMissingParkingCell = confirmModal.category === 'parking' && confirmModal.newStatus === 'resuelto' && selectedSpotType === 'fija' && !selectedSpotId;
                   const isBlocked = isMissingMaintenancePhoto || isMissingRejectReason || isMissingParkingCell;
 
                   return (
-                    <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 12 }}>
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      gap: 12, 
+                      width: '100%', 
+                      paddingHorizontal: 20, 
+                      paddingVertical: 14,
+                      borderTopWidth: 1,
+                      borderTopColor: modalTheme.cardBorder,
+                      backgroundColor: modalTheme.cardBg
+                    }}>
                       <TouchableOpacity 
                         style={{
                           flex: 1,
@@ -3960,7 +4026,7 @@ export const checkIsSpecialRoom = (item: any) => {
   );
 };
 
-function RequestTableHeader() {
+function RequestTableHeader({ marginHorizontal = 25 }: { marginHorizontal?: number }) {
   return (
     <View style={{
       flexDirection: 'row',
@@ -3970,7 +4036,7 @@ function RequestTableHeader() {
       paddingHorizontal: 18,
       borderRadius: 12,
       marginBottom: 8,
-      marginHorizontal: 25,
+      marginHorizontal,
       minWidth: 1080,
       gap: 12,
     }}>
@@ -4005,6 +4071,7 @@ function RequestTableRow({
   onReturnRequest,
   onAssignDriver,
   onOpenDetail,
+  marginHorizontal = 25,
 }: any) {
   const serviceTheme = getCategoryCardTheme(item.category, item.type);
   const priorityTheme = getPriorityTheme(item.priority);
@@ -4029,7 +4096,7 @@ function RequestTableRow({
           paddingHorizontal: 18,
           borderRadius: 14,
           marginBottom: 8,
-          marginHorizontal: 25,
+          marginHorizontal,
           minWidth: 1080,
           gap: 12,
           borderWidth: 0,
@@ -4347,6 +4414,7 @@ function RequestDetailModal({
 }: any) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const isMobile = width < 768;
   const [comment, setComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
 
@@ -4391,7 +4459,7 @@ function RequestDetailModal({
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: isDesktop ? 24 : 12,
+        padding: isDesktop ? 24 : isMobile ? 8 : 12,
       }}>
         {/* Fondo clicable para cerrar */}
         <Pressable
@@ -4403,7 +4471,7 @@ function RequestDetailModal({
         <View style={{
           width: '100%',
           maxWidth: 760,
-          maxHeight: isDesktop ? '88%' : '94%',
+          maxHeight: isDesktop ? '88%' : '95%',
           backgroundColor: '#FFFFFF',
           borderRadius: 22,
           borderWidth: 1,
@@ -4420,8 +4488,8 @@ function RequestDetailModal({
         }}>
           {/* Cabecera del Modal */}
           <View style={{
-            paddingHorizontal: 22,
-            paddingVertical: 16,
+            paddingHorizontal: isMobile ? 14 : 22,
+            paddingVertical: isMobile ? 12 : 16,
             borderBottomWidth: 1,
             borderBottomColor: '#E2E8F0',
             flexDirection: 'row',
@@ -4518,7 +4586,7 @@ function RequestDetailModal({
           {/* Cuerpo del Drawer (Scrollable) */}
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 22, gap: 20 }}
+            contentContainerStyle={{ padding: isMobile ? 14 : 22, gap: isMobile ? 14 : 20 }}
             showsVerticalScrollIndicator={false}
           >
             {/* Título y Solicitante */}
@@ -4832,15 +4900,15 @@ function RequestDetailModal({
 
           {/* Pie de Acciones del Drawer */}
           <View style={{
-            paddingHorizontal: 20,
-            paddingVertical: 14,
+            paddingHorizontal: isMobile ? 12 : 20,
+            paddingVertical: isMobile ? 10 : 14,
             borderTopWidth: 1,
             borderTopColor: '#E2E8F0',
             backgroundColor: '#FFFFFF',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
+            flexDirection: isMobile ? 'column-reverse' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
+            justifyContent: isMobile ? 'flex-start' : 'space-between',
+            gap: isMobile ? 8 : 10,
           }}>
             {/* Botón Cerrar */}
             <TouchableOpacity
@@ -4848,20 +4916,29 @@ function RequestDetailModal({
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 6,
                 paddingHorizontal: 16,
-                height: 40,
+                height: 38,
                 borderRadius: 10,
                 backgroundColor: '#F1F5F9',
                 borderWidth: 1,
                 borderColor: '#CBD5E1',
+                width: isMobile ? '100%' : 'auto',
               }}
             >
               <Ionicons name="close-outline" size={17} color="#475569" />
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>Cerrar</Text>
             </TouchableOpacity>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              gap: isMobile ? 6 : 8,
+              flexWrap: 'wrap',
+              width: isMobile ? '100%' : 'auto',
+              justifyContent: isMobile ? 'center' : 'flex-end',
+            }}>
               {/* Acciones principales según estado (a la izquierda) */}
               {isPending && (
                 <>
@@ -4875,18 +4952,21 @@ function RequestDetailModal({
                         {
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 6,
-                          paddingHorizontal: 18,
+                          justifyContent: 'center',
+                          gap: 5,
+                          paddingHorizontal: isMobile ? 8 : 18,
                           height: 38,
                           borderRadius: 9999,
                           backgroundColor: hovered ? '#1D4ED8' : '#2563EB',
                           borderWidth: 0,
+                          flex: isMobile ? 1 : undefined,
+                          minWidth: isMobile ? 75 : undefined,
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                     >
-                      <Ionicons name="play" size={14} color="#FFFFFF" />
-                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>PROCESAR</Text>
+                      <Ionicons name="play" size={13} color="#FFFFFF" />
+                      <Text style={{ fontSize: isMobile ? 11 : 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.4 }}>PROCESAR</Text>
                     </Pressable>
                   )}
 
@@ -4900,18 +4980,21 @@ function RequestDetailModal({
                         {
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 6,
-                          paddingHorizontal: 18,
+                          justifyContent: 'center',
+                          gap: 5,
+                          paddingHorizontal: isMobile ? 8 : 18,
                           height: 38,
                           borderRadius: 9999,
                           backgroundColor: hovered ? '#059669' : '#10B981',
                           borderWidth: 0,
+                          flex: isMobile ? 1 : undefined,
+                          minWidth: isMobile ? 75 : undefined,
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                     >
-                      <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>APROBAR</Text>
+                      <Ionicons name="checkmark" size={15} color="#FFFFFF" />
+                      <Text style={{ fontSize: isMobile ? 11 : 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.4 }}>APROBAR</Text>
                     </Pressable>
                   )}
 
@@ -4925,18 +5008,21 @@ function RequestDetailModal({
                         {
                           flexDirection: 'row',
                           alignItems: 'center',
-                          gap: 6,
-                          paddingHorizontal: 18,
+                          justifyContent: 'center',
+                          gap: 5,
+                          paddingHorizontal: isMobile ? 8 : 18,
                           height: 38,
                           borderRadius: 9999,
                           backgroundColor: hovered ? '#0369A1' : '#0284C7',
                           borderWidth: 0,
+                          flex: isMobile ? 1 : undefined,
+                          minWidth: isMobile ? 75 : undefined,
                         },
                         Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                       ]}
                     >
-                      <Ionicons name="car" size={16} color="#FFFFFF" />
-                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>ASIGNAR CONDUCTOR</Text>
+                      <Ionicons name="car" size={15} color="#FFFFFF" />
+                      <Text style={{ fontSize: isMobile ? 11 : 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.4 }}>{isMobile ? 'ASIGNAR' : 'ASIGNAR CONDUCTOR'}</Text>
                     </Pressable>
                   )}
                 </>
@@ -4952,18 +5038,21 @@ function RequestDetailModal({
                     {
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 18,
+                      justifyContent: 'center',
+                      gap: 5,
+                      paddingHorizontal: isMobile ? 8 : 18,
                       height: 38,
                       borderRadius: 9999,
                       backgroundColor: hovered ? '#059669' : '#10B981',
                       borderWidth: 0,
+                      flex: isMobile ? 1 : undefined,
+                      minWidth: isMobile ? 75 : undefined,
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                 >
-                  <Ionicons name="checkmark-done" size={16} color="#FFFFFF" />
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>FINALIZAR</Text>
+                  <Ionicons name="checkmark-done" size={15} color="#FFFFFF" />
+                  <Text style={{ fontSize: isMobile ? 11 : 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.4 }}>FINALIZAR</Text>
                 </Pressable>
               )}
 
@@ -4978,18 +5067,21 @@ function RequestDetailModal({
                     {
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 16,
+                      justifyContent: 'center',
+                      gap: 5,
+                      paddingHorizontal: isMobile ? 8 : 16,
                       height: 38,
                       borderRadius: 9999,
                       backgroundColor: hovered ? '#D97706' : '#F59E0B',
                       borderWidth: 0,
+                      flex: isMobile ? 1 : undefined,
+                      minWidth: isMobile ? 75 : undefined,
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                 >
-                  <Ionicons name="return-down-back" size={16} color="#FFFFFF" />
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>DEVOLVER</Text>
+                  <Ionicons name="return-down-back" size={15} color="#FFFFFF" />
+                  <Text style={{ fontSize: isMobile ? 11 : 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.4 }}>DEVOLVER</Text>
                 </Pressable>
               )}
 
@@ -5004,18 +5096,21 @@ function RequestDetailModal({
                     {
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 18,
+                      justifyContent: 'center',
+                      gap: 5,
+                      paddingHorizontal: isMobile ? 8 : 18,
                       height: 38,
                       borderRadius: 9999,
                       backgroundColor: hovered ? '#DC2626' : '#EF4444',
                       borderWidth: 0,
+                      flex: isMobile ? 1 : undefined,
+                      minWidth: isMobile ? 75 : undefined,
                     },
                     Platform.OS === 'web' && ({ cursor: 'pointer', transition: 'all 0.15s ease' } as any)
                   ]}
                 >
-                  <Ionicons name="close" size={16} color="#FFFFFF" />
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.6 }}>RECHAZAR</Text>
+                  <Ionicons name="close" size={15} color="#FFFFFF" />
+                  <Text style={{ fontSize: isMobile ? 11 : 12.5, fontWeight: '800', color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: 0.4 }}>RECHAZAR</Text>
                 </Pressable>
               )}
             </View>

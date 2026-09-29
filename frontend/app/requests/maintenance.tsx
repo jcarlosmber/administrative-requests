@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Platform, ActivityIndicator, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +42,15 @@ export default function MaintenanceRequestScreen() {
   const [priority, setPriority] = useState<'baja' | 'media' | 'alta'>('media');
   const [attachment, setAttachment] = useState<{ name: string; uri: string } | null>(null);
   const [readingFile, setReadingFile] = useState(false);
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+
+  const isImageAttachment = useMemo(() => {
+    if (!attachment) return false;
+    return (
+      attachment.uri.startsWith('data:image') ||
+      /\.(jpg|jpeg|png|webp|gif|bmp|heic|svg)$/i.test(attachment.name || '')
+    );
+  }, [attachment]);
 
   const readAsDataURLAsync = (blob: Blob): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -203,7 +212,7 @@ export default function MaintenanceRequestScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 14, 
+              padding: isDesktop ? 40 : 10, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -314,32 +323,115 @@ export default function MaintenanceRequestScreen() {
                   />
                 </Card>
 
-                <Card title="Evidencia" icon="camera">
-                  <TouchableOpacity style={styles.uploadBox} onPress={handlePickDocument} disabled={readingFile}>
-                    {readingFile ? (
-                      <>
-                        <ActivityIndicator size="large" color={COLORS.primary} />
-                        <Text style={[styles.uploadText, { marginTop: 10 }]}>Procesando archivo...</Text>
-                        <Text style={styles.uploadSub}>Por favor espera un momento</Text>
-                      </>
-                    ) : attachment ? (
-                      <>
-                        <View style={[styles.uploadIcon, { backgroundColor: COLORS.success }]}>
-                          <Ionicons name="checkmark" size={32} color={COLORS.white} />
+                <Card title="Evidencias Fotográficas" icon="camera">
+                  {readingFile ? (
+                    <View style={styles.uploadLoadingBox}>
+                      <ActivityIndicator size="large" color={COLORS.primary} />
+                      <Text style={[styles.uploadText, { marginTop: 10 }]}>Cargando evidencia...</Text>
+                      <Text style={styles.uploadSub}>Generando vista previa del archivo</Text>
+                    </View>
+                  ) : attachment ? (
+                    isImageAttachment ? (
+                      /* Vista Previa de Imagen con Acciones */
+                      <View style={styles.previewContainer}>
+                        <TouchableOpacity 
+                          activeOpacity={0.9} 
+                          onPress={() => setPreviewModalVisible(true)}
+                          style={styles.imagePreviewWrapper}
+                        >
+                          <Image 
+                            source={{ uri: attachment.uri }} 
+                            style={styles.imagePreview} 
+                            resizeMode="cover" 
+                          />
+                          <LinearGradient
+                            colors={['rgba(15, 23, 42, 0.75)', 'transparent', 'rgba(15, 23, 42, 0.65)']}
+                            style={StyleSheet.absoluteFill}
+                          />
+                          <View style={styles.previewTopBadge}>
+                            <Ionicons name="image" size={14} color="#FFFFFF" />
+                            <Text style={styles.previewTopBadgeText} numberOfLines={1}>{attachment.name}</Text>
+                          </View>
+                          <View style={styles.previewZoomHint}>
+                            <Ionicons name="expand" size={13} color="#FFFFFF" />
+                            <Text style={styles.previewZoomText}>Toca para ampliar</Text>
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* Botones de Acción para Cambiar, Ver o Quitar */}
+                        <View style={styles.previewActions}>
+                          <TouchableOpacity 
+                            style={[styles.previewActionBtn, { flex: 1.1, backgroundColor: '#F0F9F8', borderColor: '#99F6E4' }]}
+                            onPress={() => setPreviewModalVisible(true)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="eye-outline" size={16} color={COLORS.primary} />
+                            <Text style={[styles.previewActionText, { color: COLORS.primary }]}>Ver grande</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity 
+                            style={[styles.previewActionBtn, { flex: 1.2, backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
+                            onPress={handlePickDocument}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="camera-reverse-outline" size={16} color="#2563EB" />
+                            <Text style={[styles.previewActionText, { color: '#2563EB' }]}>Cambiar foto</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity 
+                            style={[styles.previewActionBtn, { flex: 0.9, backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
+                            onPress={() => setAttachment(null)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                            <Text style={[styles.previewActionText, { color: '#DC2626' }]}>Quitar</Text>
+                          </TouchableOpacity>
                         </View>
-                        <Text style={styles.uploadText}>{attachment.name}</Text>
-                        <Text style={styles.uploadSub}>Toca para cambiar la evidencia</Text>
-                      </>
+                      </View>
                     ) : (
-                      <>
-                        <View style={styles.uploadIcon}>
-                          <Ionicons name="cloud-upload-outline" size={32} color={COLORS.primary} />
+                      /* Vista Previa de Documento / PDF */
+                      <View style={styles.docPreviewCard}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View style={styles.docIconBox}>
+                            <Ionicons name="document-text" size={28} color="#DC2626" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.docName} numberOfLines={1}>{attachment.name}</Text>
+                            <Text style={styles.docSub}>Documento PDF adjunto</Text>
+                          </View>
                         </View>
-                        <Text style={styles.uploadText}>Subir Evidencia Fotográfica / PDF</Text>
-                        <Text style={styles.uploadSub}>Adjunte una imagen o documento (Máx. 5MB)</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+
+                        <View style={styles.previewActions}>
+                          <TouchableOpacity 
+                            style={[styles.previewActionBtn, { flex: 1, backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
+                            onPress={handlePickDocument}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="sync-outline" size={16} color="#2563EB" />
+                            <Text style={[styles.previewActionText, { color: '#2563EB' }]}>Cambiar</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity 
+                            style={[styles.previewActionBtn, { flex: 1, backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}
+                            onPress={() => setAttachment(null)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                            <Text style={[styles.previewActionText, { color: '#DC2626' }]}>Quitar</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    )
+                  ) : (
+                    /* Selector de Archivo / Foto cuando no hay adjunto */
+                    <TouchableOpacity style={styles.uploadBox} onPress={handlePickDocument} activeOpacity={0.8}>
+                      <View style={styles.uploadIcon}>
+                        <Ionicons name="camera-outline" size={30} color={COLORS.primary} />
+                      </View>
+                      <Text style={styles.uploadText}>Subir Evidencias Fotográficas</Text>
+                      <Text style={styles.uploadSub}>Toca aquí para adjuntar fotos de la falla o daño (JPG, PNG, PDF hasta 5MB)</Text>
+                    </TouchableOpacity>
+                  )}
                 </Card>
 
                 {errorMessage ? (
@@ -369,6 +461,69 @@ export default function MaintenanceRequestScreen() {
           </ScrollView>
         </View>
       </LinearGradient>
+
+      {/* Modal para Visualizar Evidencia en Pantalla Completa */}
+      {attachment && isImageAttachment && (
+        <Modal 
+          visible={previewModalVisible} 
+          transparent={true} 
+          animationType="fade"
+          onRequestClose={() => setPreviewModalVisible(false)}
+        >
+          <View style={styles.imageModalOverlay}>
+            <View style={styles.imageModalCard}>
+              {/* Header del visor */}
+              <View style={styles.imageModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 10 }}>
+                  <Ionicons name="image" size={18} color="#2A9D8F" />
+                  <Text style={styles.imageModalTitle} numberOfLines={1}>
+                    {attachment.name}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => setPreviewModalVisible(false)}
+                  style={styles.imageModalCloseBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="close" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Imagen en tamaño grande */}
+              <View style={styles.imageModalBody}>
+                <Image 
+                  source={{ uri: attachment.uri }} 
+                  style={{ width: '100%', height: '100%' }} 
+                  resizeMode="contain" 
+                />
+              </View>
+
+              {/* Footer con botón cerrar y cambiar */}
+              <View style={styles.imageModalFooter}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    setPreviewModalVisible(false);
+                    handlePickDocument();
+                  }}
+                  style={styles.imageModalChangeBtn}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="camera-reverse-outline" size={17} color="#2563EB" />
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#2563EB' }}>Cambiar foto</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  onPress={() => setPreviewModalVisible(false)}
+                  style={styles.imageModalDoneBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#FFFFFF' }}>Cerrar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
 
       <SuccessModal 
         visible={showSuccess} 
@@ -439,7 +594,7 @@ function Hero({ progress }: { progress: number }) {
   return (
     <View style={styles.hero}>
       <View style={styles.heroRow}>
-        <View>
+        <View style={{ flex: 1, minWidth: 160, marginRight: 8 }}>
           <Text style={styles.heroTitle}>Mantenimientos Locativos</Text>
           <Text style={styles.heroSub}>Infraestructura y Servicios Generales</Text>
         </View>
@@ -463,9 +618,9 @@ function Card({ title, icon, right, children }: any) {
           <View style={styles.iconBox}>
             <Ionicons name={icon} size={18} color={COLORS.primary} />
           </View>
-          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={[styles.cardTitle, { flex: 1, flexWrap: 'wrap' }]}>{title}</Text>
         </View>
-        {right}
+        {right && <View style={{ alignSelf: 'flex-start' }}>{right}</View>}
       </View>
       <View style={styles.cardBody}>
         {children}
@@ -549,27 +704,27 @@ const styles = StyleSheet.create({
   sideBadge: { marginTop: 30, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignSelf: 'flex-start' },
   badgeText: { color: COLORS.white, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   
-  mobHeader: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 20 },
-  mobTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text },
-  mobSub: { fontSize: 14, color: COLORS.muted },
+  mobHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, paddingRight: 45 },
+  mobTitle: { fontSize: 19, fontWeight: '900', color: COLORS.text },
+  mobSub: { fontSize: 13, color: COLORS.muted },
   
-  hero: { backgroundColor: COLORS.white, borderRadius: 28, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: COLORS.line, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 15, elevation: 2 },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroTitle: { fontSize: 26, fontWeight: '900', color: COLORS.text },
-  heroSub: { color: COLORS.muted, marginTop: 2, fontSize: 15 },
-  pill: { backgroundColor: COLORS.soft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  pillText: { color: COLORS.primary, fontWeight: '800', fontSize: 11, textTransform: 'uppercase' },
-  barContainer: { marginTop: 20 },
+  hero: { backgroundColor: COLORS.white, borderRadius: 24, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: COLORS.line, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 15, elevation: 2 },
+  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text },
+  heroSub: { color: COLORS.muted, marginTop: 2, fontSize: 13 },
+  pill: { backgroundColor: COLORS.soft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  pillText: { color: COLORS.primary, fontWeight: '800', fontSize: 10, textTransform: 'uppercase' },
+  barContainer: { marginTop: 16 },
   barBg: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 10, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 10 },
-  barLabel: { marginTop: 8, fontSize: 12, fontWeight: '700', color: COLORS.muted, textAlign: 'right' },
+  barLabel: { marginTop: 6, fontSize: 11, fontWeight: '700', color: COLORS.muted, textAlign: 'right' },
   
-  card: { borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, marginBottom: 16 },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  cardBody: { padding: 20 },
+  card: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, marginBottom: 16 },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', flexWrap: 'wrap', gap: 8 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 150 },
+  iconBox: { width: 32, height: 32, borderRadius: 9, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, flexShrink: 1 },
+  cardBody: { padding: 16 },
   
   field: { marginBottom: 15 },
   label: { fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, marginLeft: 4 },
@@ -593,5 +748,173 @@ const styles = StyleSheet.create({
   modalText: { fontSize: 15, color: COLORS.muted, lineHeight: 24 },
   modalBtn: { backgroundColor: COLORS.primary, width: '100%', height: 54, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginTop: 25 },
   modalBtnText: { color: COLORS.white, fontWeight: '800', fontSize: 16 },
-  successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }
+  successIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+
+  // Estilos de Vista Previa de Evidencia
+  previewContainer: { gap: 10 },
+  imagePreviewWrapper: {
+    width: '100%',
+    height: 220,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#0F172A',
+    borderWidth: 1.5,
+    borderColor: '#99F6E4',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  imagePreview: { width: '100%', height: '100%' },
+  previewTopBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  previewTopBadgeText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', flex: 1 },
+  previewZoomHint: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+  },
+  previewZoomText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  previewActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  previewActionBtn: {
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+  },
+  previewActionText: { fontSize: 12.5, fontWeight: '700' },
+
+  uploadLoadingBox: {
+    height: 160,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#99F6E4',
+    backgroundColor: COLORS.soft,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  docPreviewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    gap: 12,
+  },
+  docIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  docName: { fontSize: 14, fontWeight: '800', color: COLORS.text },
+  docSub: { fontSize: 12, color: COLORS.muted, marginTop: 2 },
+
+  // Estilos del Modal Visor de Imagen
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  imageModalCard: {
+    width: '100%',
+    maxWidth: 640,
+    backgroundColor: '#0F172A',
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    backgroundColor: '#0F172A',
+  },
+  imageModalTitle: { fontSize: 13.5, fontWeight: '700', color: '#FFFFFF' },
+  imageModalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#1E293B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  imageModalBody: {
+    width: '100%',
+    height: 380,
+    backgroundColor: '#020617',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalFooter: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
+    backgroundColor: '#0F172A',
+  },
+  imageModalChangeBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  imageModalDoneBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

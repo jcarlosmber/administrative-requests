@@ -202,9 +202,9 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
             /* ============================================================== */
             /* PANTALLA / MODAL DE CONFIRMACIÓN DE CALIFICACIÓN EXITOSA      */
             /* ============================================================== */
-            <View>
+            <View style={{ width: '100%', maxHeight: '100%', flexShrink: 1 }}>
               {/* Header de confirmación */}
-              <View style={styles.headerRow}>
+              <View style={[styles.headerRow, { marginBottom: 12, paddingBottom: 12 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={styles.confirmHeaderBox}>
                     <Ionicons name="checkmark-circle" size={22} color="#059669" />
@@ -219,10 +219,14 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
                 </TouchableOpacity>
               </View>
 
-              {/* Contenido de confirmación */}
-              <View style={styles.confirmBody}>
+              {/* Contenido scrolleable de confirmación */}
+              <ScrollView 
+                style={{ width: '100%', flexShrink: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 2, paddingBottom: 10, alignItems: 'center' }}
+                showsVerticalScrollIndicator={true}
+              >
                 <View style={styles.confirmBigIconBox}>
-                  <Ionicons name="checkmark-done" size={46} color="#059669" />
+                  <Ionicons name="checkmark-done" size={42} color="#059669" />
                 </View>
 
                 <Text style={styles.confirmMainTitle}>¡Muchas gracias por tu valoración!</Text>
@@ -231,7 +235,7 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
                 </Text>
 
                 {/* Tarjeta de resumen de lo calificado */}
-                <View style={styles.confirmSummaryCard}>
+                <View style={[styles.confirmSummaryCard, { width: '100%' }]}>
                   {catConfig && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <View style={[styles.categoryBadge, { backgroundColor: catConfig.bg }]}>
@@ -293,10 +297,12 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
                     </View>
                   ) : null}
                 </View>
+              </ScrollView>
 
-                {/* Botón de cierre / confirmación */}
+              {/* Botón de cierre / confirmación fijo abajo */}
+              <View style={{ width: '100%', paddingTop: 14, borderTopWidth: 1, borderTopColor: COLORS.line, backgroundColor: COLORS.white }}>
                 <TouchableOpacity
-                  style={styles.confirmActionBtn}
+                  style={[styles.confirmActionBtn, { width: '100%', marginTop: 0 }]}
                   onPress={handleFinish}
                   activeOpacity={0.8}
                 >
@@ -518,9 +524,11 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 460,
+    maxHeight: '90%',
+    overflow: 'hidden',
     backgroundColor: COLORS.white,
     borderRadius: 24,
-    padding: 22,
+    padding: 20,
     borderWidth: 1,
     borderColor: COLORS.line,
     ...Platform.select({

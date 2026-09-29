@@ -1757,99 +1757,238 @@ export default function AdminSettings() {
               {(activeTab === 'all' || activeTab === 'users') && (
                 <>
                   <SectionHeader title="Usuarios y Roles" kicker="ACCESOS DEL SISTEMA" />
-                  <View style={styles.userSectionCard}>
-                    <View style={styles.userSectionHeader}>
+                  <View style={[styles.userSectionCard, !isDesktop && { padding: 14, borderRadius: 20 }]}>
+                    <View style={[styles.userSectionHeader, !isDesktop && { gap: 8 }]}>
                       <TextInput
-                        style={styles.userSearchInput}
+                        style={[styles.userSearchInput, !isDesktop && { minWidth: '100%', marginBottom: 4 }]}
                         value={userSearch}
                         onChangeText={setUserSearch}
                         placeholder="Buscar usuario, correo o dependencia"
                       />
-                      <TouchableOpacity style={styles.exportUsersBtn} onPress={exportUsers}>
+                      <TouchableOpacity style={[styles.exportUsersBtn, !isDesktop && { flex: 1, justifyContent: 'center' }]} onPress={exportUsers}>
                         <Ionicons name="download-outline" size={18} color={COLORS.white} />
                         <Text style={styles.exportUsersText}>Excel</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.addUserBtn} onPress={addUser}>
+                      <TouchableOpacity style={[styles.addUserBtn, !isDesktop && { flex: 1, justifyContent: 'center' }]} onPress={addUser}>
                         <Ionicons name="person-add-outline" size={18} color={COLORS.white} />
                         <Text style={styles.exportUsersText}>Agregar</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <View style={styles.userTable}>
-                      <View style={styles.userTableHeader}>
-                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
-                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
-                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.2, minWidth: 125 }]}>Rol</Text>
-                        <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9, minWidth: 95 }]}>Acciones</Text>
-                      </View>
+                    {!isDesktop ? (
+                      <View style={{ gap: 12 }}>
+                        {filteredUsers.map(user => {
+                          const normalizedRole = (user.role || 'funcionario').toLowerCase().trim();
+                          let roleLabel = 'Funcionario';
+                          let roleBg = '#F1F5F9';
+                          let roleColor = '#334155';
+                          let roleBorder = '#E2E8F0';
 
-                      {filteredUsers.map(user => {
-                        const normalizedRole = (user.role || 'funcionario').toLowerCase().trim();
-                        let roleLabel = 'Funcionario';
-                        let roleBg = '#F1F5F9';
-                        let roleColor = '#334155';
-                        let roleBorder = '#E2E8F0';
+                          if (normalizedRole === 'superadmin' || normalizedRole === 'super administrador' || normalizedRole === 'super_admin') {
+                            roleLabel = 'Super Administrador';
+                            roleBg = '#FAF5FF';
+                            roleColor = '#7E22CE';
+                            roleBorder = '#D8B4FE';
+                          } else if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
+                            roleLabel = 'Administrador';
+                            roleBg = '#FEF08A';
+                            roleColor = '#854D0E';
+                            roleBorder = '#FDE047';
+                          } else if (normalizedRole === 'security' || normalizedRole === 'seguridad') {
+                            roleLabel = 'Seguridad';
+                            roleBg = '#DBEAFE';
+                            roleColor = '#1E40AF';
+                            roleBorder = '#BFDBFE';
+                          } else if (normalizedRole === 'directivo') {
+                            roleLabel = 'Directivo';
+                            roleBg = '#F3E8FF';
+                            roleColor = '#6B21A8';
+                            roleBorder = '#E9D5FF';
+                          } else if (normalizedRole === 'conductor') {
+                            roleLabel = 'Conductor';
+                            roleBg = '#FFEDD5';
+                            roleColor = '#C2410C';
+                            roleBorder = '#FED7AA';
+                          }
 
-                        if (normalizedRole === 'superadmin' || normalizedRole === 'super administrador' || normalizedRole === 'super_admin') {
-                          roleLabel = 'Super Administrador';
-                          roleBg = '#FAF5FF';
-                          roleColor = '#7E22CE';
-                          roleBorder = '#D8B4FE';
-                        } else if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
-                          roleLabel = 'Administrador';
-                          roleBg = '#FEF08A';
-                          roleColor = '#854D0E';
-                          roleBorder = '#FDE047';
-                        } else if (normalizedRole === 'security' || normalizedRole === 'seguridad') {
-                          roleLabel = 'Seguridad';
-                          roleBg = '#DBEAFE';
-                          roleColor = '#1E40AF';
-                          roleBorder = '#BFDBFE';
-                        } else if (normalizedRole === 'directivo') {
-                          roleLabel = 'Directivo';
-                          roleBg = '#F3E8FF';
-                          roleColor = '#6B21A8';
-                          roleBorder = '#E9D5FF';
-                        } else if (normalizedRole === 'conductor') {
-                          roleLabel = 'Conductor';
-                          roleBg = '#FFEDD5';
-                          roleColor = '#C2410C';
-                          roleBorder = '#FED7AA';
-                        }
+                          const depName = dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || 'Sin dependencia';
+                          const userName = user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre';
+                          const initials = userName.split(' ').map((n: string) => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || 'US';
 
-                        return (
-                          <View key={user.id} style={styles.userTableRow}>
-                            <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
-                              <Text style={styles.userNameText}>{user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
-                              <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
-                            </View>
-                            <View style={[styles.userTableCell, { flex: 1.3 }]}>
-                              <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || 'Sin dependencia'}</Text>
-                            </View>
-                            <View style={[styles.userTableCell, { flex: 1.2, minWidth: 125 }]}>
-                              <View style={{
-                                backgroundColor: roleBg,
+                          return (
+                            <View 
+                              key={user.id} 
+                              style={{
+                                backgroundColor: '#FFFFFF',
+                                borderRadius: 16,
+                                padding: 14,
                                 borderWidth: 1,
-                                borderColor: roleBorder,
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 8,
-                                alignSelf: 'flex-start'
+                                borderColor: '#E2E8F0',
+                                gap: 10,
+                                shadowColor: '#0F172A',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.04,
+                                shadowRadius: 6,
+                                elevation: 1,
+                              }}
+                            >
+                              {/* Fila Superior: Avatar, Nombre/Correo y Badge de Rol */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                  <View style={{
+                                    width: 38,
+                                    height: 38,
+                                    borderRadius: 19,
+                                    backgroundColor: '#EFF6FF',
+                                    borderWidth: 1,
+                                    borderColor: '#BFDBFE',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                  }}>
+                                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E40AF' }}>{initials}</Text>
+                                  </View>
+                                  <View style={{ flex: 1, minWidth: 0 }}>
+                                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+                                      {userName}
+                                    </Text>
+                                    <Text style={{ fontSize: 11.5, color: '#64748B', fontWeight: '500', marginTop: 1 }} numberOfLines={1}>
+                                      {user.email || 'Sin correo'}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                <View style={{
+                                  backgroundColor: roleBg,
+                                  borderWidth: 1,
+                                  borderColor: roleBorder,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3.5,
+                                  borderRadius: 8,
+                                }}>
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: roleColor }}>
+                                    {roleLabel}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Fila Intermedia: Dependencia */}
+                              <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                backgroundColor: '#F8FAFC',
+                                paddingHorizontal: 10,
+                                paddingVertical: 7,
+                                borderRadius: 10,
+                                borderWidth: 1,
+                                borderColor: '#F1F5F9',
                               }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: roleColor }}>
-                                  {roleLabel}
+                                <Ionicons name="business-outline" size={13} color="#64748B" />
+                                <Text style={{ fontSize: 11.5, color: '#334155', fontWeight: '600', flex: 1 }} numberOfLines={2}>
+                                  {depName}
                                 </Text>
                               </View>
+
+                              {/* Fila Inferior: Botón Modificar */}
+                              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 2 }}>
+                                <TouchableOpacity 
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    backgroundColor: COLORS.primary,
+                                    paddingHorizontal: 14,
+                                    paddingVertical: 7,
+                                    borderRadius: 8,
+                                  }} 
+                                  onPress={() => openUserEditor(user)}
+                                  activeOpacity={0.8}
+                                >
+                                  <Ionicons name="create-outline" size={14} color="#FFFFFF" />
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '800' }}>Modificar</Text>
+                                </TouchableOpacity>
+                              </View>
                             </View>
-                            <View style={[styles.userTableCell, { flex: 0.9, minWidth: 95, gap: 6 }]}>
-                              <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
-                                <Text style={styles.userActionBtnText}>Modificar</Text>
-                              </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ) : (
+                      <View style={styles.userTable}>
+                        <View style={styles.userTableHeader}>
+                          <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.6 }]}>Nombre</Text>
+                          <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.3 }]}>Dependencia</Text>
+                          <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 1.2, minWidth: 125 }]}>Rol</Text>
+                          <Text style={[styles.userTableCell, styles.userTableHeaderText, { flex: 0.9, minWidth: 95 }]}>Acciones</Text>
+                        </View>
+
+                        {filteredUsers.map(user => {
+                          const normalizedRole = (user.role || 'funcionario').toLowerCase().trim();
+                          let roleLabel = 'Funcionario';
+                          let roleBg = '#F1F5F9';
+                          let roleColor = '#334155';
+                          let roleBorder = '#E2E8F0';
+
+                          if (normalizedRole === 'superadmin' || normalizedRole === 'super administrador' || normalizedRole === 'super_admin') {
+                            roleLabel = 'Super Administrador';
+                            roleBg = '#FAF5FF';
+                            roleColor = '#7E22CE';
+                            roleBorder = '#D8B4FE';
+                          } else if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
+                            roleLabel = 'Administrador';
+                            roleBg = '#FEF08A';
+                            roleColor = '#854D0E';
+                            roleBorder = '#FDE047';
+                          } else if (normalizedRole === 'security' || normalizedRole === 'seguridad') {
+                            roleLabel = 'Seguridad';
+                            roleBg = '#DBEAFE';
+                            roleColor = '#1E40AF';
+                            roleBorder = '#BFDBFE';
+                          } else if (normalizedRole === 'directivo') {
+                            roleLabel = 'Directivo';
+                            roleBg = '#F3E8FF';
+                            roleColor = '#6B21A8';
+                            roleBorder = '#E9D5FF';
+                          } else if (normalizedRole === 'conductor') {
+                            roleLabel = 'Conductor';
+                            roleBg = '#FFEDD5';
+                            roleColor = '#C2410C';
+                            roleBorder = '#FED7AA';
+                          }
+
+                          return (
+                            <View key={user.id} style={styles.userTableRow}>
+                              <View style={[styles.userTableCell, { flex: 1.6, gap: 3 }]}>
+                                <Text style={styles.userNameText}>{user.full_name || user.name || [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Sin nombre'}</Text>
+                                <Text style={styles.userEmailText}>{user.email || 'Sin correo'}</Text>
+                              </View>
+                              <View style={[styles.userTableCell, { flex: 1.3 }]}>
+                                <Text style={styles.userMetaText}>{dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || 'Sin dependencia'}</Text>
+                              </View>
+                              <View style={[styles.userTableCell, { flex: 1.2, minWidth: 125 }]}>
+                                <View style={{
+                                  backgroundColor: roleBg,
+                                  borderWidth: 1,
+                                  borderColor: roleBorder,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 8,
+                                  alignSelf: 'flex-start'
+                                }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: roleColor }}>
+                                    {roleLabel}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View style={[styles.userTableCell, { flex: 0.9, minWidth: 95, gap: 6 }]}>
+                                <TouchableOpacity style={styles.userActionBtn} onPress={() => openUserEditor(user)}>
+                                  <Text style={styles.userActionBtnText}>Modificar</Text>
+                                </TouchableOpacity>
+                              </View>
                             </View>
-                          </View>
-                        );
-                      })}
-                    </View>
+                          );
+                        })}
+                      </View>
+                    )}
 
                     <TouchableOpacity style={styles.saveBtn} onPress={saveUsers} disabled={saving}>
                       <LinearGradient colors={[COLORS.primary, COLORS.primarySoft]} style={styles.saveGradient}>

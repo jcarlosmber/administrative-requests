@@ -281,8 +281,8 @@ export const ChatbotModal: React.FC = () => {
       <Animated.View 
         style={{ 
           position: 'absolute', 
-          bottom: 24, 
-          right: 24, 
+          bottom: isSmallScreen ? 85 : 24, 
+          right: isSmallScreen ? 16 : 24, 
           zIndex: 9999,
           transform: [{ translateX: pan.x }, { translateY: pan.y }]
         }} 
@@ -291,9 +291,23 @@ export const ChatbotModal: React.FC = () => {
       >
         <TouchableOpacity 
           onPress={() => setIsMinimized(false)}
-          style={{ backgroundColor: '#3b82f6', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 8, opacity: 0.7 }}
+          style={{ 
+            backgroundColor: '#3b82f6', 
+            width: isSmallScreen ? 50 : 64, 
+            height: isSmallScreen ? 50 : 64, 
+            borderRadius: isSmallScreen ? 25 : 32, 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            shadowColor: '#000', 
+            shadowOffset: { width: 0, height: 4 }, 
+            shadowOpacity: 0.3, 
+            shadowRadius: 5, 
+            elevation: 8, 
+            opacity: 0.9 
+          }}
+          accessibilityLabel="Abrir asistente virtual"
         >
-          <Ionicons name="chatbubbles" size={32} color="#fff" />
+          <Ionicons name="chatbubbles" size={isSmallScreen ? 24 : 32} color="#fff" />
         </TouchableOpacity>
       </Animated.View>
     );

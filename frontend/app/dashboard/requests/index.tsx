@@ -52,6 +52,7 @@ const CATEGORIES = ['Todas', 'Visitantes', 'Transporte', 'Mantenimiento', 'Salas
 const STATUSES = ['Todos', 'Pendiente', 'En proceso', 'Aprobada', 'Resuelta', 'Rechazada'];
 
 export default function RequestsScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isSmallScreen = width < 500;
@@ -63,6 +64,7 @@ export default function RequestsScreen() {
   const [serviceFilter, setServiceFilter] = useState((params?.service as string) || 'Todas');
   const [selectedRequest, setSelectedRequest] = useState<AdministrativeRequest | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [newRequestModalVisible, setNewRequestModalVisible] = useState(false);
   const [evalCategories, setEvalCategories] = useState<string[]>(['visitors', 'transport', 'maintenance', 'rooms', 'parking']);
 
   // Reactivar el filtro si el parámetro cambia dinámicamente
@@ -212,11 +214,101 @@ export default function RequestsScreen() {
               fetchRequests();
             }}
           />
+
+          {/* Modal selector para Crear Nueva Solicitud desde el botón '+' */}
+          <Modal
+            visible={newRequestModalVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setNewRequestModalVisible(false)}
+          >
+            <View style={modalStyles.overlay}>
+              <View style={[modalStyles.container, { maxWidth: 480, maxHeight: '88%' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: COLORS.line }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="add-circle" size={22} color={COLORS.primary} />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 17, fontWeight: '900', color: COLORS.dark }}>Nueva Solicitud</Text>
+                      <Text style={{ fontSize: 12, color: COLORS.muted, fontWeight: '500' }}>Selecciona el servicio administrativo</Text>
+                    </View>
+                  </View>
+                  <Pressable onPress={() => setNewRequestModalVisible(false)} style={modalStyles.closeButton}>
+                    <Ionicons name="close" size={22} color={COLORS.dark} />
+                  </Pressable>
+                </View>
+
+                <ScrollView style={{ paddingHorizontal: 16, paddingVertical: 14 }} showsVerticalScrollIndicator={false}>
+                  {[
+                    { id: 'transport', title: 'Transporte Oficial', desc: 'Vehículos oficiales y traslados institucionales', icon: 'car-sport', color: '#2563EB', route: '/requests/transport' },
+                    { id: 'parking', title: 'Cupo de Parqueadero', desc: 'Registro vehicular y asignación de celda', icon: 'car', color: '#F59E0B', route: '/requests/parking' },
+                    { id: 'rooms', title: 'Reserva de Salas', desc: 'Salas de juntas, auditorios y recursos', icon: 'easel', color: '#7209B7', route: '/requests/rooms' },
+                    { id: 'visitors', title: 'Ingreso de Visitantes', desc: 'Control de acceso de personas externas', icon: 'people', color: '#E63946', route: '/requests/visitors' },
+                    { id: 'maintenance', title: 'Mantenimiento Locativo', desc: 'Infraestructura, reparaciones y adecuaciones', icon: 'construct', color: '#10B981', route: '/requests/maintenance' },
+                  ].map((serv) => (
+                    <TouchableOpacity
+                      key={serv.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: 14,
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        marginBottom: 10,
+                        gap: 12,
+                      }}
+                      onPress={() => {
+                        setNewRequestModalVisible(false);
+                        router.push(serv.route as any);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${serv.color}15`, justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name={serv.icon as any} size={22} color={serv.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.dark }}>{serv.title}</Text>
+                        <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 2 }}>{serv.desc}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: COLORS.line, backgroundColor: COLORS.white }}>
+                  <TouchableOpacity
+                    style={{
+                      width: '100%',
+                      height: 44,
+                      borderRadius: 12,
+                      backgroundColor: '#F1F5F9',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                    onPress={() => {
+                      setNewRequestModalVisible(false);
+                      router.push('/dashboard');
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: COLORS.dark }}>Ir al Menú Principal (Inicio)</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </View>
 
         {!isDesktop && (
-          <Pressable style={styles.fab}>
-            <Ionicons name="add" size={30} color={COLORS.white} />
+          <Pressable 
+            style={styles.fab}
+            onPress={() => setNewRequestModalVisible(true)}
+            accessibilityLabel="Crear nueva solicitud"
+            accessibilityRole="button"
+          >
+            <Ionicons name="add" size={32} color={COLORS.white} />
           </Pressable>
         )}
       </View>
@@ -487,7 +579,7 @@ function RequestCard({ item, evalCategories, onPress }: any) {
           <View style={styles.cardHeader}>
             <View style={styles.cardHeaderLeft}>
               <Text style={[styles.cardCategory, { color: item.color }]}>{item.cat}</Text>
-              <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+              <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
               {item.status?.toLowerCase() === 'pendiente' && Boolean(item.metadata?.returned_for_correction) && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start' }}>
                   <Ionicons name="return-down-back" size={12} color="#B45309" />
@@ -593,8 +685,23 @@ const styles = StyleSheet.create({
   metaText: { fontSize: 13, color: COLORS.muted, fontWeight: '600' },
   actionLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   actionLinkText: { fontSize: 13, color: COLORS.primary, fontWeight: '800' },
-
-  fab: { position: 'absolute', right: 25, bottom: 25, width: 64, height: 64, borderRadius: 22, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', elevation: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 15 }
+  fab: { 
+    position: 'absolute', 
+    right: 20, 
+    bottom: 85, 
+    width: 58, 
+    height: 58, 
+    borderRadius: 20, 
+    backgroundColor: COLORS.primary, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    elevation: 8, 
+    shadowColor: COLORS.primary, 
+    shadowOffset: { width: 0, height: 6 }, 
+    shadowOpacity: 0.35, 
+    shadowRadius: 10,
+    zIndex: 900
+  }
 });
 
 const RATING_LABELS: Record<number, string> = {
@@ -1014,155 +1121,164 @@ function DetailModal({ visible, request, evalCategories, onClose, onSuccess }: {
             /* ============================================================== */
             /* PANTALLA / MODAL DE CONFIRMACIÓN DE CALIFICACIÓN EXITOSA      */
             /* ============================================================== */
-            <View style={{ padding: 24, alignItems: 'center' }}>
+            <View style={{ width: '100%', maxHeight: '100%', flexShrink: 1 }}>
               {/* Header de confirmación */}
-              <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: COLORS.line }}>
+              <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: COLORS.line }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center' }}>
                     <Ionicons name="checkmark-circle" size={22} color="#059669" />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.dark }}>¡Calificación Registrada!</Text>
-                    <Text style={{ fontSize: 12, color: COLORS.muted, fontWeight: '500' }}>Comprobante de calificación del servicio</Text>
+                    <Text style={{ fontSize: 17, fontWeight: '900', color: COLORS.dark }}>¡Calificación Registrada!</Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>Comprobante de calificación del servicio</Text>
                   </View>
                 </View>
                 <Pressable onPress={() => { setEvalSubmitted(false); onClose(); }} style={modalStyles.closeButton}>
-                  <Ionicons name="close" size={24} color={COLORS.dark} />
+                  <Ionicons name="close" size={22} color={COLORS.dark} />
                 </Pressable>
               </View>
 
-              {/* Icono central de confirmación */}
-              <View style={{
-                width: 76,
-                height: 76,
-                borderRadius: 38,
-                backgroundColor: '#ECFDF5',
-                borderWidth: 2,
-                borderColor: '#A7F3D0',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: 14,
-              }}>
-                <Ionicons name="checkmark-done" size={44} color="#059669" />
-              </View>
+              {/* Contenido scrolleable para que nunca se corte en pantallas pequeñas */}
+              <ScrollView 
+                style={{ width: '100%', flexShrink: 1 }}
+                contentContainerStyle={{ padding: 20, alignItems: 'center' }}
+                showsVerticalScrollIndicator={true}
+              >
+                {/* Icono central de confirmación */}
+                <View style={{
+                  width: 68,
+                  height: 68,
+                  borderRadius: 34,
+                  backgroundColor: '#ECFDF5',
+                  borderWidth: 2,
+                  borderColor: '#A7F3D0',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}>
+                  <Ionicons name="checkmark-done" size={38} color="#059669" />
+                </View>
 
-              <Text style={{ fontSize: 19, fontWeight: '900', color: COLORS.dark, textAlign: 'center', marginBottom: 6 }}>
-                ¡Muchas gracias por tu valoración!
-              </Text>
-              <Text style={{ fontSize: 13, color: COLORS.muted, textAlign: 'center', lineHeight: 18, paddingHorizontal: 10, marginBottom: 16 }}>
-                Tu calificación y observaciones han quedado registradas en el sistema SASGE. Tu opinión es fundamental para continuar optimizando la gestión de los servicios administrativos en la entidad.
-              </Text>
-
-              {/* Tarjeta resumen de lo calificado */}
-              <View style={{
-                width: '100%',
-                backgroundColor: '#F8FAFC',
-                borderRadius: 16,
-                padding: 14,
-                borderWidth: 1,
-                borderColor: COLORS.line,
-                marginBottom: 20,
-              }}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.dark, marginBottom: 10 }} numberOfLines={2}>
-                  {request.title}
+                <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.dark, textAlign: 'center', marginBottom: 6 }}>
+                  ¡Muchas gracias por tu valoración!
+                </Text>
+                <Text style={{ fontSize: 13, color: COLORS.muted, textAlign: 'center', lineHeight: 18, paddingHorizontal: 10, marginBottom: 16 }}>
+                  Tu calificación y observaciones han quedado registradas en el sistema SASGE. Tu opinión es fundamental para continuar optimizando la gestión de los servicios administrativos en la entidad.
                 </Text>
 
-                {/* Estrellas otorgadas */}
+                {/* Tarjeta resumen de lo calificado */}
                 <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: COLORS.white,
-                  paddingHorizontal: 12,
-                  paddingVertical: 9,
-                  borderRadius: 10,
+                  width: '100%',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 16,
+                  padding: 14,
                   borderWidth: 1,
-                  borderColor: '#E2E8F0',
-                  marginBottom: 8,
+                  borderColor: COLORS.line,
                 }}>
-                  <View style={{ flexDirection: 'row', gap: 3 }}>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Ionicons
-                        key={star}
-                        name={rating >= star ? 'star' : 'star-outline'}
-                        size={18}
-                        color={COLORS.accent}
-                      />
-                    ))}
-                  </View>
-                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#B45309' }}>
-                    {RATING_LABELS[rating] || `${rating} / 5`}
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.dark, marginBottom: 10 }} numberOfLines={2}>
+                    {request.title}
                   </Text>
-                </View>
 
-                {/* Uso del servicio */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  backgroundColor: COLORS.white,
-                  paddingHorizontal: 12,
-                  paddingVertical: 9,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: '#E2E8F0',
-                  marginBottom: comment.trim() ? 8 : 0,
-                }}>
-                  <Ionicons
-                    name={serviceTaken ? 'checkmark-circle' : 'close-circle'}
-                    size={16}
-                    color={serviceTaken ? '#059669' : '#DC2626'}
-                  />
-                  <Text style={{
-                    fontSize: 12,
-                    fontWeight: '800',
-                    color: serviceTaken ? '#059669' : '#DC2626',
-                  }}>
-                    {serviceTaken ? 'Servicio efectivamente prestado / recibido' : 'Servicio no tomado'}
-                  </Text>
-                </View>
-
-                {/* Comentario */}
-                {comment.trim() ? (
+                  {/* Estrellas otorgadas */}
                   <View style={{
                     flexDirection: 'row',
-                    alignItems: 'flex-start',
-                    gap: 8,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                     backgroundColor: COLORS.white,
-                    padding: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
                     borderRadius: 10,
                     borderWidth: 1,
                     borderColor: '#E2E8F0',
+                    marginBottom: 8,
                   }}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={14} color={COLORS.muted} style={{ marginTop: 2 }} />
-                    <Text style={{ fontSize: 12, fontStyle: 'italic', color: COLORS.dark, flex: 1, lineHeight: 17 }}>
-                      "{comment.trim()}"
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Ionicons
+                          key={star}
+                          name={rating >= star ? 'star' : 'star-outline'}
+                          size={18}
+                          color={COLORS.accent}
+                        />
+                      ))}
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#B45309' }}>
+                      {RATING_LABELS[rating] || `${rating} / 5`}
                     </Text>
                   </View>
-                ) : null}
-              </View>
 
-              {/* Botón de confirmación y cierre */}
-              <TouchableOpacity
-                style={{
-                  width: '100%',
-                  backgroundColor: '#059669',
-                  borderRadius: 16,
-                  height: 48,
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-                onPress={() => {
-                  setEvalSubmitted(false);
-                  onClose();
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.white} />
-                <Text style={{ color: COLORS.white, fontSize: 15, fontWeight: '800' }}>Aceptar y Continuar</Text>
-              </TouchableOpacity>
+                  {/* Uso del servicio */}
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: COLORS.white,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    marginBottom: comment.trim() ? 8 : 0,
+                  }}>
+                    <Ionicons
+                      name={serviceTaken ? 'checkmark-circle' : 'close-circle'}
+                      size={16}
+                      color={serviceTaken ? '#059669' : '#DC2626'}
+                    />
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: serviceTaken ? '#059669' : '#DC2626',
+                    }}>
+                      {serviceTaken ? 'Servicio efectivamente prestado / recibido' : 'Servicio no tomado'}
+                    </Text>
+                  </View>
+
+                  {/* Comentario */}
+                  {comment.trim() ? (
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      backgroundColor: COLORS.white,
+                      padding: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      marginTop: 8,
+                    }}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={14} color={COLORS.muted} style={{ marginTop: 2 }} />
+                      <Text style={{ fontSize: 12, fontStyle: 'italic', color: COLORS.dark, flex: 1, lineHeight: 17 }}>
+                        "{comment.trim()}"
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              </ScrollView>
+
+              {/* Botón de confirmación y cierre fijo abajo siempre visible */}
+              <View style={{ width: '100%', paddingHorizontal: 20, paddingVertical: 14, borderTopWidth: 1, borderTopColor: COLORS.line, backgroundColor: COLORS.white }}>
+                <TouchableOpacity
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#059669',
+                    borderRadius: 16,
+                    height: 48,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                  onPress={() => {
+                    setEvalSubmitted(false);
+                    onClose();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.white} />
+                  <Text style={{ color: COLORS.white, fontSize: 15, fontWeight: '800' }}>Aceptar y Continuar</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             <>

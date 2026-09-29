@@ -97,11 +97,11 @@ export const IntroVideoModal: React.FC<IntroVideoModalProps> = ({ visible, onClo
   }, [visible, onClose]);
 
   const modalWidth = isMobile
-    ? Math.min(windowWidth * 0.95, 460)
+    ? Math.min(windowWidth - 16, 480)
     : Math.min(windowWidth * 0.88, 1020);
 
   const modalHeight = isMobile
-    ? Math.min(windowHeight * 0.85, 560)
+    ? Math.min(windowHeight * 0.82, 540)
     : Math.min(windowHeight * 0.88, 720);
 
   const videoUri = resolveSourceUri(videoSource);
@@ -113,7 +113,7 @@ export const IntroVideoModal: React.FC<IntroVideoModalProps> = ({ visible, onClo
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, isMobile && styles.overlayMobile]}>
         {/* Fondo oscuro cerrable al hacer clic */}
         <Pressable style={styles.backdropPressable} onPress={onClose} />
 
@@ -125,34 +125,37 @@ export const IntroVideoModal: React.FC<IntroVideoModalProps> = ({ visible, onClo
               height: modalHeight,
               maxWidth: 1040,
             },
+            isMobile && { borderRadius: 16 },
           ]}
         >
           {/* Header del Modal */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={styles.playBadge}>
-                <Ionicons name="play" size={16} color="#FFFFFF" />
+          <View style={[styles.header, isMobile && styles.headerMobile]}>
+            <View style={[styles.headerLeft, isMobile && styles.headerLeftMobile]}>
+              <View style={[styles.playBadge, isMobile && styles.playBadgeMobile]}>
+                <Ionicons name="play" size={isMobile ? 13 : 16} color="#FFFFFF" />
               </View>
               <View style={styles.headerTextGroup}>
                 <View style={styles.headerTitleRow}>
-                  <Text style={styles.title}>Video de Introducción</Text>
-                  <View style={styles.tagBadge}>
-                    <Text style={styles.tagBadgeText}>SASGE 2.0</Text>
+                  <Text style={[styles.title, isMobile && styles.titleMobile]} numberOfLines={1}>
+                    Video de Introducción
+                  </Text>
+                  <View style={[styles.tagBadge, isMobile && styles.tagBadgeMobile]}>
+                    <Text style={[styles.tagBadgeText, isMobile && styles.tagBadgeTextMobile]}>SASGE 2.0</Text>
                   </View>
                 </View>
-                <Text style={styles.subtitle}>
-                  Conoce el Sistema de Administración de Servicios Generales
+                <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]} numberOfLines={1}>
+                  {isMobile ? 'Sistema de Servicios Generales' : 'Conoce el Sistema de Administración de Servicios Generales'}
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity
               onPress={onClose}
-              style={styles.closeButton}
+              style={[styles.closeButton, isMobile && styles.closeButtonMobile]}
               accessibilityRole="button"
               accessibilityLabel="Cerrar video"
             >
-              <Ionicons name="close" size={22} color="#FFFFFF" />
+              <Ionicons name="close" size={isMobile ? 18 : 22} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
@@ -185,21 +188,21 @@ export const IntroVideoModal: React.FC<IntroVideoModalProps> = ({ visible, onClo
           </View>
 
           {/* Footer del Modal */}
-          <View style={styles.footer}>
-            <View style={styles.footerLeft}>
-              <Ionicons name="shield-checkmark" size={16} color="#BE1F2D" />
-              <Text style={styles.footerText}>
-                Secretaría Jurídica Distrital • Alcaldía Mayor de Bogotá
+          <View style={[styles.footer, isMobile && styles.footerMobile]}>
+            <View style={[styles.footerLeft, isMobile && styles.footerLeftMobile]}>
+              <Ionicons name="shield-checkmark" size={isMobile ? 14 : 16} color="#BE1F2D" />
+              <Text style={[styles.footerText, isMobile && styles.footerTextMobile]} numberOfLines={1}>
+                {isMobile ? 'Secretaría Jurídica Distrital' : 'Secretaría Jurídica Distrital • Alcaldía Mayor de Bogotá'}
               </Text>
             </View>
 
             <TouchableOpacity
               onPress={onClose}
-              style={styles.closeFooterBtn}
+              style={[styles.closeFooterBtn, isMobile && styles.closeFooterBtnMobile]}
               accessibilityRole="button"
               accessibilityLabel="Cerrar reproductor"
             >
-              <Text style={styles.closeFooterBtnText}>Cerrar</Text>
+              <Text style={[styles.closeFooterBtnText, isMobile && styles.closeFooterBtnTextMobile]}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -350,5 +353,59 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+  overlayMobile: {
+    padding: 8,
+  },
+  headerMobile: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  headerLeftMobile: {
+    gap: 8,
+  },
+  playBadgeMobile: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+  },
+  titleMobile: {
+    fontSize: 14,
+  },
+  tagBadgeMobile: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  tagBadgeTextMobile: {
+    fontSize: 9.5,
+  },
+  subtitleMobile: {
+    fontSize: 10.5,
+    marginTop: 1,
+  },
+  closeButtonMobile: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  footerMobile: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  footerLeftMobile: {
+    flex: 1,
+    marginRight: 8,
+  },
+  footerTextMobile: {
+    fontSize: 10.5,
+    flexShrink: 1,
+  },
+  closeFooterBtnMobile: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  closeFooterBtnTextMobile: {
+    fontSize: 12,
   },
 });

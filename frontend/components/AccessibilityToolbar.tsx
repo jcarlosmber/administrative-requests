@@ -10,7 +10,9 @@ import {
   Animated,
   Platform,
   Dimensions,
-  Image
+  useWindowDimensions,
+  Image,
+  PanResponder
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
@@ -529,7 +531,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   const router = useRouter();
   const rawPathname = usePathname();
   const pathname = rawPathname || (typeof window !== 'undefined' ? window.location.pathname : '/');
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isMobile = windowWidth < 1024;
   const [panelOpen, setOpenPanel] = useState(false);
+  const [bannerMinimized, setBannerMinimized] = useState(false);
 
   // Perfiles de discapacidad
   const [activeProfile, setActiveProfile] = useState<'none' | 'deaf' | 'blind' | 'colorblind' | 'dyslexia'>('none');
@@ -577,6 +582,75 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
   };
+
+  // Movimiento libre / Drag & Drop para el botón flotante de Accesibilidad
+  const buttonPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  const buttonPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+      },
+      onPanResponderGrant: () => {
+        buttonPan.extractOffset();
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: buttonPan.x, dy: buttonPan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (e, gestureState) => {
+        buttonPan.flattenOffset();
+        const { width, height } = Dimensions.get('window');
+        
+        // Coordenadas acumuladas
+        const currentX = (buttonPan.x as any)._value;
+        const currentY = (buttonPan.y as any)._value;
+
+        // Ancho aproximado del botón
+        const btnWidth = isMobile ? 48 : 80;
+        const maxLeft = -(width - btnWidth - 16); 
+        const maxRight = 0;
+
+        // Límites en Y según si es desktop o móvil
+        const maxUp = isMobile ? -(height - 180) : -(height * 0.38 - 60); 
+        const maxDown = isMobile ? 40 : (height * 0.5 - 80);
+
+        let targetX = currentX;
+        let targetY = currentY;
+
+        // Snap magnético al borde más cercano (izquierda o derecha)
+        const middleX = maxLeft / 2;
+        if (currentX < middleX) {
+          targetX = maxLeft;
+        } else {
+          targetX = maxRight;
+        }
+
+        // Limitar posición en Y dentro de la pantalla
+        if (currentY < maxUp) {
+          targetY = maxUp;
+        } else if (currentY > maxDown) {
+          targetY = maxDown;
+        }
+
+        Animated.parallel([
+          Animated.spring(buttonPan.x, {
+            toValue: targetX,
+            useNativeDriver: false,
+            tension: 40,
+            friction: 7,
+          }),
+          Animated.spring(buttonPan.y, {
+            toValue: targetY,
+            useNativeDriver: false,
+            tension: 40,
+            friction: 7,
+          }),
+        ]).start();
+      },
+    })
+  ).current;
 
   // Aplicación directa en el DOM para Web (Zoom de toda la página, Colores, Daltonismo, Dislexia, Subrayado)
   useEffect(() => {
@@ -1552,41 +1626,110 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   return (
     <>
       {/* Banner Accesible Superior para personas con Discapacidad Visual / Ciegos */}
-      <View style={styles.accessibleScreenReaderBanner}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={
-            (interactiveReaderEnabled || activeProfile === 'blind')
-              ? 'Lector de voz activo. Presione la tecla V para pausar o desactivar'
-              : 'Activar asistente de voz y lector de pantalla para personas con discapacidad visual. Presione la tecla V o Enter'
-          }
-          accessibilityHint="Presione la tecla V en cualquier momento para activar o pausar"
-          style={[
-            styles.accessibleBannerBtn,
-            (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
-          ]}
-          onPress={toggleVoiceAssistant}
-        >
-          <Ionicons name="volume-high" size={16} color="#FFFFFF" />
-          <Text style={styles.accessibleBannerText}>
-            {(interactiveReaderEnabled || activeProfile === 'blind')
-              ? '🔊 VOZ ACTIVA (Pulse tecla V para pausar)'
-              : '🔊 VOZ Y LECTOR PARA CIEGOS (Pulse tecla V o clic aquí)'}
-          </Text>
-        </Pressable>
+      <View style={[
+        styles.accessibleScreenReaderBanner,
+        isMobile && styles.accessibleScreenReaderBannerMobile
+      ]}>
+        {isMobile && bannerMinimized ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Expandir lector de voz"
+            style={[
+              styles.accessibleBannerBtnMinimized,
+              (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
+            ]}
+            onPress={() => setBannerMinimized(false)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="volume-high" size={13} color="#FACC15" />
+            <Text style={styles.accessibleBannerTextMinimized}>
+              {(interactiveReaderEnabled || activeProfile === 'blind') ? 'Voz On' : 'Voz'}
+            </Text>
+            <Ionicons name="chevron-down" size={11} color="#94A3B8" />
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={[
+              styles.accessibleBannerBtn,
+              isMobile && styles.accessibleBannerBtnMobile,
+              (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
+            ]}
+          >
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={
+                (interactiveReaderEnabled || activeProfile === 'blind')
+                  ? 'Lector de voz activo. Presione para pausar'
+                  : 'Activar asistente de voz y lector de pantalla para personas con discapacidad visual'
+              }
+              accessibilityHint={isMobile ? 'Toca para encender o pausar la voz' : 'Presione la tecla V en cualquier momento para activar o pausar'}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
+              onPress={toggleVoiceAssistant}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="volume-high" size={isMobile ? 14 : 16} color="#FFFFFF" />
+              <Text
+                style={[
+                  styles.accessibleBannerText,
+                  isMobile && styles.accessibleBannerTextMobile
+                ]}
+                numberOfLines={1}
+              >
+                {isMobile
+                  ? ((interactiveReaderEnabled || activeProfile === 'blind')
+                    ? '🔊 Voz Activa'
+                    : '🔊 Voz / Lector')
+                  : ((interactiveReaderEnabled || activeProfile === 'blind')
+                    ? '🔊 VOZ ACTIVA (Pulse tecla V para pausar)'
+                    : '🔊 VOZ Y LECTOR PARA CIEGOS (Pulse tecla V o clic aquí)')
+                }
+              </Text>
+            </TouchableOpacity>
+
+            {/* En móvil: Botón para minimizar y despejar la vista de atrás */}
+            {isMobile && (
+              <TouchableOpacity
+                onPress={() => setBannerMinimized(true)}
+                style={styles.bannerMinimizeBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Minimizar barra de voz para ver pantalla"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={13} color="#CBD5E1" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
-      {/* Botón flotante lateral derecho de Accesibilidad */}
-      <TouchableOpacity
-        accessible={true}
-        accessibilityRole="button"
-        style={styles.floatingButton}
-        onPress={() => setOpenPanel(true)}
-        accessibilityLabel="Menú de Accesibilidad Web"
+      {/* Botón flotante lateral movible de Accesibilidad (Drag & Drop) */}
+      <Animated.View
+        style={[
+          styles.floatingButton, 
+          isMobile && styles.floatingButtonMobile,
+          {
+            transform: [{ translateX: buttonPan.x }, { translateY: buttonPan.y }],
+          }
+        ]}
+        {...buttonPanResponder.panHandlers}
       >
-        <Ionicons name="accessibility" size={26} color="#FFFFFF" />
-        <Text style={styles.floatingText}>Accesibilidad</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          accessible={true}
+          accessibilityRole="button"
+          onPress={() => setOpenPanel(true)}
+          accessibilityLabel="Menú de Accesibilidad Web"
+          activeOpacity={0.85}
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'column',
+            gap: isMobile ? 0 : 4,
+          }}
+        >
+          <Ionicons name="accessibility" size={isMobile ? 22 : 26} color="#FFFFFF" />
+          {!isMobile && <Text style={styles.floatingText}>Accesibilidad</Text>}
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Toast informativo de estado */}
       {toastMessage ? (
@@ -1735,25 +1878,29 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
       {/* Modal / Panel Principal de Accesibilidad */}
       <Modal visible={panelOpen} transparent animationType="slide" onRequestClose={() => setOpenPanel(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.panelSheet}>
+        <View style={[styles.modalOverlay, isMobile && styles.modalOverlayMobile]}>
+          <View style={[styles.panelSheet, isMobile && styles.panelSheetMobile]}>
             {/* Header */}
-            <View style={styles.panelHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={styles.panelIconBg}>
-                  <Ionicons name="accessibility" size={24} color="#FFFFFF" />
+            <View style={[styles.panelHeader, isMobile && styles.panelHeaderMobile]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 8 : 10, flex: 1, marginRight: 8 }}>
+                <View style={[styles.panelIconBg, isMobile && styles.panelIconBgMobile]}>
+                  <Ionicons name="accessibility" size={isMobile ? 20 : 24} color="#FFFFFF" />
                 </View>
-                <View>
-                  <Text style={styles.panelTitle}>Barra de Accesibilidad Web</Text>
-                  <Text style={styles.panelSub}>Ajustes e Inclusión para Personas con Discapacidad</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.panelTitle, isMobile && styles.panelTitleMobile]} numberOfLines={1}>
+                    Barra de Accesibilidad
+                  </Text>
+                  <Text style={[styles.panelSub, isMobile && styles.panelSubMobile]} numberOfLines={1}>
+                    Ajustes de Inclusión y Discapacidad
+                  </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setOpenPanel(false)} style={{ padding: 4 }}>
-                <Ionicons name="close" size={26} color="#0F172A" />
+              <TouchableOpacity onPress={() => setOpenPanel(false)} style={{ padding: 6 }}>
+                <Ionicons name="close" size={isMobile ? 24 : 26} color="#0F172A" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.panelBody} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[styles.panelBody, isMobile && styles.panelBodyMobile]} showsVerticalScrollIndicator={false}>
               {/* SECCIÓN 1: PERFILES DE DISCAPACIDAD */}
               <Text style={styles.sectionHeaderTitle}>1. PERFILES DE ACCESIBILIDAD</Text>
 
@@ -1762,16 +1909,18 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 style={[styles.profileCard, activeProfile === 'deaf' && styles.profileCardActive]}
                 onPress={toggleDeafProfile}
               >
-                <View style={styles.profileRow}>
-                  <View style={[styles.profileIconBox, { backgroundColor: '#EFF6FF' }]}>
-                    <Ionicons name="ear-outline" size={24} color="#2563EB" />
+                <View style={[styles.profileRow, isMobile && styles.profileRowMobile]}>
+                  <View style={[styles.profileIconBox, isMobile && styles.profileIconBoxMobile, { backgroundColor: '#EFF6FF' }]}>
+                    <Ionicons name="ear-outline" size={isMobile ? 20 : 24} color="#2563EB" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.profileName}>Discapacidad Auditiva / Sordera</Text>
-                    <Text style={styles.profileDesc}>Activa el intérprete en Lengua de Señas Colombiana (LSC) y el glosario de términos.</Text>
+                    <Text style={[styles.profileName, isMobile && styles.profileNameMobile]}>Discapacidad Auditiva / Sordera</Text>
+                    <Text style={[styles.profileDesc, isMobile && styles.profileDescMobile]}>Activa el intérprete en Lengua de Señas Colombiana (LSC) y el glosario de términos.</Text>
                   </View>
-                  <View style={[styles.toggleBadge, activeProfile === 'deaf' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
-                    <Text style={styles.toggleBadgeText}>{activeProfile === 'deaf' ? 'ACTIVADO' : 'DESACTIVADO'}</Text>
+                  <View style={[styles.toggleBadge, isMobile && styles.toggleBadgeMobile, activeProfile === 'deaf' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
+                    <Text style={[styles.toggleBadgeText, isMobile && styles.toggleBadgeTextMobile]}>
+                      {activeProfile === 'deaf' ? (isMobile ? 'ACTIVO' : 'ACTIVADO') : (isMobile ? 'INACTIVO' : 'DESACTIVADO')}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -1781,16 +1930,18 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 style={[styles.profileCard, activeProfile === 'blind' && styles.profileCardActive]}
                 onPress={toggleBlindProfile}
               >
-                <View style={styles.profileRow}>
-                  <View style={[styles.profileIconBox, { backgroundColor: '#FEF2F2' }]}>
-                    <Ionicons name="eye-outline" size={24} color="#DC2626" />
+                <View style={[styles.profileRow, isMobile && styles.profileRowMobile]}>
+                  <View style={[styles.profileIconBox, isMobile && styles.profileIconBoxMobile, { backgroundColor: '#FEF2F2' }]}>
+                    <Ionicons name="eye-outline" size={isMobile ? 20 : 24} color="#DC2626" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.profileName}>Ceguera / Discapacidad Visual</Text>
-                    <Text style={styles.profileDesc}>Lector de pantalla por voz, alto contraste, aumento de letra y comandos por voz.</Text>
+                    <Text style={[styles.profileName, isMobile && styles.profileNameMobile]}>Ceguera / Discapacidad Visual</Text>
+                    <Text style={[styles.profileDesc, isMobile && styles.profileDescMobile]}>Lector de pantalla por voz, alto contraste, aumento de letra y comandos por voz.</Text>
                   </View>
-                  <View style={[styles.toggleBadge, activeProfile === 'blind' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
-                    <Text style={styles.toggleBadgeText}>{activeProfile === 'blind' ? 'ACTIVADO' : 'DESACTIVADO'}</Text>
+                  <View style={[styles.toggleBadge, isMobile && styles.toggleBadgeMobile, activeProfile === 'blind' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
+                    <Text style={[styles.toggleBadgeText, isMobile && styles.toggleBadgeTextMobile]}>
+                      {activeProfile === 'blind' ? (isMobile ? 'ACTIVO' : 'ACTIVADO') : (isMobile ? 'INACTIVO' : 'DESACTIVADO')}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -1800,16 +1951,18 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 style={[styles.profileCard, activeProfile === 'colorblind' && styles.profileCardActive]}
                 onPress={toggleColorblindProfile}
               >
-                <View style={styles.profileRow}>
-                  <View style={[styles.profileIconBox, { backgroundColor: '#F0FDF4' }]}>
-                    <Ionicons name="color-palette-outline" size={24} color="#16A34A" />
+                <View style={[styles.profileRow, isMobile && styles.profileRowMobile]}>
+                  <View style={[styles.profileIconBox, isMobile && styles.profileIconBoxMobile, { backgroundColor: '#F0FDF4' }]}>
+                    <Ionicons name="color-palette-outline" size={isMobile ? 20 : 24} color="#16A34A" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.profileName}>Daltonismo</Text>
-                    <Text style={styles.profileDesc}>Aplica filtro monocromo / escala de grises para mejorar diferenciación de colores.</Text>
+                    <Text style={[styles.profileName, isMobile && styles.profileNameMobile]}>Daltonismo</Text>
+                    <Text style={[styles.profileDesc, isMobile && styles.profileDescMobile]}>Aplica filtro monocromo / escala de grises para mejorar diferenciación de colores.</Text>
                   </View>
-                  <View style={[styles.toggleBadge, activeProfile === 'colorblind' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
-                    <Text style={styles.toggleBadgeText}>{activeProfile === 'colorblind' ? 'ACTIVADO' : 'DESACTIVADO'}</Text>
+                  <View style={[styles.toggleBadge, isMobile && styles.toggleBadgeMobile, activeProfile === 'colorblind' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
+                    <Text style={[styles.toggleBadgeText, isMobile && styles.toggleBadgeTextMobile]}>
+                      {activeProfile === 'colorblind' ? (isMobile ? 'ACTIVO' : 'ACTIVADO') : (isMobile ? 'INACTIVO' : 'DESACTIVADO')}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -1819,16 +1972,18 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 style={[styles.profileCard, activeProfile === 'dyslexia' && styles.profileCardActive]}
                 onPress={toggleDyslexiaProfile}
               >
-                <View style={styles.profileRow}>
-                  <View style={[styles.profileIconBox, { backgroundColor: '#F5F3FF' }]}>
-                    <Ionicons name="text-outline" size={24} color="#7C3AED" />
+                <View style={[styles.profileRow, isMobile && styles.profileRowMobile]}>
+                  <View style={[styles.profileIconBox, isMobile && styles.profileIconBoxMobile, { backgroundColor: '#F5F3FF' }]}>
+                    <Ionicons name="text-outline" size={isMobile ? 20 : 24} color="#7C3AED" />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.profileName}>Dislexia</Text>
-                    <Text style={styles.profileDesc}>Habilita fuente de fácil lectura con interlineado y espacio entre letras optimizado.</Text>
+                    <Text style={[styles.profileName, isMobile && styles.profileNameMobile]}>Dislexia</Text>
+                    <Text style={[styles.profileDesc, isMobile && styles.profileDescMobile]}>Habilita fuente de fácil lectura con interlineado y espacio entre letras optimizado.</Text>
                   </View>
-                  <View style={[styles.toggleBadge, activeProfile === 'dyslexia' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
-                    <Text style={styles.toggleBadgeText}>{activeProfile === 'dyslexia' ? 'ACTIVADO' : 'DESACTIVADO'}</Text>
+                  <View style={[styles.toggleBadge, isMobile && styles.toggleBadgeMobile, activeProfile === 'dyslexia' ? styles.toggleBadgeOn : styles.toggleBadgeOff]}>
+                    <Text style={[styles.toggleBadgeText, isMobile && styles.toggleBadgeTextMobile]}>
+                      {activeProfile === 'dyslexia' ? (isMobile ? 'ACTIVO' : 'ACTIVADO') : (isMobile ? 'INACTIVO' : 'DESACTIVADO')}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -1840,27 +1995,27 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
               <View style={styles.toolsGroupCard}>
                 <Text style={styles.toolsGroupTitle}>🔊 Lectores y Comandos de Voz para Ciegos</Text>
                 <Text style={styles.toolsGroupSubtitle}>
-                  Atajo rápido: Presione la tecla V en su teclado para encender o pausar la voz sin necesidad de buscar botones.
+                  {isMobile ? 'Pulsa Escuchar Pantalla para leer el contenido o usa el Asistente por Voz.' : 'Atajo rápido: Presione la tecla V en su teclado para encender o pausar la voz sin necesidad de buscar botones.'}
                 </Text>
 
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: 8, marginTop: 10 }}>
                   <TouchableOpacity
-                    style={[styles.actionBtn, isSpeaking && styles.actionBtnActive]}
+                    style={[styles.actionBtn, isSpeaking && styles.actionBtnActive, isMobile && { width: '100%' }]}
                     onPress={isSpeaking ? stopSpeech : readCurrentPage}
                     accessibilityRole="button"
                     accessibilityLabel="Escuchar página completa"
                   >
-                    <Ionicons name={isSpeaking ? "stop" : "volume-high"} size={18} color="#FFFFFF" />
+                    <Ionicons name={isSpeaking ? "stop" : "volume-high"} size={16} color="#FFFFFF" />
                     <Text style={styles.actionBtnText}>{isSpeaking ? "Detener Lectura" : "Escuchar Pantalla"}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: '#2563EB' }]}
+                    style={[styles.actionBtn, { backgroundColor: '#2563EB' }, isMobile && { width: '100%' }]}
                     onPress={startVoiceAssistant}
                     accessibilityRole="button"
                     accessibilityLabel="Asistente por voz con micrófono"
                   >
-                    <Ionicons name="mic" size={18} color="#FFFFFF" />
+                    <Ionicons name="mic" size={16} color="#FFFFFF" />
                     <Text style={styles.actionBtnText}>Asistente por Voz</Text>
                   </TouchableOpacity>
                 </View>
@@ -2088,9 +2243,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             </ScrollView>
 
             {/* Footer */}
-            <View style={styles.panelFooter}>
+            <View style={[styles.panelFooter, isMobile && styles.panelFooterMobile]}>
               <TouchableOpacity
-                style={styles.resetBtn}
+                style={[styles.resetBtn, isMobile && styles.footerBtnMobile]}
                 onPress={() => {
                   setActiveProfile('none');
                   setFontSizeMultiplier(1);
@@ -2107,13 +2262,13 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 }}
               >
                 <Ionicons name="refresh" size={16} color="#64748B" />
-                <Text style={styles.resetBtnText}>Restablecer Todo</Text>
+                <Text style={styles.resetBtnText}>{isMobile ? 'Restablecer' : 'Restablecer Todo'}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 accessible={true}
                 accessibilityRole="button"
-                style={styles.closeBtn}
+                style={[styles.closeBtn, isMobile && styles.footerBtnMobile]}
                 onPress={() => setOpenPanel(false)}
                 accessibilityLabel="Aplicar y Cerrar"
               >
@@ -2126,28 +2281,32 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
       {/* Modal Diccionario de Términos para Personas Sordas (LSC) */}
       <Modal visible={dictionaryVisible} transparent animationType="fade" onRequestClose={() => setDictionaryVisible(false)}>
-        <View style={styles.dictionaryOverlay}>
-          <View style={styles.dictionarySheet}>
-            <View style={styles.dictionaryHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ fontSize: 24 }}>📖</Text>
-                <View>
-                  <Text style={styles.dictionaryTitle}>Glosario para Personas Sordas</Text>
-                  <Text style={styles.dictionarySub}>Definiciones claras y señas en LSC</Text>
+        <View style={[styles.dictionaryOverlay, isMobile && styles.dictionaryOverlayMobile]}>
+          <View style={[styles.dictionarySheet, isMobile && styles.dictionarySheetMobile]}>
+            <View style={[styles.dictionaryHeader, isMobile && styles.dictionaryHeaderMobile]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, marginRight: 8 }}>
+                <Text style={{ fontSize: isMobile ? 20 : 24 }}>📖</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.dictionaryTitle, isMobile && styles.dictionaryTitleMobile]} numberOfLines={1}>
+                    Glosario Personas Sordas
+                  </Text>
+                  <Text style={[styles.dictionarySub, isMobile && styles.dictionarySubMobile]} numberOfLines={1}>
+                    Definiciones y señas LSC
+                  </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={() => setDictionaryVisible(false)}>
-                <Ionicons name="close" size={24} color="#0F172A" />
+              <TouchableOpacity onPress={() => setDictionaryVisible(false)} style={{ padding: 4 }}>
+                <Ionicons name="close" size={isMobile ? 22 : 24} color="#0F172A" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={{ padding: 18, gap: 14 }}>
+            <ScrollView contentContainerStyle={{ padding: isMobile ? 12 : 18, gap: isMobile ? 10 : 14 }}>
               {DICTIONARY_TERMS.map((item, idx) => (
-                <View key={idx} style={styles.termCard}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[styles.termName, { flex: 1 }]}>{item.term}</Text>
+                <View key={idx} style={[styles.termCard, isMobile && styles.termCardMobile]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <Text style={[styles.termName, isMobile && styles.termNameMobile, { flex: 1 }]}>{item.term}</Text>
                     <TouchableOpacity
-                      style={styles.termPlayBtn}
+                      style={[styles.termPlayBtn, isMobile && styles.termPlayBtnMobile]}
                       onPress={() => {
                         const matched = LSC_DICTIONARY.find(t => t.title.toLowerCase().includes(item.term.toLowerCase()) || item.term.toLowerCase().includes(t.title.toLowerCase())) || LSC_DICTIONARY[0];
                         setLscPopover({
@@ -2160,20 +2319,20 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                         setDictionaryVisible(false);
                       }}
                     >
-                      <Ionicons name="play" size={12} color="#FFFFFF" />
-                      <Text style={styles.termPlayBtnText}>Ver Seña</Text>
+                      <Ionicons name="play" size={isMobile ? 10 : 12} color="#FFFFFF" />
+                      <Text style={[styles.termPlayBtnText, isMobile && styles.termPlayBtnTextMobile]}>Ver Seña</Text>
                     </TouchableOpacity>
                   </View>
-                  <Text style={styles.termDef}>{item.definition}</Text>
-                  <View style={styles.termLscHintBox}>
-                    <Text style={styles.termLscHintText}>{item.lscHint}</Text>
+                  <Text style={[styles.termDef, isMobile && styles.termDefMobile]}>{item.definition}</Text>
+                  <View style={[styles.termLscHintBox, isMobile && styles.termLscHintBoxMobile]}>
+                    <Text style={[styles.termLscHintText, isMobile && styles.termLscHintTextMobile]}>{item.lscHint}</Text>
                   </View>
                 </View>
               ))}
             </ScrollView>
 
-            <TouchableOpacity style={styles.dictionaryCloseBtn} onPress={() => setDictionaryVisible(false)}>
-              <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>Entendido / Cerrar</Text>
+            <TouchableOpacity style={[styles.dictionaryCloseBtn, isMobile && styles.dictionaryCloseBtnMobile]} onPress={() => setDictionaryVisible(false)}>
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: isMobile ? 13 : 14 }}>Entendido / Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2184,23 +2343,34 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
 const styles = StyleSheet.create({
   floatingButton: {
-    position: 'absolute',
-    top: '38%',
-    right: 0,
+    position: (Platform.OS === 'web' ? 'fixed' : 'absolute') as any,
+    top: '40%',
+    right: 8,
     zIndex: 9999,
     backgroundColor: '#1E40AF',
-    borderTopLeftRadius: 16,
-    borderBottomLeftRadius: 16,
+    borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 12,
     flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     shadowColor: '#000',
-    shadowOffset: { width: -2, height: 4 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 8,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer', userSelect: 'none' } as any : {}),
+  },
+  floatingButtonMobile: {
+    top: 'auto' as any,
+    bottom: 96,
+    right: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    gap: 0,
+    shadowOpacity: 0.25,
   },
   floatingText: {
     color: '#FFFFFF',
@@ -2784,5 +2954,153 @@ const styles = StyleSheet.create({
   scaleChipTextActive: {
     color: '#FFFFFF',
     fontWeight: '900',
-  }
+  },
+  modalOverlayMobile: {
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    padding: 0,
+  },
+  panelSheetMobile: {
+    width: '100%',
+    maxWidth: '100%',
+    height: '94%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+  panelHeaderMobile: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  panelIconBgMobile: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+  },
+  panelTitleMobile: {
+    fontSize: 15,
+  },
+  panelSubMobile: {
+    fontSize: 10.5,
+  },
+  panelBodyMobile: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
+    paddingBottom: 30,
+  },
+  profileRowMobile: {
+    gap: 10,
+  },
+  profileIconBoxMobile: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+  },
+  profileNameMobile: {
+    fontSize: 13,
+  },
+  profileDescMobile: {
+    fontSize: 10.5,
+    lineHeight: 15,
+  },
+  toggleBadgeMobile: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  toggleBadgeTextMobile: {
+    fontSize: 9,
+  },
+  panelFooterMobile: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  footerBtnMobile: {
+    paddingVertical: 10,
+  },
+  dictionaryOverlayMobile: {
+    padding: 8,
+  },
+  dictionarySheetMobile: {
+    maxHeight: '92%',
+    borderRadius: 18,
+  },
+  dictionaryHeaderMobile: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dictionaryTitleMobile: {
+    fontSize: 15,
+  },
+  dictionarySubMobile: {
+    fontSize: 10.5,
+  },
+  termCardMobile: {
+    padding: 10,
+  },
+  termNameMobile: {
+    fontSize: 14,
+  },
+  termDefMobile: {
+    fontSize: 11.5,
+    lineHeight: 17,
+  },
+  termLscHintBoxMobile: {
+    padding: 6,
+  },
+  termLscHintTextMobile: {
+    fontSize: 10.5,
+  },
+  termPlayBtnMobile: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  termPlayBtnTextMobile: {
+    fontSize: 10,
+  },
+  dictionaryCloseBtnMobile: {
+    paddingVertical: 11,
+  },
+  accessibleScreenReaderBannerMobile: {
+    top: 8,
+    paddingHorizontal: 10,
+  },
+  accessibleBannerBtnMobile: {
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    gap: 6,
+    maxWidth: '92%',
+  },
+  accessibleBannerTextMobile: {
+    fontSize: 11,
+    letterSpacing: 0.2,
+  },
+  bannerMinimizeBtn: {
+    padding: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 10,
+    marginLeft: 4,
+  },
+  accessibleBannerBtnMinimized: {
+    backgroundColor: '#0F172A',
+    borderWidth: 1.5,
+    borderColor: '#FACC15',
+    borderRadius: 16,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  accessibleBannerTextMinimized: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 10,
+  },
 });

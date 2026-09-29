@@ -111,8 +111,8 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
             alignItems: 'center',
             backgroundColor: '#FFFFFF',
             borderRadius: 999,
-            paddingVertical: isMobile ? 6 : 8,
-            paddingHorizontal: isDesktop ? 14 : isMobile ? 8 : 10,
+            paddingVertical: isMobile ? 4 : 8,
+            paddingHorizontal: isDesktop ? 14 : isMobile ? 4 : 10,
             shadowColor: '#0F172A',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.15,
@@ -120,38 +120,40 @@ export const GuideModalButton: React.FC<GuideModalButtonProps> = ({
             elevation: 6,
             borderWidth: 1.5,
             borderColor: '#E2E8F0',
-            gap: isMobile ? 4 : 6,
+            gap: isMobile ? 0 : 6,
           }}
         >
           <View
             style={{
-              width: isMobile ? 28 : 32,
-              height: isMobile ? 28 : 32,
+              width: isMobile ? 32 : 32,
+              height: isMobile ? 32 : 32,
               borderRadius: 16,
               backgroundColor: themeColor,
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Ionicons name="help" size={isMobile ? 17 : 20} color="#FFFFFF" />
+            <Ionicons name="help" size={isMobile ? 18 : 20} color="#FFFFFF" />
           </View>
-          <View>
-            <Text
-              style={{
-                fontSize: isMobile ? 12 : 13,
-                fontWeight: '700',
-                color: '#1E293B',
-                letterSpacing: 0.2,
-              }}
-            >
-              Guía
-            </Text>
-            {isDesktop && (
-              <Text style={{ fontSize: 10, color: '#64748B', marginTop: -2 }}>
-                del flujo
+          {!isMobile && (
+            <View>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: '#1E293B',
+                  letterSpacing: 0.2,
+                }}
+              >
+                Guía
               </Text>
-            )}
-          </View>
+              {isDesktop && (
+                <Text style={{ fontSize: 10, color: '#64748B', marginTop: -2 }}>
+                  del flujo
+                </Text>
+              )}
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 

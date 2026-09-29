@@ -97,6 +97,7 @@ export default function RoomsRequestScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const isMobile = width < 768;
   
   // Slots ocupados en tiempo real (limpio por defecto)
   const [occupiedSlots, setOccupiedSlots] = useState<{ day: number; hour: number; title?: string }[]>([]);
@@ -491,7 +492,7 @@ export default function RoomsRequestScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 14, 
+              padding: isDesktop ? 40 : 10, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -585,8 +586,8 @@ export default function RoomsRequestScreen() {
                       onChangeText={setEntityName} 
                       placeholder="Ej. Consejo de Estado" 
                     />
-                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 5 }}>
-                      <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 0 : 12, marginTop: 5 }}>
+                      <View style={{ flex: isMobile ? undefined : 1 }}>
                         <Field 
                           label="Nombre del Responsable" 
                           icon="person-outline" 
@@ -595,7 +596,7 @@ export default function RoomsRequestScreen() {
                           placeholder="Ej. Laura Juliana Ariza" 
                         />
                       </View>
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: isMobile ? undefined : 1 }}>
                         <Field 
                           label="Cargo del Responsable" 
                           icon="ribbon-outline" 
@@ -1361,7 +1362,7 @@ function Card({ title, icon, right, children }: any) {
           </View>
           <Text style={styles.cardTitle}>{title}</Text>
         </View>
-        {right}
+        {right && <View style={{ alignSelf: 'flex-start' }}>{right}</View>}
       </View>
       <View style={styles.cardBody}>
         {children}
@@ -1626,27 +1627,27 @@ const styles = StyleSheet.create({
   sideBadge: { marginTop: 30, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignSelf: 'flex-start' },
   badgeText: { color: COLORS.white, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   
-  mobHeader: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 20 },
-  mobTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text },
-  mobSub: { fontSize: 14, color: COLORS.muted },
+  mobHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, paddingRight: 45 },
+  mobTitle: { fontSize: 19, fontWeight: '900', color: COLORS.text },
+  mobSub: { fontSize: 13, color: COLORS.muted },
   
-  hero: { backgroundColor: COLORS.white, borderRadius: 28, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: COLORS.line, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 15, elevation: 2 },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroTitle: { fontSize: 26, fontWeight: '900', color: COLORS.text },
-  heroSub: { color: COLORS.muted, marginTop: 2, fontSize: 15 },
-  pill: { backgroundColor: COLORS.soft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  pillText: { color: COLORS.primary, fontWeight: '800', fontSize: 11, textTransform: 'uppercase' },
-  barContainer: { marginTop: 20 },
+  hero: { backgroundColor: COLORS.white, borderRadius: 24, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: COLORS.line, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 15, elevation: 2 },
+  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text },
+  heroSub: { color: COLORS.muted, marginTop: 2, fontSize: 13 },
+  pill: { backgroundColor: COLORS.soft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  pillText: { color: COLORS.primary, fontWeight: '800', fontSize: 10, textTransform: 'uppercase' },
+  barContainer: { marginTop: 16 },
   barBg: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 10, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 10 },
-  barLabel: { marginTop: 8, fontSize: 12, fontWeight: '700', color: COLORS.muted, textAlign: 'right' },
+  barLabel: { marginTop: 6, fontSize: 11, fontWeight: '700', color: COLORS.muted, textAlign: 'right' },
   
-  card: { borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, marginBottom: 16 },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  cardBody: { padding: 20 },
+  card: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, marginBottom: 16 },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', flexWrap: 'wrap', gap: 8 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 150 },
+  iconBox: { width: 32, height: 32, borderRadius: 9, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, flex: 1, flexShrink: 1 },
+  cardBody: { padding: 16 },
   
   calendarNav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, paddingHorizontal: 5 },
   monthLabel: { fontSize: 16, fontWeight: '900', color: COLORS.text, textTransform: 'capitalize' },

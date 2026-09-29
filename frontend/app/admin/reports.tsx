@@ -2296,35 +2296,47 @@ export default function AdminReports() {
           <View style={styles.contentPadding}>
             
             {/* Filtros Generales Superior */}
-            <View style={styles.filtersRow}>
-              <View style={styles.rangeSelector}>
-                <TouchableOpacity 
-                  style={[styles.rangeBtn, dateRange === 'month' && styles.rangeBtnActive]} 
-                  onPress={() => setDateRange('month')}
-                >
-                  <Text style={[styles.rangeText, dateRange === 'month' && styles.rangeTextActive]}>Este Mes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.rangeBtn, dateRange === 'quarter' && styles.rangeBtnActive]} 
-                  onPress={() => setDateRange('quarter')}
-                >
-                  <Text style={[styles.rangeText, dateRange === 'quarter' && styles.rangeTextActive]}>3 Meses</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.rangeBtn, dateRange === 'all' && styles.rangeBtnActive]} 
-                  onPress={() => setDateRange('all')}
-                >
-                  <Text style={[styles.rangeText, dateRange === 'all' && styles.rangeTextActive]}>Histórico</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.rangeBtn, dateRange === 'custom' && styles.rangeBtnActive]} 
-                  onPress={() => setDateRange('custom')}
-                >
-                  <Text style={[styles.rangeText, dateRange === 'custom' && styles.rangeTextActive]}>Personalizado</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={[styles.filtersRow, !isDesktop && { flexDirection: 'column', alignItems: 'stretch', gap: 12 }]}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={{ paddingRight: 16 }}
+                style={!isDesktop ? { width: '100%' } : undefined}
+              >
+                <View style={styles.rangeSelector}>
+                  <TouchableOpacity 
+                    style={[styles.rangeBtn, dateRange === 'month' && styles.rangeBtnActive]} 
+                    onPress={() => setDateRange('month')}
+                  >
+                    <Text style={[styles.rangeText, dateRange === 'month' && styles.rangeTextActive]}>Este Mes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.rangeBtn, dateRange === 'quarter' && styles.rangeBtnActive]} 
+                    onPress={() => setDateRange('quarter')}
+                  >
+                    <Text style={[styles.rangeText, dateRange === 'quarter' && styles.rangeTextActive]}>3 Meses</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.rangeBtn, dateRange === 'all' && styles.rangeBtnActive]} 
+                    onPress={() => setDateRange('all')}
+                  >
+                    <Text style={[styles.rangeText, dateRange === 'all' && styles.rangeTextActive]}>Histórico</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.rangeBtn, dateRange === 'custom' && styles.rangeBtnActive]} 
+                    onPress={() => setDateRange('custom')}
+                  >
+                    <Text style={[styles.rangeText, dateRange === 'custom' && styles.rangeTextActive]}>Personalizado</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
               
-              <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: 'row', gap: 10, paddingRight: 24, paddingVertical: 2 }}
+                style={!isDesktop ? { width: '100%' } : undefined}
+              >
                 <TouchableOpacity 
                   style={[styles.downloadDocBtn, { backgroundColor: COLORS.primarySoft }]} 
                   onPress={() => navigateToManage({ status: 'Todos', service: 'Todas' })}
@@ -2340,7 +2352,7 @@ export default function AdminReports() {
                   <Ionicons name="download-outline" size={18} color={COLORS.white} />
                   <Text style={styles.downloadDocText}>Exportar Excel</Text>
                 </TouchableOpacity>
-              </View>
+              </ScrollView>
             </View>
 
             {dateRange === 'month' && (
@@ -6496,7 +6508,7 @@ const styles = StyleSheet.create({
   firmaSub: { fontSize: 10, color: COLORS.muted, marginTop: 2 },
   logoutBtn: { width: 42, height: 42, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
 
-  reportDocFooter: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 15, marginTop: 10 },
+  reportDocFooter: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, borderTopWidth: 1, borderTopColor: COLORS.line, paddingTop: 15, marginTop: 10, flexWrap: 'wrap' },
   cancelReportBtn: { height: 42, paddingHorizontal: 20, borderRadius: 10, justifyContent: 'center', borderWidth: 1, borderColor: COLORS.line },
   cancelReportText: { fontSize: 13, fontWeight: '700', color: COLORS.muted },
   printReportBtn: { height: 42, paddingHorizontal: 20, backgroundColor: COLORS.primary, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },

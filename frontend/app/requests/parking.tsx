@@ -495,7 +495,7 @@ export default function ParkingRequestScreen() {
 
           <ScrollView 
             contentContainerStyle={{ 
-              padding: isDesktop ? 40 : 14, 
+              padding: isDesktop ? 40 : 10, 
               paddingBottom: 60,
               flexGrow: 1
             }}
@@ -522,23 +522,23 @@ export default function ParkingRequestScreen() {
                           : (!chargeLimitInfo.isUnlimited && activeVehiclesCount >= chargeLimitInfo.maxLimit)
                           ? '#F59E0B'
                           : COLORS.primary,
-                        paddingHorizontal: 12,
-                        paddingVertical: 7,
-                        borderRadius: 10,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 8,
                       }}
                       onPress={openCreateVehicleModal}
                     >
                       <Ionicons 
                         name={!chargeLimitInfo.canRegister ? "lock-closed" : "add-circle"} 
-                        size={16} 
+                        size={15} 
                         color={COLORS.white} 
                       />
-                      <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 12 }}>
+                      <Text style={{ color: COLORS.white, fontWeight: '800', fontSize: 11 }}>
                         {!chargeLimitInfo.canRegister 
                           ? 'No Habilitado (Contratista)' 
                           : (!chargeLimitInfo.isUnlimited && activeVehiclesCount >= chargeLimitInfo.maxLimit)
                           ? '+ Registrar (Cupo 1/1)'
-                          : '+ Registrar Nuevo Vehículo'}
+                          : isDesktop ? '+ Registrar Nuevo Vehículo' : '+ Registrar'}
                       </Text>
                     </TouchableOpacity>
                   }
@@ -560,8 +560,8 @@ export default function ParkingRequestScreen() {
                       ? '#FECACA' 
                       : COLORS.line 
                   }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 160 }}>
                         <Ionicons 
                           name={
                             chargeLimitInfo.type === 'directivo' 
@@ -582,6 +582,7 @@ export default function ParkingRequestScreen() {
                         <Text style={{ 
                           fontSize: 12, 
                           fontWeight: '800', 
+                          flexShrink: 1,
                           color: chargeLimitInfo.type === 'directivo' 
                             ? '#1E40AF' 
                             : chargeLimitInfo.type === 'contratista' 
@@ -606,6 +607,7 @@ export default function ParkingRequestScreen() {
                         paddingHorizontal: 8,
                         paddingVertical: 3,
                         borderRadius: 8,
+                        alignSelf: 'flex-start',
                       }}>
                         <Text style={{ 
                           fontSize: 12, 
@@ -1632,15 +1634,15 @@ function Sidebar() {
 function MobileHeader() {
   const router = useRouter();
   return (
-    <View style={[styles.mobHeader, { paddingRight: 50, flexDirection: 'row', alignItems: 'center' }]}>
+    <View style={[styles.mobHeader, { paddingRight: 45, flexDirection: 'row', alignItems: 'center' }]}>
       <TouchableOpacity 
         onPress={() => router.push('/dashboard')}
-        style={{ marginRight: 10, padding: 8, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: COLORS.line }}
+        style={{ marginRight: 8, padding: 8, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: COLORS.line }}
       >
         <Ionicons name="arrow-back" size={20} color={COLORS.primary} />
       </TouchableOpacity>
-      <Ionicons name="car" size={28} color={COLORS.primary} />
-      <View style={{ flex: 1, marginLeft: 10 }}>
+      <Ionicons name="car" size={26} color={COLORS.primary} />
+      <View style={{ flex: 1, marginLeft: 8 }}>
         <Text style={styles.mobTitle} numberOfLines={1}>Secretaría Jurídica</Text>
         <Text style={styles.mobSub} numberOfLines={1}>Solicitud de Parqueadero</Text>
       </View>
@@ -1652,7 +1654,7 @@ function Hero({ progress }: { progress: number }) {
   return (
     <View style={styles.hero}>
       <View style={styles.heroRow}>
-        <View>
+        <View style={{ flex: 1, minWidth: 160, marginRight: 8 }}>
           <Text style={styles.heroTitle}>Nuevo Registro</Text>
           <Text style={styles.heroSub}>Vincule su vehículo al sistema central</Text>
         </View>
@@ -1669,10 +1671,10 @@ function Hero({ progress }: { progress: number }) {
 }
 
 const barStyles = StyleSheet.create({
-  barContainer: { marginTop: 20 },
+  barContainer: { marginTop: 16 },
   barBg: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 10, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 10 },
-  barLabel: { marginTop: 8, fontSize: 12, fontWeight: '700', color: COLORS.muted, textAlign: 'right' }
+  barLabel: { marginTop: 6, fontSize: 11, fontWeight: '700', color: COLORS.muted, textAlign: 'right' }
 });
 
 function Card({ title, icon, right, children }: any) {
@@ -1683,9 +1685,9 @@ function Card({ title, icon, right, children }: any) {
           <View style={styles.iconBox}>
             <Ionicons name={icon} size={18} color={COLORS.primary} />
           </View>
-          <Text style={styles.cardTitle}>{title}</Text>
+          <Text style={[styles.cardTitle, { flex: 1, flexWrap: 'wrap' }]}>{title}</Text>
         </View>
-        {right}
+        {right && <View style={{ alignSelf: 'flex-start' }}>{right}</View>}
       </View>
       <View style={styles.cardBody}>
         {children}
@@ -1910,27 +1912,27 @@ const styles = StyleSheet.create({
   sideBadge: { marginTop: 30, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', alignSelf: 'flex-start' },
   badgeText: { color: COLORS.white, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
   
-  mobHeader: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 20 },
-  mobTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text },
-  mobSub: { fontSize: 14, color: COLORS.muted },
+  mobHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  mobTitle: { fontSize: 19, fontWeight: '900', color: COLORS.text },
+  mobSub: { fontSize: 13, color: COLORS.muted },
   
-  hero: { backgroundColor: COLORS.white, borderRadius: 28, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: COLORS.line, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 15, elevation: 2 },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  heroTitle: { fontSize: 26, fontWeight: '900', color: COLORS.text },
-  heroSub: { color: COLORS.muted, marginTop: 2, fontSize: 15 },
-  pill: { backgroundColor: COLORS.soft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  pillText: { color: COLORS.primary, fontWeight: '800', fontSize: 11, textTransform: 'uppercase' },
-  barContainer: { marginTop: 20 },
+  hero: { backgroundColor: COLORS.white, borderRadius: 24, padding: 18, marginBottom: 16, borderWidth: 1, borderColor: COLORS.line, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 15, elevation: 2 },
+  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  heroTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text },
+  heroSub: { color: COLORS.muted, marginTop: 2, fontSize: 13 },
+  pill: { backgroundColor: COLORS.soft, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  pillText: { color: COLORS.primary, fontWeight: '800', fontSize: 10, textTransform: 'uppercase' },
+  barContainer: { marginTop: 16 },
   barBg: { height: 8, backgroundColor: '#F1F5F9', borderRadius: 10, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.primary, borderRadius: 10 },
-  barLabel: { marginTop: 8, fontSize: 12, fontWeight: '700', color: COLORS.muted, textAlign: 'right' },
+  barLabel: { marginTop: 6, fontSize: 11, fontWeight: '700', color: COLORS.muted, textAlign: 'right' },
   
-  card: { borderRadius: 28, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, marginBottom: 16 },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)' },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBox: { width: 34, height: 34, borderRadius: 10, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
-  cardBody: { padding: 20 },
+  card: { borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.line, marginBottom: 16 },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)', flexWrap: 'wrap', gap: 8 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 150 },
+  iconBox: { width: 32, height: 32, borderRadius: 9, backgroundColor: COLORS.soft, justifyContent: 'center', alignItems: 'center' },
+  cardTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text, flexShrink: 1 },
+  cardBody: { padding: 16 },
   
   field: { marginBottom: 15 },
   label: { fontSize: 13, fontWeight: '700', color: COLORS.muted, marginBottom: 8, marginLeft: 4 },
