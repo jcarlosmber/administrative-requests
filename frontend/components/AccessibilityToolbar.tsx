@@ -1629,10 +1629,27 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             border-color: #2D3A54 !important;
           }
 
-          /* 15. Modales, diálogos y hojas emergentes */
+          /* 15. Modales: El contenedor raíz del diálogo debe ser transparente para permitir el fondo translúcido */
           html[data-theme="dark"] [role="dialog"],
-          html[data-theme="dark"] div[style*="background-color: white"],
-          html[data-theme="dark"] div[style*="background-color: #fff"] {
+          html[data-theme="dark"] [aria-modal="true"] {
+            background: transparent !important;
+            background-color: transparent !important;
+          }
+
+          /* Overlays y backdrops translúcidos de modales con efecto blur */
+          html[data-theme="dark"] div[style*="rgba(0, 0, 0"],
+          html[data-theme="dark"] div[style*="rgba(0,0,0"],
+          html[data-theme="dark"] [data-modal-overlay] {
+            background-color: rgba(10, 14, 23, 0.65) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+          }
+
+          /* Panel y tarjetas internas de los modales */
+          html[data-theme="dark"] [data-modal-sheet],
+          html[data-theme="dark"] div[style*="background-color: white"]:not([role="dialog"]):not([data-modal-overlay]),
+          html[data-theme="dark"] div[style*="background-color: #fff"]:not([role="dialog"]):not([data-modal-overlay]),
+          html[data-theme="dark"] div[style*="background-color: rgb(255, 255, 255)"]:not([role="dialog"]):not([data-modal-overlay]) {
             background-color: #161F30 !important;
             color: #FFFFFF !important;
             border-color: #2D3A54 !important;
@@ -4328,8 +4345,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
       {/* Modal / Panel Principal de Accesibilidad */}
       <Modal visible={panelOpen} transparent animationType="slide" onRequestClose={() => setOpenPanel(false)}>
-        <View style={[styles.modalOverlay, isMobile && styles.modalOverlayMobile]}>
-          <View style={[styles.panelSheet, isMobile && styles.panelSheetMobile]}>
+        <View 
+          data-modal-overlay="true"
+          style={[styles.modalOverlay, isMobile && styles.modalOverlayMobile]}
+        >
+          <View 
+            data-modal-sheet="true"
+            style={[styles.panelSheet, isMobile && styles.panelSheetMobile]}
+          >
             {/* Header */}
             <View style={[styles.panelHeader, isMobile && styles.panelHeaderMobile]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 8 : 10, flex: 1, marginRight: 8 }}>
@@ -5047,9 +5070,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     justifyContent: 'center',
     alignItems: 'flex-end',
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+    } as any : {}),
   },
   panelSheet: {
     width: Platform.OS === 'web' ? 460 : '90%',
@@ -5440,6 +5467,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     padding: 0,
+    ...(Platform.OS === 'web' ? {
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+    } as any : {}),
   },
   panelSheetMobile: {
     width: '100%',
