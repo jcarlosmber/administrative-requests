@@ -5846,7 +5846,11 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   return (
     <View style={styles.sidebar}>
       <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
-      <View style={styles.sidebarContent}>
+      <ScrollView 
+        style={{ flex: 1, width: '100%' }}
+        contentContainerStyle={[styles.sidebarContent, { flexGrow: 1, paddingBottom: 30 }]}
+        showsVerticalScrollIndicator={true}
+      >
         <View style={styles.logoCircle}>
           <Ionicons name="bar-chart" size={40} color={COLORS.white} />
         </View>
@@ -5862,7 +5866,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
           <SidebarTabButton id="rooms" label="Reserva de Salas" icon="easel" active={activeTab === 'rooms'} onPress={() => setActiveTab('rooms')} />
           <SidebarTabButton id="transport" label="Flota de Transporte" icon="car-sport" active={activeTab === 'transport'} onPress={() => setActiveTab('transport')} />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -6273,7 +6277,7 @@ const getModuleMeta = (cat?: string) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   sidebar: { width: 300, height: '100%', overflow: 'hidden' },
-  sidebarContent: { flex: 1, padding: 30, paddingTop: 60, alignItems: 'center' },
+  sidebarContent: { padding: 30, paddingTop: 50, alignItems: 'center', minHeight: '100%' },
   logoCircle: { width: 70, height: 70, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   sideTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', textAlign: 'center' },
   sideSubTitle: { color: COLORS.accent, fontSize: 13, fontWeight: '700', marginTop: 3 },

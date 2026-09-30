@@ -1014,7 +1014,11 @@ function Sidebar({ user }: any) {
         style={styles.sideBg}
       >
         <LinearGradient colors={['rgba(169, 48, 30, 0.95)', 'rgba(15, 23, 42, 0.95)']} style={StyleSheet.absoluteFill} />
-        <View style={styles.sideContent}>
+        <ScrollView 
+          style={{ flex: 1, width: '100%' }}
+          contentContainerStyle={[styles.sideContent, { flexGrow: 1, paddingBottom: 30 }]}
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.logoRing}>
             <Ionicons name="business" size={54} color={COLORS.white} />
           </View>
@@ -1034,7 +1038,7 @@ function Sidebar({ user }: any) {
               <Text style={styles.userRole} numberOfLines={1}>Funcionario {user?.dependency ? `• ${user.dependency}` : ''}</Text>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </ImageBackground>
     </View>
   );
@@ -1422,9 +1426,9 @@ function RequestCard({ req, onPress }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  sidebar: { width: 380, height: '100%' },
+  sidebar: { width: 380, height: '100%', overflow: 'hidden' },
   sideBg: { flex: 1 },
-  sideContent: { flex: 1, padding: 50, justifyContent: 'center' },
+  sideContent: { padding: 40, justifyContent: 'center', minHeight: '100%' },
   logoRing: { width: 90, height: 90, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   sideTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', lineHeight: 38 },
   sideSub: { color: 'rgba(255,255,255,0.8)', fontSize: 18, marginTop: 5 },

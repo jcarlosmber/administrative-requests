@@ -1616,7 +1616,11 @@ function Sidebar() {
         style={styles.sideBg}
       >
         <LinearGradient colors={['rgba(244, 162, 97, 0.9)', 'rgba(231, 111, 81, 0.95)']} style={StyleSheet.absoluteFill} />
-        <View style={styles.sideContent}>
+        <ScrollView 
+          style={{ flex: 1, width: '100%' }}
+          contentContainerStyle={[styles.sideContent, { flexGrow: 1, paddingBottom: 30 }]}
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.logoRing}>
             <Ionicons name="car" size={54} color={COLORS.white} />
           </View>
@@ -1629,7 +1633,7 @@ function Sidebar() {
           <View style={styles.sideBadge}>
             <Text style={styles.badgeText}>ZONA PROTEGIDA</Text>
           </View>
-        </View>
+        </ScrollView>
       </ImageBackground>
     </View>
   );
@@ -1905,9 +1909,9 @@ function GuidelinesModal({ visible, onClose }: any) {
 }
 
 const styles = StyleSheet.create({
-  sidebar: { width: 380, height: '100%' },
+  sidebar: { width: 380, height: '100%', overflow: 'hidden' },
   sideBg: { flex: 1 },
-  sideContent: { flex: 1, padding: 50, justifyContent: 'center' },
+  sideContent: { minHeight: '100%', padding: 50, justifyContent: 'center' },
   logoRing: { width: 90, height: 90, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
   sideTitle: { color: COLORS.white, fontSize: 32, fontWeight: '900', lineHeight: 38 },
   sideSub: { color: 'rgba(255,255,255,0.8)', fontSize: 18, marginTop: 5 },

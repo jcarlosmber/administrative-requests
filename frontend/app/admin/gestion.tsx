@@ -1260,7 +1260,11 @@ export default function AdminGestion() {
         {isDesktop && (
           <View style={styles.sidebar}>
             <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
-            <View style={styles.sidebarContent}>
+            <ScrollView
+              style={{ flex: 1, width: '100%' }}
+              contentContainerStyle={[styles.sidebarContent, { flexGrow: 1, paddingBottom: 30 }]}
+              showsVerticalScrollIndicator={true}
+            >
               <View style={styles.logoCircle}>
                 <Ionicons name="briefcase" size={36} color={COLORS.white} />
               </View>
@@ -1304,7 +1308,7 @@ export default function AdminGestion() {
                   <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>Ajustes del Sistema</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </ScrollView>
           </View>
         )}
 
@@ -3788,6 +3792,8 @@ export default function AdminGestion() {
 const styles = StyleSheet.create({
   sidebar: {
     width: 260,
+    height: '100%',
+    overflow: 'hidden',
     backgroundColor: COLORS.primaryDark,
     borderRightWidth: 1,
     borderRightColor: 'rgba(255,255,255,0.08)',
@@ -3795,7 +3801,7 @@ const styles = StyleSheet.create({
   sidebarContent: {
     padding: 24,
     alignItems: 'center',
-    flex: 1,
+    minHeight: '100%',
   },
   logoCircle: {
     width: 68,

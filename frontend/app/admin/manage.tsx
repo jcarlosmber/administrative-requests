@@ -2860,7 +2860,11 @@ function Sidebar({
   return (
     <View style={styles.sidebar}>
       <LinearGradient colors={[COLORS.primary, COLORS.primaryDark]} style={StyleSheet.absoluteFill} />
-      <View style={styles.sidebarContent}>
+      <ScrollView 
+        style={{ flex: 1, width: '100%' }}
+        contentContainerStyle={[styles.sidebarContent, { flexGrow: 1, paddingBottom: 30 }]}
+        showsVerticalScrollIndicator={true}
+      >
         <View style={styles.logoCircle}>
           <Ionicons name="layers" size={40} color={COLORS.white} />
         </View>
@@ -2896,7 +2900,7 @@ function Sidebar({
             <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Portal Funcionario</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -5432,7 +5436,7 @@ function RequestListItem({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   sidebar: { width: 300, height: '100%', overflow: 'hidden' },
-  sidebarContent: { flex: 1, padding: 30, paddingTop: 60, alignItems: 'center' },
+  sidebarContent: { padding: 30, paddingTop: 50, alignItems: 'center', minHeight: '100%' },
   logoCircle: { width: 70, height: 70, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   sideTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', textAlign: 'center' },
   sideSubTitle: { color: COLORS.accent, fontSize: 13, fontWeight: '700', marginTop: 3 },
