@@ -1226,6 +1226,24 @@ function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
   const scale = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const [isDark, setIsDark] = React.useState(() => {
+    if (typeof document !== 'undefined') {
+      return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const checkTheme = () => {
+        setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
+      };
+      checkTheme();
+      const obs = new MutationObserver(checkTheme);
+      obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      return () => obs.disconnect();
+    }
+  }, []);
 
   React.useEffect(() => {
     Animated.parallel([
@@ -1263,24 +1281,32 @@ function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
       onHoverOut={handleOut}
     >
       <Animated.View style={{ transform: [{ scale }, { translateY: slideAnim }], opacity: fadeAnim }}>
-        <View style={[
-          styles.serviceCardLight, 
-          { 
-            width: width, 
-            maxWidth: '100%',
-            height: isMobile ? 245 : 260,
-            padding: isMobile ? 14 : 24,
-            borderRadius: isMobile ? 24 : 32,
-            justifyContent: 'space-between',
-          }
-        ]}>
+        <View 
+          // @ts-ignore
+          data-service-card="true"
+          style={[
+            styles.serviceCardLight, 
+            { 
+              width: width, 
+              maxWidth: '100%',
+              height: isMobile ? 245 : 260,
+              padding: isMobile ? 14 : 24,
+              borderRadius: isMobile ? 24 : 32,
+              justifyContent: 'space-between',
+              backgroundColor: isDark ? '#161F30' : COLORS.white,
+              borderColor: isDark ? '#2D3A54' : '#E2E8F0',
+            }
+          ]}
+        >
           <LinearGradient
-            colors={['#FFFFFF', '#F8FAFC', `${item.color}15`]}
+            colors={isDark 
+              ? ['#1E293B', '#0F172A', `${item.color}35`]
+              : ['#FFFFFF', '#F8FAFC', `${item.color}15`]}
             locations={[0, 0.7, 1]}
             style={StyleSheet.absoluteFill}
           />
           <View style={[styles.cardWatermark, isMobile && { right: -15, top: -15 }]}>
-            <Ionicons name={item.icon} size={isMobile ? 85 : 120} color={`${item.color}10`} />
+            <Ionicons name={item.icon} size={isMobile ? 85 : 120} color={isDark ? `${item.color}25` : `${item.color}10`} />
           </View>
           
           <View style={[styles.cardInfo, isMobile && { gap: 10, marginBottom: 8 }]}>
@@ -1300,6 +1326,7 @@ function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
               <Text 
                 style={[
                   styles.cardTitleLight, 
+                  isDark && { color: '#FFFFFF' },
                   isMobile && { fontSize: 13.5, lineHeight: 17, letterSpacing: -0.2 }
                 ]}
                 numberOfLines={isMobile ? 2 : 1}
@@ -1322,6 +1349,7 @@ function ServiceCard({ item, width, onPress, index = 0, isMobile }: any) {
           <Text 
             style={[
               styles.cardDescLight, 
+              isDark && { color: '#CBD5E1' },
               isMobile && { fontSize: 11, lineHeight: 15, marginVertical: 4 }
             ]} 
             numberOfLines={2}

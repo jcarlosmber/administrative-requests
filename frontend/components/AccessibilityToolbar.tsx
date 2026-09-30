@@ -1354,6 +1354,23 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             border-color: #2D3A54 !important;
           }
 
+          /* Adaptación específica para tarjetas de Accesos Rápidos y gradientes blancos */
+          html[data-theme="dark"] [data-service-card],
+          html[data-theme="dark"] .r-borderColor-1wr2p1e {
+            background-color: #161F30 !important;
+            border-color: #2D3A54 !important;
+          }
+
+          html[data-theme="dark"] [data-service-card] > div:first-child,
+          html[data-theme="dark"] [data-theme-gradient="light"],
+          html[data-theme="dark"] div[style*="linear-gradient"][style*="255, 255, 255"],
+          html[data-theme="dark"] div[style*="linear-gradient"][style*="248, 250, 252"],
+          html[data-theme="dark"] div[style*="linear-gradient"][style*="#FFFFFF"],
+          html[data-theme="dark"] div[style*="linear-gradient"][style*="#ffffff"] {
+            background-image: linear-gradient(180deg, #1E293B 0%, #0F172A 100%) !important;
+            opacity: 0.95 !important;
+          }
+
           /* 2. Textos principales oscuros pasan a blanco */
           html[data-theme="dark"] .r-color-18zdu8c,
           html[data-theme="dark"] .r-color-1rcpcwj,
@@ -1522,10 +1539,11 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
     if (colorMode !== 'dark') {
       // Limpiar marcas dinámicas al volver a Modo Claro u Original
-      document.querySelectorAll('[data-theme-bg], [data-theme-color], [data-theme-border]').forEach(el => {
+      document.querySelectorAll('[data-theme-bg], [data-theme-color], [data-theme-border], [data-theme-gradient]').forEach(el => {
         el.removeAttribute('data-theme-bg');
         el.removeAttribute('data-theme-color');
         el.removeAttribute('data-theme-border');
+        el.removeAttribute('data-theme-gradient');
       });
       return;
     }
@@ -1548,6 +1566,12 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
               el.setAttribute('data-theme-bg', 'light');
             }
           }
+        }
+
+        // Gradientes claros (como LinearGradient en tarjetas de servicios)
+        const bi = st.backgroundImage;
+        if (bi && bi !== 'none' && (bi.includes('255, 255, 255') || bi.includes('248, 250, 252') || bi.includes('white'))) {
+          el.setAttribute('data-theme-gradient', 'light');
         }
 
         // Textos oscuros se marcan para aplicar blanco o gris claro
