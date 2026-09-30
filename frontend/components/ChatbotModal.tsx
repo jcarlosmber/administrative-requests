@@ -92,9 +92,12 @@ export const ChatbotModal: React.FC = () => {
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const moved = Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+        const moved = Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
         if (moved) isDraggingChatRef.current = true;
         return moved;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
       },
       onPanResponderGrant: () => {
         isDraggingChatRef.current = false;
@@ -299,9 +302,10 @@ export const ChatbotModal: React.FC = () => {
           bottom: isSmallScreen ? 85 : 24, 
           right: isSmallScreen ? 16 : 24, 
           zIndex: 9999,
-          transform: [{ translateX: pan.x }, { translateY: pan.y }]
+          transform: [{ translateX: pan.x }, { translateY: pan.y }],
+          ...(Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none' } as any) : {})
         }} 
-        pointerEvents="box-none"
+        pointerEvents="auto"
         {...panResponder.panHandlers}
       >
         <TouchableOpacity 

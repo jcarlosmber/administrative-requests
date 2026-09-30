@@ -1217,6 +1217,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         if (moved) isDraggingBtnRef.current = true;
         return moved;
       },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+      },
       onPanResponderGrant: () => {
         isDraggingBtnRef.current = false;
         buttonPan.extractOffset();
@@ -1288,6 +1291,72 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             friction: 6,
           }),
         ]).start();
+      },
+    })
+  ).current;
+
+  // Movimiento libre / Drag & Drop para el banner superior de Lector de Voz
+  const isDraggingReaderBannerRef = useRef(false);
+  const readerBannerPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const readerBannerPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const moved = Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+        if (moved) isDraggingReaderBannerRef.current = true;
+        return moved;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+      },
+      onPanResponderGrant: () => {
+        isDraggingReaderBannerRef.current = false;
+        readerBannerPan.extractOffset();
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4) {
+          isDraggingReaderBannerRef.current = true;
+        }
+        readerBannerPan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
+      onPanResponderRelease: () => {
+        readerBannerPan.flattenOffset();
+        setTimeout(() => {
+          isDraggingReaderBannerRef.current = false;
+        }, 200);
+      },
+    })
+  ).current;
+
+  // Movimiento libre / Drag & Drop para el widget de Asistente de Voz Continuo
+  const isDraggingVoiceWidgetRef = useRef(false);
+  const voiceWidgetPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const voiceWidgetPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const moved = Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+        if (moved) isDraggingVoiceWidgetRef.current = true;
+        return moved;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+      },
+      onPanResponderGrant: () => {
+        isDraggingVoiceWidgetRef.current = false;
+        voiceWidgetPan.extractOffset();
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4) {
+          isDraggingVoiceWidgetRef.current = true;
+        }
+        voiceWidgetPan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
+      onPanResponderRelease: () => {
+        voiceWidgetPan.flattenOffset();
+        setTimeout(() => {
+          isDraggingVoiceWidgetRef.current = false;
+        }, 200);
       },
     })
   ).current;
@@ -4141,81 +4210,112 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   return (
     <>
       {/* Banner Accesible Superior para personas con Discapacidad Visual / Ciegos */}
-      <View style={[
-        styles.accessibleScreenReaderBanner,
-        isMobile && styles.accessibleScreenReaderBannerMobile
-      ]}>
-        {isMobile && bannerMinimized ? (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Expandir lector de voz"
+      {!(isListening || voiceActiveRef.current) && (
+        <View 
+          style={[
+            styles.accessibleScreenReaderBanner,
+            isMobile && styles.accessibleScreenReaderBannerMobile
+          ]}
+          pointerEvents="box-none"
+        >
+          <Animated.View
             style={[
-              styles.accessibleBannerBtnMinimized,
-              (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
+              {
+                transform: [
+                  { translateX: readerBannerPan.x },
+                  { translateY: readerBannerPan.y },
+                ],
+              },
+              Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none' } as any) : null,
             ]}
-            onPress={() => setBannerMinimized(false)}
-            activeOpacity={0.8}
+            pointerEvents="auto"
+            {...readerBannerPanResponder.panHandlers}
           >
-            <Ionicons name="volume-high" size={13} color="#FACC15" />
-            <Text style={styles.accessibleBannerTextMinimized}>
-              {(interactiveReaderEnabled || activeProfile === 'blind') ? 'Voz On' : 'Voz'}
-            </Text>
-            <Ionicons name="chevron-down" size={11} color="#94A3B8" />
-          </TouchableOpacity>
-        ) : (
-          <View
-            style={[
-              styles.accessibleBannerBtn,
-              isMobile && styles.accessibleBannerBtnMobile,
-              (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
-            ]}
-          >
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={
-                (interactiveReaderEnabled || activeProfile === 'blind')
-                  ? 'Lector de voz activo. Presione para pausar'
-                  : 'Activar asistente de voz y lector de pantalla para personas con discapacidad visual'
-              }
-              accessibilityHint={isMobile ? 'Toca para encender o pausar la voz' : 'Presione la tecla V en cualquier momento para activar o pausar'}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
-              onPress={toggleVoiceAssistant}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="volume-high" size={isMobile ? 14 : 16} color="#FFFFFF" />
-              <Text
-                style={[
-                  styles.accessibleBannerText,
-                  isMobile && styles.accessibleBannerTextMobile
-                ]}
-                numberOfLines={1}
-              >
-                {isMobile
-                  ? ((interactiveReaderEnabled || activeProfile === 'blind')
-                    ? '🔊 Voz Activa'
-                    : '🔊 Voz / Lector')
-                  : ((interactiveReaderEnabled || activeProfile === 'blind')
-                    ? '🔊 VOZ ACTIVA (Pulse tecla V para pausar)'
-                    : '🔊 VOZ Y LECTOR PARA CIEGOS (Pulse tecla V o clic aquí)')
-                }
-              </Text>
-            </TouchableOpacity>
-
-            {/* En móvil: Botón para minimizar y despejar la vista de atrás */}
-            {isMobile && (
+            {isMobile && bannerMinimized ? (
               <TouchableOpacity
-                onPress={() => setBannerMinimized(true)}
-                style={styles.bannerMinimizeBtn}
                 accessibilityRole="button"
-                accessibilityLabel="Minimizar barra de voz para ver pantalla"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Expandir lector de voz"
+                style={[
+                  styles.accessibleBannerBtnMinimized,
+                  (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
+                ]}
+                onPress={() => {
+                  if (isDraggingReaderBannerRef.current) return;
+                  setBannerMinimized(false);
+                }}
+                activeOpacity={0.8}
               >
-                <Ionicons name="close" size={13} color="#CBD5E1" />
+                <Ionicons name="volume-high" size={13} color="#FACC15" />
+                <Text style={styles.accessibleBannerTextMinimized}>
+                  {(interactiveReaderEnabled || activeProfile === 'blind') ? 'Voz On' : 'Voz'}
+                </Text>
+                <Ionicons name="chevron-down" size={11} color="#94A3B8" />
               </TouchableOpacity>
+            ) : (
+              <View
+                style={[
+                  styles.accessibleBannerBtn,
+                  isMobile && styles.accessibleBannerBtnMobile,
+                  (interactiveReaderEnabled || activeProfile === 'blind') && styles.accessibleBannerBtnActive
+                ]}
+              >
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    (interactiveReaderEnabled || activeProfile === 'blind')
+                      ? 'Lector de voz activo. Presione para pausar'
+                      : 'Activar asistente de voz y lector de pantalla para personas con discapacidad visual'
+                  }
+                  accessibilityHint={isMobile ? 'Toca para encender o pausar la voz' : 'Presione la tecla V en cualquier momento para activar o pausar'}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
+                  onPress={(e: any) => {
+                    if (isDraggingReaderBannerRef.current) {
+                      if (e && e.preventDefault) e.preventDefault();
+                      return;
+                    }
+                    toggleVoiceAssistant();
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="volume-high" size={isMobile ? 14 : 16} color="#FFFFFF" />
+                  <Text
+                    style={[
+                      styles.accessibleBannerText,
+                      isMobile && styles.accessibleBannerTextMobile
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {isMobile
+                      ? ((interactiveReaderEnabled || activeProfile === 'blind')
+                        ? 'Voz Activa'
+                        : 'Voz / Lector')
+                      : ((interactiveReaderEnabled || activeProfile === 'blind')
+                        ? 'VOZ ACTIVA (Pulse tecla V para pausar)'
+                        : 'VOZ Y LECTOR PARA CIEGOS (Pulse tecla V o clic aquí)')
+                    }
+                  </Text>
+                </TouchableOpacity>
+
+                {/* En móvil: Botón para minimizar y despejar la vista de atrás */}
+                {isMobile && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (isDraggingReaderBannerRef.current) return;
+                      setBannerMinimized(true);
+                    }}
+                    style={styles.bannerMinimizeBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Minimizar barra de voz para ver pantalla"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={13} color="#CBD5E1" />
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </View>
-        )}
-      </View>
+          </Animated.View>
+        </View>
+      )}
 
       {/* Botón flotante lateral movible de Accesibilidad (Drag & Drop tipo burbuja flotante como el chat) */}
       <Animated.View
@@ -4225,8 +4325,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           right: isSmallScreen ? 16 : 24,
           zIndex: 9999,
           transform: [{ translateX: buttonPan.x }, { translateY: buttonPan.y }],
+          ...(Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none' } as any) : {}),
         }}
-        pointerEvents="box-none"
+        pointerEvents="auto"
         {...buttonPanResponder.panHandlers}
       >
         <TouchableOpacity
@@ -4419,7 +4520,20 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         if (!isListening && !voiceActiveRef.current) return null;
 
         const widgetElement = (
-          <View style={styles.voiceAssistantWidget}>
+          <Animated.View
+            style={[
+              styles.voiceAssistantWidget,
+              {
+                transform: [
+                  { translateX: voiceWidgetPan.x },
+                  { translateY: voiceWidgetPan.y },
+                ],
+              },
+              Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none' } as any) : null,
+            ]}
+            pointerEvents="auto"
+            {...voiceWidgetPanResponder.panHandlers}
+          >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={styles.voiceMicPulse}>
@@ -4432,7 +4546,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
               </View>
               <TouchableOpacity
                 style={styles.voiceCloseBtn}
-                onPress={stopVoiceAssistant}
+                onPress={() => {
+                  if (isDraggingVoiceWidgetRef.current) return;
+                  stopVoiceAssistant();
+                }}
                 accessibilityLabel="Desactivar asistente de voz"
               >
                 <Ionicons name="close" size={18} color="#94A3B8" />
@@ -4477,7 +4594,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 <TouchableOpacity
                   key={item.label}
                   style={styles.voiceHintChip}
-                  onPress={() => handleVoiceTranscript(item.cmd)}
+                  onPress={() => {
+                    if (isDraggingVoiceWidgetRef.current) return;
+                    handleVoiceTranscript(item.cmd);
+                  }}
                 >
                   <Text style={styles.voiceHintChipText}>{item.label}</Text>
                 </TouchableOpacity>
@@ -4488,11 +4608,17 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
               <Text style={styles.voiceKeyboardHint}>
                 Atajo: Presione M para pausar • Esc para silenciar
               </Text>
-              <TouchableOpacity style={styles.stopVoiceBtn} onPress={stopVoiceAssistant}>
+              <TouchableOpacity
+                style={styles.stopVoiceBtn}
+                onPress={() => {
+                  if (isDraggingVoiceWidgetRef.current) return;
+                  stopVoiceAssistant();
+                }}
+              >
                 <Text style={styles.stopVoiceText}>Apagar</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         );
 
         if (Platform.OS === 'web' && ReactDOMPortal && typeof document !== 'undefined' && document.body) {
