@@ -3536,33 +3536,6 @@ export default function AdminSettings() {
                       Servidores, auditoría, roles y control absoluto.
                     </Text>
                   </TouchableOpacity>
-
-                  {/* Rol: Seguridad */}
-                  <TouchableOpacity
-                    onPress={() => setUserDraft({ ...userDraft, role: 'security' })}
-                    activeOpacity={0.8}
-                    style={{
-                      flex: isDesktop ? 1 : undefined,
-                      minWidth: isDesktop ? 180 : '100%',
-                      padding: 14,
-                      borderRadius: 14,
-                      backgroundColor: userDraft?.role === 'security' ? '#F0FDF4' : COLORS.white,
-                      borderWidth: 1.5,
-                      borderColor: userDraft?.role === 'security' ? '#16A34A' : '#E2E8F0',
-                      gap: 4
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Ionicons name="key-outline" size={20} color={userDraft?.role === 'security' ? '#16A34A' : '#64748B'} />
-                      <Ionicons name={userDraft?.role === 'security' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'security' ? '#16A34A' : '#CBD5E1'} />
-                    </View>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: userDraft?.role === 'security' ? '#166534' : COLORS.primary, marginTop: 4 }}>
-                      Seguridad
-                    </Text>
-                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
-                      Ingreso peatonal y vehicular de visitantes.
-                    </Text>
-                  </TouchableOpacity>
                 </View>
               </View>
 
