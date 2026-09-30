@@ -149,6 +149,55 @@ export default function RequestsScreen() {
     });
   }, [requests, searchQuery, statusFilter, serviceFilter]);
 
+  // Integración con el Asistente de Voz Continuo de Accesibilidad
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as any).__sasgeRequestsVoice = {
+      getSummary: () => ({
+        stats,
+        serviceFilter,
+        statusFilter,
+        searchQuery,
+        total: filteredData.length,
+        items: filteredData.slice(0, 5).map(r => {
+          const catMap: Record<string, string> = {
+            visitors: 'Visitantes',
+            transport: 'Transporte',
+            maintenance: 'Mantenimiento',
+            rooms: 'Salas',
+            parking: 'Parqueadero'
+          };
+          return {
+            title: r.title,
+            category: catMap[r.category] || r.category,
+            status: r.status,
+            date: new Date(r.created_at).toLocaleDateString('es-CO')
+          };
+        })
+      }),
+      setStatusFilter: (status: string) => setStatusFilter(status),
+      setServiceFilter: (service: string) => setServiceFilter(service),
+      setSearchQuery: (query: string) => setSearchQuery(query),
+      openNewRequestModal: () => setNewRequestModalVisible(true),
+      closeModal: () => {
+        setModalVisible(false);
+        setNewRequestModalVisible(false);
+      },
+      openFirstRequest: () => {
+        if (filteredData.length > 0) {
+          setSelectedRequest(filteredData[0]);
+          setModalVisible(true);
+          return filteredData[0];
+        }
+        return null;
+      }
+    };
+
+    return () => {
+      delete (window as any).__sasgeRequestsVoice;
+    };
+  }, [stats, serviceFilter, statusFilter, searchQuery, filteredData]);
+
   return (
     <View style={styles.container}>
       <View style={{ flex: 1, flexDirection: isDesktop ? 'row' : 'column' }}>

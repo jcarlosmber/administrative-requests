@@ -1839,6 +1839,21 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       );
     }
 
+    if (path.includes('/dashboard/requests')) {
+      return (
+        'Bandeja de Solicitudes Administrativas de la Secretaría Jurídica Distrital. ' +
+        'Aquí puede consultar y gestionar el estado de todos sus trámites radicados. ' +
+        'Comandos de voz adaptados: ' +
+        'Diga: Resumen o Estado, para escuchar cuántas solicitudes pendientes, en curso o resueltas tiene. ' +
+        'Diga: Filtrar pendientes, Filtrar aprobadas, o Filtrar por servicio como Transporte o Visitantes. ' +
+        'Diga: Buscar, seguido de una palabra clave. ' +
+        'Diga: Leer solicitudes, para escuchar los trámites de la lista. ' +
+        'Diga: Ver primera solicitud, para abrir su detalle. ' +
+        'Diga: Nueva solicitud, para radicar un nuevo trámite. ' +
+        'O diga: Inicio, para volver al panel principal.'
+      );
+    }
+
     if (path.includes('/dashboard')) {
       return (
         'Portal del Funcionario del Sistema de Administración de Servicios Generales 2.0 de la Secretaría Jurídica Distrital. ' +
@@ -1850,38 +1865,40 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         'Número tres: Mantenimiento Locativo. Reportes de infraestructura y reparaciones. ' +
         'Número cuatro: Reserva de Salas. Agenda de salas de reuniones y auditorios. ' +
         'Número cinco: Parqueadero Institucional. Cupos de estacionamiento para funcionarios. ' +
-        'Diga en voz alta el nombre del servicio al que desea ingresar, por ejemplo: Visitantes, Transporte, Mantenimiento, Salas o Parqueadero.'
+        'También puede decir: Ver solicitudes, para consultar sus trámites radicados. ' +
+        'Diga en voz alta el nombre del servicio al que desea ingresar.'
       );
     }
 
     if (path.includes('/requests/visitors')) {
       return (
-        'Formulario de Solicitud de Ingreso de Visitantes. Secretaría Jurídica Distrital. ' +
-        'Este formulario permite registrar la entrada de personas externas a las instalaciones. ' +
-        'Campos del formulario: ' +
-        'Campo uno: Dependencia anfitriona. ' +
-        'Campo dos: Nombre completo del visitante. ' +
-        'Campo tres: Cédula o documento de identidad. ' +
-        'Opción: ¿Ingresa con vehículo? Si marca sí, se solicitará placa y marca del vehículo. ' +
-        'Campo cuatro: Fecha de la visita. ' +
-        'Campo cinco: Motivo o justificación de la visita. ' +
-        'Botón principal: Radicar solicitud de visitantes. ' +
-        'Botón secundario: Volver al menú principal.'
+        'Formulario de Solicitud de Ingreso de Visitantes de la Secretaría Jurídica Distrital. ' +
+        'Permite registrar la entrada de personas externas a las instalaciones. ' +
+        'Comandos adaptados por voz: ' +
+        'Diga: Nombre, seguido del nombre del visitante. ' +
+        'Diga: Documento o Cédula, seguido del número. ' +
+        'Diga: Con vehículo o Sin vehículo. Si ingresa vehículo, diga: Placa, y Marca. ' +
+        'Diga: Funcionario, seguido del nombre de quien autoriza. ' +
+        'Diga: Motivo, seguido de la justificación. ' +
+        'Diga: Acepto términos, para autorizar el tratamiento de datos. ' +
+        'Diga: Registrar ingreso o Radicar, para guardar la solicitud. ' +
+        'Diga: Leer formulario, para revisar los campos, o Volver, para salir.'
       );
     }
 
     if (path.includes('/requests/transport')) {
       return (
         'Formulario de Solicitud de Transporte Institucional. ' +
-        'Permite solicitar un vehículo oficial para comisiones y desplazamientos laborales. ' +
-        'Campos requeridos: ' +
-        'Campo uno: Dependencia solicitante. ' +
-        'Campo dos: Dirección o lugar de salida u origen. ' +
-        'Campo tres: Dirección de destino. ' +
-        'Campo cuatro: Número de pasajeros requeridos. ' +
-        'Campo cinco: Fecha y hora de recogida. ' +
-        'Campo seis: Justificación de la misión oficial. ' +
-        'Botón principal: Enviar solicitud de transporte.'
+        'Permite solicitar un vehículo oficial para comisiones laborales. ' +
+        'Comandos adaptados por voz: ' +
+        'Diga: Nombre, seguido del pasajero. ' +
+        'Diga: Teléfono, seguido del número de contacto. ' +
+        'Diga: Origen o Salida, seguido de la dirección de partida. ' +
+        'Diga: Destino, seguido de la dirección de llegada. ' +
+        'Diga: Pasajeros, seguido de la cantidad. ' +
+        'Diga: Motivo, seguido de la justificación. ' +
+        'Diga: Enviar solicitud o Radicar, para guardar el trámite. ' +
+        'Diga: Leer formulario, para verificar los datos, o Volver, para salir.'
       );
     }
 
@@ -1889,42 +1906,43 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       return (
         'Formulario de Solicitud de Mantenimiento Locativo e Infraestructura. ' +
         'Permite reportar daños y averías en la sede. ' +
-        'Campos requeridos: ' +
-        'Campo uno: Título o resumen de la avería. ' +
-        'Campo dos: Dependencia. ' +
-        'Campo tres: Ubicación física, piso o salón afectado. ' +
-        'Campo cuatro: Descripción detallada del daño. ' +
-        'Campo cinco: Prioridad del mantenimiento. ' +
-        'Opción para adjuntar fotografías del daño. ' +
-        'Botón principal: Enviar reporte de mantenimiento.'
+        'Comandos adaptados por voz: ' +
+        'Diga: Título o Daño, seguido de un resumen de la falla. ' +
+        'Diga: Ubicación o Piso, indicando el piso o zona. ' +
+        'Diga: Oficina o Espacio, indicando el número o nombre del espacio. ' +
+        'Diga: Descripción, detallando el problema. ' +
+        'Diga: Prioridad alta, media o baja. ' +
+        'Diga: Enviar reporte o Radicar, para guardar la solicitud. ' +
+        'Diga: Leer formulario, para verificar los campos, o Volver, para salir.'
       );
     }
 
     if (path.includes('/requests/rooms')) {
       return (
         'Formulario de Reserva de Salas y Auditorios. ' +
-        'Salas disponibles: Sala 308, Sala 310, Sala 311, Sala 312, Sala de Juntas Principal, Auditorio Barule 1 y 2, Auditorio Huitaca y Sala Archivista Central. ' +
-        'Campos requeridos: ' +
-        'Campo uno: Selección de la sala según su aforo. ' +
-        'Campo dos: Fecha de la reunión. ' +
-        'Campo tres: Hora de inicio y hora de finalización. ' +
-        'Campo cuatro: Asunto o propósito del evento. ' +
-        'Campo cinco: Cantidad estimada de asistentes. ' +
-        'Botón principal: Confirmar reserva de sala.'
+        'Permite agendar salas de juntas o auditorios como Barulé o Huitaca. ' +
+        'Comandos adaptados por voz: ' +
+        'Diga: Asunto o Título, seguido del tema de la reunión. ' +
+        'Diga: Asistentes, seguido de la cantidad de personas. ' +
+        'Diga: Presencial o Virtual. ' +
+        'Diga: Confirmar reserva o Radicar, para agendar el espacio. ' +
+        'Diga: Leer formulario, para verificar los campos, o Volver, para salir.'
       );
     }
 
     if (path.includes('/requests/parking')) {
       return (
         'Formulario de Cupo de Parqueadero Institucional. ' +
-        'Aplica para funcionarios con vehículo o motocicleta. ' +
-        'Campos requeridos: ' +
-        'Campo uno: Nombre completo del funcionario. ' +
-        'Campo dos: Documento de identidad. ' +
-        'Campo tres: Dependencia y cargo. ' +
-        'Campo cuatro: Placa y tipo de vehículo. ' +
-        'Campo cinco: Sede institucional solicitada. ' +
-        'Botón principal: Radicar solicitud de parqueadero.'
+        'Permite solicitar estacionamiento y registrar vehículos para funcionarios. ' +
+        'Comandos adaptados por voz: ' +
+        'Diga: Nombre, seguido de su nombre. ' +
+        'Diga: Documento o Cédula, seguido del número. ' +
+        'Diga: Placa, seguido de la placa vehicular. ' +
+        'Diga: Marca, seguido de la marca. ' +
+        'Diga: Color, seguido del color. ' +
+        'Diga: Carro o Moto, según el tipo. ' +
+        'Diga: Radicar solicitud, para enviar. ' +
+        'Diga: Leer formulario, para verificar los datos, o Volver, para salir.'
       );
     }
 
@@ -2056,7 +2074,108 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     }
   };
 
-  // Procesamiento de comandos de voz para ciegos
+  // Helper para asignar valores en inputs de React Native Web de manera confiable
+  const setNativeDomInputValue = (inputEl: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+    const isTextArea = inputEl.tagName === 'TEXTAREA';
+    const prototype = isTextArea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
+    const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
+    if (descriptor && descriptor.set) {
+      descriptor.set.call(inputEl, value);
+    } else {
+      inputEl.value = value;
+    }
+    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+    inputEl.focus();
+  };
+
+  // Helper para buscar y llenar un input por palabras clave en placeholder, aria-label o etiqueta
+  const fillInputByKeywords = (keywords: string[], value: string): boolean => {
+    if (typeof document === 'undefined') return false;
+    const allInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea')) as (HTMLInputElement | HTMLTextAreaElement)[];
+    const cleanKws = keywords.map(k => k.toLowerCase().trim());
+
+    // 1. Coincidencia por placeholder, aria-label o name
+    for (const input of allInputs) {
+      const ph = (input.placeholder || '').toLowerCase();
+      const aria = (input.getAttribute('aria-label') || '').toLowerCase();
+      const name = (input.name || '').toLowerCase();
+
+      for (const kw of cleanKws) {
+        if (ph.includes(kw) || aria.includes(kw) || name.includes(kw)) {
+          setNativeDomInputValue(input, value);
+          return true;
+        }
+      }
+    }
+
+    // 2. Coincidencia por texto contenedor o etiqueta (Label padre / hermano)
+    for (const input of allInputs) {
+      const parent = input.closest('div, label, section') as HTMLElement;
+      const text = (parent?.innerText || parent?.parentElement?.innerText || '').toLowerCase();
+      for (const kw of cleanKws) {
+        if (text.includes(kw)) {
+          setNativeDomInputValue(input, value);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // Helper para hacer clic en botones por texto o aria-label
+  const clickButtonByKeywords = (keywords: string[]): boolean => {
+    if (typeof document === 'undefined') return false;
+    const cleanKws = keywords.map(k => k.toLowerCase().trim());
+    const elements = Array.from(document.querySelectorAll('button, [role="button"], a, div')) as HTMLElement[];
+
+    for (const el of elements) {
+      const text = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase().trim();
+      if (!text || text.length > 70) continue;
+      for (const kw of cleanKws) {
+        if (text === kw || (text.includes(kw) && text.length < 50)) {
+          el.click();
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // Helper para extraer el valor dictado después de una o varias palabras clave
+  const extractValueAfter = (fullText: string, prefixes: string[]): string => {
+    for (const prefix of prefixes) {
+      const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?:^|\\b)${escaped}(?:\\ses|\\sson|\\sde|\\spara|\\scon)?\\s+(.+)`, 'i');
+      const match = fullText.match(regex);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    return '';
+  };
+
+  // Helper para leer los campos del formulario actual
+  const readFormSummary = () => {
+    if (typeof document === 'undefined') return;
+    const allInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea')) as (HTMLInputElement | HTMLTextAreaElement)[];
+    const summaryList: string[] = [];
+    allInputs.forEach((inp) => {
+      const parent = inp.closest('div, section') as HTMLElement;
+      const label = inp.getAttribute('aria-label') || inp.placeholder || parent?.innerText?.split('\n')[0] || inp.name || 'Campo';
+      const cleanLabel = label.replace(/\s+/g, ' ').trim().slice(0, 30);
+      const val = inp.value?.trim();
+      summaryList.push(`${cleanLabel}: ${val ? val : 'vacío'}`);
+    });
+    if (summaryList.length === 0) {
+      speakText('No se encontraron campos de formulario editables en esta pantalla.');
+    } else {
+      speakText('Resumen de los campos del formulario: ' + summaryList.slice(0, 8).join('. '));
+    }
+  };
+
+  // Procesamiento de comandos de voz para ciegos y manos libres continuo
   const handleVoiceTranscript = (speechResult: string) => {
     const text = speechResult.toLowerCase().trim();
     setVoiceStatusText(`Escuchó: "${text}"`);
@@ -2083,21 +2202,53 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       return;
     }
 
-    // 1. Ayuda
-    if (text.includes('ayuda') || text.includes('comandos') || text.includes('opciones')) {
-      speakText('Comandos disponibles: Puede decir: Ingresar al sistema, Visitantes, Transporte, Mantenimiento, Reserva de Salas, Parqueadero, Inicio, Leer página, o Apagar asistente.');
+    // 1. Ayuda contextual por pantalla
+    if (text.includes('ayuda') || text.includes('comandos') || text.includes('opciones') || text.includes('qué puedo decir')) {
+      if (pathname.includes('/dashboard/requests')) {
+        speakText('En la bandeja de solicitudes puede decir: Resumen, Filtrar pendientes, Filtrar aprobadas, Filtrar transporte o visitantes, Buscar una palabra, Leer solicitudes, Ver primera solicitud, o Nueva solicitud.');
+        return;
+      }
+      if (pathname.includes('/requests/visitors')) {
+        speakText('En el formulario de visitantes puede decir: Nombre Juan, Documento doce tres, Con vehículo o Sin vehículo, Placa, Marca, Motivo, Acepto términos, Registrar ingreso, o Leer formulario.');
+        return;
+      }
+      if (pathname.includes('/requests/transport')) {
+        speakText('En transporte puede decir: Nombre, Teléfono, Origen, Destino, Pasajeros dos, Motivo, Enviar solicitud, o Leer formulario.');
+        return;
+      }
+      if (pathname.includes('/requests/maintenance')) {
+        speakText('En mantenimiento puede decir: Título daño de luz, Ubicación piso tres, Oficina 304, Descripción no enciende, Prioridad alta, Enviar reporte, o Leer formulario.');
+        return;
+      }
+      if (pathname.includes('/requests/rooms')) {
+        speakText('En reserva de salas puede decir: Asunto reunión, Asistentes cuatro, Presencial o Virtual, Confirmar reserva, o Leer formulario.');
+        return;
+      }
+      if (pathname.includes('/requests/parking')) {
+        speakText('En parqueadero puede decir: Nombre, Documento, Placa, Marca, Color, Carro o Moto, Radicar solicitud, o Leer formulario.');
+        return;
+      }
+      if (pathname.includes('/login')) {
+        speakText('En la pantalla de ingreso puede decir: Usuario admin, luego Contraseña admin123, y finalmente Ingresar.');
+        return;
+      }
+      speakText('Comandos disponibles: Diga Visitantes, Transporte, Mantenimiento, Salas, Parqueadero, Ver solicitudes, Inicio, o Leer página.');
       return;
     }
 
-    // 2. Leer página actual
+    // 2. Leer página o leer formulario
+    if (text.includes('leer formulario') || text.includes('revisar formulario') || text.includes('qué campos tengo') || text.includes('revisar campos')) {
+      readFormSummary();
+      return;
+    }
     if (text.includes('leer') || text.includes('qué dice') || text.includes('repetir') || text.includes('escuchar')) {
       readCurrentPage();
       return;
     }
 
-    // 3. Ingresar al sistema / Login
-    if (text.includes('ingresar') || text.includes('login') || text.includes('entrar') || text.includes('acceder')) {
-      if (pathname.includes('/login')) {
+    // 3. Login
+    if (pathname.includes('/login')) {
+      if (text.includes('ingresar') || text.includes('login') || text.includes('entrar') || text.includes('acceder')) {
         speakText('Procesando ingreso al sistema...');
         setTimeout(() => {
           if (typeof document !== 'undefined') {
@@ -2112,95 +2263,482 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             }
           }
         }, 800);
-      } else {
-        speakText('Redirigiendo a la pantalla de ingreso institucional. Por favor espere.');
-        setTimeout(() => router.push('/login'), 1500);
+        return;
       }
-      return;
-    }
-
-    // 4. Llenar usuario por voz en login
-    if (pathname.includes('/login') && (text.includes('admin') || text.includes('usuario'))) {
-      if (typeof document !== 'undefined') {
-        const allInputs = Array.from(document.querySelectorAll('input'));
-        const userInput = allInputs.find((i: any) => i.placeholder && i.placeholder.toLowerCase().includes('usuario')) as HTMLInputElement;
-        if (userInput) {
-          userInput.focus();
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-          if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(userInput, 'admin');
-            userInput.dispatchEvent(new Event('input', { bubbles: true }));
-            userInput.dispatchEvent(new Event('change', { bubbles: true }));
-          } else {
-            userInput.value = 'admin';
-          }
-          speakText('Usuario admin establecido. Por favor diga: Contraseña admin123, o diga: Ingresar.');
-          return;
+      if (text.includes('admin') || text.includes('usuario')) {
+        const val = extractValueAfter(text, ['usuario', 'user']) || 'admin';
+        const ok = fillInputByKeywords(['usuario', 'correo', 'email'], val);
+        if (ok) {
+          speakText(`Usuario ${val} establecido. Diga: Contraseña admin123, o diga: Ingresar.`);
         }
+        return;
+      }
+      if (text.includes('contraseña') || text.includes('admin123') || text.includes('clave')) {
+        const val = extractValueAfter(text, ['contraseña', 'clave', 'password']) || 'admin123';
+        const ok = fillInputByKeywords(['contraseña', 'clave', 'password'], val);
+        if (ok) {
+          speakText('Contraseña ingresada. Diga: Ingresar para iniciar sesión.');
+        }
+        return;
       }
     }
 
-    // 5. Llenar contraseña por voz en login
-    if (pathname.includes('/login') && (text.includes('contraseña') || text.includes('admin123') || text.includes('clave'))) {
-      if (typeof document !== 'undefined') {
-        const passInputs = Array.from(document.querySelectorAll('input[type="password"]')) as HTMLInputElement[];
-        const passInput = passInputs[0];
-        if (passInput) {
-          passInput.focus();
-          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-          if (nativeInputValueSetter) {
-            nativeInputValueSetter.call(passInput, 'admin123');
-            passInput.dispatchEvent(new Event('input', { bubbles: true }));
-            passInput.dispatchEvent(new Event('change', { bubbles: true }));
-          } else {
-            passInput.value = 'admin123';
-          }
-          speakText('Contraseña admin123 ingresada. Diga la palabra: Ingresar para iniciar sesión.');
+    // 4. Adaptación para Bandeja de Solicitudes (/dashboard/requests)
+    const isRequestsPage = pathname.includes('/dashboard/requests');
+
+    // Navegación directa hacia Solicitudes desde cualquier pantalla
+    if ((text.includes('solicitud') || text.includes('solicitudes') || text.includes('bandeja')) && !isRequestsPage) {
+      if (text.includes('mis solicitudes') || text.includes('ver solicitudes') || text.includes('ir a solicitudes') || text.includes('bandeja') || text === 'solicitudes') {
+        speakText('Abriendo la Bandeja de Solicitudes Administrativas.');
+        setTimeout(() => router.push('/dashboard/requests'), 1200);
+        return;
+      }
+    }
+
+    if (isRequestsPage) {
+      const voiceBridge = typeof window !== 'undefined' ? (window as any).__sasgeRequestsVoice : null;
+
+      // 4.1 Resumen y estadísticas de solicitudes
+      if (text.includes('resumen') || text.includes('estadística') || text.includes('estadistica') || text.includes('cuántas') || text.includes('cuantas') || text.includes('estado general')) {
+        if (voiceBridge && voiceBridge.getSummary) {
+          const summary = voiceBridge.getSummary();
+          const { stats, total } = summary;
+          speakText(`Resumen de solicitudes: ${stats.pendientes} pendientes, ${stats.enCurso} en proceso o en curso, y ${stats.aprobadas} resueltas o aprobadas. Total visible en lista: ${total} trámites.`);
+        } else {
+          speakText('Consultando estado de solicitudes. Por favor revise los paneles de resumen en pantalla.');
+        }
+        return;
+      }
+
+      // 4.2 Filtros por Estado
+      if (text.includes('pendiente') || text.includes('pendientes')) {
+        if (voiceBridge) voiceBridge.setStatusFilter('Pendiente');
+        else clickButtonByKeywords(['pendiente']);
+        speakText('Filtro aplicado: mostrando solicitudes pendientes.');
+        return;
+      }
+      if (text.includes('en proceso') || text.includes('en curso')) {
+        if (voiceBridge) voiceBridge.setStatusFilter('En proceso');
+        else clickButtonByKeywords(['en proceso']);
+        speakText('Filtro aplicado: mostrando solicitudes en proceso.');
+        return;
+      }
+      if (text.includes('aprobada') || text.includes('aprobadas') || text.includes('resuelta') || text.includes('resueltas')) {
+        if (voiceBridge) voiceBridge.setStatusFilter('Aprobada');
+        else clickButtonByKeywords(['aprobada', 'resuelta']);
+        speakText('Filtro aplicado: mostrando solicitudes aprobadas y resueltas.');
+        return;
+      }
+      if (text.includes('rechazada') || text.includes('rechazadas')) {
+        if (voiceBridge) voiceBridge.setStatusFilter('Rechazada');
+        else clickButtonByKeywords(['rechazada']);
+        speakText('Filtro aplicado: mostrando solicitudes rechazadas.');
+        return;
+      }
+      if (text.includes('todos los estados') || text.includes('quitar filtro de estado') || text === 'todas las solicitudes') {
+        if (voiceBridge) voiceBridge.setStatusFilter('Todos');
+        else clickButtonByKeywords(['todos']);
+        speakText('Mostrando solicitudes en todos los estados.');
+        return;
+      }
+
+      // 4.3 Filtros por Servicio
+      if (text.includes('filtrar visitante') || text.includes('servicio visitante')) {
+        if (voiceBridge) voiceBridge.setServiceFilter('Visitantes');
+        else clickButtonByKeywords(['visitantes']);
+        speakText('Filtrado por servicio de Visitantes.');
+        return;
+      }
+      if (text.includes('filtrar transporte') || text.includes('servicio transporte')) {
+        if (voiceBridge) voiceBridge.setServiceFilter('Transporte');
+        else clickButtonByKeywords(['transporte']);
+        speakText('Filtrado por servicio de Transporte.');
+        return;
+      }
+      if (text.includes('filtrar mantenimiento') || text.includes('servicio mantenimiento')) {
+        if (voiceBridge) voiceBridge.setServiceFilter('Mantenimiento');
+        else clickButtonByKeywords(['mantenimiento']);
+        speakText('Filtrado por servicio de Mantenimiento.');
+        return;
+      }
+      if (text.includes('filtrar sala') || text.includes('servicio sala')) {
+        if (voiceBridge) voiceBridge.setServiceFilter('Salas');
+        else clickButtonByKeywords(['salas']);
+        speakText('Filtrado por servicio de Reserva de Salas.');
+        return;
+      }
+      if (text.includes('filtrar parqueadero') || text.includes('servicio parqueadero')) {
+        if (voiceBridge) voiceBridge.setServiceFilter('Parqueadero');
+        else clickButtonByKeywords(['parqueadero']);
+        speakText('Filtrado por servicio de Parqueadero.');
+        return;
+      }
+      if (text.includes('todos los servicios') || text.includes('todas las categorías') || text.includes('todas las categorias')) {
+        if (voiceBridge) voiceBridge.setServiceFilter('Todas');
+        else clickButtonByKeywords(['todas']);
+        speakText('Mostrando todos los servicios.');
+        return;
+      }
+
+      // 4.4 Búsqueda de trámites
+      if (text.startsWith('buscar ') || text.includes('buscar por ') || text.includes('filtro ')) {
+        const query = extractValueAfter(text, ['buscar por', 'buscar', 'filtro']) || text.replace(/^buscar\s+/i, '');
+        if (query) {
+          if (voiceBridge) voiceBridge.setSearchQuery(query);
+          else fillInputByKeywords(['buscar', 'título'], query);
+          speakText(`Buscando solicitudes con el término: ${query}`);
           return;
         }
+      }
+      if (text.includes('limpiar búsqueda') || text.includes('borrar búsqueda') || text.includes('quitar búsqueda')) {
+        if (voiceBridge) voiceBridge.setSearchQuery('');
+        speakText('Búsqueda restablecida.');
+        return;
+      }
+
+      // 4.5 Leer solicitudes visibles
+      if (text.includes('leer solicitudes') || text.includes('listar solicitudes') || text.includes('qué solicitudes hay')) {
+        if (voiceBridge && voiceBridge.getSummary) {
+          const { items, total } = voiceBridge.getSummary();
+          if (!items || items.length === 0) {
+            speakText('No hay solicitudes visibles con los filtros actuales.');
+          } else {
+            const listSpoken = items.map((it: any, idx: number) => `Solicitud ${idx + 1}: ${it.title}. Servicio: ${it.category}. Estado: ${it.status}. Fecha: ${it.date}`).join('. ');
+            speakText(`Se muestran ${items.length} de ${total} solicitudes. ${listSpoken}`);
+          }
+        } else {
+          speakText('Mostrando lista de solicitudes.');
+        }
+        return;
+      }
+
+      // 4.6 Abrir detalle o primera solicitud
+      if (text.includes('primera solicitud') || text.includes('ver primera') || text.includes('abrir solicitud') || text.includes('detalle')) {
+        if (voiceBridge && voiceBridge.openFirstRequest) {
+          const req = voiceBridge.openFirstRequest();
+          if (req) {
+            speakText(`Abriendo detalle de la solicitud: ${req.title}. Estado actual: ${req.status}.`);
+          } else {
+            speakText('No hay solicitudes disponibles para abrir.');
+          }
+        }
+        return;
+      }
+
+      // 4.7 Cerrar detalle / modal
+      if (text.includes('cerrar detalle') || text.includes('cerrar modal') || text.includes('cerrar ventana')) {
+        if (voiceBridge && voiceBridge.closeModal) voiceBridge.closeModal();
+        speakText('Ventana cerrada.');
+        return;
+      }
+
+      // 4.8 Crear nueva solicitud
+      if (text.includes('nueva solicitud') || text.includes('crear solicitud') || text.includes('radicar nueva')) {
+        if (voiceBridge && voiceBridge.openNewRequestModal) voiceBridge.openNewRequestModal();
+        else clickButtonByKeywords(['crear nueva solicitud', 'nueva solicitud', '+']);
+        speakText('Menú de nueva solicitud abierto. Diga: Visitantes, Transporte, Mantenimiento, Salas o Parqueadero.');
+        return;
+      }
+    }
+
+    // 5. Adaptación para Formularios (/requests/*)
+    const isFormPage = pathname.includes('/requests/');
+    if (isFormPage) {
+      // 5.1 Enviar / Radicar / Guardar el formulario
+      if (
+        text.includes('radicar') ||
+        text.includes('enviar') ||
+        text.includes('registrar ingreso') ||
+        text.includes('enviar solicitud') ||
+        text.includes('enviar reporte') ||
+        text.includes('confirmar reserva') ||
+        text.includes('guardar solicitud')
+      ) {
+        speakText('Procesando el envío de la solicitud. Por favor espere.');
+        setTimeout(() => {
+          const clicked = clickButtonByKeywords([
+            'registrar ingreso',
+            'enviar solicitud',
+            'enviar reporte',
+            'confirmar reserva',
+            'radicar solicitud',
+            'radicar',
+            'enviar'
+          ]);
+          if (!clicked) {
+            speakText('No se encontró el botón de envío o falta completar campos obligatorios como autorizar términos.');
+          }
+        }, 600);
+        return;
+      }
+
+      // 5.2 Aceptar términos / Ley 1581
+      if (text.includes('término') || text.includes('termino') || text.includes('autorizo') || text.includes('política') || text.includes('politica')) {
+        if (typeof document !== 'undefined') {
+          const allEls = Array.from(document.querySelectorAll('*')) as HTMLElement[];
+          const termsEl = allEls.find(el => {
+            const t = (el.innerText || '').toLowerCase();
+            return t.includes('autorizo el tratamiento') || t.includes('ley 1581') || t.includes('términos');
+          });
+          if (termsEl) {
+            termsEl.click();
+            speakText('Términos y autorización de datos marcados correctamente.');
+            return;
+          }
+        }
+      }
+
+      // 5.3 Control de Vehículo en Visitantes
+      if (text.includes('con vehículo') || text.includes('con vehiculo') || text.includes('ingresa con vehículo') || text.includes('tiene carro') || text.includes('tiene moto')) {
+        if (typeof document !== 'undefined') {
+          const switchEl = document.querySelector('[role="switch"], input[type="checkbox"]') as HTMLElement;
+          if (switchEl) switchEl.click();
+          speakText('Acceso con vehículo habilitado. Ahora puede decir: Placa y Marca.');
+          return;
+        }
+      }
+      if (text.includes('sin vehículo') || text.includes('sin vehiculo') || text.includes('a pie') || text.includes('peatonal')) {
+        speakText('Acceso vehicular deshabilitado.');
+        return;
+      }
+
+      // 5.4 Prioridad en Mantenimiento
+      if (text.includes('prioridad')) {
+        if (text.includes('alta')) {
+          clickButtonByKeywords(['alta']);
+          speakText('Prioridad alta seleccionada.');
+          return;
+        }
+        if (text.includes('media')) {
+          clickButtonByKeywords(['media']);
+          speakText('Prioridad media seleccionada.');
+          return;
+        }
+        if (text.includes('baja')) {
+          clickButtonByKeywords(['baja']);
+          speakText('Prioridad baja seleccionada.');
+          return;
+        }
+      }
+
+      // 5.5 Tipo de reunión en Salas
+      if (text.includes('presencial')) {
+        clickButtonByKeywords(['presencial']);
+        speakText('Tipo de reunión: Presencial.');
+        return;
+      }
+      if (text.includes('virtual')) {
+        clickButtonByKeywords(['virtual']);
+        speakText('Tipo de reunión: Virtual.');
+        return;
+      }
+
+      // 5.6 Placa vehicular
+      if (text.includes('placa')) {
+        const val = extractValueAfter(text, ['placa']) || text.replace(/^placa\s+/i, '');
+        if (val) {
+          const cleanPlate = val.toUpperCase().replace(/\s+/g, '').slice(0, 6);
+          fillInputByKeywords(['placa', 'abc123'], cleanPlate);
+          speakText(`Placa ${cleanPlate} ingresada.`);
+          return;
+        }
+      }
+
+      // 5.7 Marca vehicular
+      if (text.includes('marca')) {
+        const val = extractValueAfter(text, ['marca']) || text.replace(/^marca\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['marca', 'mazda', 'chevrolet'], val);
+          speakText(`Marca ${val} ingresada.`);
+          return;
+        }
+      }
+
+      // 5.8 Color de vehículo
+      if (text.includes('color')) {
+        const val = extractValueAfter(text, ['color']) || text.replace(/^color\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['color', 'gris'], val);
+          speakText(`Color ${val} ingresado.`);
+          return;
+        }
+      }
+
+      // 5.9 Cédula / Documento
+      if (text.includes('cédula') || text.includes('cedula') || text.includes('documento') || text.includes('identificación') || text.includes('identificacion') || text.includes('cc')) {
+        const val = extractValueAfter(text, ['cédula', 'cedula', 'documento', 'identificación', 'identificacion', 'cc']) || text.replace(/^cédula\s+/i, '');
+        if (val) {
+          const cleanDoc = val.replace(/\s+/g, '');
+          fillInputByKeywords(['documento', 'cédula', 'cedula', 'identificación', 'cc / ce'], cleanDoc);
+          speakText(`Documento ${cleanDoc} ingresado.`);
+          return;
+        }
+      }
+
+      // 5.10 Teléfono / Celular
+      if (text.includes('teléfono') || text.includes('telefono') || text.includes('celular') || text.includes('extensión') || text.includes('ext')) {
+        const val = extractValueAfter(text, ['teléfono', 'telefono', 'celular', 'extensión', 'ext']) || text.replace(/^teléfono\s+/i, '');
+        if (val) {
+          const cleanPhone = val.replace(/\s+/g, '');
+          fillInputByKeywords(['teléfono', 'telefono', 'ext', 'celular', '1234'], cleanPhone);
+          speakText(`Teléfono ${cleanPhone} ingresado.`);
+          return;
+        }
+      }
+
+      // 5.11 Origen / Salida / Recogida (Transporte)
+      if (text.includes('origen') || text.includes('salida') || text.includes('desde') || text.includes('recogida')) {
+        const val = extractValueAfter(text, ['origen', 'salida', 'desde', 'recogida']) || text.replace(/^origen\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['origen', 'salida', 'sede principal'], val);
+          speakText(`Lugar de origen: ${val}.`);
+          return;
+        }
+      }
+
+      // 5.12 Destino / Llegada (Transporte)
+      if (text.includes('destino') || text.includes('hacia') || text.includes('llegada')) {
+        const val = extractValueAfter(text, ['destino', 'hacia', 'llegada']) || text.replace(/^destino\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['destino', 'tribunal', 'llegada'], val);
+          speakText(`Destino: ${val}.`);
+          return;
+        }
+      }
+
+      // 5.13 Motivo / Razón / Justificación
+      if (text.includes('motivo') || text.includes('razón') || text.includes('razon') || text.includes('justificación') || text.includes('justificacion')) {
+        const val = extractValueAfter(text, ['motivo', 'razón', 'razon', 'justificación', 'justificacion']) || text.replace(/^motivo\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['motivo', 'reunión técnica', 'audiencia', 'justificación'], val);
+          speakText('Motivo ingresado correctamente.');
+          return;
+        }
+      }
+
+      // 5.14 Título / Asunto / Daño / Evento
+      if (text.includes('título') || text.includes('titulo') || text.includes('asunto') || text.includes('daño') || text.includes('dano') || text.includes('falla') || text.includes('evento')) {
+        const val = extractValueAfter(text, ['título', 'titulo', 'asunto', 'daño', 'dano', 'falla', 'evento']) || text.replace(/^título\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['título', 'titulo', 'asunto', 'comité', 'gotera', 'daño'], val);
+          speakText(`Título: ${val}.`);
+          return;
+        }
+      }
+
+      // 5.15 Ubicación / Piso
+      if (text.includes('ubicación') || text.includes('ubicacion') || text.includes('piso')) {
+        const val = extractValueAfter(text, ['ubicación', 'ubicacion', 'piso']) || text.replace(/^ubicación\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['ubicación', 'ubicacion', 'edificio liévano', 'piso'], val);
+          speakText(`Ubicación: ${val}.`);
+          return;
+        }
+      }
+
+      // 5.16 Oficina / Espacio / Salón
+      if (text.includes('oficina') || text.includes('espacio') || text.includes('salón') || text.includes('salon')) {
+        const val = extractValueAfter(text, ['oficina', 'espacio', 'salón', 'salon']) || text.replace(/^oficina\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['espacio', 'oficina', '304'], val);
+          speakText(`Espacio: ${val}.`);
+          return;
+        }
+      }
+
+      // 5.17 Descripción detallada
+      if (text.includes('descripción') || text.includes('descripcion') || text.includes('detalle')) {
+        const val = extractValueAfter(text, ['descripción', 'descripcion', 'detalle', 'detalles']) || text.replace(/^descripción\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['descripción', 'descripcion', 'describe la falla', 'detalle'], val);
+          speakText('Descripción detallada ingresada.');
+          return;
+        }
+      }
+
+      // 5.18 Pasajeros / Asistentes / Cantidad
+      if (text.includes('pasajero') || text.includes('asistente') || text.includes('cantidad') || text.includes('cupo') || text.includes('aforo')) {
+        const val = extractValueAfter(text, ['pasajeros', 'asistentes', 'cantidad', 'cupos', 'aforo', 'personas']) || text.replace(/\D/g, '');
+        if (val) {
+          fillInputByKeywords(['pasajeros', 'asistentes', 'aforo', '1', '4', '6'], val);
+          speakText(`Cantidad establecida en ${val}.`);
+          return;
+        }
+      }
+
+      // 5.19 Funcionario / Responsable
+      if (text.includes('funcionario') || text.includes('responsable') || text.includes('autoriza')) {
+        const val = extractValueAfter(text, ['funcionario', 'responsable', 'autoriza']) || text.replace(/^funcionario\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['funcionario', 'responsable', 'autoriza'], val);
+          speakText(`Funcionario responsable: ${val}.`);
+          return;
+        }
+      }
+
+      // 5.20 Nombre / Visitante / Pasajero
+      if (text.includes('nombre') || text.includes('visitante') || text.includes('pasajero') || text.includes('solicitante')) {
+        const val = extractValueAfter(text, ['nombre completo', 'nombre', 'visitante', 'pasajero', 'solicitante']) || text.replace(/^nombre\s+/i, '');
+        if (val) {
+          fillInputByKeywords(['nombre completo', 'nombre', 'juan pérez', 'viaja'], val);
+          speakText(`Nombre ${val} ingresado.`);
+          return;
+        }
+      }
+
+      // 5.21 Agregar elementos adicionales
+      if (text.includes('agregar visitante') || text.includes('otro visitante')) {
+        clickButtonByKeywords(['agregar otro visitante']);
+        speakText('Nuevo visitante agregado.');
+        return;
+      }
+      if (text.includes('agregar vehículo') || text.includes('agregar vehiculo') || text.includes('otro vehículo')) {
+        clickButtonByKeywords(['agregar otro vehículo', 'agregar vehículo']);
+        speakText('Nuevo vehículo agregado.');
+        return;
       }
     }
 
     // 6. Navegación a módulos de servicios
-    if (text.includes('visitante')) {
+    if (text.includes('visitante') || text.includes('formulario de visitantes') || text.includes('ingreso de visitantes')) {
       speakText('Abriendo formulario de Ingreso de Visitantes.');
-      setTimeout(() => router.push('/requests/visitors'), 1200);
+      setTimeout(() => router.push('/requests/visitors'), 1000);
       return;
     }
 
     if (text.includes('transporte') || text.includes('carro') || text.includes('vehiculo') || text.includes('vehículo')) {
       speakText('Abriendo formulario de Transporte Institucional.');
-      setTimeout(() => router.push('/requests/transport'), 1200);
+      setTimeout(() => router.push('/requests/transport'), 1000);
       return;
     }
 
     if (text.includes('mantenimiento') || text.includes('daño') || text.includes('arreglo') || text.includes('reparar')) {
       speakText('Abriendo formulario de Mantenimiento Locativo.');
-      setTimeout(() => router.push('/requests/maintenance'), 1200);
+      setTimeout(() => router.push('/requests/maintenance'), 1000);
       return;
     }
 
     if (text.includes('sala') || text.includes('auditorio') || text.includes('reunión') || text.includes('reunion')) {
       speakText('Abriendo formulario de Reserva de Salas y Auditorios.');
-      setTimeout(() => router.push('/requests/rooms'), 1200);
+      setTimeout(() => router.push('/requests/rooms'), 1000);
       return;
     }
 
     if (text.includes('parqueadero') || text.includes('estacionamiento')) {
       speakText('Abriendo formulario de Parqueadero Institucional.');
-      setTimeout(() => router.push('/requests/parking'), 1200);
+      setTimeout(() => router.push('/requests/parking'), 1000);
       return;
     }
 
-    if (text.includes('inicio') || text.includes('portal') || text.includes('dashboard')) {
+    if (text.includes('inicio') || text.includes('portal') || text.includes('dashboard') || text.includes('volver') || text.includes('regresar') || text.includes('menú principal')) {
       speakText('Regresando al Portal del Funcionario.');
-      setTimeout(() => router.push('/dashboard'), 1200);
+      setTimeout(() => router.push('/dashboard'), 1000);
       return;
     }
 
     if (text.includes('salir') || text.includes('cerrar sesion') || text.includes('cerrar sesión')) {
       speakText('Cerrando sesión del sistema.');
-      setTimeout(() => router.push('/'), 1200);
+      setTimeout(() => router.push('/'), 1000);
       return;
     }
 
@@ -2448,17 +2986,17 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     };
   }, [activeProfile, pathname, interactiveReaderEnabled, isSpeaking, speechRate]);
 
-  // Anunciar nueva pantalla cuando cambia la ruta si el lector está activo
+  // Anunciar nueva pantalla cuando cambia la ruta si el lector o el asistente de voz continuo está activo
   useEffect(() => {
     if (lastPathnameRef.current !== pathname) {
       lastPathnameRef.current = pathname;
-      if (interactiveReaderEnabled || activeProfile === 'blind') {
+      if (interactiveReaderEnabled || activeProfile === 'blind' || voiceActiveRef.current) {
         setTimeout(() => {
           readCurrentPage();
-        }, 600);
+        }, 500);
       }
     }
-  }, [pathname, interactiveReaderEnabled, activeProfile]);
+  }, [pathname, interactiveReaderEnabled, activeProfile, isListening]);
 
   return (
     <>
