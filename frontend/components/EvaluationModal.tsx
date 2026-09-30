@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { requestService, AdministrativeRequest } from '../lib/requestService';
@@ -49,6 +50,9 @@ export interface EvaluationModalProps {
 }
 
 export default function EvaluationModal({ visible, requestId, request, onClose, onSuccess }: EvaluationModalProps) {
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
+  const isSmallScreen = windowHeight < 720 || windowWidth < 480;
+
   const [currentRequest, setCurrentRequest] = useState<AdministrativeRequest | null>(request || null);
   const [loadingRequest, setLoadingRequest] = useState(false);
   const [rating, setRating] = useState(0);
@@ -196,13 +200,20 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
       visible={visible}
       onRequestClose={handleClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+      <View style={[styles.modalOverlay, isSmallScreen && { padding: 10 }]}>
+        <View style={[
+          styles.modalContent,
+          isSmallScreen && {
+            maxHeight: '95%',
+            padding: 14,
+            borderRadius: 20,
+          }
+        ]}>
           {isSubmitted ? (
             /* ============================================================== */
             /* PANTALLA / MODAL DE CONFIRMACIÓN DE CALIFICACIÓN EXITOSA      */
             /* ============================================================== */
-            <View style={{ width: '100%', maxHeight: '100%', flexShrink: 1 }}>
+            <View style={{ width: '100%', flex: 1, maxHeight: '100%', display: 'flex', flexDirection: 'column' }}>
               {/* Header de confirmación */}
               <View style={[styles.headerRow, { marginBottom: 12, paddingBottom: 12 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -221,7 +232,7 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
 
               {/* Contenido scrolleable de confirmación */}
               <ScrollView 
-                style={{ width: '100%', flexShrink: 1 }}
+                style={{ width: '100%', flex: 1, flexShrink: 1 }}
                 contentContainerStyle={{ paddingHorizontal: 2, paddingBottom: 10, alignItems: 'center' }}
                 showsVerticalScrollIndicator={true}
               >
@@ -300,7 +311,7 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
               </ScrollView>
 
               {/* Botón de cierre / confirmación fijo abajo */}
-              <View style={{ width: '100%', paddingTop: 14, borderTopWidth: 1, borderTopColor: COLORS.line, backgroundColor: COLORS.white }}>
+              <View style={{ width: '100%', paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.line, backgroundColor: COLORS.white, flexShrink: 0 }}>
                 <TouchableOpacity
                   style={[styles.confirmActionBtn, { width: '100%', marginTop: 0 }]}
                   onPress={handleFinish}
@@ -315,9 +326,9 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
             /* ============================================================== */
             /* FORMULARIO DE CALIFICACIÓN                                      */
             /* ============================================================== */
-            <View>
+            <View style={{ width: '100%', flex: 1, maxHeight: '100%', display: 'flex', flexDirection: 'column' }}>
               {/* Header */}
-              <View style={styles.headerRow}>
+              <View style={[styles.headerRow, isSmallScreen && { marginBottom: 10, paddingBottom: 10 }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={styles.modalIconBox}>
                     <Ionicons name="star" size={22} color={COLORS.warning} />
@@ -341,9 +352,10 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
               )}
 
               <ScrollView
-                style={{ width: '100%', maxHeight: 460 }}
+                style={{ width: '100%', flex: 1, flexShrink: 1 }}
                 contentContainerStyle={{ paddingBottom: 10 }}
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={true}
+                keyboardShouldPersistTaps="handled"
               >
                 {/* Tarjeta de Información del Servicio */}
                 {loadingRequest ? (
@@ -476,8 +488,8 @@ export default function EvaluationModal({ visible, requestId, request, onClose, 
                 </View>
               </ScrollView>
 
-              {/* Botones de Acción */}
-              <View style={styles.footerRow}>
+              {/* Botones de Acción fijo abajo */}
+              <View style={[styles.footerRow, isSmallScreen && { marginTop: 8, paddingTop: 8 }]}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
                   onPress={handleClose}
@@ -524,7 +536,10 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 460,
-    maxHeight: '90%',
+    maxHeight: '92%',
+    flexShrink: 1,
+    display: 'flex',
+    flexDirection: 'column',
     overflow: 'hidden',
     backgroundColor: COLORS.white,
     borderRadius: 24,
@@ -724,11 +739,14 @@ const styles = StyleSheet.create({
   // Footer
   footerRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
-    marginTop: 14,
-    paddingTop: 14,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
+    backgroundColor: COLORS.white,
+    flexShrink: 0,
   },
   cancelBtn: {
     flex: 1,
