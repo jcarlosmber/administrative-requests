@@ -1196,6 +1196,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   // Estado de hover para opacidad suave en el botón flotante
   const [isBtnHovered, setIsBtnHovered] = useState(false);
 
+  // Bandera para diferenciar arrastre (drag) de clic simple y evitar abrir el modal al soltar el mouse
+  const isDraggingBtnRef = useRef(false);
+
   // Movimiento libre / Drag & Drop para el botón flotante de Accesibilidad
   const buttonPan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
@@ -1203,17 +1206,32 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+        const moved = Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+        if (moved) isDraggingBtnRef.current = true;
+        return moved;
       },
       onPanResponderGrant: () => {
+        isDraggingBtnRef.current = false;
         buttonPan.extractOffset();
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: buttonPan.x, dy: buttonPan.y }],
-        { useNativeDriver: false }
-      ),
+      onPanResponderMove: (evt, gestureState) => {
+        if (Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4) {
+          isDraggingBtnRef.current = true;
+        }
+        buttonPan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
       onPanResponderRelease: (e, gestureState) => {
         buttonPan.flattenOffset();
+        const wasDragged = Math.abs(gestureState.dx) > 4 || Math.abs(gestureState.dy) > 4;
+        if (wasDragged) {
+          isDraggingBtnRef.current = true;
+          // Mantener la bandera activa brevemente para bloquear el evento de clic del navegador tras soltar el mouse
+          setTimeout(() => {
+            isDraggingBtnRef.current = false;
+          }, 250);
+        } else {
+          isDraggingBtnRef.current = false;
+        }
         const { width, height } = Dimensions.get('window');
         
         // Coordenadas acumuladas
@@ -2536,7 +2554,20 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         <TouchableOpacity
           accessible={true}
           accessibilityRole="button"
-          onPress={() => setOpenPanel(true)}
+          onPress={(e: any) => {
+            if (isDraggingBtnRef.current) {
+              if (e && e.preventDefault) e.preventDefault();
+              return;
+            }
+            setOpenPanel(true);
+          }}
+          // @ts-ignore
+          onClick={(e: any) => {
+            if (isDraggingBtnRef.current) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
           accessibilityLabel="Abrir menú de accesibilidad"
           activeOpacity={0.88}
           // @ts-ignore

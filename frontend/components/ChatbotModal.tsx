@@ -86,22 +86,37 @@ export const ChatbotModal: React.FC = () => {
   ];
 
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const isDraggingChatRef = useRef(false);
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+        const moved = Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+        if (moved) isDraggingChatRef.current = true;
+        return moved;
       },
       onPanResponderGrant: () => {
+        isDraggingChatRef.current = false;
         pan.extractOffset();
       },
-      onPanResponderMove: Animated.event(
-        [null, { dx: pan.x, dy: pan.y }],
-        { useNativeDriver: false }
-      ),
+      onPanResponderMove: (evt, gestureState) => {
+        if (Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5) {
+          isDraggingChatRef.current = true;
+        }
+        pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
       onPanResponderRelease: (e, gestureState) => {
         pan.flattenOffset();
+        const wasDragged = Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+        if (wasDragged) {
+          isDraggingChatRef.current = true;
+          setTimeout(() => {
+            isDraggingChatRef.current = false;
+          }, 250);
+        } else {
+          isDraggingChatRef.current = false;
+        }
         const { width, height } = Dimensions.get('window');
         
         // Coordenadas actuales
@@ -290,7 +305,20 @@ export const ChatbotModal: React.FC = () => {
         {...panResponder.panHandlers}
       >
         <TouchableOpacity 
-          onPress={() => setIsMinimized(false)}
+          onPress={(e: any) => {
+            if (isDraggingChatRef.current) {
+              if (e && e.preventDefault) e.preventDefault();
+              return;
+            }
+            setIsMinimized(false);
+          }}
+          // @ts-ignore
+          onClick={(e: any) => {
+            if (isDraggingChatRef.current) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
           style={{ 
             backgroundColor: '#3b82f6', 
             width: isSmallScreen ? 50 : 64, 
