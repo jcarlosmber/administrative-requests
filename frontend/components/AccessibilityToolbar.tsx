@@ -1185,6 +1185,12 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   const isSpeakingRef = useRef<boolean>(false);
   const restartVoiceTimeoutRef = useRef<any>(null);
   const lastActiveInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const currentFormNavIndexRef = useRef<number>(-1);
+
+  // Reiniciar el índice secuencial de campos al cambiar de formulario
+  useEffect(() => {
+    currentFormNavIndexRef.current = -1;
+  }, [pathname]);
 
   // Notificación de estado
   const [toastMessage, setToastMessage] = useState('');
@@ -2521,150 +2527,396 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     return (inputEl as HTMLInputElement).name || 'Campo';
   };
 
-  // Helper para obtener los inputs visibles y editables del formulario
-  const getVisibleFormInputs = (): (HTMLInputElement | HTMLTextAreaElement)[] => {
+  // Helper integral para obtener TODOS los controles interactivos del formulario (inputs, selects, checkboxes, switches)
+  const getVisibleFormControls = (): {
+    id: string;
+    element: HTMLElement;
+    type: 'input' | 'textarea' | 'select' | 'checkbox' | 'switch';
+    label: string;
+    value: string;
+    isFilled: boolean;
+  }[] => {
     if (typeof document === 'undefined') return [];
-    const elements = Array.from(
-      document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled])')
+
+    const results: {
+      id: string;
+      element: HTMLElement;
+      type: 'input' | 'textarea' | 'select' | 'checkbox' | 'switch';
+      label: string;
+      value: string;
+      isFilled: boolean;
+    }[] = [];
+
+    const seenElements = new Set<HTMLElement>();
+
+    // 1. Inputs y Textareas estándar de texto, números, etc.
+    const textEls = Array.from(
+      document.querySelectorAll(
+        'input:not([type="hidden"]):not([disabled]):not([type="checkbox"]):not([role="switch"]), textarea:not([disabled])'
+      )
     ) as (HTMLInputElement | HTMLTextAreaElement)[];
-    return elements.filter((el) => {
+
+    for (const el of textEls) {
+      if (el.closest('#accessibility-toolbar-modal') || el.closest('#accessibility-voice-widget')) continue;
       const rect = el.getBoundingClientRect();
       const style = window.getComputedStyle(el);
-      return (
-        rect.width > 0 &&
-        rect.height > 0 &&
-        style.display !== 'none' &&
-        style.visibility !== 'hidden' &&
-        !el.closest('#accessibility-toolbar-modal')
+      if (rect.width === 0 || rect.height === 0 || style.display === 'none' || style.visibility === 'hidden') continue;
+
+      const label = getFieldLabel(el);
+      const val = el.value?.trim() || '';
+      results.push({
+        id: el.id || label,
+        element: el,
+        type: el.tagName === 'TEXTAREA' ? 'textarea' : 'input',
+        label,
+        value: val,
+        isFilled: val.length > 0,
+      });
+      seenElements.add(el);
+    }
+
+    // 2. Switches / Interruptores (AccesibleSwitch o switch nativo)
+    const switchEls = Array.from(
+      document.querySelectorAll('[role="switch"]')
+    ) as HTMLElement[];
+
+    for (const el of switchEls) {
+      if (el.closest('#accessibility-toolbar-modal') || el.closest('#accessibility-voice-widget')) continue;
+      const container = (el.tagName === 'INPUT' ? el.parentElement : el) as HTMLElement;
+      if (!container || seenElements.has(container)) continue;
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+
+      const parentCard = container.closest('div[style*="border-radius"], div[style*="padding"]') as HTMLElement;
+      let label = 'Interruptor';
+      if (parentCard) {
+        const textNodes = parentCard.innerText?.split('\n').map(t => t.trim()).filter(Boolean) || [];
+        label = textNodes[0] || 'Interruptor';
+      }
+      const isChecked = container.getAttribute('aria-checked') === 'true' || 
+                        container.innerText?.includes('SÍ') || 
+                        container.querySelector('input')?.checked;
+
+      results.push({
+        id: label,
+        element: container,
+        type: 'switch',
+        label,
+        value: isChecked ? 'Activado' : 'Desactivado',
+        isFilled: true,
+      });
+      seenElements.add(container);
+    }
+
+    // 3. Selectores desplegables personalizados y pickers (Dependencia, Fechas, Horas)
+    // 4. Casillas de Verificación / Checkboxes (ej. Aceptación de Términos Ley 1581)
+    const clickables = Array.from(
+      document.querySelectorAll('div[style*="cursor: pointer"], div[role="button"], button')
+    ) as HTMLElement[];
+
+    for (const el of clickables) {
+      if (el.closest('#accessibility-toolbar-modal') || el.closest('#accessibility-voice-widget')) continue;
+      if (seenElements.has(el)) continue;
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+
+      const text = (el.innerText || '').trim();
+      const parent = el.closest('div, label, section') as HTMLElement;
+      const labelText = parent ? (parent.querySelector('label, text, span, div')?.textContent || '').trim() : '';
+
+      // Casilla de verificación / Checkbox
+      const isCheckbox = (
+        el.getAttribute('role') === 'checkbox' ||
+        text.toLowerCase().includes('autorizo el tratamiento') ||
+        text.toLowerCase().includes('ley 1581') ||
+        text.toLowerCase().includes('términos y condiciones') ||
+        text.toLowerCase().includes('manifestación expresa')
       );
+
+      if (isCheckbox) {
+        const isChecked = el.getAttribute('aria-checked') === 'true' || 
+                          el.querySelector('[style*="background-color: rgb(230, 57, 70)"]') !== null ||
+                          el.querySelector('svg, i') !== null;
+        const cbLabel = text.length > 60 ? text.slice(0, 50) + '...' : text;
+        results.push({
+          id: 'terminos',
+          element: el,
+          type: 'checkbox',
+          label: cbLabel || 'Términos y condiciones',
+          value: isChecked ? 'Aceptado' : 'Pendiente',
+          isFilled: isChecked,
+        });
+        seenElements.add(el);
+        continue;
+      }
+
+      // Selector de Dependencia, Fecha o Hora
+      const isSelectorWrap = (
+        (text.includes('Seleccionar') || text.includes('Dependencia') || text.includes('202') || text.includes(':')) &&
+        (el.querySelector('svg, i') || text.includes('Seleccionar') || el.style.borderWidth)
+      ) || (labelText.toLowerCase().includes('dependencia') || labelText.toLowerCase().includes('fecha') || labelText.toLowerCase().includes('hora'));
+
+      if (isSelectorWrap && rect.height >= 30 && rect.width >= 60) {
+        let fieldLabel = labelText;
+        if (!fieldLabel || fieldLabel === text) {
+          const prev = el.previousElementSibling as HTMLElement;
+          fieldLabel = prev?.innerText?.trim() || 'Selector';
+        }
+        if (fieldLabel.length > 40) fieldLabel = fieldLabel.slice(0, 40);
+
+        const val = text !== 'Seleccionar' ? text : '';
+        results.push({
+          id: fieldLabel,
+          element: el,
+          type: 'select',
+          label: fieldLabel || 'Selector desplegable',
+          value: val,
+          isFilled: val.length > 0 && val !== 'Seleccionar',
+        });
+        seenElements.add(el);
+      }
+    }
+
+    // Ordenar de arriba a abajo y de izquierda a derecha según posición visual en pantalla
+    results.sort((a, b) => {
+      const rectA = a.element.getBoundingClientRect();
+      const rectB = b.element.getBoundingClientRect();
+      if (Math.abs(rectA.top - rectB.top) > 15) {
+        return rectA.top - rectB.top;
+      }
+      return rectA.left - rectB.left;
     });
+
+    return results;
   };
 
-  // Helper para navegar de campo en campo ("siguiente", "anterior")
-  const navigateFormFields = (direction: 'next' | 'prev'): boolean => {
+  // Helper para mantener compatibilidad con búsquedas de inputs puros
+  const getVisibleFormInputs = (): (HTMLInputElement | HTMLTextAreaElement)[] => {
+    const controls = getVisibleFormControls();
+    return controls
+      .filter(c => c.type === 'input' || c.type === 'textarea')
+      .map(c => c.element as (HTMLInputElement | HTMLTextAreaElement));
+  };
+
+  // Helper para navegar secuencialmente de control en control ("siguiente", "anterior")
+  const navigateFormControls = (direction: 'next' | 'prev'): boolean => {
     if (typeof document === 'undefined') return false;
-    const inputs = getVisibleFormInputs();
-    if (inputs.length === 0) {
-      speakText('No se encontraron campos de formulario editables en esta pantalla.');
+    const controls = getVisibleFormControls();
+    if (controls.length === 0) {
+      speakText('No se encontraron campos en este formulario.');
       return false;
     }
 
-    const activeEl = document.activeElement as HTMLElement;
-    let currentIndex = inputs.indexOf(activeEl as any);
-    if (currentIndex === -1 && lastActiveInputRef.current) {
-      currentIndex = inputs.indexOf(lastActiveInputRef.current as any);
-    }
-
-    let targetIndex = 0;
+    let nextIndex = 0;
     if (direction === 'next') {
-      if (currentIndex === -1) {
-        targetIndex = 0;
-      } else if (currentIndex < inputs.length - 1) {
-        targetIndex = currentIndex + 1;
+      if (currentFormNavIndexRef.current === -1) {
+        nextIndex = 0;
+      } else if (currentFormNavIndexRef.current < controls.length - 1) {
+        nextIndex = currentFormNavIndexRef.current + 1;
       } else {
-        speakText('Ha llegado al final de los campos. Diga: Acepto términos, o diga: Radicar solicitud para enviar.');
+        speakText('Ha llegado al final del formulario. Diga: Radicar solicitud para enviar, o diga siguiente para volver al primer campo.');
+        currentFormNavIndexRef.current = -1;
         return true;
       }
     } else {
-      if (currentIndex <= 0) {
-        targetIndex = 0;
-        const label = getFieldLabel(inputs[0]);
-        speakText(`Ya está en el primer campo: ${label}.`);
-        inputs[0].focus();
-        lastActiveInputRef.current = inputs[0];
-        return true;
+      if (currentFormNavIndexRef.current <= 0) {
+        nextIndex = 0;
+        speakText(`Ya está en el primer campo: ${controls[0].label}.`);
       } else {
-        targetIndex = currentIndex - 1;
+        nextIndex = currentFormNavIndexRef.current - 1;
       }
     }
 
-    const targetInput = inputs[targetIndex];
-    lastActiveInputRef.current = targetInput;
+    currentFormNavIndexRef.current = nextIndex;
+    const item = controls[nextIndex];
+    lastActiveInputRef.current = item.element as any;
+
     try {
-      targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch {
-      // scroll fallback
+      item.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (e) {}
+
+    if (item.type === 'input' || item.type === 'textarea') {
+      (item.element as HTMLElement).focus();
+      speakText(`Campo: ${item.label}.${item.value ? ` Valor actual: ${item.value}.` : ' Está vacío.'} Diga lo que desea ingresar, o diga siguiente.`);
+    } else if (item.type === 'switch') {
+      speakText(`Interruptor: ${item.label}. Estado: ${item.value}. Diga cambiar o alternar, o diga siguiente.`);
+    } else if (item.type === 'checkbox') {
+      speakText(`Casilla: ${item.label}. Estado: ${item.value}. Diga marcar o aceptar, o diga siguiente.`);
+    } else if (item.type === 'select') {
+      speakText(`Selector de: ${item.label}.${item.value ? ` Selección actual: ${item.value}.` : ' Sin seleccionar.'} Diga abrir o seleccionar para ver opciones, o diga siguiente.`);
     }
-    targetInput.focus();
-    const label = getFieldLabel(targetInput);
-    const curVal = targetInput.value?.trim();
-    speakText(`Campo: ${label}.${curVal ? ` Valor actual: ${curVal}.` : ' Está vacío.'} Diga lo que desea ingresar, o diga siguiente.`);
+
     return true;
   };
+
+  const navigateFormFields = navigateFormControls;
 
   // Helper para repetir dictado si el usuario se equivocó ("repetir", "repetir campo", "me equivoqué")
   const repeatCurrentField = () => {
     if (typeof document === 'undefined') return;
-    const inputs = getVisibleFormInputs();
-    if (inputs.length === 0) {
-      speakText('No se encontraron campos de formulario en esta pantalla.');
+    const controls = getVisibleFormControls();
+    if (controls.length === 0) {
+      speakText('No se encontraron campos en este formulario.');
       return;
     }
 
-    const activeEl = document.activeElement as (HTMLInputElement | HTMLTextAreaElement);
-    let targetInput: HTMLInputElement | HTMLTextAreaElement | null = null;
-    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.closest('#accessibility-toolbar-modal')) {
-      targetInput = activeEl;
-    } else if (lastActiveInputRef.current && document.body.contains(lastActiveInputRef.current)) {
-      targetInput = lastActiveInputRef.current;
-    } else {
-      targetInput = inputs[0];
+    const currentIndex = currentFormNavIndexRef.current >= 0 && currentFormNavIndexRef.current < controls.length
+      ? currentFormNavIndexRef.current
+      : 0;
+    const currentItem = controls[currentIndex];
+
+    if (!currentItem) return;
+
+    if (currentItem.type === 'input' || currentItem.type === 'textarea') {
+      const inputEl = currentItem.element as (HTMLInputElement | HTMLTextAreaElement);
+      setNativeDomInputValue(inputEl, '');
+      inputEl.focus();
+      try {
+        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) {}
+      speakText(`Campo ${currentItem.label} borrado. Puede repetir su dictado ahora. Le escucho.`);
+    } else if (currentItem.type === 'switch' || currentItem.type === 'checkbox') {
+      currentItem.element.click();
+      speakText(`${currentItem.label} restablecido. Puede repetir la acción.`);
+    } else if (currentItem.type === 'select') {
+      currentItem.element.click();
+      speakText(`Selector ${currentItem.label} abierto para repetir selección.`);
+    }
+  };
+
+  // Helper para corregir el campo actual ("corregir", "corregir campo")
+  const correctCurrentField = () => {
+    if (typeof document === 'undefined') return;
+    const controls = getVisibleFormControls();
+    if (controls.length === 0) {
+      speakText('No se encontraron campos para corregir.');
+      return;
     }
 
-    if (targetInput) {
-      lastActiveInputRef.current = targetInput;
-      setNativeDomInputValue(targetInput, '');
-      targetInput.focus();
-      try {
-        targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch (e) {}
+    const currentIndex = currentFormNavIndexRef.current >= 0 && currentFormNavIndexRef.current < controls.length
+      ? currentFormNavIndexRef.current
+      : 0;
+    const currentItem = controls[currentIndex];
 
-      const label = getFieldLabel(targetInput);
-      speakText(`Campo ${label} borrado. Puede repetir su dictado ahora. Le escucho.`);
+    if (!currentItem) return;
+
+    if (currentItem.type === 'input' || currentItem.type === 'textarea') {
+      const inputEl = currentItem.element as (HTMLInputElement | HTMLTextAreaElement);
+      setNativeDomInputValue(inputEl, '');
+      inputEl.focus();
+      try {
+        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) {}
+      speakText(`Modo corrección activado para el campo ${currentItem.label}. Dicte el valor correcto.`);
+    } else if (currentItem.type === 'switch' || currentItem.type === 'checkbox') {
+      currentItem.element.click();
+      speakText(`Modo corrección: ${currentItem.label} cambiado.`);
+    } else if (currentItem.type === 'select') {
+      currentItem.element.click();
+      speakText(`Modo corrección: Selector ${currentItem.label} abierto. Diga la nueva opción deseada.`);
+    }
+  };
+
+  // Helper para alternar/cambiar el control actual (switch, checkbox o abrir select)
+  const toggleOrActivateCurrentField = () => {
+    if (typeof document === 'undefined') return;
+    const controls = getVisibleFormControls();
+    if (controls.length === 0) {
+      speakText('No hay controles interactivos disponibles.');
+      return;
+    }
+
+    const currentIndex = currentFormNavIndexRef.current >= 0 && currentFormNavIndexRef.current < controls.length
+      ? currentFormNavIndexRef.current
+      : 0;
+    const currentItem = controls[currentIndex];
+
+    if (!currentItem) return;
+
+    if (currentItem.type === 'switch') {
+      currentItem.element.click();
+      setTimeout(() => {
+        const isNowOn = currentItem.element.getAttribute('aria-checked') === 'true' || 
+                        currentItem.element.innerText?.includes('SÍ');
+        speakText(`Interruptor ${currentItem.label}: ${isNowOn ? 'Activado' : 'Desactivado'}. Diga siguiente para continuar.`);
+      }, 100);
+      return;
+    }
+
+    if (currentItem.type === 'checkbox') {
+      currentItem.element.click();
+      setTimeout(() => {
+        speakText(`Casilla ${currentItem.label} alternada. Diga siguiente para continuar.`);
+      }, 100);
+      return;
+    }
+
+    if (currentItem.type === 'select') {
+      currentItem.element.click();
+      speakText(`Selector ${currentItem.label} abierto. Diga el nombre de la opción para seleccionarla, o diga siguiente.`);
+      return;
+    }
+
+    if (currentItem.type === 'input' || currentItem.type === 'textarea') {
+      (currentItem.element as HTMLElement).focus();
+      speakText(`Campo de texto ${currentItem.label}. Dicte el valor que desea escribir, o diga borrar o repetir.`);
+      return;
     }
   };
 
   // Helper para detectar campos faltantes por llenar ("¿qué falta?", "campos faltantes", "falta llenar")
   const checkMissingFields = () => {
     if (typeof document === 'undefined') return;
-    const inputs = getVisibleFormInputs();
-    if (inputs.length === 0) {
+    const controls = getVisibleFormControls();
+    if (controls.length === 0) {
       speakText('No se encontraron campos de formulario en esta página.');
       return;
     }
 
-    const missingInputs = inputs.filter((inp) => !inp.value || !inp.value.trim());
+    const missingControls = controls.filter(c => !c.isFilled);
 
-    if (missingInputs.length === 0) {
+    if (missingControls.length === 0) {
       speakText('¡Excelente! Todos los campos del formulario están completos. Diga: Acepto términos, o diga: Radicar solicitud para enviar.');
       return;
     }
 
-    const targetInput = missingInputs[0];
-    lastActiveInputRef.current = targetInput;
-    try {
-      targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } catch (e) {}
-    targetInput.focus();
+    const targetItem = missingControls[0];
+    const targetIdx = controls.indexOf(targetItem);
+    if (targetIdx !== -1) {
+      currentFormNavIndexRef.current = targetIdx;
+    }
 
-    const missingLabels = missingInputs.map(inp => getFieldLabel(inp));
-    const firstLabel = missingLabels[0];
-    const restText = missingLabels.length > 1
-      ? `Faltan ${missingInputs.length} campos por completar: ${missingLabels.slice(0, 3).join(', ')}. `
+    try {
+      targetItem.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (e) {}
+
+    const missingLabels = missingControls.map(c => c.label);
+    const firstLabel = targetItem.label;
+    const restText = missingControls.length > 1
+      ? `Faltan ${missingControls.length} campos por completar: ${missingLabels.slice(0, 3).join(', ')}. `
       : `Falta 1 campo por completar. `;
 
-    speakText(`${restText}Posicionado en el campo: ${firstLabel}. Diga lo que desea ingresar, o diga siguiente.`);
+    if (targetItem.type === 'input' || targetItem.type === 'textarea') {
+      (targetItem.element as HTMLElement).focus();
+      speakText(`${restText}Posicionado en: ${firstLabel}. Dicte lo que desea ingresar, o diga siguiente.`);
+    } else if (targetItem.type === 'checkbox') {
+      speakText(`${restText}Posicionado en la casilla: ${firstLabel}. Diga marcar o aceptar, o diga siguiente.`);
+    } else if (targetItem.type === 'select') {
+      speakText(`${restText}Posicionado en el selector: ${firstLabel}. Diga abrir o seleccionar, o diga siguiente.`);
+    } else {
+      speakText(`${restText}Posicionado en: ${firstLabel}.`);
+    }
   };
 
   // Helper para leer los campos del formulario actual
   const readFormSummary = () => {
     if (typeof document === 'undefined') return;
-    const allInputs = getVisibleFormInputs();
+    const allControls = getVisibleFormControls();
     const summaryList: string[] = [];
-    allInputs.forEach((inp) => {
-      const cleanLabel = getFieldLabel(inp).slice(0, 30);
-      const val = inp.value?.trim();
-      summaryList.push(`${cleanLabel}: ${val ? val : 'vacío'}`);
+    allControls.forEach((c) => {
+      const cleanLabel = c.label.slice(0, 30);
+      summaryList.push(`${cleanLabel}: ${c.value ? c.value : 'vacío'}`);
     });
     if (summaryList.length === 0) {
       speakText('No se encontraron campos de formulario editables en esta pantalla.');
@@ -2942,7 +3194,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     // 5. Adaptación para Formularios (/requests/*)
     const isFormPage = pathname.includes('/requests/');
     if (isFormPage) {
-      // 5.0 Navegación secuencial de campos ("siguiente", "anterior", "repetir", "qué falta", "borrar")
+      // 5.0 Navegación secuencial de campos ("siguiente", "anterior", "repetir", "corregir", "cambiar", "qué falta", "borrar")
       if (
         text === 'siguiente' ||
         text === 'siguiente campo' ||
@@ -2959,7 +3211,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         text === 'proximo campo' ||
         text.startsWith('siguiente')
       ) {
-        navigateFormFields('next');
+        navigateFormControls('next');
         return;
       }
 
@@ -2972,7 +3224,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         text === 'atras' ||
         text === 'volver al campo anterior'
       ) {
-        navigateFormFields('prev');
+        navigateFormControls('prev');
         return;
       }
 
@@ -2987,8 +3239,6 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         text === 'me equivoque dictando' ||
         text === 'me equivoqué dictando' ||
         text === 'reintentar' ||
-        text === 'corregir' ||
-        text === 'corregir campo' ||
         text === 'borrar y repetir' ||
         text.includes('me equivoque') ||
         text.includes('me equivoqué') ||
@@ -2996,6 +3246,52 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       ) {
         repeatCurrentField();
         return;
+      }
+
+      // Corregir campo
+      if (
+        text === 'corregir' ||
+        text === 'corregir campo' ||
+        text === 'corrección' ||
+        text === 'correccion' ||
+        text.startsWith('corregir')
+      ) {
+        correctCurrentField();
+        return;
+      }
+
+      // Alternar / Cambiar / Marcar checkbox o switch o abrir select box
+      if (
+        text === 'cambiar' ||
+        text === 'alternar' ||
+        text === 'marcar' ||
+        text === 'desmarcar' ||
+        text === 'activar' ||
+        text === 'desactivar' ||
+        text === 'abrir' ||
+        text === 'seleccionar' ||
+        text === 'abrir opciones' ||
+        text === 'ver opciones'
+      ) {
+        toggleOrActivateCurrentField();
+        return;
+      }
+
+      // Selección directa si hay un modal de opciones desplegado (ej. Dependencias, Salas)
+      if (typeof document !== 'undefined') {
+        const openModal = document.querySelector('[role="dialog"]') as HTMLElement;
+        if (openModal) {
+          const options = Array.from(openModal.querySelectorAll('div[role="button"], button, [style*="cursor: pointer"]')) as HTMLElement[];
+          const found = options.find(opt => {
+            const optText = (opt.innerText || '').toLowerCase().trim();
+            return optText && (optText.includes(text) || text.includes(optText)) && optText.length < 80;
+          });
+          if (found) {
+            found.click();
+            speakText(`Opción seleccionada: ${found.innerText?.trim()}. Diga siguiente para continuar.`);
+            return;
+          }
+        }
       }
 
       // Detectar y saltar a campos faltantes por llenar
@@ -3979,6 +4275,8 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 ? [
                     { label: '⏭️ Siguiente', cmd: 'siguiente' },
                     { label: '🔄 Repetir', cmd: 'repetir' },
+                    { label: '✏️ Corregir', cmd: 'corregir' },
+                    { label: '🔘 Cambiar / Marcar', cmd: 'cambiar' },
                     { label: '⚠️ ¿Qué falta?', cmd: 'qué falta' },
                     { label: '✍️ En nombre...', cmd: 'en nombre juan carlos' },
                     { label: '✅ Acepto términos', cmd: 'acepto términos' },
@@ -4652,7 +4950,7 @@ const styles = StyleSheet.create({
     top: 20,
     left: 16,
     right: 16,
-    maxWidth: 380,
+    maxWidth: 420,
     marginHorizontal: 'auto',
     alignSelf: 'center',
     zIndex: 2147483647,
