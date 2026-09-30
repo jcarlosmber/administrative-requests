@@ -947,7 +947,7 @@ export default function AdminSettings() {
       telefono: user.phone || '',
       dependencia: dependencies.find(dep => dep.id === user.dependency_id)?.name || user.dependency || '',
       entidad: user.entity || '',
-      rol: user.role === 'superadmin' ? 'Super Administrador' : user.role === 'admin' ? 'Administrador' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
+      rol: user.role === 'superadmin' ? 'Super Administrador' : user.role === 'admin' ? 'Administrador' : user.role === 'directivo' ? 'Directivo' : user.role === 'conductor' ? 'Conductor' : user.role === 'security' ? 'Seguridad' : 'Funcionario',
       activo: user.is_active ? 'ACTIVO' : 'INACTIVO',
       inicio: user.start_date || '',
       vencimiento: user.end_date || '',
@@ -3458,6 +3458,60 @@ export default function AdminSettings() {
                     </Text>
                     <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
                       Solicitudes de salas, movilidad, mantenimientos.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Rol: Directivo */}
+                  <TouchableOpacity
+                    onPress={() => setUserDraft({ ...userDraft, role: 'directivo' })}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 180 : '100%',
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: userDraft?.role === 'directivo' ? '#F3E8FF' : COLORS.white,
+                      borderWidth: 1.5,
+                      borderColor: userDraft?.role === 'directivo' ? '#9333EA' : '#E2E8F0',
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name="ribbon-outline" size={20} color={userDraft?.role === 'directivo' ? '#9333EA' : '#64748B'} />
+                      <Ionicons name={userDraft?.role === 'directivo' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'directivo' ? '#9333EA' : '#CBD5E1'} />
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: userDraft?.role === 'directivo' ? '#6B21A8' : COLORS.primary, marginTop: 4 }}>
+                      Directivo
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
+                      Nivel directivo, prioridad en reservas y cupo de parqueadero.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Rol: Conductor */}
+                  <TouchableOpacity
+                    onPress={() => setUserDraft({ ...userDraft, role: 'conductor' })}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 180 : '100%',
+                      padding: 14,
+                      borderRadius: 14,
+                      backgroundColor: userDraft?.role === 'conductor' ? '#FFEDD5' : COLORS.white,
+                      borderWidth: 1.5,
+                      borderColor: userDraft?.role === 'conductor' ? '#EA580C' : '#E2E8F0',
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Ionicons name="car-sport-outline" size={20} color={userDraft?.role === 'conductor' ? '#EA580C' : '#64748B'} />
+                      <Ionicons name={userDraft?.role === 'conductor' ? "radio-button-on" : "radio-button-off"} size={18} color={userDraft?.role === 'conductor' ? '#EA580C' : '#CBD5E1'} />
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: userDraft?.role === 'conductor' ? '#C2410C' : COLORS.primary, marginTop: 4 }}>
+                      Conductor
+                    </Text>
+                    <Text style={{ fontSize: 11, color: COLORS.muted, fontWeight: '500' }}>
+                      Conducción y operación de la flota de transporte oficial.
                     </Text>
                   </TouchableOpacity>
 
