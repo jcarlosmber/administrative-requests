@@ -774,7 +774,7 @@ export default function ParkingRequestScreen() {
                                   }}>
                                     {v.plate}
                                   </Text>
-                                  <Text style={{ fontSize: 8, fontWeight: '800', color: '#334155', textTransform: 'uppercase', marginTop: -2 }}>
+                                  <Text style={{ fontSize: 8, fontWeight: '800', color: '#000000', textTransform: 'uppercase', marginTop: -2 }}>
                                     BOGOTÁ D.C.
                                   </Text>
                                 </View>

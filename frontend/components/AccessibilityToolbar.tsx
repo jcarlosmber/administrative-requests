@@ -1322,7 +1322,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         document.body.style.color = '#FFFFFF';
 
         themeStyleEl.textContent = `
-          /* === MODO OSCURO AUTOMÁTICO PARA TODA LA PÁGINA (ESTILO CELULAR) === */
+          /* === MODO OSCURO GLOBAL SASGE (CONTRASTE ELEVADO EN FORMULARIOS) === */
           html[data-theme="dark"],
           html[data-theme="dark"] body,
           html[data-theme="dark"] #root {
@@ -1330,7 +1330,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             color: #FFFFFF !important;
           }
 
-          /* 1. Contenedores, secciones, tarjetas y paneles en modo oscuro */
+          /* 1. Contenedores, secciones, tarjetas, paneles y cards */
           html[data-theme="dark"] .r-backgroundColor-14lw9ot,
           html[data-theme="dark"] .r-backgroundColor-11j01x2,
           html[data-theme="dark"] .r-backgroundColor-1jh0li6,
@@ -1340,21 +1340,27 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           html[data-theme="dark"] div[style*="background-color: #ffffff"],
           html[data-theme="dark"] div[style*="background-color: rgb(248, 250, 252)"],
           html[data-theme="dark"] div[style*="background-color: #F8FAFC"],
+          html[data-theme="dark"] div[style*="background-color: #f8fafc"],
           html[data-theme="dark"] div[style*="background-color: rgb(241, 245, 249)"],
-          html[data-theme="dark"] div[style*="background-color: #F1F5F9"] {
+          html[data-theme="dark"] div[style*="background-color: #F1F5F9"],
+          html[data-theme="dark"] div[style*="background-color: #f1f5f9"] {
             background-color: #161F30 !important;
             border-color: #2D3A54 !important;
             color: #F8FAFC !important;
           }
 
-          /* Fondos secundarios suaves y translúcidos */
+          /* Fondos secundarios suaves, blurviews y paneles de resumen */
           html[data-theme="dark"] div[style*="background-color: rgba(255, 255, 255"],
-          html[data-theme="dark"] div[style*="background-color: rgba(248, 250, 252"] {
+          html[data-theme="dark"] div[style*="background-color: rgba(248, 250, 252"],
+          html[data-theme="dark"] div[style*="background-color: rgba(0, 0, 0, 0.02)"],
+          html[data-theme="dark"] div[style*="background-color: rgba(0,0,0,0.02)"],
+          html[data-theme="dark"] div[style*="background-color: #FFF5F3"],
+          html[data-theme="dark"] div[style*="background-color: #fff5f3"] {
             background-color: rgba(22, 31, 48, 0.95) !important;
             border-color: #2D3A54 !important;
           }
 
-          /* Adaptación específica para tarjetas de Accesos Rápidos y gradientes blancos */
+          /* Tarjetas de Accesos Rápidos y gradientes blancos */
           html[data-theme="dark"] [data-service-card],
           html[data-theme="dark"] .r-borderColor-1wr2p1e {
             background-color: #161F30 !important;
@@ -1371,42 +1377,56 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             opacity: 0.95 !important;
           }
 
-          /* 2. Textos principales oscuros pasan a blanco */
+          /* 2. Textos principales oscuros pasan a blanco nítido (WCAG AAA) */
           html[data-theme="dark"] .r-color-18zdu8c,
           html[data-theme="dark"] .r-color-1rcpcwj,
           html[data-theme="dark"] [data-theme-color="dark"],
-          html[data-theme="dark"] div[style*="color: rgb(15, 23, 42)"],
-          html[data-theme="dark"] div[style*="color: #0F172A"],
-          html[data-theme="dark"] div[style*="color: rgb(30, 41, 59)"],
-          html[data-theme="dark"] div[style*="color: #1E293B"],
-          html[data-theme="dark"] div[style*="color: rgb(17, 24, 39)"],
-          html[data-theme="dark"] div[style*="color: #111827"] {
+          html[data-theme="dark"] *[style*="color: rgb(15, 23, 42)"],
+          html[data-theme="dark"] *[style*="color: #0F172A"],
+          html[data-theme="dark"] *[style*="color: #0f172a"],
+          html[data-theme="dark"] *[style*="color: rgb(30, 41, 59)"],
+          html[data-theme="dark"] *[style*="color: #1E293B"],
+          html[data-theme="dark"] *[style*="color: #1e293b"],
+          html[data-theme="dark"] *[style*="color: rgb(17, 24, 39)"],
+          html[data-theme="dark"] *[style*="color: #111827"] {
             color: #FFFFFF !important;
           }
 
-          /* 3. Textos secundarios oscuros pasan a gris claro legible */
+          /* 3. Textos secundarios oscuros pasan a gris claro de alto contraste */
           html[data-theme="dark"] .r-color-1s7ct43,
           html[data-theme="dark"] [data-theme-color="muted"],
-          html[data-theme="dark"] div[style*="color: rgb(100, 116, 139)"],
-          html[data-theme="dark"] div[style*="color: #64748B"],
-          html[data-theme="dark"] div[style*="color: rgb(71, 85, 105)"],
-          html[data-theme="dark"] div[style*="color: #475569"],
-          html[data-theme="dark"] div[style*="color: rgb(51, 65, 85)"],
-          html[data-theme="dark"] div[style*="color: #334155"] {
+          html[data-theme="dark"] *[style*="color: rgb(100, 116, 139)"],
+          html[data-theme="dark"] *[style*="color: #64748B"],
+          html[data-theme="dark"] *[style*="color: #64748b"],
+          html[data-theme="dark"] *[style*="color: rgb(71, 85, 105)"],
+          html[data-theme="dark"] *[style*="color: #475569"],
+          html[data-theme="dark"] *[style*="color: #475569"],
+          html[data-theme="dark"] *[style*="color: rgb(51, 65, 85)"],
+          html[data-theme="dark"] *[style*="color: #334155"],
+          html[data-theme="dark"] *[style*="color: #334155"] {
             color: #CBD5E1 !important;
           }
 
-          /* 4. Bordes claros y separadores */
+          /* 4. Bordes claros y líneas separadoras */
           html[data-theme="dark"] .r-borderColor-1wr2p1e,
-          html[data-theme="dark"] .r-backgroundColor-182zmgx,
           html[data-theme="dark"] [data-theme-border="light"],
-          html[data-theme="dark"] div[style*="border-color: rgb(226, 232, 240)"],
-          html[data-theme="dark"] div[style*="border-color: #E2E8F0"] {
+          html[data-theme="dark"] *[style*="border-color: rgb(226, 232, 240)"],
+          html[data-theme="dark"] *[style*="border-color: #E2E8F0"],
+          html[data-theme="dark"] *[style*="border-color: #e2e8f0"],
+          html[data-theme="dark"] *[style*="border-color: #CBD5E1"],
+          html[data-theme="dark"] *[style*="border-color: #cbd5e1"] {
             border-color: #2D3A54 !important;
+          }
+
+          html[data-theme="dark"] .r-backgroundColor-182zmgx,
+          html[data-theme="dark"] div[style*="background-color: rgb(226, 232, 240)"][style*="height: 1px"],
+          html[data-theme="dark"] div[style*="background-color: #E2E8F0"][style*="height: 1px"],
+          html[data-theme="dark"] div[style*="background-color: #e2e8f0"][style*="height: 1px"],
+          html[data-theme="dark"] div[style*="background-color: #F1F5F9"][style*="height: 1px"] {
             background-color: #2D3A54 !important;
           }
 
-          /* 5. Formularios e inputs oscuros con texto blanco */
+          /* 5. Inputs, selects, textareas y wrappers de selección (dropdowns) */
           html[data-theme="dark"] input,
           html[data-theme="dark"] textarea,
           html[data-theme="dark"] select,
@@ -1420,7 +1440,170 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             color: #94A3B8 !important;
           }
 
-          /* 6. Tablas y listas */
+          /* Wrappers interactivos de formulario (fecha, dependencia, hora, checbox) */
+          html[data-theme="dark"] div[style*="border-radius: 16px"][style*="background-color"],
+          html[data-theme="dark"] div[style*="border-radius: 8px"][style*="border-width: 2px"] {
+            background-color: #161F30 !important;
+            border-color: #3B4D6E !important;
+          }
+
+          /* 6. Cajas de Aviso, Notas de Parqueadero y Lineamientos (Amarillo / Ámbar) */
+          html[data-theme="dark"] div[style*="background-color: rgb(255, 251, 235)"],
+          html[data-theme="dark"] div[style*="background-color: #FFFBEB"],
+          html[data-theme="dark"] div[style*="background-color: #fffbeb"],
+          html[data-theme="dark"] div[style*="background-color: rgb(255, 247, 237)"],
+          html[data-theme="dark"] div[style*="background-color: #FFF7ED"],
+          html[data-theme="dark"] div[style*="background-color: #fff7ed"],
+          html[data-theme="dark"] div[style*="background-color: #FEF3C7"],
+          html[data-theme="dark"] div[style*="background-color: #fef3c7"] {
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            border-color: rgba(245, 158, 11, 0.45) !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: rgb(255, 251, 235)"] *,
+          html[data-theme="dark"] div[style*="background-color: #FFFBEB"] *,
+          html[data-theme="dark"] div[style*="background-color: #fffbeb"] *,
+          html[data-theme="dark"] div[style*="background-color: rgb(255, 247, 237)"] *,
+          html[data-theme="dark"] div[style*="background-color: #FFF7ED"] *,
+          html[data-theme="dark"] div[style*="background-color: #fff7ed"] *,
+          html[data-theme="dark"] div[style*="background-color: #FEF3C7"] * {
+            color: #FDE68A !important;
+          }
+
+          /* 7. Cajas Informativas Azules y Advertencias de Parqueadero */
+          html[data-theme="dark"] div[style*="background-color: rgb(239, 246, 255)"],
+          html[data-theme="dark"] div[style*="background-color: #EFF6FF"],
+          html[data-theme="dark"] div[style*="background-color: #eff6ff"],
+          html[data-theme="dark"] div[style*="background-color: #DBEAFE"],
+          html[data-theme="dark"] div[style*="background-color: #dbeafe"] {
+            background-color: rgba(37, 99, 235, 0.15) !important;
+            border-color: rgba(59, 130, 246, 0.45) !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: rgb(239, 246, 255)"] *,
+          html[data-theme="dark"] div[style*="background-color: #EFF6FF"] *,
+          html[data-theme="dark"] div[style*="background-color: #eff6ff"] *,
+          html[data-theme="dark"] div[style*="background-color: #DBEAFE"] *,
+          html[data-theme="dark"] div[style*="background-color: #dbeafe"] * {
+            color: #93C5FD !important;
+          }
+
+          /* 8. Cajas de Error y Bloqueos */
+          html[data-theme="dark"] div[style*="background-color: rgb(254, 242, 242)"],
+          html[data-theme="dark"] div[style*="background-color: #FEF2F2"],
+          html[data-theme="dark"] div[style*="background-color: #fef2f2"],
+          html[data-theme="dark"] div[style*="background-color: #FEE2E2"],
+          html[data-theme="dark"] div[style*="background-color: #fee2e2"] {
+            background-color: rgba(239, 68, 68, 0.18) !important;
+            border-color: rgba(239, 68, 68, 0.45) !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: rgb(254, 242, 242)"] *,
+          html[data-theme="dark"] div[style*="background-color: #FEF2F2"] *,
+          html[data-theme="dark"] div[style*="background-color: #fef2f2"] *,
+          html[data-theme="dark"] div[style*="background-color: #FEE2E2"] *,
+          html[data-theme="dark"] div[style*="background-color: #fee2e2"] * {
+            color: #FECACA !important;
+          }
+
+          /* 9. Aulas Barulé y Auditorio Huitaca (Manual de Salas) */
+          html[data-theme="dark"] div[style*="background-color: rgb(240, 249, 255)"],
+          html[data-theme="dark"] div[style*="background-color: #F0F9FF"],
+          html[data-theme="dark"] div[style*="background-color: #f0f9ff"] {
+            background-color: rgba(2, 132, 199, 0.15) !important;
+            border-color: rgba(56, 189, 248, 0.4) !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: #F0F9FF"] *,
+          html[data-theme="dark"] div[style*="background-color: #f0f9ff"] *,
+          html[data-theme="dark"] *[style*="color: #0C4A6E"],
+          html[data-theme="dark"] *[style*="color: rgb(12, 74, 110)"] {
+            color: #E0F2FE !important;
+          }
+          html[data-theme="dark"] *[style*="color: #0369A1"],
+          html[data-theme="dark"] *[style*="color: rgb(3, 105, 161)"] {
+            color: #38BDF8 !important;
+          }
+
+          /* 10. Botones de Prioridad en Mantenimiento (Baja, Media, Alta) */
+          html[data-theme="dark"] div[style*="background-color: #EBFDF5"],
+          html[data-theme="dark"] div[style*="background-color: #ebfdf5"] {
+            background-color: rgba(16, 185, 129, 0.2) !important;
+            border-color: #10B981 !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: #EBFDF5"] * {
+            color: #34D399 !important;
+          }
+
+          /* 11. Cuadrícula de Salas: Celdas ocupadas, celdas pasadas, celdas seleccionadas y chips */
+          html[data-theme="dark"] div[style*="background-color: rgb(255, 241, 242)"],
+          html[data-theme="dark"] div[style*="background-color: #FFF1F2"],
+          html[data-theme="dark"] div[style*="background-color: #fff1f2"] {
+            background-color: rgba(239, 68, 68, 0.18) !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: #FDA4AF"],
+          html[data-theme="dark"] div[style*="background-color: rgb(253, 164, 175)"] {
+            background-color: rgba(244, 63, 94, 0.35) !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: #FDA4AF"] *,
+          html[data-theme="dark"] *[style*="color: #9F1239"],
+          html[data-theme="dark"] *[style*="color: rgb(159, 18, 57)"] {
+            color: #FECDD3 !important;
+          }
+          /* Celdas inactivas pasadas del calendario */
+          html[data-theme="dark"] div[style*="background-color: rgb(226, 232, 240)"],
+          html[data-theme="dark"] div[style*="background-color: #E2E8F0"] {
+            background-color: rgba(30, 41, 59, 0.6) !important;
+          }
+          /* Chips de servicios adicionales */
+          html[data-theme="dark"] div[style*="background-color: #F3E8FF"],
+          html[data-theme="dark"] div[style*="background-color: #f3e8ff"] {
+            background-color: rgba(139, 92, 246, 0.2) !important;
+            border-color: #8B5CF6 !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: #F3E8FF"] *,
+          html[data-theme="dark"] *[style*="color: #7209B7"],
+          html[data-theme="dark"] *[style*="color: rgb(114, 9, 183)"] {
+            color: #DDD6FE !important;
+          }
+
+          /* 12. Botones de acción, contadores (+/-), botones de volver y badges */
+          html[data-theme="dark"] div[style*="background-color: #FFFFFF"][style*="border-radius: 12px"],
+          html[data-theme="dark"] div[style*="background-color: #ffffff"][style*="border-radius: 12px"],
+          html[data-theme="dark"] div[style*="background-color: #FFFFFF"][style*="border-radius: 10px"],
+          html[data-theme="dark"] div[style*="background-color: #ffffff"][style*="border-radius: 10px"],
+          html[data-theme="dark"] div[style*="border-radius: 18px"][style*="background-color"] {
+            background-color: #1E293B !important;
+            border-color: #3B4D6E !important;
+          }
+          html[data-theme="dark"] div[style*="border-radius: 18px"][style*="background-color"] * {
+            color: #FFFFFF !important;
+          }
+
+          /* Iconos y textos de botones de acción en tarjetas de vehículos */
+          html[data-theme="dark"] *[style*="color: #334155"],
+          html[data-theme="dark"] *[style*="color: rgb(51, 65, 85)"] {
+            color: #E2E8F0 !important;
+          }
+          html[data-theme="dark"] *[style*="color: #1D4ED8"],
+          html[data-theme="dark"] *[style*="color: rgb(29, 78, 216)"] {
+            color: #93C5FD !important;
+          }
+          html[data-theme="dark"] *[style*="color: #A9301E"],
+          html[data-theme="dark"] *[style*="color: #a9301e"] {
+            color: #F87171 !important;
+          }
+
+          /* 13. Exclusión Sagrada: Placa Oficial Colombiana Amarilla */
+          html[data-theme="dark"] div[style*="background-color: #FDE047"],
+          html[data-theme="dark"] div[style*="background-color: rgb(253, 224, 71)"],
+          html[data-theme="dark"] [data-colombia-plate] {
+            background-color: #FDE047 !important;
+            border-color: #000000 !important;
+          }
+          html[data-theme="dark"] div[style*="background-color: #FDE047"] *,
+          html[data-theme="dark"] div[style*="background-color: rgb(253, 224, 71)"] *,
+          html[data-theme="dark"] [data-colombia-plate] * {
+            color: #000000 !important;
+          }
+
+          /* 14. Tablas y listas */
           html[data-theme="dark"] table,
           html[data-theme="dark"] tr,
           html[data-theme="dark"] td,
@@ -1430,19 +1613,21 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             border-color: #2D3A54 !important;
           }
 
-          /* 7. Modales y ventanas emergentes */
+          /* 15. Modales, diálogos y hojas emergentes */
           html[data-theme="dark"] [role="dialog"],
-          html[data-theme="dark"] div[style*="background-color: white"] {
+          html[data-theme="dark"] div[style*="background-color: white"],
+          html[data-theme="dark"] div[style*="background-color: #fff"] {
             background-color: #161F30 !important;
             color: #FFFFFF !important;
+            border-color: #2D3A54 !important;
           }
 
-          /* 8. Enlaces */
+          /* 16. Enlaces y acentos */
           html[data-theme="dark"] a {
             color: #60A5FA !important;
           }
 
-          /* 9. Preservar imágenes, videos, logos e iconos */
+          /* 17. Preservar imágenes, videos, logos e iconos */
           html[data-theme="dark"] img,
           html[data-theme="dark"] video,
           html[data-theme="dark"] canvas,
@@ -1554,6 +1739,12 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         const tag = el.tagName?.toLowerCase();
         if (tag === 'img' || tag === 'video' || tag === 'canvas' || tag === 'svg' || tag === 'path') return;
 
+        // Proteger placa colombiana amarilla (#FDE047) y sus textos internos
+        const styleAttr = el.getAttribute('style') || '';
+        if (styleAttr.includes('#FDE047') || styleAttr.includes('253, 224, 71') || (el.closest && el.closest('[data-colombia-plate]'))) {
+          return;
+        }
+
         const st = window.getComputedStyle(el);
 
         // Fondos claros se marcan para aplicar superficie oscura
@@ -1561,8 +1752,11 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
           const m = bg.match(/\d+/g);
           if (m && m.length >= 3) {
-            const brightness = (+m[0] * 299 + +m[1] * 587 + +m[2] * 114) / 1000;
-            if (brightness > 165) {
+            const r = +m[0], g = +m[1], b = +m[2];
+            const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+            // Solo fondos neutrales claros (blancos y grises) se marcan con data-theme-bg
+            if (brightness > 165 && saturation <= 40) {
               el.setAttribute('data-theme-bg', 'light');
             }
           }
@@ -1579,11 +1773,17 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         if (col && col !== 'transparent' && col !== 'rgba(0, 0, 0, 0)') {
           const m = col.match(/\d+/g);
           if (m && m.length >= 3) {
-            const brightness = (+m[0] * 299 + +m[1] * 587 + +m[2] * 114) / 1000;
-            if (brightness < 115) {
-              el.setAttribute('data-theme-color', 'dark');
-            } else if (brightness >= 115 && brightness < 155) {
-              el.setAttribute('data-theme-color', 'muted');
+            const r = +m[0], g = +m[1], b = +m[2];
+            const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+            const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+            // Solo textos neutrales oscuros (slate, negro, gris)
+            if (saturation <= 45) {
+              if (brightness < 115) {
+                el.setAttribute('data-theme-color', 'dark');
+              } else if (brightness >= 115 && brightness < 160) {
+                el.setAttribute('data-theme-color', 'muted');
+              }
             }
           }
         }
