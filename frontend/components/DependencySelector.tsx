@@ -97,10 +97,19 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue, 
   return (
     <Modal visible={visible} transparent animationType='fade' onRequestClose={onClose}>
       <View style={d.overlay}>
-        <View style={[d.sheet, desktop && d.sheetDesk]}>
+        <View 
+          style={[d.sheet, desktop && d.sheetDesk]}
+          aria-modal={true}
+          accessibilityLabel="Selector de dependencias"
+          {...({ role: 'dialog' } as any)}
+        >
           <View style={d.head}>
             <Text style={d.tt}>Seleccionar dependencia</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity 
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar selector de dependencias"
+            >
               <Ionicons name='close' size={24} color='#0F172A' />
             </TouchableOpacity>
           </View>
@@ -113,6 +122,7 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue, 
               value={q} 
               onChangeText={setQ} 
               style={d.input} 
+              accessibilityLabel="Buscar dependencia"
             />
           </View>
 
@@ -129,6 +139,8 @@ export const DependencySelector = ({ visible, onClose, onSelect, selectedValue, 
                 <TouchableOpacity 
                   style={[d.row, selectedValue === item && d.rowOn]} 
                   onPress={() => { onSelect(item); onClose(); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Opción ${item}`}
                 >
                   <Text style={[d.tx, selectedValue === item && d.txOn]}>{item}</Text>
                   {selectedValue === item && <Ionicons name='checkmark-circle' size={20} color='#A9301E' />}

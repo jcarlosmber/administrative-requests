@@ -238,6 +238,10 @@ export default function MaintenanceRequestScreen() {
                     <TouchableOpacity 
                       style={styles.inputWrap} 
                       onPress={() => setShowDeps(true)}
+                      accessibilityRole="combobox"
+                      accessibilityLabel="Dependencia o Área"
+                      aria-label="Dependencia o Área"
+                      {...({ 'data-field-role': 'select', 'data-field-name': 'Dependencia' } as any)}
                     >
                       <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                       <Text style={[styles.input, !dependency && { color: '#94A3B8' }]}>

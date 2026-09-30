@@ -186,6 +186,10 @@ export default function TransportRequestScreen() {
                     <TouchableOpacity 
                       style={styles.inputWrap} 
                       onPress={() => setShowDeps(true)}
+                      accessibilityRole="combobox"
+                      accessibilityLabel="Dependencia o Área"
+                      aria-label="Dependencia o Área"
+                      {...({ 'data-field-role': 'select', 'data-field-name': 'Dependencia' } as any)}
                     >
                       <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                       <Text style={[styles.input, !dependency && { color: '#94A3B8' }]}>
@@ -291,6 +295,10 @@ export default function TransportRequestScreen() {
                             setTimePickerTarget('pickup');
                             setShowTimePicker(true);
                           }}
+                          accessibilityRole="combobox"
+                          accessibilityLabel="Hora de Recogida"
+                          aria-label="Hora de Recogida"
+                          {...({ 'data-field-role': 'select', 'data-field-name': 'Hora de Recogida' } as any)}
                         >
                           <Ionicons name="time-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                           <Text style={[styles.input, !pickupTime && { color: '#94A3B8' }]}>
@@ -327,6 +335,10 @@ export default function TransportRequestScreen() {
                           setTimePickerTarget('return');
                           setShowTimePicker(true);
                         }}
+                        accessibilityRole="combobox"
+                        accessibilityLabel="Hora de Regreso Estimada"
+                        aria-label="Hora de Regreso Estimada"
+                        {...({ 'data-field-role': 'select', 'data-field-name': 'Hora de Regreso Estimada' } as any)}
                       >
                         <Ionicons name="hourglass-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text style={[styles.input, !returnTime && { color: '#94A3B8' }]}>

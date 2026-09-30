@@ -2628,7 +2628,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     // 3. Selectores desplegables personalizados y pickers (Dependencia, Fechas, Horas)
     // 4. Casillas de Verificación / Checkboxes (ej. Aceptación de Términos Ley 1581)
     const clickables = Array.from(
-      document.querySelectorAll('div[style*="cursor: pointer"], div[role="button"], button')
+      document.querySelectorAll(
+        '[role="combobox"], [data-field-role="select"], [role="button"], [role="checkbox"], button, div[tabindex="0"], div[class*="r-cursor-1loqt21"], div[class*="cursor-pointer"], div[style*="cursor: pointer"]'
+      )
     ) as HTMLElement[];
 
     for (const el of clickables) {
@@ -2639,11 +2641,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       if (rect.width === 0 || rect.height === 0) continue;
 
       const text = (el.innerText || '').trim();
+      const ariaLabel = (el.getAttribute('aria-label') || el.getAttribute('data-field-name') || '').trim();
+      const ariaRole = (el.getAttribute('role') || el.getAttribute('data-field-role') || '').trim();
       const parent = el.closest('div, label, section') as HTMLElement;
       const labelText = parent ? (parent.querySelector('label, text, span, div')?.textContent || '').trim() : '';
 
       // Casilla de verificación / Checkbox
       const isCheckbox = (
+        ariaRole === 'checkbox' ||
         el.getAttribute('role') === 'checkbox' ||
         text.toLowerCase().includes('autorizo el tratamiento') ||
         text.toLowerCase().includes('ley 1581') ||
@@ -2669,29 +2674,55 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       }
 
       // Selector de Dependencia, Fecha o Hora
-      const isSelectorWrap = (
-        (text.includes('Seleccionar') || text.includes('Dependencia') || text.includes('202') || text.includes(':')) &&
-        (el.querySelector('svg, i') || text.includes('Seleccionar') || el.style.borderWidth)
-      ) || (labelText.toLowerCase().includes('dependencia') || labelText.toLowerCase().includes('fecha') || labelText.toLowerCase().includes('hora'));
+      const isCombobox = ariaRole === 'combobox' || ariaRole === 'select';
+      const isSelectorWrap = isCombobox || (
+        (text.toLowerCase().includes('seleccionar') || text.toLowerCase().includes('dependencia') || text.includes('202') || text.includes(':')) &&
+        (el.querySelector('svg, i') !== null || text.toLowerCase().includes('seleccionar') || el.style.borderWidth !== '')
+      ) || (
+        labelText.toLowerCase().includes('dependencia') || 
+        labelText.toLowerCase().includes('fecha') || 
+        labelText.toLowerCase().includes('hora') ||
+        ariaLabel.toLowerCase().includes('dependencia') ||
+        ariaLabel.toLowerCase().includes('fecha') ||
+        ariaLabel.toLowerCase().includes('hora')
+      );
 
-      if (isSelectorWrap && rect.height >= 30 && rect.width >= 60) {
-        let fieldLabel = labelText;
+      if (isSelectorWrap && rect.height >= 30 && rect.width >= 50) {
+        if (el.parentElement && seenElements.has(el.parentElement)) continue;
+
+        let fieldLabel = ariaLabel;
+        if (!fieldLabel || fieldLabel === text) {
+          fieldLabel = labelText;
+        }
         if (!fieldLabel || fieldLabel === text) {
           const prev = el.previousElementSibling as HTMLElement;
-          fieldLabel = prev?.innerText?.trim() || 'Selector';
+          fieldLabel = prev?.innerText?.trim() || '';
+        }
+        if (!fieldLabel || fieldLabel === text) {
+          const parentPrev = el.parentElement?.previousElementSibling as HTMLElement;
+          fieldLabel = parentPrev?.innerText?.trim() || '';
+        }
+        if (!fieldLabel) {
+          if (text.toLowerCase().includes('dependencia') || ariaLabel.toLowerCase().includes('dependencia')) fieldLabel = 'Dependencia';
+          else if (text.includes('202') || ariaLabel.toLowerCase().includes('fecha')) fieldLabel = 'Fecha';
+          else if (text.includes(':') || ariaLabel.toLowerCase().includes('hora')) fieldLabel = 'Hora';
+          else fieldLabel = 'Selector';
         }
         if (fieldLabel.length > 40) fieldLabel = fieldLabel.slice(0, 40);
 
-        const val = text !== 'Seleccionar' ? text : '';
+        const isUnselected = !text || text.toLowerCase().includes('seleccionar') || text.toLowerCase() === 'seleccionar dependencia';
+        const val = isUnselected ? '' : text;
+
         results.push({
           id: fieldLabel,
           element: el,
           type: 'select',
-          label: fieldLabel || 'Selector desplegable',
+          label: fieldLabel,
           value: val,
-          isFilled: val.length > 0 && val !== 'Seleccionar',
+          isFilled: !isUnselected && val.length > 0,
         });
         seenElements.add(el);
+        el.querySelectorAll('*').forEach(c => seenElements.add(c as HTMLElement));
       }
     }
 
@@ -2761,7 +2792,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     } else if (item.type === 'checkbox') {
       speakText(`Casilla: ${item.label}. Estado: ${item.value}. Diga marcar o aceptar, o diga siguiente.`);
     } else if (item.type === 'select') {
-      speakText(`Selector de: ${item.label}.${item.value ? ` Selección actual: ${item.value}.` : ' Sin seleccionar.'} Diga abrir o seleccionar para ver opciones, o diga siguiente.`);
+      speakText(`Selector de: ${item.label}.${item.value ? ` Selección actual: ${item.value}.` : ' Sin seleccionar.'} Diga abrir o seleccionar para ver opciones, o dicte el nombre de la opción (por ejemplo: En dependencia gestión corporativa), o diga siguiente.`);
     }
 
     return true;
@@ -2871,7 +2902,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
     if (currentItem.type === 'select') {
       currentItem.element.click();
-      speakText(`Selector ${currentItem.label} abierto. Diga el nombre de la opción para seleccionarla, o diga siguiente.`);
+      setTimeout(() => {
+        speakText(`Selector ${currentItem.label} abierto. Diga la opción deseada para seleccionarla (por ejemplo: Gestión Corporativa o Jurídica), o diga cerrar.`);
+      }, 350);
       return;
     }
 
@@ -2880,6 +2913,85 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       speakText(`Campo de texto ${currentItem.label}. Dicte el valor que desea escribir, o diga borrar o repetir.`);
       return;
     }
+  };
+
+  // Helper para buscar y seleccionar una opción en un selector desplegable o modal (ej. Dependencias, Salas)
+  const selectDropdownOrModalOption = (fieldNameKeywords: string[], optionValue: string): boolean => {
+    if (typeof document === 'undefined') return false;
+    const cleanOption = optionValue.toLowerCase().trim();
+    if (!cleanOption) return false;
+
+    // 1. Si ya hay un modal abierto en pantalla
+    const openModals = Array.from(
+      document.querySelectorAll(
+        '[role="dialog"], [aria-modal="true"], div[style*="z-index: 999"], div[style*="z-index: 999999"], div[style*="zIndex: 999"]'
+      )
+    ) as HTMLElement[];
+
+    const searchAndClick = (container: HTMLElement): boolean => {
+      const clickables = Array.from(
+        container.querySelectorAll('div[tabindex="0"], div[role="button"], button, [style*="cursor: pointer"], div[class*="r-cursor-1loqt21"]')
+      ) as HTMLElement[];
+
+      // Intento A: Coincidencia directa
+      for (const el of clickables) {
+        const text = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase().trim();
+        if (!text || text.length > 90) continue;
+        if (text === cleanOption || text.includes(cleanOption) || cleanOption.includes(text)) {
+          el.click();
+          return true;
+        }
+      }
+
+      // Intento B: Palabras clave clave
+      const words = cleanOption.split(/\s+/).filter(w => w.length > 3 && !['para', 'como', 'área', 'area', 'dependencia', 'dirección', 'direccion'].includes(w));
+      if (words.length > 0) {
+        for (const el of clickables) {
+          const text = (el.innerText || el.getAttribute('aria-label') || '').toLowerCase().trim();
+          if (!text || text.length > 90) continue;
+          if (words.some(w => text.includes(w))) {
+            el.click();
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    for (const m of openModals) {
+      if (searchAndClick(m)) {
+        speakText(`Opción ${cleanOption} seleccionada. Diga siguiente para continuar.`);
+        return true;
+      }
+    }
+
+    // 2. Si no hay modal abierto, buscar el control selector en el formulario y abrirlo
+    const controls = getVisibleFormControls();
+    const targetSelect = controls.find(c => 
+      c.type === 'select' && 
+      fieldNameKeywords.some(kw => c.label.toLowerCase().includes(kw.toLowerCase()))
+    );
+
+    if (targetSelect) {
+      targetSelect.element.click();
+      setTimeout(() => {
+        const newModals = Array.from(
+          document.querySelectorAll(
+            '[role="dialog"], [aria-modal="true"], div[style*="z-index: 999"], div[style*="z-index: 999999"], div[style*="zIndex: 999"]'
+          )
+        ) as HTMLElement[];
+        for (const m of newModals) {
+          if (searchAndClick(m)) {
+            speakText(`Opción ${cleanOption} seleccionada en ${targetSelect.label}. Diga siguiente para continuar.`);
+            return;
+          }
+        }
+        speakText(`Selector ${targetSelect.label} abierto. Diga la opción que desea seleccionar.`);
+      }, 350);
+      return true;
+    }
+
+    return false;
   };
 
   // Helper para detectar campos faltantes por llenar ("¿qué falta?", "campos faltantes", "falta llenar")
@@ -2920,7 +3032,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     } else if (targetItem.type === 'checkbox') {
       speakText(`${restText}Posicionado en la casilla: ${firstLabel}. Diga marcar o aceptar, o diga siguiente.`);
     } else if (targetItem.type === 'select') {
-      speakText(`${restText}Posicionado en el selector: ${firstLabel}. Diga abrir o seleccionar, o diga siguiente.`);
+      speakText(`${restText}Posicionado en el selector: ${firstLabel}. Diga abrir o seleccionar para ver opciones, o dicte la opción deseada.`);
     } else {
       speakText(`${restText}Posicionado en: ${firstLabel}.`);
     }
@@ -3294,19 +3406,48 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         return;
       }
 
-      // Selección directa si hay un modal de opciones desplegado (ej. Dependencias, Salas)
+      // Selección directa si hay un modal de opciones desplegado (ej. Dependencias, Salas, Fechas)
       if (typeof document !== 'undefined') {
-        const openModal = document.querySelector('[role="dialog"]') as HTMLElement;
-        if (openModal) {
-          const options = Array.from(openModal.querySelectorAll('div[role="button"], button, [style*="cursor: pointer"]')) as HTMLElement[];
-          const found = options.find(opt => {
-            const optText = (opt.innerText || '').toLowerCase().trim();
-            return optText && (optText.includes(text) || text.includes(optText)) && optText.length < 80;
-          });
-          if (found) {
-            found.click();
-            speakText(`Opción seleccionada: ${found.innerText?.trim()}. Diga siguiente para continuar.`);
+        const openModals = Array.from(
+          document.querySelectorAll(
+            '[role="dialog"], [aria-modal="true"], div[style*="z-index: 999"], div[style*="z-index: 999999"], div[style*="zIndex: 999"]'
+          )
+        ) as HTMLElement[];
+
+        if (openModals.length > 0) {
+          if (
+            text === 'cerrar' || 
+            text === 'cerrar selector' || 
+            text === 'cerrar opciones' || 
+            text === 'cerrar modal' || 
+            text === 'cerrar ventana' || 
+            text === 'cancelar'
+          ) {
+            const closeBtn = document.querySelector(
+              '[role="dialog"] [aria-label*="Cerrar"], [role="dialog"] [aria-label*="cerrar"], [role="dialog"] button, [role="dialog"] [role="button"]'
+            ) as HTMLElement;
+            if (closeBtn) closeBtn.click();
+            speakText('Selector cerrado.');
             return;
+          }
+
+          for (const modal of openModals) {
+            const options = Array.from(
+              modal.querySelectorAll('div[tabindex="0"], div[role="button"], button, [style*="cursor: pointer"], div[class*="r-cursor-1loqt21"]')
+            ) as HTMLElement[];
+            const found = options.find(opt => {
+              const optText = (opt.innerText || opt.getAttribute('aria-label') || '').toLowerCase().trim();
+              if (!optText || optText.length > 90) return false;
+              if (optText === text || optText.includes(text) || text.includes(optText)) return true;
+              const words = text.split(/\s+/).filter(w => w.length > 3 && !['opcion', 'opción', 'seleccionar', 'elegir', 'para', 'como'].includes(w));
+              return words.length > 0 && words.some(w => optText.includes(w));
+            });
+            if (found) {
+              found.click();
+              const chosen = found.innerText?.trim() || text;
+              speakText(`Opción seleccionada: ${chosen}. Diga siguiente para continuar.`);
+              return;
+            }
           }
         }
       }
@@ -3623,6 +3764,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             speakText(`Dependencia ${val} ingresada. Diga siguiente para continuar.`);
             return;
           }
+          const selected = selectDropdownOrModalOption(['dependencia', 'área', 'area', 'direccion'], val);
+          if (selected) {
+            return;
+          }
         }
       }
 
@@ -3656,7 +3801,20 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         return;
       }
 
-      // 5.22 Dictado directo sobre el campo actualmente enfocado (al usar "siguiente" o haber seleccionado el input)
+      // 5.22 Dictado directo sobre el campo actualmente enfocado (al usar "siguiente" o haber seleccionado el input o selector)
+      const allFormControls = getVisibleFormControls();
+      const currentControl = (currentFormNavIndexRef.current >= 0 && currentFormNavIndexRef.current < allFormControls.length)
+        ? allFormControls[currentFormNavIndexRef.current]
+        : null;
+
+      if (currentControl && currentControl.type === 'select') {
+        const cleanedValue = cleanDictatedValue(text);
+        if (cleanedValue && cleanedValue.length >= 2) {
+          const ok = selectDropdownOrModalOption([currentControl.label, 'dependencia'], cleanedValue);
+          if (ok) return;
+        }
+      }
+
       const activeEl = typeof document !== 'undefined' ? (document.activeElement as HTMLInputElement | HTMLTextAreaElement) : null;
       const targetInput = (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.closest('#accessibility-toolbar-modal'))
         ? activeEl

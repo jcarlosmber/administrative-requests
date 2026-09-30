@@ -1245,6 +1245,10 @@ export default function ParkingRequestScreen() {
                     <TouchableOpacity
                       style={[styles.inputWrap, { justifyContent: 'space-between', backgroundColor: '#FFFFFF' }]}
                       onPress={() => setShowDeps(true)}
+                      accessibilityRole="combobox"
+                      accessibilityLabel="Dependencia"
+                      aria-label="Dependencia"
+                      {...({ 'data-field-role': 'select', 'data-field-name': 'Dependencia' } as any)}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                         <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />

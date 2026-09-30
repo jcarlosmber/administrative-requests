@@ -974,6 +974,10 @@ export default function RoomsRequestScreen() {
                       <TouchableOpacity 
                         style={styles.inputWrap} 
                         onPress={() => setShowDeps(true)}
+                        accessibilityRole="combobox"
+                        accessibilityLabel="Dependencia Solicitante"
+                        aria-label="Dependencia Solicitante"
+                        {...({ 'data-field-role': 'select', 'data-field-name': 'Dependencia' } as any)}
                       >
                         <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text 

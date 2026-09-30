@@ -445,6 +445,10 @@ export default function VisitorsScreen() {
                       <TouchableOpacity 
                         style={styles.inputWrap} 
                         onPress={() => setShowDeps(true)}
+                        accessibilityRole="combobox"
+                        accessibilityLabel="Dependencia"
+                        aria-label="Dependencia"
+                        {...({ 'data-field-role': 'select', 'data-field-name': 'Dependencia' } as any)}
                       >
                         <Ionicons name="business-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text 
@@ -489,6 +493,10 @@ export default function VisitorsScreen() {
                           setModalTarget('from');
                           setShowDatePicker(true);
                         }}
+                        accessibilityRole="combobox"
+                        accessibilityLabel="Desde (Fecha)"
+                        aria-label="Desde (Fecha)"
+                        {...({ 'data-field-role': 'select', 'data-field-name': 'Desde (Fecha)' } as any)}
                       >
                         <Ionicons name="calendar-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text style={styles.input}>{fromDate}</Text>
@@ -503,6 +511,10 @@ export default function VisitorsScreen() {
                           setModalTarget('to');
                           setShowDatePicker(true);
                         }}
+                        accessibilityRole="combobox"
+                        accessibilityLabel="Hasta (Fecha)"
+                        aria-label="Hasta (Fecha)"
+                        {...({ 'data-field-role': 'select', 'data-field-name': 'Hasta (Fecha)' } as any)}
                       >
                         <Ionicons name="calendar-outline" size={18} color={COLORS.muted} style={{ marginRight: 10 }} />
                         <Text style={styles.input}>{toDate}</Text>
