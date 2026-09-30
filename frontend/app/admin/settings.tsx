@@ -2476,6 +2476,198 @@ export default function AdminSettings() {
 
                   <View style={{ height: 24 }} />
 
+                  {/* Sección: Stack Tecnológico y Arquitectura del Código */}
+                  <SectionHeader title="Arquitectura y Tecnologías del Sistema" kicker="STACK DE DESARROLLO Y CÓDIGO" />
+                  <View style={styles.gitDeployCard}>
+                    <View style={styles.gitDeployHeader}>
+                      <View style={[styles.gitIconCircle, { backgroundColor: '#3B82F618' }]}>
+                        <Ionicons name="code-slash" size={24} color="#2563EB" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Text style={styles.gitDeployTitle}>¿En qué está desarrollado el sistema?</Text>
+                          <View style={{
+                            backgroundColor: '#EFF6FF',
+                            borderColor: '#BFDBFE',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Ionicons name="layers-outline" size={12} color="#1D4ED8" />
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#1D4ED8', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                              Full Stack Moderno
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.gitDeploySubtitle}>
+                          Detalle técnico de los lenguajes, frameworks, librerías base y servicios sobre los que está construido y desplegado SASGE.
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.configDivider} />
+
+                    <View style={styles.statsGrid}>
+                      {/* 1. Frontend */}
+                      <View style={styles.metricCard}>
+                        <View style={styles.metricHeader}>
+                          <View style={[styles.metricIconCircle, { backgroundColor: '#EFF6FF' }]}>
+                            <Ionicons name="phone-portrait-outline" size={20} color="#2563EB" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.metricLabel}>Frontend & Móvil / Web</Text>
+                            <Text style={styles.metricSubtitle}>Interfaz de usuario reactiva</Text>
+                          </View>
+                          <View style={[styles.metricBadge, { backgroundColor: '#EFF6FF' }]}>
+                            <Text style={[styles.metricBadgeText, { color: '#2563EB' }]}>Expo 54</Text>
+                          </View>
+                        </View>
+
+                        <View style={{ marginVertical: 10 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>
+                            React Native 0.81.5 + React 19.1.0
+                          </Text>
+                          <Text style={{ fontSize: 12, color: COLORS.muted, lineHeight: 18 }}>
+                            Enrutamiento nativo con <Text style={{ fontWeight: '700', color: COLORS.primary }}>Expo Router v6</Text> (arquitectura modular basada en carpetas <Text style={{ fontWeight: '700', color: COLORS.primary }}>/app</Text> y entrada <Text style={{ fontWeight: '700', color: COLORS.primary }}>expo-router/entry</Text>).
+                          </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
+                          {['TypeScript ~5.9', 'React Native Web 0.21', 'Vector Icons (Ionicons)', 'Expo Video', 'Accesibilidad Universal'].map((tag) => (
+                            <View key={tag} style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#334155' }}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+
+                      {/* 2. Backend */}
+                      <View style={styles.metricCard}>
+                        <View style={styles.metricHeader}>
+                          <View style={[styles.metricIconCircle, { backgroundColor: '#ECFDF5' }]}>
+                            <Ionicons name="server-outline" size={20} color="#059669" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.metricLabel}>Backend & API REST</Text>
+                            <Text style={styles.metricSubtitle}>Lógica de negocio y servicios</Text>
+                          </View>
+                          <View style={[styles.metricBadge, { backgroundColor: '#ECFDF5' }]}>
+                            <Text style={[styles.metricBadgeText, { color: '#059669' }]}>Node.js</Text>
+                          </View>
+                        </View>
+
+                        <View style={{ marginVertical: 10 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>
+                            Node.js (LTS) + Express.js 4.19
+                          </Text>
+                          <Text style={{ fontSize: 12, color: COLORS.muted, lineHeight: 18 }}>
+                            Servidor RESTful con autenticación <Text style={{ fontWeight: '700', color: COLORS.primary }}>JWT (JSON Web Tokens)</Text>, encriptación Bcrypt y validación de seguridad de roles.
+                          </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
+                          {['LDAP (Active Directory)', 'Nodemailer (SMTP)', 'Child Process (Git/PM2)', 'CORS', 'Dotenv'].map((tag) => (
+                            <View key={tag} style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#334155' }}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+
+                      {/* 3. Base de Datos */}
+                      <View style={styles.metricCard}>
+                        <View style={styles.metricHeader}>
+                          <View style={[styles.metricIconCircle, { backgroundColor: '#FEF3C7' }]}>
+                            <Ionicons name="cube-outline" size={20} color="#D97706" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.metricLabel}>Base de Datos & Datos</Text>
+                            <Text style={styles.metricSubtitle}>Persistencia y almacenamiento</Text>
+                          </View>
+                          <View style={[styles.metricBadge, { backgroundColor: '#FEF3C7' }]}>
+                            <Text style={[styles.metricBadgeText, { color: '#D97706' }]}>PostgreSQL</Text>
+                          </View>
+                        </View>
+
+                        <View style={{ marginVertical: 10 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>
+                            PostgreSQL + Supabase Client
+                          </Text>
+                          <Text style={{ fontSize: 12, color: COLORS.muted, lineHeight: 18 }}>
+                            Pool relacional de conexiones optimizadas con <Text style={{ fontWeight: '700', color: COLORS.primary }}>pg (node-postgres 8.11)</Text> y cliente <Text style={{ fontWeight: '700', color: COLORS.primary }}>@supabase/supabase-js 2.90</Text>.
+                          </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
+                          {['PostgreSQL 14+', 'Supabase Cloud', 'xlsx / xlsx-js-style', 'Pool Conexiones', 'Migraciones SQL'].map((tag) => (
+                            <View key={tag} style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#334155' }}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+
+                      {/* 4. IA & Asistente */}
+                      <View style={styles.metricCard}>
+                        <View style={styles.metricHeader}>
+                          <View style={[styles.metricIconCircle, { backgroundColor: '#FAF5FF' }]}>
+                            <Ionicons name="sparkles-outline" size={20} color="#7E22CE" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.metricLabel}>Inteligencia Artificial & Voz</Text>
+                            <Text style={styles.metricSubtitle}>Asistencia y Accesibilidad</Text>
+                          </View>
+                          <View style={[styles.metricBadge, { backgroundColor: '#FAF5FF' }]}>
+                            <Text style={[styles.metricBadgeText, { color: '#7E22CE' }]}>IA Dual</Text>
+                          </View>
+                        </View>
+
+                        <View style={{ marginVertical: 10 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: COLORS.primary, marginBottom: 4 }}>
+                            Google Gemini + Groq (Llama 3)
+                          </Text>
+                          <Text style={{ fontSize: 12, color: COLORS.muted, lineHeight: 18 }}>
+                            Chatbot con motor RAG local de procedimientos, síntesis de voz y reconocimiento continuo manos libres para usuarios con discapacidad visual.
+                          </Text>
+                        </View>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 6 }}>
+                          {['Gemini 1.5/2.0 SDK', 'Groq Cloud SDK', 'Web Speech API', 'Lengua de Señas (LSC)', 'Lector de Pantalla'].map((tag) => (
+                            <View key={tag} style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#334155' }}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Resumen de arquitectura */}
+                    <View style={{
+                      marginHorizontal: 16,
+                      marginBottom: 16,
+                      padding: 14,
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12
+                    }}>
+                      <Ionicons name="information-circle" size={24} color="#3B82F6" />
+                      <Text style={{ flex: 1, fontSize: 12, color: '#334155', lineHeight: 18 }}>
+                        <Text style={{ fontWeight: '800', color: COLORS.primary }}>Resumen de Arquitectura: </Text>
+                        El portal opera con un frontend universal desacoplado, comunicándose vía HTTPS / REST con el backend Node.js en el servidor de producción (10.54.80.209), versionado en GitHub (<Text style={{ fontWeight: '700', color: '#2563EB' }}>origin/main</Text>) para despliegue automatizado con cero caídas.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ height: 24 }} />
+
                   <SectionHeader title="Despliegue y Control de Versiones" kicker="NIVEL SUPERADMIN" />
                   <View style={styles.gitDeployCard}>
                     {/* Cabecera de la tarjeta */}
