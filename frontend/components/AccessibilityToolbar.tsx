@@ -2367,28 +2367,166 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     return false;
   };
 
-  // Helper para extraer el valor dictado después de una o varias palabras clave
-  const extractValueAfter = (fullText: string, prefixes: string[]): string => {
-    for (const prefix of prefixes) {
-      const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`(?:^|\\b)${escaped}(?:\\ses|\\sson|\\sde|\\spara|\\scon)?\\s+(.+)`, 'i');
-      const match = fullText.match(regex);
-      if (match && match[1]) {
-        return match[1].trim();
+  // Helper para limpiar el valor dictado eliminando verbos de acción y muletillas comunes
+  const cleanDictatedValue = (raw: string): string => {
+    if (!raw) return '';
+    let cleaned = raw.trim();
+    // Quitar verbos y palabras de relleno iniciales
+    cleaned = cleaned.replace(
+      /^(coloque|colocar|pon|poner|escriba|escribe|escribir|digite|digitar|ingrese|ingresar|asigne|asignar|que\s+sea|sea|es|como)\s+/i,
+      ''
+    );
+    // Quitar artículos iniciales si quedan sueltos
+    cleaned = cleaned.replace(/^(un|una)\s+/i, '');
+    // Quitar puntuación final producida por el reconocedor de voz
+    cleaned = cleaned.replace(/[.,;:]+$/, '').trim();
+    return cleaned;
+  };
+
+  // Helper avanzado para extraer el valor dictado en frases naturales en español
+  // Soporta:
+  // "en nombre coloque Juan Carlos"
+  // "en el formulario en nombre coloque Juan Carlos"
+  // "coloque en nombre Juan Carlos"
+  // "coloque Juan Carlos en nombre"
+  // "nombre Juan Carlos"
+  const extractFieldValue = (fullText: string, fieldKeywords: string[]): string => {
+    let text = fullText.trim();
+    // Quitar prefijos comunes de contexto como "en el formulario (de ...)", "en el campo", etc.
+    text = text.replace(/^en\s+el\s+formulario(?:\s+de\s+[a-záéíóúñ]+)?\s*/i, '');
+
+    for (const kw of fieldKeywords) {
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // Patrón 1 (Directo): "en [campo] (coloque|pon|...) [VALOR]" o "[campo] [VALOR]"
+      const patternForward = new RegExp(
+        `(?:^|\\b)(?:en\\s+(?:el\\s+campo\\s+|el\\s+|la\\s+)?)?${escaped}(?:\\s+(?:coloque|colocar|pon|poner|escriba|escribe|escribir|digite|digitar|ingrese|ingresar|asigne|asignar|es|son|de|para|con|sea))?\\s+(.+)`,
+        'i'
+      );
+      const matchForward = text.match(patternForward);
+      if (matchForward && matchForward[1]) {
+        const val = cleanDictatedValue(matchForward[1]);
+        if (val && !fieldKeywords.some(k => k.toLowerCase() === val.toLowerCase())) {
+          return val;
+        }
+      }
+
+      // Patrón 2 (Invertido): "(coloque|pon|escriba|ingrese) [VALOR] en (el campo)? [campo]"
+      const patternReverse = new RegExp(
+        `(?:^|\\b)(?:coloque|colocar|pon|poner|escriba|escribe|escribir|digite|digitar|ingrese|ingresar)\\s+(.+?)\\s+en\\s+(?:el\\s+campo\\s+|el\\s+|la\\s+)?${escaped}(?:\\b|$)`,
+        'i'
+      );
+      const matchReverse = text.match(patternReverse);
+      if (matchReverse && matchReverse[1]) {
+        const val = cleanDictatedValue(matchReverse[1]);
+        if (val) return val;
+      }
+
+      // Patrón 3 (Verbo antes del campo): "(coloque|pon|escriba) en (el campo)? [campo] [VALOR]"
+      const patternVerbFirst = new RegExp(
+        `(?:^|\\b)(?:coloque|colocar|pon|poner|escriba|escribe|escribir|digite|digitar|ingrese|ingresar|asigne|asignar)\\s+en\\s+(?:el\\s+campo\\s+|el\\s+|la\\s+)?${escaped}\\s+(.+)`,
+        'i'
+      );
+      const matchVerbFirst = text.match(patternVerbFirst);
+      if (matchVerbFirst && matchVerbFirst[1]) {
+        const val = cleanDictatedValue(matchVerbFirst[1]);
+        if (val) return val;
       }
     }
+
     return '';
+  };
+
+  // Helper para mantener compatibilidad
+  const extractValueAfter = (fullText: string, prefixes: string[]): string => {
+    return extractFieldValue(fullText, prefixes);
+  };
+
+  // Helper para obtener la etiqueta descriptiva de un campo
+  const getFieldLabel = (inputEl: HTMLElement): string => {
+    const aria = inputEl.getAttribute('aria-label');
+    if (aria) return aria.trim();
+    const ph = (inputEl as HTMLInputElement).placeholder;
+    if (ph) return ph.trim();
+    const parent = inputEl.closest('div, label, section') as HTMLElement;
+    const parentText = parent?.innerText?.split('\n').map(t => t.trim()).filter(Boolean)[0];
+    if (parentText && parentText.length < 50) return parentText;
+    return (inputEl as HTMLInputElement).name || 'Campo';
+  };
+
+  // Helper para obtener los inputs visibles y editables del formulario
+  const getVisibleFormInputs = (): (HTMLInputElement | HTMLTextAreaElement)[] => {
+    if (typeof document === 'undefined') return [];
+    const elements = Array.from(
+      document.querySelectorAll('input:not([type="hidden"]):not([disabled]), textarea:not([disabled])')
+    ) as (HTMLInputElement | HTMLTextAreaElement)[];
+    return elements.filter((el) => {
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        !el.closest('#accessibility-toolbar-modal')
+      );
+    });
+  };
+
+  // Helper para navegar de campo en campo ("siguiente", "anterior")
+  const navigateFormFields = (direction: 'next' | 'prev'): boolean => {
+    if (typeof document === 'undefined') return false;
+    const inputs = getVisibleFormInputs();
+    if (inputs.length === 0) {
+      speakText('No se encontraron campos de formulario editables en esta pantalla.');
+      return false;
+    }
+
+    const activeEl = document.activeElement as HTMLElement;
+    const currentIndex = inputs.indexOf(activeEl as any);
+
+    let targetIndex = 0;
+    if (direction === 'next') {
+      if (currentIndex === -1) {
+        targetIndex = 0;
+      } else if (currentIndex < inputs.length - 1) {
+        targetIndex = currentIndex + 1;
+      } else {
+        speakText('Ha llegado al final de los campos. Diga: Acepto términos, o diga: Radicar solicitud para enviar.');
+        return true;
+      }
+    } else {
+      if (currentIndex <= 0) {
+        targetIndex = 0;
+        const label = getFieldLabel(inputs[0]);
+        speakText(`Ya está en el primer campo: ${label}.`);
+        inputs[0].focus();
+        return true;
+      } else {
+        targetIndex = currentIndex - 1;
+      }
+    }
+
+    const targetInput = inputs[targetIndex];
+    try {
+      targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      // scroll fallback
+    }
+    targetInput.focus();
+    const label = getFieldLabel(targetInput);
+    const curVal = targetInput.value?.trim();
+    speakText(`Campo: ${label}.${curVal ? ` Valor actual: ${curVal}.` : ' Está vacío.'} Diga lo que desea ingresar, o diga siguiente.`);
+    return true;
   };
 
   // Helper para leer los campos del formulario actual
   const readFormSummary = () => {
     if (typeof document === 'undefined') return;
-    const allInputs = Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea')) as (HTMLInputElement | HTMLTextAreaElement)[];
+    const allInputs = getVisibleFormInputs();
     const summaryList: string[] = [];
     allInputs.forEach((inp) => {
-      const parent = inp.closest('div, section') as HTMLElement;
-      const label = inp.getAttribute('aria-label') || inp.placeholder || parent?.innerText?.split('\n')[0] || inp.name || 'Campo';
-      const cleanLabel = label.replace(/\s+/g, ' ').trim().slice(0, 30);
+      const cleanLabel = getFieldLabel(inp).slice(0, 30);
       const val = inp.value?.trim();
       summaryList.push(`${cleanLabel}: ${val ? val : 'vacío'}`);
     });
@@ -2433,23 +2571,23 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         return;
       }
       if (pathname.includes('/requests/visitors')) {
-        speakText('En el formulario de visitantes puede decir: Nombre Juan, Documento doce tres, Con vehículo o Sin vehículo, Placa, Marca, Motivo, Acepto términos, Registrar ingreso, o Leer formulario.');
+        speakText('En este formulario puede decir Siguiente para avanzar de campo en campo, o dictar directamente: En nombre coloque Juan Carlos, En documento 102030, Con vehículo o Sin vehículo, En placa ABC 123, En marca Mazda, En motivo reunión de trabajo, Acepto términos, o Registrar ingreso.');
         return;
       }
       if (pathname.includes('/requests/transport')) {
-        speakText('En transporte puede decir: Nombre, Teléfono, Origen, Destino, Pasajeros dos, Motivo, Enviar solicitud, o Leer formulario.');
+        speakText('En transporte puede decir Siguiente para avanzar campo por campo, o dictar: En nombre coloque Juan Carlos, En teléfono 3101234567, En origen sede central, En destino fiscalía, En pasajeros dos, En motivo justificación, Acepto términos, o Enviar solicitud.');
         return;
       }
       if (pathname.includes('/requests/maintenance')) {
-        speakText('En mantenimiento puede decir: Título daño de luz, Ubicación piso tres, Oficina 304, Descripción no enciende, Prioridad alta, Enviar reporte, o Leer formulario.');
+        speakText('En mantenimiento puede decir Siguiente para avanzar, o dictar: En título daño de luz, En ubicación piso tres, En oficina 304, En descripción detalle de la falla, Prioridad alta, Acepto términos, o Enviar reporte.');
         return;
       }
       if (pathname.includes('/requests/rooms')) {
-        speakText('En reserva de salas puede decir: Asunto reunión, Asistentes cuatro, Presencial o Virtual, Confirmar reserva, o Leer formulario.');
+        speakText('En salas puede decir Siguiente para avanzar, o dictar: En asunto reunión directiva, En asistentes cuatro, Modalidad presencial o virtual, Acepto términos, o Confirmar reserva.');
         return;
       }
       if (pathname.includes('/requests/parking')) {
-        speakText('En parqueadero puede decir: Nombre, Documento, Placa, Marca, Color, Carro o Moto, Radicar solicitud, o Leer formulario.');
+        speakText('En parqueadero puede decir Siguiente para avanzar, o dictar: En nombre Juan Carlos, En documento 102030, En placa ABC 123, En marca Chevrolet, En color gris, Carro o Moto, Acepto términos, o Radicar solicitud.');
         return;
       }
       if (pathname.includes('/login')) {
@@ -2668,6 +2806,47 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     // 5. Adaptación para Formularios (/requests/*)
     const isFormPage = pathname.includes('/requests/');
     if (isFormPage) {
+      // 5.0 Navegación secuencial de campos ("siguiente", "anterior", "borrar")
+      if (
+        text === 'siguiente' ||
+        text === 'siguiente campo' ||
+        text === 'campo siguiente' ||
+        text === 'avanzar' ||
+        text === 'continuar' ||
+        text === 'pasa al siguiente' ||
+        text === 'pasar al siguiente' ||
+        text === 'próximo' ||
+        text === 'proximo' ||
+        text === 'próximo campo' ||
+        text === 'proximo campo'
+      ) {
+        navigateFormFields('next');
+        return;
+      }
+
+      if (
+        text === 'anterior' ||
+        text === 'campo anterior' ||
+        text === 'anterior campo' ||
+        text === 'retroceder' ||
+        text === 'atrás' ||
+        text === 'atras' ||
+        text === 'volver al campo anterior'
+      ) {
+        navigateFormFields('prev');
+        return;
+      }
+
+      if (text === 'borrar campo' || text === 'limpiar campo' || text === 'borrar valor' || text === 'borrar' || text === 'limpiar') {
+        const activeEl = typeof document !== 'undefined' ? (document.activeElement as HTMLInputElement | HTMLTextAreaElement) : null;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+          setNativeDomInputValue(activeEl, '');
+          const lbl = getFieldLabel(activeEl);
+          speakText(`Campo ${lbl} borrado. Diga lo que desea ingresar o diga siguiente.`);
+          return;
+        }
+      }
+
       // 5.1 Enviar / Radicar / Guardar el formulario
       if (
         text.includes('radicar') ||
@@ -2706,7 +2885,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           });
           if (termsEl) {
             termsEl.click();
-            speakText('Términos y autorización de datos marcados correctamente.');
+            speakText('Términos y autorización de datos marcados correctamente. Diga Radicar solicitud para enviar.');
             return;
           }
         }
@@ -2730,17 +2909,17 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       if (text.includes('prioridad')) {
         if (text.includes('alta')) {
           clickButtonByKeywords(['alta']);
-          speakText('Prioridad alta seleccionada.');
+          speakText('Prioridad alta seleccionada. Diga siguiente para continuar.');
           return;
         }
         if (text.includes('media')) {
           clickButtonByKeywords(['media']);
-          speakText('Prioridad media seleccionada.');
+          speakText('Prioridad media seleccionada. Diga siguiente para continuar.');
           return;
         }
         if (text.includes('baja')) {
           clickButtonByKeywords(['baja']);
-          speakText('Prioridad baja seleccionada.');
+          speakText('Prioridad baja seleccionada. Diga siguiente para continuar.');
           return;
         }
       }
@@ -2748,165 +2927,227 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       // 5.5 Tipo de reunión en Salas
       if (text.includes('presencial')) {
         clickButtonByKeywords(['presencial']);
-        speakText('Tipo de reunión: Presencial.');
+        speakText('Tipo de reunión: Presencial. Diga siguiente para continuar.');
         return;
       }
       if (text.includes('virtual')) {
         clickButtonByKeywords(['virtual']);
-        speakText('Tipo de reunión: Virtual.');
+        speakText('Tipo de reunión: Virtual. Diga siguiente para continuar.');
         return;
       }
 
       // 5.6 Placa vehicular
       if (text.includes('placa')) {
-        const val = extractValueAfter(text, ['placa']) || text.replace(/^placa\s+/i, '');
+        const val = extractFieldValue(text, ['placa']);
         if (val) {
           const cleanPlate = val.toUpperCase().replace(/\s+/g, '').slice(0, 6);
-          fillInputByKeywords(['placa', 'abc123'], cleanPlate);
-          speakText(`Placa ${cleanPlate} ingresada.`);
-          return;
+          const ok = fillInputByKeywords(['placa', 'abc123'], cleanPlate);
+          if (ok) {
+            speakText(`Placa ${cleanPlate} ingresada. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.7 Marca vehicular
       if (text.includes('marca')) {
-        const val = extractValueAfter(text, ['marca']) || text.replace(/^marca\s+/i, '');
+        const val = extractFieldValue(text, ['marca']);
         if (val) {
-          fillInputByKeywords(['marca', 'mazda', 'chevrolet'], val);
-          speakText(`Marca ${val} ingresada.`);
-          return;
+          const ok = fillInputByKeywords(['marca', 'mazda', 'chevrolet'], val);
+          if (ok) {
+            speakText(`Marca ${val} ingresada. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.8 Color de vehículo
       if (text.includes('color')) {
-        const val = extractValueAfter(text, ['color']) || text.replace(/^color\s+/i, '');
+        const val = extractFieldValue(text, ['color']);
         if (val) {
-          fillInputByKeywords(['color', 'gris'], val);
-          speakText(`Color ${val} ingresado.`);
-          return;
+          const ok = fillInputByKeywords(['color', 'gris', 'blanco', 'negro'], val);
+          if (ok) {
+            speakText(`Color ${val} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
+        }
+      }
+
+      // 5.8b Modelo de vehículo
+      if (text.includes('modelo')) {
+        const val = extractFieldValue(text, ['modelo']);
+        if (val) {
+          const ok = fillInputByKeywords(['modelo', '2020', '2024'], val);
+          if (ok) {
+            speakText(`Modelo ${val} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.9 Cédula / Documento
       if (text.includes('cédula') || text.includes('cedula') || text.includes('documento') || text.includes('identificación') || text.includes('identificacion') || text.includes('cc')) {
-        const val = extractValueAfter(text, ['cédula', 'cedula', 'documento', 'identificación', 'identificacion', 'cc']) || text.replace(/^cédula\s+/i, '');
+        const val = extractFieldValue(text, ['cédula', 'cedula', 'documento', 'identificación', 'identificacion', 'cc', 'número de identificación', 'numero de identificacion']);
         if (val) {
-          const cleanDoc = val.replace(/\s+/g, '');
-          fillInputByKeywords(['documento', 'cédula', 'cedula', 'identificación', 'cc / ce'], cleanDoc);
-          speakText(`Documento ${cleanDoc} ingresado.`);
-          return;
+          const cleanDoc = val.replace(/\s+/g, '').replace(/\D/g, '') || val;
+          const ok = fillInputByKeywords(['documento', 'cédula', 'cedula', 'identificación', 'cc / ce', 'identificacion'], cleanDoc);
+          if (ok) {
+            speakText(`Documento ${cleanDoc} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
-      // 5.10 Teléfono / Celular
+      // 5.10 Teléfono / Celular / Extensión
       if (text.includes('teléfono') || text.includes('telefono') || text.includes('celular') || text.includes('extensión') || text.includes('ext')) {
-        const val = extractValueAfter(text, ['teléfono', 'telefono', 'celular', 'extensión', 'ext']) || text.replace(/^teléfono\s+/i, '');
+        const val = extractFieldValue(text, ['teléfono', 'telefono', 'celular', 'extensión', 'ext']);
         if (val) {
           const cleanPhone = val.replace(/\s+/g, '');
-          fillInputByKeywords(['teléfono', 'telefono', 'ext', 'celular', '1234'], cleanPhone);
-          speakText(`Teléfono ${cleanPhone} ingresado.`);
-          return;
+          const ok = fillInputByKeywords(['teléfono', 'telefono', 'ext', 'celular', '1234'], cleanPhone);
+          if (ok) {
+            speakText(`Teléfono ${cleanPhone} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.11 Origen / Salida / Recogida (Transporte)
       if (text.includes('origen') || text.includes('salida') || text.includes('desde') || text.includes('recogida')) {
-        const val = extractValueAfter(text, ['origen', 'salida', 'desde', 'recogida']) || text.replace(/^origen\s+/i, '');
+        const val = extractFieldValue(text, ['origen', 'salida', 'desde', 'recogida']);
         if (val) {
-          fillInputByKeywords(['origen', 'salida', 'sede principal'], val);
-          speakText(`Lugar de origen: ${val}.`);
-          return;
+          const ok = fillInputByKeywords(['origen', 'salida', 'sede principal'], val);
+          if (ok) {
+            speakText(`Lugar de origen ${val} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.12 Destino / Llegada (Transporte)
       if (text.includes('destino') || text.includes('hacia') || text.includes('llegada')) {
-        const val = extractValueAfter(text, ['destino', 'hacia', 'llegada']) || text.replace(/^destino\s+/i, '');
+        const val = extractFieldValue(text, ['destino', 'hacia', 'llegada']);
         if (val) {
-          fillInputByKeywords(['destino', 'tribunal', 'llegada'], val);
-          speakText(`Destino: ${val}.`);
-          return;
+          const ok = fillInputByKeywords(['destino', 'tribunal', 'llegada'], val);
+          if (ok) {
+            speakText(`Destino ${val} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.13 Motivo / Razón / Justificación
       if (text.includes('motivo') || text.includes('razón') || text.includes('razon') || text.includes('justificación') || text.includes('justificacion')) {
-        const val = extractValueAfter(text, ['motivo', 'razón', 'razon', 'justificación', 'justificacion']) || text.replace(/^motivo\s+/i, '');
+        const val = extractFieldValue(text, ['motivo', 'razón', 'razon', 'justificación', 'justificacion']);
         if (val) {
-          fillInputByKeywords(['motivo', 'reunión técnica', 'audiencia', 'justificación'], val);
-          speakText('Motivo ingresado correctamente.');
-          return;
+          const ok = fillInputByKeywords(['motivo', 'reunión técnica', 'audiencia', 'justificación'], val);
+          if (ok) {
+            speakText('Motivo ingresado correctamente. Diga siguiente para continuar.');
+            return;
+          }
         }
       }
 
       // 5.14 Título / Asunto / Daño / Evento
       if (text.includes('título') || text.includes('titulo') || text.includes('asunto') || text.includes('daño') || text.includes('dano') || text.includes('falla') || text.includes('evento')) {
-        const val = extractValueAfter(text, ['título', 'titulo', 'asunto', 'daño', 'dano', 'falla', 'evento']) || text.replace(/^título\s+/i, '');
+        const val = extractFieldValue(text, ['título', 'titulo', 'asunto', 'daño', 'dano', 'falla', 'evento']);
         if (val) {
-          fillInputByKeywords(['título', 'titulo', 'asunto', 'comité', 'gotera', 'daño'], val);
-          speakText(`Título: ${val}.`);
-          return;
+          const ok = fillInputByKeywords(['título', 'titulo', 'asunto', 'comité', 'gotera', 'daño'], val);
+          if (ok) {
+            speakText(`Título ${val} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.15 Ubicación / Piso
       if (text.includes('ubicación') || text.includes('ubicacion') || text.includes('piso')) {
-        const val = extractValueAfter(text, ['ubicación', 'ubicacion', 'piso']) || text.replace(/^ubicación\s+/i, '');
+        const val = extractFieldValue(text, ['ubicación', 'ubicacion', 'piso']);
         if (val) {
-          fillInputByKeywords(['ubicación', 'ubicacion', 'edificio liévano', 'piso'], val);
-          speakText(`Ubicación: ${val}.`);
-          return;
+          const ok = fillInputByKeywords(['ubicación', 'ubicacion', 'edificio liévano', 'piso'], val);
+          if (ok) {
+            speakText(`Ubicación ${val} ingresada. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.16 Oficina / Espacio / Salón
       if (text.includes('oficina') || text.includes('espacio') || text.includes('salón') || text.includes('salon')) {
-        const val = extractValueAfter(text, ['oficina', 'espacio', 'salón', 'salon']) || text.replace(/^oficina\s+/i, '');
+        const val = extractFieldValue(text, ['oficina', 'espacio', 'salón', 'salon']);
         if (val) {
-          fillInputByKeywords(['espacio', 'oficina', '304'], val);
-          speakText(`Espacio: ${val}.`);
-          return;
+          const ok = fillInputByKeywords(['espacio', 'oficina', '304'], val);
+          if (ok) {
+            speakText(`Espacio ${val} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.17 Descripción detallada
       if (text.includes('descripción') || text.includes('descripcion') || text.includes('detalle')) {
-        const val = extractValueAfter(text, ['descripción', 'descripcion', 'detalle', 'detalles']) || text.replace(/^descripción\s+/i, '');
+        const val = extractFieldValue(text, ['descripción', 'descripcion', 'detalle', 'detalles']);
         if (val) {
-          fillInputByKeywords(['descripción', 'descripcion', 'describe la falla', 'detalle'], val);
-          speakText('Descripción detallada ingresada.');
-          return;
+          const ok = fillInputByKeywords(['descripción', 'descripcion', 'describe la falla', 'detalle'], val);
+          if (ok) {
+            speakText('Descripción detallada ingresada. Diga siguiente para continuar.');
+            return;
+          }
         }
       }
 
       // 5.18 Pasajeros / Asistentes / Cantidad
       if (text.includes('pasajero') || text.includes('asistente') || text.includes('cantidad') || text.includes('cupo') || text.includes('aforo')) {
-        const val = extractValueAfter(text, ['pasajeros', 'asistentes', 'cantidad', 'cupos', 'aforo', 'personas']) || text.replace(/\D/g, '');
-        if (val) {
-          fillInputByKeywords(['pasajeros', 'asistentes', 'aforo', '1', '4', '6'], val);
-          speakText(`Cantidad establecida en ${val}.`);
-          return;
+        const val = extractFieldValue(text, ['pasajeros', 'asistentes', 'cantidad', 'cupos', 'aforo', 'personas']);
+        const num = (val || text).replace(/\D/g, '');
+        if (num) {
+          const ok = fillInputByKeywords(['pasajeros', 'asistentes', 'aforo', '1', '4', '6'], num);
+          if (ok) {
+            speakText(`Cantidad establecida en ${num}. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
       // 5.19 Funcionario / Responsable
       if (text.includes('funcionario') || text.includes('responsable') || text.includes('autoriza')) {
-        const val = extractValueAfter(text, ['funcionario', 'responsable', 'autoriza']) || text.replace(/^funcionario\s+/i, '');
+        const val = extractFieldValue(text, ['funcionario', 'responsable', 'autoriza']);
         if (val) {
-          fillInputByKeywords(['funcionario', 'responsable', 'autoriza'], val);
-          speakText(`Funcionario responsable: ${val}.`);
-          return;
+          const capitalized = val.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          const ok = fillInputByKeywords(['funcionario', 'responsable', 'autoriza'], capitalized);
+          if (ok) {
+            speakText(`Funcionario responsable ${capitalized} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
-      // 5.20 Nombre / Visitante / Pasajero
-      if (text.includes('nombre') || text.includes('visitante') || text.includes('pasajero') || text.includes('solicitante')) {
-        const val = extractValueAfter(text, ['nombre completo', 'nombre', 'visitante', 'pasajero', 'solicitante']) || text.replace(/^nombre\s+/i, '');
+      // 5.19b Dependencia / Dirección / Área
+      if (text.includes('dependencia') || text.includes('dirección') || text.includes('direccion') || text.includes('área') || text.includes('area')) {
+        const val = extractFieldValue(text, ['dependencia', 'dirección', 'direccion', 'área', 'area']);
         if (val) {
-          fillInputByKeywords(['nombre completo', 'nombre', 'juan pérez', 'viaja'], val);
-          speakText(`Nombre ${val} ingresado.`);
-          return;
+          const ok = fillInputByKeywords(['dependencia', 'dirección', 'area', 'gestión'], val);
+          if (ok) {
+            speakText(`Dependencia ${val} ingresada. Diga siguiente para continuar.`);
+            return;
+          }
+        }
+      }
+
+      // 5.20 Nombre / Visitante / Pasajero / Solicitante
+      if (
+        text.includes('nombre') ||
+        text.includes('solicitante') ||
+        (text.includes('visitante') && !text.includes('formulario') && !text.includes('agregar')) ||
+        text.includes('pasajero')
+      ) {
+        const val = extractFieldValue(text, ['nombre completo', 'nombre', 'solicitante', 'visitante', 'pasajero']);
+        if (val) {
+          const capitalized = val.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          const ok = fillInputByKeywords(['nombre completo', 'nombre', 'juan pérez', 'solicitante', 'viaja'], capitalized);
+          if (ok) {
+            speakText(`Nombre ${capitalized} ingresado. Diga siguiente para continuar.`);
+            return;
+          }
         }
       }
 
@@ -2921,34 +3162,58 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         speakText('Nuevo vehículo agregado.');
         return;
       }
+
+      // 5.22 Dictado directo sobre el campo actualmente enfocado (al usar "siguiente" o haber seleccionado el input)
+      const activeEl = typeof document !== 'undefined' ? (document.activeElement as HTMLInputElement | HTMLTextAreaElement) : null;
+      if (
+        activeEl &&
+        (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') &&
+        !activeEl.closest('#accessibility-toolbar-modal')
+      ) {
+        const cleanedValue = cleanDictatedValue(text);
+        if (cleanedValue && cleanedValue.length >= 1) {
+          const fieldLabel = getFieldLabel(activeEl);
+          let finalVal = cleanedValue;
+          if (fieldLabel.toLowerCase().includes('documento') || fieldLabel.toLowerCase().includes('cédula')) {
+            finalVal = cleanedValue.replace(/\s+/g, '').replace(/\D/g, '') || cleanedValue;
+          } else if (fieldLabel.toLowerCase().includes('placa')) {
+            finalVal = cleanedValue.toUpperCase().replace(/\s+/g, '').slice(0, 6);
+          } else if (fieldLabel.toLowerCase().includes('nombre') || fieldLabel.toLowerCase().includes('funcionario')) {
+            finalVal = cleanedValue.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          }
+          setNativeDomInputValue(activeEl, finalVal);
+          speakText(`Ingresado ${finalVal} en ${fieldLabel}. Diga siguiente para continuar.`);
+          return;
+        }
+      }
     }
 
-    // 6. Navegación a módulos de servicios
-    if (text.includes('visitante') || text.includes('formulario de visitantes') || text.includes('ingreso de visitantes')) {
+    // 6. Navegación a módulos de servicios (solo si no estamos ya en ese formulario)
+    if ((text.includes('visitante') || text.includes('formulario de visitantes') || text.includes('ingreso de visitantes')) && !pathname.includes('/requests/visitors')) {
       speakText('Abriendo formulario de Ingreso de Visitantes.');
       setTimeout(() => router.push('/requests/visitors'), 1000);
       return;
     }
 
-    if (text.includes('transporte') || text.includes('carro') || text.includes('vehiculo') || text.includes('vehículo')) {
+    if ((text.includes('transporte') || text.includes('formulario de transporte') || text.includes('solicitar transporte')) && !pathname.includes('/requests/transport')) {
       speakText('Abriendo formulario de Transporte Institucional.');
       setTimeout(() => router.push('/requests/transport'), 1000);
       return;
     }
 
-    if (text.includes('mantenimiento') || text.includes('daño') || text.includes('arreglo') || text.includes('reparar')) {
+    if ((text.includes('mantenimiento') || text.includes('formulario de mantenimiento') || text.includes('reportar daño')) && !pathname.includes('/requests/maintenance')) {
       speakText('Abriendo formulario de Mantenimiento Locativo.');
       setTimeout(() => router.push('/requests/maintenance'), 1000);
       return;
     }
 
-    if (text.includes('sala') || text.includes('auditorio') || text.includes('reunión') || text.includes('reunion')) {
+    if ((text.includes('sala') || text.includes('auditorio') || text.includes('formulario de salas') || text.includes('reservar sala')) && !pathname.includes('/requests/rooms')) {
       speakText('Abriendo formulario de Reserva de Salas y Auditorios.');
       setTimeout(() => router.push('/requests/rooms'), 1000);
       return;
     }
 
-    if (text.includes('parqueadero') || text.includes('estacionamiento')) {
+    if ((text.includes('parqueadero') || text.includes('estacionamiento') || text.includes('formulario de parqueadero')) && !pathname.includes('/requests/parking')) {
       speakText('Abriendo formulario de Parqueadero Institucional.');
       setTimeout(() => router.push('/requests/parking'), 1000);
       return;
@@ -3530,13 +3795,36 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             </View>
 
             <View style={styles.voiceHintsRow}>
-              {['Visitantes', 'Transporte', 'Salas', 'Mantenimiento', 'Ayuda'].map((cmd) => (
+              {(pathname.includes('/requests/')
+                ? [
+                    { label: 'Siguiente', cmd: 'siguiente' },
+                    { label: 'En nombre...', cmd: 'en nombre juan carlos' },
+                    { label: 'Acepto términos', cmd: 'acepto términos' },
+                    { label: 'Radicar', cmd: 'radicar solicitud' },
+                    { label: 'Ayuda', cmd: 'ayuda' }
+                  ]
+                : pathname.includes('/dashboard/requests')
+                ? [
+                    { label: 'Pendientes', cmd: 'filtrar pendientes' },
+                    { label: 'Aprobadas', cmd: 'filtrar aprobadas' },
+                    { label: 'Resumen', cmd: 'resumen' },
+                    { label: 'Nueva solicitud', cmd: 'nueva solicitud' },
+                    { label: 'Ayuda', cmd: 'ayuda' }
+                  ]
+                : [
+                    { label: 'Visitantes', cmd: 'visitantes' },
+                    { label: 'Transporte', cmd: 'transporte' },
+                    { label: 'Salas', cmd: 'salas' },
+                    { label: 'Mantenimiento', cmd: 'mantenimiento' },
+                    { label: 'Ayuda', cmd: 'ayuda' }
+                  ]
+              ).map((item) => (
                 <TouchableOpacity
-                  key={cmd}
+                  key={item.label}
                   style={styles.voiceHintChip}
-                  onPress={() => handleVoiceTranscript(cmd.toLowerCase())}
+                  onPress={() => handleVoiceTranscript(item.cmd)}
                 >
-                  <Text style={styles.voiceHintChipText}>{cmd}</Text>
+                  <Text style={styles.voiceHintChipText}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
