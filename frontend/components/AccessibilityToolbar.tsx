@@ -2398,18 +2398,63 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     setVoiceStatusText('');
   };
 
+  // Restablecer todas las preferencias visuales y de accesibilidad a la normalidad al cerrar el box de Voz
+  const closeVoiceAssistantAndResetAll = () => {
+    // 1. Apagar micrófono y reconocimiento
+    stopVoiceAssistant();
+
+    // 2. Detener síntesis de voz activa
+    stopSpeech();
+
+    // 3. Volver tipografía, tema, zoom y lectores a la normalidad
+    setActiveProfile('none');
+    setFontSizeMultiplier(1);
+    setColorMode('normal');
+    setUnderlineLinks(false);
+    setDyslexiaMode(false);
+    setInteractiveReaderEnabled(false);
+    setBannerMinimized(false);
+
+    // 4. Centrar posiciones de los widgets movibles a su posición predeterminada
+    try {
+      voiceWidgetPan.setValue({ x: 0, y: 0 });
+      readerBannerPan.setValue({ x: 0, y: 0 });
+    } catch (e) {}
+
+    // 5. Limpiar persistencia en localStorage
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('sasge_zoom_scale');
+        localStorage.removeItem('sasge_color_mode');
+      }
+    } catch (e) {}
+
+    // 6. Restablecer estilos en el DOM Web de inmediato
+    if (typeof document !== 'undefined') {
+      try {
+        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.style.colorScheme = '';
+        document.documentElement.style.filter = 'none';
+        document.documentElement.style.fontSize = '16px';
+        (document.body.style as any).zoom = '1';
+        document.body.style.backgroundColor = '';
+        document.body.style.color = '';
+        document.body.style.fontFamily = '';
+        document.body.style.letterSpacing = '';
+        document.body.style.lineHeight = '';
+        const themeStyleEl = document.getElementById('sasge-global-theme-style');
+        if (themeStyleEl) themeStyleEl.textContent = '';
+      } catch (e) {}
+    }
+
+    showToast('Asistente de voz cerrado. Interfaz restablecida a la normalidad');
+    speakText('Asistente de voz cerrado. La interfaz ha vuelto a la normalidad.');
+  };
+
   // Alternar Asistente de Voz y Lector de Pantalla para personas ciegas
   const toggleVoiceAssistant = () => {
-    if (interactiveReaderEnabled || activeProfile === 'blind') {
-      setInteractiveReaderEnabled(false);
-      setActiveProfile('none');
-      setColorMode('normal');
-      setFontSizeMultiplier(1);
-      setUnderlineLinks(false);
-      stopSpeech();
-      stopVoiceAssistant();
-      showToast('Lector de voz y Asistente: DESACTIVADO');
-      speakText('Lector de voz y asistente desactivados.');
+    if (interactiveReaderEnabled || activeProfile === 'blind' || isListening || voiceActiveRef.current) {
+      closeVoiceAssistantAndResetAll();
     } else {
       setInteractiveReaderEnabled(true);
       setActiveProfile('blind');
@@ -2418,10 +2463,13 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       setUnderlineLinks(true);
       setOpenPanel(false);
       showToast('Lector de voz y Asistente: ACTIVADO');
+
+      // 1. Activar inmediatamente el Asistente de Voz Continuo (para que el box de Voz aparezca al instante)
+      startVoiceAssistant();
+
+      // 2. Dar instrucción de bienvenida por voz
       const intro = 'Lector de pantalla por voz y asistente activados. Tema oscuro habilitado. El micrófono permanecerá escuchando continuamente en modo manos libres. Diga cualquier comando o pulse la tecla M para pausar.';
-      speakText(intro, () => {
-        startVoiceAssistant();
-      });
+      speakText(intro);
     }
   };
 
@@ -3144,9 +3192,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       text.includes('adios') ||
       text.includes('terminar asistente')
     ) {
-      stopVoiceAssistant();
-      showToast('Asistente de voz: DESACTIVADO');
-      speakText('Asistente por voz desactivado. Puede reactivarlo cuando desee pulsando la tecla M.');
+      closeVoiceAssistantAndResetAll();
       return;
     }
 
@@ -4159,10 +4205,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         (activeEl as HTMLElement).isContentEditable
       );
 
-      // Tecla Escape: Silenciar inmediatamente y apagar asistente
+      // Tecla Escape: Silenciar inmediatamente y apagar asistente restableciendo la interfaz
       if (e.key === 'Escape') {
-        stopSpeech();
-        stopVoiceAssistant();
+        closeVoiceAssistantAndResetAll();
         return;
       }
 
@@ -4176,14 +4221,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       // Tecla 'M' (o Alt + M): Alternar Micrófono / Asistente por Voz
       if ((e.key === 'm' || e.key === 'M' || (e.altKey && (e.key === 'm' || e.key === 'M'))) && !isInput) {
         e.preventDefault();
-        if (voiceActiveRef.current) {
-          stopVoiceAssistant();
-          stopSpeech();
-          showToast('Asistente por voz: DESACTIVADO');
-          speakText('Asistente por voz desactivado.');
+        if (voiceActiveRef.current || isListening) {
+          closeVoiceAssistantAndResetAll();
         } else {
-          showToast('Asistente por voz: ACTIVADO');
-          startVoiceAssistant();
+          toggleVoiceAssistant();
         }
         return;
       }
@@ -4548,7 +4589,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 style={styles.voiceCloseBtn}
                 onPress={() => {
                   if (isDraggingVoiceWidgetRef.current) return;
-                  stopVoiceAssistant();
+                  closeVoiceAssistantAndResetAll();
                 }}
                 accessibilityLabel="Desactivar asistente de voz"
               >
@@ -4612,7 +4653,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                 style={styles.stopVoiceBtn}
                 onPress={() => {
                   if (isDraggingVoiceWidgetRef.current) return;
-                  stopVoiceAssistant();
+                  closeVoiceAssistantAndResetAll();
                 }}
               >
                 <Text style={styles.stopVoiceText}>Apagar</Text>
@@ -4773,7 +4814,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
                       { backgroundColor: isListening ? '#DC2626' : '#2563EB' },
                       isMobile && { width: '100%' }
                     ]}
-                    onPress={isListening ? stopVoiceAssistant : startVoiceAssistant}
+                    onPress={isListening ? closeVoiceAssistantAndResetAll : startVoiceAssistant}
                     accessibilityRole="button"
                     accessibilityLabel="Asistente por voz con micrófono continuo"
                   >
