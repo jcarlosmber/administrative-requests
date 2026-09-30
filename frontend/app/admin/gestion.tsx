@@ -2851,7 +2851,8 @@ export default function AdminGestion() {
                               setPendingEvalToggle({ id: item.id, label: item.label, newValue: val });
                               setShowEvalConfirmModal(true);
                             }}
-                            trackColor={{ false: '#CBD5E1', true: '#2563EB' }}
+                            trackColor={{ false: '#475569', true: '#2563EB' }}
+                            thumbColor="#FFFFFF"
                           />
                         </View>
                         {index < arr.length - 1 && <View style={styles.configDivider} />}
@@ -3173,7 +3174,8 @@ export default function AdminGestion() {
                 <Switch 
                   value={driverIsActive} 
                   onValueChange={setDriverIsActive} 
-                  trackColor={{ false: '#CBD5E1', true: '#2563EB' }} 
+                  trackColor={{ false: '#475569', true: '#2563EB' }} 
+                  thumbColor="#FFFFFF"
                 />
               </View>
             </View>
@@ -3618,7 +3620,7 @@ export default function AdminGestion() {
 
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.text }}>Vehículo Activo</Text>
-                <Switch value={adminVIsActive} onValueChange={setAdminVIsActive} trackColor={{ false: '#CBD5E1', true: '#2563EB' }} />
+                <Switch value={adminVIsActive} onValueChange={setAdminVIsActive} trackColor={{ false: '#475569', true: '#2563EB' }} thumbColor="#FFFFFF" />
               </View>
             </View>
 

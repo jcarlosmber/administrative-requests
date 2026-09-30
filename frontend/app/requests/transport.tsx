@@ -309,8 +309,8 @@ export default function TransportRequestScreen() {
                           <Switch 
                             value={requiresReturn} 
                             onValueChange={setRequiresReturn}
-                            trackColor={{ false: COLORS.line, true: COLORS.primary }}
-                            thumbColor={COLORS.white}
+                            trackColor={{ false: '#475569', true: COLORS.primary }}
+                            thumbColor="#FFFFFF"
                           />
                         </View>
                       </View>

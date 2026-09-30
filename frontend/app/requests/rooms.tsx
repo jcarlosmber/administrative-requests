@@ -932,8 +932,8 @@ export default function RoomsRequestScreen() {
                       <Switch 
                         value={manifestationAccepted} 
                         onValueChange={setManifestationAccepted} 
-                        trackColor={{ false: COLORS.line, true: COLORS.primary }}
-                        thumbColor={COLORS.white}
+                        trackColor={{ false: '#475569', true: COLORS.primary }}
+                        thumbColor="#FFFFFF"
                       />
                     </View>
                   </Card>

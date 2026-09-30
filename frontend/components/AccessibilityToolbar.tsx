@@ -1335,15 +1335,15 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           html[data-theme="dark"] .r-backgroundColor-11j01x2,
           html[data-theme="dark"] .r-backgroundColor-1jh0li6,
           html[data-theme="dark"] [data-theme-bg="light"],
-          html[data-theme="dark"] div[style*="background-color: rgb(255, 255, 255)"],
-          html[data-theme="dark"] div[style*="background-color: #FFFFFF"],
-          html[data-theme="dark"] div[style*="background-color: #ffffff"],
-          html[data-theme="dark"] div[style*="background-color: rgb(248, 250, 252)"],
-          html[data-theme="dark"] div[style*="background-color: #F8FAFC"],
-          html[data-theme="dark"] div[style*="background-color: #f8fafc"],
-          html[data-theme="dark"] div[style*="background-color: rgb(241, 245, 249)"],
-          html[data-theme="dark"] div[style*="background-color: #F1F5F9"],
-          html[data-theme="dark"] div[style*="background-color: #f1f5f9"] {
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: rgb(255, 255, 255)"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: #FFFFFF"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: #ffffff"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: rgb(248, 250, 252)"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: #F8FAFC"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: #f8fafc"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: rgb(241, 245, 249)"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: #F1F5F9"],
+          html[data-theme="dark"] div:not([role="switch"]):not([role="switch"] *)[style*="background-color: #f1f5f9"] {
             background-color: #161F30 !important;
             border-color: #2D3A54 !important;
             color: #F8FAFC !important;
@@ -1633,6 +1633,57 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           html[data-theme="dark"] canvas,
           html[data-theme="dark"] svg {
             filter: none !important;
+          }
+
+          /* 18. BOTONES SWITCH (MÁXIMA VISIBILIDAD EN MODO OSCURO) */
+          /* Contenedor del interruptor */
+          html[data-theme="dark"] [role="switch"],
+          html[data-theme="dark"] div[role="switch"],
+          html[data-theme="dark"] .r-cursor-1loqt21[role="switch"] {
+            opacity: 1 !important;
+            visibility: visible !important;
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5)) !important;
+          }
+
+          /* Pista / Track cuando el Switch está APAGADO (false / inactivo) */
+          html[data-theme="dark"] [role="switch"]:not([aria-checked="true"]) > div:first-child,
+          html[data-theme="dark"] [role="switch"][aria-checked="false"] > div:first-child,
+          html[data-theme="dark"] div[role="switch"]:not([aria-checked="true"]) > div:first-child,
+          html[data-theme="dark"] div[role="switch"][aria-checked="false"] > div:first-child {
+            background-color: #334155 !important;
+            border: 2px solid #64748B !important;
+            opacity: 1 !important;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
+          }
+
+          /* Pista / Track cuando el Switch está ENCENDIDO (true / activo) */
+          html[data-theme="dark"] [role="switch"][aria-checked="true"] > div:first-child,
+          html[data-theme="dark"] div[role="switch"][aria-checked="true"] > div:first-child {
+            background-color: #2563EB !important;
+            border: 2px solid #93C5FD !important;
+            opacity: 1 !important;
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.6) !important;
+          }
+
+          /* Bolita / Thumb del switch (SIEMPRE 100% BLANCO PURO Y DESTACADO) */
+          html[data-theme="dark"] [role="switch"] > div:nth-child(2),
+          html[data-theme="dark"] [role="switch"] div[style*="border-radius: 9999px"]:not(:first-child),
+          html[data-theme="dark"] [role="switch"] div[style*="transform"],
+          html[data-theme="dark"] [role="switch"] div[style*="translate"],
+          html[data-theme="dark"] div[role="switch"] > div:nth-child(2),
+          html[data-theme="dark"] div[role="switch"] div[style*="transform"],
+          html[data-theme="dark"] div[role="switch"] div[style*="translate"] {
+            background-color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.9) !important;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.8), 0 0 4px rgba(255, 255, 255, 0.8) !important;
+            opacity: 1 !important;
+            z-index: 5 !important;
+          }
+
+          /* Checkbox tipo switch o inputs nativos de switch */
+          html[data-theme="dark"] input[type="checkbox"][role="switch"] {
+            accent-color: #2563EB !important;
+            opacity: 1 !important;
           }
         `;
       } else if (colorMode === 'light') {
@@ -4658,14 +4709,18 @@ const styles = StyleSheet.create({
   },
   toggleBadgeOn: {
     backgroundColor: '#2563EB',
+    borderWidth: 1,
+    borderColor: '#60A5FA',
   },
   toggleBadgeOff: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#334155',
+    borderWidth: 1,
+    borderColor: '#475569',
   },
   toggleBadgeText: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#F8FAFC',
   },
   toolsGroupCard: {
     backgroundColor: '#F8FAFC',

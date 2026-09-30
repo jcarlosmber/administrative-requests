@@ -344,7 +344,8 @@ export default function VisitorsScreen() {
                     <Switch 
                       value={hasVehicle} 
                       onValueChange={setHasVehicle} 
-                      trackColor={{ false: '#CBD5E1', true: COLORS.primary }}
+                      trackColor={{ false: '#475569', true: COLORS.primary }}
+                      thumbColor="#FFFFFF"
                     />
                   }
                 >

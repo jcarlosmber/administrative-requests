@@ -2217,14 +2217,14 @@ export default function AdminSettings() {
                             <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapServer} onChangeText={setLdapServer} placeholder="Servidor" />
                             <View style={styles.userSwitchRow}>
                               <Text style={styles.userSwitchLabel}>SSL</Text>
-                              <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: COLORS.line, true: COLORS.success }} thumbColor={COLORS.white} />
+                              <Switch value={ldapUseSsl} onValueChange={setLdapUseSsl} trackColor={{ false: '#475569', true: COLORS.success }} thumbColor="#FFFFFF" />
                             </View>
                           </View>
                           <View style={styles.userRow}>
                             <TextInput style={[styles.userFieldInput, { flex: 1 }]} value={ldapPort} onChangeText={setLdapPort} placeholder="Puerto LDAP" keyboardType="number-pad" />
                             <View style={styles.userSwitchRow}>
                               <Text style={styles.userSwitchLabel}>Usar bind</Text>
-                              <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: COLORS.line, true: COLORS.accent }} thumbColor={COLORS.white} />
+                              <Switch value={ldapUseBind} onValueChange={setLdapUseBind} trackColor={{ false: '#475569', true: COLORS.accent }} thumbColor="#FFFFFF" />
                             </View>
                           </View>
                           <TextInput style={styles.userFieldInput} value={ldapComments} onChangeText={setLdapComments} placeholder="Comentarios" />
@@ -3397,8 +3397,8 @@ export default function AdminSettings() {
                   <Switch
                     value={userDraft?.is_active ?? true}
                     onValueChange={(val) => setUserDraft({ ...userDraft, is_active: val })}
-                    trackColor={{ false: '#CBD5E1', true: '#10B981' }}
-                    thumbColor={COLORS.white}
+                    trackColor={{ false: '#475569', true: '#10B981' }}
+                    thumbColor="#FFFFFF"
                   />
                 </View>
 
@@ -3420,8 +3420,8 @@ export default function AdminSettings() {
                   <Switch
                     value={userDraft?.ldap_enabled ?? false}
                     onValueChange={(val) => setUserDraft({ ...userDraft, ldap_enabled: val })}
-                    trackColor={{ false: '#CBD5E1', true: COLORS.accent }}
-                    thumbColor={COLORS.white}
+                    trackColor={{ false: '#475569', true: COLORS.accent }}
+                    thumbColor="#FFFFFF"
                   />
                 </View>
               </View>
@@ -4885,7 +4885,7 @@ export default function AdminSettings() {
                   <Switch
                     value={adminVIsActive}
                     onValueChange={setAdminVIsActive}
-                    trackColor={{ false: '#CBD5E1', true: '#10B981' }}
+                    trackColor={{ false: '#475569', true: '#10B981' }}
                     thumbColor="#FFFFFF"
                   />
                 </View>
@@ -5738,8 +5738,8 @@ function ConfigToggle({ label, desc, value, onValueChange, icon }: any) {
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: COLORS.line, true: COLORS.accent }}
-        thumbColor={COLORS.white}
+        trackColor={{ false: '#475569', true: COLORS.accent }}
+        thumbColor="#FFFFFF"
       />
     </View>
   );
