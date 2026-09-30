@@ -1184,6 +1184,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
   const voiceActiveRef = useRef<boolean>(false);
   const isSpeakingRef = useRef<boolean>(false);
   const restartVoiceTimeoutRef = useRef<any>(null);
+  const lastActiveInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
 
   // Notificación de estado
   const [toastMessage, setToastMessage] = useState('');
@@ -2046,7 +2047,12 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (target) showForElement(target);
+      if (target) {
+        if ((target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') && !target.closest('#accessibility-toolbar-modal')) {
+          lastActiveInputRef.current = target as (HTMLInputElement | HTMLTextAreaElement);
+        }
+        showForElement(target);
+      }
     };
 
     const handleClick = (e: MouseEvent) => {
@@ -2360,6 +2366,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
   // Helper para asignar valores en inputs de React Native Web de manera confiable
   const setNativeDomInputValue = (inputEl: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+    lastActiveInputRef.current = inputEl;
     const isTextArea = inputEl.tagName === 'TEXTAREA';
     const prototype = isTextArea ? window.HTMLTextAreaElement.prototype : window.HTMLInputElement.prototype;
     const descriptor = Object.getOwnPropertyDescriptor(prototype, 'value');
@@ -2543,7 +2550,10 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     }
 
     const activeEl = document.activeElement as HTMLElement;
-    const currentIndex = inputs.indexOf(activeEl as any);
+    let currentIndex = inputs.indexOf(activeEl as any);
+    if (currentIndex === -1 && lastActiveInputRef.current) {
+      currentIndex = inputs.indexOf(lastActiveInputRef.current as any);
+    }
 
     let targetIndex = 0;
     if (direction === 'next') {
@@ -2561,6 +2571,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         const label = getFieldLabel(inputs[0]);
         speakText(`Ya está en el primer campo: ${label}.`);
         inputs[0].focus();
+        lastActiveInputRef.current = inputs[0];
         return true;
       } else {
         targetIndex = currentIndex - 1;
@@ -2568,6 +2579,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     }
 
     const targetInput = inputs[targetIndex];
+    lastActiveInputRef.current = targetInput;
     try {
       targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch {
@@ -2578,6 +2590,70 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     const curVal = targetInput.value?.trim();
     speakText(`Campo: ${label}.${curVal ? ` Valor actual: ${curVal}.` : ' Está vacío.'} Diga lo que desea ingresar, o diga siguiente.`);
     return true;
+  };
+
+  // Helper para repetir dictado si el usuario se equivocó ("repetir", "repetir campo", "me equivoqué")
+  const repeatCurrentField = () => {
+    if (typeof document === 'undefined') return;
+    const inputs = getVisibleFormInputs();
+    if (inputs.length === 0) {
+      speakText('No se encontraron campos de formulario en esta pantalla.');
+      return;
+    }
+
+    const activeEl = document.activeElement as (HTMLInputElement | HTMLTextAreaElement);
+    let targetInput: HTMLInputElement | HTMLTextAreaElement | null = null;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.closest('#accessibility-toolbar-modal')) {
+      targetInput = activeEl;
+    } else if (lastActiveInputRef.current && document.body.contains(lastActiveInputRef.current)) {
+      targetInput = lastActiveInputRef.current;
+    } else {
+      targetInput = inputs[0];
+    }
+
+    if (targetInput) {
+      lastActiveInputRef.current = targetInput;
+      setNativeDomInputValue(targetInput, '');
+      targetInput.focus();
+      try {
+        targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) {}
+
+      const label = getFieldLabel(targetInput);
+      speakText(`Campo ${label} borrado. Puede repetir su dictado ahora. Le escucho.`);
+    }
+  };
+
+  // Helper para detectar campos faltantes por llenar ("¿qué falta?", "campos faltantes", "falta llenar")
+  const checkMissingFields = () => {
+    if (typeof document === 'undefined') return;
+    const inputs = getVisibleFormInputs();
+    if (inputs.length === 0) {
+      speakText('No se encontraron campos de formulario en esta página.');
+      return;
+    }
+
+    const missingInputs = inputs.filter((inp) => !inp.value || !inp.value.trim());
+
+    if (missingInputs.length === 0) {
+      speakText('¡Excelente! Todos los campos del formulario están completos. Diga: Acepto términos, o diga: Radicar solicitud para enviar.');
+      return;
+    }
+
+    const targetInput = missingInputs[0];
+    lastActiveInputRef.current = targetInput;
+    try {
+      targetInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (e) {}
+    targetInput.focus();
+
+    const missingLabels = missingInputs.map(inp => getFieldLabel(inp));
+    const firstLabel = missingLabels[0];
+    const restText = missingLabels.length > 1
+      ? `Faltan ${missingInputs.length} campos por completar: ${missingLabels.slice(0, 3).join(', ')}. `
+      : `Falta 1 campo por completar. `;
+
+    speakText(`${restText}Posicionado en el campo: ${firstLabel}. Diga lo que desea ingresar, o diga siguiente.`);
   };
 
   // Helper para leer los campos del formulario actual
@@ -2631,23 +2707,23 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         return;
       }
       if (pathname.includes('/requests/visitors')) {
-        speakText('En este formulario puede decir Siguiente para avanzar de campo en campo, o dictar directamente: En nombre coloque Juan Carlos, En documento 102030, Con vehículo o Sin vehículo, En placa ABC 123, En marca Mazda, En motivo reunión de trabajo, Acepto términos, o Registrar ingreso.');
+        speakText('En este formulario puede decir Siguiente para avanzar de campo, Repetir si se equivocó dictando, Qué falta para ir a campos vacíos, o dictar directamente: En nombre coloque Juan Carlos, En documento 102030, Con vehículo o Sin vehículo, En placa ABC 123, En motivo reunión de trabajo, Acepto términos, o Registrar ingreso.');
         return;
       }
       if (pathname.includes('/requests/transport')) {
-        speakText('En transporte puede decir Siguiente para avanzar campo por campo, o dictar: En nombre coloque Juan Carlos, En teléfono 3101234567, En origen sede central, En destino fiscalía, En pasajeros dos, En motivo justificación, Acepto términos, o Enviar solicitud.');
+        speakText('En transporte puede decir Siguiente para avanzar, Repetir si se equivocó, Qué falta para saltar a campos vacíos, o dictar: En nombre Juan Carlos, En teléfono 3101234567, En origen sede central, En destino fiscalía, En motivo justificación, Acepto términos, o Enviar solicitud.');
         return;
       }
       if (pathname.includes('/requests/maintenance')) {
-        speakText('En mantenimiento puede decir Siguiente para avanzar, o dictar: En título daño de luz, En ubicación piso tres, En oficina 304, En descripción detalle de la falla, Prioridad alta, Acepto términos, o Enviar reporte.');
+        speakText('En mantenimiento puede decir Siguiente para avanzar, Repetir para corregir, Qué falta para ver campos vacíos, o dictar: En título daño de luz, En ubicación piso tres, En descripción detalle de la falla, Prioridad alta, Acepto términos, o Enviar reporte.');
         return;
       }
       if (pathname.includes('/requests/rooms')) {
-        speakText('En salas puede decir Siguiente para avanzar, o dictar: En asunto reunión directiva, En asistentes cuatro, Modalidad presencial o virtual, Acepto términos, o Confirmar reserva.');
+        speakText('En salas puede decir Siguiente para avanzar, Repetir si se equivocó, Qué falta para campos vacíos, o dictar: En asunto reunión directiva, En asistentes cuatro, Modalidad presencial o virtual, Acepto términos, o Confirmar reserva.');
         return;
       }
       if (pathname.includes('/requests/parking')) {
-        speakText('En parqueadero puede decir Siguiente para avanzar, o dictar: En nombre Juan Carlos, En documento 102030, En placa ABC 123, En marca Chevrolet, En color gris, Carro o Moto, Acepto términos, o Radicar solicitud.');
+        speakText('En parqueadero puede decir Siguiente para avanzar, Repetir si se equivocó, Qué falta para campos vacíos, o dictar: En nombre Juan Carlos, En placa ABC 123, En marca Chevrolet, En color gris, Carro o Moto, Acepto términos, o Radicar solicitud.');
         return;
       }
       if (pathname.includes('/login')) {
@@ -2866,7 +2942,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
     // 5. Adaptación para Formularios (/requests/*)
     const isFormPage = pathname.includes('/requests/');
     if (isFormPage) {
-      // 5.0 Navegación secuencial de campos ("siguiente", "anterior", "borrar")
+      // 5.0 Navegación secuencial de campos ("siguiente", "anterior", "repetir", "qué falta", "borrar")
       if (
         text === 'siguiente' ||
         text === 'siguiente campo' ||
@@ -2875,10 +2951,13 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         text === 'continuar' ||
         text === 'pasa al siguiente' ||
         text === 'pasar al siguiente' ||
+        text === 'siguiente por favor' ||
+        text === 'ir al siguiente' ||
         text === 'próximo' ||
         text === 'proximo' ||
         text === 'próximo campo' ||
-        text === 'proximo campo'
+        text === 'proximo campo' ||
+        text.startsWith('siguiente')
       ) {
         navigateFormFields('next');
         return;
@@ -2897,14 +2976,55 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
         return;
       }
 
+      // Repetir dictado si hubo equivocación
+      if (
+        text === 'repetir' ||
+        text === 'repetir campo' ||
+        text === 'repetir dictado' ||
+        text === 'volver a dictar' ||
+        text === 'me equivoque' ||
+        text === 'me equivoqué' ||
+        text === 'me equivoque dictando' ||
+        text === 'me equivoqué dictando' ||
+        text === 'reintentar' ||
+        text === 'corregir' ||
+        text === 'corregir campo' ||
+        text === 'borrar y repetir' ||
+        text.includes('me equivoque') ||
+        text.includes('me equivoqué') ||
+        text.startsWith('repetir')
+      ) {
+        repeatCurrentField();
+        return;
+      }
+
+      // Detectar y saltar a campos faltantes por llenar
+      if (
+        text === 'qué falta' ||
+        text === 'que falta' ||
+        text === 'qué falta llenar' ||
+        text === 'que falta llenar' ||
+        text === 'campos faltantes' ||
+        text === 'campo faltante' ||
+        text === 'falta llenar' ||
+        text === 'falta algún campo' ||
+        text === 'falta algun campo' ||
+        text === 'qué campos faltan' ||
+        text === 'que campos faltan' ||
+        text === 'revisar campos' ||
+        text === 'verificar campos' ||
+        text === 'ir al faltante' ||
+        text.includes('que falta') ||
+        text.includes('qué falta') ||
+        text.includes('campos faltantes')
+      ) {
+        checkMissingFields();
+        return;
+      }
+
       if (text === 'borrar campo' || text === 'limpiar campo' || text === 'borrar valor' || text === 'borrar' || text === 'limpiar') {
-        const activeEl = typeof document !== 'undefined' ? (document.activeElement as HTMLInputElement | HTMLTextAreaElement) : null;
-        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
-          setNativeDomInputValue(activeEl, '');
-          const lbl = getFieldLabel(activeEl);
-          speakText(`Campo ${lbl} borrado. Diga lo que desea ingresar o diga siguiente.`);
-          return;
-        }
+        repeatCurrentField();
+        return;
       }
 
       // 5.1 Enviar / Radicar / Guardar el formulario
@@ -3225,14 +3345,14 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
 
       // 5.22 Dictado directo sobre el campo actualmente enfocado (al usar "siguiente" o haber seleccionado el input)
       const activeEl = typeof document !== 'undefined' ? (document.activeElement as HTMLInputElement | HTMLTextAreaElement) : null;
-      if (
-        activeEl &&
-        (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') &&
-        !activeEl.closest('#accessibility-toolbar-modal')
-      ) {
+      const targetInput = (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !activeEl.closest('#accessibility-toolbar-modal'))
+        ? activeEl
+        : (lastActiveInputRef.current && typeof document !== 'undefined' && document.body.contains(lastActiveInputRef.current) ? lastActiveInputRef.current : null);
+
+      if (targetInput) {
         const cleanedValue = cleanDictatedValue(text);
         if (cleanedValue && cleanedValue.length >= 1) {
-          const fieldLabel = getFieldLabel(activeEl);
+          const fieldLabel = getFieldLabel(targetInput);
           let finalVal = cleanedValue;
           if (fieldLabel.toLowerCase().includes('documento') || fieldLabel.toLowerCase().includes('cédula')) {
             finalVal = cleanedValue.replace(/\s+/g, '').replace(/\D/g, '') || cleanedValue;
@@ -3241,8 +3361,8 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           } else if (fieldLabel.toLowerCase().includes('nombre') || fieldLabel.toLowerCase().includes('funcionario')) {
             finalVal = cleanedValue.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
           }
-          setNativeDomInputValue(activeEl, finalVal);
-          speakText(`Ingresado ${finalVal} en ${fieldLabel}. Diga siguiente para continuar.`);
+          setNativeDomInputValue(targetInput, finalVal);
+          speakText(`Ingresado ${finalVal} en ${fieldLabel}. Diga siguiente para continuar, o repetir si se equivocó.`);
           return;
         }
       }
@@ -3857,11 +3977,13 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
             <View style={styles.voiceHintsRow}>
               {(pathname.includes('/requests/')
                 ? [
-                    { label: 'Siguiente', cmd: 'siguiente' },
-                    { label: 'En nombre...', cmd: 'en nombre juan carlos' },
-                    { label: 'Acepto términos', cmd: 'acepto términos' },
-                    { label: 'Radicar', cmd: 'radicar solicitud' },
-                    { label: 'Ayuda', cmd: 'ayuda' }
+                    { label: '⏭️ Siguiente', cmd: 'siguiente' },
+                    { label: '🔄 Repetir', cmd: 'repetir' },
+                    { label: '⚠️ ¿Qué falta?', cmd: 'qué falta' },
+                    { label: '✍️ En nombre...', cmd: 'en nombre juan carlos' },
+                    { label: '✅ Acepto términos', cmd: 'acepto términos' },
+                    { label: '🚀 Radicar', cmd: 'radicar solicitud' },
+                    { label: '❓ Ayuda', cmd: 'ayuda' }
                   ]
                 : pathname.includes('/dashboard/requests')
                 ? [
