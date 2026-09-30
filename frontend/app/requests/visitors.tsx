@@ -8,6 +8,7 @@ import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
+import { AccessibleSwitch } from '../../components/AccessibleSwitch';
 import { requestService } from '../../lib/requestService';
 import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
@@ -341,11 +342,11 @@ export default function VisitorsScreen() {
                   title="Acceso Vehicular" 
                   icon="car" 
                   right={
-                    <Switch 
+                    <AccessibleSwitch 
                       value={hasVehicle} 
                       onValueChange={setHasVehicle} 
-                      trackColor={{ false: '#475569', true: COLORS.primary }}
-                      thumbColor="#FFFFFF"
+                      activeColor={COLORS.primary}
+                      accessibilityLabel="Acceso vehicular con parqueadero"
                     />
                   }
                 >

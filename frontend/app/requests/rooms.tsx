@@ -8,6 +8,7 @@ import { BlurView } from 'expo-blur';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
+import { AccessibleSwitch } from '../../components/AccessibleSwitch';
 import { requestService } from '../../lib/requestService';
 import { settingsService } from '../../lib/settingsService';
 import { supabase } from '../../lib/supabase';
@@ -929,11 +930,11 @@ export default function RoomsRequestScreen() {
                           Se manifiesta expresamente que el evento está relacionado con la misión y funciones de la entidad solicitante y no es de carácter político, religioso o comercial.
                         </Text>
                       </View>
-                      <Switch 
+                      <AccessibleSwitch 
                         value={manifestationAccepted} 
                         onValueChange={setManifestationAccepted} 
-                        trackColor={{ false: '#475569', true: COLORS.primary }}
-                        thumbColor="#FFFFFF"
+                        activeColor={COLORS.primary}
+                        accessibilityLabel="Manifestación de fines institucionales"
                       />
                     </View>
                   </Card>

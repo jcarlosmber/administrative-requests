@@ -9,6 +9,7 @@ import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { DependencySelector } from '../../components/DependencySelector';
 import { GuideModalButton } from '../../components/GuideModalButton';
 import { TimePickerModal } from '../../components/TimePickerModal';
+import { AccessibleSwitch } from '../../components/AccessibleSwitch';
 import { requestService } from '../../lib/requestService';
 import { supabase } from '../../lib/supabase';
 
@@ -306,11 +307,11 @@ export default function TransportRequestScreen() {
                           <Text style={[styles.input, { color: requiresReturn ? COLORS.primary : COLORS.muted }]}>
                             {requiresReturn ? 'SÍ' : 'NO'}
                           </Text>
-                          <Switch 
+                          <AccessibleSwitch 
                             value={requiresReturn} 
                             onValueChange={setRequiresReturn}
-                            trackColor={{ false: '#475569', true: COLORS.primary }}
-                            thumbColor="#FFFFFF"
+                            activeColor={COLORS.primary}
+                            accessibilityLabel="¿Requiere regreso?"
                           />
                         </View>
                       </View>

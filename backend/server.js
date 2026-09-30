@@ -3694,6 +3694,14 @@ app.post('/api/chatbot', optionalAuthenticateToken, async (req, res) => {
 
 
     
+    let chatbotKnowledge = "";
+    try {
+      delete require.cache[require.resolve('./chatbotKnowledge')];
+      chatbotKnowledge = require('./chatbotKnowledge');
+    } catch (e) {
+      console.error("Error al cargar chatbotKnowledge:", e);
+    }
+
     const systemContext = `Eres el Asistente Virtual experto de SASGE 2.0 (Sistema de Solicitudes Administrativas). 
 Tu objetivo es ayudar a los funcionarios a resolver dudas sobre cómo realizar solicitudes y cómo funciona el sistema.
 
@@ -3722,9 +3730,10 @@ INSTRUCCIONES FINALES:
 - Háblale al usuario por su nombre. Eres su asistente amigable.
 - Responde de forma corta, muy clara y concisa. No des respuestas gigantes ni redundantes.
 - Usa listas o viñetas (Markdown) si debes explicar pasos o listar salas.
+- Conoce y aplica al detalle el procedimiento oficial de la SJD (2311500-PR-122 Versión 05) y sus formatos, plazos de antelación y responsables.
 - Si no sabes algo, no inventes. Diles que contacten a los "servidores del proceso de gestión administrativa" o que lo hagan dentro del horario de atención.
   
-${require('./chatbotKnowledge')}
+${chatbotKnowledge}
 `;
 
     // Modelos candidatos en orden de prioridad (llama-3.1-8b-instant es rápido y disponible para todos los tiers)

@@ -1427,7 +1427,7 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           }
 
           /* 5. Inputs, selects, textareas y wrappers de selección (dropdowns) */
-          html[data-theme="dark"] input,
+          html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
           html[data-theme="dark"] textarea,
           html[data-theme="dark"] select,
           html[data-theme="dark"] .css-textinput-11aywtz {
@@ -1438,6 +1438,15 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           html[data-theme="dark"] input::placeholder,
           html[data-theme="dark"] textarea::placeholder {
             color: #94A3B8 !important;
+          }
+
+          /* Evitar que inputs transparentes nativos de Switches y checkboxes se pinten de oscuro sólido tapando el botón */
+          html[data-theme="dark"] input[type="checkbox"],
+          html[data-theme="dark"] input[type="radio"],
+          html[data-theme="dark"] input[role="switch"] {
+            background: transparent !important;
+            background-color: transparent !important;
+            border-color: transparent !important;
           }
 
           /* Wrappers interactivos de formulario (fecha, dependencia, hora, checbox) */
