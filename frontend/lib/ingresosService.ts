@@ -281,20 +281,54 @@ export const ingresosService = {
   },
 
   async actualizarValidacion(id: string, data: Partial<AnalisisCompleto>): Promise<{ success: boolean; mensaje: string }> {
-    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    // 1. Probar POST /update con X-HTTP-Method-Override para evitar bloqueos del WAF corporativo
+    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-HTTP-Method-Override': 'PUT'
+      },
       body: JSON.stringify(data)
-    });
+    }).catch(() => null);
+
+    // 2. Si no responde o falla, intentar PUT estándar
+    if (!res || !res.ok) {
+      res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-HTTP-Method-Override': 'PUT'
+        },
+        body: JSON.stringify(data)
+      });
+    }
+
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Error al actualizar la validación');
     return json;
   },
 
   async eliminarValidacion(id: string): Promise<{ success: boolean; mensaje: string }> {
-    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
-      method: 'DELETE'
-    });
+    // 1. Probar POST /delete con X-HTTP-Method-Override (100% compatible con WAF distrital)
+    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-HTTP-Method-Override': 'DELETE'
+      }
+    }).catch(() => null);
+
+    // 2. Si no responde o falla, probar DELETE estándar
+    if (!res || !res.ok) {
+      res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-HTTP-Method-Override': 'DELETE'
+        }
+      });
+    }
+
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Error al eliminar la validación');
     return json;

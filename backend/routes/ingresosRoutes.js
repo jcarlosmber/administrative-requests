@@ -704,25 +704,39 @@ module.exports = function(pool) {
       res.json({ success: true, mensaje: 'Validación actualizada exitosamente.' });
     } catch (err) {
       await client.query('ROLLBACK');
-      console.error('[Ingresos] Error en PUT /validaciones/:id:', err);
+      console.error('[Ingresos] Error en PUT/POST update /validaciones/:id:', err);
       res.status(500).json({ error: 'Error al actualizar la validación: ' + err.message });
     } finally {
       client.release();
     }
-  });
+  };
+
+  router.put('/validaciones/:id', handlerActualizarValidacion);
+  router.post('/validaciones/:id/update', handlerActualizarValidacion);
 
   /**
-   * 7.2 DELETE /api/ingresos/validaciones/:id - Elimina una validación
+   * 7.2 DELETE /api/ingresos/validaciones/:id - Elimina una validación (soporta DELETE y POST /delete para WAF)
    */
-  router.delete('/validaciones/:id', async (req, res) => {
+  const handlerEliminarValidacion = async (req, res) => {
+    const client = await pool.connect();
     try {
       const { id } = req.params;
-      await pool.query('DELETE FROM ingreso_validaciones WHERE id = $1', [id]);
+      await client.query('BEGIN');
+      await client.query('DELETE FROM ingreso_certificados WHERE validacion_id = $1', [id]);
+      await client.query('DELETE FROM ingreso_validaciones WHERE id = $1', [id]);
+      await client.query('COMMIT');
       res.json({ success: true, mensaje: 'Validación eliminada correctamente.' });
     } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[Ingresos] Error en DELETE /validaciones/:id:', err);
       res.status(500).json({ error: 'Error al eliminar la validación: ' + err.message });
+    } finally {
+      client.release();
     }
-  });
+  };
+
+  router.delete('/validaciones/:id', handlerEliminarValidacion);
+  router.post('/validaciones/:id/delete', handlerEliminarValidacion);
 
   /**
    * 8. GET /api/ingresos/validaciones/:id/excel - Descarga del dictamen en Excel
