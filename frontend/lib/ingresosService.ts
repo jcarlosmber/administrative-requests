@@ -116,13 +116,23 @@ export const ingresosService = {
   },
 
   async guardarCargo(cargo: CargoEvaluado): Promise<CargoEvaluado> {
-    const res = await fetch(`${API_URL}/api/ingresos/cargos`, {
-      method: 'POST',
+    const isEdit = !!cargo.id;
+    const url = isEdit ? `${API_URL}/api/ingresos/cargos/${cargo.id}` : `${API_URL}/api/ingresos/cargos`;
+    const res = await fetch(url, {
+      method: isEdit ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cargo)
     });
-    if (!res.ok) throw new Error('Error al guardar el cargo');
+    if (!res.ok) throw new Error(isEdit ? 'Error al actualizar el cargo' : 'Error al guardar el cargo');
     return res.json();
+  },
+
+  async eliminarCargo(id: string): Promise<boolean> {
+    const res = await fetch(`${API_URL}/api/ingresos/cargos/${id}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) throw new Error('Error al eliminar el cargo');
+    return true;
   },
 
   async analizarDocumentos(

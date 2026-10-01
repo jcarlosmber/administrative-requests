@@ -111,8 +111,33 @@ module.exports = function(pool) {
    */
   router.post('/cargos', async (req, res) => {
     try {
-      const { nombre, codigo, grado, dependencia, requisito_experiencia_meses, requisitos_formacion, funciones_cargo } = req.body;
+      const { id, nombre, codigo, grado, dependencia, requisito_experiencia_meses, requisitos_formacion, funciones_cargo } = req.body;
       if (!nombre) return res.status(400).json({ error: 'El nombre del cargo es obligatorio.' });
+
+      if (id) {
+        const updateQuery = `
+          UPDATE ingreso_cargos
+          SET nombre = $1, codigo = $2, grado = $3, dependencia = $4,
+              requisito_experiencia_meses = $5, requisitos_formacion = $6,
+              funciones_cargo = $7, updated_at = NOW()
+          WHERE id = $8
+          RETURNING *;
+        `;
+        const updateValues = [
+          nombre,
+          codigo || '',
+          grado || '',
+          dependencia || '',
+          Number(requisito_experiencia_meses) || 0,
+          requisitos_formacion || '',
+          JSON.stringify(funciones_cargo || []),
+          id
+        ];
+        const updateResult = await pool.query(updateQuery, updateValues);
+        if (updateResult.rows.length > 0) {
+          return res.json(updateResult.rows[0]);
+        }
+      }
 
       const query = `
         INSERT INTO ingreso_cargos (nombre, codigo, grado, dependencia, requisito_experiencia_meses, requisitos_formacion, funciones_cargo)
@@ -131,7 +156,57 @@ module.exports = function(pool) {
       const result = await pool.query(query, values);
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      res.status(500).json({ error: 'Error al registrar cargo: ' + err.message });
+      res.status(500).json({ error: 'Error al registrar o actualizar cargo: ' + err.message });
+    }
+  });
+
+  /**
+   * 2.1 PUT /api/ingresos/cargos/:id - Actualiza un cargo existente
+   */
+  router.put('/cargos/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nombre, codigo, grado, dependencia, requisito_experiencia_meses, requisitos_formacion, funciones_cargo } = req.body;
+      if (!nombre) return res.status(400).json({ error: 'El nombre del cargo es obligatorio.' });
+
+      const query = `
+        UPDATE ingreso_cargos
+        SET nombre = $1, codigo = $2, grado = $3, dependencia = $4,
+            requisito_experiencia_meses = $5, requisitos_formacion = $6,
+            funciones_cargo = $7, updated_at = NOW()
+        WHERE id = $8
+        RETURNING *;
+      `;
+      const values = [
+        nombre,
+        codigo || '',
+        grado || '',
+        dependencia || '',
+        Number(requisito_experiencia_meses) || 0,
+        requisitos_formacion || '',
+        JSON.stringify(funciones_cargo || []),
+        id
+      ];
+      const result = await pool.query(query, values);
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Cargo no encontrado.' });
+      }
+      res.json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al actualizar cargo: ' + err.message });
+    }
+  });
+
+  /**
+   * 2.2 DELETE /api/ingresos/cargos/:id - Elimina un cargo
+   */
+  router.delete('/cargos/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await pool.query('DELETE FROM ingreso_cargos WHERE id = $1', [id]);
+      res.json({ success: true, message: 'Cargo eliminado correctamente.' });
+    } catch (err) {
+      res.status(500).json({ error: 'Error al eliminar cargo: ' + err.message });
     }
   });
 

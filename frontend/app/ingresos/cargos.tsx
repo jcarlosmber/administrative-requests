@@ -18,8 +18,9 @@ export default function CargosOficialesScreen() {
   const [cargos, setCargos] = useState<CargoEvaluado[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formulario de nuevo cargo
+  // Formulario de cargo (Crear o Editar)
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [cargoEditandoId, setCargoEditandoId] = useState<string | null>(null);
   const [nombre, setNombre] = useState('');
   const [codigo, setCodigo] = useState('');
   const [grado, setGrado] = useState('');
@@ -29,7 +30,11 @@ export default function CargosOficialesScreen() {
   const [funciones, setFunciones] = useState('');
   const [guardando, setGuardando] = useState(false);
 
-  // Modales
+  // Modal de Confirmación de Eliminación (Regla: No alerts)
+  const [cargoAEliminar, setCargoAEliminar] = useState<CargoEvaluado | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  // Modales de Notificación
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
@@ -56,7 +61,44 @@ export default function CargosOficialesScreen() {
     }
   };
 
-  const guardarNuevoCargo = async () => {
+  const limpiarFormulario = () => {
+    setCargoEditandoId(null);
+    setNombre('');
+    setCodigo('');
+    setGrado('');
+    setDependencia('');
+    setMeses('54');
+    setFormacion('');
+    setFunciones('');
+  };
+
+  const iniciarCreacion = () => {
+    limpiarFormulario();
+    setMostrarForm(true);
+  };
+
+  const iniciarEdicion = (c: CargoEvaluado) => {
+    setCargoEditandoId(c.id || null);
+    setNombre(c.nombre);
+    setCodigo(c.codigo || '');
+    setGrado(c.grado || '');
+    setDependencia(c.dependencia || '');
+    setMeses(String(c.requisito_experiencia_meses || 0));
+    setFormacion(c.requisitos_formacion || '');
+    if (Array.isArray(c.funciones_cargo)) {
+      setFunciones(c.funciones_cargo.join('\n'));
+    } else {
+      setFunciones('');
+    }
+    setMostrarForm(true);
+  };
+
+  const cancelarEdicion = () => {
+    limpiarFormulario();
+    setMostrarForm(false);
+  };
+
+  const guardarCargo = async () => {
     if (!nombre.trim()) {
       mostrarMensaje('Campo Requerido', 'El nombre del cargo es obligatorio.');
       return;
@@ -70,6 +112,7 @@ export default function CargosOficialesScreen() {
         .filter(f => f.length > 0);
 
       await ingresosService.guardarCargo({
+        id: cargoEditandoId || undefined,
         nombre,
         codigo,
         grado,
@@ -79,21 +122,33 @@ export default function CargosOficialesScreen() {
         funciones_cargo: funcionesArr
       });
 
+      const esEdicion = !!cargoEditandoId;
       setGuardando(false);
-      setMostrarForm(false);
-      // Limpiar
-      setNombre('');
-      setCodigo('');
-      setGrado('');
-      setDependencia('');
-      setMeses('54');
-      setFormacion('');
-      setFunciones('');
-      cargarCargos();
-      mostrarMensaje('Éxito', 'Cargo oficial registrado exitosamente.');
+      cancelarEdicion();
+      await cargarCargos();
+      mostrarMensaje(
+        'Operación Exitosa',
+        esEdicion ? 'El cargo oficial ha sido actualizado correctamente.' : 'El cargo oficial fue registrado exitosamente.'
+      );
     } catch (err: any) {
       setGuardando(false);
       mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el cargo.');
+    }
+  };
+
+  const confirmarEliminar = async () => {
+    if (!cargoAEliminar?.id) return;
+    try {
+      setEliminando(true);
+      await ingresosService.eliminarCargo(cargoAEliminar.id);
+      setEliminando(false);
+      setCargoAEliminar(null);
+      await cargarCargos();
+      mostrarMensaje('Cargo Eliminado', 'El perfil ha sido removido del catálogo.');
+    } catch (err: any) {
+      setEliminando(false);
+      setCargoAEliminar(null);
+      mostrarMensaje('Error al Eliminar', err.message || 'No se pudo eliminar el cargo.');
     }
   };
 
@@ -110,7 +165,9 @@ export default function CargosOficialesScreen() {
           alignItems: 'center',
           justifyContent: 'space-between',
           borderBottomWidth: 1,
-          borderBottomColor: '#1E293B'
+          borderBottomColor: '#1E293B',
+          flexWrap: 'wrap',
+          gap: 12
         }}
       >
         <TouchableOpacity
@@ -118,24 +175,29 @@ export default function CargosOficialesScreen() {
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>
-            Banco de Perfiles y Cargos Oficiales
-          </Text>
+          <View>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>
+              Banco de Perfiles y Cargos Oficiales
+            </Text>
+            <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+              Manuales de Funciones para Cotejo Documental
+            </Text>
+          </View>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setMostrarForm(!mostrarForm)}
+          onPress={mostrarForm ? cancelarEdicion : iniciarCreacion}
           style={{
             backgroundColor: mostrarForm ? '#334155' : '#991B1B',
-            paddingHorizontal: 14,
-            paddingVertical: 8,
+            paddingHorizontal: 16,
+            paddingVertical: 9,
             borderRadius: 8,
             flexDirection: 'row',
             alignItems: 'center',
             gap: 6
           }}
         >
-          <Ionicons name={mostrarForm ? 'close' : 'add'} size={18} color="#FFFFFF" />
+          <Ionicons name={mostrarForm ? 'close' : 'add-circle'} size={18} color="#FFFFFF" />
           <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
             {mostrarForm ? 'Cerrar Formulario' : 'Nuevo Cargo'}
           </Text>
@@ -143,21 +205,38 @@ export default function CargosOficialesScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 1000, alignSelf: 'center', width: '100%' }}>
-        {/* FORMULARIO DE NUEVO CARGO */}
+        {/* FORMULARIO DE CARGO (CREAR O EDITAR) */}
         {mostrarForm && (
           <View
             style={{
               backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              padding: 22,
+              borderRadius: 14,
+              padding: 24,
               borderWidth: 1,
-              borderColor: '#CBD5E1',
-              marginBottom: 24
+              borderColor: cargoEditandoId ? '#3B82F6' : '#CBD5E1',
+              marginBottom: 24,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.05,
+              shadowRadius: 10
             }}
           >
-            <Text style={{ fontSize: 17, fontWeight: '700', color: '#0F172A', marginBottom: 14 }}>
-              Registrar Perfil Oficial del Manual de Funciones
-            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons
+                  name={cargoEditandoId ? 'create' : 'add-circle'}
+                  size={22}
+                  color={cargoEditandoId ? '#2563EB' : '#991B1B'}
+                />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
+                  {cargoEditandoId ? `Editar Perfil de Cargo: ${nombre}` : 'Registrar Nuevo Perfil de Cargo'}
+                </Text>
+              </View>
+
+              <TouchableOpacity onPress={cancelarEdicion} style={{ padding: 4 }}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               <View style={{ flex: 2, minWidth: 240 }}>
@@ -168,7 +247,8 @@ export default function CargosOficialesScreen() {
                   value={nombre}
                   onChangeText={setNombre}
                   placeholder="Ej. Profesional Especializado"
-                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10 }}
+                  placeholderTextColor="#94A3B8"
+                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A' }}
                 />
               </View>
 
@@ -180,7 +260,8 @@ export default function CargosOficialesScreen() {
                   value={codigo}
                   onChangeText={setCodigo}
                   placeholder="222"
-                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10 }}
+                  placeholderTextColor="#94A3B8"
+                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A' }}
                 />
               </View>
 
@@ -192,20 +273,22 @@ export default function CargosOficialesScreen() {
                   value={grado}
                   onChangeText={setGrado}
                   placeholder="24"
-                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10 }}
+                  placeholderTextColor="#94A3B8"
+                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A' }}
                 />
               </View>
 
               <View style={{ flex: 1, minWidth: 120 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>
-                  Meses Exigidos
+                  Meses Exigidos *
                 </Text>
                 <TextInput
                   keyboardType="numeric"
                   value={meses}
                   onChangeText={setMeses}
                   placeholder="54"
-                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontWeight: '700' }}
+                  placeholderTextColor="#94A3B8"
+                  style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A', fontWeight: '700' }}
                 />
               </View>
             </View>
@@ -218,66 +301,135 @@ export default function CargosOficialesScreen() {
                 value={dependencia}
                 onChangeText={setDependencia}
                 placeholder="Ej. Dirección Distrital de Asuntos Penales"
-                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10 }}
+                placeholderTextColor="#94A3B8"
+                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A' }}
               />
             </View>
 
             <View style={{ marginTop: 12 }}>
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>
-                Requisitos de Formación
+                Requisitos de Formación Académica
               </Text>
               <TextInput
                 value={formacion}
                 onChangeText={setFormacion}
                 placeholder="Título profesional en... Posgrado en..."
-                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10 }}
+                placeholderTextColor="#94A3B8"
+                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 14, color: '#0F172A' }}
               />
             </View>
 
             <View style={{ marginTop: 12 }}>
               <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 4 }}>
-                Funciones Oficiales (Una por cada renglón)
+                Funciones Oficiales del Manual de Funciones (Una por cada renglón) *
               </Text>
               <TextInput
                 multiline
                 numberOfLines={6}
                 value={funciones}
                 onChangeText={setFunciones}
-                placeholder="1. Proyectar conceptos jurídicos...&#10;2. Sustanciar actos administrativos..."
-                style={{ borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, minHeight: 120, textAlignVertical: 'top' }}
+                placeholder="1. Proyectar conceptos jurídicos sobre temas de doctrina...&#10;2. Sustanciar actos administrativos..."
+                placeholderTextColor="#94A3B8"
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  borderRadius: 8,
+                  padding: 10,
+                  minHeight: 120,
+                  textAlignVertical: 'top',
+                  fontSize: 13,
+                  color: '#0F172A',
+                  lineHeight: 18
+                }}
               />
             </View>
 
-            <TouchableOpacity
-              onPress={guardarNuevoCargo}
-              disabled={guardando}
-              style={{
-                marginTop: 16,
-                backgroundColor: '#16A34A',
-                paddingVertical: 12,
-                borderRadius: 8,
-                alignItems: 'center',
-                flexDirection: 'row',
-                justifyContent: 'center',
-                gap: 8
-              }}
-            >
-              {guardando ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
-              )}
-              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
-                {guardando ? 'Guardando...' : 'Guardar Cargo'}
-              </Text>
-            </TouchableOpacity>
+            {/* BOTONES DEL FORMULARIO */}
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+              <TouchableOpacity
+                onPress={cancelarEdicion}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#F1F5F9',
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  alignItems: 'center'
+                }}
+              >
+                <Text style={{ color: '#475569', fontWeight: '700', fontSize: 14 }}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={guardarCargo}
+                disabled={guardando}
+                style={{
+                  flex: 2,
+                  backgroundColor: cargoEditandoId ? '#2563EB' : '#16A34A',
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                {guardando ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name={cargoEditandoId ? 'save-outline' : 'checkmark-circle'} size={18} color="#FFFFFF" />
+                )}
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+                  {guardando
+                    ? 'Guardando cambios...'
+                    : cargoEditandoId
+                    ? 'Actualizar Cargo Oficial'
+                    : 'Guardar Nuevo Cargo'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {/* LISTA DE CARGOS */}
+        {/* LISTADO DE CARGOS */}
         {loading ? (
           <View style={{ padding: 40, alignItems: 'center' }}>
             <ActivityIndicator size="large" color="#991B1B" />
+            <Text style={{ marginTop: 12, color: '#64748B', fontSize: 14 }}>
+              Cargando catálogo de cargos...
+            </Text>
+          </View>
+        ) : cargos.length === 0 ? (
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              padding: 40,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+          >
+            <Ionicons name="briefcase-outline" size={44} color="#94A3B8" />
+            <Text style={{ marginTop: 12, fontSize: 16, fontWeight: '700', color: '#1E293B' }}>
+              No hay cargos configurados
+            </Text>
+            <Text style={{ color: '#64748B', fontSize: 14, textAlign: 'center', marginTop: 4 }}>
+              Crea el primer cargo oficial con sus funciones para realizar cotejos automáticos con IA.
+            </Text>
+            <TouchableOpacity
+              onPress={iniciarCreacion}
+              style={{
+                marginTop: 16,
+                backgroundColor: '#991B1B',
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 8
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Crear Primer Cargo</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={{ gap: 14 }}>
@@ -289,16 +441,20 @@ export default function CargosOficialesScreen() {
                   borderRadius: 12,
                   padding: 20,
                   borderWidth: 1,
-                  borderColor: '#E2E8F0'
+                  borderColor: cargoEditandoId === cargo.id ? '#3B82F6' : '#E2E8F0',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.03,
+                  shadowRadius: 6
                 }}
               >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View>
-                    <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+                  <View style={{ flex: 1, minWidth: 260 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
                       {cargo.nombre}
                     </Text>
-                    <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
-                      Código: {cargo.codigo || 'N/A'} • Grado: {cargo.grado || 'N/A'} • Dependencia: {cargo.dependencia || 'N/A'}
+                    <Text style={{ fontSize: 13, color: '#64748B', marginTop: 3 }}>
+                      Código: <Text style={{ fontWeight: '700', color: '#334155' }}>{cargo.codigo || 'N/A'}</Text> • Grado: <Text style={{ fontWeight: '700', color: '#334155' }}>{cargo.grado || 'N/A'}</Text> • Dependencia: {cargo.dependencia || 'N/A'}
                     </Text>
                   </View>
 
@@ -310,30 +466,165 @@ export default function CargosOficialesScreen() {
                 </View>
 
                 {cargo.requisitos_formacion ? (
-                  <Text style={{ fontSize: 12, color: '#475569', marginTop: 8 }}>
-                    <Text style={{ fontWeight: '700' }}>Formación:</Text> {cargo.requisitos_formacion}
+                  <Text style={{ fontSize: 12, color: '#475569', marginTop: 10 }}>
+                    <Text style={{ fontWeight: '700' }}>Formación exigida:</Text> {cargo.requisitos_formacion}
                   </Text>
                 ) : null}
 
                 {Array.isArray(cargo.funciones_cargo) && cargo.funciones_cargo.length > 0 && (
-                  <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
                       Funciones Oficiales ({cargo.funciones_cargo.length}):
                     </Text>
                     {cargo.funciones_cargo.map((fn, fidx) => (
-                      <Text key={fidx} style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                      <Text key={fidx} style={{ fontSize: 12, color: '#64748B', marginTop: 2, lineHeight: 18 }}>
                         • {fn}
                       </Text>
                     ))}
                   </View>
                 )}
+
+                {/* BARRA DE ACCIONES (EDITAR / ELIMINAR) */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'flex-end',
+                    gap: 10,
+                    marginTop: 16,
+                    paddingTop: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: '#F1F5F9'
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => iniciarEdicion(cargo)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 6
+                    }}
+                  >
+                    <Ionicons name="pencil" size={15} color="#2563EB" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#2563EB' }}>
+                      Editar Cargo
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setCargoAEliminar(cargo)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: '#FEF2F2',
+                      borderWidth: 1,
+                      borderColor: '#FECACA',
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 6
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626' }}>
+                      Eliminar
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
         )}
       </ScrollView>
 
-      {/* Modal Reusable */}
+      {/* Modal de Confirmación de Eliminación (Regla: No alerts) */}
+      <Modal
+        visible={!!cargoAEliminar}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCargoAEliminar(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              padding: 24,
+              width: '100%',
+              maxWidth: 420,
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <Ionicons name="warning" size={26} color="#DC2626" />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
+                Confirmar Eliminación
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 14, color: '#475569', lineHeight: 20, marginBottom: 18 }}>
+              ¿Estás seguro de que deseas eliminar el cargo{' '}
+              <Text style={{ fontWeight: '700', color: '#0F172A' }}>
+                "{cargoAEliminar?.nombre}"
+              </Text>
+              ? Esta acción no se puede deshacer.
+            </Text>
+
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setCargoAEliminar(null)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#F1F5F9',
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  alignItems: 'center'
+                }}
+              >
+                <Text style={{ color: '#475569', fontWeight: '700', fontSize: 14 }}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmarEliminar}
+                disabled={eliminando}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#DC2626',
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 6
+                }}
+              >
+                {eliminando && <ActivityIndicator size="small" color="#FFFFFF" />}
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+                  {eliminando ? 'Eliminando...' : 'Sí, Eliminar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Notificaciones Reusable (Regla: No alerts) */}
       <Modal
         visible={modalVisible}
         transparent={true}
