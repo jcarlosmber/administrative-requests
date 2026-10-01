@@ -18,10 +18,12 @@ async function generarReporteExcelValidacion(data) {
     await workbook.xlsx.readFile(templatePath);
     ws = workbook.worksheets[0];
     ws.name = 'FORMATO FT-318';
+    ws.tables = {};
   } else {
     ws = workbook.addWorksheet('FORMATO FT-318', {
       views: [{ showGridLines: true }]
     });
+    ws.tables = {};
   }
 
   const candidato = data.candidato || {};
