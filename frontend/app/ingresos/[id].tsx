@@ -12,7 +12,13 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ingresosService, AnalisisCompleto, FormacionAcademicaItem } from '../../lib/ingresosService';
+import {
+  ingresosService,
+  AnalisisCompleto,
+  FormacionAcademicaItem,
+  CertificadoAnalizado,
+  DocumentoNoAplicaItem
+} from '../../lib/ingresosService';
 
 export default function DetalleValidacionScreen() {
   const router = useRouter();
@@ -21,8 +27,10 @@ export default function DetalleValidacionScreen() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalisisCompleto | null>(null);
 
-  // Estados de Títulos Académicos
+  // Estados interactivos para Títulos, Certificados y Documentos No Aplicables
   const [titulos, setTitulos] = useState<FormacionAcademicaItem[]>([]);
+  const [certificados, setCertificados] = useState<CertificadoAnalizado[]>([]);
+  const [documentosNoAplican, setDocumentosNoAplican] = useState<DocumentoNoAplicaItem[]>([]);
   const [hayCambios, setHayCambios] = useState(false);
   const [guardandoCambios, setGuardandoCambios] = useState(false);
 
@@ -37,9 +45,14 @@ export default function DetalleValidacionScreen() {
   const [formCumple, setFormCumple] = useState(true);
   const [formJustificacion, setFormJustificacion] = useState('');
 
-  // Modal Confirmar Eliminación
+  // Modal Confirmar Eliminación (Unificado para Títulos, Certificados y No Aplican)
   const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
-  const [indexAEliminar, setIndexAEliminar] = useState<number | null>(null);
+  const [itemAEliminar, setItemAEliminar] = useState<{
+    tipo: 'TITULO' | 'CERTIFICADO' | 'DOCUMENTO_NO_APLICA';
+    idx: number;
+    titulo: string;
+    descripcion: string;
+  } | null>(null);
 
   // Modales Informativos
   const [modalVisible, setModalVisible] = useState(false);
@@ -64,6 +77,8 @@ export default function DetalleValidacionScreen() {
       const res = await ingresosService.obtenerValidacionPorId(valId);
       setData(res);
       setTitulos(res.formacion_academica || []);
+      setCertificados(res.certificados || []);
+      setDocumentosNoAplican(res.documentos_no_aplican || []);
       setHayCambios(false);
     } catch (err: any) {
       mostrarMensaje('Error al Cargar', err.message || 'No se pudo obtener el detalle de la validación.');
@@ -131,18 +146,51 @@ export default function DetalleValidacionScreen() {
     setModalTituloVisible(false);
   };
 
-  const pedirConfirmarEliminar = (idx: number) => {
-    setIndexAEliminar(idx);
+  const pedirConfirmarEliminarTitulo = (idx: number) => {
+    const it = titulos[idx];
+    setItemAEliminar({
+      tipo: 'TITULO',
+      idx,
+      titulo: 'Eliminar Título Académico',
+      descripcion: `¿Estás seguro de que deseas eliminar el título "${it?.titulo_obtenido || 'seleccionado'}" de este expediente?`
+    });
     setModalEliminarVisible(true);
   };
 
-  const ejecutarEliminarTitulo = () => {
-    if (indexAEliminar === null) return;
-    const nuevaLista = titulos.filter((_, idx) => idx !== indexAEliminar);
-    setTitulos(nuevaLista);
+  const pedirConfirmarEliminarCertificado = (idx: number) => {
+    const it = certificados[idx];
+    setItemAEliminar({
+      tipo: 'CERTIFICADO',
+      idx,
+      titulo: 'Eliminar Certificado Laboral',
+      descripcion: `¿Estás seguro de que deseas eliminar el certificado "${it?.entidad || ''} - ${it?.cargo_certificado || ''}" de este expediente?`
+    });
+    setModalEliminarVisible(true);
+  };
+
+  const pedirConfirmarEliminarDocNoAplica = (idx: number) => {
+    const it = documentosNoAplican[idx];
+    setItemAEliminar({
+      tipo: 'DOCUMENTO_NO_APLICA',
+      idx,
+      titulo: 'Eliminar Registro de Documento No Aplicable',
+      descripcion: `¿Estás seguro de que deseas eliminar "${it?.descripcion || it?.nombre_archivo || 'este documento'}" de la lista de documentos que no aplican?`
+    });
+    setModalEliminarVisible(true);
+  };
+
+  const ejecutarEliminar = () => {
+    if (!itemAEliminar) return;
+    if (itemAEliminar.tipo === 'TITULO') {
+      setTitulos(titulos.filter((_, idx) => idx !== itemAEliminar.idx));
+    } else if (itemAEliminar.tipo === 'CERTIFICADO') {
+      setCertificados(certificados.filter((_, idx) => idx !== itemAEliminar.idx));
+    } else if (itemAEliminar.tipo === 'DOCUMENTO_NO_APLICA') {
+      setDocumentosNoAplican(documentosNoAplican.filter((_, idx) => idx !== itemAEliminar.idx));
+    }
     setHayCambios(true);
     setModalEliminarVisible(false);
-    setIndexAEliminar(null);
+    setItemAEliminar(null);
   };
 
   const guardarCambiosServidor = async () => {
@@ -150,13 +198,20 @@ export default function DetalleValidacionScreen() {
     try {
       setGuardandoCambios(true);
       await ingresosService.actualizarValidacion(id, {
-        formacion_academica: titulos
+        formacion_academica: titulos,
+        certificados: certificados,
+        documentos_no_aplican: documentosNoAplican
       });
       setHayCambios(false);
-      setData({ ...data, formacion_academica: titulos });
+      setData({
+        ...data,
+        formacion_academica: titulos,
+        certificados: certificados,
+        documentos_no_aplican: documentosNoAplican
+      });
       mostrarMensaje(
         'Cambios Guardados',
-        'Los títulos formativos del expediente han sido actualizados exitosamente en la base de datos y se reflejarán de inmediato en la exportación a Excel.'
+        'Las modificaciones realizadas (títulos, certificados o documentos no aplicables) han sido actualizadas exitosamente en el expediente y se reflejarán de inmediato en la exportación a Excel.'
       );
     } catch (err: any) {
       mostrarMensaje('Error al Guardar', err.message || 'No se pudieron guardar los cambios.');
@@ -208,7 +263,7 @@ export default function DetalleValidacionScreen() {
     );
   }
 
-  const { candidato, cargo_evaluado, consolidado, certificados } = data;
+  const { candidato, cargo_evaluado, consolidado } = data;
   const esCumple = consolidado.resultado_final === 'CUMPLE';
   const esNoCumple = consolidado.resultado_final === 'NO_CUMPLE';
   const colorEstado = esCumple ? '#16A34A' : esNoCumple ? '#DC2626' : '#D97706';
@@ -615,7 +670,7 @@ export default function DetalleValidacionScreen() {
 
                       {/* Botón Eliminar */}
                       <TouchableOpacity
-                        onPress={() => pedirConfirmarEliminar(idx)}
+                        onPress={() => pedirConfirmarEliminarTitulo(idx)}
                         style={{
                           padding: 6,
                           borderRadius: 6,
@@ -678,17 +733,34 @@ export default function DetalleValidacionScreen() {
                     </Text>
                   </View>
 
-                  <View
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 5,
-                      borderRadius: 6,
-                      backgroundColor: esRel ? '#DCFCE7' : '#FEE2E2'
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: '800', color: esRel ? '#16A34A' : '#DC2626' }}>
-                      {c.clasificacion_experiencia}
-                    </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        backgroundColor: esRel ? '#DCFCE7' : '#FEE2E2'
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: esRel ? '#16A34A' : '#DC2626' }}>
+                        {c.clasificacion_experiencia}
+                      </Text>
+                    </View>
+
+                    {/* Botón Eliminar Certificado */}
+                    <TouchableOpacity
+                      onPress={() => pedirConfirmarEliminarCertificado(index)}
+                      style={{
+                        padding: 6,
+                        borderRadius: 6,
+                        backgroundColor: '#FEE2E2',
+                        borderWidth: 1,
+                        borderColor: '#FCA5A5'
+                      }}
+                      accessibilityLabel="Eliminar certificado"
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -911,8 +983,8 @@ export default function DetalleValidacionScreen() {
             </View>
             <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A' }}>
               <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309' }}>
-                {data.documentos_no_aplican && data.documentos_no_aplican.length > 0
-                  ? `${data.documentos_no_aplican.length} excluido(s)`
+                {documentosNoAplican.length > 0
+                  ? `${documentosNoAplican.length} excluido(s)`
                   : '0 excluidos'}
               </Text>
             </View>
@@ -922,7 +994,7 @@ export default function DetalleValidacionScreen() {
             Relación explícita de documentos que no constituyen experiencia laboral válida, certificaciones sin funciones o requisitos de ley, o documentos que no guardan relación con el perfil exigido.
           </Text>
 
-          {(!data.documentos_no_aplican || data.documentos_no_aplican.length === 0) ? (
+          {documentosNoAplican.length === 0 ? (
             <View style={{ padding: 12, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0' }}>
               <Text style={{ fontSize: 12, color: '#15803D', fontWeight: '700' }}>
                 ✓ Todos los documentos aportados son válidos y computables para la evaluación del cargo.
@@ -930,7 +1002,7 @@ export default function DetalleValidacionScreen() {
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              {data.documentos_no_aplican.map((doc, idx) => (
+              {documentosNoAplican.map((doc, idx) => (
                 <View
                   key={doc.id || idx}
                   style={{
@@ -960,10 +1032,27 @@ export default function DetalleValidacionScreen() {
                       ) : null}
                     </View>
 
-                    <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#DC2626' }}>
-                        NO APLICA
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#DC2626' }}>
+                          NO APLICA
+                        </Text>
+                      </View>
+
+                      {/* Botón Eliminar Registro No Aplica */}
+                      <TouchableOpacity
+                        onPress={() => pedirConfirmarEliminarDocNoAplica(idx)}
+                        style={{
+                          padding: 5,
+                          borderRadius: 6,
+                          backgroundColor: '#FEE2E2',
+                          borderWidth: 1,
+                          borderColor: '#FCA5A5'
+                        }}
+                        accessibilityLabel="Eliminar de no aplica"
+                      >
+                        <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
@@ -1315,11 +1404,11 @@ export default function DetalleValidacionScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <Ionicons name="trash-bin-outline" size={24} color="#DC2626" />
               <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
-                Eliminar Título Académico
+                {itemAEliminar?.titulo || 'Confirmar Eliminación'}
               </Text>
             </View>
             <Text style={{ fontSize: 13, color: '#475569', lineHeight: 20, marginBottom: 20 }}>
-              ¿Estás seguro de que deseas eliminar este título formativo de este expediente? Recuerda guardar los cambios para sincronizarlos con la base de datos.
+              {itemAEliminar?.descripcion || '¿Estás seguro de que deseas eliminar este registro del expediente? Recuerda guardar los cambios para sincronizarlos con la base de datos.'}
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <TouchableOpacity
@@ -1336,7 +1425,7 @@ export default function DetalleValidacionScreen() {
                 <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={ejecutarEliminarTitulo}
+                onPress={ejecutarEliminar}
                 style={{
                   backgroundColor: '#DC2626',
                   paddingVertical: 9,

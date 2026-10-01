@@ -710,21 +710,83 @@ export default function NuevaValidacionScreen() {
     setModalTituloVisible(false);
   };
 
-  const pedirConfirmarEliminar = (idx: number) => {
-    setIndexAEliminar(idx);
+  const [itemAEliminar, setItemAEliminar] = useState<{
+    tipo: 'TITULO' | 'CERTIFICADO' | 'DOCUMENTO_NO_APLICA';
+    idx: number;
+    titulo: string;
+    descripcion: string;
+  } | null>(null);
+
+  const pedirConfirmarEliminarTitulo = (idx: number) => {
+    if (!analisisResultado?.formacion_academica) return;
+    const it = analisisResultado.formacion_academica[idx];
+    setItemAEliminar({
+      tipo: 'TITULO',
+      idx,
+      titulo: 'Eliminar Título Académico',
+      descripcion: `¿Estás seguro de que deseas eliminar el título "${it?.titulo_obtenido || 'seleccionado'}" de este dictamen?`
+    });
     setModalEliminarVisible(true);
   };
 
-  const ejecutarEliminarTitulo = () => {
-    if (indexAEliminar === null || !analisisResultado) return;
-    const actual = analisisResultado.formacion_academica || [];
-    const nuevaLista = actual.filter((_, idx) => idx !== indexAEliminar);
-    setAnalisisResultado({
-      ...analisisResultado,
-      formacion_academica: nuevaLista
+  const pedirConfirmarEliminarCertificado = (idx: number) => {
+    if (!analisisResultado?.certificados) return;
+    const it = analisisResultado.certificados[idx];
+    setItemAEliminar({
+      tipo: 'CERTIFICADO',
+      idx,
+      titulo: 'Eliminar Certificado Laboral',
+      descripcion: `¿Estás seguro de que deseas eliminar el certificado "${it?.entidad || ''} - ${it?.cargo_certificado || ''}" de este dictamen? Se recalcularán los tiempos válidos.`
     });
+    setModalEliminarVisible(true);
+  };
+
+  const pedirConfirmarEliminarDocNoAplica = (idx: number) => {
+    if (!analisisResultado?.documentos_no_aplican) return;
+    const it = analisisResultado.documentos_no_aplican[idx];
+    setItemAEliminar({
+      tipo: 'DOCUMENTO_NO_APLICA',
+      idx,
+      titulo: 'Eliminar Documento No Aplicable',
+      descripcion: `¿Estás seguro de que deseas eliminar "${it?.descripcion || it?.nombre_archivo || 'este documento'}" de la lista de documentos que no aplican?`
+    });
+    setModalEliminarVisible(true);
+  };
+
+  const ejecutarEliminar = async () => {
+    if (!itemAEliminar || !analisisResultado) return;
+    if (itemAEliminar.tipo === 'TITULO') {
+      const actual = analisisResultado.formacion_academica || [];
+      setAnalisisResultado({
+        ...analisisResultado,
+        formacion_academica: actual.filter((_, idx) => idx !== itemAEliminar.idx)
+      });
+    } else if (itemAEliminar.tipo === 'CERTIFICADO') {
+      const actual = analisisResultado.certificados || [];
+      const nuevosCerts = actual.filter((_, idx) => idx !== itemAEliminar.idx);
+      try {
+        const reqMeses = Number(mesesExigidos) || analisisResultado.consolidado.requisito_minimo_meses || 0;
+        const recalc = await ingresosService.recalcularTiempos(nuevosCerts, reqMeses);
+        setAnalisisResultado({
+          ...analisisResultado,
+          certificados: recalc.certificados || nuevosCerts,
+          consolidado: recalc.consolidado || analisisResultado.consolidado
+        });
+      } catch (e) {
+        setAnalisisResultado({
+          ...analisisResultado,
+          certificados: nuevosCerts
+        });
+      }
+    } else if (itemAEliminar.tipo === 'DOCUMENTO_NO_APLICA') {
+      const actual = analisisResultado.documentos_no_aplican || [];
+      setAnalisisResultado({
+        ...analisisResultado,
+        documentos_no_aplican: actual.filter((_, idx) => idx !== itemAEliminar.idx)
+      });
+    }
     setModalEliminarVisible(false);
-    setIndexAEliminar(null);
+    setItemAEliminar(null);
   };
 
   return (
@@ -1943,7 +2005,7 @@ export default function NuevaValidacionScreen() {
 
                           {/* Botón Eliminar */}
                           <TouchableOpacity
-                            onPress={() => pedirConfirmarEliminar(idx)}
+                            onPress={() => pedirConfirmarEliminarTitulo(idx)}
                             style={{
                               padding: 6,
                               borderRadius: 6,
@@ -1987,26 +2049,44 @@ export default function NuevaValidacionScreen() {
                   }}
                 >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', flex: 1 }}>
                       {c.id_certificado}: {c.entidad}
                     </Text>
-                    <View
-                      style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 3,
-                        borderRadius: 4,
-                        backgroundColor: c.clasificacion_experiencia === 'RELACIONADA' ? '#DCFCE7' : '#FEE2E2'
-                      }}
-                    >
-                      <Text
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View
                         style={{
-                          fontSize: 11,
-                          fontWeight: '700',
-                          color: c.clasificacion_experiencia === 'RELACIONADA' ? '#16A34A' : '#DC2626'
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 4,
+                          backgroundColor: c.clasificacion_experiencia === 'RELACIONADA' ? '#DCFCE7' : '#FEE2E2'
                         }}
                       >
-                        {c.clasificacion_experiencia}
-                      </Text>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '700',
+                            color: c.clasificacion_experiencia === 'RELACIONADA' ? '#16A34A' : '#DC2626'
+                          }}
+                        >
+                          {c.clasificacion_experiencia}
+                        </Text>
+                      </View>
+
+                      {/* Botón Eliminar Certificado */}
+                      <TouchableOpacity
+                        onPress={() => pedirConfirmarEliminarCertificado(i)}
+                        style={{
+                          padding: 5,
+                          borderRadius: 6,
+                          backgroundColor: '#FEE2E2',
+                          borderWidth: 1,
+                          borderColor: '#FCA5A5'
+                        }}
+                        accessibilityLabel="Eliminar certificado"
+                      >
+                        <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
@@ -2195,10 +2275,25 @@ export default function NuevaValidacionScreen() {
                           ) : null}
                         </View>
 
-                        <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#DC2626' }}>
-                            NO APLICA
-                          </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#DC2626' }}>
+                              NO APLICA
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => pedirConfirmarEliminarDocNoAplica(idx)}
+                            style={{
+                              padding: 5,
+                              borderRadius: 6,
+                              backgroundColor: '#FEE2E2',
+                              borderWidth: 1,
+                              borderColor: '#FCA5A5'
+                            }}
+                            accessibilityLabel="Eliminar de no aplica"
+                          >
+                            <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                          </TouchableOpacity>
                         </View>
                       </View>
 
@@ -2858,11 +2953,11 @@ export default function NuevaValidacionScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
               <Ionicons name="trash-bin-outline" size={24} color="#DC2626" />
               <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
-                Eliminar Título Académico
+                {itemAEliminar?.titulo || 'Confirmar Eliminación'}
               </Text>
             </View>
             <Text style={{ fontSize: 13, color: '#475569', lineHeight: 20, marginBottom: 20 }}>
-              ¿Estás seguro de que deseas eliminar este título formativo de este expediente?
+              {itemAEliminar?.descripcion || '¿Estás seguro de que deseas eliminar este registro del dictamen preliminar?'}
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <TouchableOpacity
@@ -2879,7 +2974,7 @@ export default function NuevaValidacionScreen() {
                 <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={ejecutarEliminarTitulo}
+                onPress={ejecutarEliminar}
                 style={{
                   backgroundColor: '#DC2626',
                   paddingVertical: 9,
