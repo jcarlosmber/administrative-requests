@@ -420,7 +420,7 @@ module.exports = function(pool) {
   router.get('/validaciones', async (req, res) => {
     try {
       const query = `
-        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
         ORDER BY v.created_at DESC;
@@ -618,6 +618,18 @@ module.exports = function(pool) {
           updates.push(`cargo_grado = $${pIdx++}`);
           values.push(cargo_evaluado.grado);
         }
+        if (cargo_evaluado.id_sideap !== undefined) {
+          updates.push(`id_sideap = $${pIdx++}`);
+          values.push(cargo_evaluado.id_sideap || null);
+        }
+        if (cargo_evaluado.id_perno !== undefined) {
+          updates.push(`id_perno = $${pIdx++}`);
+          values.push(cargo_evaluado.id_perno || null);
+        }
+        if (cargo_evaluado.id_plaza !== undefined) {
+          updates.push(`id_plaza = $${pIdx++}`);
+          values.push(cargo_evaluado.id_plaza || null);
+        }
       }
 
       updates.push(`updated_at = NOW()`);
@@ -626,6 +638,18 @@ module.exports = function(pool) {
         values.push(id);
         const updateValQuery = `UPDATE ingreso_validaciones SET ${updates.join(', ')} WHERE id = $${pIdx} RETURNING *;`;
         await client.query(updateValQuery, values);
+      }
+
+      // Actualizar candidato si viene
+      if (candidato) {
+        const candIdRes = await client.query('SELECT candidato_id FROM ingreso_validaciones WHERE id = $1', [id]);
+        if (candIdRes.rows.length > 0 && candIdRes.rows[0].candidato_id) {
+          const cId = candIdRes.rows[0].candidato_id;
+          await client.query(
+            'UPDATE ingreso_candidatos SET nombre = COALESCE($1, nombre), documento = COALESCE($2, documento), email = COALESCE($3, email), telefono = COALESCE($4, telefono) WHERE id = $5',
+            [candidato.nombre || null, candidato.documento || null, candidato.email || null, candidato.telefono || null, cId]
+          );
+        }
       }
 
       // Si vienen certificados actualizados

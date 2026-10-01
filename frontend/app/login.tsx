@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -78,6 +78,25 @@ export default function LoginPage() {
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [showVideoModal, setShowVideoModal] = useState(false);
+
+  // Acceso oculto a validación de ingresos (3 clics rápidos en Gestión de Mantenimiento)
+  const clickCountRef = useRef<number>(0);
+  const clickTimeoutRef = useRef<any>(null);
+
+  const handleMantenimientoSecretClick = () => {
+    clickCountRef.current = (clickCountRef.current || 0) + 1;
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+    if (clickCountRef.current >= 3) {
+      clickCountRef.current = 0;
+      router.push('/ingresos');
+      return;
+    }
+    clickTimeoutRef.current = setTimeout(() => {
+      clickCountRef.current = 0;
+    }, 2000);
+  };
 
   const [loading, setLoading] = useState(false);
   const [errorModalVisible, setErrorModalVisible] = useState(false);
@@ -265,16 +284,35 @@ export default function LoginPage() {
                     </View>
                   </Pressable>
 
-                  {/* Cuadrícula de Módulos (Visible en Pantallas Grandes como la imagen de referencia) */}
-                  {isDesktop && (
+                  {/* Cuadrícula de Módulos (Desktop y Mobile con acceso oculto a ingresos con 3 clics en mantenimiento) */}
+                  {isDesktop ? (
                     <View style={styles.modulesGrid}>
                       {SASGE_MODULES.map((item) => (
-                        <View key={item.id} style={styles.moduleCard}>
+                        <Pressable
+                          key={item.id}
+                          style={styles.moduleCard}
+                          onPress={item.id === 'maintenance' ? handleMantenimientoSecretClick : undefined}
+                        >
                           <View style={styles.moduleIconBox}>
                             <Ionicons name={item.icon} size={28} color="#FFFFFF" />
                           </View>
                           <Text style={styles.moduleCardTitle}>{item.title}</Text>
-                        </View>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.modulesGridMobile}>
+                      {SASGE_MODULES.map((item) => (
+                        <Pressable
+                          key={item.id}
+                          style={styles.moduleCardMobile}
+                          onPress={item.id === 'maintenance' ? handleMantenimientoSecretClick : undefined}
+                        >
+                          <View style={styles.moduleIconBoxMobile}>
+                            <Ionicons name={item.icon} size={20} color="#FFFFFF" />
+                          </View>
+                          <Text style={styles.moduleCardTitleMobile} numberOfLines={1}>{item.title}</Text>
+                        </Pressable>
                       ))}
                     </View>
                   )}
@@ -829,6 +867,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 17,
+  },
+  modulesGridMobile: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginVertical: 14,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  moduleCardMobile: {
+    width: '48%',
+    backgroundColor: COLORS.bgCardDarkSoft,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.lineDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  moduleIconBoxMobile: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  moduleCardTitleMobile: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 
   /* Footer del panel de marca */

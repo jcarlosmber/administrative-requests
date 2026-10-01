@@ -179,8 +179,31 @@ export default function DetalleValidacionScreen() {
     setModalEliminarVisible(true);
   };
 
-  const ejecutarEliminar = () => {
+  const pedirConfirmarEliminarExpediente = () => {
+    setItemAEliminar({
+      tipo: 'EXPEDIENTE_COMPLETO',
+      idx: 0,
+      titulo: 'Eliminar Dictamen y Expediente',
+      descripcion: `¿Estás seguro de que deseas eliminar definitivamente este dictamen de ${candidato.nombre}? Esta acción no se puede deshacer y borrará todos los certificados y validaciones asociadas.`
+    });
+    setModalEliminarVisible(true);
+  };
+
+  const ejecutarEliminar = async () => {
     if (!itemAEliminar) return;
+    if (itemAEliminar.tipo === 'EXPEDIENTE_COMPLETO') {
+      try {
+        setModalEliminarVisible(false);
+        setLoading(true);
+        await ingresosService.eliminarValidacion(id);
+        router.replace('/ingresos');
+      } catch (err: any) {
+        setLoading(false);
+        mostrarMensaje('Error al Eliminar', err.message || 'No se pudo eliminar el dictamen.');
+      }
+      return;
+    }
+
     if (itemAEliminar.tipo === 'TITULO') {
       setTitulos(titulos.filter((_, idx) => idx !== itemAEliminar.idx));
     } else if (itemAEliminar.tipo === 'CERTIFICADO') {
@@ -363,6 +386,24 @@ export default function DetalleValidacionScreen() {
               Exportar Excel
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={pedirConfirmarEliminarExpediente}
+            style={{
+              backgroundColor: '#DC2626',
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+              Eliminar Dictamen
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -379,14 +420,24 @@ export default function DetalleValidacionScreen() {
           }}
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
-            <View>
+            <View style={{ flex: 1, minWidth: 280 }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
                 Resultado Oficial de la Verificación
               </Text>
               <Text style={{ fontSize: 24, fontWeight: '800', color: '#0F172A', marginTop: 4 }}>
                 {candidato.nombre}
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4, flexWrap: 'wrap' }}>
+                <Text style={{ fontSize: 13, color: '#475569' }}>
+                  <Text style={{ fontWeight: '700' }}>Cédula:</Text> {candidato.documento || 'N/A'}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#475569' }}>
+                  <Text style={{ fontWeight: '700' }}>Correo:</Text> {candidato.email || 'No registrado'}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                 <Text style={{ fontSize: 14, color: '#475569' }}>
                   Cargo Evaluado: <Text style={{ fontWeight: '700' }}>{cargo_evaluado.nombre}</Text> (Cód. {cargo_evaluado.codigo || 'N/A'} - Grado {cargo_evaluado.grado || 'N/A'})
                 </Text>

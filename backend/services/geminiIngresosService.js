@@ -396,8 +396,19 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
   }
 
   return {
-    candidato: parsedJson.candidato || candidatoData,
-    cargo_evaluado: parsedJson.cargo_evaluado || cargoData,
+    candidato: {
+      ...candidatoData,
+      ...(parsedJson.candidato || {}),
+      email: candidatoData.email || parsedJson.candidato?.email || null,
+      telefono: candidatoData.telefono || parsedJson.candidato?.telefono || null
+    },
+    cargo_evaluado: {
+      ...cargoData,
+      ...(parsedJson.cargo_evaluado || {}),
+      id_sideap: cargoData.id_sideap || parsedJson.cargo_evaluado?.id_sideap || null,
+      id_perno: cargoData.id_perno || parsedJson.cargo_evaluado?.id_perno || null,
+      id_plaza: cargoData.id_plaza || parsedJson.cargo_evaluado?.id_plaza || null
+    },
     formacion_academica: formacionAcademica,
     certificados: auditResult.certificados,
     documentos_no_aplican: documentosNoAplican,

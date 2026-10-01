@@ -617,6 +617,15 @@ export default function NuevaValidacionScreen() {
       );
 
       setProgresoTexto('Auditando traslapes y calculando tiempos válidos...');
+      if (!resultado.candidato.email && candidatoEmail) {
+        resultado.candidato.email = candidatoEmail;
+      }
+      if (!resultado.cargo_evaluado.id_sideap && idSideap) {
+        resultado.cargo_evaluado.id_sideap = parseInt(String(idSideap), 10);
+      }
+      if (!resultado.cargo_evaluado.id_perno && idPerno) {
+        resultado.cargo_evaluado.id_perno = parseInt(String(idPerno), 10);
+      }
       setAnalisisResultado(resultado);
       setAnalizando(false);
     } catch (err: any) {
@@ -629,13 +638,28 @@ export default function NuevaValidacionScreen() {
     if (!analisisResultado) return;
     try {
       setGuardando(true);
+      const payloadListo: AnalisisCompleto = {
+        ...analisisResultado,
+        candidato: {
+          ...analisisResultado.candidato,
+          email: candidatoEmail || analisisResultado.candidato?.email || undefined,
+          telefono: candidatoTel || analisisResultado.candidato?.telefono || undefined
+        },
+        cargo_evaluado: {
+          ...analisisResultado.cargo_evaluado,
+          id_sideap: idSideap ? parseInt(String(idSideap), 10) : analisisResultado.cargo_evaluado?.id_sideap,
+          id_perno: idPerno ? parseInt(String(idPerno), 10) : analisisResultado.cargo_evaluado?.id_perno,
+          id_plaza: idPlaza ?? analisisResultado.cargo_evaluado?.id_plaza
+        }
+      };
+
       if (rehacerId) {
         // En modo rehacer, actualizamos la validación existente en la base de datos
-        await ingresosService.actualizarValidacion(rehacerId, analisisResultado);
+        await ingresosService.actualizarValidacion(rehacerId, payloadListo);
         setGuardando(false);
         router.replace(`/ingresos/${rehacerId}`);
       } else {
-        const res = await ingresosService.guardarValidacion(analisisResultado);
+        const res = await ingresosService.guardarValidacion(payloadListo);
         setGuardando(false);
         router.replace(`/ingresos/${res.id}`);
       }
@@ -1766,14 +1790,34 @@ export default function NuevaValidacionScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                <View>
-                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '600' }}>DICTAMEN PRELIMINAR</Text>
+                <View style={{ flex: 1, minWidth: 260 }}>
+                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>DICTAMEN PRELIMINAR</Text>
                   <Text style={{ fontSize: 22, fontWeight: '800', color: '#0F172A', marginTop: 2 }}>
                     {analisisResultado.candidato.nombre}
                   </Text>
-                  <Text style={{ fontSize: 13, color: '#64748B' }}>
-                    Cédula: {analisisResultado.candidato.documento} • Cargo: {analisisResultado.cargo_evaluado.nombre}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 4, flexWrap: 'wrap' }}>
+                    <Text style={{ fontSize: 13, color: '#475569' }}>
+                      <Text style={{ fontWeight: '700' }}>Cédula:</Text> {analisisResultado.candidato.documento}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: '#475569' }}>
+                      <Text style={{ fontWeight: '700' }}>Correo:</Text> {analisisResultado.candidato.email || candidatoEmail || 'Sin especificar'}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                    <Text style={{ fontSize: 13, color: '#475569' }}>
+                      <Text style={{ fontWeight: '700' }}>Cargo:</Text> {analisisResultado.cargo_evaluado.nombre} (Cód. {analisisResultado.cargo_evaluado.codigo || 'N/A'} - Grado {analisisResultado.cargo_evaluado.grado || 'N/A'})
+                    </Text>
+                    {(analisisResultado.cargo_evaluado.id_sideap || idSideap) ? (
+                      <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#C7D2FE' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>SIDEAP #{analisisResultado.cargo_evaluado.id_sideap || idSideap}</Text>
+                      </View>
+                    ) : null}
+                    {(analisisResultado.cargo_evaluado.id_perno || idPerno) ? (
+                      <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>PERNO #{analisisResultado.cargo_evaluado.id_perno || idPerno}</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
 
                 <View

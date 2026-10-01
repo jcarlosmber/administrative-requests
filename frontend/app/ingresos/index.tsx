@@ -25,10 +25,36 @@ export default function IngresosDashboardScreen() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
 
+  // Modal de confirmación de eliminación
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [itemAEliminar, setItemAEliminar] = useState<{ id: string; nombre: string } | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
   const mostrarMensaje = (titulo: string, mensaje: string) => {
     setModalTitle(titulo);
     setModalMessage(mensaje);
     setModalVisible(true);
+  };
+
+  const pedirConfirmarEliminar = (id: string, nombre: string) => {
+    setItemAEliminar({ id, nombre });
+    setModalEliminarVisible(true);
+  };
+
+  const ejecutarEliminar = async () => {
+    if (!itemAEliminar) return;
+    try {
+      setEliminando(true);
+      await ingresosService.eliminarValidacion(itemAEliminar.id);
+      setModalEliminarVisible(false);
+      setItemAEliminar(null);
+      await cargarDatos();
+      mostrarMensaje('Expediente Eliminado', 'El dictamen y su expediente documental han sido eliminados correctamente.');
+    } catch (err: any) {
+      mostrarMensaje('Error al Eliminar', err.message || 'No se pudo eliminar el dictamen.');
+    } finally {
+      setEliminando(false);
+    }
   };
 
   const cargarDatos = async () => {
@@ -387,8 +413,21 @@ export default function IngresosDashboardScreen() {
                     </View>
 
                     <Text style={{ color: '#64748B', fontSize: 13, marginTop: 4 }}>
-                      Cédula: {val.candidato_documento || 'N/A'} • Cargo: {val.cargo_nombre} ({val.cargo_codigo || 'N/A'})
+                      Cédula: {val.candidato_documento || 'N/A'} {val.candidato_email ? `• ${val.candidato_email}` : ''} • Cargo: {val.cargo_nombre} ({val.cargo_codigo || 'N/A'})
                     </Text>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                      {val.id_sideap ? (
+                        <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#C7D2FE' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#3730A3' }}>SIDEAP #{val.id_sideap}</Text>
+                        </View>
+                      ) : null}
+                      {val.id_perno ? (
+                        <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>PERNO #{val.id_perno}</Text>
+                        </View>
+                      ) : null}
+                    </View>
 
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8 }}>
                       <Text style={{ fontSize: 12, color: '#334155' }}>
@@ -424,6 +463,28 @@ export default function IngresosDashboardScreen() {
                     >
                       <Ionicons name="refresh-outline" size={15} color="#4338CA" />
                       <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>Rehacer</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        // @ts-ignore
+                        if (e?.stopPropagation) e.stopPropagation();
+                        pedirConfirmarEliminar(val.id, val.candidato_nombre || 'Candidato');
+                      }}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 7,
+                        borderRadius: 8,
+                        backgroundColor: '#FEE2E2',
+                        borderWidth: 1,
+                        borderColor: '#FECACA',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#DC2626' }}>Eliminar</Text>
                     </TouchableOpacity>
 
                     <View
@@ -493,6 +554,84 @@ export default function IngresosDashboardScreen() {
             >
               <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Entendido</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Confirmación de Eliminación */}
+      <Modal
+        visible={modalEliminarVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !eliminando && setModalEliminarVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              padding: 24,
+              width: '100%',
+              maxWidth: 440,
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="trash" size={22} color="#DC2626" />
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
+                Eliminar Dictamen
+              </Text>
+            </View>
+            <Text style={{ fontSize: 14, color: '#475569', lineHeight: 20, marginBottom: 20 }}>
+              ¿Estás seguro de que deseas eliminar permanentemente el dictamen de verificación de <Text style={{ fontWeight: '700' }}>{itemAEliminar?.nombre}</Text>? Esta acción no se puede deshacer y borrará el expediente completo.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setModalEliminarVisible(false)}
+                disabled={eliminando}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F5F9'
+                }}
+              >
+                <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={ejecutarEliminar}
+                disabled={eliminando}
+                style={{
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  backgroundColor: '#DC2626',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                {eliminando ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                )}
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                  {eliminando ? 'Eliminando...' : 'Sí, Eliminar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
