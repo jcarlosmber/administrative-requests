@@ -121,7 +121,21 @@ async function generarReporteExcelValidacion(data) {
       .map(f => `• [${f.coincidencia || 'COINCIDENCIA'}] Función Cargo: ${f.funcion_del_cargo || ''}\n  Certificado: "${f.evidencia_textual || f.funcion_certificada || ''}"\n  Justificación: ${f.justificacion || ''}`)
       .join('\n\n');
 
-    const estadoDoc = c.documento?.estado === 'COMPLETO' ? 'Completo / Legible' : 'Requiere Revisión / Incompleto';
+    const vf = c.verificacion_formal;
+    let estadoDoc = '';
+    if (vf) {
+      const cumpleFormal = vf.corresponde_aspirante && vf.entidad_identificable && vf.suscriptor_identificable && vf.cuenta_con_firma && vf.fecha_expedicion_identificable && vf.documento_legible_integro && vf.mecanismos_contacto_verificacion;
+      estadoDoc = (cumpleFormal ? '✓ CUMPLE FORMAL' : '⚠️ REVISIÓN FORMAL') +
+        `\n1. Aspirante: ${vf.corresponde_aspirante ? '✓' : '✗'} ${vf.aspirante_nombre_doc || ''}` +
+        `\n2. Entidad: ${vf.entidad_identificable ? '✓' : '✗'} ${vf.entidad_nombre || ''}` +
+        `\n3. Suscriptor: ${vf.suscriptor_identificable ? '✓' : '✗'} ${vf.suscriptor_nombre_cargo_calidad || ''}` +
+        `\n4. Firma: ${vf.cuenta_con_firma ? '✓' : '✗'} ${vf.tipo_firma || ''}` +
+        `\n5. Fecha Exp.: ${vf.fecha_expedicion_identificable ? '✓' : '✗'} ${vf.fecha_expedicion || ''}` +
+        `\n6. Legible/Íntegro: ${vf.documento_legible_integro ? '✓' : '✗'}` +
+        `\n7. Contacto/Verif.: ${vf.mecanismos_contacto_verificacion ? '✓' : '✗'} (${vf.mecanismos_contacto_cuales || 'No consta'})`;
+    } else {
+      estadoDoc = c.documento?.estado === 'COMPLETO' ? '✓ Completo / Legible' : '⚠️ Requiere Revisión / Incompleto';
+    }
 
     const row = sheet.addRow([
       c.id_certificado || 'N/A',
@@ -167,7 +181,7 @@ async function generarReporteExcelValidacion(data) {
     { width: 20 }, // Clasificación
     { width: 26 }, // Traslapes
     { width: 45 }, // Funciones
-    { width: 20 }  // Estado Doc
+    { width: 45 }  // Estado Doc y Verificación Formal
   ];
 
   return await workbook.xlsx.writeBuffer();

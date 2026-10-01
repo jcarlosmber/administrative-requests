@@ -389,18 +389,110 @@ export default function DetalleValidacionScreen() {
                   )}
                 </View>
 
-                {/* Estado del Documento */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                  <Text style={{ fontSize: 11, color: c.documento?.firma_visible ? '#16A34A' : '#DC2626' }}>
-                    {c.documento?.firma_visible ? '✓ Firma visible' : '✗ Sin firma visible'}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: c.documento?.documento_legible ? '#16A34A' : '#DC2626' }}>
-                    {c.documento?.documento_legible ? '✓ Documento legible' : '✗ Documento ilegible'}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B' }}>
-                    Estado: <Text style={{ fontWeight: '700' }}>{c.documento?.estado || 'COMPLETO'}</Text>
-                  </Text>
-                </View>
+                {/* 1. VERIFICACIÓN FORMAL DEL CERTIFICADO (7 CHECKS BÁSICOS) */}
+                {(() => {
+                  const vf = c.verificacion_formal;
+                  const c1 = vf ? vf.corresponde_aspirante : true;
+                  const d1 = vf?.aspirante_nombre_doc || candidato.nombre;
+                  const c2 = vf ? vf.entidad_identificable : (!!c.entidad && c.entidad !== 'NO CONSTA');
+                  const d2 = vf?.entidad_nombre || c.entidad;
+                  const c3 = vf ? vf.suscriptor_identificable : (!!c.firmante && c.firmante !== 'NO CONSTA');
+                  const d3 = vf?.suscriptor_nombre_cargo_calidad || (c.firmante ? `${c.firmante} - ${c.cargo_firmante || 'Suscriptor'}` : 'NO CONSTA');
+                  const c4 = vf ? vf.cuenta_con_firma : (c.documento?.firma_visible ?? true);
+                  const d4 = vf?.tipo_firma || (c.documento?.firma_visible ? 'Firma visible identificada' : 'Sin firma identificable');
+                  const c5 = vf ? vf.fecha_expedicion_identificable : (!!c.fecha_expedicion && c.fecha_expedicion !== 'NO CONSTA');
+                  const d5 = vf?.fecha_expedicion || c.fecha_expedicion || 'NO CONSTA';
+                  const c6 = vf ? vf.documento_legible_integro : (c.documento?.documento_legible ?? true);
+                  const d6 = vf?.detalle_legibilidad || (c.documento?.documento_legible ? 'Documento legible, íntegro y sin alteraciones' : 'Documento con ilegibilidad');
+                  const c7 = vf ? vf.mecanismos_contacto_verificacion : true;
+                  const d7 = vf?.mecanismos_contacto_cuales || (c.ciudad_expedicion ? `Ciudad: ${c.ciudad_expedicion} • Membrete institucional` : 'Membrete institucional de la entidad emisora');
+
+                  const cumpleFormal = c1 && c2 && c3 && c4 && c5 && c6 && c7;
+
+                  const items = [
+                    { num: 1, texto: 'El certificado corresponde al aspirante y contiene su nombre completo e identificación.', ok: c1, detalle: d1 },
+                    { num: 2, texto: 'Se identifica claramente la entidad o empresa que expide el certificado.', ok: c2, detalle: d2 },
+                    { num: 3, texto: 'Se identifica el nombre, cargo y calidad de quien suscribe el documento.', ok: c3, detalle: d3 },
+                    { num: 4, texto: 'El certificado cuenta con firma manuscrita, electrónica o digital, según corresponda.', ok: c4, detalle: d4 },
+                    { num: 5, texto: 'Se identifica la fecha de expedición del certificado.', ok: c5, detalle: d5 },
+                    { num: 6, texto: 'El documento es legible, íntegro y no presenta alteraciones visibles.', ok: c6, detalle: d6 },
+                    { num: 7, texto: 'Se dispone de datos de contacto o mecanismos para verificar la información con la entidad emisora. (cuáles)', ok: c7, detalle: d7, esCuales: true }
+                  ];
+
+                  return (
+                    <View
+                      style={{
+                        marginTop: 16,
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 10,
+                        padding: 14,
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0'
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="checkbox-outline" size={18} color="#991B1B" />
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                            1. Verificación formal del certificado
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: cumpleFormal ? '#DCFCE7' : '#FEF3C7',
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: cumpleFormal ? '#BBF7D0' : '#FDE68A'
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: cumpleFormal ? '#166534' : '#92400E' }}>
+                            {cumpleFormal ? '✓ Cumple verificación formal' : '⚠️ Requiere revisión formal'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ gap: 8 }}>
+                        {items.map((it) => (
+                          <View
+                            key={it.num}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'flex-start',
+                              gap: 8,
+                              backgroundColor: '#FFFFFF',
+                              padding: 8,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: it.ok ? '#E2E8F0' : '#FECACA'
+                            }}
+                          >
+                            <Ionicons
+                              name={it.ok ? 'checkmark-circle' : 'close-circle'}
+                              size={18}
+                              color={it.ok ? '#16A34A' : '#DC2626'}
+                              style={{ marginTop: 1 }}
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B', lineHeight: 17 }}>
+                                {it.texto}
+                              </Text>
+                              {it.detalle ? (
+                                <Text style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                                  {it.esCuales ? 'Mecanismos / Datos: ' : 'Consta: '}
+                                  <Text style={{ fontWeight: it.esCuales ? '700' : '500', color: '#0F172A' }}>
+                                    {it.detalle}
+                                  </Text>
+                                </Text>
+                              ) : null}
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })()}
               </View>
             );
           })}

@@ -90,6 +90,7 @@ module.exports = function(pool) {
         -- Garantizar columnas de ID SIDEAP, ID PERNO e ID PLAZA
         ALTER TABLE public.ingreso_cargos ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT;
         ALTER TABLE public.ingreso_validaciones ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT, ADD COLUMN IF NOT EXISTS id_plaza INT;
+        ALTER TABLE public.ingreso_certificados ADD COLUMN IF NOT EXISTS verificacion_formal JSONB;
       `);
       console.log('✓ Tablas del módulo de ingresos verificadas.');
     } catch (err) {
@@ -383,7 +384,7 @@ module.exports = function(pool) {
             cert.tiempo_certificado?.meses_totales_aproximados || 0,
             JSON.stringify(cert.traslapes || []),
             cert.tiempo_valido?.meses_totales || cert.tiempo_certificado?.meses_totales_aproximados || 0,
-            JSON.stringify(cert.documento || {}),
+            JSON.stringify({ ...(cert.documento || {}), verificacion_formal: cert.verificacion_formal || {} }),
             JSON.stringify(cert.observaciones || []),
             cert.nombre_archivo || null
           ];
@@ -500,6 +501,7 @@ module.exports = function(pool) {
           traslapes: r.traslapes_json,
           tiempo_valido: { meses_totales: Number(r.tiempo_valido_meses) },
           documento: r.documento_json,
+          verificacion_formal: r.documento_json?.verificacion_formal || r.verificacion_formal || null,
           observaciones: r.observaciones_json,
           nombre_archivo: r.nombre_archivo
         })),

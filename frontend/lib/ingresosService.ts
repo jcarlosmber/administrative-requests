@@ -50,10 +50,28 @@ export interface FuncionCoincidente {
   evidencia_textual: string;
 }
 
+export interface VerificacionFormalCertificado {
+  corresponde_aspirante: boolean;
+  aspirante_nombre_doc?: string;
+  entidad_identificable: boolean;
+  entidad_nombre?: string;
+  suscriptor_identificable: boolean;
+  suscriptor_nombre_cargo_calidad?: string;
+  cuenta_con_firma: boolean;
+  tipo_firma?: string;
+  fecha_expedicion_identificable: boolean;
+  fecha_expedicion?: string;
+  documento_legible_integro: boolean;
+  detalle_legibilidad?: string;
+  mecanismos_contacto_verificacion: boolean;
+  mecanismos_contacto_cuales?: string;
+}
+
 export interface CertificadoAnalizado {
   id?: string;
   id_certificado: string;
   nombre_archivo?: string;
+  verificacion_formal?: VerificacionFormalCertificado;
   entidad: string;
   nit_entidad?: string;
   ciudad_expedicion?: string;

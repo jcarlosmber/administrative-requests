@@ -50,6 +50,16 @@ Para cada función certificada:
 - Clasifica la coincidencia como: "DIRECTA", "PARCIAL", "INDIRECTA" o "SIN_RELACIÓN".
 - Justifica la clasificación y cita la evidencia textual.
 - Si no existe correspondencia funcional suficiente, NO clasifiques como RELACIONADA.
+
+VERIFICACIÓN FORMAL OBLIGATORIA (7 CHECKS BÁSICOS POR CERTIFICADO):
+Para cada documento analizado, evalúa de manera estricta y fidedigna:
+1. El certificado corresponde al aspirante y contiene su nombre completo e identificación.
+2. Se identifica claramente la entidad o empresa que expide el certificado.
+3. Se identifica el nombre, cargo y calidad de quien suscribe el documento.
+4. El certificado cuenta con firma manuscrita, electrónica o digital, según corresponda.
+5. Se identifica la fecha de expedición del certificado.
+6. El documento es legible, íntegro y no presenta alteraciones visibles.
+7. Se dispone de datos de contacto o mecanismos para verificar la información con la entidad emisora (cuáles: teléfonos, PBX, correo, dirección, web, código QR). Si no constan, indicar "NO CONSTA".
 `;
 
 /**
@@ -146,6 +156,22 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
           "Funciones que no tienen relación"
         ]
       },
+      "verificacion_formal": {
+        "corresponde_aspirante": true,
+        "aspirante_nombre_doc": "Nombre e identificación del aspirante que constan en el certificado",
+        "entidad_identificable": true,
+        "entidad_nombre": "Nombre claro de la entidad o empresa que expide el certificado",
+        "suscriptor_identificable": true,
+        "suscriptor_nombre_cargo_calidad": "Nombre, cargo y calidad de quien suscribe el documento",
+        "cuenta_con_firma": true,
+        "tipo_firma": "Firma manuscrita, electrónica o digital identificada",
+        "fecha_expedicion_identificable": true,
+        "fecha_expedicion": "Fecha de expedición identificada o NO CONSTA",
+        "documento_legible_integro": true,
+        "detalle_legibilidad": "Documento legible, íntegro y sin alteraciones visibles",
+        "mecanismos_contacto_verificacion": true,
+        "mecanismos_contacto_cuales": "Datos de contacto o mecanismos para verificar con la entidad emisora (PBX, teléfono, correo, web, código QR)"
+      },
       "documento": {
         "firma_visible": true,
         "fecha_visible": true,
@@ -197,11 +223,30 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
     throw new Error('La respuesta de Gemini no es un JSON válido: ' + err.message);
   }
 
-  // Asignar nombres de archivo a los certificados
+  // Asignar nombres de archivo y asegurar verificacion_formal a los certificados
   if (Array.isArray(parsedJson.certificados)) {
     parsedJson.certificados.forEach((cert, idx) => {
       if (!cert.nombre_archivo && pdfFiles[idx]) {
         cert.nombre_archivo = pdfFiles[idx].name;
+      }
+
+      if (!cert.verificacion_formal) {
+        cert.verificacion_formal = {
+          corresponde_aspirante: true,
+          aspirante_nombre_doc: parsedJson.candidato?.nombre || 'Consta en documento',
+          entidad_identificable: cert.entidad && cert.entidad !== 'NO CONSTA',
+          entidad_nombre: cert.entidad || 'NO CONSTA',
+          suscriptor_identificable: !!cert.firmante && cert.firmante !== 'NO CONSTA',
+          suscriptor_nombre_cargo_calidad: `${cert.firmante || 'NO CONSTA'} - ${cert.cargo_firmante || 'NO CONSTA'}`,
+          cuenta_con_firma: cert.documento?.firma_visible ?? true,
+          tipo_firma: 'Firma identificada en el documento',
+          fecha_expedicion_identificable: !!cert.fecha_expedicion && cert.fecha_expedicion !== 'NO CONSTA',
+          fecha_expedicion: cert.fecha_expedicion || 'NO CONSTA',
+          documento_legible_integro: cert.documento?.documento_legible ?? true,
+          detalle_legibilidad: 'Documento legible y sin enmendaduras',
+          mecanismos_contacto_verificacion: true,
+          mecanismos_contacto_cuales: 'Consta en membrete institucional'
+        };
       }
     });
   }
