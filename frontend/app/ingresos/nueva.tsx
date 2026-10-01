@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,9 +17,11 @@ import { ingresosService, CargoEvaluado, AnalisisCompleto } from '../../lib/ingr
 export default function NuevaValidacionScreen() {
   const router = useRouter();
 
-  // Estados de Cargo
+  // Estados de Cargo y Buscador
   const [cargos, setCargos] = useState<CargoEvaluado[]>([]);
   const [cargoSeleccionado, setCargoSeleccionado] = useState<CargoEvaluado | null>(null);
+  const [busquedaCargo, setBusquedaCargo] = useState('');
+  const [mostrarCatalogo, setMostrarCatalogo] = useState(false);
   const [nombreCargo, setNombreCargo] = useState('Profesional Especializado');
   const [codigoCargo, setCodigoCargo] = useState('222');
   const [gradoCargo, setGradoCargo] = useState('24');
@@ -74,17 +76,29 @@ export default function NuevaValidacionScreen() {
     }
   };
 
+  const cargosFiltrados = useMemo(() => {
+    if (!busquedaCargo.trim()) return cargos;
+    const query = busquedaCargo.toLowerCase().trim();
+    return cargos.filter(c =>
+      (c.nombre && c.nombre.toLowerCase().includes(query)) ||
+      (c.codigo && c.codigo.toString().toLowerCase().includes(query)) ||
+      (c.grado && c.grado.toString().toLowerCase().includes(query)) ||
+      (c.dependencia && c.dependencia.toLowerCase().includes(query))
+    );
+  }, [cargos, busquedaCargo]);
+
   const seleccionarCargo = (c: CargoEvaluado) => {
     setCargoSeleccionado(c);
     setNombreCargo(c.nombre);
     setCodigoCargo(c.codigo || '');
     setGradoCargo(c.grado || '');
     setDependenciaCargo(c.dependencia || '');
-    setMesesExigidos(String(c.requisito_experiencia_meses || 54));
+    setMesesExigidos(String(c.requisito_experiencia_meses || 0));
     setFormacionExigida(c.requisitos_formacion || '');
     if (Array.isArray(c.funciones_cargo)) {
       setFuncionesTexto(c.funciones_cargo.join('\n'));
     }
+    setMostrarCatalogo(false);
   };
 
   // Selección de archivos PDF con expo-document-picker
@@ -247,37 +261,213 @@ export default function NuevaValidacionScreen() {
                 </Text>
               </View>
 
-              {cargos.length > 0 && (
-                <View style={{ marginBottom: 16 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6 }}>
-                    Cargar desde catálogo:
+              {/* BUSCADOR DE CARGOS OFICIALES DEL MANUAL */}
+              <View
+                style={{
+                  marginBottom: 18,
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0'
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                    🔍 Buscar Cargo en el Manual Oficial SJD:
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                    {cargos.map(c => (
-                      <TouchableOpacity
-                        key={c.id || c.nombre}
-                        onPress={() => seleccionarCargo(c)}
-                        style={{
-                          backgroundColor: cargoSeleccionado?.id === c.id ? '#0F172A' : '#F1F5F9',
-                          paddingHorizontal: 12,
-                          paddingVertical: 7,
-                          borderRadius: 6
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: cargoSeleccionado?.id === c.id ? '#FFFFFF' : '#334155',
-                            fontSize: 12,
-                            fontWeight: '600'
-                          }}
-                        >
-                          {c.nombre} ({c.codigo || 'N/A'})
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  <Text style={{ fontSize: 12, color: '#64748B' }}>
+                    {cargos.length} cargos disponibles
+                  </Text>
                 </View>
-              )}
+
+                {/* Barra de Búsqueda */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#FFFFFF',
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      height: 42
+                    }}
+                  >
+                    <Ionicons name="search" size={18} color="#64748B" style={{ marginRight: 8 }} />
+                    <TextInput
+                      placeholder="Buscar por nombre, código, grado o dependencia..."
+                      placeholderTextColor="#94A3B8"
+                      value={busquedaCargo}
+                      onChangeText={(t) => {
+                        setBusquedaCargo(t);
+                        if (!mostrarCatalogo) setMostrarCatalogo(true);
+                      }}
+                      onFocus={() => setMostrarCatalogo(true)}
+                      style={{ flex: 1, color: '#0F172A', fontSize: 14 }}
+                    />
+                    {busquedaCargo.length > 0 && (
+                      <TouchableOpacity onPress={() => setBusquedaCargo('')} style={{ padding: 4 }}>
+                        <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setMostrarCatalogo(!mostrarCatalogo)}
+                    style={{
+                      backgroundColor: mostrarCatalogo ? '#0F172A' : '#1E293B',
+                      paddingHorizontal: 14,
+                      height: 42,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons name={mostrarCatalogo ? 'chevron-up' : 'list'} size={16} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                      {mostrarCatalogo ? 'Ocultar' : 'Ver Lista'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Cargo Seleccionado Actualmente */}
+                {cargoSeleccionado && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      marginTop: 10
+                    }}
+                  >
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="checkmark-circle" size={16} color="#2563EB" />
+                      <Text style={{ fontSize: 13, color: '#1E40AF', fontWeight: '600' }} numberOfLines={1}>
+                        <Text style={{ fontWeight: '800' }}>{cargoSeleccionado.nombre}</Text> (Cód. {cargoSeleccionado.codigo || 'N/A'} - Gr. {cargoSeleccionado.grado || 'N/A'}) • {cargoSeleccionado.dependencia || 'N/A'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setMostrarCatalogo(true)}
+                      style={{ marginLeft: 8 }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#2563EB' }}>Cambiar</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Lista Desplegable de Resultados */}
+                {mostrarCatalogo && (
+                  <View
+                    style={{
+                      marginTop: 10,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      maxHeight: 270,
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <View
+                      style={{
+                        backgroundColor: '#F1F5F9',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderBottomWidth: 1,
+                        borderBottomColor: '#E2E8F0',
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
+                        {cargosFiltrados.length} cargo(s) encontrado(s)
+                      </Text>
+                      <TouchableOpacity onPress={() => setMostrarCatalogo(false)}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 230 }}>
+                      {cargosFiltrados.length === 0 ? (
+                        <View style={{ padding: 20, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center' }}>
+                            No se encontraron cargos con "{busquedaCargo}".
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: 4 }}>
+                            Puedes diligenciar los datos manualmente en los campos inferiores.
+                          </Text>
+                        </View>
+                      ) : (
+                        cargosFiltrados.map((c, idx) => {
+                          const esSeleccionado =
+                            cargoSeleccionado?.id === c.id ||
+                            (cargoSeleccionado?.nombre === c.nombre &&
+                              cargoSeleccionado?.codigo === c.codigo &&
+                              cargoSeleccionado?.grado === c.grado &&
+                              cargoSeleccionado?.dependencia === c.dependencia);
+
+                          return (
+                            <TouchableOpacity
+                              key={c.id || idx}
+                              onPress={() => seleccionarCargo(c)}
+                              style={{
+                                padding: 12,
+                                borderBottomWidth: 1,
+                                borderBottomColor: '#F1F5F9',
+                                backgroundColor: esSeleccionado ? '#EFF6FF' : '#FFFFFF',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 10
+                              }}
+                            >
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                    {c.nombre}
+                                  </Text>
+                                  <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                    <Text style={{ fontSize: 11, color: '#475569', fontWeight: '700' }}>
+                                      Cód. {c.codigo || 'N/A'} - Gr. {c.grado || 'N/A'}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }} numberOfLines={1}>
+                                  {c.dependencia || 'Sin dependencia asignada'}
+                                </Text>
+                              </View>
+
+                              <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                                <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#16A34A' }}>
+                                    {c.requisito_experiencia_meses}m req.
+                                  </Text>
+                                </View>
+                                {Array.isArray(c.funciones_cargo) && (
+                                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                                    {c.funciones_cargo.length} funciones
+                                  </Text>
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })
+                      )}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
 
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
                 <View style={{ flex: 2, minWidth: 240 }}>
