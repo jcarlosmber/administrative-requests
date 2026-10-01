@@ -528,9 +528,9 @@ module.exports = function(pool) {
   });
 
   /**
-   * 7.1 PUT /api/ingresos/validaciones/:id - Actualiza formación académica, certificados y consolidado
+   * 7.1 PUT /api/ingresos/validaciones/:id y POST /validaciones/:id/update
    */
-  router.put('/validaciones/:id', async (req, res) => {
+  const handlerActualizarValidacion = async (req, res) => {
     const client = await pool.connect();
     try {
       const { id } = req.params;
