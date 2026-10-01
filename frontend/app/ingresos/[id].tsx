@@ -249,6 +249,108 @@ export default function DetalleValidacionScreen() {
           </View>
         </View>
 
+        {/* TÍTULOS ACADÉMICOS Y TARJETA PROFESIONAL */}
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 14,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#E2E8F0',
+            marginBottom: 20,
+            gap: 14
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="school" size={20} color="#1E40AF" />
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                Títulos Académicos y Tarjeta Profesional
+              </Text>
+            </View>
+            <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#3730A3' }}>
+                {data.formacion_academica && data.formacion_academica.length > 0
+                  ? `${data.formacion_academica.length} documento(s) formativo(s)`
+                  : '0 detectados'}
+              </Text>
+            </View>
+          </View>
+
+          {(!data.formacion_academica || data.formacion_academica.length === 0) ? (
+            <View style={{ padding: 12, backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>
+                No se detectaron diplomas, actas de grado ni tarjetas profesionales en el lote de archivos adjuntos. Si el cargo exige título o tarjeta, asegúrate de adjuntar el PDF correspondiente.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {data.formacion_academica.map((fa, idx) => (
+                <View
+                  key={fa.id || idx}
+                  style={{
+                    padding: 14,
+                    borderRadius: 8,
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: fa.cumple_requisito_cargo ? '#BBF7D0' : '#E2E8F0'
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <Ionicons
+                        name={fa.tipo === 'TARJETA_PROFESIONAL' ? 'card-outline' : 'school-outline'}
+                        size={18}
+                        color={fa.cumple_requisito_cargo ? '#15803D' : '#2563EB'}
+                      />
+                      <View>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>
+                          {fa.titulo_obtenido}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>
+                          {fa.institucion} {fa.fecha_grado && fa.fecha_grado !== 'NO CONSTA' ? `• Fecha: ${fa.fecha_grado}` : ''}
+                        </Text>
+                        {fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA' ? (
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF', marginTop: 2 }}>
+                            Registro / Tarjeta N°: {fa.numero_tarjeta_o_registro}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    <View
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        backgroundColor: fa.cumple_requisito_cargo ? '#DCFCE7' : '#FEF3C7',
+                        borderWidth: 1,
+                        borderColor: fa.cumple_requisito_cargo ? '#86EFAC' : '#FDE68A'
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '800',
+                          color: fa.cumple_requisito_cargo ? '#15803D' : '#B45309'
+                        }}
+                      >
+                        {fa.cumple_requisito_cargo ? '✓ CUMPLE REQUISITO' : 'EN EVALUACIÓN'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {fa.justificacion ? (
+                    <Text style={{ fontSize: 12, color: '#334155', marginTop: 8, fontStyle: 'italic' }}>
+                      <Text style={{ fontWeight: '700' }}>Criterio:</Text> {fa.justificacion}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         {/* DETALLE CERTIFICADO POR CERTIFICADO */}
         <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 14 }}>
           Certificados Analizados y Evidencias Textuales ({certificados.length})
@@ -496,6 +598,103 @@ export default function DetalleValidacionScreen() {
               </View>
             );
           })}
+        </View>
+
+        {/* DOCUMENTOS Y CERTIFICACIONES QUE NO APLICAN */}
+        <View
+          style={{
+            marginTop: 20,
+            backgroundColor: '#FFFBEB',
+            borderRadius: 12,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#FDE68A',
+            gap: 14
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="alert-circle" size={22} color="#D97706" />
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#92400E' }}>
+                Documentos y Certificaciones que NO Aplican
+              </Text>
+            </View>
+            <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, borderWidth: 1, borderColor: '#FDE68A' }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309' }}>
+                {data.documentos_no_aplican && data.documentos_no_aplican.length > 0
+                  ? `${data.documentos_no_aplican.length} excluido(s)`
+                  : '0 excluidos'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 12, color: '#78350F', lineHeight: 18 }}>
+            Relación explícita de documentos que no constituyen experiencia laboral válida, certificaciones sin funciones o requisitos de ley, o documentos que no guardan relación con el perfil exigido.
+          </Text>
+
+          {(!data.documentos_no_aplican || data.documentos_no_aplican.length === 0) ? (
+            <View style={{ padding: 12, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0' }}>
+              <Text style={{ fontSize: 12, color: '#15803D', fontWeight: '700' }}>
+                ✓ Todos los documentos aportados son válidos y computables para la evaluación del cargo.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {data.documentos_no_aplican.map((doc, idx) => (
+                <View
+                  key={doc.id || idx}
+                  style={{
+                    padding: 14,
+                    borderRadius: 8,
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#FECACA',
+                    borderLeftWidth: 4,
+                    borderLeftColor: '#DC2626'
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 6 }}>
+                    <View style={{ flex: 1, minWidth: 220 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                        {doc.descripcion || doc.nombre_archivo}
+                      </Text>
+                      {doc.entidad ? (
+                        <Text style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>
+                          Entidad emisora: <Text style={{ fontWeight: '600' }}>{doc.entidad}</Text>
+                        </Text>
+                      ) : null}
+                      {doc.nombre_archivo ? (
+                        <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>
+                          Archivo: {doc.nombre_archivo}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#DC2626' }}>
+                        NO APLICA
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Motivo por el cual no aplica */}
+                  <View style={{ marginTop: 8, backgroundColor: '#FEF2F2', padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#FECACA' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#991B1B' }}>
+                      ¿Por qué no aplica al cargo?
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#7F1D1D', marginTop: 2, lineHeight: 17 }}>
+                      {doc.motivo_no_aplica}
+                    </Text>
+                    {doc.sustento_criterio ? (
+                      <Text style={{ fontSize: 11, color: '#B91C1C', marginTop: 4, fontStyle: 'italic' }}>
+                        Sustento / Criterio: {doc.sustento_criterio}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 

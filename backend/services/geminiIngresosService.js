@@ -51,8 +51,8 @@ Para cada función certificada:
 - Justifica la clasificación y cita la evidencia textual.
 - Si no existe correspondencia funcional suficiente, NO clasifiques como RELACIONADA.
 
-VERIFICACIÓN FORMAL OBLIGATORIA (7 CHECKS BÁSICOS POR CERTIFICADO):
-Para cada documento analizado, evalúa de manera estricta y fidedigna:
+VERIFICACIÓN FORMAL OBLIGATORIA (7 CHECKS BÁSICOS POR CERTIFICADO LABORAL):
+Para cada documento laboral analizado, evalúa de manera estricta y fidedigna:
 1. El certificado corresponde al aspirante y contiene su nombre completo e identificación.
 2. Se identifica claramente la entidad o empresa que expide el certificado.
 3. Se identifica el nombre, cargo y calidad de quien suscribe el documento.
@@ -60,6 +60,17 @@ Para cada documento analizado, evalúa de manera estricta y fidedigna:
 5. Se identifica la fecha de expedición del certificado.
 6. El documento es legible, íntegro y no presenta alteraciones visibles.
 7. Se dispone de datos de contacto o mecanismos para verificar la información con la entidad emisora (cuáles: teléfonos, PBX, correo, dirección, web, código QR). Si no constan, indicar "NO CONSTA".
+
+CLASIFICACIÓN DE DOCUMENTOS (3 CATEGORÍAS OBLIGATORIAS):
+Debes clasificar rigurosamente cada archivo adjunto en una de estas 3 categorías:
+A. TÍTULOS ACADÉMICOS Y TARJETA PROFESIONAL (Diplomas, Actas de Grado de Pregrado o Posgrado, Tarjeta Profesional, Matrícula o Certificado de Vigencia):
+   - Extrae el título obtenido, la institución universitaria o entidad expedidora (ej. Consejo Superior de la Judicatura), la fecha de grado y número de tarjeta o registro.
+   - Compara contra los "Requisitos de formación" del cargo evaluado y determina si cumple.
+B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
+   - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos y cotejo funcional.
+C. DOCUMENTOS QUE NO APLICAN AL CARGO:
+   - Cursos de capacitación, seminarios, diplomados de educación continua/no formal, certificados ilegibles, certificados sin firma manuscrita ni digital, o certificaciones sin funciones ni relación contractual.
+   - Colócalos obligatoriamente en "documentos_no_aplican" explicando claramente qué documento es y POR QUÉ NO APLICA como experiencia laboral o requisito del cargo.
 `;
 
 /**
@@ -97,10 +108,10 @@ DATOS DEL CANDIDATO (si se conocen de antemano):
 - Documento: ${candidatoData.documento || 'NO CONSTA'}
 
 DOCUMENTOS ADJUNTOS:
-Se adjuntan ${pdfFiles.length} documento(s) PDF de certificaciones laborales o de contratos.
+Se adjuntan ${pdfFiles.length} documento(s) PDF para evaluación integral.
 
 INSTRUCCIONES DE RESPUESTA:
-Extrae la información de cada documento de acuerdo con las 18 reglas obligatorias y responde en el siguiente formato JSON:
+Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
 {
   "candidato": {
     "nombre": "Nombre completo extraído o suministrado",
@@ -112,6 +123,19 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
     "grado": "${cargoData.grado || ''}",
     "requisito_experiencia_meses": ${cargoData.requisito_experiencia_meses || 54}
   },
+  "formacion_academica": [
+    {
+      "id": "ACAD-1",
+      "nombre_archivo": "nombre_archivo.pdf",
+      "tipo": "PREGRADO | ESPECIALIZACION | MAESTRIA | DOCTORADO | TARJETA_PROFESIONAL | OTRO",
+      "titulo_obtenido": "Título profesional, posgrado o número de tarjeta profesional",
+      "institucion": "Universidad o entidad expedidora (ej. Universidad Nacional, Consejo Superior de la Judicatura)",
+      "fecha_grado": "YYYY-MM-DD o NO CONSTA",
+      "numero_tarjeta_o_registro": "Número de tarjeta si aplica o NO CONSTA",
+      "cumple_requisito_cargo": true,
+      "justificacion": "Explicación de por qué cumple o no con los requisitos de formación del cargo"
+    }
+  ],
   "certificados": [
     {
       "id_certificado": "CERT-1",
@@ -181,6 +205,17 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
       "observaciones": [
         "Observaciones o alertas del documento"
       ]
+    }
+  ],
+  "documentos_no_aplican": [
+    {
+      "id": "NO-APLICA-1",
+      "nombre_archivo": "nombre_archivo.pdf",
+      "tipo_documento": "CURSO_NO_FORMAL | CAPACITACION | CERTIFICADO_SIN_FIRMA | ILEGIBLE | NO_EXPERIENCIA | OTRO",
+      "descripcion": "Descripción del documento (ej: Certificado de diplomado o curso de 40 horas)",
+      "entidad": "Nombre de la entidad emisora",
+      "motivo_no_aplica": "Explicación clara y contundente de por qué no aplica como experiencia laboral ni formación exigida",
+      "sustento_criterio": "Criterio o norma de exclusión (ej: Educación continua no computable como experiencia laboral según Decreto 1083 de 2015)"
     }
   ]
 }
@@ -276,6 +311,21 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
     });
   }
 
+  // Asegurar estructura y nombres de archivo en formacion_academica
+  const formacionAcademica = Array.isArray(parsedJson.formacion_academica) ? parsedJson.formacion_academica : [];
+  formacionAcademica.forEach((item, idx) => {
+    if (!item.id) item.id = `ACAD-${idx + 1}`;
+    if (!item.nombre_archivo && pdfFiles[idx]) item.nombre_archivo = pdfFiles[idx].name;
+    if (item.cumple_requisito_cargo === undefined) item.cumple_requisito_cargo = true;
+  });
+
+  // Asegurar estructura de documentos_no_aplican
+  const documentosNoAplican = Array.isArray(parsedJson.documentos_no_aplican) ? parsedJson.documentos_no_aplican : [];
+  documentosNoAplican.forEach((item, idx) => {
+    if (!item.id) item.id = `NO-APLICA-${idx + 1}`;
+    if (!item.nombre_archivo && pdfFiles[idx]) item.nombre_archivo = pdfFiles[idx].name;
+  });
+
   // REGLA TÉCNICA IMPORTANTE:
   // No dejar que Gemini sea el único responsable del cálculo de fechas ni de la exclusión de traslapes.
   // Pasamos los certificados extraídos por nuestro motor matemático determinista:
@@ -284,10 +334,33 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
     cargoData.requisito_experiencia_meses || 54
   );
 
+  // Si algún certificado analizado resultó clasificado como NO_RELACIONADA o NO_PROFESIONAL,
+  // lo referenciamos también al final en la sección de documentos que no aplican:
+  if (Array.isArray(auditResult.certificados)) {
+    auditResult.certificados.forEach((c) => {
+      if (c.clasificacion_experiencia === 'NO_RELACIONADA' || c.clasificacion_experiencia === 'NO_PROFESIONAL') {
+        const yaExiste = documentosNoAplican.some(d => (d.nombre_archivo && d.nombre_archivo === c.nombre_archivo) || (d.id && d.id.includes(c.id_certificado)));
+        if (!yaExiste) {
+          documentosNoAplican.push({
+            id: `NO-APLICA-${c.id_certificado}`,
+            nombre_archivo: c.nombre_archivo || 'Certificado',
+            tipo_documento: 'EXPERIENCIA_NO_RELACIONADA',
+            descripcion: `${c.id_certificado}: ${c.cargo_certificado || 'Cargo'} en ${c.entidad || 'Entidad'}`,
+            entidad: c.entidad,
+            motivo_no_aplica: `Experiencia clasificada como ${c.clasificacion_experiencia}: Las funciones certificadas no guardan relación de equivalencia con las funciones del cargo evaluado.`,
+            sustento_criterio: 'Cotejo funcional estricto - Funciones no afines al Manual Específico de Funciones y Competencias Laborales.'
+          });
+        }
+      }
+    });
+  }
+
   return {
     candidato: parsedJson.candidato || candidatoData,
     cargo_evaluado: parsedJson.cargo_evaluado || cargoData,
+    formacion_academica: formacionAcademica,
     certificados: auditResult.certificados,
+    documentos_no_aplican: documentosNoAplican,
     consolidado: auditResult.consolidado
   };
 }

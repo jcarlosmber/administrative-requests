@@ -128,6 +128,28 @@ export interface CertificadoAnalizado {
   observaciones?: string[];
 }
 
+export interface FormacionAcademicaItem {
+  id?: string;
+  nombre_archivo?: string;
+  tipo: 'PREGRADO' | 'ESPECIALIZACION' | 'MAESTRIA' | 'DOCTORADO' | 'TARJETA_PROFESIONAL' | 'OTRO';
+  titulo_obtenido: string;
+  institucion: string;
+  fecha_grado?: string;
+  numero_tarjeta_o_registro?: string;
+  cumple_requisito_cargo: boolean;
+  justificacion: string;
+}
+
+export interface DocumentoNoAplicaItem {
+  id?: string;
+  nombre_archivo?: string;
+  tipo_documento?: string;
+  descripcion: string;
+  entidad?: string;
+  motivo_no_aplica: string;
+  sustento_criterio?: string;
+}
+
 export interface ConsolidadoValidacion {
   experiencia_relacionada_meses: number;
   experiencia_no_relacionada_meses: number;
@@ -144,7 +166,9 @@ export interface AnalisisCompleto {
   id?: string;
   candidato: CandidatoInfo;
   cargo_evaluado: CargoEvaluado;
+  formacion_academica?: FormacionAcademicaItem[];
   certificados: CertificadoAnalizado[];
+  documentos_no_aplican?: DocumentoNoAplicaItem[];
   consolidado: ConsolidadoValidacion;
   created_at?: string;
 }

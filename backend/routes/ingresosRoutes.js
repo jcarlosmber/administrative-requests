@@ -87,9 +87,9 @@ module.exports = function(pool) {
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
-        -- Garantizar columnas de ID SIDEAP, ID PERNO e ID PLAZA
+        -- Garantizar columnas de ID SIDEAP, ID PERNO e ID PLAZA y nuevas secciones
         ALTER TABLE public.ingreso_cargos ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT;
-        ALTER TABLE public.ingreso_validaciones ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT, ADD COLUMN IF NOT EXISTS id_plaza INT;
+        ALTER TABLE public.ingreso_validaciones ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT, ADD COLUMN IF NOT EXISTS id_plaza INT, ADD COLUMN IF NOT EXISTS formacion_academica JSONB DEFAULT '[]'::jsonb, ADD COLUMN IF NOT EXISTS documentos_no_aplican JSONB DEFAULT '[]'::jsonb;
         ALTER TABLE public.ingreso_certificados ADD COLUMN IF NOT EXISTS verificacion_formal JSONB;
       `);
       console.log('✓ Tablas del módulo de ingresos verificadas.');
@@ -299,7 +299,7 @@ module.exports = function(pool) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const { candidato, cargo_evaluado, certificados, consolidado, evaluador_email } = req.body;
+      const { candidato, cargo_evaluado, certificados, consolidado, evaluador_email, formacion_academica, documentos_no_aplican } = req.body;
 
       // 1. Insertar o actualizar candidato
       let candId = null;
@@ -327,8 +327,8 @@ module.exports = function(pool) {
           requisito_minimo_meses, experiencia_relacionada_meses, experiencia_no_relacionada_meses,
           tiempo_excluido_traslapes_meses, diferencia_meses, resultado_final,
           justificacion_final, requiere_revision_humana, evaluador_email, estado,
-          id_sideap, id_perno, id_plaza
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+          id_sideap, id_perno, id_plaza, formacion_academica, documentos_no_aplican
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING id;
       `;
       const valValues = [
@@ -349,7 +349,9 @@ module.exports = function(pool) {
         'EVALUADO',
         cargo_evaluado.id_sideap || null,
         cargo_evaluado.id_perno || null,
-        cargo_evaluado.id_plaza || null
+        cargo_evaluado.id_plaza || null,
+        JSON.stringify(formacion_academica || []),
+        JSON.stringify(documentos_no_aplican || [])
       ];
       const valRes = await client.query(valQuery, valValues);
       const validacionId = valRes.rows[0].id;
@@ -514,6 +516,8 @@ module.exports = function(pool) {
           observaciones: r.observaciones_json,
           nombre_archivo: r.nombre_archivo
         })),
+        formacion_academica: val.formacion_academica || [],
+        documentos_no_aplican: val.documentos_no_aplican || [],
         created_at: val.created_at
       };
 
