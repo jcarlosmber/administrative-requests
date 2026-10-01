@@ -28,6 +28,7 @@ export default function NuevaValidacionScreen() {
   const [filtroCargo, setFiltroCargo] = useState('');
   const [filtroCodigoGrado, setFiltroCodigoGrado] = useState('');
   const [filtroDependencia, setFiltroDependencia] = useState('');
+  const [filtroSituacion, setFiltroSituacion] = useState('');
   const [filtroSideap, setFiltroSideap] = useState('');
   const [filtroPerno, setFiltroPerno] = useState('');
 
@@ -46,7 +47,7 @@ export default function NuevaValidacionScreen() {
   );
 
   // Estados del Modal Selector Universal (Desplegable)
-  type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'sideap' | 'perno';
+  type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno';
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerTipo, setPickerTipo] = useState<PickerTipo | null>(null);
   const [pickerBusqueda, setPickerBusqueda] = useState('');
@@ -153,19 +154,45 @@ export default function NuevaValidacionScreen() {
       .sort((a, b) => a.valor.localeCompare(b.valor));
   }, [planta, filtroCargo, filtroCodigoGrado]);
 
-  // 4. Plazas filtradas por los selectores
+  // 4. Lista de Situaciones Administrativas del Titular del Cargo
+  const listaSituaciones = useMemo(() => {
+    let base = planta;
+    if (filtroCargo) {
+      base = base.filter(p => p.cargo.toLowerCase() === filtroCargo.toLowerCase());
+    }
+    if (filtroCodigoGrado) {
+      base = base.filter(p => `${p.codigo || ''}-${p.grado || ''}` === filtroCodigoGrado);
+    }
+    if (filtroDependencia) {
+      base = base.filter(p => (p.dependencia_cargo || '').toLowerCase() === filtroDependencia.toLowerCase());
+    }
+    const map = new Map<string, number>();
+    base.forEach(p => {
+      const sit = (p.situacion_administrativa || '').trim() || 'NO ESPECIFICADA';
+      map.set(sit, (map.get(sit) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([sit, count]) => ({ valor: sit, etiqueta: sit, count }))
+      .sort((a, b) => b.count - a.count || a.valor.localeCompare(b.valor));
+  }, [planta, filtroCargo, filtroCodigoGrado, filtroDependencia]);
+
+  // 5. Plazas filtradas por los selectores
   const plazasFiltradas = useMemo(() => {
     return planta.filter(p => {
       if (filtroCargo && p.cargo.toLowerCase() !== filtroCargo.toLowerCase()) return false;
       if (filtroCodigoGrado && `${p.codigo || ''}-${p.grado || ''}` !== filtroCodigoGrado) return false;
       if (filtroDependencia && (p.dependencia_cargo || '').toLowerCase() !== filtroDependencia.toLowerCase()) return false;
+      if (filtroSituacion) {
+        const sit = (p.situacion_administrativa || '').trim() || 'NO ESPECIFICADA';
+        if (sit.toLowerCase() !== filtroSituacion.toLowerCase()) return false;
+      }
       if (filtroSideap && String(p.id_sideap) !== filtroSideap) return false;
       if (filtroPerno && String(p.id_perno) !== filtroPerno) return false;
       return true;
     });
-  }, [planta, filtroCargo, filtroCodigoGrado, filtroDependencia, filtroSideap, filtroPerno]);
+  }, [planta, filtroCargo, filtroCodigoGrado, filtroDependencia, filtroSituacion, filtroSideap, filtroPerno]);
 
-  // 5. Lista de ID SIDEAP disponibles
+  // 6. Lista de ID SIDEAP disponibles
   const listaSideap = useMemo(() => {
     let base = plazasFiltradas.length > 0 ? plazasFiltradas : planta;
     return base
@@ -174,13 +201,13 @@ export default function NuevaValidacionScreen() {
         valor: String(p.id_sideap),
         etiquetaPrincipal: `ID SIDEAP: ${p.id_sideap}`,
         etiquetaSecundaria: `${p.cargo} (Cód. ${p.codigo || 'N/A'}-Gr.${p.grado || 'N/A'}) • ${p.dependencia_cargo || ''}`,
-        badge: p.id_perno ? `PERNO #${p.id_perno}` : undefined,
+        badge: p.situacion_administrativa ? p.situacion_administrativa : (p.id_perno ? `PERNO #${p.id_perno}` : undefined),
         plaza: p
       }))
       .sort((a, b) => Number(a.valor) - Number(b.valor));
   }, [plazasFiltradas, planta]);
 
-  // 6. Lista de ID PERNO disponibles
+  // 7. Lista de ID PERNO disponibles
   const listaPerno = useMemo(() => {
     let base = plazasFiltradas.length > 0 ? plazasFiltradas : planta;
     return base
@@ -189,7 +216,7 @@ export default function NuevaValidacionScreen() {
         valor: String(p.id_perno),
         etiquetaPrincipal: `ID PERNO: ${p.id_perno}`,
         etiquetaSecundaria: `${p.cargo} (Cód. ${p.codigo || 'N/A'}-Gr.${p.grado || 'N/A'}) • ${p.dependencia_cargo || ''}`,
-        badge: p.id_sideap ? `SIDEAP #${p.id_sideap}` : undefined,
+        badge: p.situacion_administrativa ? p.situacion_administrativa : (p.id_sideap ? `SIDEAP #${p.id_sideap}` : undefined),
         plaza: p
       }))
       .sort((a, b) => Number(a.valor) - Number(b.valor));
@@ -209,6 +236,7 @@ export default function NuevaValidacionScreen() {
     setFiltroCargo(p.cargo || '');
     setFiltroCodigoGrado(p.codigo && p.grado ? `${p.codigo}-${p.grado}` : '');
     setFiltroDependencia(p.dependencia_cargo || '');
+    setFiltroSituacion(p.situacion_administrativa || '');
     setFiltroSideap(p.id_sideap != null ? String(p.id_sideap) : '');
     setFiltroPerno(p.id_perno != null ? String(p.id_perno) : '');
 
@@ -230,7 +258,7 @@ export default function NuevaValidacionScreen() {
 
     // Meses de experiencia exigidos
     const matchCargo = cargos.find(c =>
-      c.nombre.toLowerCase().trim() === p.cargo.toLowerCase().trim()
+        c.nombre.toLowerCase().trim() === p.cargo.toLowerCase().trim()
     );
     if (matchCargo && matchCargo.requisito_experiencia_meses) {
       setMesesExigidos(String(matchCargo.requisito_experiencia_meses));
@@ -249,6 +277,7 @@ export default function NuevaValidacionScreen() {
     setFiltroCargo('');
     setFiltroCodigoGrado('');
     setFiltroDependencia('');
+    setFiltroSituacion('');
     setFiltroSideap('');
     setFiltroPerno('');
     setPlazaSeleccionada(null);
@@ -265,6 +294,7 @@ export default function NuevaValidacionScreen() {
       case 'cargo': return 'Seleccionar Denominación del Cargo';
       case 'codigoGrado': return 'Seleccionar Código y Grado';
       case 'dependencia': return 'Seleccionar Dependencia';
+      case 'situacion': return 'Seleccionar Situación Administrativa Titular del Cargo';
       case 'sideap': return 'Seleccionar por ID SIDEAP';
       case 'perno': return 'Seleccionar por ID PERNO';
       default: return 'Seleccionar Opción';
@@ -303,6 +333,19 @@ export default function NuevaValidacionScreen() {
         seleccionado: filtroDependencia.toLowerCase() === dep.valor.toLowerCase()
       }));
     }
+    if (pickerTipo === 'situacion') {
+      return listaSituaciones.map(sit => {
+        const isVacante = sit.valor.toUpperCase().includes('VACANTE');
+        const isPropiedad = sit.valor.toUpperCase().includes('PROPIEDAD');
+        return {
+          valor: sit.valor,
+          etiquetaPrincipal: sit.etiqueta,
+          etiquetaSecundaria: `${sit.count} plaza(s) registradas con esta situación`,
+          badge: isVacante ? 'VACANCIA' : (isPropiedad ? 'EN PROPIEDAD' : 'ACTIVO'),
+          seleccionado: filtroSituacion.toLowerCase() === sit.valor.toLowerCase()
+        };
+      });
+    }
     if (pickerTipo === 'sideap') {
       return listaSideap.map(s => ({
         valor: s.valor,
@@ -324,7 +367,7 @@ export default function NuevaValidacionScreen() {
       }));
     }
     return [];
-  }, [pickerTipo, listaCargos, listaCodigoGrado, listaDependencias, listaSideap, listaPerno, planta, filtroCargo, filtroCodigoGrado, filtroDependencia, filtroSideap, filtroPerno]);
+  }, [pickerTipo, listaCargos, listaCodigoGrado, listaDependencias, listaSituaciones, listaSideap, listaPerno, planta, filtroCargo, filtroCodigoGrado, filtroDependencia, filtroSituacion, filtroSideap, filtroPerno]);
 
   const opcionesModalFiltradas = useMemo(() => {
     if (!pickerBusqueda.trim()) return opcionesModal;
@@ -358,6 +401,7 @@ export default function NuevaValidacionScreen() {
       setNombreCargo(item.valor);
       setFiltroCodigoGrado('');
       setFiltroDependencia('');
+      setFiltroSituacion('');
       setFiltroSideap('');
       setFiltroPerno('');
       setPlazaSeleccionada(null);
@@ -377,6 +421,7 @@ export default function NuevaValidacionScreen() {
       if (parts[0]) setCodigoCargo(parts[0]);
       if (parts[1]) setGradoCargo(parts[1]);
       setFiltroDependencia('');
+      setFiltroSituacion('');
       setFiltroSideap('');
       setFiltroPerno('');
       setPlazaSeleccionada(null);
@@ -386,7 +431,20 @@ export default function NuevaValidacionScreen() {
       const coincidentes = planta.filter(p => {
         if (filtroCargo && p.cargo.toLowerCase() !== filtroCargo.toLowerCase()) return false;
         if (filtroCodigoGrado && `${p.codigo || ''}-${p.grado || ''}` !== filtroCodigoGrado) return false;
+        if (filtroSituacion && ((p.situacion_administrativa || '').trim() || 'NO ESPECIFICADA').toLowerCase() !== filtroSituacion.toLowerCase()) return false;
         return (p.dependencia_cargo || '').toLowerCase() === item.valor.toLowerCase();
+      });
+      if (coincidentes.length === 1) {
+        aplicarPlazaCompleta(coincidentes[0]);
+      }
+    } else if (pickerTipo === 'situacion') {
+      setFiltroSituacion(item.valor);
+      const coincidentes = planta.filter(p => {
+        if (filtroCargo && p.cargo.toLowerCase() !== filtroCargo.toLowerCase()) return false;
+        if (filtroCodigoGrado && `${p.codigo || ''}-${p.grado || ''}` !== filtroCodigoGrado) return false;
+        if (filtroDependencia && (p.dependencia_cargo || '').toLowerCase() !== filtroDependencia.toLowerCase()) return false;
+        const sit = (p.situacion_administrativa || '').trim() || 'NO ESPECIFICADA';
+        return sit.toLowerCase() === item.valor.toLowerCase();
       });
       if (coincidentes.length === 1) {
         aplicarPlazaCompleta(coincidentes[0]);
@@ -582,7 +640,7 @@ export default function NuevaValidacionScreen() {
                     </View>
                   </View>
 
-                  {(filtroCargo || filtroCodigoGrado || filtroDependencia || filtroSideap || filtroPerno || plazaSeleccionada) ? (
+                  {(filtroCargo || filtroCodigoGrado || filtroDependencia || filtroSituacion || filtroSideap || filtroPerno || plazaSeleccionada) ? (
                     <TouchableOpacity
                       onPress={limpiarFiltros}
                       style={{
@@ -721,10 +779,59 @@ export default function NuevaValidacionScreen() {
                   </View>
                 </View>
 
-                {/* FILA 2: IDENTIFICADORES DIRECTOS (ID SIDEAP Y ID PERNO) */}
+                {/* FILA 2: SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO E IDENTIFICADORES DIRECTOS */}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                  {/* Desplegable 4: ID SIDEAP */}
-                  <View style={{ flex: 1, minWidth: 180 }}>
+                  {/* Desplegable 4: Situación Administrativa Titular del Cargo */}
+                  <View style={{ flex: 2, minWidth: 240 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 5 }}>
+                      Situación Administrativa Titular del Cargo
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => abrirPicker('situacion')}
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: filtroSituacion
+                          ? (filtroSituacion.toUpperCase().includes('VACANTE') ? '#D97706' : filtroSituacion.toUpperCase().includes('PROPIEDAD') ? '#059669' : '#2563EB')
+                          : '#CBD5E1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 10,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        minHeight: 42
+                      }}
+                    >
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 6 }}>
+                        <Ionicons
+                          name="shield-checkmark-outline"
+                          size={16}
+                          color={
+                            filtroSituacion
+                              ? (filtroSituacion.toUpperCase().includes('VACANTE') ? '#D97706' : filtroSituacion.toUpperCase().includes('PROPIEDAD') ? '#059669' : '#2563EB')
+                              : '#64748B'
+                          }
+                        />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: filtroSituacion ? '800' : '500',
+                            color: filtroSituacion
+                              ? (filtroSituacion.toUpperCase().includes('VACANTE') ? '#B45309' : filtroSituacion.toUpperCase().includes('PROPIEDAD') ? '#047857' : '#1D4ED8')
+                              : '#94A3B8'
+                          }}
+                          numberOfLines={1}
+                        >
+                          {filtroSituacion || 'Todas las situaciones...'}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-down" size={16} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Desplegable 5: ID SIDEAP */}
+                  <View style={{ flex: 1, minWidth: 160 }}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 5 }}>
                       ID SIDEAP
                     </Text>
@@ -753,15 +860,15 @@ export default function NuevaValidacionScreen() {
                           }}
                           numberOfLines={1}
                         >
-                          {filtroSideap ? `SIDEAP #${filtroSideap}` : 'Seleccionar ID SIDEAP...'}
+                          {filtroSideap ? `SIDEAP #${filtroSideap}` : 'ID SIDEAP...'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={16} color="#64748B" />
                     </TouchableOpacity>
                   </View>
 
-                  {/* Desplegable 5: ID PERNO */}
-                  <View style={{ flex: 1, minWidth: 180 }}>
+                  {/* Desplegable 6: ID PERNO */}
+                  <View style={{ flex: 1, minWidth: 160 }}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 5 }}>
                       ID PERNO
                     </Text>
@@ -790,7 +897,7 @@ export default function NuevaValidacionScreen() {
                           }}
                           numberOfLines={1}
                         >
-                          {filtroPerno ? `PERNO #${filtroPerno}` : 'Seleccionar ID PERNO...'}
+                          {filtroPerno ? `PERNO #${filtroPerno}` : 'ID PERNO...'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={16} color="#64748B" />
@@ -835,6 +942,40 @@ export default function NuevaValidacionScreen() {
                             </Text>
                           </View>
                         )}
+                        {plazaSeleccionada.situacion_administrativa ? (
+                          <View
+                            style={{
+                              backgroundColor: plazaSeleccionada.situacion_administrativa.toUpperCase().includes('VACANTE')
+                                ? '#FEF3C7'
+                                : plazaSeleccionada.situacion_administrativa.toUpperCase().includes('PROPIEDAD')
+                                ? '#DCFCE7'
+                                : '#EFF6FF',
+                              paddingHorizontal: 6,
+                              paddingVertical: 1,
+                              borderRadius: 4,
+                              borderWidth: 1,
+                              borderColor: plazaSeleccionada.situacion_administrativa.toUpperCase().includes('VACANTE')
+                                ? '#FDE68A'
+                                : plazaSeleccionada.situacion_administrativa.toUpperCase().includes('PROPIEDAD')
+                                ? '#86EFAC'
+                                : '#BFDBFE'
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                fontWeight: '800',
+                                color: plazaSeleccionada.situacion_administrativa.toUpperCase().includes('VACANTE')
+                                  ? '#B45309'
+                                  : plazaSeleccionada.situacion_administrativa.toUpperCase().includes('PROPIEDAD')
+                                  ? '#15803D'
+                                  : '#1D4ED8'
+                              }}
+                            >
+                              SITUACIÓN: {plazaSeleccionada.situacion_administrativa}
+                            </Text>
+                          </View>
+                        ) : null}
                         {plazaSeleccionada.id_plaza != null && (
                           <Text style={{ fontSize: 11, color: '#64748B' }}>
                             (Plaza #{plazaSeleccionada.id_plaza})
@@ -854,7 +995,7 @@ export default function NuevaValidacionScreen() {
                 ) : null}
 
                 {/* LISTA RÁPIDA DE COINCIDENCIAS CUANDO SE FILTRA Y HAY MENOS DE 6 PLAZAS */}
-                {!plazaSeleccionada && (filtroCargo || filtroCodigoGrado || filtroDependencia) && plazasFiltradas.length > 0 && plazasFiltradas.length <= 6 && (
+                {!plazaSeleccionada && (filtroCargo || filtroCodigoGrado || filtroDependencia || filtroSituacion) && plazasFiltradas.length > 0 && plazasFiltradas.length <= 6 && (
                   <View style={{ marginTop: 12, backgroundColor: '#FFFFFF', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 6 }}>
                       {plazasFiltradas.length} plaza(s) coincidente(s) - Haz clic para seleccionar:
@@ -883,6 +1024,22 @@ export default function NuevaValidacionScreen() {
                               <Text style={{ fontSize: 11, color: '#475569' }}>
                                 Cód. {pl.codigo || 'N/A'} - Gr. {pl.grado || 'N/A'}
                               </Text>
+                              {pl.situacion_administrativa ? (
+                                <View style={{
+                                  backgroundColor: pl.situacion_administrativa.toUpperCase().includes('VACANTE') ? '#FEF3C7' : '#EFF6FF',
+                                  paddingHorizontal: 5,
+                                  paddingVertical: 1,
+                                  borderRadius: 4
+                                }}>
+                                  <Text style={{
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                    color: pl.situacion_administrativa.toUpperCase().includes('VACANTE') ? '#92400E' : '#1E40AF'
+                                  }}>
+                                    {pl.situacion_administrativa}
+                                  </Text>
+                                </View>
+                              ) : null}
                               {pl.id_sideap != null && (
                                 <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
                                   <Text style={{ fontSize: 10, fontWeight: '800', color: '#4338CA' }}>SIDEAP #{pl.id_sideap}</Text>
@@ -1816,6 +1973,7 @@ export default function NuevaValidacionScreen() {
                   if (pickerTipo === 'cargo') setFiltroCargo('');
                   else if (pickerTipo === 'codigoGrado') setFiltroCodigoGrado('');
                   else if (pickerTipo === 'dependencia') setFiltroDependencia('');
+                  else if (pickerTipo === 'situacion') setFiltroSituacion('');
                   else if (pickerTipo === 'sideap') setFiltroSideap('');
                   else if (pickerTipo === 'perno') setFiltroPerno('');
                   setPickerVisible(false);
