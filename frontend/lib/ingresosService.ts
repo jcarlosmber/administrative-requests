@@ -192,10 +192,25 @@ export const ingresosService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ archivos, cargo, candidato })
     });
-    const json = await res.json();
+
     if (!res.ok) {
-      throw new Error(json.error || 'Error en el análisis de documentos.');
+      if (res.status === 413) {
+        throw new Error(
+          'Los archivos PDF adjuntos superan el tamaño máximo permitido por el servidor web (Error 413: Payload Too Large). Por favor adjunta archivos más livianos o de menor peso.'
+        );
+      }
+      let errorMsg = `Error en el análisis de documentos (Código ${res.status}).`;
+      try {
+        const json = await res.json();
+        if (json && json.error) errorMsg = json.error;
+      } catch (_) {
+        const text = await res.text().catch(() => '');
+        if (text) errorMsg = `Error del servidor: ${text.slice(0, 100)}`;
+      }
+      throw new Error(errorMsg);
     }
+
+    const json = await res.json();
     return json.data;
   },
 

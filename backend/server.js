@@ -17,8 +17,8 @@ const PORT = process.env.PORT || 3000;
 
 // Configuración de Middlewares
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Workaround para WAF: Si recibimos POST pero con X-HTTP-Method-Override,
 // cambiamos internamente el req.method para engañar a Express y al WAF.

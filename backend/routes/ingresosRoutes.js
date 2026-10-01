@@ -235,6 +235,15 @@ module.exports = function(pool) {
   });
 
   /**
+   * 3.0 GET /api/ingresos/analizar - Manejador de advertencia si se invoca con GET
+   */
+  router.get('/analizar', (req, res) => {
+    res.status(405).json({
+      error: 'El método GET no está permitido para /api/ingresos/analizar. El análisis de documentos requiere una petición POST con los certificados en formato PDF.'
+    });
+  });
+
+  /**
    * 3. POST /api/ingresos/analizar - Analiza PDFs con Gemini e IA
    */
   router.post('/analizar', async (req, res) => {
