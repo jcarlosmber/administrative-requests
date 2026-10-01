@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const POLICY_URL = 'https://www.secretariajuridica.gov.co/node/376';
+const POLICY_URL = 'https://secretariajuridica.gov.co/manual-de-la-politica-de-tratamiento-y-proteccion-de-datos-personales';
 
 const COLORS = {
   primary: '#A9301E',
@@ -26,6 +26,7 @@ const COLORS = {
 export default function PolicyPage() {
   const router = useRouter();
   const [accepted, setAccepted] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   const openPolicy = async () => {
     await Linking.openURL(POLICY_URL);
@@ -33,7 +34,7 @@ export default function PolicyPage() {
 
   const continueToLogin = () => {
     if (!accepted) {
-      Alert.alert('Aceptación requerida', 'Debes aceptar el tratamiento de datos personales para continuar.');
+      setShowWarningModal(true);
       return;
     }
 
@@ -84,8 +85,8 @@ export default function PolicyPage() {
                 <Text style={styles.commitmentTitle}>Compromiso institucional</Text>
               </View>
               <Text style={styles.commitmentText}>
-                La Secretaría Jurídica Distrital se compromete a salvaguardar la privacidad de los funcionarios,
-                aplicando estándares de seguridad digital y ética administrativa.
+                La Secretaría Jurídica Distrital se compromete a salvaguardar la privacidad de los funcionarios y usuarios,
+                aplicando estándares de seguridad digital y ética administrativa conforme a la normativa vigente.
               </Text>
             </View>
           </View>
@@ -95,17 +96,17 @@ export default function PolicyPage() {
               <Text style={styles.badgeText}>TRATAMIENTO DE DATOS</Text>
             </View>
 
-            <Text style={styles.title}>Autorización de Tratamiento de Datos Personales</Text>
+            <Text style={styles.title}>Manual de la Política de Tratamiento y Protección de Datos Personales</Text>
             <Text style={styles.subtitle}>Alcaldía Mayor de Bogotá D.C. - Secretaría Jurídica Distrital</Text>
             <Text style={styles.caption}>Dirección de Gestión Corporativa</Text>
 
             <View style={styles.quoteBox}>
               <Text style={styles.quoteText}>
                 Al completar y enviar estos datos usted autoriza a la Secretaría Jurídica Distrital para que realice
-                el tratamiento de sus datos personales, conforme a la política institucional vigente.
+                el tratamiento de sus datos personales, conforme al Manual de la Política de Tratamiento y Protección de Datos Personales institucional.
               </Text>
               <Pressable style={styles.externalLink} onPress={openPolicy}>
-                <Text style={styles.externalLinkText}>Ver política de datos</Text>
+                <Text style={styles.externalLinkText}>Ver Manual de la Política de Datos</Text>
                 <Ionicons name="open-outline" size={16} color={COLORS.primary} />
               </Pressable>
             </View>
@@ -117,8 +118,8 @@ export default function PolicyPage() {
               <View style={styles.acceptTextWrap}>
                 <Text style={styles.acceptTitle}>Acepto los términos y condiciones</Text>
                 <Text style={styles.acceptText}>
-                  Confirmo que he leído y acepto expresamente el tratamiento de mis datos personales según la política
-                  institucional mencionada anteriormente.
+                  Confirmo que he leído y acepto expresamente el tratamiento de mis datos personales según el
+                  Manual de la Política de Tratamiento y Protección de Datos Personales de la entidad.
                 </Text>
               </View>
             </Pressable>
@@ -152,6 +153,32 @@ export default function PolicyPage() {
           <Image source={require('../assets/alcaldia-mayor-bogota.png')} style={styles.footerLogo} resizeMode="contain" />
         </View>
       </ScrollView>
+
+      {/* Modal de Advertencia de Aceptación Requerida */}
+      <Modal
+        visible={showWarningModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowWarningModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalIconWrap}>
+              <Ionicons name="alert-circle" size={36} color={COLORS.primary} />
+            </View>
+            <Text style={styles.modalTitle}>Aceptación Requerida</Text>
+            <Text style={styles.modalMessage}>
+              Debes leer y marcar la casilla de aceptación del Manual de la Política de Tratamiento y Protección de Datos Personales para continuar.
+            </Text>
+            <Pressable
+              style={styles.modalConfirmBtn}
+              onPress={() => setShowWarningModal(false)}
+            >
+              <Text style={styles.modalConfirmBtnText}>Entendido</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -440,5 +467,61 @@ const styles = StyleSheet.create({
   footerLogo: {
     width: 220,
     height: 130,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 420,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  modalIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.ink,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: COLORS.muted,
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 22,
+  },
+  modalConfirmBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalConfirmBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

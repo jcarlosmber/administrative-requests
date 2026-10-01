@@ -39,7 +39,7 @@ const COLORS = {
   goldStar: '#F59E0B',
 };
 
-const POLICY_URL = 'https://www.secretariajuridica.gov.co/node/376';
+const POLICY_URL = 'https://secretariajuridica.gov.co/manual-de-la-politica-de-tratamiento-y-proteccion-de-datos-personales';
 
 // Módulos institucionales de SASGE 2.0 (inspirados en la cuadrícula de SIGA)
 const SASGE_MODULES = [
@@ -106,8 +106,10 @@ export default function LoginPage() {
 
       if (error) throw error;
       
-      // Auto-redirect admins and superadmins to the admin panel
-      if (data?.user?.role === 'admin' || data?.user?.role === 'superadmin') {
+      // Redirección inteligente según el rol del usuario
+      if (data?.user?.role === 'talento_humano' || data?.user?.role === 'analista_ingresos' || data?.user?.role === 'ingresos') {
+        router.replace('/ingresos');
+      } else if (data?.user?.role === 'admin' || data?.user?.role === 'superadmin') {
         router.replace('/admin');
       } else {
         router.replace('/dashboard');
@@ -396,8 +398,8 @@ export default function LoginPage() {
                       ]}
                     >
                       {policyAccepted
-                        ? 'Política de datos aceptada'
-                        : 'Ver política de tratamiento de datos personales'}
+                        ? 'Manual de política de datos aceptado'
+                        : 'Ver Manual de la Política de Tratamiento de Datos'}
                     </Text>
                   </Pressable>
 
@@ -440,28 +442,29 @@ export default function LoginPage() {
                 <View style={[styles.modalContent, { maxWidth: isDesktop ? 620 : '90%' }]}>
                   <View style={styles.modalHeader}>
                     <Ionicons name="shield-checkmark" size={28} color={COLORS.primary} />
-                    <Text style={styles.modalTitle}>Tratamiento de Datos Personales</Text>
+                    <Text style={styles.modalTitle}>Manual de la Política de Tratamiento y Protección de Datos Personales</Text>
                   </View>
 
                   <ScrollView style={styles.modalBody}>
                     <Text style={styles.policyText}>
-                      Conforme a la Ley 1581 de 2012 y demás normas concordantes, el usuario autoriza
-                      de manera libre, previa e informada a la Alcaldía Mayor de Bogotá - Secretaría
-                      Jurídica Distrital, para realizar el tratamiento de sus datos personales.{'\n\n'}
+                      Conforme a la Ley 1581 de 2012 y el Manual de la Política de Tratamiento y Protección
+                      de Datos Personales, el usuario autoriza de manera libre, previa e informada a la
+                      Alcaldía Mayor de Bogotá - Secretaría Jurídica Distrital, para realizar el tratamiento
+                      de sus datos personales.{'\n\n'}
                       Esta información será utilizada exclusivamente para:{'\n'}
                       1. Gestión de trámites administrativos internos.{'\n'}
                       2. Control de acceso a instalaciones físicas.{'\n'}
                       3. Reportes institucionales y seguimiento de servicios generales.{'\n'}
                       4. Notificaciones relacionadas con el Sistema SASGE 2.0.{'\n\n'}
                       El titular de los datos tiene derecho a conocer, actualizar, rectificar y suprimir
-                      su información personal en cualquier momento.{'\n\n'}
+                      su información personal en cualquier momento conforme a las directrices institucionales.{'\n\n'}
                       Para más información, puede consultar el documento oficial aquí:
                     </Text>
                     <Pressable
                       onPress={() => Linking.openURL(POLICY_URL)}
                       style={styles.externalLink}
                     >
-                      <Text style={styles.externalLinkText}>Ver Política Completa en el sitio web</Text>
+                      <Text style={styles.externalLinkText}>Ver Manual Oficial de Tratamiento de Datos Personales</Text>
                       <Ionicons name="open-outline" size={16} color={COLORS.primary} />
                     </Pressable>
                   </ScrollView>

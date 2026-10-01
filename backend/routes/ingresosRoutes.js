@@ -1,0 +1,479 @@
+const express = require('express');
+const router = express.Router();
+const geminiIngresosService = require('../services/geminiIngresosService');
+const timeCalculatorService = require('../services/timeCalculatorService');
+const excelReportService = require('../services/excelReportService');
+
+module.exports = function(pool) {
+
+  // Inicializar tablas automáticamente al montar el router si no existen
+  const initTables = async () => {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS public.ingreso_cargos (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            nombre TEXT NOT NULL,
+            codigo TEXT,
+            grado TEXT,
+            dependencia TEXT,
+            requisito_experiencia_meses NUMERIC(6, 2) DEFAULT 0,
+            requisitos_formacion TEXT,
+            funciones_cargo JSONB NOT NULL DEFAULT '[]'::jsonb,
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.ingreso_candidatos (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            nombre TEXT NOT NULL,
+            documento TEXT NOT NULL,
+            email TEXT,
+            telefono TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.ingreso_validaciones (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            candidato_id UUID REFERENCES public.ingreso_candidatos(id) ON DELETE CASCADE,
+            cargo_id UUID REFERENCES public.ingreso_cargos(id) ON DELETE SET NULL,
+            cargo_nombre TEXT,
+            cargo_codigo TEXT,
+            cargo_grado TEXT,
+            requisito_minimo_meses NUMERIC(6, 2) DEFAULT 0,
+            experiencia_relacionada_meses NUMERIC(6, 2) DEFAULT 0,
+            experiencia_no_relacionada_meses NUMERIC(6, 2) DEFAULT 0,
+            tiempo_excluido_traslapes_meses NUMERIC(6, 2) DEFAULT 0,
+            diferencia_meses NUMERIC(6, 2) DEFAULT 0,
+            resultado_final TEXT CHECK (resultado_final IN ('CUMPLE', 'NO_CUMPLE', 'REQUIERE_REVISION')) DEFAULT 'REQUIERE_REVISION',
+            justificacion_final TEXT,
+            requiere_revision_humana BOOLEAN DEFAULT TRUE,
+            observaciones TEXT,
+            evaluador_email TEXT,
+            estado TEXT DEFAULT 'EVALUADO',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS public.ingreso_certificados (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            validacion_id UUID REFERENCES public.ingreso_validaciones(id) ON DELETE CASCADE,
+            id_certificado TEXT,
+            entidad TEXT,
+            nit_entidad TEXT,
+            ciudad_expedicion TEXT,
+            fecha_expedicion TEXT,
+            firmante TEXT,
+            cargo_firmante TEXT,
+            tipo_vinculo TEXT,
+            cargo_certificado TEXT,
+            codigo_cargo TEXT,
+            grado_cargo TEXT,
+            dependencia TEXT,
+            numero_contrato_o_acto TEXT,
+            fecha_inicio TEXT,
+            fecha_fin TEXT,
+            vinculo_vigente BOOLEAN DEFAULT FALSE,
+            funciones_certificadas JSONB DEFAULT '[]'::jsonb,
+            experiencia_profesional BOOLEAN DEFAULT TRUE,
+            clasificacion_experiencia TEXT DEFAULT 'RELACIONADA',
+            experiencia_relacionada_json JSONB DEFAULT '{}'::jsonb,
+            tiempo_certificado_json JSONB DEFAULT '{}'::jsonb,
+            meses_certificados NUMERIC(6, 2) DEFAULT 0,
+            traslapes_json JSONB DEFAULT '[]'::jsonb,
+            tiempo_valido_meses NUMERIC(6, 2) DEFAULT 0,
+            documento_json JSONB DEFAULT '{}'::jsonb,
+            observaciones_json JSONB DEFAULT '[]'::jsonb,
+            nombre_archivo TEXT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+      console.log('✓ Tablas del módulo de ingresos verificadas.');
+    } catch (err) {
+      console.error('Error al inicializar tablas de ingresos:', err.message);
+    }
+  };
+  initTables();
+
+  /**
+   * 1. GET /api/ingresos/cargos - Lista los cargos configurados
+   */
+  router.get('/cargos', async (req, res) => {
+    try {
+      const result = await pool.query('SELECT * FROM ingreso_cargos ORDER BY nombre ASC');
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al obtener cargos: ' + err.message });
+    }
+  });
+
+  /**
+   * 2. POST /api/ingresos/cargos - Registra o actualiza un cargo
+   */
+  router.post('/cargos', async (req, res) => {
+    try {
+      const { nombre, codigo, grado, dependencia, requisito_experiencia_meses, requisitos_formacion, funciones_cargo } = req.body;
+      if (!nombre) return res.status(400).json({ error: 'El nombre del cargo es obligatorio.' });
+
+      const query = `
+        INSERT INTO ingreso_cargos (nombre, codigo, grado, dependencia, requisito_experiencia_meses, requisitos_formacion, funciones_cargo)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *;
+      `;
+      const values = [
+        nombre,
+        codigo || '',
+        grado || '',
+        dependencia || '',
+        Number(requisito_experiencia_meses) || 0,
+        requisitos_formacion || '',
+        JSON.stringify(funciones_cargo || [])
+      ];
+      const result = await pool.query(query, values);
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al registrar cargo: ' + err.message });
+    }
+  });
+
+  /**
+   * 3. POST /api/ingresos/analizar - Analiza PDFs con Gemini e IA
+   */
+  router.post('/analizar', async (req, res) => {
+    try {
+      const { archivos, cargo, candidato } = req.body;
+
+      if (!archivos || !Array.isArray(archivos) || archivos.length === 0) {
+        return res.status(400).json({ error: 'Debes enviar al menos un archivo PDF de certificado laboral.' });
+      }
+
+      if (!cargo || !cargo.nombre) {
+        return res.status(400).json({ error: 'Faltan los datos del cargo a evaluar.' });
+      }
+
+      console.log(`[Ingresos] Iniciando análisis de ${archivos.length} archivos para el cargo: ${cargo.nombre}`);
+
+      const analisis = await geminiIngresosService.analizarDocumentosConGemini(
+        archivos,
+        cargo,
+        candidato || {}
+      );
+
+      res.json({
+        success: true,
+        data: analisis
+      });
+    } catch (err) {
+      console.error('[Ingresos] Error en /analizar:', err);
+      res.status(500).json({ error: 'Error durante el análisis con IA: ' + err.message });
+    }
+  });
+
+  /**
+   * 4. POST /api/ingresos/recalcular - Recalcula tiempos y traslapes si el usuario edita
+   */
+  router.post('/recalcular', async (req, res) => {
+    try {
+      const { certificados, requisito_minimo_meses } = req.body;
+      const result = timeCalculatorService.auditCertificatesAndCalculateTotals(
+        certificados || [],
+        Number(requisito_minimo_meses) || 54
+      );
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al recalcular: ' + err.message });
+    }
+  });
+
+  /**
+   * 5. POST /api/ingresos/guardar - Guarda la validación y certificados en la base de datos
+   */
+  router.post('/guardar', async (req, res) => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { candidato, cargo_evaluado, certificados, consolidado, evaluador_email } = req.body;
+
+      // 1. Insertar o actualizar candidato
+      let candId = null;
+      if (candidato && candidato.documento) {
+        const findCand = await client.query('SELECT id FROM ingreso_candidatos WHERE documento = $1', [candidato.documento]);
+        if (findCand.rows.length > 0) {
+          candId = findCand.rows[0].id;
+          await client.query(
+            'UPDATE ingreso_candidatos SET nombre = $1, email = $2, telefono = $3 WHERE id = $4',
+            [candidato.nombre, candidato.email || null, candidato.telefono || null, candId]
+          );
+        } else {
+          const newCand = await client.query(
+            'INSERT INTO ingreso_candidatos (nombre, documento, email, telefono) VALUES ($1, $2, $3, $4) RETURNING id',
+            [candidato.nombre, candidato.documento, candidato.email || null, candidato.telefono || null]
+          );
+          candId = newCand.rows[0].id;
+        }
+      }
+
+      // 2. Insertar validación
+      const valQuery = `
+        INSERT INTO ingreso_validaciones (
+          candidato_id, cargo_id, cargo_nombre, cargo_codigo, cargo_grado,
+          requisito_minimo_meses, experiencia_relacionada_meses, experiencia_no_relacionada_meses,
+          tiempo_excluido_traslapes_meses, diferencia_meses, resultado_final,
+          justificacion_final, requiere_revision_humana, evaluador_email, estado
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING id;
+      `;
+      const valValues = [
+        candId,
+        cargo_evaluado.id || null,
+        cargo_evaluado.nombre || 'N/A',
+        cargo_evaluado.codigo || '',
+        cargo_evaluado.grado || '',
+        consolidado.requisito_minimo_meses || 0,
+        consolidado.experiencia_relacionada_meses || 0,
+        consolidado.experiencia_no_relacionada_meses || 0,
+        consolidado.tiempo_excluido_por_traslapes_meses || 0,
+        consolidado.diferencia_meses || 0,
+        consolidado.resultado_final || 'REQUIERE_REVISION',
+        consolidado.justificacion || '',
+        consolidado.requiere_revision_humana || false,
+        evaluador_email || 'talento_humano@secjuridica.gov.co',
+        'EVALUADO'
+      ];
+      const valRes = await client.query(valQuery, valValues);
+      const validacionId = valRes.rows[0].id;
+
+      // 3. Insertar cada certificado
+      if (Array.isArray(certificados)) {
+        for (const cert of certificados) {
+          const certQuery = `
+            INSERT INTO ingreso_certificados (
+              validacion_id, id_certificado, entidad, nit_entidad, ciudad_expedicion, fecha_expedicion,
+              firmante, cargo_firmante, tipo_vinculo, cargo_certificado, codigo_cargo, grado_cargo,
+              dependencia, numero_contrato_o_acto, fecha_inicio, fecha_fin, vinculo_vigente,
+              funciones_certificadas, experiencia_profesional, clasificacion_experiencia,
+              experiencia_relacionada_json, tiempo_certificado_json, meses_certificados,
+              traslapes_json, tiempo_valido_meses, documento_json, observaciones_json, nombre_archivo
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28);
+          `;
+          const certValues = [
+            validacionId,
+            cert.id_certificado || 'CERT-1',
+            cert.entidad || 'N/A',
+            cert.nit_entidad || null,
+            cert.ciudad_expedicion || null,
+            cert.fecha_expedicion || null,
+            cert.firmante || null,
+            cert.cargo_firmante || null,
+            cert.tipo_vinculo || null,
+            cert.cargo_certificado || 'N/A',
+            cert.codigo_cargo || null,
+            cert.grado_cargo || null,
+            cert.dependencia || null,
+            cert.numero_contrato_o_acto || null,
+            cert.fecha_inicio || null,
+            cert.fecha_fin || null,
+            cert.vinculo_vigente || false,
+            JSON.stringify(cert.funciones_certificadas || []),
+            cert.experiencia_profesional !== false,
+            cert.clasificacion_experiencia || 'RELACIONADA',
+            JSON.stringify(cert.experiencia_relacionada || {}),
+            JSON.stringify(cert.tiempo_certificado || {}),
+            cert.tiempo_certificado?.meses_totales_aproximados || 0,
+            JSON.stringify(cert.traslapes || []),
+            cert.tiempo_valido?.meses_totales || cert.tiempo_certificado?.meses_totales_aproximados || 0,
+            JSON.stringify(cert.documento || {}),
+            JSON.stringify(cert.observaciones || []),
+            cert.nombre_archivo || null
+          ];
+          await client.query(certQuery, certValues);
+        }
+      }
+
+      await client.query('COMMIT');
+      res.status(201).json({ success: true, id: validacionId, mensaje: 'Validación guardada exitosamente.' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[Ingresos] Error en /guardar:', err);
+      res.status(500).json({ error: 'Error al guardar la validación: ' + err.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  /**
+   * 6. GET /api/ingresos/validaciones - Lista todas las validaciones
+   */
+  router.get('/validaciones', async (req, res) => {
+    try {
+      const query = `
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento
+        FROM ingreso_validaciones v
+        LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        ORDER BY v.created_at DESC;
+      `;
+      const result = await pool.query(query);
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al consultar validaciones: ' + err.message });
+    }
+  });
+
+  /**
+   * 7. GET /api/ingresos/validaciones/:id - Detalle completo de una validación
+   */
+  router.get('/validaciones/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const valQuery = `
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email, c.telefono as candidato_telefono
+        FROM ingreso_validaciones v
+        LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        WHERE v.id = $1;
+      `;
+      const valRes = await pool.query(valQuery, [id]);
+      if (valRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Validación no encontrada.' });
+      }
+
+      const certsQuery = `
+        SELECT * FROM ingreso_certificados
+        WHERE validacion_id = $1
+        ORDER BY fecha_inicio ASC;
+      `;
+      const certsRes = await pool.query(certsQuery, [id]);
+
+      const val = valRes.rows[0];
+      const responseData = {
+        id: val.id,
+        candidato: {
+          nombre: val.candidato_nombre,
+          documento: val.candidato_documento,
+          email: val.candidato_email,
+          telefono: val.candidato_telefono
+        },
+        cargo_evaluado: {
+          id: val.cargo_id,
+          nombre: val.cargo_nombre,
+          codigo: val.cargo_codigo,
+          grado: val.cargo_grado,
+          requisito_experiencia_meses: Number(val.requisito_minimo_meses)
+        },
+        consolidado: {
+          requisito_minimo_meses: Number(val.requisito_minimo_meses),
+          experiencia_relacionada_meses: Number(val.experiencia_relacionada_meses),
+          experiencia_no_relacionada_meses: Number(val.experiencia_no_relacionada_meses),
+          tiempo_excluido_por_traslapes_meses: Number(val.tiempo_excluido_traslapes_meses),
+          diferencia_meses: Number(val.diferencia_meses),
+          resultado_final: val.resultado_final,
+          justificacion: val.justificacion_final,
+          requiere_revision_humana: val.requiere_revision_humana
+        },
+        certificados: certsRes.rows.map(r => ({
+          id: r.id,
+          id_certificado: r.id_certificado,
+          entidad: r.entidad,
+          nit_entidad: r.nit_entidad,
+          ciudad_expedicion: r.ciudad_expedicion,
+          fecha_expedicion: r.fecha_expedicion,
+          firmante: r.firmante,
+          cargo_firmante: r.cargo_firmante,
+          tipo_vinculo: r.tipo_vinculo,
+          cargo_certificado: r.cargo_certificado,
+          codigo_cargo: r.codigo_cargo,
+          grado_cargo: r.grado_cargo,
+          dependencia: r.dependencia,
+          numero_contrato_o_acto: r.numero_contrato_o_acto,
+          fecha_inicio: r.fecha_inicio,
+          fecha_fin: r.fecha_fin,
+          vinculo_vigente: r.vinculo_vigente,
+          funciones_certificadas: r.funciones_certificadas,
+          experiencia_profesional: r.experiencia_profesional,
+          clasificacion_experiencia: r.clasificacion_experiencia,
+          experiencia_relacionada: r.experiencia_relacionada_json,
+          tiempo_certificado: r.tiempo_certificado_json,
+          traslapes: r.traslapes_json,
+          tiempo_valido: { meses_totales: Number(r.tiempo_valido_meses) },
+          documento: r.documento_json,
+          observaciones: r.observaciones_json,
+          nombre_archivo: r.nombre_archivo
+        })),
+        created_at: val.created_at
+      };
+
+      res.json(responseData);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al consultar validación: ' + err.message });
+    }
+  });
+
+  /**
+   * 8. GET /api/ingresos/validaciones/:id/excel - Descarga del dictamen en Excel
+   */
+  router.get('/validaciones/:id/excel', async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Obtener data reutilizando la lógica interna
+      const valQuery = `
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento
+        FROM ingreso_validaciones v
+        LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        WHERE v.id = $1;
+      `;
+      const valRes = await pool.query(valQuery, [id]);
+      if (valRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Validación no encontrada.' });
+      }
+
+      const certsQuery = 'SELECT * FROM ingreso_certificados WHERE validacion_id = $1 ORDER BY fecha_inicio ASC;';
+      const certsRes = await pool.query(certsQuery, [id]);
+
+      const val = valRes.rows[0];
+      const payloadData = {
+        candidato: {
+          nombre: val.candidato_nombre,
+          documento: val.candidato_documento
+        },
+        cargo_evaluado: {
+          nombre: val.cargo_nombre,
+          codigo: val.cargo_codigo,
+          grado: val.cargo_grado
+        },
+        consolidado: {
+          requisito_minimo_meses: Number(val.requisito_minimo_meses),
+          experiencia_relacionada_meses: Number(val.experiencia_relacionada_meses),
+          tiempo_excluido_por_traslapes_meses: Number(val.tiempo_excluido_traslapes_meses),
+          diferencia_meses: Number(val.diferencia_meses),
+          resultado_final: val.resultado_final,
+          justificacion: val.justificacion_final
+        },
+        certificados: certsRes.rows.map(r => ({
+          id_certificado: r.id_certificado,
+          entidad: r.entidad,
+          cargo_certificado: r.cargo_certificado,
+          fecha_inicio: r.fecha_inicio,
+          fecha_fin: r.fecha_fin,
+          vinculo_vigente: r.vinculo_vigente,
+          clasificacion_experiencia: r.clasificacion_experiencia,
+          tiempo_certificado: r.tiempo_certificado_json,
+          traslapes: r.traslapes_json,
+          experiencia_relacionada: r.experiencia_relacionada_json,
+          documento: r.documento_json
+        }))
+      };
+
+      const buffer = await excelReportService.generarReporteExcelValidacion(payloadData);
+
+      const filename = `Dictamen_${(val.candidato_nombre || 'Candidato').replace(/\s+/g, '_')}_${val.cargo_codigo || 'Cargo'}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(buffer);
+    } catch (err) {
+      console.error('[Ingresos] Error al exportar Excel:', err);
+      res.status(500).json({ error: 'Error al generar Excel: ' + err.message });
+    }
+  });
+
+  return router;
+};

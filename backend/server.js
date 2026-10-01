@@ -3969,6 +3969,10 @@ app.post('/api/settings/:key', authenticateToken, async (req, res) => {
   }
 });
 
+// Módulo Independiente: Validación de Ingresos y Experiencia Laboral con IA Gemini
+const ingresosRoutes = require('./routes/ingresosRoutes')(pool);
+app.use('/api/ingresos', ingresosRoutes);
+
 // Fallback 404 para cualquier ruta /api para garantizar respuesta JSON y nunca HTML
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.originalUrl}` });

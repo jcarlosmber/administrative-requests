@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, useWindowDimensions, Modal, ImageBackground, Animated, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -532,7 +532,7 @@ export default function VisitorsScreen() {
                     {acceptedTerms && <Ionicons name="checkmark" size={16} color={COLORS.white} />}
                   </View>
                   <Text style={styles.termsText}>
-                    Autorizo el tratamiento de datos según la <Text style={{ color: COLORS.primary, fontWeight: '700' }} onPress={() => setShowPolicy(true)}>Ley 1581 de 2012</Text>.
+                    Autorizo el tratamiento de datos según el <Text style={{ color: COLORS.primary, fontWeight: '700' }} onPress={() => setShowPolicy(true)}>Manual de la Política de Tratamiento y Protección de Datos Personales</Text>.
                   </Text>
                 </TouchableOpacity>
 
@@ -722,13 +722,22 @@ function PolicyModal({ visible, onClose }: any) {
         <BlurView intensity={20} style={StyleSheet.absoluteFill} />
         <View style={styles.modalPanel}>
           <View style={styles.modalHead}>
-            <Text style={styles.modalTitle}>Política de Privacidad</Text>
+            <Text style={[styles.modalTitle, { fontSize: 16 }]}>Manual de la Política de Tratamiento y Protección de Datos Personales</Text>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={24} color={COLORS.text} /></TouchableOpacity>
           </View>
           <ScrollView style={{ maxHeight: 300 }}>
             <Text style={styles.modalText}>
-              En cumplimiento de la Ley 1581 de 2012, informamos que los datos capturados serán utilizados únicamente para fines de seguridad y control de acceso. Usted puede ejercer sus derechos de consulta y reclamo a través de nuestros canales oficiales.
+              En cumplimiento de la Ley 1581 de 2012 y el Manual de la Política de Tratamiento y Protección de Datos Personales de la Secretaría Jurídica Distrital, informamos que los datos capturados serán utilizados para fines de seguridad, control de acceso y trámites administrativos institucionales.
             </Text>
+            <TouchableOpacity
+              onPress={() => Linking.openURL('https://secretariajuridica.gov.co/manual-de-la-politica-de-tratamiento-y-proteccion-de-datos-personales')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, paddingVertical: 6 }}
+            >
+              <Text style={{ color: COLORS.primary, fontWeight: '700', fontSize: 13 }}>
+                Ver Manual Oficial en el sitio web
+              </Text>
+              <Ionicons name="open-outline" size={16} color={COLORS.primary} />
+            </TouchableOpacity>
           </ScrollView>
           <TouchableOpacity style={styles.modalBtn} onPress={onClose}>
             <Text style={styles.modalBtnText}>CERRAR</Text>

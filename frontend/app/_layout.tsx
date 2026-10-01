@@ -108,6 +108,22 @@ export default function RootLayout() {
             headerShown: false
           }} 
         />
+        <Stack.Screen 
+          name="ingresos/index" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="ingresos/nueva" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="ingresos/[id]" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="ingresos/cargos" 
+          options={{ headerShown: false }} 
+        />
       </Stack>
       <StatusBar style="auto" />
 
