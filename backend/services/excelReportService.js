@@ -67,16 +67,55 @@ async function generarReporteExcelValidacion(data) {
   // ----------------------------------------------------
   // 4. FORMACIÓN ACADÉMICA (Filas 11 a 17)
   // ----------------------------------------------------
+  // Rescate de salvaguarda: si algún diploma de bachiller, técnico, pregrado,
+  // posgrado o tarjeta profesional quedó en documentos_no_aplican, lo recuperamos:
+  const noAplicanLimpios = [];
+  const formacionCompleta = [...formacion];
+
+  noAplican.forEach(item => {
+    const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
+    const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA') || texto.includes('COLEGIO');
+    const esTecnico = texto.includes('TECNIC') || texto.includes('TECNOLOG');
+    const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');
+    const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
+    const esPregrado = texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('DIPLOMA') || texto.includes('ACTA DE GRADO');
+
+    if (esBachiller || esTecnico || esTarjeta || esPosgrado || esPregrado) {
+      let tipo = 'PREGRADO';
+      if (esBachiller) tipo = 'BACHILLER';
+      else if (esTecnico) tipo = 'TECNICO';
+      else if (esTarjeta) tipo = 'TARJETA_PROFESIONAL';
+      else if (esPosgrado) tipo = 'POSGRADO';
+
+      // Extraer posible fecha del texto si fecha_grado no consta
+      let fechaDetectada = item.fecha_grado || null;
+      if (!fechaDetectada || fechaDetectada === 'NO CONSTA') {
+        const matchFecha = (item.descripcion || item.motivo_no_aplica || '').match(/\b(19\d\d|20\d\d)[-\/\.]\d{1,2}[-\/\.]\d{1,2}\b|\b\d{1,2}[-\/\.]\d{1,2}[-\/\.](19\d\d|20\d\d)\b|\b(19\d\d|20\d\d)\b/);
+        if (matchFecha) fechaDetectada = matchFecha[0];
+      }
+
+      formacionCompleta.push({
+        tipo: tipo,
+        titulo_obtenido: item.descripcion || item.nombre_archivo || (esBachiller ? 'Bachiller' : 'Título Formativo'),
+        institucion: item.entidad && item.entidad !== 'NO CONSTA' ? item.entidad : (item.descripcion ? item.descripcion.split(' - ')[0] : 'Institución Educativa'),
+        fecha_grado: fechaDetectada || 'NO CONSTA',
+        numero_tarjeta_o_registro: item.numero_tarjeta || 'NO CONSTA'
+      });
+    } else {
+      noAplicanLimpios.push(item);
+    }
+  });
+
   let bachiller = null;
   let tecnico = null;
   let pregrado = null;
   const posgrados = [];
   let tarjeta = null;
 
-  formacion.forEach(item => {
+  formacionCompleta.forEach(item => {
     const tipo = (item.tipo || '').toUpperCase();
     const titulo = (item.titulo_obtenido || '').toUpperCase();
-    if (tipo === 'BACHILLER' || titulo.includes('BACHILLER')) {
+    if (tipo === 'BACHILLER' || titulo.includes('BACHILLER') || titulo.includes('BACHILLERATO') || titulo.includes('EDUCACION MEDIA') || titulo.includes('SECUNDARIA')) {
       if (!bachiller) bachiller = item;
     } else if (tipo === 'TECNICO' || tipo === 'TECNOLOGO' || titulo.includes('TECNIC') || titulo.includes('TECNOLOG')) {
       if (!tecnico) tecnico = item;
@@ -271,11 +310,11 @@ async function generarReporteExcelValidacion(data) {
     };
   });
 
-  if (noAplican.length === 0) {
+  if (noAplicanLimpios.length === 0) {
     const r = wsNoAplican.addRow([1, 'N/A', 'N/A', 'Todos los documentos aportados son válidos y computables para la evaluación del cargo.', 'Cumple con los requisitos del perfil.']);
     r.font = { name: 'Arial', size: 10, italic: true };
   } else {
-    noAplican.forEach((d, idx) => {
+    noAplicanLimpios.forEach((d, idx) => {
       const r = wsNoAplican.addRow([
         idx + 1,
         d.descripcion || d.nombre_archivo || `Documento ${idx + 1}`,

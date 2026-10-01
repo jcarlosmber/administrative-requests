@@ -63,14 +63,20 @@ Para cada documento laboral analizado, evalúa de manera estricta y fidedigna:
 
 CLASIFICACIÓN DE DOCUMENTOS (3 CATEGORÍAS OBLIGATORIAS):
 Debes clasificar rigurosamente cada archivo adjunto en una de estas 3 categorías:
-A. TÍTULOS ACADÉMICOS Y TARJETA PROFESIONAL (Diplomas, Actas de Grado de Pregrado o Posgrado, Tarjeta Profesional, Matrícula o Certificado de Vigencia):
-   - Extrae el título obtenido, la institución universitaria o entidad expedidora (ej. Consejo Superior de la Judicatura), la fecha de grado y número de tarjeta o registro.
-   - Compara contra los "Requisitos de formación" del cargo evaluado y determina si cumple.
+A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bachiller, Técnico, Tecnólogo, Pregrado o Posgrados [Especialización, Maestría, Doctorado], Tarjeta Profesional o Matrícula):
+   - ¡REGLA CRÍTICA!: NUNCA clasifiques un título de Bachiller, Técnico, Tecnólogo, Pregrado, Posgrado ni Tarjeta Profesional en "documentos_no_aplican". El formato oficial institucional FT-318 exige registrar explícitamente:
+     1. TÍTULO DE BACHILLER (Institución y Fecha de Grado)
+     2. TÍTULO DE TÉCNICO / TECNÓLOGO (Institución y Fecha de Grado)
+     3. TÍTULO DE PREGRADO (Institución y Fecha de Grado)
+     4. TÍTULOS DE POSGRADO (Institución y Fecha de Grado)
+     5. TARJETA PROFESIONAL (Número de Registro y Fecha de Expedición)
+   - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL"), título obtenido, institución educativa y fecha de grado o expedición.
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
    - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos y cotejo funcional.
 C. DOCUMENTOS QUE NO APLICAN AL CARGO:
-   - Cursos de capacitación, seminarios, diplomados de educación continua/no formal, certificados ilegibles, certificados sin firma manuscrita ni digital, o certificaciones sin funciones ni relación contractual.
-   - Colócalos obligatoriamente en "documentos_no_aplican" explicando claramente qué documento es y POR QUÉ NO APLICA como experiencia laboral o requisito del cargo.
+   - ÚNICAMENTE cursos de capacitación corta, seminarios, diplomados de educación continua o informal (de 20, 40 o 120 horas), certificados ilegibles o sin firma, o certificados de funciones totalmente ajenas al sector o sin vínculo laboral válido.
+   - ¡NO pongas aquí diplomas de bachiller, actas de grado de bachiller ni títulos universitarios!
+   - Para los que verdaderamente no apliquen, explica claramente por qué no aplican como experiencia laboral computable.
 `;
 
 /**
@@ -127,9 +133,9 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
     {
       "id": "ACAD-1",
       "nombre_archivo": "nombre_archivo.pdf",
-      "tipo": "PREGRADO | ESPECIALIZACION | MAESTRIA | DOCTORADO | TARJETA_PROFESIONAL | OTRO",
-      "titulo_obtenido": "Título profesional, posgrado o número de tarjeta profesional",
-      "institucion": "Universidad o entidad expedidora (ej. Universidad Nacional, Consejo Superior de la Judicatura)",
+      "tipo": "BACHILLER | TECNICO | TECNOLOGO | PREGRADO | ESPECIALIZACION | MAESTRIA | DOCTORADO | TARJETA_PROFESIONAL",
+      "titulo_obtenido": "Título de bachiller, técnico, profesional, posgrado o número de tarjeta profesional",
+      "institucion": "Colegio, Universidad o entidad expedidora (ej. Instituto Técnico, Universidad Nacional, Consejo Superior de la Judicatura)",
       "fecha_grado": "YYYY-MM-DD o NO CONSTA",
       "numero_tarjeta_o_registro": "Número de tarjeta si aplica o NO CONSTA",
       "cumple_requisito_cargo": true,
@@ -313,14 +319,48 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
 
   // Asegurar estructura y nombres de archivo en formacion_academica
   const formacionAcademica = Array.isArray(parsedJson.formacion_academica) ? parsedJson.formacion_academica : [];
+  
+  // Rescate proactivo: Si Gemini colocó diplomas de bachiller, técnico, posgrado o tarjeta en no_aplican, los trasladamos
+  const documentosNoAplicanRaw = Array.isArray(parsedJson.documentos_no_aplican) ? parsedJson.documentos_no_aplican : [];
+  const documentosNoAplican = [];
+
+  documentosNoAplicanRaw.forEach((item, idx) => {
+    const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
+    const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA');
+    const esTecnico = texto.includes('TECNIC') || texto.includes('TECNOLOG');
+    const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');
+    const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
+    const esPregrado = texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('DIPLOMA DE GRADO') || texto.includes('ACTA DE GRADO');
+
+    if (esBachiller || esTecnico || esTarjeta || esPosgrado || esPregrado) {
+      let tipo = 'PREGRADO';
+      if (esBachiller) tipo = 'BACHILLER';
+      else if (esTecnico) tipo = 'TECNICO';
+      else if (esTarjeta) tipo = 'TARJETA_PROFESIONAL';
+      else if (esPosgrado) tipo = 'POSGRADO';
+
+      formacionAcademica.push({
+        id: `ACAD-${formacionAcademica.length + 1}`,
+        nombre_archivo: item.nombre_archivo || (pdfFiles[idx] ? pdfFiles[idx].name : 'Documento Formativo'),
+        tipo: tipo,
+        titulo_obtenido: item.descripcion || item.nombre_archivo || (esBachiller ? 'Bachiller' : 'Título Formativo'),
+        institucion: item.entidad || 'Institución Educativa',
+        fecha_grado: item.fecha_grado || 'NO CONSTA',
+        numero_tarjeta_o_registro: item.numero_tarjeta || 'NO CONSTA',
+        cumple_requisito_cargo: true,
+        justificacion: `Acreditación formativa registrada para cumplimiento de requisitos de educación (${tipo}).`
+      });
+    } else {
+      documentosNoAplican.push(item);
+    }
+  });
+
   formacionAcademica.forEach((item, idx) => {
     if (!item.id) item.id = `ACAD-${idx + 1}`;
     if (!item.nombre_archivo && pdfFiles[idx]) item.nombre_archivo = pdfFiles[idx].name;
     if (item.cumple_requisito_cargo === undefined) item.cumple_requisito_cargo = true;
   });
 
-  // Asegurar estructura de documentos_no_aplican
-  const documentosNoAplican = Array.isArray(parsedJson.documentos_no_aplican) ? parsedJson.documentos_no_aplican : [];
   documentosNoAplican.forEach((item, idx) => {
     if (!item.id) item.id = `NO-APLICA-${idx + 1}`;
     if (!item.nombre_archivo && pdfFiles[idx]) item.nombre_archivo = pdfFiles[idx].name;
