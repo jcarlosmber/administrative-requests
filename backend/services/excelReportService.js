@@ -285,7 +285,7 @@ async function generarReporteExcelValidacion(data) {
   // 7. HOJA 2: DOCUMENTOS Y CERTIFICACIONES QUE NO APLICAN
   // ----------------------------------------------------
   const wsNoAplican = workbook.addWorksheet('Documentos NO Aplican', {
-    views: [{ showGridLines: true }]
+    views: [{ showGridLines: false }]
   });
 
   wsNoAplican.columns = [
@@ -340,7 +340,7 @@ async function generarReporteExcelValidacion(data) {
   // 8. HOJA 3: COTEJO FUNCIONAL DETALLADO
   // ----------------------------------------------------
   const wsCotejo = workbook.addWorksheet('Cotejo Funcional', {
-    views: [{ showGridLines: true }]
+    views: [{ showGridLines: false }]
   });
 
   wsCotejo.columns = [
