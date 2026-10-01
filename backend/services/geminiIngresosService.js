@@ -73,14 +73,13 @@ async function analizarDocumentosConGemini(pdfFiles, cargoData, candidatoData = 
     throw new Error('No se encontró la variable GEMINI_API_KEY en el backend.');
   }
 
-  // Usamos gemini-1.5-flash o gemini-2.5-flash / gemini-1.5-pro según disponibilidad
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature: 0.1, // Baja temperatura para máxima precisión fidedigna
-    },
-  });
+  // Lista de modelos oficiales actualizados con fallback automático
+  const MODELOS_GEMINI = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-flash-latest',
+    'gemini-pro-latest'
+  ];
 
   const promptUser = `
 DATOS DEL CARGO A EVALUAR:
@@ -211,9 +210,35 @@ Extrae la información de cada documento de acuerdo con las 18 reglas obligatori
     });
   });
 
-  console.log(`[GeminiIngresos] Enviando ${pdfFiles.length} documento(s) para análisis...`);
-  const result = await model.generateContent(parts);
-  const responseText = result.response.text();
+  console.log(`[GeminiIngresos] Enviando ${pdfFiles.length} documento(s) para análisis con IA...`);
+  let responseText = null;
+  let ultimoError = null;
+
+  for (const modeloNombre of MODELOS_GEMINI) {
+    try {
+      console.log(`[GeminiIngresos] Probando modelo ${modeloNombre}...`);
+      const model = genAI.getGenerativeModel({
+        model: modeloNombre,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        },
+      });
+      const result = await model.generateContent(parts);
+      responseText = result.response.text();
+      if (responseText) {
+        console.log(`[GeminiIngresos] ✓ Análisis exitoso con modelo: ${modeloNombre}`);
+        break;
+      }
+    } catch (err) {
+      console.warn(`[GeminiIngresos] Modelo ${modeloNombre} arrojó: ${err.message}. Intentando siguiente modelo...`);
+      ultimoError = err;
+    }
+  }
+
+  if (!responseText) {
+    throw new Error('No se pudo completar el análisis con los modelos de Gemini: ' + (ultimoError ? ultimoError.message : 'Error desconocido'));
+  }
 
   let parsedJson;
   try {
