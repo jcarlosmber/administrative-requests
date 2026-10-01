@@ -131,7 +131,7 @@ export interface CertificadoAnalizado {
 export interface FormacionAcademicaItem {
   id?: string;
   nombre_archivo?: string;
-  tipo: 'PREGRADO' | 'ESPECIALIZACION' | 'MAESTRIA' | 'DOCTORADO' | 'TARJETA_PROFESIONAL' | 'OTRO';
+  tipo: 'BACHILLER' | 'TECNICO' | 'TECNOLOGO' | 'PREGRADO' | 'ESPECIALIZACION' | 'MAESTRIA' | 'DOCTORADO' | 'TARJETA_PROFESIONAL' | 'OTRO';
   titulo_obtenido: string;
   institucion: string;
   fecha_grado?: string;
@@ -278,6 +278,26 @@ export const ingresosService = {
     const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`);
     if (!res.ok) throw new Error('Error al obtener la validación');
     return res.json();
+  },
+
+  async actualizarValidacion(id: string, data: Partial<AnalisisCompleto>): Promise<{ success: boolean; mensaje: string }> {
+    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Error al actualizar la validación');
+    return json;
+  },
+
+  async eliminarValidacion(id: string): Promise<{ success: boolean; mensaje: string }> {
+    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+      method: 'DELETE'
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Error al eliminar la validación');
+    return json;
   },
 
   getExcelDownloadUrl(id: string): string {

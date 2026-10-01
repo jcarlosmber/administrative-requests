@@ -403,7 +403,29 @@ export default function IngresosDashboardScreen() {
                     </View>
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        // @ts-ignore
+                        if (e?.stopPropagation) e.stopPropagation();
+                        router.push(`/ingresos/nueva?rehacerId=${val.id}`);
+                      }}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 7,
+                        borderRadius: 8,
+                        backgroundColor: '#EEF2FF',
+                        borderWidth: 1,
+                        borderColor: '#C7D2FE',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <Ionicons name="refresh-outline" size={15} color="#4338CA" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>Rehacer</Text>
+                    </TouchableOpacity>
+
                     <View
                       style={{
                         paddingHorizontal: 12,

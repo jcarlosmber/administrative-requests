@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   ActivityIndicator,
   Modal,
   Platform,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ingresosService, AnalisisCompleto } from '../../lib/ingresosService';
+import { ingresosService, AnalisisCompleto, FormacionAcademicaItem } from '../../lib/ingresosService';
 
 export default function DetalleValidacionScreen() {
   const router = useRouter();
@@ -20,7 +21,27 @@ export default function DetalleValidacionScreen() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalisisCompleto | null>(null);
 
-  // Modales
+  // Estados de Títulos Académicos
+  const [titulos, setTitulos] = useState<FormacionAcademicaItem[]>([]);
+  const [hayCambios, setHayCambios] = useState(false);
+  const [guardandoCambios, setGuardandoCambios] = useState(false);
+
+  // Modal para Crear / Editar Título
+  const [modalTituloVisible, setModalTituloVisible] = useState(false);
+  const [editandoIndex, setEditandoIndex] = useState<number | null>(null);
+  const [formTipo, setFormTipo] = useState<FormacionAcademicaItem['tipo']>('PREGRADO');
+  const [formTitulo, setFormTitulo] = useState('');
+  const [formInstitucion, setFormInstitucion] = useState('');
+  const [formFechaGrado, setFormFechaGrado] = useState('');
+  const [formTarjeta, setFormTarjeta] = useState('');
+  const [formCumple, setFormCumple] = useState(true);
+  const [formJustificacion, setFormJustificacion] = useState('');
+
+  // Modal Confirmar Eliminación
+  const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
+  const [indexAEliminar, setIndexAEliminar] = useState<number | null>(null);
+
+  // Modales Informativos
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
@@ -42,11 +63,111 @@ export default function DetalleValidacionScreen() {
       setLoading(true);
       const res = await ingresosService.obtenerValidacionPorId(valId);
       setData(res);
+      setTitulos(res.formacion_academica || []);
+      setHayCambios(false);
     } catch (err: any) {
       mostrarMensaje('Error al Cargar', err.message || 'No se pudo obtener el detalle de la validación.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const abrirNuevoTitulo = () => {
+    setEditandoIndex(null);
+    setFormTipo('PREGRADO');
+    setFormTitulo('');
+    setFormInstitucion('');
+    setFormFechaGrado('');
+    setFormTarjeta('');
+    setFormCumple(true);
+    setFormJustificacion('');
+    setModalTituloVisible(true);
+  };
+
+  const abrirEditarTitulo = (idx: number) => {
+    const item = titulos[idx];
+    if (!item) return;
+    setEditandoIndex(idx);
+    setFormTipo(item.tipo || 'PREGRADO');
+    setFormTitulo(item.titulo_obtenido || '');
+    setFormInstitucion(item.institucion || '');
+    setFormFechaGrado(item.fecha_grado || '');
+    setFormTarjeta(item.numero_tarjeta_o_registro || '');
+    setFormCumple(item.cumple_requisito_cargo !== false);
+    setFormJustificacion(item.justificacion || '');
+    setModalTituloVisible(true);
+  };
+
+  const guardarTituloForm = () => {
+    if (!formTitulo.trim()) {
+      mostrarMensaje('Campo Requerido', 'Debes ingresar el nombre del título obtenido.');
+      return;
+    }
+    if (!formInstitucion.trim()) {
+      mostrarMensaje('Campo Requerido', 'Debes ingresar la institución educativa emisora.');
+      return;
+    }
+
+    const nuevoItem: FormacionAcademicaItem = {
+      tipo: formTipo,
+      titulo_obtenido: formTitulo.trim(),
+      institucion: formInstitucion.trim(),
+      fecha_grado: formFechaGrado.trim() || 'NO CONSTA',
+      numero_tarjeta_o_registro: formTarjeta.trim() || undefined,
+      cumple_requisito_cargo: formCumple,
+      justificacion: formJustificacion.trim()
+    };
+
+    let nuevaLista: FormacionAcademicaItem[];
+    if (editandoIndex !== null) {
+      nuevaLista = [...titulos];
+      nuevaLista[editandoIndex] = { ...nuevaLista[editandoIndex], ...nuevoItem };
+    } else {
+      nuevaLista = [...titulos, nuevoItem];
+    }
+
+    setTitulos(nuevaLista);
+    setHayCambios(true);
+    setModalTituloVisible(false);
+  };
+
+  const pedirConfirmarEliminar = (idx: number) => {
+    setIndexAEliminar(idx);
+    setModalEliminarVisible(true);
+  };
+
+  const ejecutarEliminarTitulo = () => {
+    if (indexAEliminar === null) return;
+    const nuevaLista = titulos.filter((_, idx) => idx !== indexAEliminar);
+    setTitulos(nuevaLista);
+    setHayCambios(true);
+    setModalEliminarVisible(false);
+    setIndexAEliminar(null);
+  };
+
+  const guardarCambiosServidor = async () => {
+    if (!id || !data) return;
+    try {
+      setGuardandoCambios(true);
+      await ingresosService.actualizarValidacion(id, {
+        formacion_academica: titulos
+      });
+      setHayCambios(false);
+      setData({ ...data, formacion_academica: titulos });
+      mostrarMensaje(
+        'Cambios Guardados',
+        'Los títulos formativos del expediente han sido actualizados exitosamente en la base de datos y se reflejarán de inmediato en la exportación a Excel.'
+      );
+    } catch (err: any) {
+      mostrarMensaje('Error al Guardar', err.message || 'No se pudieron guardar los cambios.');
+    } finally {
+      setGuardandoCambios(false);
+    }
+  };
+
+  const rehacerExpediente = () => {
+    if (!id) return;
+    router.push(`/ingresos/nueva?rehacerId=${id}`);
   };
 
   const descargarExcel = () => {
@@ -126,23 +247,68 @@ export default function DetalleValidacionScreen() {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={descargarExcel}
-          style={{
-            backgroundColor: '#16A34A',
-            paddingHorizontal: 14,
-            paddingVertical: 9,
-            borderRadius: 8,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6
-          }}
-        >
-          <Ionicons name="download-outline" size={18} color="#FFFFFF" />
-          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-            Exportar Excel
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {hayCambios && (
+            <TouchableOpacity
+              onPress={guardarCambiosServidor}
+              disabled={guardandoCambios}
+              style={{
+                backgroundColor: '#2563EB',
+                paddingHorizontal: 14,
+                paddingVertical: 9,
+                borderRadius: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6
+              }}
+            >
+              {guardandoCambios ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="save-outline" size={18} color="#FFFFFF" />
+              )}
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                {guardandoCambios ? 'Guardando...' : 'Guardar Cambios'}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            onPress={rehacerExpediente}
+            style={{
+              backgroundColor: '#4338CA',
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Ionicons name="refresh-outline" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+              Rehacer Dictamen
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={descargarExcel}
+            style={{
+              backgroundColor: '#16A34A',
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Ionicons name="download-outline" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+              Exportar Excel
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
@@ -261,31 +427,106 @@ export default function DetalleValidacionScreen() {
             gap: 14
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons name="school" size={20} color="#1E40AF" />
               <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
                 Títulos Académicos y Tarjeta Profesional
               </Text>
             </View>
-            <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#3730A3' }}>
-                {data.formacion_academica && data.formacion_academica.length > 0
-                  ? `${data.formacion_academica.length} documento(s) formativo(s)`
-                  : '0 detectados'}
-              </Text>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#3730A3' }}>
+                  {titulos.length} documento(s) formativo(s)
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={abrirNuevoTitulo}
+                style={{
+                  backgroundColor: '#1E40AF',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                  + Agregar Título / Tarjeta
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {(!data.formacion_academica || data.formacion_academica.length === 0) ? (
-            <View style={{ padding: 12, backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>
-                No se detectaron diplomas, actas de grado ni tarjetas profesionales en el lote de archivos adjuntos. Si el cargo exige título o tarjeta, asegúrate de adjuntar el PDF correspondiente.
+          {/* Banner de cambios pendientes */}
+          {hayCambios && (
+            <View
+              style={{
+                backgroundColor: '#EFF6FF',
+                borderColor: '#93C5FD',
+                borderWidth: 1,
+                borderRadius: 8,
+                padding: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 10
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 240 }}>
+                <Ionicons name="information-circle" size={20} color="#1D4ED8" />
+                <Text style={{ fontSize: 12, color: '#1E40AF', fontWeight: '600' }}>
+                  Has realizado cambios en los títulos. Guarda los cambios para que se persistan en el expediente y en el Excel.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={guardarCambiosServidor}
+                disabled={guardandoCambios}
+                style={{
+                  backgroundColor: '#1D4ED8',
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                {guardandoCambios ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="save-outline" size={16} color="#FFFFFF" />
+                )}
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                  {guardandoCambios ? 'Guardando...' : 'Guardar Cambios'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {titulos.length === 0 ? (
+            <View style={{ padding: 14, backgroundColor: '#F8FAFC', borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="school-outline" size={28} color="#94A3B8" />
+              <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '600' }}>
+                No hay títulos ni tarjetas registradas en este expediente.
               </Text>
+              <TouchableOpacity
+                onPress={abrirNuevoTitulo}
+                style={{ marginTop: 4, paddingVertical: 4, paddingHorizontal: 10 }}
+              >
+                <Text style={{ fontSize: 12, color: '#1E40AF', fontWeight: '700' }}>
+                  Pulsa aquí para agregar uno manualmente
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              {data.formacion_academica.map((fa, idx) => (
+              {titulos.map((fa, idx) => (
                 <View
                   key={fa.id || idx}
                   style={{
@@ -296,18 +537,34 @@ export default function DetalleValidacionScreen() {
                     borderColor: fa.cumple_requisito_cargo ? '#BBF7D0' : '#E2E8F0'
                   }}
                 >
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1, minWidth: 260 }}>
                       <Ionicons
                         name={fa.tipo === 'TARJETA_PROFESIONAL' ? 'card-outline' : 'school-outline'}
-                        size={18}
+                        size={20}
                         color={fa.cumple_requisito_cargo ? '#15803D' : '#2563EB'}
+                        style={{ marginTop: 2 }}
                       />
-                      <View>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>
-                          {fa.titulo_obtenido}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>
+                            {fa.titulo_obtenido}
+                          </Text>
+                          <View
+                            style={{
+                              backgroundColor: '#E0E7FF',
+                              paddingHorizontal: 6,
+                              paddingVertical: 1,
+                              borderRadius: 4
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#3730A3' }}>
+                              {fa.tipo.replace('_', ' ')}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
                           {fa.institucion} {fa.fecha_grado && fa.fecha_grado !== 'NO CONSTA' ? `• Fecha: ${fa.fecha_grado}` : ''}
                         </Text>
                         {fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA' ? (
@@ -318,25 +575,58 @@ export default function DetalleValidacionScreen() {
                       </View>
                     </View>
 
-                    <View
-                      style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 3,
-                        borderRadius: 6,
-                        backgroundColor: fa.cumple_requisito_cargo ? '#DCFCE7' : '#FEF3C7',
-                        borderWidth: 1,
-                        borderColor: fa.cumple_requisito_cargo ? '#86EFAC' : '#FDE68A'
-                      }}
-                    >
-                      <Text
+                    {/* Acciones y estado */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View
                         style={{
-                          fontSize: 11,
-                          fontWeight: '800',
-                          color: fa.cumple_requisito_cargo ? '#15803D' : '#B45309'
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 6,
+                          backgroundColor: fa.cumple_requisito_cargo ? '#DCFCE7' : '#FEF3C7',
+                          borderWidth: 1,
+                          borderColor: fa.cumple_requisito_cargo ? '#86EFAC' : '#FDE68A'
                         }}
                       >
-                        {fa.cumple_requisito_cargo ? '✓ CUMPLE REQUISITO' : 'EN EVALUACIÓN'}
-                      </Text>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '800',
+                            color: fa.cumple_requisito_cargo ? '#15803D' : '#B45309'
+                          }}
+                        >
+                          {fa.cumple_requisito_cargo ? '✓ CUMPLE REQUISITO' : 'EN EVALUACIÓN'}
+                        </Text>
+                      </View>
+
+                      {/* Botón Editar */}
+                      <TouchableOpacity
+                        onPress={() => abrirEditarTitulo(idx)}
+                        style={{
+                          padding: 6,
+                          borderRadius: 6,
+                          backgroundColor: '#F1F5F9',
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1'
+                        }}
+                        accessibilityLabel="Editar título"
+                      >
+                        <Ionicons name="pencil-outline" size={15} color="#0F172A" />
+                      </TouchableOpacity>
+
+                      {/* Botón Eliminar */}
+                      <TouchableOpacity
+                        onPress={() => pedirConfirmarEliminar(idx)}
+                        style={{
+                          padding: 6,
+                          borderRadius: 6,
+                          backgroundColor: '#FEE2E2',
+                          borderWidth: 1,
+                          borderColor: '#FCA5A5'
+                        }}
+                        accessibilityLabel="Eliminar título"
+                      >
+                        <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      </TouchableOpacity>
                     </View>
                   </View>
 
@@ -697,6 +987,369 @@ export default function DetalleValidacionScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal Crear / Editar Título */}
+      <Modal
+        visible={modalTituloVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalTituloVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 16
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              padding: 22,
+              width: '100%',
+              maxWidth: 580,
+              maxHeight: '90%',
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="school" size={22} color="#1E40AF" />
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
+                  {editandoIndex !== null ? 'Editar Título o Tarjeta' : 'Agregar Nuevo Título / Tarjeta'}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalTituloVisible(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+              {/* Selector de Tipo */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                  Tipo de Documento Formativo *
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                  {[
+                    { id: 'PREGRADO', label: 'Pregrado' },
+                    { id: 'ESPECIALIZACION', label: 'Especialización' },
+                    { id: 'MAESTRIA', label: 'Maestría' },
+                    { id: 'DOCTORADO', label: 'Doctorado' },
+                    { id: 'BACHILLER', label: 'Bachiller' },
+                    { id: 'TECNICO', label: 'Técnico' },
+                    { id: 'TECNOLOGO', label: 'Tecnólogo' },
+                    { id: 'TARJETA_PROFESIONAL', label: 'Tarjeta Profesional' },
+                    { id: 'OTRO', label: 'Otro' }
+                  ].map((t) => {
+                    const sel = formTipo === t.id;
+                    return (
+                      <TouchableOpacity
+                        key={t.id}
+                        onPress={() => setFormTipo(t.id as any)}
+                        style={{
+                          backgroundColor: sel ? '#1E40AF' : '#F1F5F9',
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          borderWidth: 1,
+                          borderColor: sel ? '#1E40AF' : '#CBD5E1'
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: sel ? '#FFFFFF' : '#475569' }}>
+                          {t.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Título Obtenido */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Título Obtenido / Denominación *
+                </Text>
+                <TextInput
+                  value={formTitulo}
+                  onChangeText={setFormTitulo}
+                  placeholder="Ej. Abogado, Bachiller Académico, Contador Público"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                    color: '#0F172A'
+                  }}
+                />
+              </View>
+
+              {/* Institución */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Institución Educativa Emisora *
+                </Text>
+                <TextInput
+                  value={formInstitucion}
+                  onChangeText={setFormInstitucion}
+                  placeholder="Ej. Universidad Nacional de Colombia, Colegio Mayor"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                    color: '#0F172A'
+                  }}
+                />
+              </View>
+
+              {/* Fila Fecha y Tarjeta */}
+              <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: 160 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                    Fecha de Grado / Expedición
+                  </Text>
+                  <TextInput
+                    value={formFechaGrado}
+                    onChangeText={setFormFechaGrado}
+                    placeholder="AAAA-MM-DD (o NO CONSTA)"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 13,
+                      color: '#0F172A'
+                    }}
+                  />
+                </View>
+
+                <View style={{ flex: 1, minWidth: 160 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                    N° Tarjeta / Registro
+                  </Text>
+                  <TextInput
+                    value={formTarjeta}
+                    onChangeText={setFormTarjeta}
+                    placeholder="Opcional (Ej. 345612 CSJ)"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 13,
+                      color: '#0F172A'
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Cumple Requisito */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                  ¿Cumple Requisito Exigido para el Cargo?
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => setFormCumple(true)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: formCumple ? '#DCFCE7' : '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: formCumple ? '#16A34A' : '#CBD5E1',
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons
+                      name={formCumple ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={16}
+                      color={formCumple ? '#15803D' : '#64748B'}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: formCumple ? '#15803D' : '#64748B' }}>
+                      Sí Cumple Requisito
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setFormCumple(false)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: !formCumple ? '#FEF3C7' : '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: !formCumple ? '#D97706' : '#CBD5E1',
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons
+                      name={!formCumple ? 'alert-circle' : 'ellipse-outline'}
+                      size={16}
+                      color={!formCumple ? '#B45309' : '#64748B'}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: !formCumple ? '#B45309' : '#64748B' }}>
+                      En Evaluación / Adicional
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Justificación */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Justificación / Criterio de Validación
+                </Text>
+                <TextInput
+                  value={formJustificacion}
+                  onChangeText={setFormJustificacion}
+                  multiline
+                  numberOfLines={2}
+                  placeholder="Ej. Cumple con el núcleo básico del conocimiento exigido en el manual de funciones."
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                    color: '#0F172A',
+                    minHeight: 56
+                  }}
+                />
+              </View>
+            </ScrollView>
+
+            {/* Botones Acciones Modal */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+              <TouchableOpacity
+                onPress={() => setModalTituloVisible(false)}
+                style={{
+                  paddingVertical: 9,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1'
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={guardarTituloForm}
+                style={{
+                  paddingVertical: 9,
+                  paddingHorizontal: 18,
+                  borderRadius: 8,
+                  backgroundColor: '#1E40AF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>
+                  {editandoIndex !== null ? 'Actualizar Título' : 'Agregar Título'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Confirmar Eliminación */}
+      <Modal
+        visible={modalEliminarVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalEliminarVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              padding: 22,
+              width: '100%',
+              maxWidth: 420,
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <Ionicons name="trash-bin-outline" size={24} color="#DC2626" />
+              <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
+                Eliminar Título Académico
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#475569', lineHeight: 20, marginBottom: 20 }}>
+              ¿Estás seguro de que deseas eliminar este título formativo de este expediente? Recuerda guardar los cambios para sincronizarlos con la base de datos.
+            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setModalEliminarVisible(false)}
+                style={{
+                  backgroundColor: '#F1F5F9',
+                  paddingVertical: 9,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1'
+                }}
+              >
+                <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={ejecutarEliminarTitulo}
+                style={{
+                  backgroundColor: '#DC2626',
+                  paddingVertical: 9,
+                  paddingHorizontal: 16,
+                  borderRadius: 8
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal Reusable (Regla: No alerts) */}
       <Modal

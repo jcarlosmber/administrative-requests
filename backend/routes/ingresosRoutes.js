@@ -528,6 +528,179 @@ module.exports = function(pool) {
   });
 
   /**
+   * 7.1 PUT /api/ingresos/validaciones/:id - Actualiza formación académica, certificados y consolidado
+   */
+  router.put('/validaciones/:id', async (req, res) => {
+    const client = await pool.connect();
+    try {
+      const { id } = req.params;
+      const { formacion_academica, documentos_no_aplican, consolidado, certificados, cargo_evaluado, candidato } = req.body;
+
+      await client.query('BEGIN');
+
+      const checkVal = await client.query('SELECT * FROM ingreso_validaciones WHERE id = $1', [id]);
+      if (checkVal.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Validación no encontrada.' });
+      }
+
+      const valRow = checkVal.rows[0];
+
+      // Actualizar candidato si vino
+      if (candidato && valRow.candidato_id) {
+        await client.query(
+          `UPDATE ingreso_candidatos 
+           SET nombre = COALESCE($1, nombre), documento = COALESCE($2, documento),
+               email = COALESCE($3, email), telefono = COALESCE($4, telefono)
+           WHERE id = $5`,
+          [candidato.nombre, candidato.documento, candidato.email, candidato.telefono, valRow.candidato_id]
+        );
+      }
+
+      // Preparar campos de actualización de validación
+      const updates = [];
+      const values = [];
+      let pIdx = 1;
+
+      if (formacion_academica !== undefined) {
+        updates.push(`formacion_academica = $${pIdx++}`);
+        values.push(JSON.stringify(formacion_academica));
+      }
+      if (documentos_no_aplican !== undefined) {
+        updates.push(`documentos_no_aplican = $${pIdx++}`);
+        values.push(JSON.stringify(documentos_no_aplican));
+      }
+      if (consolidado) {
+        if (consolidado.resultado_final !== undefined) {
+          updates.push(`resultado_final = $${pIdx++}`);
+          values.push(consolidado.resultado_final);
+        }
+        if (consolidado.justificacion !== undefined) {
+          updates.push(`justificacion_final = $${pIdx++}`);
+          values.push(consolidado.justificacion);
+        }
+        if (consolidado.requisito_minimo_meses !== undefined) {
+          updates.push(`requisito_minimo_meses = $${pIdx++}`);
+          values.push(Number(consolidado.requisito_minimo_meses) || 0);
+        }
+        if (consolidado.experiencia_relacionada_meses !== undefined) {
+          updates.push(`experiencia_relacionada_meses = $${pIdx++}`);
+          values.push(Number(consolidado.experiencia_relacionada_meses) || 0);
+        }
+        if (consolidado.experiencia_no_relacionada_meses !== undefined) {
+          updates.push(`experiencia_no_relacionada_meses = $${pIdx++}`);
+          values.push(Number(consolidado.experiencia_no_relacionada_meses) || 0);
+        }
+        if (consolidado.tiempo_excluido_por_traslapes_meses !== undefined) {
+          updates.push(`tiempo_excluido_traslapes_meses = $${pIdx++}`);
+          values.push(Number(consolidado.tiempo_excluido_por_traslapes_meses) || 0);
+        }
+        if (consolidado.diferencia_meses !== undefined) {
+          updates.push(`diferencia_meses = $${pIdx++}`);
+          values.push(Number(consolidado.diferencia_meses) || 0);
+        }
+        if (consolidado.requiere_revision_humana !== undefined) {
+          updates.push(`requiere_revision_humana = $${pIdx++}`);
+          values.push(Boolean(consolidado.requiere_revision_humana));
+        }
+      }
+
+      if (cargo_evaluado) {
+        if (cargo_evaluado.nombre) {
+          updates.push(`cargo_nombre = $${pIdx++}`);
+          values.push(cargo_evaluado.nombre);
+        }
+        if (cargo_evaluado.codigo) {
+          updates.push(`cargo_codigo = $${pIdx++}`);
+          values.push(cargo_evaluado.codigo);
+        }
+        if (cargo_evaluado.grado) {
+          updates.push(`cargo_grado = $${pIdx++}`);
+          values.push(cargo_evaluado.grado);
+        }
+      }
+
+      updates.push(`updated_at = NOW()`);
+
+      if (updates.length > 1) {
+        values.push(id);
+        const updateValQuery = `UPDATE ingreso_validaciones SET ${updates.join(', ')} WHERE id = $${pIdx} RETURNING *;`;
+        await client.query(updateValQuery, values);
+      }
+
+      // Si vienen certificados actualizados
+      if (Array.isArray(certificados) && certificados.length > 0) {
+        await client.query('DELETE FROM ingreso_certificados WHERE validacion_id = $1', [id]);
+        for (const cert of certificados) {
+          const certQuery = `
+            INSERT INTO ingreso_certificados (
+              validacion_id, id_certificado, entidad, nit_entidad, ciudad_expedicion, fecha_expedicion,
+              firmante, cargo_firmante, tipo_vinculo, cargo_certificado, codigo_cargo, grado_cargo,
+              dependencia, numero_contrato_o_acto, fecha_inicio, fecha_fin, vinculo_vigente,
+              funciones_certificadas, experiencia_profesional, clasificacion_experiencia,
+              experiencia_relacionada_json, tiempo_certificado_json, meses_certificados,
+              traslapes_json, tiempo_valido_meses, documento_json, observaciones_json, nombre_archivo
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28);
+          `;
+          const certValues = [
+            id,
+            cert.id_certificado || 'CERT-1',
+            cert.entidad || 'N/A',
+            cert.nit_entidad || null,
+            cert.ciudad_expedicion || null,
+            cert.fecha_expedicion || null,
+            cert.firmante || null,
+            cert.cargo_firmante || null,
+            cert.tipo_vinculo || null,
+            cert.cargo_certificado || 'N/A',
+            cert.codigo_cargo || null,
+            cert.grado_cargo || null,
+            cert.dependencia || null,
+            cert.numero_contrato_o_acto || null,
+            cert.fecha_inicio || null,
+            cert.fecha_fin || null,
+            cert.vinculo_vigente || false,
+            JSON.stringify(cert.funciones_certificadas || []),
+            cert.experiencia_profesional !== false,
+            cert.clasificacion_experiencia || 'RELACIONADA',
+            JSON.stringify(cert.experiencia_relacionada || {}),
+            JSON.stringify(cert.tiempo_certificado || {}),
+            cert.tiempo_certificado?.meses_totales_aproximados || 0,
+            JSON.stringify(cert.traslapes || []),
+            cert.tiempo_valido?.meses_totales || cert.tiempo_certificado?.meses_totales_aproximados || 0,
+            JSON.stringify({ ...(cert.documento || {}), verificacion_formal: cert.verificacion_formal || {} }),
+            JSON.stringify(cert.observaciones || []),
+            cert.nombre_archivo || null
+          ];
+          await client.query(certQuery, certValues);
+        }
+      }
+
+      await client.query('COMMIT');
+      res.json({ success: true, mensaje: 'Validación actualizada exitosamente.' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[Ingresos] Error en PUT /validaciones/:id:', err);
+      res.status(500).json({ error: 'Error al actualizar la validación: ' + err.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  /**
+   * 7.2 DELETE /api/ingresos/validaciones/:id - Elimina una validación
+   */
+  router.delete('/validaciones/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      await pool.query('DELETE FROM ingreso_validaciones WHERE id = $1', [id]);
+      res.json({ success: true, mensaje: 'Validación eliminada correctamente.' });
+    } catch (err) {
+      res.status(500).json({ error: 'Error al eliminar la validación: ' + err.message });
+    }
+  });
+
+  /**
    * 8. GET /api/ingresos/validaciones/:id/excel - Descarga del dictamen en Excel
    */
   router.get('/validaciones/:id/excel', async (req, res) => {
