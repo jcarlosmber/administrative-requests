@@ -534,9 +534,10 @@ module.exports = function(pool) {
     try {
       const { id } = req.params;
 
-      // Obtener data reutilizando la lógica interna
+      // Obtener data completa con candidatos, formación y documentos no aplicables
       const valQuery = `
-        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento,
+               c.email as candidato_email, c.telefono as candidato_telefono
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
         WHERE v.id = $1;
@@ -553,12 +554,20 @@ module.exports = function(pool) {
       const payloadData = {
         candidato: {
           nombre: val.candidato_nombre,
-          documento: val.candidato_documento
+          documento: val.candidato_documento,
+          email: val.candidato_email,
+          telefono: val.candidato_telefono
         },
         cargo_evaluado: {
+          id: val.cargo_id,
+          id_sideap: val.id_sideap,
+          id_perno: val.id_perno,
+          id_plaza: val.id_plaza,
           nombre: val.cargo_nombre,
           codigo: val.cargo_codigo,
-          grado: val.cargo_grado
+          grado: val.cargo_grado,
+          dependencia: val.cargo_dependencia || 'Secretaría Jurídica Distrital',
+          requisito_experiencia_meses: Number(val.requisito_minimo_meses)
         },
         consolidado: {
           requisito_minimo_meses: Number(val.requisito_minimo_meses),
@@ -568,6 +577,9 @@ module.exports = function(pool) {
           resultado_final: val.resultado_final,
           justificacion: val.justificacion_final
         },
+        formacion_academica: val.formacion_academica || [],
+        documentos_no_aplican: val.documentos_no_aplican || [],
+        evaluador: val.evaluador_email || 'Profesional Universitario DGC',
         certificados: certsRes.rows.map(r => ({
           id_certificado: r.id_certificado,
           entidad: r.entidad,
@@ -579,7 +591,8 @@ module.exports = function(pool) {
           tiempo_certificado: r.tiempo_certificado_json,
           traslapes: r.traslapes_json,
           experiencia_relacionada: r.experiencia_relacionada_json,
-          documento: r.documento_json
+          documento: r.documento_json,
+          verificacion_formal: r.verificacion_formal
         }))
       };
 
