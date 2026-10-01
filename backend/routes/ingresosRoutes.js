@@ -86,6 +86,10 @@ module.exports = function(pool) {
             nombre_archivo TEXT,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        -- Garantizar columnas de ID SIDEAP, ID PERNO e ID PLAZA
+        ALTER TABLE public.ingreso_cargos ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT;
+        ALTER TABLE public.ingreso_validaciones ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT, ADD COLUMN IF NOT EXISTS id_plaza INT;
       `);
       console.log('✓ Tablas del módulo de ingresos verificadas.');
     } catch (err) {
@@ -93,6 +97,25 @@ module.exports = function(pool) {
     }
   };
   initTables();
+
+  /**
+   * 0. GET /api/ingresos/planta - Lista las 170 plazas de la planta oficial SJD
+   */
+  router.get('/planta', async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
+               dependencia_cargo, dependencia_funcional, proposito, funciones,
+               requisitos, asignacion_basica, titular_cedula, titular_nombre,
+               tipo_vinculacion, situacion_administrativa
+        FROM planta_personal_sjd
+        ORDER BY id_plaza ASC;
+      `);
+      res.json(result.rows);
+    } catch (err) {
+      res.status(500).json({ error: 'Error al consultar planta de personal: ' + err.message });
+    }
+  });
 
   /**
    * 1. GET /api/ingresos/cargos - Lista los cargos configurados
@@ -293,8 +316,9 @@ module.exports = function(pool) {
           candidato_id, cargo_id, cargo_nombre, cargo_codigo, cargo_grado,
           requisito_minimo_meses, experiencia_relacionada_meses, experiencia_no_relacionada_meses,
           tiempo_excluido_traslapes_meses, diferencia_meses, resultado_final,
-          justificacion_final, requiere_revision_humana, evaluador_email, estado
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+          justificacion_final, requiere_revision_humana, evaluador_email, estado,
+          id_sideap, id_perno, id_plaza
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING id;
       `;
       const valValues = [
@@ -312,7 +336,10 @@ module.exports = function(pool) {
         consolidado.justificacion || '',
         consolidado.requiere_revision_humana || false,
         evaluador_email || 'talento_humano@secjuridica.gov.co',
-        'EVALUADO'
+        'EVALUADO',
+        cargo_evaluado.id_sideap || null,
+        cargo_evaluado.id_perno || null,
+        cargo_evaluado.id_plaza || null
       ];
       const valRes = await client.query(valQuery, valValues);
       const validacionId = valRes.rows[0].id;
@@ -428,9 +455,13 @@ module.exports = function(pool) {
         },
         cargo_evaluado: {
           id: val.cargo_id,
+          id_sideap: val.id_sideap,
+          id_perno: val.id_perno,
+          id_plaza: val.id_plaza,
           nombre: val.cargo_nombre,
           codigo: val.cargo_codigo,
           grado: val.cargo_grado,
+          dependencia: val.cargo_dependencia || null,
           requisito_experiencia_meses: Number(val.requisito_minimo_meses)
         },
         consolidado: {

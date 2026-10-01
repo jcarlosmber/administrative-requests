@@ -2,6 +2,9 @@ import { API_URL, appStorage } from './supabase';
 
 export interface CargoEvaluado {
   id?: string;
+  id_sideap?: number;
+  id_perno?: number;
+  id_plaza?: number;
   nombre: string;
   codigo?: string;
   grado?: string;
@@ -9,6 +12,26 @@ export interface CargoEvaluado {
   requisito_experiencia_meses: number;
   requisitos_formacion?: string;
   funciones_cargo: string[];
+}
+
+export interface PlazaPlanta {
+  id_plaza: number;
+  id_sideap?: number;
+  id_perno?: number;
+  nivel?: string;
+  cargo: string;
+  codigo?: string;
+  grado?: string;
+  dependencia_cargo?: string;
+  dependencia_funcional?: string;
+  proposito?: string;
+  funciones?: string[];
+  requisitos?: string;
+  asignacion_basica?: number;
+  titular_cedula?: string;
+  titular_nombre?: string;
+  tipo_vinculacion?: string;
+  situacion_administrativa?: string;
 }
 
 export interface CandidatoInfo {
@@ -112,6 +135,12 @@ export const ingresosService = {
   async obtenerCargos(): Promise<CargoEvaluado[]> {
     const res = await fetch(`${API_URL}/api/ingresos/cargos`);
     if (!res.ok) throw new Error('Error al obtener cargos');
+    return res.json();
+  },
+
+  async obtenerPlanta(): Promise<PlazaPlanta[]> {
+    const res = await fetch(`${API_URL}/api/ingresos/planta`);
+    if (!res.ok) throw new Error('Error al obtener planta de personal');
     return res.json();
   },
 

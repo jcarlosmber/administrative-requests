@@ -54,6 +54,7 @@ async function generarReporteExcelValidacion(data) {
   const datosInfo = [
     ['Candidato / Aspirante:', candidato.nombre || 'N/A', '', 'Documento de Identidad:', candidato.documento || 'N/A'],
     ['Cargo Evaluado:', cargo.nombre || 'N/A', '', 'Código y Grado:', `${cargo.codigo || ''} - ${cargo.grado || ''}`],
+    ['ID SIDEAP:', cargo.id_sideap ? String(cargo.id_sideap) : 'N/A', '', 'ID PERNO:', cargo.id_perno ? String(cargo.id_perno) : 'N/A'],
     ['Dependencia:', cargo.dependencia || 'N/A', '', 'Requisito Mínimo:', `${consolidado.requisito_minimo_meses || 54} Meses`],
     ['Experiencia Relacionada Neta:', `${consolidado.experiencia_relacionada_meses || 0} Meses`, '', 'Tiempo Excluido por Traslapes:', `${consolidado.tiempo_excluido_por_traslapes_meses || 0} Meses`],
     ['Diferencia frente al Requisito:', `${consolidado.diferencia_meses >= 0 ? '+' : ''}${consolidado.diferencia_meses || 0} Meses`, '', 'DICTAMEN FINAL:', consolidado.resultado_final || 'REQUIERE_REVISION']
