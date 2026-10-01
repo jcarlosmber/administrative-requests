@@ -12,7 +12,7 @@ async function generarReporteExcelValidacion(data) {
   const templatePath = path.join(__dirname, '../templates/2311300-FT-318_template.xlsx');
   const workbook = new ExcelJS.Workbook();
 
-  // 1. Cargar plantilla oficial o inicializar libro nuevo si no existiera
+  // 1. Cargar plantilla oficial
   let ws;
   if (fs.existsSync(templatePath)) {
     await workbook.xlsx.readFile(templatePath);
@@ -65,29 +65,30 @@ async function generarReporteExcelValidacion(data) {
   }
 
   // ----------------------------------------------------
-  // 4. FORMACIÓN ACADÉMICA (Filas 11 a 17)
+  // 4. FORMACIÓN ACADÉMICA (Filas 11 a 32)
   // ----------------------------------------------------
   // Rescate de salvaguarda: si algún diploma de bachiller, técnico, pregrado,
-  // posgrado o tarjeta profesional quedó en documentos_no_aplican, lo recuperamos:
+  // posgrado o tarjeta profesional quedó en documentos_no_aplican, lo recuperamos
   const noAplicanLimpios = [];
   const formacionCompleta = [...formacion];
 
   noAplican.forEach(item => {
     const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
     const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA') || texto.includes('COLEGIO');
-    const esTecnico = texto.includes('TECNIC') || texto.includes('TECNOLOG');
+    const esTecnico = texto.includes('TECNIC') && !texto.includes('TECNOLOG');
+    const esTecnologo = texto.includes('TECNOLOG');
     const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');
     const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
     const esPregrado = texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('DIPLOMA') || texto.includes('ACTA DE GRADO');
 
-    if (esBachiller || esTecnico || esTarjeta || esPosgrado || esPregrado) {
+    if (esBachiller || esTecnico || esTecnologo || esTarjeta || esPosgrado || esPregrado) {
       let tipo = 'PREGRADO';
       if (esBachiller) tipo = 'BACHILLER';
       else if (esTecnico) tipo = 'TECNICO';
+      else if (esTecnologo) tipo = 'TECNOLOGO';
       else if (esTarjeta) tipo = 'TARJETA_PROFESIONAL';
       else if (esPosgrado) tipo = 'POSGRADO';
 
-      // Extraer posible fecha del texto si fecha_grado no consta
       let fechaDetectada = item.fecha_grado || null;
       if (!fechaDetectada || fechaDetectada === 'NO CONSTA') {
         const matchFecha = (item.descripcion || item.motivo_no_aplica || '').match(/\b(19\d\d|20\d\d)[-\/\.]\d{1,2}[-\/\.]\d{1,2}\b|\b\d{1,2}[-\/\.]\d{1,2}[-\/\.](19\d\d|20\d\d)\b|\b(19\d\d|20\d\d)\b/);
@@ -107,8 +108,9 @@ async function generarReporteExcelValidacion(data) {
   });
 
   let bachiller = null;
-  let tecnico = null;
-  let pregrado = null;
+  const tecnicos = [];
+  const tecnologos = [];
+  const pregrados = [];
   const posgrados = [];
   let tarjeta = null;
 
@@ -117,10 +119,12 @@ async function generarReporteExcelValidacion(data) {
     const titulo = (item.titulo_obtenido || '').toUpperCase();
     if (tipo === 'BACHILLER' || titulo.includes('BACHILLER') || titulo.includes('BACHILLERATO') || titulo.includes('EDUCACION MEDIA') || titulo.includes('SECUNDARIA')) {
       if (!bachiller) bachiller = item;
-    } else if (tipo === 'TECNICO' || tipo === 'TECNOLOGO' || titulo.includes('TECNIC') || titulo.includes('TECNOLOG')) {
-      if (!tecnico) tecnico = item;
-    } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || (!pregrado && !titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
-      if (!pregrado) pregrado = item;
+    } else if (tipo === 'TECNICO' || (titulo.includes('TECNIC') && !titulo.includes('TECNOLOG'))) {
+      tecnicos.push(item);
+    } else if (tipo === 'TECNOLOGO' || tipo === 'TECNOLOGIA' || titulo.includes('TECNOLOG')) {
+      tecnologos.push(item);
+    } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || (!titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
+      pregrados.push(item);
     } else if (tipo === 'POSGRADO' || tipo === 'ESPECIALIZACION' || tipo === 'MAESTRIA' || tipo === 'DOCTORADO' || titulo.includes('ESPECIALIZ') || titulo.includes('MAESTR') || titulo.includes('DOCTOR')) {
       posgrados.push(item);
     } else if (tipo === 'TARJETA_PROFESIONAL' || titulo.includes('TARJETA') || item.numero_tarjeta_o_registro) {
@@ -128,161 +132,238 @@ async function generarReporteExcelValidacion(data) {
     }
   });
 
-  // Bachiller (Fila 11)
+  // Fila 11: Bachiller (1 fila fija, deja campos vacíos si no hay)
   if (bachiller) {
     ws.getCell('B11').value = bachiller.titulo_obtenido;
     ws.getCell('H11').value = bachiller.institucion;
     ws.getCell('N11').value = parseFecha(bachiller.fecha_grado);
   } else {
-    ws.getCell('B11').value = 'NO REGISTRA';
-    ws.getCell('H11').value = 'NO REGISTRA';
+    ws.getCell('B11').value = null;
+    ws.getCell('H11').value = null;
     ws.getCell('N11').value = null;
   }
 
-  // Técnico (Fila 12)
-  if (tecnico) {
-    ws.getCell('B12').value = tecnico.titulo_obtenido;
-    ws.getCell('H12').value = tecnico.institucion;
-    ws.getCell('N12').value = parseFecha(tecnico.fecha_grado);
-  } else {
-    ws.getCell('B12').value = 'NO REGISTRA';
-    ws.getCell('H12').value = 'NO REGISTRA';
-    ws.getCell('N12').value = null;
-  }
-
-  // Pregrado (Fila 13)
-  if (pregrado) {
-    ws.getCell('B13').value = pregrado.titulo_obtenido;
-    ws.getCell('H13').value = pregrado.institucion;
-    ws.getCell('N13').value = parseFecha(pregrado.fecha_grado);
-  } else {
-    ws.getCell('B13').value = 'NO REGISTRA';
-    ws.getCell('H13').value = 'NO REGISTRA';
-    ws.getCell('N13').value = null;
-  }
-
-  // Posgrados (Filas 14, 15, 16)
-  const posgradoRows = [14, 15, 16];
-  posgradoRows.forEach((r, idx) => {
-    if (posgrados[idx]) {
-      ws.getCell(`B${r}`).value = posgrados[idx].titulo_obtenido;
-      ws.getCell(`H${r}`).value = posgrados[idx].institucion;
-      ws.getCell(`N${r}`).value = parseFecha(posgrados[idx].fecha_grado);
+  // Filas 12 a 15: Técnicos (4 filas preparadas en plantilla)
+  const tecnicosCount = Math.max(1, tecnicos.length);
+  for (let i = 0; i < 4; i++) {
+    const r = 12 + i;
+    if (i < tecnicos.length) {
+      ws.getCell(`B${r}`).value = tecnicos[i].titulo_obtenido;
+      ws.getCell(`H${r}`).value = tecnicos[i].institucion;
+      ws.getCell(`N${r}`).value = parseFecha(tecnicos[i].fecha_grado);
     } else {
-      ws.getCell(`B${r}`).value = 'NO REGISTRA';
-      ws.getCell(`H${r}`).value = 'NO REGISTRA';
+      ws.getCell(`B${r}`).value = null;
+      ws.getCell(`H${r}`).value = null;
       ws.getCell(`N${r}`).value = null;
     }
-  });
-
-  // Tarjeta profesional (Fila 17)
-  if (tarjeta) {
-    ws.getCell('B17').value = tarjeta.numero_tarjeta_o_registro || tarjeta.titulo_obtenido || 'NO CONSTA';
-    ws.getCell('L17').value = parseFecha(tarjeta.fecha_grado || tarjeta.fecha_expedicion);
-  } else {
-    ws.getCell('B17').value = 'NO REGISTRA';
-    ws.getCell('L17').value = null;
   }
 
-  // ----------------------------------------------------
-  // 5. EXPERIENCIA LABORAL (Filas 21 en adelante)
-  // ----------------------------------------------------
-  const maxInitialRows = 11; // Plantilla original filas 21 a 31
-  const certCount = certs.length;
-  const totalRowsNeeded = Math.max(maxInitialRows, certCount);
-
-  if (certCount > maxInitialRows) {
-    const extraRows = certCount - maxInitialRows;
-    for (let i = 0; i < extraRows; i++) {
-      ws.insertRow(32, []);
+  // Filas 16 a 19: Tecnólogos (4 filas preparadas en plantilla)
+  const tecnologosCount = Math.max(1, tecnologos.length);
+  for (let i = 0; i < 4; i++) {
+    const r = 16 + i;
+    if (i < tecnologos.length) {
+      ws.getCell(`B${r}`).value = tecnologos[i].titulo_obtenido;
+      ws.getCell(`H${r}`).value = tecnologos[i].institucion;
+      ws.getCell(`N${r}`).value = parseFecha(tecnologos[i].fecha_grado);
+    } else {
+      ws.getCell(`B${r}`).value = null;
+      ws.getCell(`H${r}`).value = null;
+      ws.getCell(`N${r}`).value = null;
     }
   }
 
-  const startExpRow = 21;
-  const endExpRow = 20 + totalRowsNeeded;
-  const sumRowIdx = endExpRow + 1;
-  const totalRowIdx = endExpRow + 2;
+  // Filas 20 a 23: Pregrados (4 filas preparadas en plantilla)
+  const pregradosCount = Math.max(1, pregrados.length);
+  for (let i = 0; i < 4; i++) {
+    const r = 20 + i;
+    if (i < pregrados.length) {
+      ws.getCell(`B${r}`).value = pregrados[i].titulo_obtenido;
+      ws.getCell(`H${r}`).value = pregrados[i].institucion;
+      ws.getCell(`N${r}`).value = parseFecha(pregrados[i].fecha_grado);
+    } else {
+      ws.getCell(`B${r}`).value = null;
+      ws.getCell(`H${r}`).value = null;
+      ws.getCell(`N${r}`).value = null;
+    }
+  }
 
-  for (let r = startExpRow; r <= endExpRow; r++) {
-    const certIdx = r - startExpRow;
-    const cert = certs[certIdx];
+  // Filas 24 a 31: Posgrados (8 filas preparadas en plantilla)
+  const posgradosCount = Math.max(1, posgrados.length);
+  for (let i = 0; i < 8; i++) {
+    const r = 24 + i;
+    if (i < posgrados.length) {
+      ws.getCell(`B${r}`).value = posgrados[i].titulo_obtenido;
+      ws.getCell(`H${r}`).value = posgrados[i].institucion;
+      ws.getCell(`N${r}`).value = parseFecha(posgrados[i].fecha_grado);
+    } else {
+      ws.getCell(`B${r}`).value = null;
+      ws.getCell(`H${r}`).value = null;
+      ws.getCell(`N${r}`).value = null;
+    }
+  }
+
+  // Fila 32: Tarjeta profesional
+  if (tarjeta) {
+    ws.getCell('B32').value = tarjeta.numero_tarjeta_o_registro || tarjeta.titulo_obtenido || 'NO CONSTA';
+    ws.getCell('H32').value = parseFecha(tarjeta.fecha_grado || tarjeta.fecha_expedicion);
+  } else {
+    ws.getCell('B32').value = null;
+    ws.getCell('H32').value = null;
+  }
+
+  // ----------------------------------------------------
+  // ELIMINAR FILAS SOBRANTES DE FORMACIÓN (DE ABAJO HACIA ARRIBA)
+  // ----------------------------------------------------
+  // Posgrados: de 24 a 31 (8 filas). Dejamos posgradosCount (mínimo 1).
+  for (let r = 31; r >= 24 + posgradosCount; r--) {
+    ws.spliceRows(r, 1);
+  }
+  // Pregrados: de 20 a 23 (4 filas). Dejamos pregradosCount (mínimo 1).
+  for (let r = 23; r >= 20 + pregradosCount; r--) {
+    ws.spliceRows(r, 1);
+  }
+  // Tecnólogos: de 16 a 19 (4 filas). Dejamos tecnologosCount (mínimo 1).
+  for (let r = 19; r >= 16 + tecnologosCount; r--) {
+    ws.spliceRows(r, 1);
+  }
+  // Técnicos: de 12 a 15 (4 filas). Dejamos tecnicosCount (mínimo 1).
+  for (let r = 15; r >= 12 + tecnicosCount; r--) {
+    ws.spliceRows(r, 1);
+  }
+
+  // ----------------------------------------------------
+  // 5. EXPERIENCIA LABORAL
+  // ----------------------------------------------------
+  // Localizar dinámicamente la sección 2.2. EXPERIENCIA
+  let expHeaderIdx = -1;
+  for (let r = 10; r <= ws.rowCount; r++) {
+    const val = String(ws.getRow(r).getCell('A').value || '');
+    if (val.includes('2.2. EXPERIENCIA')) {
+      expHeaderIdx = r;
+      break;
+    }
+  }
+
+  // Los certificados inician 3 filas abajo del encabezado (después de encabezados nivel 1 y 2)
+  const startExp = expHeaderIdx + 3;
+
+  // Localizar la fila "TIEMPO DE EXPERIENCIA"
+  let sumRowIdx = -1;
+  for (let r = startExp; r <= ws.rowCount; r++) {
+    const val = String(ws.getRow(r).getCell('A').value || '');
+    if (val.includes('TIEMPO DE EXPERIENCIA')) {
+      sumRowIdx = r;
+      break;
+    }
+  }
+
+  const availableExpRows = sumRowIdx - startExp;
+  const certsCount = Math.max(1, certs.length);
+
+  // Limpiar cualquier fórmula compartida o valor previo en las filas de experiencia
+  for (let r = startExp; r < sumRowIdx; r++) {
+    const row = ws.getRow(r);
+    for (let c = 1; c <= 15; c++) {
+      row.getCell(c).value = null;
+    }
+  }
+
+  // Llenar certificados
+  for (let i = 0; i < certs.length; i++) {
+    const r = startExp + i;
+    const cert = certs[i];
     const row = ws.getRow(r);
 
-    if (cert) {
-      row.getCell('A').value = cert.entidad || 'N/A';
-      row.getCell('B').value = cert.cargo_certificado || 'N/A';
+    row.getCell('A').value = cert.entidad || 'N/A';
+    row.getCell('B').value = cert.cargo_certificado || 'N/A';
 
-      const fIni = parseFecha(cert.fecha_inicio);
-      row.getCell('C').value = fIni;
-      if (fIni instanceof Date) row.getCell('C').numFmt = 'yyyy-mm-dd';
+    const fIni = parseFecha(cert.fecha_inicio);
+    row.getCell('C').value = fIni;
+    if (fIni instanceof Date) row.getCell('C').numFmt = 'yyyy-mm-dd';
 
-      const fFin = cert.vinculo_vigente ? new Date() : parseFecha(cert.fecha_fin);
-      row.getCell('D').value = fFin;
-      if (fFin instanceof Date) row.getCell('D').numFmt = 'yyyy-mm-dd';
+    const fFin = cert.vinculo_vigente ? new Date() : parseFecha(cert.fecha_fin);
+    row.getCell('D').value = fFin;
+    if (fFin instanceof Date) row.getCell('D').numFmt = 'yyyy-mm-dd';
 
-      const esRelacionada = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA';
-      row.getCell('E').value = esRelacionada ? 'Relacionada' : 'Profesional';
+    const esRel = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA';
+    row.getCell('E').value = esRel ? 'Relacionada' : 'Profesional';
 
-      let obs = '';
-      if (cert.traslapes && cert.traslapes.length > 0) {
-        obs = cert.traslapes.map(t => t.explicacion).join('; ');
-      } else if (cert.experiencia_relacionada?.funciones_coincidentes?.length > 0) {
-        obs = `${cert.experiencia_relacionada.funciones_coincidentes.length} funciones coincidentes con el empleo`;
-      }
-      row.getCell('F').value = obs || null;
+    let obs = '';
+    if (cert.traslapes && cert.traslapes.length > 0) {
+      obs = cert.traslapes.map(t => t.explicacion).join('; ');
+    } else if (cert.experiencia_relacionada?.funciones_coincidentes?.length > 0) {
+      obs = `${cert.experiencia_relacionada.funciones_coincidentes.length} funciones coincidentes con el empleo`;
+    }
+    row.getCell('F').value = obs || null;
 
-      // Fórmulas oficiales DATEDIF
-      row.getCell('H').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Y")),"-")` };
-      row.getCell('I').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"YM")),"-")` };
-      row.getCell('J').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Md")),"-")` };
+    // Fórmulas oficiales DATEDIF
+    row.getCell('H').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Y")),"-")` };
+    row.getCell('I').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"YM")),"-")` };
+    row.getCell('J').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Md")),"-")` };
 
-      row.getCell('M').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Y"))` };
-      row.getCell('N').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF($C${r},$D${r},"YM"))` };
-      row.getCell('O').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF($C${r},$D${r},"MD"))` };
-    } else {
-      // Limpiar fila vacía sobrante
+    row.getCell('M').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Y"))` };
+    row.getCell('N').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF($C${r},$D${r},"YM"))` };
+    row.getCell('O').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF($C${r},$D${r},"MD"))` };
+  }
+
+  // Eliminar filas de experiencia sobrantes si certsCount < availableExpRows
+  if (availableExpRows > certsCount) {
+    const toDelete = availableExpRows - certsCount;
+    const deleteFrom = startExp + certsCount;
+    for (let r = deleteFrom; r < deleteFrom + toDelete; r++) {
+      const row = ws.getRow(r);
       for (let c = 1; c <= 15; c++) {
         row.getCell(c).value = null;
       }
     }
+    ws.spliceRows(deleteFrom, toDelete);
+  } else if (certsCount > availableExpRows) {
+    // Si hubiese más de 31 certificados, insertar filas extra antes de sumRowIdx
+    const toInsert = certsCount - availableExpRows;
+    for (let i = 0; i < toInsert; i++) {
+      ws.insertRow(sumRowIdx, []);
+    }
   }
 
-  // Fórmulas de Suma de Experiencia
-  ws.getCell(`H${sumRowIdx}`).value = { formula: `SUM(H${startExpRow}:H${endExpRow})` };
-  ws.getCell(`I${sumRowIdx}`).value = { formula: `SUM(I${startExpRow}:I${endExpRow})` };
-  ws.getCell(`J${sumRowIdx}`).value = { formula: `SUM(J${startExpRow}:J${endExpRow})` };
+  // Nuevas posiciones de las filas de totales
+  const newSumRow = startExp + certsCount;
+  const newTotalRow = newSumRow + 1;
+  const endExp = newSumRow - 1;
 
-  ws.getCell(`M${sumRowIdx}`).value = { formula: `SUM(M${startExpRow}:M${endExpRow})` };
-  ws.getCell(`N${sumRowIdx}`).value = { formula: `SUM(N${startExpRow}:N${endExpRow})` };
-  ws.getCell(`O${sumRowIdx}`).value = { formula: `SUM(O${startExpRow}:O${endExpRow})` };
+  // Actualizar Fórmulas de Suma de Experiencia
+  ws.getCell(`H${newSumRow}`).value = { formula: `SUM(H${startExp}:H${endExp})` };
+  ws.getCell(`I${newSumRow}`).value = { formula: `SUM(I${startExp}:I${endExp})` };
+  ws.getCell(`J${newSumRow}`).value = { formula: `SUM(J${startExp}:J${endExp})` };
 
-  // Fórmulas de Conversión TOTAL
-  ws.getCell(`H${totalRowIdx}`).value = { formula: `+INT((SUM(I${startExpRow}:I${endExpRow})+INT((SUM(J${startExpRow}:J${endExpRow})/30)))/12)+H${sumRowIdx}` };
-  ws.getCell(`I${totalRowIdx}`).value = { formula: `(((SUM(I${startExpRow}:I${endExpRow})+INT(SUM(J${startExpRow}:J${endExpRow})/30))/12)-(INT((SUM(I${startExpRow}:I${endExpRow})+INT((SUM(J${startExpRow}:J${endExpRow})/30)))/12)))*12` };
-  ws.getCell(`J${totalRowIdx}`).value = { formula: `(SUM(J${startExpRow}:J${endExpRow})/30-INT(SUM(J${startExpRow}:J${endExpRow})/30))*30` };
+  ws.getCell(`M${newSumRow}`).value = { formula: `SUM(M${startExp}:M${endExp})` };
+  ws.getCell(`N${newSumRow}`).value = { formula: `SUM(N${startExp}:N${endExp})` };
+  ws.getCell(`O${newSumRow}`).value = { formula: `SUM(O${startExp}:O${endExp})` };
 
-  ws.getCell(`M${totalRowIdx}`).value = { formula: `+INT((SUM(N${startExpRow}:N${endExpRow})+INT((SUM(O${startExpRow}:O${endExpRow})/30)))/12)+M${sumRowIdx}` };
-  ws.getCell(`N${totalRowIdx}`).value = { formula: `(((SUM(N${startExpRow}:N${endExpRow})+INT(SUM(O${startExpRow}:O${endExpRow})/30))/12)-(INT((SUM(N${startExpRow}:N${endExpRow})+INT((SUM(O${startExpRow}:O${endExpRow})/30)))/12)))*12` };
-  ws.getCell(`O${totalRowIdx}`).value = { formula: `(SUM(O${startExpRow}:O${endExpRow})/30-INT(SUM(O${startExpRow}:O${endExpRow})/30))*30` };
+  // Actualizar Fórmulas de Conversión TOTAL
+  ws.getCell(`H${newTotalRow}`).value = { formula: `+INT((SUM(I${startExp}:I${endExp})+INT((SUM(J${startExp}:J${endExp})/30)))/12)+H${newSumRow}` };
+  ws.getCell(`I${newTotalRow}`).value = { formula: `(((SUM(I${startExp}:I${endExp})+INT(SUM(J${startExp}:J${endExp})/30))/12)-(INT((SUM(I${startExp}:I${endExp})+INT((SUM(J${startExp}:J${endExp})/30)))/12)))*12` };
+  ws.getCell(`J${newTotalRow}`).value = { formula: `(SUM(J${startExp}:J${endExp})/30-INT(SUM(J${startExp}:J${endExp})/30))*30` };
+
+  ws.getCell(`M${newTotalRow}`).value = { formula: `+INT((SUM(N${startExp}:N${endExp})+INT((SUM(O${startExp}:O${endExp})/30)))/12)+M${newSumRow}` };
+  ws.getCell(`N${newTotalRow}`).value = { formula: `(((SUM(N${startExp}:N${endExp})+INT(SUM(O${startExp}:O${endExp})/30))/12)-(INT((SUM(N${startExp}:N${endExp})+INT((SUM(O${startExp}:O${endExp})/30)))/12)))*12` };
+  ws.getCell(`O${newTotalRow}`).value = { formula: `(SUM(O${startExp}:O${endExp})/30-INT(SUM(O${startExp}:O${endExp})/30))*30` };
+
+  // Actualizar fechas y textos de firmas en el pie
+  for (let r = newTotalRow + 1; r <= ws.rowCount; r++) {
+    const cellVal = String(ws.getRow(r).getCell('A').value || '');
+    if (cellVal.includes('Fecha de Expedición')) {
+      ws.getRow(r).getCell('A').value = `Fecha de Expedición: Ver fecha de firma (${new Date().toLocaleDateString('es-CO')})`;
+    } else if (cellVal.includes('Elaborado por')) {
+      const evaluadorTxt = data.evaluador || data.candidato?.evaluador || 'Profesional Universitario DGC';
+      ws.getRow(r).getCell('A').value = `Elaborado por: Sistema de Validación SASGE - ${evaluadorTxt}`;
+    } else if (cellVal.includes('Revisado por')) {
+      ws.getRow(r).getCell('A').value = `Revisado por: Dirección de Gestión Corporativa`;
+    }
+  }
 
   // ----------------------------------------------------
-  // 6. FIRMAS Y PIE DE PÁGINA
-  // ----------------------------------------------------
-  const firmaRow = totalRowIdx + 3;
-  ws.getCell(`E${firmaRow}`).value = 'DIRECTOR (A) DE GESTION CORPORATIVA';
-
-  const expDateRow = firmaRow + 2;
-  ws.getCell(`A${expDateRow}`).value = `Fecha de Expedición: Ver fecha de firma (${new Date().toLocaleDateString('es-CO')})`;
-
-  const elabRow = expDateRow + 1;
-  const evaluadorTxt = data.evaluador || data.candidato?.evaluador || 'Profesional Universitario DGC';
-  ws.getCell(`A${elabRow}`).value = `Elaborado por: Sistema de Validación SASGE - ${evaluadorTxt}`;
-
-  const revRow = elabRow + 1;
-  ws.getCell(`A${revRow}`).value = `Revisado por: Dirección de Gestión Corporativa`;
-
-  // ----------------------------------------------------
-  // 7. HOJA 2: DOCUMENTOS Y CERTIFICACIONES QUE NO APLICAN
+  // 6. HOJA 2: DOCUMENTOS Y CERTIFICACIONES QUE NO APLICAN
   // ----------------------------------------------------
   const wsNoAplican = workbook.addWorksheet('Documentos NO Aplican', {
     views: [{ showGridLines: false }]
@@ -337,7 +418,7 @@ async function generarReporteExcelValidacion(data) {
   }
 
   // ----------------------------------------------------
-  // 8. HOJA 3: COTEJO FUNCIONAL DETALLADO
+  // 7. HOJA 3: COTEJO FUNCIONAL DETALLADO
   // ----------------------------------------------------
   const wsCotejo = workbook.addWorksheet('Cotejo Funcional', {
     views: [{ showGridLines: false }]
