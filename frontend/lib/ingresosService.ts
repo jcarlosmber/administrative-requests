@@ -161,6 +161,40 @@ export interface CertificadoAnalizado {
   observaciones?: string[];
 }
 
+export interface VerificacionFormalTitulo {
+  institucion_reconocida: boolean;
+  institucion_evidencia?: string;
+  corresponde_aspirante: boolean;
+  aspirante_evidencia?: string;
+  titulo_y_nivel_formal: boolean;
+  titulo_evidencia?: string;
+  fecha_grado_cierta: boolean;
+  fecha_grado_evidencia?: string;
+  acta_o_registro_valido: boolean;
+  acta_o_registro_evidencia?: string;
+  firmas_autoridades: boolean;
+  firmas_evidencia?: string;
+  convalidacion_men: boolean;
+  convalidacion_evidencia?: string;
+}
+
+export interface VerificacionFormalTarjeta {
+  consejo_emisor_identificable: boolean;
+  consejo_evidencia?: string;
+  corresponde_profesional: boolean;
+  profesional_evidencia?: string;
+  matricula_o_tarjeta_identificable: boolean;
+  matricula_evidencia?: string;
+  profesion_autorizada: boolean;
+  profesion_evidencia?: string;
+  certificado_vigencia_y_sanciones: boolean;
+  vigencia_evidencia?: string;
+  vigencia_temporal_valida: boolean;
+  vigencia_temporal_evidencia?: string;
+  mecanismo_autenticacion_o_firma: boolean;
+  mecanismo_evidencia?: string;
+}
+
 export interface FormacionAcademicaItem {
   id?: string;
   nombre_archivo?: string;
@@ -173,6 +207,8 @@ export interface FormacionAcademicaItem {
   numero_tarjeta_o_registro?: string;
   cumple_requisito_cargo: boolean;
   justificacion: string;
+  verificacion_formal_titulo?: VerificacionFormalTitulo;
+  verificacion_formal_tarjeta?: VerificacionFormalTarjeta;
 }
 
 export interface DocumentoNoAplicaItem {

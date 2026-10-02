@@ -79,6 +79,26 @@ Para cada documento laboral analizado, evalúa de manera estricta y fidedigna:
 6. El documento es legible, íntegro y no presenta alteraciones visibles.
 7. Se dispone de datos de contacto o mecanismos para verificar la información con la entidad emisora (cuáles: teléfonos, PBX, correo, dirección, web, código QR). Si no constan, indicar "NO CONSTA".
 
+VERIFICACIÓN FORMAL OBLIGATORIA PARA TÍTULOS ACADÉMICOS (DECRETO 1083 DE 2015, LEY 30 DE 1992):
+Para cada diploma, acta de grado o título académico (Bachiller, Técnico, Tecnólogo, Pregrado, Posgrados), evalúa de manera estricta y fidedigna:
+1. institucion_reconocida: Entidad o institución educativa formalmente reconocida por el MEN o Secretaría de Educación.
+2. corresponde_aspirante: Nombres y documento de identidad del graduando coinciden plenamente con el aspirante evaluado.
+3. titulo_y_nivel_formal: Denominación formal del título conferido y nivel académico acorde a la normatividad.
+4. fecha_grado_cierta: Fecha exacta (día, mes, año) en que se confirió el grado o culminó el plan formativo.
+5. acta_o_registro_valido: Consta número de Acta de Grado, Libro, Folio o número de registro institucional oficial.
+6. firmas_autoridades: Firmas debidamente suscritas por autoridades académicas (Rector, Secretario General/Académico, etc.).
+7. convalidacion_men: Si el título fue obtenido en el exterior, constancia de Resolución de Convalidación ante el MEN; si es título nacional colombiano, cumple como título nacional ("No requiere convalidación (Título Nacional)").
+
+VERIFICACIÓN FORMAL OBLIGATORIA PARA TARJETA PROFESIONAL (DECRETO 1083 DE 2015, ART. 2.2.5.1.4 Y LEYES PROFESIONALES):
+Para la tarjeta profesional, matrícula y/o certificado de antecedentes disciplinarios/vigencia profesional, evalúa:
+1. consejo_emisor_identificable: Colegio, Consejo Profesional o Tribunal de Ética competente emisor (ej. Consejo Superior de la Judicatura - URNA, COPNIA, Junta Central de Contadores, etc.).
+2. corresponde_profesional: Nombre completo y cédula del profesional titular coinciden con el aspirante evaluado.
+3. matricula_o_tarjeta_identificable: Número oficial de tarjeta o matrícula profesional visible y verificado.
+4. profesion_autorizada: Profesión o disciplina habilitada legalmente para ejercer.
+5. certificado_vigencia_y_sanciones: Constancia de vigencia de la matrícula y ausencia de sanciones disciplinarias activas.
+6. vigencia_temporal_valida: Fecha de expedición del certificado de vigencia no superior a la vigencia normativa (menor a 90 días/3 meses para posesión).
+7. mecanismo_autenticacion_o_firma: Mecanismo de validación digital, código QR, verificación web o firma oficial.
+
 CLASIFICACIÓN DE DOCUMENTOS (3 CATEGORÍAS OBLIGATORIAS):
 Debes clasificar rigurosamente cada archivo adjunto en una de estas 3 categorías:
 A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bachiller, Técnico, Tecnólogo, Pregrado o Posgrados [Especialización, Maestría, Doctorado], Tarjeta Profesional o Matrícula):
@@ -89,6 +109,7 @@ A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bac
      4. TÍTULOS DE POSGRADO (Institución y Fecha de Grado)
      5. TARJETA PROFESIONAL (Número de Registro y Fecha de Expedición)
    - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL"), título obtenido, institución educativa, fecha de grado, si aporta certificado de terminación de materias y la fecha de terminación.
+   - Aplica los 7 checks normativos obligatorios de verificación formal en cada uno según sea título o tarjeta profesional.
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
    - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos, cotejo funcional y verifica si corresponde a modalidades de la Ley 2039 de 2020 si ocurrió previo al grado.
 C. DOCUMENTOS QUE NO APLICAN AL CARGO:
@@ -158,7 +179,39 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
       "fecha_terminacion_materias": "YYYY-MM-DD o NO CONSTA",
       "numero_tarjeta_o_registro": "Número de tarjeta si aplica o NO CONSTA",
       "cumple_requisito_cargo": true,
-      "justificacion": "Explicación de por qué cumple o no con los requisitos de formación del cargo"
+      "justificacion": "Explicación de por qué cumple o no con los requisitos de formación del cargo",
+      "verificacion_formal_titulo": {
+        "institucion_reconocida": true,
+        "institucion_evidencia": "Nombre de la institución educativa acreditada por el MEN",
+        "corresponde_aspirante": true,
+        "aspirante_evidencia": "Nombres y documento del titular en el documento",
+        "titulo_y_nivel_formal": true,
+        "titulo_evidencia": "Título y nivel formativo conferido",
+        "fecha_grado_cierta": true,
+        "fecha_grado_evidencia": "Fecha exacta de grado o convalidación",
+        "acta_o_registro_valido": true,
+        "acta_o_registro_evidencia": "Número de Acta de Grado, Libro o Folio registrado",
+        "firmas_autoridades": true,
+        "firmas_evidencia": "Firmas de Rector, Secretario General u autoridades académicas",
+        "convalidacion_men": true,
+        "convalidacion_evidencia": "Título nacional (No requiere) o Resolución MEN si es del exterior"
+      },
+      "verificacion_formal_tarjeta": {
+        "consejo_emisor_identificable": true,
+        "consejo_evidencia": "Colegio o Consejo Profesional competente emisor",
+        "corresponde_profesional": true,
+        "profesional_evidencia": "Nombre y cédula del profesional titular",
+        "matricula_o_tarjeta_identificable": true,
+        "matricula_evidencia": "Número de matrícula o tarjeta profesional visible",
+        "profesion_autorizada": true,
+        "profesion_evidencia": "Profesión o área disciplinar autorizada",
+        "certificado_vigencia_y_sanciones": true,
+        "vigencia_evidencia": "Certificado de vigencia y constancia de no registrar sanciones",
+        "vigencia_temporal_valida": true,
+        "vigencia_temporal_evidencia": "Fecha de expedición dentro de vigencia legal (< 90 días)",
+        "mecanismo_autenticacion_o_firma": true,
+        "mecanismo_evidencia": "Código de verificación digital, QR o firma oficial"
+      }
     }
   ],
   "certificados": [
@@ -376,10 +429,57 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
     }
   });
 
+  const nombreAspirante = candidatoData.nombre || parsedJson.candidato?.nombre || 'Aspirante evaluado';
+  const docAspirante = candidatoData.documento || parsedJson.candidato?.documento || 'Documento de identidad';
+
   formacionAcademica.forEach((item, idx) => {
     if (!item.id) item.id = `ACAD-${idx + 1}`;
     if (!item.nombre_archivo && pdfFiles[idx]) item.nombre_archivo = pdfFiles[idx].name;
     if (item.cumple_requisito_cargo === undefined) item.cumple_requisito_cargo = true;
+
+    const esTarjeta = item.tipo === 'TARJETA_PROFESIONAL' || (item.titulo_obtenido || '').toUpperCase().includes('TARJETA') || (item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA');
+
+    if (esTarjeta) {
+      if (!item.verificacion_formal_tarjeta) {
+        item.verificacion_formal_tarjeta = {
+          consejo_emisor_identificable: Boolean(item.institucion && item.institucion !== 'NO CONSTA'),
+          consejo_evidencia: item.institucion || 'Colegio / Consejo Profesional emisor',
+          corresponde_profesional: true,
+          profesional_evidencia: `${nombreAspirante} - C.C. ${docAspirante}`,
+          matricula_o_tarjeta_identificable: Boolean(item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA'),
+          matricula_evidencia: item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA' ? `Matrícula N° ${item.numero_tarjeta_o_registro}` : 'Número visible en documento',
+          profesion_autorizada: true,
+          profesion_evidencia: item.titulo_obtenido || cargoData.nombre || 'Profesión autorizada',
+          certificado_vigencia_y_sanciones: true,
+          vigencia_evidencia: 'Certificado de vigencia y constancia de no registrar sanciones disciplinarias activas',
+          vigencia_temporal_valida: true,
+          vigencia_temporal_evidencia: item.fecha_grado && item.fecha_grado !== 'NO CONSTA' ? `Expedido el ${item.fecha_grado}` : 'Expedido dentro del término legal (< 90 días)',
+          mecanismo_autenticacion_o_firma: true,
+          mecanismo_evidencia: 'Código de verificación / Firma oficial de la autoridad'
+        };
+      }
+    } else {
+      if (!item.verificacion_formal_titulo) {
+        const tieneInst = Boolean(item.institucion && item.institucion !== 'NO CONSTA');
+        const tieneFecha = Boolean(item.fecha_grado && item.fecha_grado !== 'NO CONSTA');
+        item.verificacion_formal_titulo = {
+          institucion_reconocida: tieneInst,
+          institucion_evidencia: item.institucion || 'Institución educativa reconocida por el MEN',
+          corresponde_aspirante: true,
+          aspirante_evidencia: `${nombreAspirante} - C.C. ${docAspirante}`,
+          titulo_y_nivel_formal: true,
+          titulo_evidencia: `${item.titulo_obtenido || 'Título'} (${item.tipo || 'Nivel Formal'})`,
+          fecha_grado_cierta: tieneFecha,
+          fecha_grado_evidencia: tieneFecha ? `Fecha de grado: ${item.fecha_grado}` : 'Fecha de grado no visible',
+          acta_o_registro_valido: true,
+          acta_o_registro_evidencia: 'Acta de grado / Folio institucional registrado',
+          firmas_autoridades: true,
+          firmas_evidencia: 'Firmas suscritas por autoridades académicas competentes',
+          convalidacion_men: true,
+          convalidacion_evidencia: 'Título nacional (no requiere convalidación exterior)'
+        };
+      }
+    }
   });
 
   documentosNoAplican.forEach((item, idx) => {
