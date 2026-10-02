@@ -60,9 +60,11 @@ async function generarReporteExcelValidacion(data) {
   // ----------------------------------------------------
   const reqMeses = consolidado.requisito_minimo_meses || cargo.requisito_experiencia_meses || 0;
   ws.getCell('A8').value = `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
-  if (cargo.requisitos_formacion || cargo.requisitos) {
-    ws.getCell('G8').value = cargo.requisitos_formacion || cargo.requisitos;
-  }
+  ws.getCell('A8').alignment = { wrapText: true, vertical: 'top' };
+
+  const reqFormacion = cargo.requisitos_formacion || cargo.requisitos || '';
+  ws.getCell('G8').value = reqFormacion;
+  ws.getCell('G8').alignment = { wrapText: true, vertical: 'top' };
 
   // ----------------------------------------------------
   // 4. FORMACIÓN ACADÉMICA (Filas 11 a 32)
@@ -289,13 +291,64 @@ async function generarReporteExcelValidacion(data) {
     const esRel = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA';
     row.getCell('E').value = esRel ? 'Relacionada' : 'Profesional';
 
-    let obs = '';
-    if (cert.traslapes && cert.traslapes.length > 0) {
-      obs = cert.traslapes.map(t => t.explicacion).join('; ');
-    } else if (cert.experiencia_relacionada?.funciones_coincidentes?.length > 0) {
-      obs = `${cert.experiencia_relacionada.funciones_coincidentes.length} funciones coincidentes con el empleo`;
+    // 1. Determinar si hay traslape total
+    const tieneTraslapeTotal = Boolean(
+      cert.es_traslape_total === true ||
+      (cert.traslapes && cert.traslapes.some(t => (t.tipo || '').toUpperCase().includes('TOTAL'))) ||
+      (cert.tiempo_valido && cert.tiempo_valido.dias_totales === 0 && (cert.tiempo_certificado?.dias_totales > 0 || cert.tiempo_certificado?.meses_totales > 0)) ||
+      (cert.tiempo_valido_meses === 0 && Number(cert.tiempo_certificado?.meses_totales || 0) > 0)
+    );
+
+    // 2. Extraer y formatear funciones coincidentes (cotejo explícito con el cargo oficial)
+    const funcionesCoincidentes = cert.experiencia_relacionada?.funciones_coincidentes || [];
+    let textoFunciones = '';
+    if (funcionesCoincidentes.length > 0) {
+      textoFunciones = funcionesCoincidentes.map(f => {
+        const fCert = (f.funcion_certificada || f.funcion || '').trim();
+        const fCargo = (f.funcion_del_cargo || '').trim();
+        const rel = f.coincidencia ? ` (${f.coincidencia})` : '';
+        if (fCargo) {
+          return `• Cert: "${fCert}" ➔ Cargo: "${fCargo}"${rel}`;
+        }
+        return `• Cert: "${fCert}"`;
+      }).join('\n');
     }
-    row.getCell('F').value = obs || null;
+
+    // 3. Asignar columnas F (Observación Exp Relacionada) y K (Observación Exp General)
+    if (esRel) {
+      if (tieneTraslapeTotal) {
+        // EXACTAMENTE "Traslape Total" para que la fórmula IF(F="Traslape Total", "-", DATEDIF(...)) se active en Excel
+        row.getCell('F').value = 'Traslape Total';
+        if (textoFunciones) {
+          row.getCell('F').note = `TRASLAPE TOTAL: periodo simultáneo cubierto en su totalidad.\n\nFunciones coincidentes con el empleo:\n${textoFunciones}`;
+        }
+      } else {
+        let obsTexto = '';
+        if (cert.traslapes && cert.traslapes.length > 0) {
+          const tParciales = cert.traslapes.filter(t => !(t.tipo || '').toUpperCase().includes('TOTAL'));
+          if (tParciales.length > 0) {
+            obsTexto = `[TRASLAPE PARCIAL: ${tParciales.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}]\n`;
+          }
+        }
+        obsTexto += (textoFunciones || 'Experiencia laboral relacionada con las funciones del cargo.');
+        row.getCell('F').value = obsTexto;
+      }
+      row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
+    } else {
+      // Experiencia profesional no relacionada
+      if (tieneTraslapeTotal) {
+        // En K se activa la fórmula de experiencia general/profesional
+        row.getCell('K').value = 'Traslape Total';
+        row.getCell('F').value = 'Experiencia profesional no relacionada.';
+      } else {
+        row.getCell('F').value = 'Experiencia profesional no relacionada.';
+        if (cert.traslapes && cert.traslapes.length > 0) {
+          row.getCell('K').value = `Traslape parcial: ${cert.traslapes.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}`;
+        }
+      }
+      row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
+      row.getCell('K').alignment = { wrapText: true, vertical: 'top' };
+    }
 
     // Fórmulas oficiales DATEDIF
     row.getCell('H').value = { formula: `IF(E${r}="Relacionada",IF(F${r}="Traslape Total","-",DATEDIF(C${r},D${r},"Y")),"-")` };

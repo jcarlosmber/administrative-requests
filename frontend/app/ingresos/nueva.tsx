@@ -649,7 +649,9 @@ export default function NuevaValidacionScreen() {
           ...analisisResultado.cargo_evaluado,
           id_sideap: idSideap ? parseInt(String(idSideap), 10) : analisisResultado.cargo_evaluado?.id_sideap,
           id_perno: idPerno ? parseInt(String(idPerno), 10) : analisisResultado.cargo_evaluado?.id_perno,
-          id_plaza: idPlaza ?? analisisResultado.cargo_evaluado?.id_plaza
+          id_plaza: idPlaza ?? analisisResultado.cargo_evaluado?.id_plaza,
+          requisitos_formacion: formacionExigida || analisisResultado.cargo_evaluado?.requisitos_formacion,
+          dependencia: dependenciaCargo || analisisResultado.cargo_evaluado?.dependencia
         }
       };
 

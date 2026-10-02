@@ -87,9 +87,15 @@ module.exports = function(pool) {
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
-        -- Garantizar columnas de ID SIDEAP, ID PERNO e ID PLAZA y nuevas secciones
         ALTER TABLE public.ingreso_cargos ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT;
-        ALTER TABLE public.ingreso_validaciones ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT, ADD COLUMN IF NOT EXISTS id_plaza INT, ADD COLUMN IF NOT EXISTS formacion_academica JSONB DEFAULT '[]'::jsonb, ADD COLUMN IF NOT EXISTS documentos_no_aplican JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE public.ingreso_validaciones
+          ADD COLUMN IF NOT EXISTS id_sideap INT,
+          ADD COLUMN IF NOT EXISTS id_perno INT,
+          ADD COLUMN IF NOT EXISTS id_plaza INT,
+          ADD COLUMN IF NOT EXISTS cargo_dependencia TEXT,
+          ADD COLUMN IF NOT EXISTS requisitos_formacion TEXT,
+          ADD COLUMN IF NOT EXISTS formacion_academica JSONB DEFAULT '[]'::jsonb,
+          ADD COLUMN IF NOT EXISTS documentos_no_aplican JSONB DEFAULT '[]'::jsonb;
         ALTER TABLE public.ingreso_certificados ADD COLUMN IF NOT EXISTS verificacion_formal JSONB;
       `);
       console.log('✓ Tablas del módulo de ingresos verificadas.');
@@ -323,12 +329,12 @@ module.exports = function(pool) {
       // 2. Insertar validación
       const valQuery = `
         INSERT INTO ingreso_validaciones (
-          candidato_id, cargo_id, cargo_nombre, cargo_codigo, cargo_grado,
-          requisito_minimo_meses, experiencia_relacionada_meses, experiencia_no_relacionada_meses,
-          tiempo_excluido_traslapes_meses, diferencia_meses, resultado_final,
-          justificacion_final, requiere_revision_humana, evaluador_email, estado,
+          candidato_id, cargo_id, cargo_nombre, cargo_codigo, cargo_grado, cargo_dependencia,
+          requisitos_formacion, requisito_minimo_meses, experiencia_relacionada_meses,
+          experiencia_no_relacionada_meses, tiempo_excluido_traslapes_meses, diferencia_meses,
+          resultado_final, justificacion_final, requiere_revision_humana, evaluador_email, estado,
           id_sideap, id_perno, id_plaza, formacion_academica, documentos_no_aplican
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
         RETURNING id;
       `;
       const valValues = [
@@ -337,6 +343,8 @@ module.exports = function(pool) {
         cargo_evaluado.nombre || 'N/A',
         cargo_evaluado.codigo || '',
         cargo_evaluado.grado || '',
+        cargo_evaluado.dependencia || 'Secretaría Jurídica Distrital',
+        cargo_evaluado.requisitos_formacion || cargo_evaluado.requisitos || '',
         consolidado.requisito_minimo_meses || 0,
         consolidado.experiencia_relacionada_meses || 0,
         consolidado.experiencia_no_relacionada_meses || 0,
@@ -439,9 +447,13 @@ module.exports = function(pool) {
     try {
       const { id } = req.params;
       const valQuery = `
-        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email, c.telefono as candidato_telefono
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email, c.telefono as candidato_telefono,
+               COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        LEFT JOIN planta_personal_sjd p ON (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza) OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = p.codigo AND v.cargo_grado = p.grado)
+        LEFT JOIN ingreso_cargos ic ON v.cargo_id = ic.id OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = ic.codigo AND v.cargo_grado = ic.grado)
         WHERE v.id = $1;
       `;
       const valRes = await pool.query(valQuery, [id]);
@@ -473,8 +485,9 @@ module.exports = function(pool) {
           nombre: val.cargo_nombre,
           codigo: val.cargo_codigo,
           grado: val.cargo_grado,
-          dependencia: val.cargo_dependencia || null,
-          requisito_experiencia_meses: Number(val.requisito_minimo_meses)
+          dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
+          requisito_experiencia_meses: Number(val.requisito_minimo_meses),
+          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || ''
         },
         consolidado: {
           requisito_minimo_meses: Number(val.requisito_minimo_meses),
@@ -618,6 +631,14 @@ module.exports = function(pool) {
           updates.push(`cargo_grado = $${pIdx++}`);
           values.push(cargo_evaluado.grado);
         }
+        if (cargo_evaluado.dependencia !== undefined) {
+          updates.push(`cargo_dependencia = $${pIdx++}`);
+          values.push(cargo_evaluado.dependencia || 'Secretaría Jurídica Distrital');
+        }
+        if (cargo_evaluado.requisitos_formacion !== undefined) {
+          updates.push(`requisitos_formacion = $${pIdx++}`);
+          values.push(cargo_evaluado.requisitos_formacion || null);
+        }
         if (cargo_evaluado.id_sideap !== undefined) {
           updates.push(`id_sideap = $${pIdx++}`);
           values.push(cargo_evaluado.id_sideap || null);
@@ -748,9 +769,13 @@ module.exports = function(pool) {
       // Obtener data completa con candidatos, formación y documentos no aplicables
       const valQuery = `
         SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento,
-               c.email as candidato_email, c.telefono as candidato_telefono
+               c.email as candidato_email, c.telefono as candidato_telefono,
+               COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        LEFT JOIN planta_personal_sjd p ON (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza) OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = p.codigo AND v.cargo_grado = p.grado)
+        LEFT JOIN ingreso_cargos ic ON v.cargo_id = ic.id OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = ic.codigo AND v.cargo_grado = ic.grado)
         WHERE v.id = $1;
       `;
       const valRes = await pool.query(valQuery, [id]);
@@ -777,8 +802,9 @@ module.exports = function(pool) {
           nombre: val.cargo_nombre,
           codigo: val.cargo_codigo,
           grado: val.cargo_grado,
-          dependencia: val.cargo_dependencia || 'Secretaría Jurídica Distrital',
-          requisito_experiencia_meses: Number(val.requisito_minimo_meses)
+          dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
+          requisito_experiencia_meses: Number(val.requisito_minimo_meses),
+          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || ''
         },
         consolidado: {
           requisito_minimo_meses: Number(val.requisito_minimo_meses),

@@ -193,20 +193,33 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
 
       if (tStart <= tEnd) {
         const overlapCalc = calculatePeriod(tStart, tEnd);
+        const isTotalCover = (c2._startDate.getTime() <= c1._startDate.getTime() && c2._endDate.getTime() >= c1._endDate.getTime());
+        const tipoTraslape = isTotalCover ? 'TRASLAPE_TOTAL' : 'TRASLAPE_PARCIAL';
+
+        if (isTotalCover && j < i) {
+          c1.es_traslape_total = true;
+        }
+
         c1.traslapes.push({
           otro_certificado_id: c2.id_certificado,
           entidad_coincidente: c2.entidad || 'Otra entidad',
           fecha_inicio_traslape: formatDate(tStart),
           fecha_fin_traslape: formatDate(tEnd),
-          tipo: 'TRASLAPE_PARCIAL',
+          tipo: tipoTraslape,
           tiempo_a_excluir_meses: overlapCalc.meses_totales,
-          explicacion: `Se superpone con ${c2.id_certificado} (${c2.entidad || 'N/A'}) entre ${formatDate(tStart)} y ${formatDate(tEnd)} (${overlapCalc.meses_totales} meses).`
+          explicacion: isTotalCover
+            ? `Traslape total con ${c2.id_certificado} (${c2.entidad || 'N/A'}): su periodo completo queda cubierto entre ${formatDate(tStart)} y ${formatDate(tEnd)}.`
+            : `Se superpone con ${c2.id_certificado} (${c2.entidad || 'N/A'}) entre ${formatDate(tStart)} y ${formatDate(tEnd)} (${overlapCalc.meses_totales} meses).`
         });
       }
     }
 
-    // Tiempo individual neto aproximado para este certificado (restando traslapes directos con previos)
-    c1.tiempo_valido = { ...c1.tiempo_certificado };
+    // Tiempo individual neto para este certificado
+    if (c1.es_traslape_total) {
+      c1.tiempo_valido = { dias_totales: 0, meses_totales: 0, anios: 0, meses: 0, dias: 0, valido: true };
+    } else {
+      c1.tiempo_valido = { ...c1.tiempo_certificado };
+    }
   }
 
   // Paso 3: Consolidación sin duplicar días (Interval Merging matemático)
