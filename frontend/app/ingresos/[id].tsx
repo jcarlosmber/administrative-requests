@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import {
   ingresosService,
   AnalisisCompleto,
@@ -141,6 +142,78 @@ export default function DetalleValidacionScreen() {
     setModalTitle(titulo);
     setModalMessage(mensaje);
     setModalVisible(true);
+  };
+
+  // Estados para subida y análisis automático con IA
+  const [subiendoDoc, setSubiendoDoc] = useState(false);
+  const [progresoIaTexto, setProgresoIaTexto] = useState('');
+  const [modalResultadoIaVisible, setModalResultadoIaVisible] = useState(false);
+  const [resumenIaDetectado, setResumenIaDetectado] = useState<{
+    titulos: any[];
+    certs: any[];
+    noAplican: any[];
+  } | null>(null);
+
+  const subirYAnalizarDocumento = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        multiple: true,
+        copyToCacheDirectory: true
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+
+      setSubiendoDoc(true);
+      setProgresoIaTexto(`Cargando ${result.assets.length} archivo(s)...`);
+
+      const nuevosArchivos: Array<{ name: string; base64: string; size?: number }> = [];
+
+      for (const asset of result.assets) {
+        let base64 = '';
+        if (Platform.OS === 'web' && (asset as any).file) {
+          base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL((asset as any).file as Blob);
+          });
+        } else {
+          const FileSystem = require('expo-file-system');
+          base64 = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64
+          });
+        }
+
+        nuevosArchivos.push({
+          name: asset.name,
+          base64: base64,
+          size: asset.size
+        });
+      }
+
+      setProgresoIaTexto('Analizando e identificando documento(s) con IA (Gemini)...');
+      const res = await ingresosService.adjuntarYAnalizarDocumentos(id, nuevosArchivos);
+
+      if (res.success && res.validacion) {
+        setData(res.validacion);
+        setTitulos(res.validacion.formacion_academica || []);
+        setCertificados(res.validacion.certificados || []);
+        setDocumentosNoAplican(res.validacion.documentos_no_aplican || []);
+        setHayCambios(false);
+
+        setResumenIaDetectado({
+          titulos: res.resumen_ia?.titulos_agregados || [],
+          certs: res.resumen_ia?.certificados_agregados || [],
+          noAplican: res.resumen_ia?.no_aplican_agregados || []
+        });
+        setModalResultadoIaVisible(true);
+      }
+    } catch (err: any) {
+      mostrarMensaje('Error en Análisis Automático', err.message || 'No se pudo analizar el documento con IA.');
+    } finally {
+      setSubiendoDoc(false);
+      setProgresoIaTexto('');
+    }
   };
 
   const verPdfDocumento = (nombre?: string, tituloVisible?: string) => {
@@ -592,6 +665,34 @@ export default function DetalleValidacionScreen() {
           )}
 
           <TouchableOpacity
+            onPress={subirYAnalizarDocumento}
+            disabled={subiendoDoc}
+            style={{
+              backgroundColor: '#4F46E5',
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              shadowColor: '#4F46E5',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 3
+            }}
+          >
+            {subiendoDoc ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="sparkles" size={17} color="#FDE047" />
+            )}
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+              {subiendoDoc ? 'Analizando con IA...' : 'Subir Documento (IA)'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={rehacerExpediente}
             style={{
               backgroundColor: '#4338CA',
@@ -789,6 +890,25 @@ export default function DetalleValidacionScreen() {
               </View>
 
               <TouchableOpacity
+                onPress={subirYAnalizarDocumento}
+                disabled={subiendoDoc}
+                style={{
+                  backgroundColor: '#4338CA',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Ionicons name="sparkles" size={15} color="#FDE047" />
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                  Subir PDF con IA
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={abrirNuevoTitulo}
                 style={{
                   backgroundColor: '#1E40AF',
@@ -802,7 +922,7 @@ export default function DetalleValidacionScreen() {
               >
                 <Ionicons name="add-circle-outline" size={16} color="#FFFFFF" />
                 <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
-                  + Agregar Título / Tarjeta
+                  + Manual
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1215,9 +1335,30 @@ export default function DetalleValidacionScreen() {
         </View>
 
         {/* DETALLE CERTIFICADO POR CERTIFICADO */}
-        <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 14 }}>
-          Certificados Analizados y Evidencias Textuales ({certificados.length})
-        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
+            Certificados Analizados y Evidencias Textuales ({certificados.length})
+          </Text>
+
+          <TouchableOpacity
+            onPress={subirYAnalizarDocumento}
+            disabled={subiendoDoc}
+            style={{
+              backgroundColor: '#4338CA',
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6
+            }}
+          >
+            <Ionicons name="sparkles" size={15} color="#FDE047" />
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+              + Subir Certificado (IA)
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ gap: 16 }}>
           {certificados.map((c, index) => {
@@ -2450,6 +2591,183 @@ export default function DetalleValidacionScreen() {
               }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Aceptar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Análisis en Progreso con IA */}
+      <Modal
+        visible={subiendoDoc}
+        transparent={true}
+        animationType="fade"
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              padding: 28,
+              width: '100%',
+              maxWidth: 440,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              gap: 16
+            }}
+          >
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: '#EEF2FF',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: '#C7D2FE'
+              }}
+            >
+              <ActivityIndicator size="large" color="#4F46E5" />
+            </View>
+
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', textAlign: 'center' }}>
+                Identificación Automática con IA
+              </Text>
+              <Text style={{ fontSize: 13, color: '#4F46E5', fontWeight: '700', textAlign: 'center' }}>
+                {progresoIaTexto || 'Analizando documento(s) con Gemini...'}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', lineHeight: 18, marginTop: 4 }}>
+                La inteligencia artificial está extrayendo los datos, determinando si es Título Académico, Tarjeta Profesional o Certificado Laboral, auditando los 7 checks normativos y recalculando tiempos y traslapes.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Resultados del Análisis Automático */}
+      <Modal
+        visible={modalResultadoIaVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalResultadoIaVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              padding: 24,
+              width: '100%',
+              maxWidth: 480,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              gap: 16
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: '#DCFCE7',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={28} color="#15803D" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
+                  Documento Incorporado
+                </Text>
+                <Text style={{ fontSize: 12, color: '#64748B' }}>
+                  Clasificación y auditoría normativa completadas
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
+              {resumenIaDetectado?.titulos && resumenIaDetectado.titulos.length > 0 ? (
+                <View style={{ gap: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>
+                    🎓 Títulos / Matrículas Detectadas ({resumenIaDetectado.titulos.length}):
+                  </Text>
+                  {resumenIaDetectado.titulos.map((t, idx) => (
+                    <Text key={idx} style={{ fontSize: 12, color: '#334155' }}>
+                      • <Text style={{ fontWeight: '700' }}>{t.titulo_obtenido}</Text> ({t.tipo}) - {t.institucion}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {resumenIaDetectado?.certs && resumenIaDetectado.certs.length > 0 ? (
+                <View style={{ gap: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#15803D' }}>
+                    💼 Certificados Laborales Detectados ({resumenIaDetectado.certs.length}):
+                  </Text>
+                  {resumenIaDetectado.certs.map((c, idx) => (
+                    <Text key={idx} style={{ fontSize: 12, color: '#334155' }}>
+                      • <Text style={{ fontWeight: '700' }}>{c.cargo_certificado}</Text> en {c.entidad} [{c.clasificacion_experiencia}]
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {resumenIaDetectado?.noAplican && resumenIaDetectado.noAplican.length > 0 ? (
+                <View style={{ gap: 4 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#B45309' }}>
+                    ⚠️ Otros Documentos ({resumenIaDetectado.noAplican.length}):
+                  </Text>
+                  {resumenIaDetectado.noAplican.map((d, idx) => (
+                    <Text key={idx} style={{ fontSize: 12, color: '#64748B' }}>
+                      • {d.descripcion || d.nombre_archivo} (Educación continua o no formal)
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {(!resumenIaDetectado?.titulos?.length && !resumenIaDetectado?.certs?.length && !resumenIaDetectado?.noAplican?.length) ? (
+                <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>
+                  El documento analizado ya se encontraba registrado o no requirió adición de nuevas filas.
+                </Text>
+              ) : null}
+            </View>
+
+            <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18 }}>
+              Todos los tiempos válidos, traslapes y verificaciones normativas fueron recalculados y persistidos automáticamente en la base de datos y en el formato Excel FT-318.
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => setModalResultadoIaVisible(false)}
+              style={{
+                backgroundColor: '#1E40AF',
+                paddingVertical: 11,
+                borderRadius: 8,
+                alignItems: 'center'
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                Ver Expediente Actualizado
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

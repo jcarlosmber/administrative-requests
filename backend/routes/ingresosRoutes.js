@@ -953,6 +953,330 @@ module.exports = function(pool) {
   });
 
   /**
+   * 7.4.1 POST /api/ingresos/validaciones/:id/adjuntar-y-analizar
+   * Sube uno o más documentos PDF a una validación existente, los analiza con IA (Gemini),
+   * los clasifica automáticamente (título, tarjeta profesional, certificado laboral o no aplica),
+   * recalcula determinísticamente los tiempos y traslapes y persiste todo en el expediente.
+   */
+  router.post('/validaciones/:id/adjuntar-y-analizar', async (req, res) => {
+    const client = await pool.connect();
+    try {
+      const { id } = req.params;
+      const { archivos } = req.body;
+
+      if (!archivos || !Array.isArray(archivos) || archivos.length === 0) {
+        return res.status(400).json({ error: 'Debes enviar al menos un archivo PDF para analizar.' });
+      }
+
+      // 1. Obtener validación actual, cargo y candidato
+      const valQuery = `
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email, c.telefono as candidato_telefono,
+               COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto,
+               COALESCE(p.funciones, ic.funciones_cargo, '[]'::jsonb) as funciones_cargo_resuelto
+        FROM ingreso_validaciones v
+        LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        LEFT JOIN LATERAL (
+          SELECT p.dependencia_cargo, p.requisitos, p.funciones
+          FROM planta_personal_sjd p
+          WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
+             OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
+             OR (v.id_perno IS NOT NULL AND p.id_perno = v.id_perno)
+             OR (v.id_plaza IS NULL AND v.id_sideap IS NULL AND v.id_perno IS NULL AND p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado)
+          ORDER BY 
+            CASE WHEN v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza THEN 1
+                 WHEN v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap THEN 2
+                 WHEN v.id_perno IS NOT NULL AND p.id_perno = v.id_perno THEN 3
+                 ELSE 4 END
+          LIMIT 1
+        ) p ON true
+        LEFT JOIN LATERAL (
+          SELECT ic.dependencia, ic.requisitos_formacion, ic.funciones_cargo
+          FROM ingreso_cargos ic
+          WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
+             OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
+          LIMIT 1
+        ) ic ON true
+        WHERE v.id = $1;
+      `;
+      const valRes = await pool.query(valQuery, [id]);
+      if (valRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Validación no encontrada.' });
+      }
+
+      const val = valRes.rows[0];
+
+      // Certificados actuales
+      const certsQuery = await pool.query('SELECT * FROM ingreso_certificados WHERE validacion_id = $1 ORDER BY fecha_inicio ASC', [id]);
+      const certificadosExistentes = certsQuery.rows.map(r => ({
+        id: r.id,
+        id_certificado: r.id_certificado,
+        entidad: r.entidad,
+        nit_entidad: r.nit_entidad,
+        ciudad_expedicion: r.ciudad_expedicion,
+        fecha_expedicion: r.fecha_expedicion,
+        firmante: r.firmante,
+        cargo_firmante: r.cargo_firmante,
+        tipo_vinculo: r.tipo_vinculo,
+        cargo_certificado: r.cargo_certificado,
+        codigo_cargo: r.codigo_cargo,
+        grado_cargo: r.grado_cargo,
+        dependencia: r.dependencia,
+        numero_contrato_o_acto: r.numero_contrato_o_acto,
+        fecha_inicio: r.fecha_inicio,
+        fecha_fin: r.fecha_fin,
+        vinculo_vigente: r.vinculo_vigente,
+        funciones_certificadas: r.funciones_certificadas,
+        experiencia_profesional: r.experiencia_profesional,
+        clasificacion_experiencia: r.clasificacion_experiencia,
+        experiencia_relacionada: r.experiencia_relacionada_json,
+        tiempo_certificado: r.tiempo_certificado_json,
+        traslapes: r.traslapes_json,
+        tiempo_valido: { meses_totales: Number(r.tiempo_valido_meses) },
+        documento: r.documento_json,
+        verificacion_formal: r.documento_json?.verificacion_formal || r.verificacion_formal || null,
+        observaciones: r.observaciones_json,
+        nombre_archivo: r.nombre_archivo
+      }));
+
+      const formacionExistente = Array.isArray(val.formacion_academica) ? [...val.formacion_academica] : [];
+      const noAplicanExistente = Array.isArray(val.documentos_no_aplican) ? [...val.documentos_no_aplican] : [];
+
+      // 2. Guardar archivos en disco y en BD
+      const valFolder = path.join(UPLOADS_DIR, id);
+      for (const arch of archivos) {
+        if (arch.name && arch.base64) {
+          guardarArchivoEnDisco(valFolder, arch.name, arch.base64);
+          try {
+            const cleanBase64 = arch.base64.includes(';base64,') ? arch.base64.split(';base64,')[1] : arch.base64;
+            await pool.query(`
+              INSERT INTO ingreso_archivos (validacion_id, nombre_archivo, mime_type, archivo_base64, tamano_bytes)
+              VALUES ($1, $2, $3, $4, $5)
+              ON CONFLICT DO NOTHING
+            `, [id, path.basename(arch.name), arch.mimeType || 'application/pdf', cleanBase64, arch.size || cleanBase64.length]);
+          } catch (eArchDb) {
+            console.warn('[Ingresos] Error insertando archivo adjunto en DB:', eArchDb.message);
+          }
+        }
+      }
+
+      // 3. Preparar datos del cargo para Gemini
+      let funcionesCargo = [];
+      if (Array.isArray(val.funciones_cargo_resuelto)) {
+        funcionesCargo = val.funciones_cargo_resuelto;
+      } else if (typeof val.funciones_cargo_resuelto === 'string') {
+        try { funcionesCargo = JSON.parse(val.funciones_cargo_resuelto); } catch (_) {}
+      }
+
+      const cargoData = {
+        id: val.cargo_id,
+        nombre: val.cargo_nombre,
+        codigo: val.cargo_codigo,
+        grado: val.cargo_grado,
+        dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia,
+        requisito_experiencia_meses: Number(val.requisito_minimo_meses) || 54,
+        requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion,
+        funciones_cargo: funcionesCargo
+      };
+
+      const candidatoData = {
+        nombre: val.candidato_nombre,
+        documento: val.candidato_documento,
+        email: val.candidato_email,
+        telefono: val.candidato_telefono
+      };
+
+      // 4. Analizar con Gemini los NUEVOS archivos
+      console.log(`[Ingresos] Analizando ${archivos.length} archivo(s) nuevo(s) para validación ${id}`);
+      const analisisNuevo = await geminiIngresosService.analizarDocumentosConGemini(
+        archivos,
+        cargoData,
+        candidatoData
+      );
+
+      // 5. Integrar Formación Académica nueva
+      const nuevosTitulos = analisisNuevo.formacion_academica || [];
+      const titulosAgregados = [];
+      nuevosTitulos.forEach((nt) => {
+        const existe = formacionExistente.some(ft => 
+          (ft.nombre_archivo && nt.nombre_archivo && ft.nombre_archivo.toLowerCase() === nt.nombre_archivo.toLowerCase()) ||
+          (ft.titulo_obtenido && nt.titulo_obtenido && ft.titulo_obtenido.toLowerCase().trim() === nt.titulo_obtenido.toLowerCase().trim() && ft.tipo === nt.tipo)
+        );
+        if (!existe) {
+          nt.id = `ACAD-${formacionExistente.length + 1}`;
+          formacionExistente.push(nt);
+          titulosAgregados.push(nt);
+        }
+      });
+
+      // 6. Integrar Certificados Laborales nuevos
+      const nuevosCerts = analisisNuevo.certificados || [];
+      const certsAgregados = [];
+      let maxCertNum = 0;
+      certificadosExistentes.forEach(c => {
+        const m = (c.id_certificado || '').match(/CERT-(\d+)/i);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          if (num > maxCertNum) maxCertNum = num;
+        }
+      });
+
+      nuevosCerts.forEach(nc => {
+        const existe = certificadosExistentes.some(ce => 
+          (ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase() === nc.nombre_archivo.toLowerCase())
+        );
+        if (!existe) {
+          maxCertNum++;
+          nc.id_certificado = `CERT-${maxCertNum}`;
+          certificadosExistentes.push(nc);
+          certsAgregados.push(nc);
+        }
+      });
+
+      // 7. Integrar Documentos No Aplican
+      const nuevosNoAplican = analisisNuevo.documentos_no_aplican || [];
+      const noAplicanAgregados = [];
+      nuevosNoAplican.forEach(na => {
+        const existe = noAplicanExistente.some(ne => 
+          (ne.nombre_archivo && na.nombre_archivo && ne.nombre_archivo.toLowerCase() === na.nombre_archivo.toLowerCase())
+        );
+        if (!existe) {
+          na.id = `NO-APLICA-${noAplicanExistente.length + 1}`;
+          noAplicanExistente.push(na);
+          noAplicanAgregados.push(na);
+        }
+      });
+
+      // 8. Recalcular determinísticamente tiempos y traslapes de TODOS los certificados
+      const auditResult = timeCalculatorService.auditCertificatesAndCalculateTotals(
+        certificadosExistentes,
+        cargoData.requisito_experiencia_meses || 54,
+        formacionExistente
+      );
+
+      const certificadosFinales = auditResult.certificados || certificadosExistentes;
+      const consolidadoFinal = auditResult.consolidado || {
+        requisito_minimo_meses: cargoData.requisito_experiencia_meses || 54,
+        experiencia_relacionada_meses: 0,
+        experiencia_no_relacionada_meses: 0,
+        tiempo_excluido_por_traslapes_meses: 0,
+        diferencia_meses: 0,
+        resultado_final: 'REQUIERE_REVISION',
+        justificacion: '',
+        requiere_revision_humana: true
+      };
+
+      // 9. Persistir cambios en la BD
+      await client.query('BEGIN');
+
+      const updateValQuery = `
+        UPDATE ingreso_validaciones
+        SET formacion_academica = $1,
+            documentos_no_aplican = $2,
+            experiencia_relacionada_meses = $3,
+            experiencia_no_relacionada_meses = $4,
+            tiempo_excluido_traslapes_meses = $5,
+            diferencia_meses = $6,
+            resultado_final = $7,
+            justificacion_final = $8,
+            requiere_revision_humana = $9,
+            updated_at = NOW()
+        WHERE id = $10;
+      `;
+      await client.query(updateValQuery, [
+        JSON.stringify(formacionExistente),
+        JSON.stringify(noAplicanExistente),
+        Number(consolidadoFinal.experiencia_relacionada_meses) || 0,
+        Number(consolidadoFinal.experiencia_no_relacionada_meses) || 0,
+        Number(consolidadoFinal.tiempo_excluido_por_traslapes_meses) || 0,
+        Number(consolidadoFinal.diferencia_meses) || 0,
+        consolidadoFinal.resultado_final || 'REQUIERE_REVISION',
+        consolidadoFinal.justificacion || '',
+        Boolean(consolidadoFinal.requiere_revision_humana),
+        id
+      ]);
+
+      // Reemplazar certificados en ingreso_certificados
+      await client.query('DELETE FROM ingreso_certificados WHERE validacion_id = $1', [id]);
+      for (const cert of certificadosFinales) {
+        const certQuery = `
+          INSERT INTO ingreso_certificados (
+            validacion_id, id_certificado, entidad, nit_entidad, ciudad_expedicion, fecha_expedicion,
+            firmante, cargo_firmante, tipo_vinculo, cargo_certificado, codigo_cargo, grado_cargo,
+            dependencia, numero_contrato_o_acto, fecha_inicio, fecha_fin, vinculo_vigente,
+            funciones_certificadas, experiencia_profesional, clasificacion_experiencia,
+            experiencia_relacionada_json, tiempo_certificado_json, meses_certificados,
+            traslapes_json, tiempo_valido_meses, documento_json, observaciones_json, nombre_archivo
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28);
+        `;
+        const certValues = [
+          id,
+          cert.id_certificado || 'CERT-1',
+          cert.entidad || 'N/A',
+          cert.nit_entidad || null,
+          cert.ciudad_expedicion || null,
+          cert.fecha_expedicion || null,
+          cert.firmante || null,
+          cert.cargo_firmante || null,
+          cert.tipo_vinculo || null,
+          cert.cargo_certificado || 'N/A',
+          cert.codigo_cargo || null,
+          cert.grado_cargo || null,
+          cert.dependencia || null,
+          cert.numero_contrato_o_acto || null,
+          cert.fecha_inicio || null,
+          cert.fecha_fin || null,
+          cert.vinculo_vigente || false,
+          JSON.stringify(cert.funciones_certificadas || []),
+          cert.experiencia_profesional !== false,
+          cert.clasificacion_experiencia || 'RELACIONADA',
+          JSON.stringify(cert.experiencia_relacionada || {}),
+          JSON.stringify(cert.tiempo_certificado || {}),
+          cert.tiempo_certificado?.meses_totales_aproximados || 0,
+          JSON.stringify(cert.traslapes || []),
+          cert.tiempo_valido?.meses_totales || cert.tiempo_certificado?.meses_totales_aproximados || 0,
+          JSON.stringify({ ...(cert.documento || {}), verificacion_formal: cert.verificacion_formal || {} }),
+          JSON.stringify(cert.observaciones || []),
+          cert.nombre_archivo || null
+        ];
+        await client.query(certQuery, certValues);
+      }
+
+      await client.query('COMMIT');
+
+      // 10. Devolver la respuesta completa
+      const respuestaValidacion = {
+        id: val.id,
+        candidato: candidatoData,
+        cargo_evaluado: cargoData,
+        consolidado: consolidadoFinal,
+        certificados: certificadosFinales,
+        formacion_academica: formacionExistente,
+        documentos_no_aplican: noAplicanExistente,
+        created_at: val.created_at
+      };
+
+      res.json({
+        success: true,
+        mensaje: 'Documento(s) analizado(s) e incorporado(s) exitosamente al expediente.',
+        resumen_ia: {
+          titulos_agregados: titulosAgregados,
+          certificados_agregados: certsAgregados,
+          no_aplican_agregados: noAplicanAgregados
+        },
+        validacion: respuestaValidacion
+      });
+
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('[Ingresos] Error en /adjuntar-y-analizar:', err);
+      res.status(500).json({ error: 'Error al adjuntar y analizar documentos: ' + err.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  /**
    * 7.5 GET /api/ingresos/archivos/:nombre - Buscar archivo globalmente o en cache
    */
   router.get('/archivos/:nombre', async (req, res) => {

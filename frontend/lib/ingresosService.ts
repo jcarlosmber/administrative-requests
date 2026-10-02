@@ -380,6 +380,36 @@ export const ingresosService = {
     return json;
   },
 
+  async adjuntarYAnalizarDocumentos(
+    id: string,
+    archivos: Array<{ base64: string; name: string; size?: number; mimeType?: string }>
+  ): Promise<{ success: boolean; mensaje: string; resumen_ia: any; validacion: AnalisisCompleto }> {
+    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/adjuntar-y-analizar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ archivos })
+    });
+
+    if (!res.ok) {
+      if (res.status === 413) {
+        throw new Error(
+          'Los archivos PDF adjuntos superan el tamaño máximo permitido por el servidor web (Error 413: Payload Too Large).'
+        );
+      }
+      let errorMsg = `Error en el análisis de los documentos adjuntos (Código ${res.status}).`;
+      try {
+        const json = await res.json();
+        if (json && json.error) errorMsg = json.error;
+      } catch (_) {
+        const text = await res.text().catch(() => '');
+        if (text) errorMsg = `Error del servidor: ${text.slice(0, 100)}`;
+      }
+      throw new Error(errorMsg);
+    }
+
+    return res.json();
+  },
+
   async eliminarValidacion(id: string): Promise<{ success: boolean; mensaje: string }> {
     // 1. Probar POST /delete con X-HTTP-Method-Override (100% compatible con WAF distrital)
     let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/delete`, {
