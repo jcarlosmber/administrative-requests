@@ -17,9 +17,14 @@ conn.on('ready', () => {
       console.log('STDERR: ' + data);
     });
   });
+}).on('error', (err) => {
+  console.error('SSH Error:', err.message);
+  process.exit(1);
 }).connect({
   host: '10.54.80.209',
   port: 22,
   username: 'sasge',
-  password: '.Secjur-2026**'
+  password: '.Secjur-2026**',
+  readyTimeout: 60000,
+  keepaliveInterval: 10000
 });

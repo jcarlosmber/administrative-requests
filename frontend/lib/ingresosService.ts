@@ -382,32 +382,135 @@ export const ingresosService = {
 
   async adjuntarYAnalizarDocumentos(
     id: string,
-    archivos: Array<{ base64: string; name: string; size?: number; mimeType?: string }>
+    archivos: Array<{ base64: string; name: string; size?: number; mimeType?: string }>,
+    expedienteActual?: AnalisisCompleto | null
   ): Promise<{ success: boolean; mensaje: string; resumen_ia: any; validacion: AnalisisCompleto }> {
-    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/adjuntar-y-analizar`, {
+    // 1. Intentar endpoint dedicado
+    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/adjuntar-y-analizar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ archivos })
-    });
+    }).catch(() => null);
 
-    if (!res.ok) {
-      if (res.status === 413) {
-        throw new Error(
-          'Los archivos PDF adjuntos superan el tamaño máximo permitido por el servidor web (Error 413: Payload Too Large).'
-        );
-      }
-      let errorMsg = `Error en el análisis de los documentos adjuntos (Código ${res.status}).`;
-      try {
-        const json = await res.json();
-        if (json && json.error) errorMsg = json.error;
-      } catch (_) {
-        const text = await res.text().catch(() => '');
-        if (text) errorMsg = `Error del servidor: ${text.slice(0, 100)}`;
-      }
-      throw new Error(errorMsg);
+    // 2. Si el servidor respondió 200/201, devolver resultado
+    if (res && res.ok) {
+      return res.json();
     }
 
-    return res.json();
+    // 3. Si respondió 404 (o el backend en producción aún no tiene la ruta activa en memoria),
+    // ejecutar el flujo resiliente usando los endpoints base ya desplegados (/analizar + /recalcular + /update):
+    if (!res || res.status === 404) {
+      const exp = expedienteActual || (await this.obtenerValidacionPorId(id));
+      if (!exp) throw new Error('No se encontró el expediente para procesar los documentos.');
+
+      const cargo = exp.cargo_evaluado;
+      const candidato = exp.candidato;
+
+      // Analizar los nuevos documentos con Gemini
+      const analisisNuevo = await this.analizarDocumentos(archivos, cargo, candidato);
+
+      // Combinar formación académica
+      const formacionExistente = Array.isArray(exp.formacion_academica) ? [...exp.formacion_academica] : [];
+      const titulosAgregados: FormacionAcademicaItem[] = [];
+      (analisisNuevo.formacion_academica || []).forEach(nt => {
+        const existe = formacionExistente.some(ft =>
+          (ft.nombre_archivo && nt.nombre_archivo && ft.nombre_archivo.toLowerCase() === nt.nombre_archivo.toLowerCase()) ||
+          (ft.titulo_obtenido && nt.titulo_obtenido && ft.titulo_obtenido.toLowerCase().trim() === nt.titulo_obtenido.toLowerCase().trim() && ft.tipo === nt.tipo)
+        );
+        if (!existe) {
+          nt.id = `ACAD-${formacionExistente.length + 1}`;
+          formacionExistente.push(nt);
+          titulosAgregados.push(nt);
+        }
+      });
+
+      // Combinar certificados
+      const certsExistentes = Array.isArray(exp.certificados) ? [...exp.certificados] : [];
+      const certsAgregados: CertificadoAnalizado[] = [];
+      let maxCertNum = 0;
+      certsExistentes.forEach(c => {
+        const m = (c.id_certificado || '').match(/CERT-(\d+)/i);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          if (num > maxCertNum) maxCertNum = num;
+        }
+      });
+
+      (analisisNuevo.certificados || []).forEach(nc => {
+        const existe = certsExistentes.some(ce =>
+          (ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase() === nc.nombre_archivo.toLowerCase())
+        );
+        if (!existe) {
+          maxCertNum++;
+          nc.id_certificado = `CERT-${maxCertNum}`;
+          certsExistentes.push(nc);
+          certsAgregados.push(nc);
+        }
+      });
+
+      // Combinar no aplican
+      const noAplicanExistente = Array.isArray(exp.documentos_no_aplican) ? [...exp.documentos_no_aplican] : [];
+      const noAplicanAgregados: DocumentoNoAplicaItem[] = [];
+      (analisisNuevo.documentos_no_aplican || []).forEach(na => {
+        const existe = noAplicanExistente.some(ne =>
+          (ne.nombre_archivo && na.nombre_archivo && ne.nombre_archivo.toLowerCase() === na.nombre_archivo.toLowerCase())
+        );
+        if (!existe) {
+          na.id = `NO-APLICA-${noAplicanExistente.length + 1}`;
+          noAplicanExistente.push(na);
+          noAplicanAgregados.push(na);
+        }
+      });
+
+      // Recalcular determinísticamente con /recalcular
+      const reqMeses = cargo.requisito_experiencia_meses || 54;
+      const recalc = await this.recalcularTiempos(certsExistentes, reqMeses);
+
+      const certificadosFinales = recalc.certificados || certsExistentes;
+      const consolidadoFinal = recalc.consolidado || exp.consolidado;
+
+      // Actualizar en BD mediante actualizarValidacion (/update)
+      await this.actualizarValidacion(id, {
+        formacion_academica: formacionExistente,
+        certificados: certificadosFinales,
+        documentos_no_aplican: noAplicanExistente,
+        consolidado: consolidadoFinal
+      });
+
+      const validacionActualizada: AnalisisCompleto = {
+        ...exp,
+        formacion_academica: formacionExistente,
+        certificados: certificadosFinales,
+        documentos_no_aplican: noAplicanExistente,
+        consolidado: consolidadoFinal
+      };
+
+      return {
+        success: true,
+        mensaje: 'Documento(s) analizado(s) e incorporado(s) exitosamente al expediente.',
+        resumen_ia: {
+          titulos_agregados: titulosAgregados,
+          certificados_agregados: certsAgregados,
+          no_aplican_agregados: noAplicanAgregados
+        },
+        validacion: validacionActualizada
+      };
+    }
+
+    if (res && res.status === 413) {
+      throw new Error(
+        'Los archivos PDF adjuntos superan el tamaño máximo permitido por el servidor web (Error 413: Payload Too Large).'
+      );
+    }
+    let errorMsg = `Error en el análisis de los documentos adjuntos (Código ${res ? res.status : 'ERR'}).`;
+    try {
+      const json = await res.json();
+      if (json && json.error) errorMsg = json.error;
+    } catch (_) {
+      const text = await res.text().catch(() => '');
+      if (text) errorMsg = `Error del servidor: ${text.slice(0, 100)}`;
+    }
+    throw new Error(errorMsg);
   },
 
   async eliminarValidacion(id: string): Promise<{ success: boolean; mensaje: string }> {

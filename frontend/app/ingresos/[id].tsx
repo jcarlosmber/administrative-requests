@@ -192,7 +192,7 @@ export default function DetalleValidacionScreen() {
       }
 
       setProgresoIaTexto('Analizando e identificando documento(s) con IA (Gemini)...');
-      const res = await ingresosService.adjuntarYAnalizarDocumentos(id, nuevosArchivos);
+      const res = await ingresosService.adjuntarYAnalizarDocumentos(id, nuevosArchivos, data);
 
       if (res.success && res.validacion) {
         setData(res.validacion);
