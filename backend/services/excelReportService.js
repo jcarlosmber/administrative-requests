@@ -325,18 +325,23 @@ async function generarReporteExcelValidacion(data) {
       (cert.tiempo_valido_meses === 0 && Number(cert.tiempo_certificado?.meses_totales || 0) > 0)
     );
 
-    // 2. Extraer y formatear funciones coincidentes (cotejo explícito con el cargo oficial)
+    // 2. Extraer y formatear TODAS las funciones coincidentes (cotejo explícito con el cargo oficial)
     const funcionesCoincidentes = cert.experiencia_relacionada?.funciones_coincidentes || [];
     let textoFunciones = '';
     if (funcionesCoincidentes.length > 0) {
-      textoFunciones = funcionesCoincidentes.map(f => {
+      textoFunciones = funcionesCoincidentes.map((f, fIdx) => {
         const fCert = (f.funcion_certificada || f.funcion || '').trim();
         const fCargo = (f.funcion_del_cargo || '').trim();
-        const rel = f.coincidencia ? ` (${f.coincidencia})` : '';
+        const rel = f.coincidencia ? ` [${f.coincidencia}]` : '';
         if (fCargo) {
-          return `• Cert: "${fCert}" ➔ Cargo: "${fCargo}"${rel}`;
+          return `${fIdx + 1}. Cert: "${fCert}" ➔ Empleo: "${fCargo}"${rel}`;
         }
-        return `• Cert: "${fCert}"`;
+        return `${fIdx + 1}. Cert: "${fCert}"`;
+      }).join('\n');
+    } else if (Array.isArray(cert.funciones_certificadas) && cert.funciones_certificadas.length > 0) {
+      textoFunciones = cert.funciones_certificadas.map((fc, fcIdx) => {
+        const fText = typeof fc === 'string' ? fc : (fc.funcion || '');
+        return `${fcIdx + 1}. "${fText}"`;
       }).join('\n');
     }
 

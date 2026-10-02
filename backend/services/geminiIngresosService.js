@@ -49,6 +49,9 @@ Para cada función certificada:
 - Busca correspondencia directa o equivalente con una función oficial del cargo.
 - Justifica la clasificación y cita la evidencia textual.
 - Si no existe correspondencia funcional suficiente, NO clasifiques como RELACIONADA.
+- ¡REGLA CRÍTICA DE COTEJO COMPLETO!: Debes cotejar INDIVIDUALMENTE TODAS y CADA UNA de las funciones certificadas que aparezcan en el documento:
+  * En "funciones_coincidentes" registra TODAS las funciones del certificado que coincidan con funciones del cargo (no te limites a una sola, incluye todas las que apliquen, indicando explícitamente con cuál función del empleo coincide).
+  * En "funciones_no_coincidentes" registra TODAS las funciones del certificado que NO guarden relación directa con las funciones del cargo.
 
 NORMATIVA DE EXPERIENCIA PROFESIONAL PREVIA AL GRADO:
 1. Decreto 1083 de 2015 (Art. 2.2.2.3.7):
