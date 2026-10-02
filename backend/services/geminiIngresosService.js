@@ -49,9 +49,12 @@ Para cada función certificada:
 - Busca correspondencia directa o equivalente con una función oficial del cargo.
 - Justifica la clasificación y cita la evidencia textual.
 - Si no existe correspondencia funcional suficiente, NO clasifiques como RELACIONADA.
-- ¡REGLA CRÍTICA DE COTEJO COMPLETO!: Debes cotejar INDIVIDUALMENTE TODAS y CADA UNA de las funciones certificadas que aparezcan en el documento:
-  * En "funciones_coincidentes" registra TODAS las funciones del certificado que coincidan con funciones del cargo (no te limites a una sola, incluye todas las que apliquen, indicando explícitamente con cuál función del empleo coincide).
-  * En "funciones_no_coincidentes" registra TODAS las funciones del certificado que NO guarden relación directa con las funciones del cargo.
+- ¡REGLA CRÍTICA Y OBLIGATORIA: EXTRACCIÓN Y COTEJO DE TODAS Y CADA UNA DE LAS FUNCIONES!:
+  * EXTRACCIÓN ÍNTEGRA: En certificaciones laborales y contratos de prestación de servicios es habitual encontrar listas de 5, 8, 10 o 15 funciones u obligaciones específicas. DEBES transcribir y registrar TODAS Y CADA UNA de las funciones certificadas en el arreglo "funciones_certificadas" (está TERMINANTEMENTE PROHIBIDO extraer solo una o resumirlas en una sola).
+  * COTEJO INDIVIDUAL COMPLETO: Para CADA función registrada en "funciones_certificadas", debes evaluarla frente al manual de funciones del empleo:
+    - En "funciones_coincidentes": Registra TODAS las funciones del certificado que coincidan (directa o parcialmente) con funciones del cargo. Si coinciden 3, 5 o más funciones, DEBEN figurar las 3, 5 o más en el arreglo, indicando con cuál función del empleo coincide cada una.
+    - En "funciones_no_coincidentes": Registra TODAS las funciones del certificado que NO guarden relación con las responsabilidades del cargo.
+    - El total de funciones evaluadas (coincidentes + no coincidentes) DEBE ser igual al total de funciones extraídas en "funciones_certificadas".
 
 NORMATIVA DE EXPERIENCIA PROFESIONAL PREVIA AL GRADO:
 1. Decreto 1083 de 2015 (Art. 2.2.2.3.7):
@@ -238,8 +241,16 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
       "justificacion_ley_2039": "Si aplica excepción de Ley 2039/2020 indicar modalidad y concordancia con la profesión exigida",
       "funciones_certificadas": [
         {
-          "funcion": "Texto de la función certificada",
-          "evidencia_textual": "Cita textual del documento entre comillas"
+          "funcion": "Texto completo de la función 1 certificada",
+          "evidencia_textual": "Cita textual entre comillas"
+        },
+        {
+          "funcion": "Texto completo de la función 2 certificada",
+          "evidencia_textual": "Cita textual entre comillas"
+        },
+        {
+          "funcion": "Texto completo de la función 3 certificada (y así sucesivamente para TODAS las funciones del documento)",
+          "evidencia_textual": "Cita textual entre comillas"
         }
       ],
       "clasificacion_experiencia": "RELACIONADA | NO_RELACIONADA | PROFESIONAL_NO_RELACIONADA | NO_PROFESIONAL | NO_DETERMINABLE",
@@ -248,15 +259,22 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
         "nivel_confianza": "ALTO | MEDIO | BAJO",
         "funciones_coincidentes": [
           {
-            "funcion_certificada": "Función extraída del certificado",
-            "funcion_del_cargo": "Función del cargo con la que coincide",
-            "coincidencia": "DIRECTA | PARCIAL | INDIRECTA | SIN_RELACIÓN",
-            "justificacion": "Por qué coincide",
+            "funcion_certificada": "Texto de la función del certificado que sí coincide",
+            "funcion_del_cargo": "Función exacta del manual del empleo con la que coincide",
+            "coincidencia": "DIRECTA | PARCIAL | INDIRECTA",
+            "justificacion": "Explicación de afinidad temática o jurídica",
+            "evidencia_textual": "Cita textual de soporte"
+          },
+          {
+            "funcion_certificada": "Segunda función del certificado que también coincide (deben registrarse todas las que coincidan)",
+            "funcion_del_cargo": "Otra función correspondiente del empleo",
+            "coincidencia": "DIRECTA | PARCIAL | INDIRECTA",
+            "justificacion": "Explicación de afinidad",
             "evidencia_textual": "Cita textual de soporte"
           }
         ],
         "funciones_no_coincidentes": [
-          "Funciones que no tienen relación"
+          "Texto de las funciones del certificado que no guardan relación con el cargo (ej. funciones meramente logísticas o ajenas al perfil)"
         ]
       },
       "verificacion_formal": {
@@ -496,26 +514,47 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
     formacionAcademica
   );
 
-  // Si algún certificado analizado resultó clasificado como NO_RELACIONADA o NO_PROFESIONAL,
-  // lo referenciamos también al final en la sección de documentos que no aplican:
-  if (Array.isArray(auditResult.certificados)) {
-    auditResult.certificados.forEach((c) => {
-      if (c.clasificacion_experiencia === 'NO_RELACIONADA' || c.clasificacion_experiencia === 'NO_PROFESIONAL') {
-        const yaExiste = documentosNoAplican.some(d => (d.nombre_archivo && d.nombre_archivo === c.nombre_archivo) || (d.id && d.id.includes(c.id_certificado)));
-        if (!yaExiste) {
-          documentosNoAplican.push({
-            id: `NO-APLICA-${c.id_certificado}`,
-            nombre_archivo: c.nombre_archivo || 'Certificado',
-            tipo_documento: 'EXPERIENCIA_NO_RELACIONADA',
-            descripcion: `${c.id_certificado}: ${c.cargo_certificado || 'Cargo'} en ${c.entidad || 'Entidad'}`,
-            entidad: c.entidad,
-            motivo_no_aplica: `Experiencia clasificada como ${c.clasificacion_experiencia}: Las funciones certificadas no guardan relación de equivalencia con las funciones del cargo evaluado.`,
-            sustento_criterio: 'Cotejo funcional estricto - Funciones no afines al Manual Específico de Funciones y Competencias Laborales.'
-          });
-        }
+  // Deduplicación y saneamiento estricto: NUNCA permitir que certificados de experiencia
+  // ni títulos de formación académica aparezcan duplicados en documentos_no_aplican.
+  const nombresCertificados = new Set(
+    (auditResult.certificados || []).map(c => (c.nombre_archivo || '').toLowerCase().trim()).filter(Boolean)
+  );
+  const nombresFormacion = new Set(
+    formacionAcademica.map(f => (f.nombre_archivo || '').toLowerCase().trim()).filter(Boolean)
+  );
+  const idsCertificados = new Set(
+    (auditResult.certificados || []).map(c => (c.id_certificado || '').toUpperCase().trim()).filter(Boolean)
+  );
+
+  const documentosNoAplicanFiltrados = documentosNoAplican.filter(item => {
+    const nom = (item.nombre_archivo || '').toLowerCase().trim();
+    const idItem = (item.id || '').toUpperCase().trim();
+    const desc = (item.descripcion || '').toUpperCase();
+    const ent = (item.entidad || '').toUpperCase();
+
+    // 1. Coincidencia por nombre de archivo
+    if (nom && (nombresCertificados.has(nom) || nombresFormacion.has(nom))) {
+      return false;
+    }
+
+    // 2. Si el ID o la descripción hace referencia a un CERT-X existente
+    for (const certId of idsCertificados) {
+      if (idItem.includes(certId) || desc.includes(certId)) {
+        return false;
       }
+    }
+
+    // 3. Si coincide con entidad de algún certificado existente
+    const coincideCert = (auditResult.certificados || []).some(c => {
+      const cEnt = (c.entidad || '').toUpperCase();
+      const cCargo = (c.cargo_certificado || '').toUpperCase();
+      return (cEnt && ent && (cEnt === ent || cEnt.includes(ent) || ent.includes(cEnt))) &&
+             (cCargo && (desc.includes(cCargo) || (item.cargo || '').toUpperCase().includes(cCargo)));
     });
-  }
+    if (coincideCert) return false;
+
+    return true;
+  });
 
   return {
     candidato: {
@@ -533,7 +572,7 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
     },
     formacion_academica: formacionAcademica,
     certificados: auditResult.certificados,
-    documentos_no_aplican: documentosNoAplican,
+    documentos_no_aplican: documentosNoAplicanFiltrados,
     consolidado: auditResult.consolidado
   };
 }

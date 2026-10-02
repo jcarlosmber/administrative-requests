@@ -469,11 +469,26 @@ export const ingresosService = {
       const certificadosFinales = recalc.certificados || certsExistentes;
       const consolidadoFinal = recalc.consolidado || exp.consolidado;
 
+      // Filtrar no_aplican para evitar que certificados figuren allí
+      const certFilesSet = new Set<string>(certificadosFinales.map((c: CertificadoAnalizado) => (c.nombre_archivo || '').toLowerCase().trim()).filter(Boolean));
+      const certIdsList: string[] = certificadosFinales.map((c: CertificadoAnalizado) => (c.id_certificado || '').toUpperCase().trim()).filter(Boolean);
+      const acadFilesSet = new Set<string>(formacionExistente.map((f: FormacionAcademicaItem) => (f.nombre_archivo || '').toLowerCase().trim()).filter(Boolean));
+      const noAplicanLimpio = noAplicanExistente.filter((item: DocumentoNoAplicaItem) => {
+        const nom = (item.nombre_archivo || '').toLowerCase().trim();
+        const idItem = (item.id || '').toUpperCase().trim();
+        const desc = (item.descripcion || '').toUpperCase();
+        if (nom && (certFilesSet.has(nom) || acadFilesSet.has(nom))) return false;
+        for (const cId of certIdsList) {
+          if (idItem.includes(cId) || desc.includes(cId)) return false;
+        }
+        return true;
+      });
+
       // Actualizar en BD mediante actualizarValidacion (/update)
       await this.actualizarValidacion(id, {
         formacion_academica: formacionExistente,
         certificados: certificadosFinales,
-        documentos_no_aplican: noAplicanExistente,
+        documentos_no_aplican: noAplicanLimpio,
         consolidado: consolidadoFinal
       });
 
@@ -481,7 +496,7 @@ export const ingresosService = {
         ...exp,
         formacion_academica: formacionExistente,
         certificados: certificadosFinales,
-        documentos_no_aplican: noAplicanExistente,
+        documentos_no_aplican: noAplicanLimpio,
         consolidado: consolidadoFinal
       };
 

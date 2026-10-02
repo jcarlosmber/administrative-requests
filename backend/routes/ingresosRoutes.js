@@ -32,6 +32,39 @@ const guardarArchivoEnDisco = (folder, nombre, base64Data) => {
   }
 };
 
+const sanitizarDocumentosNoAplican = (noAplican, certs, formacion) => {
+  if (!Array.isArray(noAplican) || noAplican.length === 0) return [];
+  const certFiles = new Set((certs || []).map(c => (c.nombre_archivo || '').toLowerCase().trim()).filter(Boolean));
+  const certIds = new Set((certs || []).map(c => (c.id_certificado || '').toUpperCase().trim()).filter(Boolean));
+  const acadFiles = new Set((formacion || []).map(f => (f.nombre_archivo || '').toLowerCase().trim()).filter(Boolean));
+
+  return noAplican.filter(item => {
+    const nom = (item.nombre_archivo || '').toLowerCase().trim();
+    const idItem = (item.id || '').toUpperCase().trim();
+    const desc = (item.descripcion || '').toUpperCase();
+    const ent = (item.entidad || '').toUpperCase();
+
+    // 1. Si coincide por nombre de archivo con un certificado o título formal
+    if (nom && (certFiles.has(nom) || acadFiles.has(nom))) return false;
+
+    // 2. Si el ID o la descripción hace referencia a un CERT-X existente
+    for (const cId of certIds) {
+      if (idItem.includes(cId) || desc.includes(cId)) return false;
+    }
+
+    // 3. Si coincide con entidad y cargo de algún certificado
+    const coincideCert = (certs || []).some(c => {
+      const cEnt = (c.entidad || '').toUpperCase();
+      const cCargo = (c.cargo_certificado || '').toUpperCase();
+      return (cEnt && ent && (cEnt === ent || cEnt.includes(ent) || ent.includes(cEnt))) &&
+             (cCargo && (desc.includes(cCargo) || (item.cargo || '').toUpperCase().includes(cCargo)));
+    });
+    if (coincideCert) return false;
+
+    return true;
+  });
+};
+
 module.exports = function(pool) {
 
   // Inicializar tablas automáticamente al montar el router si no existen
@@ -647,7 +680,7 @@ module.exports = function(pool) {
           nombre_archivo: r.nombre_archivo
         })),
         formacion_academica: val.formacion_academica || [],
-        documentos_no_aplican: val.documentos_no_aplican || [],
+        documentos_no_aplican: sanitizarDocumentosNoAplican(val.documentos_no_aplican || [], certsRes.rows, val.formacion_academica || []),
         created_at: val.created_at
       };
 
@@ -697,8 +730,9 @@ module.exports = function(pool) {
         values.push(JSON.stringify(formacion_academica));
       }
       if (documentos_no_aplican !== undefined) {
+        const noAplicanLimpio = sanitizarDocumentosNoAplican(documentos_no_aplican, certificados, formacion_academica);
         updates.push(`documentos_no_aplican = $${pIdx++}`);
-        values.push(JSON.stringify(documentos_no_aplican));
+        values.push(JSON.stringify(noAplicanLimpio));
       }
       if (consolidado) {
         if (consolidado.resultado_final !== undefined) {
@@ -906,42 +940,91 @@ module.exports = function(pool) {
       const safeName = path.basename(targetName);
       const valFolder = path.join(UPLOADS_DIR, id);
 
+      const resolverRutaArchivo = (folder, target) => {
+        if (!fs.existsSync(folder)) return null;
+        const files = fs.readdirSync(folder);
+        if (files.length === 0) return null;
+
+        const cleanTarget = target.trim().toLowerCase();
+        const targetNoExt = cleanTarget.replace(/\.pdf$/i, '');
+        
+        // 1. Coincidencia EXACTA (con o sin .pdf)
+        const exact = files.find(f => {
+          const fLower = f.toLowerCase();
+          return fLower === cleanTarget || fLower === `${targetNoExt}.pdf`;
+        });
+        if (exact) return path.join(folder, exact);
+
+        // 2. Coincidencia normalizada exacta (removiendo tildes y caracteres no alfanuméricos)
+        const norm = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const targetNorm = norm(targetNoExt);
+        const exactNorm = files.find(f => norm(f.replace(/\.pdf$/i, '')) === targetNorm);
+        if (exactNorm) return path.join(folder, exactNorm);
+
+        // 3. Coincidencia con número: si target tiene números (ej. Gobierno5, Gobierno2, etc.),
+        // los dígitos del archivo deben coincidir exactamente para no abrir Gobierno o Gobierno2
+        const targetNum = targetNoExt.match(/\d+/g)?.join('') || '';
+        if (targetNum) {
+          const matchNum = files.find(f => {
+            const fNoExt = f.toLowerCase().replace(/\.pdf$/i, '');
+            const fNum = fNoExt.match(/\d+/g)?.join('') || '';
+            if (fNum === targetNum) {
+              return norm(fNoExt).includes(targetNorm) || targetNorm.includes(norm(fNoExt));
+            }
+            return false;
+          });
+          if (matchNum) return path.join(folder, matchNum);
+        }
+
+        // 4. Coincidencia difusa SOLO si ninguno de los dos tiene números que colisionen
+        const matchFuzzy = files.find(f => {
+          const fNoExt = f.toLowerCase().replace(/\.pdf$/i, '');
+          const fNum = fNoExt.match(/\d+/g)?.join('') || '';
+          if (targetNum !== fNum) return false;
+          return norm(fNoExt).includes(targetNorm) || targetNorm.includes(norm(fNoExt));
+        });
+        if (matchFuzzy) return path.join(folder, matchFuzzy);
+
+        return null;
+      };
+
       // 1. Buscar en carpeta de validación
-      let foundPath = null;
-      if (fs.existsSync(valFolder)) {
-        const files = fs.readdirSync(valFolder);
-        const match = files.find(f => 
-          f.toLowerCase() === safeName.toLowerCase() ||
-          f.toLowerCase() === `${safeName.toLowerCase()}.pdf` ||
-          f.toLowerCase().includes(safeName.toLowerCase().replace(/\.pdf$/i, '')) ||
-          safeName.toLowerCase().includes(f.toLowerCase().replace(/\.pdf$/i, ''))
-        );
-        if (match) foundPath = path.join(valFolder, match);
-      }
+      let foundPath = resolverRutaArchivo(valFolder, safeName);
 
       // 2. Buscar en carpeta cache
-      if (!foundPath && fs.existsSync(CACHE_DIR)) {
-        const files = fs.readdirSync(CACHE_DIR);
-        const match = files.find(f => 
-          f.toLowerCase() === safeName.toLowerCase() ||
-          f.toLowerCase() === `${safeName.toLowerCase()}.pdf` ||
-          f.toLowerCase().includes(safeName.toLowerCase().replace(/\.pdf$/i, '')) ||
-          safeName.toLowerCase().includes(f.toLowerCase().replace(/\.pdf$/i, ''))
-        );
-        if (match) foundPath = path.join(CACHE_DIR, match);
+      if (!foundPath) {
+        foundPath = resolverRutaArchivo(CACHE_DIR, safeName);
       }
 
       // 3. Buscar en la base de datos
       if (!foundPath) {
-        const dbRes = await pool.query(`
+        let dbRes = await pool.query(`
           SELECT archivo_base64, mime_type, nombre_archivo 
           FROM ingreso_archivos 
-          WHERE validacion_id = $1 AND (
-            LOWER(nombre_archivo) = LOWER($2) OR 
-            LOWER(nombre_archivo) LIKE LOWER($3)
-          )
+          WHERE validacion_id = $1 AND LOWER(nombre_archivo) = LOWER($2)
           LIMIT 1
-        `, [id, safeName, `%${safeName.replace(/\.pdf$/i, '')}%`]);
+        `, [id, safeName]);
+
+        if (dbRes.rows.length === 0) {
+          const targetNum = safeName.replace(/\.pdf$/i, '').match(/\d+/g)?.join('') || '';
+          if (targetNum) {
+            dbRes = await pool.query(`
+              SELECT archivo_base64, mime_type, nombre_archivo 
+              FROM ingreso_archivos 
+              WHERE validacion_id = $1 
+                AND LOWER(nombre_archivo) LIKE $2
+                AND nombre_archivo ~ $3
+              LIMIT 1
+            `, [id, `%${safeName.replace(/\d+/g, '').replace(/\.pdf$/i, '').trim()}%`, targetNum]);
+          } else {
+            dbRes = await pool.query(`
+              SELECT archivo_base64, mime_type, nombre_archivo 
+              FROM ingreso_archivos 
+              WHERE validacion_id = $1 AND LOWER(nombre_archivo) LIKE LOWER($2)
+              LIMIT 1
+            `, [id, `%${safeName.replace(/\.pdf$/i, '')}%`]);
+          }
+        }
 
         if (dbRes.rows.length > 0 && dbRes.rows[0].archivo_base64) {
           const row = dbRes.rows[0];
@@ -1197,9 +1280,11 @@ module.exports = function(pool) {
             updated_at = NOW()
         WHERE id = $10;
       `;
+      const noAplicanFinal = sanitizarDocumentosNoAplican(noAplicanExistente, certificadosFinales, formacionExistente);
+
       await client.query(updateValQuery, [
         JSON.stringify(formacionExistente),
-        JSON.stringify(noAplicanExistente),
+        JSON.stringify(noAplicanFinal),
         Number(consolidadoFinal.experiencia_relacionada_meses) || 0,
         Number(consolidadoFinal.experiencia_no_relacionada_meses) || 0,
         Number(consolidadoFinal.tiempo_excluido_por_traslapes_meses) || 0,
@@ -1266,7 +1351,7 @@ module.exports = function(pool) {
         consolidado: consolidadoFinal,
         certificados: certificadosFinales,
         formacion_academica: formacionExistente,
-        documentos_no_aplican: noAplicanExistente,
+        documentos_no_aplican: noAplicanFinal,
         created_at: val.created_at
       };
 
