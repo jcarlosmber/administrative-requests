@@ -75,15 +75,30 @@ async function generarReporteExcelValidacion(data) {
   const formacionCompleta = [...formacion];
 
   noAplican.forEach(item => {
-    const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
-    const esEducacionInformal = texto.includes('DIPLOMADO') || texto.includes('SEMINARIO') || texto.includes('CURSO') || texto.includes('CONGRESO') || texto.includes('CAPACITACION') || texto.includes('TALLER') || texto.includes('HORAS');
-    
-    const esBachiller = !esEducacionInformal && (texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA'));
-    const esTecnico = !esEducacionInformal && (texto.includes('TECNIC') && !texto.includes('TECNOLOG'));
-    const esTecnologo = !esEducacionInformal && texto.includes('TECNOLOG');
+    const desc = (item.descripcion || '').toUpperCase();
+    const id = (item.id || '').toUpperCase();
+    const tipoDoc = (item.tipo_documento || '').toUpperCase();
+    const motivo = (item.motivo_no_aplica || '').toUpperCase();
+    const archivo = (item.nombre_archivo || '').toUpperCase();
+    const entidad = (item.entidad || '').toUpperCase();
+
+    // Si es un certificado laboral o de experiencia, NUNCA debe considerarse título académico
+    const esExperienciaLaboral = id.includes('CERT') || desc.startsWith('CERT-') || tipoDoc.includes('EXPERIENCIA') || motivo.includes('EXPERIENCIA') || motivo.includes('FUNCIONES');
+    // Educación continua o informal no constituye título formal habilitante
+    const esEducacionInformal = desc.includes('DIPLOMADO') || desc.includes('SEMINARIO') || desc.includes('CURSO') || desc.includes('CONGRESO') || desc.includes('CAPACITACION') || desc.includes('TALLER') || desc.includes('HORAS') || archivo.includes('DIPLOMADO') || archivo.includes('CURSO') || archivo.includes('SEMINARIO');
+
+    if (esExperienciaLaboral || esEducacionInformal) {
+      noAplicanLimpios.push(item);
+      return;
+    }
+
+    const texto = `${desc} ${archivo} ${motivo} ${entidad}`;
+    const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA');
+    const esTecnico = texto.includes('TECNIC') && !texto.includes('TECNOLOG');
+    const esTecnologo = texto.includes('TECNOLOG');
     const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');
-    const esPosgrado = !esEducacionInformal && (texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR'));
-    const esPregrado = !esEducacionInformal && (texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('TITULO PROFESIONAL') || texto.includes('ACTA DE GRADO'));
+    const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
+    const esPregrado = texto.includes('PREGRADO') || texto.includes('TITULO PROFESIONAL') || texto.includes('ACTA DE GRADO') || texto.includes('LICENCIAT');
 
     if (esBachiller || esTecnico || esTecnologo || esTarjeta || esPosgrado || esPregrado) {
       let tipo = 'PREGRADO';
