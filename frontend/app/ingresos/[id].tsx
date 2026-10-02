@@ -424,7 +424,7 @@ export default function DetalleValidacionScreen() {
     setModalTituloVisible(true);
   };
 
-  const guardarTituloForm = () => {
+  const guardarTituloForm = async () => {
     if (!formTitulo.trim()) {
       mostrarMensaje('Campo Requerido', 'Debes ingresar el nombre del título obtenido.');
       return;
@@ -455,8 +455,26 @@ export default function DetalleValidacionScreen() {
     }
 
     setTitulos(nuevaLista);
-    setHayCambios(true);
     setModalTituloVisible(false);
+
+    try {
+      setGuardandoCambios(true);
+      await ingresosService.actualizarValidacion(id, {
+        formacion_academica: nuevaLista,
+        certificados: certificados,
+        documentos_no_aplican: documentosNoAplican
+      });
+      if (data) {
+        setData({ ...data, formacion_academica: nuevaLista });
+      }
+      setHayCambios(false);
+      mostrarMensaje('Título Guardado', 'El título académico ha sido actualizado y guardado permanentemente en el expediente.');
+    } catch (err: any) {
+      setHayCambios(true);
+      mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el título en el servidor.');
+    } finally {
+      setGuardandoCambios(false);
+    }
   };
 
   const pedirConfirmarEliminarTitulo = (idx: number) => {
@@ -465,7 +483,7 @@ export default function DetalleValidacionScreen() {
       tipo: 'TITULO',
       idx,
       titulo: 'Eliminar Título Académico',
-      descripcion: `¿Estás seguro de que deseas eliminar el título "${it?.titulo_obtenido || 'seleccionado'}" de este expediente?`
+      descripcion: `¿Estás seguro de que deseas eliminar el título "${it?.titulo_obtenido || 'seleccionado'}" de este expediente? Se borrará de forma permanente de la base de datos.`
     });
     setModalEliminarVisible(true);
   };
@@ -476,7 +494,7 @@ export default function DetalleValidacionScreen() {
       tipo: 'CERTIFICADO',
       idx,
       titulo: 'Eliminar Certificado Laboral',
-      descripcion: `¿Estás seguro de que deseas eliminar el certificado "${it?.entidad || ''} - ${it?.cargo_certificado || ''}" de este expediente?`
+      descripcion: `¿Estás seguro de que deseas eliminar el certificado "${it?.entidad || ''} - ${it?.cargo_certificado || ''}" de este expediente? Se borrará de forma permanente de la base de datos y se recalcularán los tiempos válidos.`
     });
     setModalEliminarVisible(true);
   };
@@ -487,7 +505,7 @@ export default function DetalleValidacionScreen() {
       tipo: 'DOCUMENTO_NO_APLICA',
       idx,
       titulo: 'Eliminar Registro de Documento No Aplicable',
-      descripcion: `¿Estás seguro de que deseas eliminar "${it?.descripcion || it?.nombre_archivo || 'este documento'}" de la lista de documentos que no aplican?`
+      descripcion: `¿Estás seguro de que deseas eliminar "${it?.descripcion || it?.nombre_archivo || 'este documento'}" de la lista de documentos que no aplican? Se borrará de forma permanente de la base de datos.`
     });
     setModalEliminarVisible(true);
   };
@@ -504,6 +522,7 @@ export default function DetalleValidacionScreen() {
 
   const ejecutarEliminar = async () => {
     if (!itemAEliminar) return;
+
     if (itemAEliminar.tipo === 'EXPEDIENTE_COMPLETO') {
       try {
         setModalEliminarVisible(false);
@@ -517,37 +536,99 @@ export default function DetalleValidacionScreen() {
       return;
     }
 
-    if (itemAEliminar.tipo === 'TITULO') {
-      setTitulos(titulos.filter((_, idx) => idx !== itemAEliminar.idx));
-    } else if (itemAEliminar.tipo === 'CERTIFICADO') {
-      setCertificados(certificados.filter((_, idx) => idx !== itemAEliminar.idx));
-    } else if (itemAEliminar.tipo === 'DOCUMENTO_NO_APLICA') {
-      setDocumentosNoAplican(documentosNoAplican.filter((_, idx) => idx !== itemAEliminar.idx));
-    }
-    setHayCambios(true);
     setModalEliminarVisible(false);
-    setItemAEliminar(null);
+    setLoading(true);
+
+    try {
+      if (itemAEliminar.tipo === 'TITULO') {
+        const nuevaLista = titulos.filter((_, idx) => idx !== itemAEliminar.idx);
+        await ingresosService.actualizarValidacion(id, {
+          formacion_academica: nuevaLista,
+          certificados: certificados,
+          documentos_no_aplican: documentosNoAplican
+        });
+        setTitulos(nuevaLista);
+        if (data) setData({ ...data, formacion_academica: nuevaLista });
+        setHayCambios(false);
+        mostrarMensaje('Título Eliminado', 'El título académico ha sido eliminado permanentemente del expediente.');
+      } else if (itemAEliminar.tipo === 'CERTIFICADO') {
+        const nuevaLista = certificados.filter((_, idx) => idx !== itemAEliminar.idx);
+        const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+        let certsFinales = nuevaLista;
+        let nuevoConsolidado = data?.consolidado;
+        try {
+          const recalc = await ingresosService.recalcularTiempos(nuevaLista, reqMeses);
+          if (recalc?.certificados) certsFinales = recalc.certificados;
+          if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
+        } catch (eRecalc) {
+          console.warn('Error recalculando tras eliminar certificado:', eRecalc);
+        }
+
+        await ingresosService.actualizarValidacion(id, {
+          certificados: certsFinales,
+          formacion_academica: titulos,
+          documentos_no_aplican: documentosNoAplican,
+          consolidado: nuevoConsolidado
+        });
+        setCertificados(certsFinales);
+        if (data) setData({ ...data, certificados: certsFinales, consolidado: nuevoConsolidado || data.consolidado });
+        setHayCambios(false);
+        mostrarMensaje(
+          'Certificado Eliminado',
+          'El certificado laboral ha sido eliminado del expediente y los tiempos de experiencia han sido recalculados y guardados en la base de datos.'
+        );
+      } else if (itemAEliminar.tipo === 'DOCUMENTO_NO_APLICA') {
+        const nuevaLista = documentosNoAplican.filter((_, idx) => idx !== itemAEliminar.idx);
+        await ingresosService.actualizarValidacion(id, {
+          documentos_no_aplican: nuevaLista,
+          formacion_academica: titulos,
+          certificados: certificados
+        });
+        setDocumentosNoAplican(nuevaLista);
+        if (data) setData({ ...data, documentos_no_aplican: nuevaLista });
+        setHayCambios(false);
+        mostrarMensaje('Registro Eliminado', 'El documento no aplicable ha sido eliminado correctamente del expediente.');
+      }
+    } catch (err: any) {
+      mostrarMensaje('Error al Guardar', err.message || 'No se pudo eliminar el elemento en el servidor.');
+    } finally {
+      setLoading(false);
+      setItemAEliminar(null);
+    }
   };
 
   const guardarCambiosServidor = async () => {
     if (!id || !data) return;
     try {
       setGuardandoCambios(true);
+      const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+      let certsFinales = certificados;
+      let nuevoConsolidado = data.consolidado;
+      try {
+        const recalc = await ingresosService.recalcularTiempos(certificados, reqMeses);
+        if (recalc?.certificados) certsFinales = recalc.certificados;
+        if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
+      } catch (eRecalc) {
+        console.warn('Error recalculando:', eRecalc);
+      }
+
       await ingresosService.actualizarValidacion(id, {
         formacion_academica: titulos,
-        certificados: certificados,
-        documentos_no_aplican: documentosNoAplican
+        certificados: certsFinales,
+        documentos_no_aplican: documentosNoAplican,
+        consolidado: nuevoConsolidado
       });
       setHayCambios(false);
       setData({
         ...data,
         formacion_academica: titulos,
-        certificados: certificados,
-        documentos_no_aplican: documentosNoAplican
+        certificados: certsFinales,
+        documentos_no_aplican: documentosNoAplican,
+        consolidado: nuevoConsolidado
       });
       mostrarMensaje(
         'Cambios Guardados',
-        'Las modificaciones realizadas (títulos, certificados o documentos no aplicables) han sido actualizadas exitosamente en el expediente y se reflejarán de inmediato en la exportación a Excel.'
+        'Las modificaciones realizadas han sido actualizadas exitosamente en el expediente y se reflejarán de inmediato en la exportación a Excel.'
       );
     } catch (err: any) {
       mostrarMensaje('Error al Guardar', err.message || 'No se pudieron guardar los cambios.');
@@ -2515,7 +2596,7 @@ export default function DetalleValidacionScreen() {
               </Text>
             </View>
             <Text style={{ fontSize: 13, color: '#475569', lineHeight: 20, marginBottom: 20 }}>
-              {itemAEliminar?.descripcion || '¿Estás seguro de que deseas eliminar este registro del expediente? Recuerda guardar los cambios para sincronizarlos con la base de datos.'}
+              {itemAEliminar?.descripcion || '¿Estás seguro de que deseas eliminar este registro del expediente? Se borrará de forma permanente de la base de datos.'}
             </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <TouchableOpacity

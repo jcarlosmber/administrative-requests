@@ -806,7 +806,7 @@ module.exports = function(pool) {
 
       updates.push(`updated_at = NOW()`);
 
-      if (updates.length > 1) {
+      if (updates.length > 0) {
         values.push(id);
         const updateValQuery = `UPDATE ingreso_validaciones SET ${updates.join(', ')} WHERE id = $${pIdx} RETURNING *;`;
         await client.query(updateValQuery, values);
@@ -824,8 +824,8 @@ module.exports = function(pool) {
         }
       }
 
-      // Si vienen certificados actualizados
-      if (Array.isArray(certificados) && certificados.length > 0) {
+      // Si vienen certificados actualizados (incluso si la lista está vacía)
+      if (Array.isArray(certificados)) {
         await client.query('DELETE FROM ingreso_certificados WHERE validacion_id = $1', [id]);
         for (const cert of certificados) {
           const certQuery = `
@@ -895,8 +895,17 @@ module.exports = function(pool) {
       const { id } = req.params;
       await client.query('BEGIN');
       await client.query('DELETE FROM ingreso_certificados WHERE validacion_id = $1', [id]);
+      await client.query('DELETE FROM ingreso_archivos WHERE validacion_id = $1', [id]);
       await client.query('DELETE FROM ingreso_validaciones WHERE id = $1', [id]);
       await client.query('COMMIT');
+
+      try {
+        const valFolder = path.join(UPLOADS_DIR, id);
+        if (fs.existsSync(valFolder)) {
+          fs.rmSync(valFolder, { recursive: true, force: true });
+        }
+      } catch (eFolder) {}
+
       res.json({ success: true, mensaje: 'Validación eliminada correctamente.' });
     } catch (err) {
       await client.query('ROLLBACK');
