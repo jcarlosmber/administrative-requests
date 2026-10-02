@@ -928,6 +928,34 @@ module.exports = function(pool) {
   router.post('/validaciones/:id/delete', handlerEliminarValidacion);
 
   /**
+   * 7.2.1 DELETE /api/ingresos/validaciones/:id/certificados/:certId - Elimina un certificado específico
+   */
+  const handlerEliminarCertificadoIndividual = async (req, res) => {
+    const client = await pool.connect();
+    try {
+      const { id, certId } = req.params;
+      await client.query('BEGIN');
+      await client.query(
+        'DELETE FROM ingreso_certificados WHERE validacion_id = $1 AND (id::text = $2 OR id_certificado = $2)',
+        [id, certId]
+      );
+      await client.query('COMMIT');
+      res.json({ success: true, mensaje: 'Certificado eliminado correctamente.' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[Ingresos] Error al eliminar certificado individual:', err);
+      res.status(500).json({ error: 'Error al eliminar certificado: ' + err.message });
+    } finally {
+      client.release();
+    }
+  };
+
+  router.delete('/validaciones/:id/certificados/:certId', handlerEliminarCertificadoIndividual);
+  router.delete('/validaciones/:id/certificados/:certId/delete', handlerEliminarCertificadoIndividual);
+  router.post('/validaciones/:id/certificados/:certId/delete', handlerEliminarCertificadoIndividual);
+  router.post('/validaciones/:id/certificados/:certId', handlerEliminarCertificadoIndividual);
+
+  /**
    * 7.3 GET /api/ingresos/validaciones/:id/archivos - Lista archivos de la validación
    */
   router.get('/validaciones/:id/archivos', async (req, res) => {

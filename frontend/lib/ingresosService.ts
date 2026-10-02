@@ -615,6 +615,37 @@ export const ingresosService = {
     return json || { success: true, mensaje: 'Validación eliminada correctamente.' };
   },
 
+  async eliminarCertificado(validacionId: string, certId: string): Promise<{ success: boolean; mensaje: string }> {
+    const enc = encodeURIComponent(certId);
+    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${validacionId}/certificados/${enc}/delete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-HTTP-Method-Override': 'DELETE'
+      }
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      res = await fetch(`${API_URL}/api/ingresos/validaciones/${validacionId}/certificados/${enc}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => null);
+    }
+
+    if (!res || !res.ok) {
+      res = await fetch(`${API_URL}/api/ingresos/validaciones/${validacionId}/certificados/${enc}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => null);
+    }
+
+    if (!res) {
+      return { success: false, mensaje: 'Sin conexión' };
+    }
+    const json = await res.json().catch(() => ({}));
+    return { success: res.ok, mensaje: json?.mensaje || 'Certificado procesado' };
+  },
+
   getExcelDownloadUrl(id: string): string {
     return `${API_URL}/api/ingresos/validaciones/${id}/excel`;
   },

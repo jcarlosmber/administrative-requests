@@ -552,6 +552,12 @@ export default function DetalleValidacionScreen() {
         setHayCambios(false);
         mostrarMensaje('Título Eliminado', 'El título académico ha sido eliminado permanentemente del expediente.');
       } else if (itemAEliminar.tipo === 'CERTIFICADO') {
+        const certAEliminar = certificados[itemAEliminar.idx];
+        const certId = certAEliminar?.id || certAEliminar?.id_certificado;
+        if (certId) {
+          await ingresosService.eliminarCertificado(id, certId).catch(() => {});
+        }
+
         const nuevaLista = certificados.filter((_, idx) => idx !== itemAEliminar.idx);
         const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
         let certsFinales = nuevaLista;
