@@ -469,9 +469,14 @@ export const ingresosService = {
       });
 
       (analisisNuevo.certificados || []).forEach(nc => {
-        const existe = certsExistentes.some(ce =>
-          (ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase() === nc.nombre_archivo.toLowerCase())
-        );
+        const existe = certsExistentes.some(ce => {
+          const mismoArchivo = ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase().trim() === nc.nombre_archivo.toLowerCase().trim();
+          const mismaVinculacion = ce.entidad && nc.entidad &&
+            ce.entidad.toLowerCase().trim() === nc.entidad.toLowerCase().trim() &&
+            ce.fecha_inicio && nc.fecha_inicio && String(ce.fecha_inicio).trim() === String(nc.fecha_inicio).trim() &&
+            ce.fecha_fin && nc.fecha_fin && String(ce.fecha_fin).trim() === String(nc.fecha_fin).trim();
+          return mismoArchivo || mismaVinculacion;
+        });
         if (!existe) {
           maxCertNum++;
           nc.id_certificado = `CERT-${maxCertNum}`;
