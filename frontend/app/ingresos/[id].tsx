@@ -1459,7 +1459,7 @@ export default function DetalleValidacionScreen() {
                     <Text style={{ fontWeight: '700' }}>Periodo Certificado:</Text> {c.fecha_inicio} al {c.fecha_fin || (c.vinculo_vigente ? 'Vigente' : 'NO CONSTA')}
                   </Text>
                   <Text style={{ fontSize: 12, color: '#334155' }}>
-                    <Text style={{ fontWeight: '700' }}>Duración:</Text> {c.tiempo_certificado?.meses_totales_aproximados} meses ({c.tiempo_certificado?.anios}a, {c.tiempo_certificado?.meses}m, {c.tiempo_certificado?.dias}d)
+                    <Text style={{ fontWeight: '700' }}>Duración:</Text> {c.tiempo_certificado?.meses_totales_aproximados} meses ({c.tiempo_certificado?.anios ? `${c.tiempo_certificado.anios}a, ` : ''}{c.tiempo_certificado?.meses || 0}m, {c.tiempo_certificado?.dias || 0}d)
                   </Text>
                   {c.nombre_archivo && (
                     <Text style={{ fontSize: 12, color: '#64748B' }}>

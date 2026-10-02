@@ -43,20 +43,44 @@ function formatDate(date) {
 }
 
 /**
- * Calcula días, meses y años entre dos fechas inclusive.
+ * Calcula días, meses y años entre dos fechas según la función oficial DATEDIF de Excel
+ * y la convención laboral colombiana (Decreto 1083 / formato FT-318 SJD).
  */
 function calculatePeriod(startDate, endDate) {
   if (!startDate || !endDate || startDate > endDate) {
     return { dias_totales: 0, meses_totales: 0, anios: 0, meses: 0, dias: 0, valido: false };
   }
 
-  const diffMs = endDate.getTime() - startDate.getTime();
-  const dias_totales = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1; // inclusive
-  const meses_totales = Number((dias_totales / 30).toFixed(2));
-  const anios = Math.floor(dias_totales / 365);
-  const remDias = dias_totales % 365;
-  const meses = Math.floor(remDias / 30);
-  const dias = remDias % 30;
+  // Algoritmo idéntico a DATEDIF de Excel (estándar formato FT-318 de la SJD)
+  let y1 = startDate.getUTCFullYear(), m1 = startDate.getUTCMonth(), day1 = startDate.getUTCDate();
+  let y2 = endDate.getUTCFullYear(), m2 = endDate.getUTCMonth(), day2 = endDate.getUTCDate();
+
+  let anios = y2 - y1;
+  if (m2 < m1 || (m2 === m1 && day2 < day1)) {
+    anios--;
+  }
+
+  let meses = m2 - m1;
+  if (day2 < day1) {
+    meses--;
+  }
+  if (meses < 0) {
+    meses += 12;
+  }
+
+  let dias = 0;
+  if (day2 >= day1) {
+    dias = day2 - day1;
+  } else {
+    let prevMonthLastDay = new Date(Date.UTC(y2, m2, 0)).getUTCDate();
+    dias = prevMonthLastDay - day1 + day2;
+  }
+
+  // Convención laboral/civil colombiana (Decreto 1083 / Función Pública / FT-318):
+  // Cada 30 días equivale a 1 mes comercial (y 360 días a 1 año laboral).
+  // Por ejemplo: 0a, 11m, 30d equivale a 11 + (30/30) = 12 meses exactos (1 año).
+  const meses_totales = Number(((anios * 12) + meses + (dias / 30)).toFixed(2));
+  const dias_totales = (anios * 360) + (meses * 30) + dias;
 
   return {
     dias_totales,

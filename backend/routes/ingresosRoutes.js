@@ -624,7 +624,21 @@ module.exports = function(pool) {
           experiencia_profesional: r.experiencia_profesional,
           clasificacion_experiencia: r.clasificacion_experiencia,
           experiencia_relacionada: r.experiencia_relacionada_json,
-          tiempo_certificado: r.tiempo_certificado_json,
+          tiempo_certificado: (() => {
+            const dIni = timeCalculatorService.parseDate(r.fecha_inicio);
+            const dFin = r.vinculo_vigente ? new Date() : timeCalculatorService.parseDate(r.fecha_fin);
+            if (dIni && dFin) {
+              const cp = timeCalculatorService.calculatePeriod(dIni, dFin);
+              return {
+                anios: cp.anios,
+                meses: cp.meses,
+                dias: cp.dias,
+                meses_totales_aproximados: cp.meses_totales,
+                metodo_calculo: 'DATEDIF_EXCEL_Y_CONVENCION_30_DIAS'
+              };
+            }
+            return r.tiempo_certificado_json;
+          })(),
           traslapes: r.traslapes_json,
           tiempo_valido: { meses_totales: Number(r.tiempo_valido_meses) },
           documento: r.documento_json,
