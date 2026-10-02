@@ -7,12 +7,27 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const timeCalculatorService = require('./timeCalculatorService');
 require('dotenv').config();
 
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.warn('ADVERTENCIA: GEMINI_API_KEY no está configurada en .env.');
-}
+function getApiKeys() {
+  const keys = [];
+  const envVars = [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_SECONDARY,
+    process.env.GEMINI_API_KEYS
+  ];
 
-const genAI = new GoogleGenerativeAI(apiKey || 'MISSING_KEY');
+  for (const envVal of envVars) {
+    if (envVal) {
+      envVal.split(',').forEach(k => {
+        const trimmed = k.trim();
+        if (trimmed && !keys.includes(trimmed)) {
+          keys.push(trimmed);
+        }
+      });
+    }
+  }
+
+  return keys;
+}
 
 const SYSTEM_PROMPT = `
 Eres un analista documental especializado en validar requisitos de experiencia para cargos públicos en Colombia. Tu función es analizar certificados laborales, certificaciones de contratos, actos administrativos y documentos relacionados con experiencia laboral o profesional. Debes comparar la información extraída de los documentos contra los requisitos del cargo suministrados por el usuario.
@@ -127,8 +142,9 @@ C. DOCUMENTOS QUE NO APLICAN AL CARGO:
  * @param {Object} candidatoData
  */
 async function analizarDocumentosConGemini(pdfFiles, cargoData, candidatoData = {}) {
-  if (!apiKey) {
-    throw new Error('No se encontró la variable GEMINI_API_KEY en el backend.');
+  const apiKeys = getApiKeys();
+  if (apiKeys.length === 0) {
+    throw new Error('No se encontraron claves de API de Gemini configuradas en el backend.');
   }
 
   // Lista de modelos oficiales actualizados con fallback automático (priorizando modelos Flash de alta cuota)
@@ -344,29 +360,43 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
     });
   });
 
-  console.log(`[GeminiIngresos] Enviando ${pdfFiles.length} documento(s) para análisis con IA...`);
+  console.log(`[GeminiIngresos] Enviando ${pdfFiles.length} documento(s) para análisis con IA (${apiKeys.length} clave(s) disponible(s))...`);
   let responseText = null;
   let ultimoError = null;
 
-  for (const modeloNombre of MODELOS_GEMINI) {
-    try {
-      console.log(`[GeminiIngresos] Probando modelo ${modeloNombre}...`);
-      const model = genAI.getGenerativeModel({
-        model: modeloNombre,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          temperature: 0.1,
-        },
-      });
-      const result = await model.generateContent(parts);
-      responseText = result.response.text();
-      if (responseText) {
-        console.log(`[GeminiIngresos] ✓ Análisis exitoso con modelo: ${modeloNombre}`);
-        break;
+  claveLoop:
+  for (let kIndex = 0; kIndex < apiKeys.length; kIndex++) {
+    const currentKey = apiKeys[kIndex];
+    const genAIInstance = new GoogleGenerativeAI(currentKey);
+
+    for (const modeloNombre of MODELOS_GEMINI) {
+      try {
+        console.log(`[GeminiIngresos] Probando modelo ${modeloNombre} (Clave API ${kIndex + 1} de ${apiKeys.length})...`);
+        const model = genAIInstance.getGenerativeModel({
+          model: modeloNombre,
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+          },
+        });
+        const result = await model.generateContent(parts);
+        responseText = result.response.text();
+        if (responseText) {
+          console.log(`[GeminiIngresos] ✓ Análisis exitoso con modelo: ${modeloNombre} (Clave API ${kIndex + 1})`);
+          break claveLoop;
+        }
+      } catch (err) {
+        ultimoError = err;
+        const msg = err.message || '';
+        const esErrorCuota = msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('too many requests') || msg.includes('RESOURCE_EXHAUSTED');
+        console.warn(`[GeminiIngresos] Modelo ${modeloNombre} (Clave ${kIndex + 1}) arrojó: ${msg}.`);
+
+        // Si el error es de cuota agotada (429), saltar inmediatamente a la siguiente clave de respaldo
+        if (esErrorCuota && kIndex < apiKeys.length - 1) {
+          console.warn(`[GeminiIngresos] ⚠️ Cuota agotada en Clave ${kIndex + 1}. Saltando de inmediato a Clave de respaldo ${kIndex + 2}...`);
+          break; // rompe el bucle de modelos para esta clave y prueba la siguiente clave
+        }
       }
-    } catch (err) {
-      console.warn(`[GeminiIngresos] Modelo ${modeloNombre} arrojó: ${err.message}. Intentando siguiente modelo...`);
-      ultimoError = err;
     }
   }
 
