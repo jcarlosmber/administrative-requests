@@ -353,31 +353,63 @@ export const ingresosService = {
   },
 
   async actualizarValidacion(id: string, data: Partial<AnalisisCompleto>): Promise<{ success: boolean; mensaje: string }> {
-    // 1. Probar POST /update con X-HTTP-Method-Override para evitar bloqueos del WAF corporativo
+    const payload = JSON.stringify(data);
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-HTTP-Method-Override': 'PUT'
+    };
+
+    // 1. Probar POST /update con X-HTTP-Method-Override (100% compatible con WAF distrital que bloquea verbos PUT)
     let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/update`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-HTTP-Method-Override': 'PUT'
-      },
-      body: JSON.stringify(data)
+      headers,
+      body: payload
     }).catch(() => null);
 
-    // 2. Si no responde o falla, intentar PUT estándar
+    // 2. Si no responde o da 404, intentar POST directo a /validaciones/:id
     if (!res || !res.ok) {
-      res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-HTTP-Method-Override': 'PUT'
-        },
-        body: JSON.stringify(data)
-      });
+      const resAlt = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+        method: 'POST',
+        headers,
+        body: payload
+      }).catch(() => null);
+      if (resAlt && resAlt.ok) {
+        res = resAlt;
+      }
     }
 
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Error al actualizar la validación');
-    return json;
+    // 3. Como último recurso solo si no fue error 500 del WAF
+    if (!res || (!res.ok && res.status !== 500)) {
+      const resPut = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+        method: 'PUT',
+        headers,
+        body: payload
+      }).catch(() => null);
+      if (resPut && resPut.ok) {
+        res = resPut;
+      }
+    }
+
+    if (!res) {
+      throw new Error('No se pudo establecer conexión con el servidor para actualizar el expediente.');
+    }
+
+    let json: any = null;
+    try {
+      json = await res.json();
+    } catch (_) {
+      // Si la respuesta fue HTML (ej. página de error 500 del WAF o 404 de Nginx), capturar texto limpio
+      const text = await res.text().catch(() => '');
+      if (!res.ok) {
+        throw new Error(`Error del servidor (${res.status}): ${text.slice(0, 120) || 'Error de conexión o bloqueo de red.'}`);
+      }
+    }
+
+    if (!res.ok) {
+      throw new Error(json?.error || `Error ${res.status} al actualizar la validación`);
+    }
+
+    return json || { success: true, mensaje: 'Validación actualizada exitosamente.' };
   },
 
   async adjuntarYAnalizarDocumentos(
@@ -529,29 +561,58 @@ export const ingresosService = {
   },
 
   async eliminarValidacion(id: string): Promise<{ success: boolean; mensaje: string }> {
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-HTTP-Method-Override': 'DELETE'
+    };
+
     // 1. Probar POST /delete con X-HTTP-Method-Override (100% compatible con WAF distrital)
     let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/delete`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-HTTP-Method-Override': 'DELETE'
-      }
+      headers
     }).catch(() => null);
 
-    // 2. Si no responde o falla, probar DELETE estándar
+    // 2. Si no responde o falla, probar POST directo con override
     if (!res || !res.ok) {
-      res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-HTTP-Method-Override': 'DELETE'
-        }
-      });
+      const resAlt = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+        method: 'POST',
+        headers
+      }).catch(() => null);
+      if (resAlt && resAlt.ok) {
+        res = resAlt;
+      }
     }
 
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Error al eliminar la validación');
-    return json;
+    // 3. Como último recurso solo si no es error 500 del WAF
+    if (!res || (!res.ok && res.status !== 500)) {
+      const resDel = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+        method: 'DELETE',
+        headers
+      }).catch(() => null);
+      if (resDel && resDel.ok) {
+        res = resDel;
+      }
+    }
+
+    if (!res) {
+      throw new Error('No se pudo conectar con el servidor.');
+    }
+
+    let json: any = null;
+    try {
+      json = await res.json();
+    } catch (_) {
+      const text = await res.text().catch(() => '');
+      if (!res.ok) {
+        throw new Error(`Error al eliminar en el servidor (${res.status}): ${text.slice(0, 120) || 'Error de conexión o bloqueo de red institucional.'}`);
+      }
+    }
+
+    if (!res.ok) {
+      throw new Error(json?.error || `Error ${res.status} al eliminar la validación`);
+    }
+
+    return json || { success: true, mensaje: 'Validación eliminada correctamente.' };
   },
 
   getExcelDownloadUrl(id: string): string {

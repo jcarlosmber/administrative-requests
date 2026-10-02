@@ -885,6 +885,12 @@ module.exports = function(pool) {
 
   router.put('/validaciones/:id', handlerActualizarValidacion);
   router.post('/validaciones/:id/update', handlerActualizarValidacion);
+  router.post('/validaciones/:id', (req, res, next) => {
+    if ((req.headers['x-http-method-override'] || '').toUpperCase() === 'DELETE') {
+      return handlerEliminarValidacion(req, res, next);
+    }
+    return handlerActualizarValidacion(req, res, next);
+  });
 
   /**
    * 7.2 DELETE /api/ingresos/validaciones/:id - Elimina una validación (soporta DELETE y POST /delete para WAF)
