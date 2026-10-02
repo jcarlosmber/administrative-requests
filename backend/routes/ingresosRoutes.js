@@ -884,6 +884,7 @@ module.exports = function(pool) {
   };
 
   router.put('/validaciones/:id', handlerActualizarValidacion);
+  router.put('/validaciones/:id/update', handlerActualizarValidacion);
   router.post('/validaciones/:id/update', handlerActualizarValidacion);
   router.post('/validaciones/:id', (req, res, next) => {
     if ((req.headers['x-http-method-override'] || '').toUpperCase() === 'DELETE') {
@@ -923,6 +924,7 @@ module.exports = function(pool) {
   };
 
   router.delete('/validaciones/:id', handlerEliminarValidacion);
+  router.delete('/validaciones/:id/delete', handlerEliminarValidacion);
   router.post('/validaciones/:id/delete', handlerEliminarValidacion);
 
   /**

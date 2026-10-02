@@ -359,16 +359,16 @@ export const ingresosService = {
       'X-HTTP-Method-Override': 'PUT'
     };
 
-    // 1. Probar POST /update con X-HTTP-Method-Override (100% compatible con WAF distrital que bloquea verbos PUT)
-    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/update`, {
+    // 1. Probar POST /validaciones/:id con X-HTTP-Method-Override (100% compatible con WAF y con Express)
+    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
       method: 'POST',
       headers,
       body: payload
     }).catch(() => null);
 
-    // 2. Si no responde o da 404, intentar POST directo a /validaciones/:id
+    // 2. Si no responde o da 404, intentar POST a /validaciones/:id/update
     if (!res || !res.ok) {
-      const resAlt = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+      const resAlt = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/update`, {
         method: 'POST',
         headers,
         body: payload
@@ -566,15 +566,15 @@ export const ingresosService = {
       'X-HTTP-Method-Override': 'DELETE'
     };
 
-    // 1. Probar POST /delete con X-HTTP-Method-Override (100% compatible con WAF distrital)
-    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/delete`, {
+    // 1. Probar POST /validaciones/:id con X-HTTP-Method-Override (100% compatible con WAF y Express)
+    let res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
       method: 'POST',
       headers
     }).catch(() => null);
 
-    // 2. Si no responde o falla, probar POST directo con override
+    // 2. Si no responde o falla, probar POST /delete
     if (!res || !res.ok) {
-      const resAlt = await fetch(`${API_URL}/api/ingresos/validaciones/${id}`, {
+      const resAlt = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/delete`, {
         method: 'POST',
         headers
       }).catch(() => null);
