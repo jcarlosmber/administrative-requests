@@ -144,14 +144,20 @@ export default function DetalleValidacionScreen() {
     setModalVisible(true);
   };
 
-  // Estados para subida y análisis automático con IA
+  // Estados para subida y análisis automático con IA con barra de progreso individual
   const [subiendoDoc, setSubiendoDoc] = useState(false);
-  const [progresoIaTexto, setProgresoIaTexto] = useState('');
+  const [progresoIaModalVisible, setProgresoIaModalVisible] = useState(false);
+  const [progresoIaIndiceActual, setProgresoIaIndiceActual] = useState(0);
+  const [progresoIaTotalArchivos, setProgresoIaTotalArchivos] = useState(0);
+  const [progresoIaArchivoActual, setProgresoIaArchivoActual] = useState('');
+  const [progresoIaPorcentaje, setProgresoIaPorcentaje] = useState(0);
+  const [progresoIaEstado, setProgresoIaEstado] = useState('');
   const [modalResultadoIaVisible, setModalResultadoIaVisible] = useState(false);
   const [resumenIaDetectado, setResumenIaDetectado] = useState<{
     titulos: any[];
     certs: any[];
     noAplican: any[];
+    errores?: Array<{ archivo: string; error: string }>;
   } | null>(null);
 
   const subirYAnalizarDocumento = async () => {
@@ -164,12 +170,38 @@ export default function DetalleValidacionScreen() {
 
       if (result.canceled || !result.assets || result.assets.length === 0) return;
 
+      const totalArchivos = result.assets.length;
       setSubiendoDoc(true);
-      setProgresoIaTexto(`Cargando ${result.assets.length} archivo(s)...`);
+      setProgresoIaTotalArchivos(totalArchivos);
+      setProgresoIaIndiceActual(1);
+      setProgresoIaPorcentaje(5);
+      setProgresoIaArchivoActual(result.assets[0].name || 'Preparando archivo...');
+      setProgresoIaEstado('Leyendo documento y preparando análisis...');
+      setProgresoIaModalVisible(true);
 
-      const nuevosArchivos: Array<{ name: string; base64: string; size?: number }> = [];
+      const resumenAcumulado: {
+        titulos: any[];
+        certs: any[];
+        noAplican: any[];
+        errores: Array<{ archivo: string; error: string }>;
+      } = {
+        titulos: [],
+        certs: [],
+        noAplican: [],
+        errores: []
+      };
 
-      for (const asset of result.assets) {
+      let expedienteActual = data;
+
+      for (let i = 0; i < totalArchivos; i++) {
+        const asset = result.assets[i];
+        const numActual = i + 1;
+        setProgresoIaIndiceActual(numActual);
+        setProgresoIaArchivoActual(asset.name || `Documento ${numActual}`);
+        const pctInicio = Math.round((i / totalArchivos) * 100);
+        setProgresoIaPorcentaje(Math.max(5, pctInicio));
+        setProgresoIaEstado(`Leyendo contenido digital (${numActual} de ${totalArchivos})...`);
+
         let base64 = '';
         if (Platform.OS === 'web' && (asset as any).file) {
           base64 = await new Promise<string>((resolve) => {
@@ -184,35 +216,66 @@ export default function DetalleValidacionScreen() {
           });
         }
 
-        nuevosArchivos.push({
+        const archivoIndividual = [{
           name: asset.name,
           base64: base64,
           size: asset.size
-        });
+        }];
+
+        setProgresoIaEstado(`Analizando funciones y requisitos con IA (Gemini)...`);
+        setProgresoIaPorcentaje(Math.round(((i + 0.4) / totalArchivos) * 100));
+
+        try {
+          const res = await ingresosService.adjuntarYAnalizarDocumentos(id, archivoIndividual, expedienteActual);
+          if (res.success && res.validacion) {
+            expedienteActual = res.validacion;
+            setData(res.validacion);
+            setTitulos(res.validacion.formacion_academica || []);
+            setCertificados(res.validacion.certificados || []);
+            setDocumentosNoAplican(res.validacion.documentos_no_aplican || []);
+            setHayCambios(false);
+
+            if (res.resumen_ia?.titulos_agregados) {
+              resumenAcumulado.titulos.push(...res.resumen_ia.titulos_agregados);
+            }
+            if (res.resumen_ia?.certificados_agregados) {
+              resumenAcumulado.certs.push(...res.resumen_ia.certificados_agregados);
+            }
+            if (res.resumen_ia?.no_aplican_agregados) {
+              resumenAcumulado.noAplican.push(...res.resumen_ia.no_aplican_agregados);
+            }
+          }
+          setProgresoIaEstado(`✓ Documento ${numActual} incorporado correctamente`);
+        } catch (errInd: any) {
+          console.warn(`[Ingresos] Error analizando ${asset.name}:`, errInd);
+          resumenAcumulado.errores.push({
+            archivo: asset.name || `Documento ${numActual}`,
+            error: errInd.message || 'Error al procesar con IA'
+          });
+          setProgresoIaEstado(`⚠️ Advertencia: ${errInd.message || 'No se pudo procesar este archivo'}`);
+        }
+
+        const pctFin = Math.round(((i + 1) / totalArchivos) * 100);
+        setProgresoIaPorcentaje(pctFin);
+
+        // Si hay más documentos por procesar, esperar 1 segundo para no saturar la tasa de peticiones por minuto
+        if (i < totalArchivos - 1) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
 
-      setProgresoIaTexto('Analizando e identificando documento(s) con IA (Gemini)...');
-      const res = await ingresosService.adjuntarYAnalizarDocumentos(id, nuevosArchivos, data);
+      setProgresoIaEstado('¡Todos los documentos han sido procesados!');
+      setProgresoIaPorcentaje(100);
+      await new Promise(r => setTimeout(r, 500));
 
-      if (res.success && res.validacion) {
-        setData(res.validacion);
-        setTitulos(res.validacion.formacion_academica || []);
-        setCertificados(res.validacion.certificados || []);
-        setDocumentosNoAplican(res.validacion.documentos_no_aplican || []);
-        setHayCambios(false);
-
-        setResumenIaDetectado({
-          titulos: res.resumen_ia?.titulos_agregados || [],
-          certs: res.resumen_ia?.certificados_agregados || [],
-          noAplican: res.resumen_ia?.no_aplican_agregados || []
-        });
-        setModalResultadoIaVisible(true);
-      }
+      setProgresoIaModalVisible(false);
+      setResumenIaDetectado(resumenAcumulado);
+      setModalResultadoIaVisible(true);
     } catch (err: any) {
+      setProgresoIaModalVisible(false);
       mostrarMensaje('Error en Análisis Automático', err.message || 'No se pudo analizar el documento con IA.');
     } finally {
       setSubiendoDoc(false);
-      setProgresoIaTexto('');
     }
   };
 
@@ -2684,8 +2747,9 @@ export default function DetalleValidacionScreen() {
       </Modal>
 
       {/* Modal de Análisis en Progreso con IA */}
+      {/* Modal de Progreso Individual y Barra de Carga Dinámica */}
       <Modal
-        visible={subiendoDoc}
+        visible={progresoIaModalVisible}
         transparent={true}
         animationType="fade"
       >
@@ -2702,41 +2766,105 @@ export default function DetalleValidacionScreen() {
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: 16,
-              padding: 28,
+              padding: 24,
               width: '100%',
-              maxWidth: 440,
-              alignItems: 'center',
+              maxWidth: 480,
               borderWidth: 1,
               borderColor: '#E2E8F0',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
               gap: 16
             }}
           >
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: '#EEF2FF',
-                justifyContent: 'center',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: '#C7D2FE'
-              }}
-            >
-              <ActivityIndicator size="large" color="#4F46E5" />
+            {/* Encabezado */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 23,
+                  backgroundColor: '#EEF2FF',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: '#C7D2FE'
+                }}
+              >
+                <ActivityIndicator size="small" color="#4F46E5" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
+                  Procesando con IA (Gemini)
+                </Text>
+                <Text style={{ fontSize: 13, color: '#4F46E5', fontWeight: '700' }}>
+                  Documento {progresoIaIndiceActual} de {progresoIaTotalArchivos}
+                </Text>
+              </View>
+              <View
+                style={{
+                  backgroundColor: '#F1F5F9',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E293B' }}>
+                  {progresoIaPorcentaje}%
+                </Text>
+              </View>
             </View>
 
-            <View style={{ alignItems: 'center', gap: 6 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', textAlign: 'center' }}>
-                Identificación Automática con IA
-              </Text>
-              <Text style={{ fontSize: 13, color: '#4F46E5', fontWeight: '700', textAlign: 'center' }}>
-                {progresoIaTexto || 'Analizando documento(s) con Gemini...'}
-              </Text>
-              <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', lineHeight: 18, marginTop: 4 }}>
-                La inteligencia artificial está extrayendo los datos, determinando si es Título Académico, Tarjeta Profesional o Certificado Laboral, auditando los 7 checks normativos y recalculando tiempos y traslapes.
+            {/* Barra de progreso gráfica */}
+            <View
+              style={{
+                height: 10,
+                backgroundColor: '#E2E8F0',
+                borderRadius: 5,
+                overflow: 'hidden',
+                width: '100%'
+              }}
+            >
+              <View
+                style={{
+                  height: '100%',
+                  width: `${progresoIaPorcentaje}%`,
+                  backgroundColor: '#4F46E5',
+                  borderRadius: 5
+                }}
+              />
+            </View>
+
+            {/* Detalle del archivo en curso */}
+            <View
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 10,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 6
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="document-text" size={16} color="#4F46E5" />
+                <Text
+                  numberOfLines={1}
+                  style={{ fontSize: 13, fontWeight: '700', color: '#1E293B', flex: 1 }}
+                >
+                  {progresoIaArchivoActual || 'Procesando...'}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#64748B' }}>
+                {progresoIaEstado}
               </Text>
             </View>
+
+            <Text style={{ fontSize: 11, color: '#94A3B8', textAlign: 'center', fontStyle: 'italic' }}>
+              Analizando documento por documento para garantizar máxima precisión y respetar la tasa por minuto.
+            </Text>
           </View>
         </View>
       </Modal>
@@ -2784,7 +2912,7 @@ export default function DetalleValidacionScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
-                  Documento Incorporado
+                  Documento(s) Incorporado(s)
                 </Text>
                 <Text style={{ fontSize: 12, color: '#64748B' }}>
                   Clasificación y auditoría normativa completadas
@@ -2792,7 +2920,7 @@ export default function DetalleValidacionScreen() {
               </View>
             </View>
 
-            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10, maxHeight: 360 }}>
               {resumenIaDetectado?.titulos && resumenIaDetectado.titulos.length > 0 ? (
                 <View style={{ gap: 4 }}>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>
@@ -2832,9 +2960,22 @@ export default function DetalleValidacionScreen() {
                 </View>
               ) : null}
 
-              {(!resumenIaDetectado?.titulos?.length && !resumenIaDetectado?.certs?.length && !resumenIaDetectado?.noAplican?.length) ? (
+              {resumenIaDetectado?.errores && resumenIaDetectado.errores.length > 0 ? (
+                <View style={{ gap: 4, backgroundColor: '#FEF2F2', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#FECACA' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#DC2626' }}>
+                    ⚠️ Documentos no procesados ({resumenIaDetectado.errores.length}):
+                  </Text>
+                  {resumenIaDetectado.errores.map((errItem, idx) => (
+                    <Text key={idx} style={{ fontSize: 11, color: '#991B1B' }}>
+                      • {errItem.archivo}: {errItem.error}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {(!resumenIaDetectado?.titulos?.length && !resumenIaDetectado?.certs?.length && !resumenIaDetectado?.noAplican?.length && !resumenIaDetectado?.errores?.length) ? (
                 <Text style={{ fontSize: 12, color: '#64748B', fontStyle: 'italic' }}>
-                  El documento analizado ya se encontraba registrado o no requirió adición de nuevas filas.
+                  Los documentos analizados ya se encontraban registrados o no requirieron adición de nuevas filas.
                 </Text>
               ) : null}
             </View>

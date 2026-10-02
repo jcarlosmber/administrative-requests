@@ -131,10 +131,11 @@ async function analizarDocumentosConGemini(pdfFiles, cargoData, candidatoData = 
     throw new Error('No se encontró la variable GEMINI_API_KEY en el backend.');
   }
 
-  // Lista de modelos oficiales actualizados con fallback automático
+  // Lista de modelos oficiales actualizados con fallback automático (priorizando modelos Flash de alta cuota)
   const MODELOS_GEMINI = [
-    'gemini-3.5-flash-lite',
-    'gemini-3.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash-lite',
     'gemini-flash-latest',
     'gemini-pro-latest'
   ];

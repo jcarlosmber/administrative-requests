@@ -1228,32 +1228,13 @@ module.exports = function(pool) {
         telefono: val.candidato_telefono
       };
 
-      // 4. Analizar con Gemini los NUEVOS archivos
+      // 4. Analizar con Gemini los NUEVOS archivos de forma secuencial
+      // Procesar archivo por archivo evita sobrepasar el límite de Tokens por Minuto (TPM) en la API de Gemini
       console.log(`[Ingresos] Analizando ${archivos.length} archivo(s) nuevo(s) para validación ${id}`);
-      const analisisNuevo = await geminiIngresosService.analizarDocumentosConGemini(
-        archivos,
-        cargoData,
-        candidatoData
-      );
-
-      // 5. Integrar Formación Académica nueva
-      const nuevosTitulos = analisisNuevo.formacion_academica || [];
       const titulosAgregados = [];
-      nuevosTitulos.forEach((nt) => {
-        const existe = formacionExistente.some(ft => 
-          (ft.nombre_archivo && nt.nombre_archivo && ft.nombre_archivo.toLowerCase() === nt.nombre_archivo.toLowerCase()) ||
-          (ft.titulo_obtenido && nt.titulo_obtenido && ft.titulo_obtenido.toLowerCase().trim() === nt.titulo_obtenido.toLowerCase().trim() && ft.tipo === nt.tipo)
-        );
-        if (!existe) {
-          nt.id = `ACAD-${formacionExistente.length + 1}`;
-          formacionExistente.push(nt);
-          titulosAgregados.push(nt);
-        }
-      });
-
-      // 6. Integrar Certificados Laborales nuevos
-      const nuevosCerts = analisisNuevo.certificados || [];
       const certsAgregados = [];
+      const noAplicanAgregados = [];
+
       let maxCertNum = 0;
       certificadosExistentes.forEach(c => {
         const m = (c.id_certificado || '').match(/CERT-(\d+)/i);
@@ -1263,31 +1244,68 @@ module.exports = function(pool) {
         }
       });
 
-      nuevosCerts.forEach(nc => {
-        const existe = certificadosExistentes.some(ce => 
-          (ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase() === nc.nombre_archivo.toLowerCase())
-        );
-        if (!existe) {
-          maxCertNum++;
-          nc.id_certificado = `CERT-${maxCertNum}`;
-          certificadosExistentes.push(nc);
-          certsAgregados.push(nc);
-        }
-      });
+      for (let i = 0; i < archivos.length; i++) {
+        const arch = archivos[i];
+        console.log(`[Ingresos] Procesando archivo ${i + 1} de ${archivos.length}: ${arch.name}`);
+        try {
+          const analisisNuevo = await geminiIngresosService.analizarDocumentosConGemini(
+            [arch],
+            cargoData,
+            candidatoData
+          );
 
-      // 7. Integrar Documentos No Aplican
-      const nuevosNoAplican = analisisNuevo.documentos_no_aplican || [];
-      const noAplicanAgregados = [];
-      nuevosNoAplican.forEach(na => {
-        const existe = noAplicanExistente.some(ne => 
-          (ne.nombre_archivo && na.nombre_archivo && ne.nombre_archivo.toLowerCase() === na.nombre_archivo.toLowerCase())
-        );
-        if (!existe) {
-          na.id = `NO-APLICA-${noAplicanExistente.length + 1}`;
-          noAplicanExistente.push(na);
-          noAplicanAgregados.push(na);
+          // 5. Integrar Formación Académica
+          const nuevosTitulos = analisisNuevo.formacion_academica || [];
+          nuevosTitulos.forEach((nt) => {
+            const existe = formacionExistente.some(ft => 
+              (ft.nombre_archivo && nt.nombre_archivo && ft.nombre_archivo.toLowerCase() === nt.nombre_archivo.toLowerCase()) ||
+              (ft.titulo_obtenido && nt.titulo_obtenido && ft.titulo_obtenido.toLowerCase().trim() === nt.titulo_obtenido.toLowerCase().trim() && ft.tipo === nt.tipo)
+            );
+            if (!existe) {
+              nt.id = `ACAD-${formacionExistente.length + 1}`;
+              formacionExistente.push(nt);
+              titulosAgregados.push(nt);
+            }
+          });
+
+          // 6. Integrar Certificados Laborales
+          const nuevosCerts = analisisNuevo.certificados || [];
+          nuevosCerts.forEach(nc => {
+            const existe = certificadosExistentes.some(ce => 
+              (ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase() === nc.nombre_archivo.toLowerCase())
+            );
+            if (!existe) {
+              maxCertNum++;
+              nc.id_certificado = `CERT-${maxCertNum}`;
+              certificadosExistentes.push(nc);
+              certsAgregados.push(nc);
+            }
+          });
+
+          // 7. Integrar Documentos No Aplican
+          const nuevosNoAplican = analisisNuevo.documentos_no_aplican || [];
+          nuevosNoAplican.forEach(na => {
+            const existe = noAplicanExistente.some(ne => 
+              (ne.nombre_archivo && na.nombre_archivo && ne.nombre_archivo.toLowerCase() === na.nombre_archivo.toLowerCase())
+            );
+            if (!existe) {
+              na.id = `NO-APLICA-${noAplicanExistente.length + 1}`;
+              noAplicanExistente.push(na);
+              noAplicanAgregados.push(na);
+            }
+          });
+        } catch (errArch) {
+          console.error(`[Ingresos] Error analizando archivo ${arch.name}:`, errArch.message);
+          if (archivos.length === 1) {
+            throw errArch;
+          }
         }
-      });
+
+        // Breve pausa preventiva entre llamadas para proteger la cuota por minuto de Gemini
+        if (i < archivos.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      }
 
       // 8. Recalcular determinísticamente tiempos y traslapes de TODOS los certificados
       const auditResult = timeCalculatorService.auditCertificatesAndCalculateTotals(
