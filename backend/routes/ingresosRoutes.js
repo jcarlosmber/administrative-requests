@@ -452,8 +452,27 @@ module.exports = function(pool) {
                COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
-        LEFT JOIN planta_personal_sjd p ON (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza) OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = p.codigo AND v.cargo_grado = p.grado)
-        LEFT JOIN ingreso_cargos ic ON v.cargo_id = ic.id OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = ic.codigo AND v.cargo_grado = ic.grado)
+        LEFT JOIN LATERAL (
+          SELECT p.dependencia_cargo, p.requisitos
+          FROM planta_personal_sjd p
+          WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
+             OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
+             OR (v.id_perno IS NOT NULL AND p.id_perno = v.id_perno)
+             OR (v.id_plaza IS NULL AND v.id_sideap IS NULL AND v.id_perno IS NULL AND p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado)
+          ORDER BY 
+            CASE WHEN v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza THEN 1
+                 WHEN v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap THEN 2
+                 WHEN v.id_perno IS NOT NULL AND p.id_perno = v.id_perno THEN 3
+                 ELSE 4 END
+          LIMIT 1
+        ) p ON true
+        LEFT JOIN LATERAL (
+          SELECT ic.dependencia, ic.requisitos_formacion
+          FROM ingreso_cargos ic
+          WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
+             OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
+          LIMIT 1
+        ) ic ON true
         WHERE v.id = $1;
       `;
       const valRes = await pool.query(valQuery, [id]);
@@ -774,8 +793,27 @@ module.exports = function(pool) {
                COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
-        LEFT JOIN planta_personal_sjd p ON (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza) OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = p.codigo AND v.cargo_grado = p.grado)
-        LEFT JOIN ingreso_cargos ic ON v.cargo_id = ic.id OR (v.cargo_codigo IS NOT NULL AND v.cargo_codigo = ic.codigo AND v.cargo_grado = ic.grado)
+        LEFT JOIN LATERAL (
+          SELECT p.dependencia_cargo, p.requisitos
+          FROM planta_personal_sjd p
+          WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
+             OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
+             OR (v.id_perno IS NOT NULL AND p.id_perno = v.id_perno)
+             OR (v.id_plaza IS NULL AND v.id_sideap IS NULL AND v.id_perno IS NULL AND p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado)
+          ORDER BY 
+            CASE WHEN v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza THEN 1
+                 WHEN v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap THEN 2
+                 WHEN v.id_perno IS NOT NULL AND p.id_perno = v.id_perno THEN 3
+                 ELSE 4 END
+          LIMIT 1
+        ) p ON true
+        LEFT JOIN LATERAL (
+          SELECT ic.dependencia, ic.requisitos_formacion
+          FROM ingreso_cargos ic
+          WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
+             OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
+          LIMIT 1
+        ) ic ON true
         WHERE v.id = $1;
       `;
       const valRes = await pool.query(valQuery, [id]);

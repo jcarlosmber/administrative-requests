@@ -67,21 +67,23 @@ async function generarReporteExcelValidacion(data) {
   ws.getCell('G8').alignment = { wrapText: true, vertical: 'top' };
 
   // ----------------------------------------------------
+  // ----------------------------------------------------
   // 4. FORMACIÓN ACADÉMICA (Filas 11 a 32)
   // ----------------------------------------------------
-  // Rescate de salvaguarda: si algún diploma de bachiller, técnico, pregrado,
-  // posgrado o tarjeta profesional quedó en documentos_no_aplican, lo recuperamos
+  // Rescate de salvaguarda: si algún título formal quedó erróneamente en documentos_no_aplican
   const noAplicanLimpios = [];
   const formacionCompleta = [...formacion];
 
   noAplican.forEach(item => {
     const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
-    const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA') || texto.includes('COLEGIO');
-    const esTecnico = texto.includes('TECNIC') && !texto.includes('TECNOLOG');
-    const esTecnologo = texto.includes('TECNOLOG');
+    const esEducacionInformal = texto.includes('DIPLOMADO') || texto.includes('SEMINARIO') || texto.includes('CURSO') || texto.includes('CONGRESO') || texto.includes('CAPACITACION') || texto.includes('TALLER') || texto.includes('HORAS');
+    
+    const esBachiller = !esEducacionInformal && (texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA'));
+    const esTecnico = !esEducacionInformal && (texto.includes('TECNIC') && !texto.includes('TECNOLOG'));
+    const esTecnologo = !esEducacionInformal && texto.includes('TECNOLOG');
     const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');
-    const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
-    const esPregrado = texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('DIPLOMA') || texto.includes('ACTA DE GRADO');
+    const esPosgrado = !esEducacionInformal && (texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR'));
+    const esPregrado = !esEducacionInformal && (texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('TITULO PROFESIONAL') || texto.includes('ACTA DE GRADO'));
 
     if (esBachiller || esTecnico || esTecnologo || esTarjeta || esPosgrado || esPregrado) {
       let tipo = 'PREGRADO';
@@ -125,10 +127,10 @@ async function generarReporteExcelValidacion(data) {
       tecnicos.push(item);
     } else if (tipo === 'TECNOLOGO' || tipo === 'TECNOLOGIA' || titulo.includes('TECNOLOG')) {
       tecnologos.push(item);
-    } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || (!titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
-      pregrados.push(item);
-    } else if (tipo === 'POSGRADO' || tipo === 'ESPECIALIZACION' || tipo === 'MAESTRIA' || tipo === 'DOCTORADO' || titulo.includes('ESPECIALIZ') || titulo.includes('MAESTR') || titulo.includes('DOCTOR')) {
+    } else if (tipo === 'POSGRADO' || tipo === 'ESPECIALIZACION' || tipo === 'MAESTRIA' || tipo === 'DOCTORADO' || titulo.includes('ESPECIALIZ') || titulo.includes('MAESTR') || titulo.includes('DOCTOR') || titulo.includes('MAGISTER')) {
       posgrados.push(item);
+    } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || tipo === 'UNIVERSITARIO' || (!titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
+      pregrados.push(item);
     } else if (tipo === 'TARJETA_PROFESIONAL' || titulo.includes('TARJETA') || item.numero_tarjeta_o_registro) {
       if (!tarjeta) tarjeta = item;
     }
@@ -157,6 +159,9 @@ async function generarReporteExcelValidacion(data) {
       ws.getCell(`B${r}`).value = null;
       ws.getCell(`H${r}`).value = null;
       ws.getCell(`N${r}`).value = null;
+      if (i >= tecnicosCount) {
+        ws.getRow(r).hidden = true;
+      }
     }
   }
 
@@ -172,6 +177,9 @@ async function generarReporteExcelValidacion(data) {
       ws.getCell(`B${r}`).value = null;
       ws.getCell(`H${r}`).value = null;
       ws.getCell(`N${r}`).value = null;
+      if (i >= tecnologosCount) {
+        ws.getRow(r).hidden = true;
+      }
     }
   }
 
@@ -187,6 +195,9 @@ async function generarReporteExcelValidacion(data) {
       ws.getCell(`B${r}`).value = null;
       ws.getCell(`H${r}`).value = null;
       ws.getCell(`N${r}`).value = null;
+      if (i >= pregradosCount) {
+        ws.getRow(r).hidden = true;
+      }
     }
   }
 
@@ -202,6 +213,9 @@ async function generarReporteExcelValidacion(data) {
       ws.getCell(`B${r}`).value = null;
       ws.getCell(`H${r}`).value = null;
       ws.getCell(`N${r}`).value = null;
+      if (i >= posgradosCount) {
+        ws.getRow(r).hidden = true;
+      }
     }
   }
 
@@ -212,26 +226,6 @@ async function generarReporteExcelValidacion(data) {
   } else {
     ws.getCell('B32').value = null;
     ws.getCell('H32').value = null;
-  }
-
-  // ----------------------------------------------------
-  // ELIMINAR FILAS SOBRANTES DE FORMACIÓN (DE ABAJO HACIA ARRIBA)
-  // ----------------------------------------------------
-  // Posgrados: de 24 a 31 (8 filas). Dejamos posgradosCount (mínimo 1).
-  for (let r = 31; r >= 24 + posgradosCount; r--) {
-    ws.spliceRows(r, 1);
-  }
-  // Pregrados: de 20 a 23 (4 filas). Dejamos pregradosCount (mínimo 1).
-  for (let r = 23; r >= 20 + pregradosCount; r--) {
-    ws.spliceRows(r, 1);
-  }
-  // Tecnólogos: de 16 a 19 (4 filas). Dejamos tecnologosCount (mínimo 1).
-  for (let r = 19; r >= 16 + tecnologosCount; r--) {
-    ws.spliceRows(r, 1);
-  }
-  // Técnicos: de 12 a 15 (4 filas). Dejamos tecnicosCount (mínimo 1).
-  for (let r = 15; r >= 12 + tecnicosCount; r--) {
-    ws.spliceRows(r, 1);
   }
 
   // ----------------------------------------------------
@@ -360,58 +354,35 @@ async function generarReporteExcelValidacion(data) {
     row.getCell('O').value = { formula: `IF(K${r}="Traslape Total","-",DATEDIF($C${r},$D${r},"MD"))` };
   }
 
-  // Eliminar filas de experiencia sobrantes si certsCount < availableExpRows
-  if (availableExpRows > certsCount) {
-    const toDelete = availableExpRows - certsCount;
-    const deleteFrom = startExp + certsCount;
-    for (let r = deleteFrom; r < deleteFrom + toDelete; r++) {
-      const row = ws.getRow(r);
-      for (let c = 1; c <= 15; c++) {
-        row.getCell(c).value = null;
-      }
+  // Ocultar filas de experiencia sobrantes (de startExp + certs.length hasta 66)
+  // De esta forma NO se rompen los merges ni las fórmulas compartidas de las filas 37 y 38
+  const maxExpRows = 66;
+  const startEmpty = startExp + certs.length;
+  for (let r = startEmpty; r <= maxExpRows; r++) {
+    const row = ws.getRow(r);
+    for (let c = 1; c <= 7; c++) {
+      row.getCell(c).value = null;
     }
-    ws.spliceRows(deleteFrom, toDelete);
-  } else if (certsCount > availableExpRows) {
-    // Si hubiese más de 31 certificados, insertar filas extra antes de sumRowIdx
-    const toInsert = certsCount - availableExpRows;
-    for (let i = 0; i < toInsert; i++) {
-      ws.insertRow(sumRowIdx, []);
-    }
+    row.getCell('K').value = null;
+    row.getCell('L').value = null;
+    row.hidden = true;
   }
 
-  // Nuevas posiciones de las filas de totales
-  const newSumRow = startExp + certsCount;
-  const newTotalRow = newSumRow + 1;
-  const endExp = newSumRow - 1;
+  // Actualizar fechas y textos de firmas en el pie de página
+  const d = new Date();
+  const dia = String(d.getDate()).padStart(2, '0');
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const anio = d.getFullYear();
+  const fechaExpedicionStr = `${dia}/${mes}/${anio}`;
 
-  // Actualizar Fórmulas de Suma de Experiencia
-  ws.getCell(`H${newSumRow}`).value = { formula: `SUM(H${startExp}:H${endExp})` };
-  ws.getCell(`I${newSumRow}`).value = { formula: `SUM(I${startExp}:I${endExp})` };
-  ws.getCell(`J${newSumRow}`).value = { formula: `SUM(J${startExp}:J${endExp})` };
-
-  ws.getCell(`M${newSumRow}`).value = { formula: `SUM(M${startExp}:M${endExp})` };
-  ws.getCell(`N${newSumRow}`).value = { formula: `SUM(N${startExp}:N${endExp})` };
-  ws.getCell(`O${newSumRow}`).value = { formula: `SUM(O${startExp}:O${endExp})` };
-
-  // Actualizar Fórmulas de Conversión TOTAL
-  ws.getCell(`H${newTotalRow}`).value = { formula: `+INT((SUM(I${startExp}:I${endExp})+INT((SUM(J${startExp}:J${endExp})/30)))/12)+H${newSumRow}` };
-  ws.getCell(`I${newTotalRow}`).value = { formula: `(((SUM(I${startExp}:I${endExp})+INT(SUM(J${startExp}:J${endExp})/30))/12)-(INT((SUM(I${startExp}:I${endExp})+INT((SUM(J${startExp}:J${endExp})/30)))/12)))*12` };
-  ws.getCell(`J${newTotalRow}`).value = { formula: `(SUM(J${startExp}:J${endExp})/30-INT(SUM(J${startExp}:J${endExp})/30))*30` };
-
-  ws.getCell(`M${newTotalRow}`).value = { formula: `+INT((SUM(N${startExp}:N${endExp})+INT((SUM(O${startExp}:O${endExp})/30)))/12)+M${newSumRow}` };
-  ws.getCell(`N${newTotalRow}`).value = { formula: `(((SUM(N${startExp}:N${endExp})+INT(SUM(O${startExp}:O${endExp})/30))/12)-(INT((SUM(N${startExp}:N${endExp})+INT((SUM(O${startExp}:O${endExp})/30)))/12)))*12` };
-  ws.getCell(`O${newTotalRow}`).value = { formula: `(SUM(O${startExp}:O${endExp})/30-INT(SUM(O${startExp}:O${endExp})/30))*30` };
-
-  // Actualizar fechas y textos de firmas en el pie
-  for (let r = newTotalRow + 1; r <= ws.rowCount; r++) {
+  for (let r = 67; r <= ws.rowCount; r++) {
     const cellVal = String(ws.getRow(r).getCell('A').value || '');
     if (cellVal.includes('Fecha de Expedición')) {
-      ws.getRow(r).getCell('A').value = `Fecha de Expedición: Ver fecha de firma (${new Date().toLocaleDateString('es-CO')})`;
+      ws.getRow(r).getCell('A').value = `Fecha de Expedición: ${fechaExpedicionStr}`;
     } else if (cellVal.includes('Elaborado por')) {
-      const evaluadorTxt = data.evaluador || data.candidato?.evaluador || 'Profesional Universitario DGC';
-      ws.getRow(r).getCell('A').value = `Elaborado por: Sistema de Validación SASGE - ${evaluadorTxt}`;
+      ws.getRow(r).getCell('A').value = 'Elaborado por:';
     } else if (cellVal.includes('Revisado por')) {
-      ws.getRow(r).getCell('A').value = `Revisado por: Dirección de Gestión Corporativa`;
+      ws.getRow(r).getCell('A').value = 'Revisado por:';
     }
   }
 
