@@ -812,7 +812,7 @@ export default function NuevaValidacionScreen() {
     const tipoCorte = fechaTerminacion ? 'TERMINACION_MATERIAS' : (fechaGrado ? 'FECHA_GRADO' : 'NO_CONSTA');
 
     const fIni = cert.fecha_inicio || '';
-    const fFin = cert.fecha_fin || (cert.vinculo_vigente ? new Date().toISOString().slice(0, 10) : fIni);
+    const fFin = cert.fecha_fin || (cert.vinculo_vigente ? (cert.fecha_expedicion || new Date().toISOString().slice(0, 10)) : fIni);
 
     const esPrevio = fIni < fechaCorte;
     const finalizoAntes = fFin < fechaCorte;

@@ -290,7 +290,7 @@ async function generarReporteExcelValidacion(data) {
     row.getCell('B').value = cert.cargo_certificado || 'N/A';
 
     const fIniOriginal = parseFecha(cert.fecha_inicio);
-    const fFin = cert.vinculo_vigente ? new Date() : parseFecha(cert.fecha_fin);
+    const fFin = parseFecha(cert.fecha_fin) || (cert.vinculo_vigente ? (parseFecha(cert.fecha_expedicion) || new Date()) : null);
 
     // Validación de experiencia previa al grado / terminación de materias (Dcto 1083/2015 y Ley 2039/2020)
     const expPrevia = cert.verificacion_experiencia_previa;

@@ -217,7 +217,7 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
     let endDate = parseDate(cert.fecha_fin);
 
     if (cert.vinculo_vigente && !endDate) {
-      endDate = new Date(); // si está vigente se toma la fecha actual
+      endDate = parseDate(cert.fecha_expedicion) || new Date(); // si está vigente sin fecha_fin se toma fecha de expedición o actual
     }
 
     if (!startDate || !endDate) {

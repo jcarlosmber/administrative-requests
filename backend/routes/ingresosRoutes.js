@@ -659,7 +659,10 @@ module.exports = function(pool) {
           experiencia_relacionada: r.experiencia_relacionada_json,
           tiempo_certificado: (() => {
             const dIni = timeCalculatorService.parseDate(r.fecha_inicio);
-            const dFin = r.vinculo_vigente ? new Date() : timeCalculatorService.parseDate(r.fecha_fin);
+            let dFin = timeCalculatorService.parseDate(r.fecha_fin);
+            if (!dFin && r.vinculo_vigente) {
+              dFin = timeCalculatorService.parseDate(r.fecha_expedicion) || new Date();
+            }
             if (dIni && dFin) {
               const cp = timeCalculatorService.calculatePeriod(dIni, dFin);
               return {
@@ -670,7 +673,7 @@ module.exports = function(pool) {
                 metodo_calculo: 'DATEDIF_EXCEL_Y_CONVENCION_30_DIAS'
               };
             }
-            return r.tiempo_certificado_json;
+            return r.tiempo_certificado_json || { anios: 0, meses: 0, dias: 0, meses_totales_aproximados: 0 };
           })(),
           traslapes: r.traslapes_json,
           tiempo_valido: { meses_totales: Number(r.tiempo_valido_meses) },
