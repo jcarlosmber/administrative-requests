@@ -628,14 +628,10 @@ export const ingresosService = {
     if (!res || !res.ok) {
       res = await fetch(`${API_URL}/api/ingresos/validaciones/${validacionId}/certificados/${enc}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      }).catch(() => null);
-    }
-
-    if (!res || !res.ok) {
-      res = await fetch(`${API_URL}/api/ingresos/validaciones/${validacionId}/certificados/${enc}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'X-HTTP-Method-Override': 'DELETE'
+        }
       }).catch(() => null);
     }
 
