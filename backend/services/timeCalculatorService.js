@@ -94,9 +94,84 @@ function mergeIntervals(intervals) {
 }
 
 /**
- * Audita traslapes entre todos los certificados y recalcula tiempos matemáticos.
+ * Obtiene la fecha de corte profesional a partir de la formación académica:
+ * Prioridad 1: Terminación y aprobación de materias / pénsum (Decreto 1083 de 2015)
+ * Prioridad 2: Fecha de grado universitaria (Diploma / Acta de grado)
  */
-function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses = 54) {
+function obtenerFechaCorteProfesional(formacionAcademica) {
+  if (!Array.isArray(formacionAcademica) || formacionAcademica.length === 0) {
+    return null;
+  }
+
+  // Filtrar títulos que habilitan experiencia profesional (Pregrados / Carreras Profesionales)
+  const pregrados = formacionAcademica.filter(f => {
+    const tipo = (f.tipo || '').toUpperCase();
+    const titulo = (f.titulo_obtenido || '').toUpperCase();
+    if (tipo === 'BACHILLER' || tipo === 'TARJETA_PROFESIONAL') return false;
+    return tipo === 'PREGRADO' || 
+           tipo.includes('PROFESIONAL') ||
+           titulo.includes('ABOGAD') || 
+           titulo.includes('PROFESIONAL') || 
+           titulo.includes('INGENIER') || 
+           titulo.includes('ADMINISTRADOR') || 
+           titulo.includes('ECONOMISTA') || 
+           titulo.includes('CONTADOR') || 
+           titulo.includes('PSICOLOG') || 
+           titulo.includes('MEDIC') || 
+           titulo.includes('LICENCIAD');
+  });
+
+  const lista = pregrados.length > 0 ? pregrados : formacionAcademica.filter(f => (f.tipo || '').toUpperCase() !== 'BACHILLER');
+  if (lista.length === 0) return null;
+
+  let mejorFecha = null;
+  let origenCorte = 'FECHA_GRADO';
+  let fechaGradoStr = null;
+  let fechaPensumStr = null;
+  let certificaPensum = false;
+  let tituloCorte = '';
+
+  for (const item of lista) {
+    const pensumDate = parseDate(item.fecha_terminacion_materias || item.fecha_terminacion_pensum);
+    const gradoDate = parseDate(item.fecha_grado || item.fecha_expedicion);
+
+    // Prioridad Decreto 1083/2015: si aportó certificación de materias aprobadas / terminación de pénsum
+    if (pensumDate && (item.certifica_terminacion_materias === true || item.certifica_terminacion_pensum === true)) {
+      if (!mejorFecha || pensumDate < mejorFecha) {
+        mejorFecha = pensumDate;
+        origenCorte = 'TERMINACION_PENSUM';
+        fechaPensumStr = formatDate(pensumDate);
+        certificaPensum = true;
+        tituloCorte = item.titulo_obtenido;
+      }
+    } else if (gradoDate) {
+      if (!mejorFecha || gradoDate < mejorFecha) {
+        mejorFecha = gradoDate;
+        origenCorte = 'FECHA_GRADO';
+        fechaGradoStr = formatDate(gradoDate);
+        tituloCorte = item.titulo_obtenido;
+      }
+    }
+  }
+
+  if (!mejorFecha) return null;
+
+  return {
+    fechaCorte: mejorFecha,
+    fechaCorteStr: formatDate(mejorFecha),
+    origenCorte,
+    fechaGradoStr: fechaGradoStr || formatDate(mejorFecha),
+    fechaPensumStr,
+    certificaPensum,
+    tituloCorte
+  };
+}
+
+/**
+ * Audita traslapes entre todos los certificados y recalcula tiempos matemáticos
+ * aplicando la regla del Decreto 1083 de 2015, Ley 2039 de 2020 y Decreto 952 de 2021.
+ */
+function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses = 54, formacionAcademica = []) {
   const processedCerts = [];
   const intervalsRelacionados = [];
   let sumaBrutaMesesRelacionados = 0;
@@ -104,11 +179,15 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
   let requiereRevisionGlobal = false;
   const razonesRevision = [];
 
-  // Paso 1: Parsear fechas y calcular periodos individuales
+  // Obtener fecha de corte profesional
+  const infoCorte = obtenerFechaCorteProfesional(formacionAcademica);
+
+  // Paso 1: Parsear fechas, auditar corte profesional y calcular periodos individuales
   for (let i = 0; i < certificados.length; i++) {
     const cert = { ...certificados[i] };
     const certId = cert.id_certificado || `CERT-${i + 1}`;
     cert.id_certificado = certId;
+    cert.observaciones = cert.observaciones || [];
 
     const startDate = parseDate(cert.fecha_inicio);
     let endDate = parseDate(cert.fecha_fin);
@@ -119,7 +198,6 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
 
     if (!startDate || !endDate) {
       cert.fecha_incompleta = true;
-      cert.observaciones = cert.observaciones || [];
       cert.observaciones.push('Fechas incompletas o no constan en el documento.');
       requiereRevisionGlobal = true;
       razonesRevision.push(`Certificado ${certId}: Fecha de inicio o fin incompleta/no legible.`);
@@ -151,16 +229,110 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
 
     const esRelacionada = cert.experiencia_relacionada?.resultado === 'RELACIONADA' || cert.clasificacion_experiencia === 'RELACIONADA';
 
-    if (esRelacionada) {
-      sumaBrutaMesesRelacionados += calc.meses_totales;
-      intervalsRelacionados.push({
-        certId,
-        start: startDate,
-        end: endDate,
-        meses: calc.meses_totales
-      });
-    } else {
+    // -------------------------------------------------------------------------
+    // VALIDACIÓN DE EXPERIENCIA PROFESIONAL PREVIA AL GRADO (D. 1083/15 y L. 2039/20)
+    // -------------------------------------------------------------------------
+    let fechaInicioEfectiva = startDate;
+    let esPreviaAlGrado = false;
+    let cumpleLey2039 = false;
+    let modalidadLey2039 = 'NINGUNA_EXPERIENCIA_REGULAR';
+    let decisionComputo = 'POSTERIOR_AL_GRADO';
+
+    if (infoCorte && infoCorte.fechaCorte) {
+      if (startDate.getTime() < infoCorte.fechaCorte.getTime()) {
+        esPreviaAlGrado = true;
+
+        // Comprobar si cumple modalidades de Ley 2039 de 2020 y Decreto 952 de 2021
+        const textoBuscar = `${cert.cargo_certificado || ''} ${cert.tipo_vinculo || ''} ${(cert.funciones_certificadas || []).map(f => f.funcion || '').join(' ')}`.toUpperCase();
+        const esPractica = textoBuscar.includes('PRACTICA') || textoBuscar.includes('PRÁCTICA');
+        const esPasantia = textoBuscar.includes('PASANTIA') || textoBuscar.includes('PASANTÍA');
+        const esJudicatura = textoBuscar.includes('JUDICATURA') || textoBuscar.includes('JUDICANTE');
+        const esMonitoria = textoBuscar.includes('MONITORIA') || textoBuscar.includes('MONITORÍA') || textoBuscar.includes('MONITOR');
+        const esAprendizaje = textoBuscar.includes('APRENDIZAJE') || textoBuscar.includes('CONTRATO DE APRENDIZAJE');
+        const esInvestigacion = textoBuscar.includes('INVESTIGADOR') || textoBuscar.includes('AUXILIAR DE INVESTIGACION');
+
+        const esModalidadValida = cert.cumple_excepcion_ley_2039 === true || esPractica || esPasantia || esJudicatura || esMonitoria || esAprendizaje || esInvestigacion;
+        const esRelacionadaConProfesion = cert.relacionada_con_profesion !== false && esRelacionada;
+
+        if (esModalidadValida && esRelacionadaConProfesion) {
+          cumpleLey2039 = true;
+          modalidadLey2039 = esJudicatura ? 'JUDICATURA' : esPractica ? 'PRACTICA_LABORAL' : esPasantia ? 'PASANTIA' : esMonitoria ? 'MONITORIA' : esInvestigacion ? 'INVESTIGACION' : 'CONTRATO_APRENDIZAJE';
+          decisionComputo = 'COMPUTABLE_TOTAL_LEY_2039';
+          cert.observaciones.push(`Experiencia previa al grado reconocida conforme a Ley 2039 de 2020 y Decreto 952 de 2021 (${modalidadLey2039}).`);
+        } else {
+          // NO cumple excepción Ley 2039 de 2020 -> No computable como profesional
+          cumpleLey2039 = false;
+          if (endDate.getTime() <= infoCorte.fechaCorte.getTime()) {
+            // Periodo completamente previo al corte -> 0 meses computables
+            decisionComputo = 'NO_COMPUTABLE_PREVIA_AL_GRADO';
+            cert.clasificacion_experiencia = 'NO_PROFESIONAL';
+            cert.es_previa_no_computable = true;
+            cert.observaciones.push(`Periodo previo al grado / terminación de pénsum (${infoCorte.fechaCorteStr}). No computable como experiencia profesional conforme al Decreto 1083 de 2015 al no corresponder a modalidades de la Ley 2039 de 2020.`);
+            cert.tiempo_valido = { dias_totales: 0, meses_totales: 0, anios: 0, meses: 0, dias: 0, valido: true };
+          } else {
+            // Inició antes y terminó después -> Se excluye tramo previo y se computa desde fechaCorte
+            decisionComputo = 'COMPUTABLE_PARCIAL_DESDE_CORTE';
+            fechaInicioEfectiva = infoCorte.fechaCorte;
+            cert._startDate = fechaInicioEfectiva; // ajustar inicio para traslapes y sumas
+            const periodoExcluido = calculatePeriod(startDate, new Date(infoCorte.fechaCorte.getTime() - 86400000));
+            cert.observaciones.push(`Se excluyen ${periodoExcluido.meses_totales} meses previos al grado / terminación de materias (${infoCorte.fechaCorteStr}) según Decreto 1083 de 2015. Se computa a partir de ${infoCorte.fechaCorteStr}.`);
+          }
+        }
+      }
+    }
+
+    // Registro estructurado de la validación de experiencia previa
+    cert.verificacion_experiencia_previa = {
+      es_previa_al_grado: esPreviaAlGrado,
+      fecha_corte_profesional: infoCorte ? infoCorte.fechaCorteStr : 'NO APLICA',
+      origen_corte: infoCorte ? infoCorte.origenCorte : 'NO CONSTA',
+      terminacion_pensum_verificada: infoCorte ? infoCorte.certificaPensum : false,
+      terminacion_pensum_detalle: infoCorte?.certificaPensum 
+        ? `Certificación universitaria con fecha de terminación y aprobación de materias: ${infoCorte.fechaPensumStr}`
+        : (infoCorte?.fechaGradoStr ? `Fecha de grado según diploma/acta: ${infoCorte.fechaGradoStr} (sin certificación de materias)` : 'No consta fecha de corte profesional'),
+      relacion_profesion_verificada: esRelacionada,
+      relacion_profesion_detalle: esRelacionada
+        ? 'Las funciones certificadas corresponden y guardan relación con la disciplina del cargo.'
+        : 'Las funciones certificadas no corresponden al perfil profesional exigido.',
+      tipo_experiencia_previa_ley2039: cumpleLey2039,
+      modalidad_ley2039: modalidadLey2039,
+      tipo_experiencia_previa_detalle: cumpleLey2039
+        ? `Modalidad formativa acreditada conforme a Ley 2039 de 2020 y Decreto 952 de 2021 (${modalidadLey2039}).`
+        : (esPreviaAlGrado ? 'Experiencia laboral ordinaria sin constancia de práctica, pasantía ni judicatura según Ley 2039 de 2020.' : 'Experiencia posterior a la fecha de grado/pénsum.'),
+      decision_computo: decisionComputo,
+      fecha_inicio_computable: formatDate(fechaInicioEfectiva)
+    };
+
+    // Calcular meses válidos y sumatorias
+    if (decisionComputo === 'NO_COMPUTABLE_PREVIA_AL_GRADO') {
       sumaMesesNoRelacionados += calc.meses_totales;
+    } else if (decisionComputo === 'COMPUTABLE_PARCIAL_DESDE_CORTE') {
+      const calcValido = calculatePeriod(fechaInicioEfectiva, endDate);
+      cert.tiempo_valido = { ...calcValido };
+      if (esRelacionada) {
+        sumaBrutaMesesRelacionados += calcValido.meses_totales;
+        intervalsRelacionados.push({
+          certId,
+          start: fechaInicioEfectiva,
+          end: endDate,
+          meses: calcValido.meses_totales
+        });
+      } else {
+        sumaMesesNoRelacionados += calcValido.meses_totales;
+      }
+    } else {
+      cert.tiempo_valido = { ...calc };
+      if (esRelacionada) {
+        sumaBrutaMesesRelacionados += calc.meses_totales;
+        intervalsRelacionados.push({
+          certId,
+          start: startDate,
+          end: endDate,
+          meses: calc.meses_totales
+        });
+      } else {
+        sumaMesesNoRelacionados += calc.meses_totales;
+      }
     }
 
     if (cert.documento?.estado === 'INCOMPLETO' || !cert.documento?.firma_visible || !cert.documento?.documento_legible) {

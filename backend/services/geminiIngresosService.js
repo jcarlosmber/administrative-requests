@@ -47,9 +47,24 @@ CRITERIO DE COMPARACIÓN FUNCIONAL:
 Para cada función certificada:
 - Identifica la acción principal, el área de conocimiento y el nivel de responsabilidad.
 - Busca correspondencia directa o equivalente con una función oficial del cargo.
-- Clasifica la coincidencia como: "DIRECTA", "PARCIAL", "INDIRECTA" o "SIN_RELACIÓN".
 - Justifica la clasificación y cita la evidencia textual.
 - Si no existe correspondencia funcional suficiente, NO clasifiques como RELACIONADA.
+
+NORMATIVA DE EXPERIENCIA PROFESIONAL PREVIA AL GRADO:
+1. Decreto 1083 de 2015 (Art. 2.2.2.3.7):
+   - Como regla general, la experiencia profesional se contabiliza a partir de la terminación y aprobación del pénsum académico (todas las materias), SIEMPRE QUE conste certificación oficial expedida por la institución educativa que lo acredite expresamente.
+   - Si no consta dicha certificación de terminación de pénsum, la experiencia profesional se contabiliza OBLIGATORIAMENTE a partir de la fecha de grado (obtención del título profesional).
+   - Cualquier certificado de experiencia laboral cuya fecha sea anterior al grado o a la terminación de materias no puede computar como experiencia profesional, SALVO que califique en las excepciones de la Ley 2039 de 2020.
+2. Ley 2039 de 2020 y Decreto 952 de 2021:
+   - Contemplan el reconocimiento de determinadas experiencias previas adquiridas antes de culminar el pénsum, ÚNICAMENTE bajo las siguientes modalidades:
+     * Prácticas laborales (Ley 2043 de 2020).
+     * Pasantías universitarias.
+     * Judicaturas (en Derecho).
+     * Monitorías académicas.
+     * Contratos de aprendizaje (SENA o universitarios vinculados a la carrera).
+     * Grupos o semilleros de investigación formalmente reconocidos por MinCiencias.
+   - CONDICIÓN INDISPENSABLE: Las funciones desarrolladas en dicha práctica o modalidad previa DEBEN guardar estricta relación directa con la profesión o disciplina requerida para el empleo y con el Manual de Funciones del cargo evaluado.
+   - Si una experiencia previa al grado es un empleo común o contrato ordinario que NO corresponde a práctica, pasantía, judicatura o monitoría, NO es computable como experiencia profesional.
 
 VERIFICACIÓN FORMAL OBLIGATORIA (7 CHECKS BÁSICOS POR CERTIFICADO LABORAL):
 Para cada documento laboral analizado, evalúa de manera estricta y fidedigna:
@@ -67,16 +82,15 @@ A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bac
    - ¡REGLA CRÍTICA!: NUNCA clasifiques un título de Bachiller, Técnico, Tecnólogo, Pregrado, Posgrado ni Tarjeta Profesional en "documentos_no_aplican". El formato oficial institucional FT-318 exige registrar explícitamente:
      1. TÍTULO DE BACHILLER (Institución y Fecha de Grado)
      2. TÍTULO DE TÉCNICO / TECNÓLOGO (Institución y Fecha de Grado)
-     3. TÍTULO DE PREGRADO (Institución y Fecha de Grado)
+     3. TÍTULO DE PREGRADO (Institución, Fecha de Grado y Fecha de Terminación de Materias si aporta certificación)
      4. TÍTULOS DE POSGRADO (Institución y Fecha de Grado)
      5. TARJETA PROFESIONAL (Número de Registro y Fecha de Expedición)
-   - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL"), título obtenido, institución educativa y fecha de grado o expedición.
+   - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL"), título obtenido, institución educativa, fecha de grado, si aporta certificado de terminación de materias y la fecha de terminación.
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
-   - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos y cotejo funcional.
+   - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos, cotejo funcional y verifica si corresponde a modalidades de la Ley 2039 de 2020 si ocurrió previo al grado.
 C. DOCUMENTOS QUE NO APLICAN AL CARGO:
-   - ÚNICAMENTE cursos de capacitación corta, seminarios, diplomados de educación continua o informal (de 20, 40 o 120 horas), certificados ilegibles o sin firma, o certificados de funciones totalmente ajenas al sector o sin vínculo laboral válido.
-   - ¡NO pongas aquí diplomas de bachiller, actas de grado de bachiller ni títulos universitarios!
-   - Para los que verdaderamente no apliquen, explica claramente por qué no aplican como experiencia laboral computable.
+   - ÚNICAMENTE cursos de capacitación corta, seminarios, diplomados de educación continua o informal (de 20, 40 o 120 horas), certificados ilegibles o sin firma, o certificados sin vínculo laboral válido.
+   - ¡NO pongas aquí diplomas de bachiller, actas de grado ni títulos universitarios!
 `;
 
 /**
@@ -137,6 +151,8 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
       "titulo_obtenido": "Título de bachiller, técnico, profesional, posgrado o número de tarjeta profesional",
       "institucion": "Colegio, Universidad o entidad expedidora (ej. Instituto Técnico, Universidad Nacional, Consejo Superior de la Judicatura)",
       "fecha_grado": "YYYY-MM-DD o NO CONSTA",
+      "certifica_terminacion_materias": false,
+      "fecha_terminacion_materias": "YYYY-MM-DD o NO CONSTA",
       "numero_tarjeta_o_registro": "Número de tarjeta si aplica o NO CONSTA",
       "cumple_requisito_cargo": true,
       "justificacion": "Explicación de por qué cumple o no con los requisitos de formación del cargo"
@@ -152,7 +168,7 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
       "fecha_expedicion": "YYYY-MM-DD o NO CONSTA",
       "firmante": "Nombre de quien firma o NO CONSTA",
       "cargo_firmante": "Cargo de quien firma o NO CONSTA",
-      "tipo_vinculo": "Tipo de vinculación (ej. Contrato de prestación de servicios, Carrera, Provisionalidad)",
+      "tipo_vinculo": "Tipo de vinculación (ej. Contrato de prestación de servicios, Carrera, Práctica laboral, Judicatura)",
       "cargo_certificado": "Cargo o denominación del contrato",
       "codigo_cargo": "Código si consta o NO CONSTA",
       "grado_cargo": "Grado si consta o NO CONSTA",
@@ -161,13 +177,15 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
       "fecha_inicio": "YYYY-MM-DD exacta",
       "fecha_fin": "YYYY-MM-DD exacta (o NO CONSTA si vigente)",
       "vinculo_vigente": false,
+      "cumple_excepcion_ley_2039": false,
+      "modalidad_ley_2039": "PRACTICA_LABORAL | PASANTIA | JUDICATURA | MONITORIA | CONTRATO_APRENDIZAJE | INVESTIGACION | NINGUNA",
+      "justificacion_ley_2039": "Si aplica excepción de Ley 2039/2020 indicar modalidad y concordancia con la profesión exigida",
       "funciones_certificadas": [
         {
           "funcion": "Texto de la función certificada",
           "evidencia_textual": "Cita textual del documento entre comillas"
         }
       ],
-      "experiencia_profesional": true,
       "clasificacion_experiencia": "RELACIONADA | NO_RELACIONADA | PROFESIONAL_NO_RELACIONADA | NO_PROFESIONAL | NO_DETERMINABLE",
       "experiencia_relacionada": {
         "resultado": "RELACIONADA | NO_RELACIONADA | REQUIERE_REVISION",
@@ -368,10 +386,11 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
 
   // REGLA TÉCNICA IMPORTANTE:
   // No dejar que Gemini sea el único responsable del cálculo de fechas ni de la exclusión de traslapes.
-  // Pasamos los certificados extraídos por nuestro motor matemático determinista:
+  // Pasamos los certificados extraídos por nuestro motor matemático determinista y la formación académica para la validación de experiencia previa al grado:
   const auditResult = timeCalculatorService.auditCertificatesAndCalculateTotals(
     parsedJson.certificados || [],
-    cargoData.requisito_experiencia_meses || 54
+    cargoData.requisito_experiencia_meses || 54,
+    formacionAcademica
   );
 
   // Si algún certificado analizado resultó clasificado como NO_RELACIONADA o NO_PROFESIONAL,

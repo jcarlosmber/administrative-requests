@@ -67,11 +67,44 @@ export interface VerificacionFormalCertificado {
   mecanismos_contacto_cuales?: string;
 }
 
+export interface VerificacionExperienciaPrevia {
+  es_previo_al_corte: boolean;
+  corte_referencia: {
+    tipo: 'TERMINACION_MATERIAS' | 'FECHA_GRADO' | 'NO_CONSTA';
+    fecha: string;
+    titulo_relacionado?: string;
+    sustento_normativo: string;
+  };
+  check_terminacion_pensum: {
+    acredita_terminacion_materias: boolean;
+    fecha_terminacion: string;
+    observacion: string;
+  };
+  check_relacion_profesion: {
+    cumple: boolean;
+    disciplina_o_profesion_exigida: string;
+    observacion: string;
+  };
+  check_modalidad_ley_2039: {
+    aplica_excepcion: boolean;
+    modalidad: string;
+    observacion: string;
+  };
+  tipo_resultado: 'COMPUTABLE_TOTAL_POSTERIOR' | 'COMPUTABLE_TOTAL_LEY_2039' | 'COMPUTABLE_PARCIAL_DESDE_CORTE' | 'NO_COMPUTABLE_PREVIA_AL_GRADO';
+  conclusion_juridica: string;
+  fecha_inicio_computable?: string;
+  dias_excluidos_previos?: number;
+}
+
 export interface CertificadoAnalizado {
   id?: string;
   id_certificado: string;
   nombre_archivo?: string;
   verificacion_formal?: VerificacionFormalCertificado;
+  verificacion_experiencia_previa?: VerificacionExperienciaPrevia;
+  cumple_excepcion_ley_2039?: boolean;
+  modalidad_ley_2039?: string;
+  justificacion_ley_2039?: string;
   entidad: string;
   nit_entidad?: string;
   ciudad_expedicion?: string;
@@ -135,6 +168,8 @@ export interface FormacionAcademicaItem {
   titulo_obtenido: string;
   institucion: string;
   fecha_grado?: string;
+  certifica_terminacion_materias?: boolean;
+  fecha_terminacion_materias?: string;
   numero_tarjeta_o_registro?: string;
   cumple_requisito_cargo: boolean;
   justificacion: string;

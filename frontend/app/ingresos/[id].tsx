@@ -42,6 +42,8 @@ export default function DetalleValidacionScreen() {
   const [formTitulo, setFormTitulo] = useState('');
   const [formInstitucion, setFormInstitucion] = useState('');
   const [formFechaGrado, setFormFechaGrado] = useState('');
+  const [formCertificaMaterias, setFormCertificaMaterias] = useState(false);
+  const [formFechaMaterias, setFormFechaMaterias] = useState('');
   const [formTarjeta, setFormTarjeta] = useState('');
   const [formCumple, setFormCumple] = useState(true);
   const [formJustificacion, setFormJustificacion] = useState('');
@@ -88,6 +90,146 @@ export default function DetalleValidacionScreen() {
     }
   };
 
+  // Helper para validación de experiencia previa al grado según Decreto 1083/2015 y Ley 2039/2020
+  const calcularExpPreviaFallback = (cert: CertificadoAnalizado, formacion?: FormacionAcademicaItem[]) => {
+    const pregrado = (formacion || []).find(f => {
+      const t = (f.tipo || '').toUpperCase();
+      const tit = (f.titulo_obtenido || '').toUpperCase();
+      return t === 'PREGRADO' || (!t.includes('BACHILLER') && !t.includes('TECNIC') && !t.includes('TARJETA') && !t.includes('ESPECIALIZ') && !t.includes('MAESTR') && !t.includes('DOCTOR') && (tit.includes('ABOGAD') || tit.includes('INGENIER') || tit.includes('LICENCIAD') || tit.includes('ADMINISTRAD') || tit.includes('ECONOM') || tit.includes('PROFESIONAL')));
+    });
+
+    const fechaTerminacion = pregrado?.certifica_terminacion_materias && pregrado?.fecha_terminacion_materias && pregrado.fecha_terminacion_materias !== 'NO CONSTA' ? pregrado.fecha_terminacion_materias : null;
+    const fechaGrado = pregrado?.fecha_grado && pregrado.fecha_grado !== 'NO CONSTA' ? pregrado.fecha_grado : null;
+    const fechaCorte = fechaTerminacion || fechaGrado || '9999-12-31';
+    const tipoCorte = fechaTerminacion ? 'TERMINACION_MATERIAS' : (fechaGrado ? 'FECHA_GRADO' : 'NO_CONSTA');
+
+    const fIni = cert.fecha_inicio || '';
+    const fFin = cert.fecha_fin || (cert.vinculo_vigente ? new Date().toISOString().slice(0, 10) : fIni);
+
+    const esPrevio = fIni < fechaCorte;
+    const finalizoAntes = fFin < fechaCorte;
+
+    const esLey2039 = Boolean(
+      cert.cumple_excepcion_ley_2039 ||
+      (cert.modalidad_ley_2039 && cert.modalidad_ley_2039 !== 'NINGUNA') ||
+      (cert.tipo_vinculo && /PRACTICA|PASANTIA|JUDICATURA|MONITORIA|APRENDIZAJE|INVESTIGACION/i.test(cert.tipo_vinculo)) ||
+      (cert.cargo_certificado && /PRACTICANTE|PASANTE|JUDICANTE|MONITOR/i.test(cert.cargo_certificado))
+    );
+
+    const esRel = cert.clasificacion_experiencia === 'RELACIONADA';
+
+    if (!esPrevio) {
+      return {
+        es_previo_al_corte: false,
+        corte_referencia: {
+          tipo: tipoCorte,
+          fecha: fechaCorte,
+          sustento_normativo: tipoCorte === 'TERMINACION_MATERIAS' ? 'Certificación de terminación y aprobación de materias (Decreto 1083 de 2015)' : 'Fecha de obtención del título profesional (Grado)'
+        },
+        check_terminacion_pensum: {
+          acredita_terminacion_materias: Boolean(fechaTerminacion),
+          fecha_terminacion: fechaTerminacion || 'No consta (rige fecha de grado)',
+          observacion: tipoCorte === 'TERMINACION_MATERIAS' ? `Terminación de materias acreditada el ${fechaTerminacion}.` : `Rige desde la fecha de grado: ${fechaGrado || 'NO CONSTA'}.`
+        },
+        check_relacion_profesion: {
+          cumple: esRel,
+          disciplina_o_profesion_exigida: 'Disciplina académica requerida por el empleo',
+          observacion: esRel ? 'Funciones directamente afines con las competencias del empleo.' : 'Funciones no relacionadas con el empleo.'
+        },
+        check_modalidad_ley_2039: {
+          aplica_excepcion: false,
+          modalidad: 'NO_APLICA',
+          observacion: 'No requerida: Adquirida con posterioridad al título profesional / terminación del pénsum.'
+        },
+        tipo_resultado: 'COMPUTABLE_TOTAL_POSTERIOR' as const,
+        conclusion_juridica: 'Experiencia posterior a la fecha de corte profesional. Computa en su totalidad según las reglas ordinarias de experiencia profesional.'
+      };
+    }
+
+    if (esLey2039 && esRel) {
+      return {
+        es_previo_al_corte: true,
+        corte_referencia: {
+          tipo: tipoCorte,
+          fecha: fechaCorte,
+          sustento_normativo: 'Ley 2039 de 2020 y Decreto 952 de 2021'
+        },
+        check_terminacion_pensum: {
+          acredita_terminacion_materias: Boolean(fechaTerminacion),
+          fecha_terminacion: fechaTerminacion || 'No aplica (adquirida previo a culminación)',
+          observacion: 'Experiencia formativa previa adquirida válidamente antes de culminar el pénsum.'
+        },
+        check_relacion_profesion: {
+          cumple: true,
+          disciplina_o_profesion_exigida: 'Disciplina académica del empleo',
+          observacion: 'Las funciones de la práctica o modalidad previa guardan relación directa con el empleo.'
+        },
+        check_modalidad_ley_2039: {
+          aplica_excepcion: true,
+          modalidad: cert.modalidad_ley_2039 || cert.tipo_vinculo || 'Práctica / Pasantía laboral',
+          observacion: 'Modalidad de experiencia previa reconocida formalmente bajo el régimen de la Ley 2039 de 2020.'
+        },
+        tipo_resultado: 'COMPUTABLE_TOTAL_LEY_2039' as const,
+        conclusion_juridica: 'Reconocida como experiencia previa válida en virtud de la Ley 2039 de 2020 y Decreto 952 de 2021.'
+      };
+    }
+
+    if (!finalizoAntes) {
+      return {
+        es_previo_al_corte: true,
+        corte_referencia: {
+          tipo: tipoCorte,
+          fecha: fechaCorte,
+          sustento_normativo: 'Decreto 1083 de 2015 Art. 2.2.2.3.7'
+        },
+        check_terminacion_pensum: {
+          acredita_terminacion_materias: Boolean(fechaTerminacion),
+          fecha_terminacion: fechaTerminacion || 'No aporta',
+          observacion: `Fecha de corte profesional: ${fechaCorte}.`
+        },
+        check_relacion_profesion: {
+          cumple: esRel,
+          disciplina_o_profesion_exigida: 'Disciplina del empleo',
+          observacion: esRel ? 'Funciones afines al cargo.' : 'Funciones no relacionadas.'
+        },
+        check_modalidad_ley_2039: {
+          aplica_excepcion: false,
+          modalidad: 'NINGUNA',
+          observacion: 'No corresponde a modalidad de Ley 2039/2020 en el tramo anterior a la graduación.'
+        },
+        tipo_resultado: 'COMPUTABLE_PARCIAL_DESDE_CORTE' as const,
+        fecha_inicio_computable: fechaCorte,
+        conclusion_juridica: `Inició el ${fIni} antes de la terminación de materias/grado (${fechaCorte}). El tramo previo no es computable como experiencia profesional. Se computa exclusivamente a partir del ${fechaCorte}.`
+      };
+    }
+
+    return {
+      es_previo_al_corte: true,
+      corte_referencia: {
+        tipo: tipoCorte,
+        fecha: fechaCorte,
+        sustento_normativo: 'Decreto 1083 de 2015 Art. 2.2.2.3.7'
+      },
+      check_terminacion_pensum: {
+        acredita_terminacion_materias: Boolean(fechaTerminacion),
+        fecha_terminacion: fechaTerminacion || 'No aporta',
+        observacion: `Culminó antes del corte profesional (${fechaCorte}).`
+      },
+      check_relacion_profesion: {
+        cumple: esRel,
+        disciplina_o_profesion_exigida: 'Disciplina del empleo',
+        observacion: esRel ? 'Funciones afines' : 'Sin relación'
+      },
+      check_modalidad_ley_2039: {
+        aplica_excepcion: false,
+        modalidad: 'NINGUNA',
+        observacion: 'No corresponde a práctica laboral, pasantía ni judicatura bajo la Ley 2039 de 2020.'
+      },
+      tipo_resultado: 'NO_COMPUTABLE_PREVIA_AL_GRADO' as const,
+      conclusion_juridica: 'NO COMPUTABLE: Experiencia laboral finalizada con anterioridad a la fecha de grado / terminación del pénsum académico (Decreto 1083 de 2015). No reúne las condiciones de la Ley 2039 de 2020.'
+    };
+  };
+
   useEffect(() => {
     if (id) {
       cargarValidacion(id);
@@ -116,6 +258,8 @@ export default function DetalleValidacionScreen() {
     setFormTitulo('');
     setFormInstitucion('');
     setFormFechaGrado('');
+    setFormCertificaMaterias(false);
+    setFormFechaMaterias('');
     setFormTarjeta('');
     setFormCumple(true);
     setFormJustificacion('');
@@ -130,6 +274,8 @@ export default function DetalleValidacionScreen() {
     setFormTitulo(item.titulo_obtenido || '');
     setFormInstitucion(item.institucion || '');
     setFormFechaGrado(item.fecha_grado || '');
+    setFormCertificaMaterias(Boolean(item.certifica_terminacion_materias));
+    setFormFechaMaterias(item.fecha_terminacion_materias || '');
     setFormTarjeta(item.numero_tarjeta_o_registro || '');
     setFormCumple(item.cumple_requisito_cargo !== false);
     setFormJustificacion(item.justificacion || '');
@@ -151,6 +297,8 @@ export default function DetalleValidacionScreen() {
       titulo_obtenido: formTitulo.trim(),
       institucion: formInstitucion.trim(),
       fecha_grado: formFechaGrado.trim() || 'NO CONSTA',
+      certifica_terminacion_materias: formTipo === 'PREGRADO' ? formCertificaMaterias : undefined,
+      fecha_terminacion_materias: (formTipo === 'PREGRADO' && formCertificaMaterias) ? (formFechaMaterias.trim() || undefined) : undefined,
       numero_tarjeta_o_registro: formTarjeta.trim() || undefined,
       cumple_requisito_cargo: formCumple,
       justificacion: formJustificacion.trim()
@@ -1071,6 +1219,186 @@ export default function DetalleValidacionScreen() {
                     </View>
                   );
                 })()}
+
+                {/* 2. VALIDACIÓN DE EXPERIENCIA PREVIA AL GRADO (DECRETO 1083 DE 2015 Y LEY 2039 DE 2020) */}
+                {(() => {
+                  const vep = c.verificacion_experiencia_previa || calcularExpPreviaFallback(c, titulos);
+                  if (!vep) return null;
+
+                  const res = vep.tipo_resultado;
+                  const esPosterior = res === 'COMPUTABLE_TOTAL_POSTERIOR';
+                  const esLey2039 = res === 'COMPUTABLE_TOTAL_LEY_2039';
+                  const esParcial = res === 'COMPUTABLE_PARCIAL_DESDE_CORTE';
+                  const esNoComputable = res === 'NO_COMPUTABLE_PREVIA_AL_GRADO';
+
+                  let badgeBg = '#DCFCE7';
+                  let badgeBorder = '#BBF7D0';
+                  let badgeColor = '#166534';
+                  let badgeTexto = '✓ Experiencia posterior al grado (Computable)';
+
+                  if (esLey2039) {
+                    badgeBg = '#DBEAFE';
+                    badgeBorder = '#BFDBFE';
+                    badgeColor = '#1E40AF';
+                    badgeTexto = '✓ Práctica / Modalidad Ley 2039/2020 (Computable)';
+                  } else if (esParcial) {
+                    badgeBg = '#FEF3C7';
+                    badgeBorder = '#FDE68A';
+                    badgeColor = '#92400E';
+                    badgeTexto = '⚠️ Tramo previo excluido - Computable desde corte';
+                  } else if (esNoComputable) {
+                    badgeBg = '#FEE2E2';
+                    badgeBorder = '#FECACA';
+                    badgeColor = '#991B1B';
+                    badgeTexto = '🚫 No computable como profesional (Decreto 1083/2015)';
+                  }
+
+                  const check1 = vep.check_terminacion_pensum;
+                  const check2 = vep.check_relacion_profesion;
+                  const check3 = vep.check_modalidad_ley_2039;
+
+                  return (
+                    <View
+                      style={{
+                        marginTop: 14,
+                        backgroundColor: esNoComputable ? '#FFF5F5' : '#F8FAFC',
+                        borderRadius: 10,
+                        padding: 14,
+                        borderWidth: 1,
+                        borderColor: esNoComputable ? '#FECACA' : '#E2E8F0'
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="school-outline" size={18} color="#1E40AF" />
+                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                            2. Validación previa al grado (Dcto 1083/2015 y Ley 2039/2020)
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: badgeBg,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: badgeBorder
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: badgeColor }}>
+                            {badgeTexto}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ gap: 8 }}>
+                        {/* Check 1: Terminación del pénsum */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            backgroundColor: '#FFFFFF',
+                            padding: 8,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: check1?.acredita_terminacion_materias ? '#BBF7D0' : '#E2E8F0'
+                          }}
+                        >
+                          <Ionicons
+                            name={check1?.acredita_terminacion_materias ? 'checkmark-circle' : 'information-circle'}
+                            size={18}
+                            color={check1?.acredita_terminacion_materias ? '#16A34A' : '#64748B'}
+                            style={{ marginTop: 1 }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B', lineHeight: 17 }}>
+                              1. Terminación del pénsum académico (Decreto 1083 de 2015)
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                              {check1?.observacion || `Corte profesional: ${vep.corte_referencia?.fecha || 'NO CONSTA'} (${vep.corte_referencia?.sustento_normativo || 'Fecha de grado'})`}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Check 2: Relación con la profesión */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            backgroundColor: '#FFFFFF',
+                            padding: 8,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: check2?.cumple ? '#BBF7D0' : '#FECACA'
+                          }}
+                        >
+                          <Ionicons
+                            name={check2?.cumple ? 'checkmark-circle' : 'close-circle'}
+                            size={18}
+                            color={check2?.cumple ? '#16A34A' : '#DC2626'}
+                            style={{ marginTop: 1 }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B', lineHeight: 17 }}>
+                              2. Relación con la profesión o disciplina exigida
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                              {check2?.observacion || (c.clasificacion_experiencia === 'RELACIONADA' ? 'Funciones afines con la disciplina y empleo evaluado' : 'Funciones no relacionadas con la disciplina')}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Check 3: Tipo de experiencia previa (Ley 2039/2020) */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            backgroundColor: '#FFFFFF',
+                            padding: 8,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: esPosterior ? '#E2E8F0' : (check3?.aplica_excepcion ? '#BFDBFE' : '#FECACA')
+                          }}
+                        >
+                          <Ionicons
+                            name={esPosterior ? 'checkmark-circle' : (check3?.aplica_excepcion ? 'checkmark-circle' : 'close-circle')}
+                            size={18}
+                            color={esPosterior ? '#16A34A' : (check3?.aplica_excepcion ? '#2563EB' : '#DC2626')}
+                            style={{ marginTop: 1 }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B', lineHeight: 17 }}>
+                              3. Modalidad de experiencia previa (Ley 2039/2020 y Dcto 952/2021)
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                              {check3?.observacion || (esPosterior ? 'No requerida: Adquirida con posterioridad al título profesional / terminación de materias.' : 'No califica en modalidades de práctica, pasantía, judicatura o monitoría de la Ley 2039/2020.')}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Conclusión Jurídica */}
+                      <View
+                        style={{
+                          marginTop: 10,
+                          padding: 10,
+                          backgroundColor: esNoComputable ? '#FEE2E2' : '#EFF6FF',
+                          borderRadius: 6,
+                          borderLeftWidth: 3,
+                          borderLeftColor: esNoComputable ? '#DC2626' : '#2563EB'
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, color: esNoComputable ? '#7F1D1D' : '#1E3A8A', lineHeight: 16 }}>
+                          <Text style={{ fontWeight: '700' }}>Conclusión normativa: </Text>
+                          {vep.conclusion_juridica}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })()}
               </View>
             );
           })}
@@ -1384,6 +1712,81 @@ export default function DetalleValidacionScreen() {
                   />
                 </View>
               </View>
+
+              {/* Decreto 1083 de 2015: Terminación de Pénsum / Materias (Solo Pregrado) */}
+              {formTipo === 'PREGRADO' && (
+                <View
+                  style={{
+                    backgroundColor: '#EFF6FF',
+                    borderRadius: 8,
+                    padding: 12,
+                    borderWidth: 1,
+                    borderColor: '#BFDBFE',
+                    gap: 10
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="school" size={16} color="#1E40AF" />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>
+                      Decreto 1083 de 2015 - Terminación de Pénsum Académico
+                    </Text>
+                  </View>
+
+                  <Text style={{ fontSize: 11, color: '#1E3A8A', lineHeight: 15 }}>
+                    La experiencia profesional se contabiliza desde la terminación y aprobación del pénsum académico cuando medie certificación de la institución educativa. De lo contrario, se computa a partir de la fecha de grado.
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => setFormCertificaMaterias(!formCertificaMaterias)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: formCertificaMaterias ? '#DBEAFE' : '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: formCertificaMaterias ? '#2563EB' : '#CBD5E1',
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6
+                      }}
+                    >
+                      <Ionicons
+                        name={formCertificaMaterias ? 'checkbox' : 'square-outline'}
+                        size={16}
+                        color={formCertificaMaterias ? '#1D4ED8' : '#64748B'}
+                      />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: formCertificaMaterias ? '#1E40AF' : '#475569' }}>
+                        Aporta certificación de terminación de materias
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {formCertificaMaterias && (
+                    <View>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF', marginBottom: 4 }}>
+                        Fecha de Terminación y Aprobación de Materias *
+                      </Text>
+                      <TextInput
+                        value={formFechaMaterias}
+                        onChangeText={setFormFechaMaterias}
+                        placeholder="AAAA-MM-DD (fecha exacta de certificación)"
+                        placeholderTextColor="#94A3B8"
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          borderWidth: 1,
+                          borderColor: '#93C5FD',
+                          borderRadius: 6,
+                          paddingHorizontal: 10,
+                          paddingVertical: 7,
+                          fontSize: 12,
+                          color: '#0F172A'
+                        }}
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
 
               {/* Cumple Requisito */}
               <View>

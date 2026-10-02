@@ -289,16 +289,33 @@ async function generarReporteExcelValidacion(data) {
     row.getCell('A').value = cert.entidad || 'N/A';
     row.getCell('B').value = cert.cargo_certificado || 'N/A';
 
-    const fIni = parseFecha(cert.fecha_inicio);
+    const fIniOriginal = parseFecha(cert.fecha_inicio);
+    const fFin = cert.vinculo_vigente ? new Date() : parseFecha(cert.fecha_fin);
+
+    // Validación de experiencia previa al grado / terminación de materias (Dcto 1083/2015 y Ley 2039/2020)
+    const expPrevia = cert.verificacion_experiencia_previa;
+    const esNoComputablePrevia = expPrevia && expPrevia.tipo_resultado === 'NO_COMPUTABLE_PREVIA_AL_GRADO';
+    const esParcialCorte = expPrevia && expPrevia.tipo_resultado === 'COMPUTABLE_PARCIAL_DESDE_CORTE';
+    const esLey2039 = expPrevia && expPrevia.tipo_resultado === 'COMPUTABLE_TOTAL_LEY_2039';
+
+    // Si es computable parcial, la fecha de inicio en celda C es la fecha de corte profesional
+    let fIni = fIniOriginal;
+    if (esParcialCorte && expPrevia.fecha_inicio_computable) {
+      fIni = parseFecha(expPrevia.fecha_inicio_computable);
+    }
     row.getCell('C').value = fIni;
     if (fIni instanceof Date) row.getCell('C').numFmt = 'yyyy-mm-dd';
 
-    const fFin = cert.vinculo_vigente ? new Date() : parseFecha(cert.fecha_fin);
     row.getCell('D').value = fFin;
     if (fFin instanceof Date) row.getCell('D').numFmt = 'yyyy-mm-dd';
 
     const esRel = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA';
-    row.getCell('E').value = esRel ? 'Relacionada' : 'Profesional';
+
+    if (esNoComputablePrevia) {
+      row.getCell('E').value = 'No Computable';
+    } else {
+      row.getCell('E').value = esRel ? 'Relacionada' : 'Profesional';
+    }
 
     // 1. Determinar si hay traslape total
     const tieneTraslapeTotal = Boolean(
@@ -324,19 +341,31 @@ async function generarReporteExcelValidacion(data) {
     }
 
     // 3. Asignar columnas F (Observación Exp Relacionada) y K (Observación Exp General)
-    if (esRel) {
+    if (esNoComputablePrevia) {
+      // No computable bajo Dcto 1083 de 2015 por ser previo al grado / terminación pénsum
+      row.getCell('F').value = `NO COMPUTABLE [Dcto 1083/2015]: Experiencia previa a la obtención del título profesional / terminación de materias. No reúne condiciones de Ley 2039 de 2020 ni Dcto 952 de 2021.`;
+      row.getCell('K').value = 'Traslape Total'; // Activa "-" en fórmulas M, N, O de experiencia general
+      row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
+      row.getCell('K').alignment = { wrapText: true, vertical: 'top' };
+    } else if (esRel) {
+      let prefijoNormativo = '';
+      if (esParcialCorte) {
+        prefijoNormativo = `[Dcto 1083/2015: Inició ${cert.fecha_inicio} previo al grado. Tramo computable desde ${expPrevia.fecha_inicio_computable}]\n`;
+      } else if (esLey2039) {
+        prefijoNormativo = `[Ley 2039/2020 y Dcto 952/2021: Modalidad previa reconocida (${expPrevia.tipo_experiencia_previa}) relacionada con la profesión]\n`;
+      }
+
       if (tieneTraslapeTotal) {
-        // EXACTAMENTE "Traslape Total" para que la fórmula IF(F="Traslape Total", "-", DATEDIF(...)) se active en Excel
         row.getCell('F').value = 'Traslape Total';
-        if (textoFunciones) {
-          row.getCell('F').note = `TRASLAPE TOTAL: periodo simultáneo cubierto en su totalidad.\n\nFunciones coincidentes con el empleo:\n${textoFunciones}`;
+        if (textoFunciones || prefijoNormativo) {
+          row.getCell('F').note = `TRASLAPE TOTAL: periodo simultáneo cubierto en su totalidad.\n${prefijoNormativo}\nFunciones coincidentes con el empleo:\n${textoFunciones}`;
         }
       } else {
-        let obsTexto = '';
+        let obsTexto = prefijoNormativo;
         if (cert.traslapes && cert.traslapes.length > 0) {
           const tParciales = cert.traslapes.filter(t => !(t.tipo || '').toUpperCase().includes('TOTAL'));
           if (tParciales.length > 0) {
-            obsTexto = `[TRASLAPE PARCIAL: ${tParciales.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}]\n`;
+            obsTexto += `[TRASLAPE PARCIAL: ${tParciales.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}]\n`;
           }
         }
         obsTexto += (textoFunciones || 'Experiencia laboral relacionada con las funciones del cargo.');
@@ -345,12 +374,18 @@ async function generarReporteExcelValidacion(data) {
       row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
     } else {
       // Experiencia profesional no relacionada
+      let prefijoNormativo = '';
+      if (esParcialCorte) {
+        prefijoNormativo = `[Dcto 1083/2015: Tramo previo excluido. Computable desde ${expPrevia.fecha_inicio_computable}]\n`;
+      } else if (esLey2039) {
+        prefijoNormativo = `[Ley 2039/2020: Modalidad previa reconocida]\n`;
+      }
+
       if (tieneTraslapeTotal) {
-        // En K se activa la fórmula de experiencia general/profesional
         row.getCell('K').value = 'Traslape Total';
-        row.getCell('F').value = 'Experiencia profesional no relacionada.';
+        row.getCell('F').value = prefijoNormativo + 'Experiencia profesional no relacionada.';
       } else {
-        row.getCell('F').value = 'Experiencia profesional no relacionada.';
+        row.getCell('F').value = prefijoNormativo + 'Experiencia profesional no relacionada.';
         if (cert.traslapes && cert.traslapes.length > 0) {
           row.getCell('K').value = `Traslape parcial: ${cert.traslapes.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}`;
         }
