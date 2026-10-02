@@ -401,9 +401,81 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
     throw new Error('No se pudo completar el análisis con los modelos de Gemini: ' + (ultimoError ? ultimoError.message : 'Error desconocido'));
   }
 
+function repararJsonConCaracteresControl(raw) {
+  let str = (raw || '').trim();
+  if (str.startsWith('```json')) str = str.slice(7);
+  else if (str.startsWith('```')) str = str.slice(3);
+  if (str.endsWith('```')) str = str.slice(0, -3);
+  str = str.trim();
+
+  // Intento 1: Parseo directo estándar
+  try {
+    return JSON.parse(str);
+  } catch (e1) {
+    // Continuar a reparación de caracteres de control
+  }
+
+  // Intento 2: Escapar caracteres de control que están dentro de cadenas de texto literales
+  try {
+    let enCadena = false;
+    let escapado = false;
+    let resultado = '';
+
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      if (escapado) {
+        resultado += char;
+        escapado = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        resultado += char;
+        escapado = true;
+        continue;
+      }
+
+      if (char === '"') {
+        enCadena = !enCadena;
+        resultado += char;
+        continue;
+      }
+
+      if (enCadena) {
+        if (char === '\n') {
+          resultado += '\\n';
+        } else if (char === '\r') {
+          resultado += '\\r';
+        } else if (char === '\t') {
+          resultado += '\\t';
+        } else {
+          const code = char.charCodeAt(0);
+          if (code < 32) {
+            resultado += `\\u${code.toString(16).padStart(4, '0')}`;
+          } else {
+            resultado += char;
+          }
+        }
+      } else {
+        resultado += char;
+      }
+    }
+
+    return JSON.parse(resultado);
+  } catch (e2) {
+    // Intento 3: Limpiar caracteres no imprimibles
+    try {
+      const sanitized = str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+      return JSON.parse(sanitized);
+    } catch (e3) {
+      throw e1;
+    }
+  }
+}
+
   let parsedJson;
   try {
-    parsedJson = JSON.parse(responseText);
+    parsedJson = repararJsonConCaracteresControl(responseText);
   } catch (err) {
     console.error('[GeminiIngresos] Error al parsear JSON devuelto por Gemini:', responseText);
     throw new Error('La respuesta de Gemini no es un JSON válido: ' + err.message);
