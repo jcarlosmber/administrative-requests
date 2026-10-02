@@ -685,7 +685,11 @@ export default function NuevaValidacionScreen() {
         });
       }
 
-      setArchivosPdf(prev => [...prev, ...nuevosArchivos]);
+      setArchivosPdf(prev => {
+        const nombresExistentes = new Set(prev.map(p => (p.name || '').toLowerCase().trim()));
+        const unicosNuevos = nuevosArchivos.filter(na => !nombresExistentes.has((na.name || '').toLowerCase().trim()));
+        return [...prev, ...unicosNuevos];
+      });
     } catch (err: any) {
       mostrarMensaje('Error al seleccionar archivos', err.message || 'No se pudieron cargar los archivos.');
     }

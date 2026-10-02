@@ -251,6 +251,25 @@ export default function DetalleValidacionScreen() {
         setProgresoIaArchivoActual(asset.name || `Documento ${numActual}`);
         const pctInicio = Math.round((i / totalArchivos) * 100);
         setProgresoIaPorcentaje(Math.max(5, pctInicio));
+
+        // Verificación preventiva anti-duplicados para AHORRO DE CRÉDITOS:
+        const nomBase = (asset.name || '').toLowerCase().trim();
+        const yaExiste = 
+          (expedienteActual?.certificados || []).some((c: any) => (c.nombre_archivo || '').toLowerCase().trim() === nomBase) ||
+          (expedienteActual?.formacion_academica || []).some((t: any) => (t.nombre_archivo || '').toLowerCase().trim() === nomBase) ||
+          (expedienteActual?.documentos_no_aplican || []).some((n: any) => (n.nombre_archivo || '').toLowerCase().trim() === nomBase);
+
+        if (yaExiste) {
+          setProgresoIaEstado(`ℹ️ Omitido: Ya fue evaluado previamente en este expediente.`);
+          resumenAcumulado.errores.push({
+            archivo: asset.name || `Documento ${numActual}`,
+            error: 'Omitido: Ya existe en el expediente (ahorro de créditos de IA).'
+          });
+          const pctFin = Math.round(((i + 1) / totalArchivos) * 100);
+          setProgresoIaPorcentaje(pctFin);
+          continue;
+        }
+
         setProgresoIaEstado(`Leyendo contenido digital (${numActual} de ${totalArchivos})...`);
 
         let base64 = '';

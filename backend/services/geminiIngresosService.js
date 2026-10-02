@@ -148,31 +148,30 @@ async function analizarDocumentosConGemini(pdfFiles, cargoData, candidatoData = 
   }
 
   // Lista de modelos verificados en producción con respuesta inmediata y alta cuota
+  // Priorizar modelos Flash-Lite (ahorro del ~75% de créditos) y Flash estándar
   const MODELOS_GEMINI = [
+    'gemini-flash-lite-latest',
     'gemini-flash-latest',
     'gemini-3.8-flash'
   ];
 
   const promptUser = `
 DATOS DEL CARGO A EVALUAR:
-- Nombre del cargo: ${cargoData.nombre || 'Profesional Especializado'}
-- Código: ${cargoData.codigo || '222'}
-- Grado: ${cargoData.grado || '24'}
+- Nombre: ${cargoData.nombre || 'Profesional Especializado'}
+- Código: ${cargoData.codigo || '222'} | Grado: ${cargoData.grado || '24'}
 - Dependencia: ${cargoData.dependencia || 'No especificada'}
-- Requisito mínimo de experiencia: ${cargoData.requisito_experiencia_meses || 54} meses de experiencia profesional relacionada con las funciones del cargo.
+- Requisito mínimo de experiencia: ${cargoData.requisito_experiencia_meses || 54} meses de experiencia profesional relacionada.
 - Requisitos de formación: ${cargoData.requisitos_formacion || 'Título profesional y posgrado afín.'}
-- Funciones Oficiales del Cargo (Manual de Funciones):
+- Manual de Funciones del Cargo:
 ${JSON.stringify(cargoData.funciones_cargo || [], null, 2)}
 
-DATOS DEL CANDIDATO (si se conocen de antemano):
-- Nombre: ${candidatoData.nombre || 'NO CONSTA'}
-- Documento: ${candidatoData.documento || 'NO CONSTA'}
+DATOS DEL CANDIDATO:
+- Nombre: ${candidatoData.nombre || 'NO CONSTA'} | Documento: ${candidatoData.documento || 'NO CONSTA'}
 
 DOCUMENTOS ADJUNTOS:
-Se adjuntan ${pdfFiles.length} documento(s) PDF para evaluación integral.
+Se adjuntan ${pdfFiles.length} documento(s) PDF.
 
-INSTRUCCIONES DE RESPUESTA:
-Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
+FORMATO DE RESPUESTA JSON ESTRICTO:
 {
   "candidato": {
     "nombre": "Nombre completo extraído o suministrado",
@@ -187,85 +186,74 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
   "formacion_academica": [
     {
       "id": "ACAD-1",
-      "nombre_archivo": "nombre_archivo.pdf",
+      "nombre_archivo": "string",
       "tipo": "BACHILLER | TECNICO | TECNOLOGO | PREGRADO | ESPECIALIZACION | MAESTRIA | DOCTORADO | TARJETA_PROFESIONAL",
-      "titulo_obtenido": "Título de bachiller, técnico, profesional, posgrado o número de tarjeta profesional",
-      "institucion": "Colegio, Universidad o entidad expedidora (ej. Instituto Técnico, Universidad Nacional, Consejo Superior de la Judicatura)",
+      "titulo_obtenido": "string",
+      "institucion": "string",
       "fecha_grado": "YYYY-MM-DD o NO CONSTA",
       "certifica_terminacion_materias": false,
       "fecha_terminacion_materias": "YYYY-MM-DD o NO CONSTA",
-      "numero_tarjeta_o_registro": "Número de tarjeta si aplica o NO CONSTA",
+      "numero_tarjeta_o_registro": "string o NO CONSTA",
       "cumple_requisito_cargo": true,
-      "justificacion": "Explicación de por qué cumple o no con los requisitos de formación del cargo",
+      "justificacion": "string",
       "verificacion_formal_titulo": {
         "institucion_reconocida": true,
-        "institucion_evidencia": "Nombre de la institución educativa acreditada por el MEN",
+        "institucion_evidencia": "string",
         "corresponde_aspirante": true,
-        "aspirante_evidencia": "Nombres y documento del titular en el documento",
+        "aspirante_evidencia": "string",
         "titulo_y_nivel_formal": true,
-        "titulo_evidencia": "Título y nivel formativo conferido",
+        "titulo_evidencia": "string",
         "fecha_grado_cierta": true,
-        "fecha_grado_evidencia": "Fecha exacta de grado o convalidación",
+        "fecha_grado_evidencia": "string",
         "acta_o_registro_valido": true,
-        "acta_o_registro_evidencia": "Número de Acta de Grado, Libro o Folio registrado",
+        "acta_o_registro_evidencia": "string",
         "firmas_autoridades": true,
-        "firmas_evidencia": "Firmas de Rector, Secretario General u autoridades académicas",
+        "firmas_evidencia": "string",
         "convalidacion_men": true,
-        "convalidacion_evidencia": "Título nacional (No requiere) o Resolución MEN si es del exterior"
+        "convalidacion_evidencia": "string"
       },
       "verificacion_formal_tarjeta": {
         "consejo_emisor_identificable": true,
-        "consejo_evidencia": "Colegio o Consejo Profesional competente emisor",
+        "consejo_evidencia": "string",
         "corresponde_profesional": true,
-        "profesional_evidencia": "Nombre y cédula del profesional titular",
+        "profesional_evidencia": "string",
         "matricula_o_tarjeta_identificable": true,
-        "matricula_evidencia": "Número de matrícula o tarjeta profesional visible",
+        "matricula_evidencia": "string",
         "profesion_autorizada": true,
-        "profesion_evidencia": "Profesión o área disciplinar autorizada",
+        "profesion_evidencia": "string",
         "certificado_vigencia_y_sanciones": true,
-        "vigencia_evidencia": "Certificado de vigencia y constancia de no registrar sanciones",
+        "vigencia_evidencia": "string",
         "vigencia_temporal_valida": true,
-        "vigencia_temporal_evidencia": "Fecha de expedición dentro de vigencia legal (< 90 días)",
+        "vigencia_temporal_evidencia": "string",
         "mecanismo_autenticacion_o_firma": true,
-        "mecanismo_evidencia": "Código de verificación digital, QR o firma oficial"
+        "mecanismo_evidencia": "string"
       }
     }
   ],
   "certificados": [
     {
       "id_certificado": "CERT-1",
-      "nombre_archivo": "nombre del archivo analizado",
-      "entidad": "Nombre de la entidad o empresa que certifica",
-      "nit_entidad": "NIT o NO CONSTA",
-      "ciudad_expedicion": "Ciudad o NO CONSTA",
+      "nombre_archivo": "string",
+      "entidad": "string",
+      "nit_entidad": "string o NO CONSTA",
+      "ciudad_expedicion": "string o NO CONSTA",
       "fecha_expedicion": "YYYY-MM-DD o NO CONSTA",
-      "firmante": "Nombre de quien firma o NO CONSTA",
-      "cargo_firmante": "Cargo de quien firma o NO CONSTA",
-      "tipo_vinculo": "Tipo de vinculación (ej. Contrato de prestación de servicios, Carrera, Práctica laboral, Judicatura)",
-      "cargo_certificado": "Cargo o denominación del contrato",
-      "codigo_cargo": "Código si consta o NO CONSTA",
-      "grado_cargo": "Grado si consta o NO CONSTA",
-      "dependencia": "Dependencia certificada o NO CONSTA",
-      "numero_contrato_o_acto": "Número de contrato o acto administrativo o NO CONSTA",
-      "fecha_inicio": "YYYY-MM-DD exacta",
-      "fecha_fin": "YYYY-MM-DD exacta (o NO CONSTA si vigente)",
+      "firmante": "string o NO CONSTA",
+      "cargo_firmante": "string o NO CONSTA",
+      "tipo_vinculo": "string",
+      "cargo_certificado": "string",
+      "codigo_cargo": "string o NO CONSTA",
+      "grado_cargo": "string o NO CONSTA",
+      "dependencia": "string o NO CONSTA",
+      "numero_contrato_o_acto": "string o NO CONSTA",
+      "fecha_inicio": "YYYY-MM-DD",
+      "fecha_fin": "YYYY-MM-DD o NO CONSTA",
       "vinculo_vigente": false,
       "cumple_excepcion_ley_2039": false,
       "modalidad_ley_2039": "PRACTICA_LABORAL | PASANTIA | JUDICATURA | MONITORIA | CONTRATO_APRENDIZAJE | INVESTIGACION | NINGUNA",
-      "justificacion_ley_2039": "Si aplica excepción de Ley 2039/2020 indicar modalidad y concordancia con la profesión exigida",
+      "justificacion_ley_2039": "string",
       "funciones_certificadas": [
-        {
-          "funcion": "Texto completo de la función 1 certificada",
-          "evidencia_textual": "Cita textual entre comillas"
-        },
-        {
-          "funcion": "Texto completo de la función 2 certificada",
-          "evidencia_textual": "Cita textual entre comillas"
-        },
-        {
-          "funcion": "Texto completo de la función 3 certificada (y así sucesivamente para TODAS las funciones del documento)",
-          "evidencia_textual": "Cita textual entre comillas"
-        }
+        { "funcion": "Texto íntegro", "evidencia_textual": "Cita textual entre comillas" }
       ],
       "clasificacion_experiencia": "RELACIONADA | NO_RELACIONADA | PROFESIONAL_NO_RELACIONADA | NO_PROFESIONAL | NO_DETERMINABLE",
       "experiencia_relacionada": {
@@ -273,39 +261,30 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
         "nivel_confianza": "ALTO | MEDIO | BAJO",
         "funciones_coincidentes": [
           {
-            "funcion_certificada": "Texto de la función del certificado que sí coincide",
-            "funcion_del_cargo": "Función exacta del manual del empleo con la que coincide",
+            "funcion_certificada": "string",
+            "funcion_del_cargo": "string",
             "coincidencia": "DIRECTA | PARCIAL | INDIRECTA",
-            "justificacion": "Explicación de afinidad temática o jurídica",
-            "evidencia_textual": "Cita textual de soporte"
-          },
-          {
-            "funcion_certificada": "Segunda función del certificado que también coincide (deben registrarse todas las que coincidan)",
-            "funcion_del_cargo": "Otra función correspondiente del empleo",
-            "coincidencia": "DIRECTA | PARCIAL | INDIRECTA",
-            "justificacion": "Explicación de afinidad",
-            "evidencia_textual": "Cita textual de soporte"
+            "justificacion": "string",
+            "evidencia_textual": "string"
           }
         ],
-        "funciones_no_coincidentes": [
-          "Texto de las funciones del certificado que no guardan relación con el cargo (ej. funciones meramente logísticas o ajenas al perfil)"
-        ]
+        "funciones_no_coincidentes": ["string"]
       },
       "verificacion_formal": {
         "corresponde_aspirante": true,
-        "aspirante_nombre_doc": "Nombre e identificación del aspirante que constan en el certificado",
+        "aspirante_nombre_doc": "string",
         "entidad_identificable": true,
-        "entidad_nombre": "Nombre claro de la entidad o empresa que expide el certificado",
+        "entidad_nombre": "string",
         "suscriptor_identificable": true,
-        "suscriptor_nombre_cargo_calidad": "Nombre, cargo y calidad de quien suscribe el documento",
+        "suscriptor_nombre_cargo_calidad": "string",
         "cuenta_con_firma": true,
-        "tipo_firma": "Firma manuscrita, electrónica o digital identificada",
+        "tipo_firma": "string",
         "fecha_expedicion_identificable": true,
-        "fecha_expedicion": "Fecha de expedición identificada o NO CONSTA",
+        "fecha_expedicion": "YYYY-MM-DD o NO CONSTA",
         "documento_legible_integro": true,
-        "detalle_legibilidad": "Documento legible, íntegro y sin alteraciones visibles",
+        "detalle_legibilidad": "string",
         "mecanismos_contacto_verificacion": true,
-        "mecanismos_contacto_cuales": "Datos de contacto o mecanismos para verificar con la entidad emisora (PBX, teléfono, correo, web, código QR)"
+        "mecanismos_contacto_cuales": "string"
       },
       "documento": {
         "firma_visible": true,
@@ -314,28 +293,25 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
         "documento_legible": true,
         "estado": "COMPLETO | INCOMPLETO"
       },
-      "observaciones": [
-        "Observaciones o alertas del documento"
-      ]
+      "observaciones": ["string"]
     }
   ],
   "documentos_no_aplican": [
     {
       "id": "NO-APLICA-1",
-      "nombre_archivo": "nombre_archivo.pdf",
+      "nombre_archivo": "string",
       "tipo_documento": "CURSO_NO_FORMAL | CAPACITACION | CERTIFICADO_SIN_FIRMA | ILEGIBLE | NO_EXPERIENCIA | OTRO",
-      "descripcion": "Descripción del documento (ej: Certificado de diplomado o curso de 40 horas)",
-      "entidad": "Nombre de la entidad emisora",
-      "motivo_no_aplica": "Explicación clara y contundente de por qué no aplica como experiencia laboral ni formación exigida",
-      "sustento_criterio": "Criterio o norma de exclusión (ej: Educación continua no computable como experiencia laboral según Decreto 1083 de 2015)"
+      "descripcion": "string",
+      "entidad": "string",
+      "motivo_no_aplica": "string",
+      "sustento_criterio": "string"
     }
   ]
 }
 `;
 
-  // Construir las partes multimodales
+  // Construir las partes multimodales: promptUser + archivos PDF
   const parts = [
-    { text: SYSTEM_PROMPT },
     { text: promptUser }
   ];
 
@@ -371,9 +347,11 @@ Clasifica los documentos y responde estrictamente en el siguiente formato JSON:
         console.log(`[GeminiIngresos] Probando modelo ${modeloNombre} (Clave API ${kIndex + 1} de ${apiKeys.length})...`);
         const model = genAIInstance.getGenerativeModel({
           model: modeloNombre,
+          systemInstruction: SYSTEM_PROMPT,
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.1,
+            maxOutputTokens: 8192
           },
         });
         const result = await model.generateContent(parts);

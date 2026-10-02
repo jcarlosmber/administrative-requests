@@ -1231,9 +1231,28 @@ module.exports = function(pool) {
         telefono: val.candidato_telefono
       };
 
-      // 4. Analizar con Gemini los NUEVOS archivos de forma secuencial
-      // Procesar archivo por archivo evita sobrepasar el límite de Tokens por Minuto (TPM) en la API de Gemini
-      console.log(`[Ingresos] Analizando ${archivos.length} archivo(s) nuevo(s) para validación ${id}`);
+      // 4. Filtrado PREVIO anti-duplicados para AHORRO DE CRÉDITOS Y TOKENS en Gemini:
+      // Si el archivo ya existe en certificados, títulos o no aplican, se omite de inmediato sin llamar a la IA.
+      const archivosParaAnalizar = [];
+      const archivosYaExistentes = [];
+
+      for (const arch of archivos) {
+        const nomBase = path.basename(arch.name || '').toLowerCase().trim();
+        const yaEnCerts = certificadosExistentes.some(c => c.nombre_archivo && path.basename(c.nombre_archivo).toLowerCase().trim() === nomBase);
+        const yaEnTitulos = formacionExistente.some(f => f.nombre_archivo && path.basename(f.nombre_archivo).toLowerCase().trim() === nomBase);
+        const yaEnNoAplican = noAplicanExistente.some(n => n.nombre_archivo && path.basename(n.nombre_archivo).toLowerCase().trim() === nomBase);
+
+        if (yaEnCerts || yaEnTitulos || yaEnNoAplican) {
+          archivosYaExistentes.push(arch.name || 'Documento');
+        } else {
+          archivosParaAnalizar.push(arch);
+        }
+      }
+
+      if (archivosYaExistentes.length > 0) {
+        console.log(`[Ingresos] ℹ️ Ahorro de créditos: Se omitieron ${archivosYaExistentes.length} archivo(s) ya evaluados:`, archivosYaExistentes);
+      }
+
       const titulosAgregados = [];
       const certsAgregados = [];
       const noAplicanAgregados = [];
@@ -1247,9 +1266,11 @@ module.exports = function(pool) {
         }
       });
 
-      for (let i = 0; i < archivos.length; i++) {
-        const arch = archivos[i];
-        console.log(`[Ingresos] Procesando archivo ${i + 1} de ${archivos.length}: ${arch.name}`);
+      console.log(`[Ingresos] Analizando con IA ${archivosParaAnalizar.length} archivo(s) efectivamente nuevos para validación ${id}`);
+
+      for (let i = 0; i < archivosParaAnalizar.length; i++) {
+        const arch = archivosParaAnalizar[i];
+        console.log(`[Ingresos] Procesando archivo nuevo ${i + 1} de ${archivosParaAnalizar.length}: ${arch.name}`);
         try {
           const analisisNuevo = await geminiIngresosService.analizarDocumentosConGemini(
             [arch],
@@ -1432,7 +1453,8 @@ module.exports = function(pool) {
         resumen_ia: {
           titulos_agregados: titulosAgregados,
           certificados_agregados: certsAgregados,
-          no_aplican_agregados: noAplicanAgregados
+          no_aplican_agregados: noAplicanAgregados,
+          archivos_omitidos_duplicados: archivosYaExistentes
         },
         validacion: respuestaValidacion
       });
