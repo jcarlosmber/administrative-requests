@@ -1,8 +1,36 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const geminiIngresosService = require('../services/geminiIngresosService');
 const timeCalculatorService = require('../services/timeCalculatorService');
 const excelReportService = require('../services/excelReportService');
+
+// Directorio base para almacenamiento de archivos PDF de ingresos
+const UPLOADS_DIR = path.join(__dirname, '../uploads/ingresos');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  try { fs.mkdirSync(UPLOADS_DIR, { recursive: true }); } catch (e) {}
+}
+const CACHE_DIR = path.join(UPLOADS_DIR, 'cache');
+if (!fs.existsSync(CACHE_DIR)) {
+  try { fs.mkdirSync(CACHE_DIR, { recursive: true }); } catch (e) {}
+}
+
+const guardarArchivoEnDisco = (folder, nombre, base64Data) => {
+  try {
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true });
+    }
+    const cleanBase64 = base64Data.includes(';base64,') ? base64Data.split(';base64,')[1] : base64Data;
+    const safeName = path.basename(nombre);
+    const destPath = path.join(folder, safeName);
+    fs.writeFileSync(destPath, Buffer.from(cleanBase64, 'base64'));
+    return destPath;
+  } catch (e) {
+    console.error(`[Ingresos] Error guardando archivo ${nombre}:`, e.message);
+    return null;
+  }
+};
 
 module.exports = function(pool) {
 
@@ -86,6 +114,17 @@ module.exports = function(pool) {
             nombre_archivo TEXT,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        CREATE TABLE IF NOT EXISTS public.ingreso_archivos (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            validacion_id UUID REFERENCES public.ingreso_validaciones(id) ON DELETE CASCADE,
+            nombre_archivo TEXT NOT NULL,
+            mime_type TEXT DEFAULT 'application/pdf',
+            archivo_base64 TEXT,
+            tamano_bytes BIGINT,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_ingreso_archivos_val ON public.ingreso_archivos(validacion_id);
 
         ALTER TABLE public.ingreso_cargos ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT;
         ALTER TABLE public.ingreso_validaciones
@@ -266,6 +305,17 @@ module.exports = function(pool) {
 
       console.log(`[Ingresos] Iniciando análisis de ${archivos.length} archivos para el cargo: ${cargo.nombre}`);
 
+      // Almacenar en CACHE_DIR para previsualización inmediata en modal
+      try {
+        for (const arch of archivos) {
+          if (arch.name && arch.base64) {
+            guardarArchivoEnDisco(CACHE_DIR, arch.name, arch.base64);
+          }
+        }
+      } catch (eArch) {
+        console.warn('[Ingresos] Error guardando archivos en cache:', eArch.message);
+      }
+
       const analisis = await geminiIngresosService.analizarDocumentosConGemini(
         archivos,
         cargo,
@@ -305,7 +355,7 @@ module.exports = function(pool) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const { candidato, cargo_evaluado, certificados, consolidado, evaluador_email, formacion_academica, documentos_no_aplican } = req.body;
+      const { candidato, cargo_evaluado, certificados, consolidado, evaluador_email, formacion_academica, documentos_no_aplican, archivos } = req.body;
 
       // 1. Insertar o actualizar candidato
       let candId = null;
@@ -408,6 +458,40 @@ module.exports = function(pool) {
             cert.nombre_archivo || null
           ];
           await client.query(certQuery, certValues);
+        }
+      }
+
+      // 4. Guardar archivos PDF en disco y registrar en ingreso_archivos
+      const valFolder = path.join(UPLOADS_DIR, validacionId);
+      if (archivos && Array.isArray(archivos) && archivos.length > 0) {
+        for (const arch of archivos) {
+          if (arch.name && arch.base64) {
+            guardarArchivoEnDisco(valFolder, arch.name, arch.base64);
+            try {
+              const cleanBase64 = arch.base64.includes(';base64,') ? arch.base64.split(';base64,')[1] : arch.base64;
+              await client.query(`
+                INSERT INTO ingreso_archivos (validacion_id, nombre_archivo, mime_type, archivo_base64, tamano_bytes)
+                VALUES ($1, $2, $3, $4, $5)
+              `, [validacionId, path.basename(arch.name), arch.mimeType || 'application/pdf', cleanBase64, arch.size || cleanBase64.length]);
+            } catch (errDb) {
+              console.warn('[Ingresos] Advertencia guardando archivo en DB:', errDb.message);
+            }
+          }
+        }
+      } else {
+        // Copiar desde CACHE_DIR si existen
+        try {
+          if (fs.existsSync(CACHE_DIR)) {
+            const cacheFiles = fs.readdirSync(CACHE_DIR);
+            for (const cf of cacheFiles) {
+              const src = path.join(CACHE_DIR, cf);
+              const dst = path.join(valFolder, cf);
+              if (!fs.existsSync(valFolder)) fs.mkdirSync(valFolder, { recursive: true });
+              fs.copyFileSync(src, dst);
+            }
+          }
+        } catch (eCopy) {
+          console.warn('[Ingresos] Error al copiar de cache:', eCopy.message);
         }
       }
 
@@ -777,6 +861,145 @@ module.exports = function(pool) {
 
   router.delete('/validaciones/:id', handlerEliminarValidacion);
   router.post('/validaciones/:id/delete', handlerEliminarValidacion);
+
+  /**
+   * 7.3 GET /api/ingresos/validaciones/:id/archivos - Lista archivos de la validación
+   */
+  router.get('/validaciones/:id/archivos', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const valFolder = path.join(UPLOADS_DIR, id);
+      let archivosDisponibles = [];
+      if (fs.existsSync(valFolder)) {
+        archivosDisponibles = fs.readdirSync(valFolder);
+      }
+      const dbRes = await pool.query('SELECT nombre_archivo FROM ingreso_archivos WHERE validacion_id = $1', [id]);
+      const dbFiles = dbRes.rows.map(r => r.nombre_archivo);
+      const combinados = Array.from(new Set([...archivosDisponibles, ...dbFiles]));
+      res.json({ archivos: combinados });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /**
+   * 7.4 GET /api/ingresos/validaciones/:id/archivo/:nombre - Visualizar PDF inline
+   */
+  router.get('/validaciones/:id/archivo/:nombre', async (req, res) => {
+    try {
+      const { id, nombre } = req.params;
+      const targetName = decodeURIComponent(nombre).trim();
+      const safeName = path.basename(targetName);
+      const valFolder = path.join(UPLOADS_DIR, id);
+
+      // 1. Buscar en carpeta de validación
+      let foundPath = null;
+      if (fs.existsSync(valFolder)) {
+        const files = fs.readdirSync(valFolder);
+        const match = files.find(f => 
+          f.toLowerCase() === safeName.toLowerCase() ||
+          f.toLowerCase() === `${safeName.toLowerCase()}.pdf` ||
+          f.toLowerCase().includes(safeName.toLowerCase().replace(/\.pdf$/i, '')) ||
+          safeName.toLowerCase().includes(f.toLowerCase().replace(/\.pdf$/i, ''))
+        );
+        if (match) foundPath = path.join(valFolder, match);
+      }
+
+      // 2. Buscar en carpeta cache
+      if (!foundPath && fs.existsSync(CACHE_DIR)) {
+        const files = fs.readdirSync(CACHE_DIR);
+        const match = files.find(f => 
+          f.toLowerCase() === safeName.toLowerCase() ||
+          f.toLowerCase() === `${safeName.toLowerCase()}.pdf` ||
+          f.toLowerCase().includes(safeName.toLowerCase().replace(/\.pdf$/i, '')) ||
+          safeName.toLowerCase().includes(f.toLowerCase().replace(/\.pdf$/i, ''))
+        );
+        if (match) foundPath = path.join(CACHE_DIR, match);
+      }
+
+      // 3. Buscar en la base de datos
+      if (!foundPath) {
+        const dbRes = await pool.query(`
+          SELECT archivo_base64, mime_type, nombre_archivo 
+          FROM ingreso_archivos 
+          WHERE validacion_id = $1 AND (
+            LOWER(nombre_archivo) = LOWER($2) OR 
+            LOWER(nombre_archivo) LIKE LOWER($3)
+          )
+          LIMIT 1
+        `, [id, safeName, `%${safeName.replace(/\.pdf$/i, '')}%`]);
+
+        if (dbRes.rows.length > 0 && dbRes.rows[0].archivo_base64) {
+          const row = dbRes.rows[0];
+          const cleanBase64 = row.archivo_base64.replace(/^data:.*?;base64,/, '');
+          const buffer = Buffer.from(cleanBase64, 'base64');
+          res.setHeader('Content-Type', row.mime_type || 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(row.nombre_archivo)}"`);
+          return res.send(buffer);
+        }
+      }
+
+      if (foundPath && fs.existsSync(foundPath)) {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(foundPath))}"`);
+        return res.sendFile(foundPath);
+      }
+
+      return res.status(404).json({ error: `El archivo "${safeName}" no fue encontrado en el servidor.` });
+    } catch (err) {
+      console.error('[Ingresos] Error al servir archivo PDF:', err);
+      res.status(500).json({ error: 'Error al obtener el archivo: ' + err.message });
+    }
+  });
+
+  /**
+   * 7.5 GET /api/ingresos/archivos/:nombre - Buscar archivo globalmente o en cache
+   */
+  router.get('/archivos/:nombre', async (req, res) => {
+    try {
+      const { nombre } = req.params;
+      const targetName = decodeURIComponent(nombre).trim();
+      const safeName = path.basename(targetName);
+
+      // Buscar en cache
+      if (fs.existsSync(CACHE_DIR)) {
+        const files = fs.readdirSync(CACHE_DIR);
+        const match = files.find(f => 
+          f.toLowerCase() === safeName.toLowerCase() ||
+          f.toLowerCase() === `${safeName.toLowerCase()}.pdf` ||
+          f.toLowerCase().includes(safeName.toLowerCase().replace(/\.pdf$/i, '')) ||
+          safeName.toLowerCase().includes(f.toLowerCase().replace(/\.pdf$/i, ''))
+        );
+        if (match) {
+          const foundPath = path.join(CACHE_DIR, match);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(foundPath))}"`);
+          return res.sendFile(foundPath);
+        }
+      }
+
+      // Buscar en base de datos global
+      const dbRes = await pool.query(`
+        SELECT archivo_base64, mime_type, nombre_archivo 
+        FROM ingreso_archivos 
+        WHERE LOWER(nombre_archivo) = LOWER($1) OR LOWER(nombre_archivo) LIKE LOWER($2)
+        ORDER BY created_at DESC LIMIT 1
+      `, [safeName, `%${safeName.replace(/\.pdf$/i, '')}%`]);
+
+      if (dbRes.rows.length > 0 && dbRes.rows[0].archivo_base64) {
+        const row = dbRes.rows[0];
+        const cleanBase64 = row.archivo_base64.replace(/^data:.*?;base64,/, '');
+        const buffer = Buffer.from(cleanBase64, 'base64');
+        res.setHeader('Content-Type', row.mime_type || 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(row.nombre_archivo)}"`);
+        return res.send(buffer);
+      }
+
+      return res.status(404).json({ error: `Archivo "${safeName}" no encontrado.` });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   /**
    * 8. GET /api/ingresos/validaciones/:id/excel - Descarga del dictamen en Excel

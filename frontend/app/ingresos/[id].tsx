@@ -19,6 +19,7 @@ import {
   CertificadoAnalizado,
   DocumentoNoAplicaItem
 } from '../../lib/ingresosService';
+import PdfViewerModal from '../../components/PdfViewerModal';
 
 export default function DetalleValidacionScreen() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function DetalleValidacionScreen() {
   // Modal Confirmar Eliminación (Unificado para Títulos, Certificados y No Aplican)
   const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
   const [itemAEliminar, setItemAEliminar] = useState<{
-    tipo: 'TITULO' | 'CERTIFICADO' | 'DOCUMENTO_NO_APLICA';
+    tipo: 'TITULO' | 'CERTIFICADO' | 'DOCUMENTO_NO_APLICA' | 'EXPEDIENTE_COMPLETO';
     idx: number;
     titulo: string;
     descripcion: string;
@@ -59,10 +60,32 @@ export default function DetalleValidacionScreen() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
 
+  // Estados del Visor de PDF integrado
+  const [visorPdfVisible, setVisorPdfVisible] = useState(false);
+  const [visorPdfTitulo, setVisorPdfTitulo] = useState('');
+  const [visorPdfNombre, setVisorPdfNombre] = useState('');
+  const [visorPdfUrl, setVisorPdfUrl] = useState<string | null>(null);
+
   const mostrarMensaje = (titulo: string, mensaje: string) => {
     setModalTitle(titulo);
     setModalMessage(mensaje);
     setModalVisible(true);
+  };
+
+  const verPdfDocumento = (nombre?: string, tituloVisible?: string) => {
+    const nombreBuscado = (nombre || '').trim();
+    const titulo = tituloVisible || nombreBuscado || 'Documento PDF';
+    setVisorPdfTitulo(titulo);
+    setVisorPdfNombre(nombreBuscado);
+
+    if (nombreBuscado) {
+      const url = ingresosService.obtenerUrlArchivo(id, nombreBuscado);
+      setVisorPdfUrl(url);
+      setVisorPdfVisible(true);
+    } else {
+      setVisorPdfUrl(null);
+      setVisorPdfVisible(true);
+    }
   };
 
   useEffect(() => {
@@ -704,6 +727,26 @@ export default function DetalleValidacionScreen() {
                         </Text>
                       </View>
 
+                      {/* Botón Ver PDF */}
+                      <TouchableOpacity
+                        onPress={() => verPdfDocumento(fa.nombre_archivo, fa.titulo_obtenido)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 8,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          backgroundColor: '#EFF6FF',
+                          borderWidth: 1,
+                          borderColor: '#BFDBFE'
+                        }}
+                        accessibilityLabel="Ver PDF del título"
+                      >
+                        <Ionicons name="document-text-outline" size={14} color="#1D4ED8" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
+                      </TouchableOpacity>
+
                       {/* Botón Editar */}
                       <TouchableOpacity
                         onPress={() => abrirEditarTitulo(idx)}
@@ -797,6 +840,26 @@ export default function DetalleValidacionScreen() {
                         {c.clasificacion_experiencia}
                       </Text>
                     </View>
+
+                    {/* Botón Ver PDF */}
+                    <TouchableOpacity
+                      onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        backgroundColor: '#EFF6FF',
+                        borderWidth: 1,
+                        borderColor: '#BFDBFE'
+                      }}
+                      accessibilityLabel="Ver PDF del certificado"
+                    >
+                      <Ionicons name="document-text-outline" size={14} color="#1D4ED8" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
+                    </TouchableOpacity>
 
                     {/* Botón Eliminar Certificado */}
                     <TouchableOpacity
@@ -1089,6 +1152,26 @@ export default function DetalleValidacionScreen() {
                           NO APLICA
                         </Text>
                       </View>
+
+                      {/* Botón Ver PDF */}
+                      <TouchableOpacity
+                        onPress={() => verPdfDocumento(doc.nombre_archivo, doc.descripcion || 'Documento no aplicable')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor: '#EFF6FF',
+                          borderWidth: 1,
+                          borderColor: '#BFDBFE'
+                        }}
+                        accessibilityLabel="Ver PDF del documento"
+                      >
+                        <Ionicons name="document-text-outline" size={13} color="#1D4ED8" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
+                      </TouchableOpacity>
 
                       {/* Botón Eliminar Registro No Aplica */}
                       <TouchableOpacity
@@ -1539,6 +1622,15 @@ export default function DetalleValidacionScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal Visor de PDF integrado */}
+      <PdfViewerModal
+        visible={visorPdfVisible}
+        onClose={() => setVisorPdfVisible(false)}
+        titulo={visorPdfTitulo}
+        nombreArchivo={visorPdfNombre}
+        pdfUrl={visorPdfUrl}
+      />
     </View>
   );
 }

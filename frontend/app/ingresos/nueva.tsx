@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { ingresosService, CargoEvaluado, AnalisisCompleto, PlazaPlanta, FormacionAcademicaItem } from '../../lib/ingresosService';
+import PdfViewerModal from '../../components/PdfViewerModal';
 
 export default function NuevaValidacionScreen() {
   const router = useRouter();
@@ -91,10 +92,66 @@ export default function NuevaValidacionScreen() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalMessage, setModalMessage] = useState('');
 
+  // Estados del Visor de PDF integrado
+  const [visorPdfVisible, setVisorPdfVisible] = useState(false);
+  const [visorPdfTitulo, setVisorPdfTitulo] = useState('');
+  const [visorPdfNombre, setVisorPdfNombre] = useState('');
+  const [visorPdfUrl, setVisorPdfUrl] = useState<string | null>(null);
+  const [visorPdfBase64, setVisorPdfBase64] = useState<string | null>(null);
+
   const mostrarMensaje = (titulo: string, mensaje: string) => {
     setModalTitle(titulo);
     setModalMessage(mensaje);
     setModalVisible(true);
+  };
+
+  const verPdfDocumento = (nombre?: string, tituloVisible?: string) => {
+    const nombreBuscado = (nombre || '').trim();
+    const titulo = tituloVisible || nombreBuscado || 'Documento PDF';
+    setVisorPdfTitulo(titulo);
+    setVisorPdfNombre(nombreBuscado);
+
+    let archivoEncontrado = null;
+    if (archivosPdf && archivosPdf.length > 0) {
+      if (nombreBuscado) {
+        const cleanBusqueda = nombreBuscado.toLowerCase();
+        const cleanSinExt = cleanBusqueda.replace(/\.pdf$/i, '');
+        archivoEncontrado = archivosPdf.find(a => a.name.toLowerCase() === cleanBusqueda);
+        if (!archivoEncontrado) {
+          archivoEncontrado = archivosPdf.find(a => a.name.toLowerCase().replace(/\.pdf$/i, '') === cleanSinExt);
+        }
+        if (!archivoEncontrado) {
+          archivoEncontrado = archivosPdf.find(a => {
+            const aClean = a.name.toLowerCase();
+            return aClean.includes(cleanSinExt) || cleanSinExt.includes(aClean.replace(/\.pdf$/i, ''));
+          });
+        }
+      }
+      if (!archivoEncontrado && archivosPdf.length === 1) {
+        archivoEncontrado = archivosPdf[0];
+      }
+    }
+
+    if (archivoEncontrado && archivoEncontrado.base64) {
+      setVisorPdfBase64(archivoEncontrado.base64);
+      setVisorPdfUrl(null);
+      setVisorPdfVisible(true);
+      return;
+    }
+
+    if (nombreBuscado) {
+      const url = rehacerId
+        ? ingresosService.obtenerUrlArchivo(rehacerId, nombreBuscado)
+        : ingresosService.obtenerUrlArchivo(undefined, nombreBuscado);
+      setVisorPdfBase64(null);
+      setVisorPdfUrl(url);
+      setVisorPdfVisible(true);
+      return;
+    }
+
+    setVisorPdfBase64(null);
+    setVisorPdfUrl(null);
+    setVisorPdfVisible(true);
   };
 
   useEffect(() => {
@@ -640,6 +697,7 @@ export default function NuevaValidacionScreen() {
       setGuardando(true);
       const payloadListo: AnalisisCompleto = {
         ...analisisResultado,
+        archivos: archivosPdf,
         candidato: {
           ...analisisResultado.candidato,
           email: candidatoEmail || analisisResultado.candidato?.email || undefined,
@@ -1743,12 +1801,29 @@ export default function NuevaValidacionScreen() {
                         </View>
                       </View>
 
-                      <TouchableOpacity
-                        onPress={() => eliminarArchivo(idx)}
-                        style={{ padding: 6 }}
-                      >
-                        <Ionicons name="trash-outline" size={20} color="#DC2626" />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <TouchableOpacity
+                          onPress={() => verPdfDocumento(file.name, file.name)}
+                          style={{
+                            padding: 6,
+                            borderRadius: 6,
+                            backgroundColor: '#EFF6FF',
+                            borderWidth: 1,
+                            borderColor: '#BFDBFE'
+                          }}
+                          accessibilityLabel="Ver PDF adjunto"
+                        >
+                          <Ionicons name="eye-outline" size={18} color="#1D4ED8" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => eliminarArchivo(idx)}
+                          style={{ padding: 6 }}
+                          accessibilityLabel="Eliminar archivo"
+                        >
+                          <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   ))}
                 </View>
@@ -2034,6 +2109,26 @@ export default function NuevaValidacionScreen() {
                             </Text>
                           </View>
 
+                          {/* Botón Ver PDF */}
+                          <TouchableOpacity
+                            onPress={() => verPdfDocumento(fa.nombre_archivo, fa.titulo_obtenido)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              paddingHorizontal: 8,
+                              paddingVertical: 5,
+                              borderRadius: 6,
+                              backgroundColor: '#EFF6FF',
+                              borderWidth: 1,
+                              borderColor: '#BFDBFE'
+                            }}
+                            accessibilityLabel="Ver PDF del título"
+                          >
+                            <Ionicons name="document-text-outline" size={14} color="#1D4ED8" />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
+                          </TouchableOpacity>
+
                           {/* Botón Editar */}
                           <TouchableOpacity
                             onPress={() => abrirEditarTitulo(idx)}
@@ -2118,6 +2213,26 @@ export default function NuevaValidacionScreen() {
                           {c.clasificacion_experiencia}
                         </Text>
                       </View>
+
+                      {/* Botón Ver PDF */}
+                      <TouchableOpacity
+                        onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor: '#EFF6FF',
+                          borderWidth: 1,
+                          borderColor: '#BFDBFE'
+                        }}
+                        accessibilityLabel="Ver PDF del certificado"
+                      >
+                        <Ionicons name="document-text-outline" size={14} color="#1D4ED8" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
+                      </TouchableOpacity>
 
                       {/* Botón Eliminar Certificado */}
                       <TouchableOpacity
@@ -2327,6 +2442,24 @@ export default function NuevaValidacionScreen() {
                               NO APLICA
                             </Text>
                           </View>
+                          <TouchableOpacity
+                            onPress={() => verPdfDocumento(doc.nombre_archivo, doc.descripcion || 'Documento no aplicable')}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              backgroundColor: '#EFF6FF',
+                              borderWidth: 1,
+                              borderColor: '#BFDBFE'
+                            }}
+                            accessibilityLabel="Ver PDF del documento"
+                          >
+                            <Ionicons name="document-text-outline" size={13} color="#1D4ED8" />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
+                          </TouchableOpacity>
                           <TouchableOpacity
                             onPress={() => pedirConfirmarEliminarDocNoAplica(idx)}
                             style={{
@@ -3083,6 +3216,16 @@ export default function NuevaValidacionScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal Visor de PDF integrado */}
+      <PdfViewerModal
+        visible={visorPdfVisible}
+        onClose={() => setVisorPdfVisible(false)}
+        titulo={visorPdfTitulo}
+        nombreArchivo={visorPdfNombre}
+        pdfUrl={visorPdfUrl}
+        pdfBase64={visorPdfBase64}
+      />
     </View>
   );
 }

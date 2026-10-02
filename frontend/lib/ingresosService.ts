@@ -170,6 +170,7 @@ export interface AnalisisCompleto {
   certificados: CertificadoAnalizado[];
   documentos_no_aplican?: DocumentoNoAplicaItem[];
   consolidado: ConsolidadoValidacion;
+  archivos?: Array<{ name: string; base64: string; size?: number; mimeType?: string }>;
   created_at?: string;
 }
 
@@ -336,5 +337,13 @@ export const ingresosService = {
 
   getExcelDownloadUrl(id: string): string {
     return `${API_URL}/api/ingresos/validaciones/${id}/excel`;
+  },
+
+  obtenerUrlArchivo(validacionId: string | undefined, nombreArchivo: string): string {
+    if (validacionId) {
+      return `${API_URL}/api/ingresos/validaciones/${validacionId}/archivo/${encodeURIComponent(nombreArchivo)}`;
+    }
+    return `${API_URL}/api/ingresos/archivos/${encodeURIComponent(nombreArchivo)}`;
   }
 };
+
