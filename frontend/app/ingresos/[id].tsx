@@ -157,8 +157,57 @@ export default function DetalleValidacionScreen() {
     titulos: any[];
     certs: any[];
     noAplican: any[];
-    errores?: Array<{ archivo: string; error: string }>;
+    errores?: Array<{ archivo: string; error: string; esCuota?: boolean }>;
+    huboErrorCuota?: boolean;
   } | null>(null);
+
+  const sanitizarMensajeErrorIa = (msg: string) => {
+    if (!msg) return { resumen: 'Error desconocido al analizar con IA.', esCuota: false };
+    const str = String(msg);
+
+    if (
+      str.includes('429') ||
+      str.toLowerCase().includes('quota') ||
+      str.toLowerCase().includes('too many requests') ||
+      str.includes('RESOURCE_EXHAUSTED')
+    ) {
+      let detalleEspera = '';
+      const matchEspera = str.match(/Please retry in ([^.]+)/i);
+      if (matchEspera && matchEspera[1]) {
+        detalleEspera = ` (Google solicita reintentar en aprox. ${matchEspera[1].trim()})`;
+      }
+      return {
+        resumen: `Cuota de Gemini agotada [Error 429]: Se excedió el límite de peticiones o tokens gratuitos de Google AI${detalleEspera}.`,
+        esCuota: true
+      };
+    }
+
+    if (
+      str.includes('413') ||
+      str.toLowerCase().includes('payload too large') ||
+      str.toLowerCase().includes('demasiado')
+    ) {
+      return {
+        resumen: 'Archivo demasiado pesado (413): El PDF supera el tamaño máximo permitido por el servidor web.',
+        esCuota: false
+      };
+    }
+
+    if (str.includes('400') && (str.includes('API key') || str.includes('API_KEY_INVALID'))) {
+      return {
+        resumen: 'Clave GEMINI_API_KEY no válida o sin permisos suficientes.',
+        esCuota: false
+      };
+    }
+
+    // Limpiar restos de JSON, URLs y volcados de trazas de Google
+    const sinJson = str.split('[{')[0].split('{"@type"')[0].replace(/\[GoogleGenerativeAI Error\]:?/gi, '').trim();
+    const lineaCorta = sinJson.length > 130 ? sinJson.substring(0, 127) + '...' : sinJson;
+    return {
+      resumen: lineaCorta || 'No se pudo interpretar el contenido del certificado con IA.',
+      esCuota: false
+    };
+  };
 
   const subirYAnalizarDocumento = async () => {
     try {
@@ -183,12 +232,14 @@ export default function DetalleValidacionScreen() {
         titulos: any[];
         certs: any[];
         noAplican: any[];
-        errores: Array<{ archivo: string; error: string }>;
+        errores: Array<{ archivo: string; error: string; esCuota?: boolean }>;
+        huboErrorCuota?: boolean;
       } = {
         titulos: [],
         certs: [],
         noAplican: [],
-        errores: []
+        errores: [],
+        huboErrorCuota: false
       };
 
       let expedienteActual = data;
@@ -247,12 +298,30 @@ export default function DetalleValidacionScreen() {
           }
           setProgresoIaEstado(`✓ Documento ${numActual} incorporado correctamente`);
         } catch (errInd: any) {
-          console.warn(`[Ingresos] Error analizando ${asset.name}:`, errInd);
+          const rawMsg = errInd?.message || String(errInd);
+          const { resumen, esCuota } = sanitizarMensajeErrorIa(rawMsg);
+          console.warn(`[Ingresos] Error analizando ${asset.name}:`, resumen);
+
           resumenAcumulado.errores.push({
             archivo: asset.name || `Documento ${numActual}`,
-            error: errInd.message || 'Error al procesar con IA'
+            error: resumen,
+            esCuota
           });
-          setProgresoIaEstado(`⚠️ Advertencia: ${errInd.message || 'No se pudo procesar este archivo'}`);
+          setProgresoIaEstado(`⚠️ ${resumen}`);
+
+          if (esCuota) {
+            resumenAcumulado.huboErrorCuota = true;
+            // Si la cuota gratuita de Google se agotó, omitir los restantes para no hacer esperar al usuario
+            for (let j = i + 1; j < totalArchivos; j++) {
+              const proxAsset = result.assets[j];
+              resumenAcumulado.errores.push({
+                archivo: proxAsset.name || `Documento ${j + 1}`,
+                error: 'Omitido: Se agotó la cuota de peticiones de Google Gemini (Error 429).',
+                esCuota: true
+              });
+            }
+            break; // Interrumpir la cola
+          }
         }
 
         const pctFin = Math.round(((i + 1) / totalArchivos) * 100);
@@ -2879,48 +2948,86 @@ export default function DetalleValidacionScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.5)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: 20
+            padding: 16
           }}
         >
           <View
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: 16,
-              padding: 24,
+              padding: 22,
               width: '100%',
-              maxWidth: 480,
+              maxWidth: 520,
+              maxHeight: '92%',
               borderWidth: 1,
               borderColor: '#E2E8F0',
-              gap: 16
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.15,
+              shadowRadius: 16,
+              elevation: 8,
+              gap: 14
             }}
           >
+            {/* Encabezado dinámico */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <View
                 style={{
                   width: 44,
                   height: 44,
                   borderRadius: 22,
-                  backgroundColor: '#DCFCE7',
+                  backgroundColor:
+                    (resumenIaDetectado?.titulos?.length || resumenIaDetectado?.certs?.length)
+                      ? '#DCFCE7'
+                      : '#FEF3C7',
                   justifyContent: 'center',
                   alignItems: 'center'
                 }}
               >
-                <Ionicons name="checkmark-circle" size={28} color="#15803D" />
+                <Ionicons
+                  name={
+                    (resumenIaDetectado?.titulos?.length || resumenIaDetectado?.certs?.length)
+                      ? 'checkmark-circle'
+                      : 'alert-circle'
+                  }
+                  size={28}
+                  color={
+                    (resumenIaDetectado?.titulos?.length || resumenIaDetectado?.certs?.length)
+                      ? '#15803D'
+                      : '#D97706'
+                  }
+                />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A' }}>
-                  Documento(s) Incorporado(s)
+                <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
+                  {(resumenIaDetectado?.titulos?.length || resumenIaDetectado?.certs?.length)
+                    ? 'Proceso de Incorporación Completado'
+                    : 'Atención en Análisis con IA'}
                 </Text>
                 <Text style={{ fontSize: 12, color: '#64748B' }}>
-                  Clasificación y auditoría normativa completadas
+                  {(resumenIaDetectado?.titulos?.length || resumenIaDetectado?.certs?.length)
+                    ? 'Resultados y auditoría normativa del expediente'
+                    : 'Revisa las observaciones generadas a continuación'}
                 </Text>
               </View>
             </View>
 
-            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 10, maxHeight: 360 }}>
+            {/* Contenedor ScrollView para garantizar que NUNCA desborde ni tape los botones */}
+            <ScrollView
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: 12,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                maxHeight: 380
+              }}
+              contentContainerStyle={{ gap: 12 }}
+              showsVerticalScrollIndicator={true}
+            >
               {resumenIaDetectado?.titulos && resumenIaDetectado.titulos.length > 0 ? (
                 <View style={{ gap: 4 }}>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>
@@ -2960,16 +3067,39 @@ export default function DetalleValidacionScreen() {
                 </View>
               ) : null}
 
+              {/* Sección de errores formateados limpiamente */}
               {resumenIaDetectado?.errores && resumenIaDetectado.errores.length > 0 ? (
-                <View style={{ gap: 4, backgroundColor: '#FEF2F2', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#FECACA' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#DC2626' }}>
-                    ⚠️ Documentos no procesados ({resumenIaDetectado.errores.length}):
-                  </Text>
-                  {resumenIaDetectado.errores.map((errItem, idx) => (
-                    <Text key={idx} style={{ fontSize: 11, color: '#991B1B' }}>
-                      • {errItem.archivo}: {errItem.error}
+                <View style={{ backgroundColor: '#FEF2F2', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FECACA', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="warning" size={16} color="#DC2626" />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#DC2626' }}>
+                      Documentos no procesados ({resumenIaDetectado.errores.length})
                     </Text>
-                  ))}
+                  </View>
+
+                  {resumenIaDetectado.huboErrorCuota ? (
+                    <View style={{ backgroundColor: '#FFF1F2', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#FFE4E6' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#9F1239', lineHeight: 16 }}>
+                        ⚠️ Límite de cuota alcanzado en Google Gemini (Error 429). La cuenta gratuita ha agotado su límite diario o de tokens por minuto. Puedes subir una nueva clave o reintentar más tarde.
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <View style={{ gap: 6, marginTop: 2 }}>
+                    {resumenIaDetectado.errores.map((errItem, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+                        <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '800' }}>•</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: '#991B1B' }}>
+                            {errItem.archivo}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: '#7F1D1D', lineHeight: 15 }}>
+                            {errItem.error}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               ) : null}
 
@@ -2978,17 +3108,17 @@ export default function DetalleValidacionScreen() {
                   Los documentos analizados ya se encontraban registrados o no requirieron adición de nuevas filas.
                 </Text>
               ) : null}
-            </View>
+            </ScrollView>
 
-            <Text style={{ fontSize: 12, color: '#475569', lineHeight: 18 }}>
-              Todos los tiempos válidos, traslapes y verificaciones normativas fueron recalculados y persistidos automáticamente en la base de datos y en el formato Excel FT-318.
+            <Text style={{ fontSize: 11, color: '#64748B', lineHeight: 16 }}>
+              Todos los documentos válidos incorporados han sido auditados normativamente y guardados en el expediente y en el Excel FT-318.
             </Text>
 
             <TouchableOpacity
               onPress={() => setModalResultadoIaVisible(false)}
               style={{
                 backgroundColor: '#1E40AF',
-                paddingVertical: 11,
+                paddingVertical: 12,
                 borderRadius: 8,
                 alignItems: 'center'
               }}
