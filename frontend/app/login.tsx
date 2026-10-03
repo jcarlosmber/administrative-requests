@@ -90,7 +90,7 @@ export default function LoginPage() {
     }
     if (clickCountRef.current >= 3) {
       clickCountRef.current = 0;
-      router.push('/ingresos');
+      router.push('/rrhh');
       return;
     }
     clickTimeoutRef.current = setTimeout(() => {
@@ -127,7 +127,7 @@ export default function LoginPage() {
       
       // Redirección inteligente según el rol del usuario
       if (data?.user?.role === 'talento_humano' || data?.user?.role === 'analista_ingresos' || data?.user?.role === 'ingresos') {
-        router.replace('/ingresos');
+        router.replace('/rrhh');
       } else if (data?.user?.role === 'admin' || data?.user?.role === 'superadmin') {
         router.replace('/admin');
       } else {

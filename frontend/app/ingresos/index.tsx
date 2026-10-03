@@ -131,6 +131,23 @@ export default function IngresosDashboardScreen() {
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity
+            onPress={() => router.push('/rrhh')}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#0F2133',
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+          >
+            <Ionicons name="grid-outline" size={18} color="#FCA5A5" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#FCA5A5', fontSize: 14, fontWeight: '700' }}>Módulos RRHH</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => router.push('/ingresos/cargos')}
             style={{
               flexDirection: 'row',

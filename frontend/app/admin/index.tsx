@@ -322,9 +322,9 @@ export default function AdminDashboardScreen() {
               </Animated.View>
             </Pressable>
 
-            {/* Banner Módulo de Validación de Ingresos con IA */}
+            {/* Banner Módulos de Talento Humano (RRHH) */}
             <Pressable 
-              onPress={() => router.push('/ingresos')}
+              onPress={() => router.push('/rrhh')}
               style={{ marginTop: 14 }}
             >
               <LinearGradient
@@ -334,12 +334,12 @@ export default function AdminDashboardScreen() {
                 style={[styles.reportsBanner, { marginTop: 0 }]}
               >
                 <View style={[styles.bannerIconBox, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                  <Ionicons name="shield-checkmark" size={28} color="#FFFFFF" />
+                  <Ionicons name="people-circle" size={28} color="#FFFFFF" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.bannerTitle}>Validación de Ingresos (IA Gemini)</Text>
+                  <Text style={styles.bannerTitle}>Gestión de Talento Humano (RRHH)</Text>
                   <Text style={styles.bannerText}>
-                    Cotejo documental de experiencia laboral y certificados con IA para contratación pública.
+                    Validación Técnica de Ingresos (IA), Teletrabajo y Desvinculaciones.
                   </Text>
                 </View>
                 <Ionicons name="arrow-forward-circle" size={32} color="#FFFFFF" opacity={0.9} />
