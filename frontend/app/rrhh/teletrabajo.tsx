@@ -46,6 +46,11 @@ const COLORS = {
 
 const DIAS_SEMANA = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'];
 
+const limpiarFecha = (fecha?: string | null): string => {
+  if (!fecha) return '';
+  return fecha.split('T')[0].trim();
+};
+
 export default function TeletrabajoScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -120,7 +125,7 @@ export default function TeletrabajoScreen() {
   const [guardandoAsignacion, setGuardandoAsignacion] = useState(false);
   const [formAsignacion, setFormAsignacion] = useState<{
     persona: PersonaPlanta | null;
-    modalidad: 'TELETRABAJO' | 'TRABAJO_EN_CASA';
+    modalidad: 'TELETRABAJO' | 'TRABAJO_EN_CASA' | 'TELETRABAJO_AUTONOMO';
     submodalidad: string;
     resolucion_id: string;
     fecha_inicio: string;
@@ -129,7 +134,7 @@ export default function TeletrabajoScreen() {
     cargo_es_teletrabajable: boolean;
     excepcion_jefe_aprobada: boolean;
     motivo_excepcion_jefe: string;
-    esquema_dias_tipo: 'DIAS_FIJOS' | 'DIAS_PARES' | 'DIAS_IMPARES' | 'CANTIDAD_LIBRE';
+    esquema_dias_tipo: 'DIAS_FIJOS' | 'DIAS_PARES' | 'DIAS_IMPARES' | 'CANTIDAD_LIBRE' | 'TODOS';
     dias_por_semana: number;
     dias_semana_fijos: string[];
     observaciones: string;
@@ -152,13 +157,16 @@ export default function TeletrabajoScreen() {
 
   const abrirModalAsignacion = (persona: PersonaPlanta) => {
     const resVigente = resoluciones.find((r) => r.estado === 'VIGENTE') || resoluciones[0];
-    const fechaIni = persona.asignacion_desde || resVigente?.fecha_inicio_vigencia || new Date().toISOString().split('T')[0];
-    const fechaFin = persona.asignacion_hasta || resVigente?.fecha_fin_vigencia || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+    const fechaIni = limpiarFecha(persona.asignacion_desde) || limpiarFecha(resVigente?.fecha_inicio_vigencia) || new Date().toISOString().split('T')[0];
+    const fechaFin = limpiarFecha(persona.asignacion_hasta) || limpiarFecha(resVigente?.fecha_fin_vigencia) || new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0];
+
+    const modInicial = (persona.modalidad as any) || 'TELETRABAJO';
+    const esqInicial = persona.esquema_dias_tipo || (modInicial === 'TELETRABAJO_AUTONOMO' ? 'TODOS' : 'DIAS_FIJOS');
 
     setFormAsignacion({
       persona,
-      modalidad: persona.modalidad || 'TELETRABAJO',
-      submodalidad: persona.submodalidad || 'SUPLEMENTARIO',
+      modalidad: modInicial,
+      submodalidad: persona.submodalidad || (modInicial === 'TELETRABAJO_AUTONOMO' ? 'AUTONOMO' : 'SUPLEMENTARIO'),
       resolucion_id: persona.resolucion_id || resVigente?.id || '',
       fecha_inicio: fechaIni,
       fecha_fin: fechaFin,
@@ -166,10 +174,12 @@ export default function TeletrabajoScreen() {
       cargo_es_teletrabajable: persona.cargo_es_teletrabajable !== undefined ? persona.cargo_es_teletrabajable : true,
       excepcion_jefe_aprobada: persona.excepcion_jefe_aprobada || false,
       motivo_excepcion_jefe: persona.motivo_excepcion_jefe || '',
-      esquema_dias_tipo: persona.esquema_dias_tipo || 'DIAS_FIJOS',
-      dias_por_semana: persona.dias_por_semana || 2,
+      esquema_dias_tipo: esqInicial,
+      dias_por_semana: persona.dias_por_semana || (modInicial === 'TELETRABAJO_AUTONOMO' ? 5 : 2),
       dias_semana_fijos: Array.isArray(persona.dias_semana_fijos) && persona.dias_semana_fijos.length > 0
         ? persona.dias_semana_fijos
+        : modInicial === 'TELETRABAJO_AUTONOMO'
+        ? [...DIAS_SEMANA]
         : ['LUNES', 'MIERCOLES'],
       observaciones: '',
     });
@@ -181,9 +191,9 @@ export default function TeletrabajoScreen() {
     setFormAsignacion((prev) => ({
       ...prev,
       resolucion_id: resId,
-      // Si el usuario no ha editado manualmente las fechas, hereda automáticamente las de la resolución
-      fecha_inicio: !prev.fechas_editadas_manualmente && resSel ? resSel.fecha_inicio_vigencia : prev.fecha_inicio,
-      fecha_fin: !prev.fechas_editadas_manualmente && resSel ? resSel.fecha_fin_vigencia : prev.fecha_fin,
+      // Si el usuario no ha editado manualmente las fechas, hereda automáticamente las de la resolución limpia
+      fecha_inicio: !prev.fechas_editadas_manualmente && resSel ? limpiarFecha(resSel.fecha_inicio_vigencia) : prev.fecha_inicio,
+      fecha_fin: !prev.fechas_editadas_manualmente && resSel ? limpiarFecha(resSel.fecha_fin_vigencia) : prev.fecha_fin,
     }));
   };
 
@@ -197,8 +207,18 @@ export default function TeletrabajoScreen() {
         ...prev,
         dias_semana_fijos: nuevos,
         dias_por_semana: nuevos.length,
+        esquema_dias_tipo: nuevos.length === 5 ? 'TODOS' : 'DIAS_FIJOS',
       };
     });
+  };
+
+  const seleccionarTodosLosDias = () => {
+    setFormAsignacion((prev) => ({
+      ...prev,
+      esquema_dias_tipo: 'TODOS',
+      dias_por_semana: 5,
+      dias_semana_fijos: [...DIAS_SEMANA],
+    }));
   };
 
   const guardarAsignacion = async () => {
@@ -208,8 +228,11 @@ export default function TeletrabajoScreen() {
       return;
     }
 
+    const esCualquierTeletrabajo =
+      formAsignacion.modalidad === 'TELETRABAJO' || formAsignacion.modalidad === 'TELETRABAJO_AUTONOMO';
+
     if (
-      formAsignacion.modalidad === 'TELETRABAJO' &&
+      esCualquierTeletrabajo &&
       !formAsignacion.cargo_es_teletrabajable &&
       !formAsignacion.excepcion_jefe_aprobada
     ) {
@@ -232,10 +255,13 @@ export default function TeletrabajoScreen() {
         grado_cargo: formAsignacion.persona.grado,
         dependencia: formAsignacion.persona.dependencia_cargo,
         modalidad: formAsignacion.modalidad,
-        submodalidad: formAsignacion.submodalidad,
+        submodalidad:
+          formAsignacion.modalidad === 'TELETRABAJO_AUTONOMO'
+            ? 'AUTONOMO'
+            : formAsignacion.submodalidad,
         resolucion_id: formAsignacion.resolucion_id || null,
-        fecha_inicio: formAsignacion.fecha_inicio,
-        fecha_fin: formAsignacion.fecha_fin,
+        fecha_inicio: limpiarFecha(formAsignacion.fecha_inicio),
+        fecha_fin: limpiarFecha(formAsignacion.fecha_fin),
         cargo_es_teletrabajable: formAsignacion.cargo_es_teletrabajable,
         excepcion_jefe_aprobada: formAsignacion.excepcion_jefe_aprobada,
         motivo_excepcion_jefe: formAsignacion.motivo_excepcion_jefe,
@@ -247,9 +273,15 @@ export default function TeletrabajoScreen() {
 
       setModalAsignacionVisible(false);
       await cargarTodo();
+      const nombreMod =
+        formAsignacion.modalidad === 'TELETRABAJO_AUTONOMO'
+          ? 'Teletrabajo Autónomo'
+          : formAsignacion.modalidad === 'TELETRABAJO'
+          ? 'Teletrabajo Suplementario'
+          : 'Trabajo en Casa';
       mostrarMensaje(
         'Modalidad Registrada',
-        `Se ha configurado exitosamente la modalidad de ${formAsignacion.modalidad === 'TELETRABAJO' ? 'Teletrabajo' : 'Trabajo en Casa'} para ${formAsignacion.persona.titular_nombre}.`,
+        `Se ha configurado exitosamente la modalidad de ${nombreMod} para ${formAsignacion.persona.titular_nombre}.`,
         'success'
       );
     } catch (err: any) {
@@ -858,6 +890,7 @@ export default function TeletrabajoScreen() {
                     {[
                       { id: 'TODOS', label: 'Todos' },
                       { id: 'TELETRABAJO', label: 'Teletrabajo' },
+                      { id: 'TELETRABAJO_AUTONOMO', label: 'Autónomo' },
                       { id: 'TRABAJO_EN_CASA', label: 'Trabajo en Casa' },
                       { id: 'SIN_MODALIDAD', label: 'Presencial' },
                       { id: 'NUEVO_ACUERDO', label: '⚠️ Requiere Acuerdo' },
@@ -898,7 +931,8 @@ export default function TeletrabajoScreen() {
                 <View style={{ gap: 12 }}>
                   {personasFiltradas.map((p) => {
                     const tieneModalidad = p.modalidad && p.asignacion_estado === 'ACTIVO';
-                    const esTeletrabajo = p.modalidad === 'TELETRABAJO';
+                    const esAutonomo = p.modalidad === 'TELETRABAJO_AUTONOMO';
+                    const esTeletrabajo = p.modalidad === 'TELETRABAJO' || esAutonomo;
                     return (
                       <View
                         key={p.id_plaza}
@@ -907,7 +941,9 @@ export default function TeletrabajoScreen() {
                           borderRadius: 14,
                           borderWidth: 1,
                           borderColor: tieneModalidad
-                            ? esTeletrabajo
+                            ? esAutonomo
+                              ? 'rgba(2, 132, 199, 0.5)'
+                              : esTeletrabajo
                               ? 'rgba(56, 189, 248, 0.35)'
                               : 'rgba(167, 139, 250, 0.35)'
                             : COLORS.border,
@@ -931,24 +967,30 @@ export default function TeletrabajoScreen() {
                             {tieneModalidad ? (
                               <View
                                 style={{
-                                  backgroundColor: esTeletrabajo
+                                  backgroundColor: esAutonomo
+                                    ? 'rgba(2, 132, 199, 0.25)'
+                                    : esTeletrabajo
                                     ? 'rgba(56, 189, 248, 0.2)'
                                     : 'rgba(167, 139, 250, 0.2)',
                                   paddingHorizontal: 8,
                                   paddingVertical: 3,
                                   borderRadius: 6,
                                   borderWidth: 1,
-                                  borderColor: esTeletrabajo ? '#38BDF8' : '#A78BFA',
+                                  borderColor: esAutonomo ? '#0284C7' : esTeletrabajo ? '#38BDF8' : '#A78BFA',
                                 }}
                               >
                                 <Text
                                   style={{
-                                    color: esTeletrabajo ? '#38BDF8' : '#C4B5FD',
+                                    color: esAutonomo ? '#7DD3FC' : esTeletrabajo ? '#38BDF8' : '#C4B5FD',
                                     fontSize: 11,
                                     fontWeight: '800',
                                   }}
                                 >
-                                  {esTeletrabajo ? 'TELETRABAJO' : 'TRABAJO EN CASA'}
+                                  {esAutonomo
+                                    ? 'TELETRABAJO AUTÓNOMO'
+                                    : esTeletrabajo
+                                    ? 'TELETRABAJO'
+                                    : 'TRABAJO EN CASA'}
                                 </Text>
                               </View>
                             ) : (
@@ -1032,7 +1074,9 @@ export default function TeletrabajoScreen() {
                                 <Text style={{ color: '#CBD5E1', fontSize: 12 }}>
                                   Esquema:{' '}
                                   <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>
-                                    {p.esquema_dias_tipo === 'DIAS_PARES'
+                                    {p.esquema_dias_tipo === 'TODOS'
+                                      ? 'Todos los días (L-V)'
+                                      : p.esquema_dias_tipo === 'DIAS_PARES'
                                       ? 'Días Pares'
                                       : p.esquema_dias_tipo === 'DIAS_IMPARES'
                                       ? 'Días Impares'
@@ -1048,7 +1092,7 @@ export default function TeletrabajoScreen() {
                                 <Text style={{ color: '#94A3B8', fontSize: 12 }}>
                                   Vigencia:{' '}
                                   <Text style={{ color: '#CBD5E1', fontWeight: '600' }}>
-                                    {p.asignacion_desde || 'N/A'} al {p.asignacion_hasta || 'N/A'}
+                                    {limpiarFecha(p.asignacion_desde) || 'N/A'} al {limpiarFecha(p.asignacion_hasta) || 'N/A'}
                                   </Text>
                                 </Text>
                               </View>
@@ -1232,12 +1276,12 @@ export default function TeletrabajoScreen() {
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                           <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                            Expedición: <Text style={{ color: '#FFFFFF' }}>{r.fecha_expedicion}</Text>
+                            Expedición: <Text style={{ color: '#FFFFFF' }}>{limpiarFecha(r.fecha_expedicion)}</Text>
                           </Text>
                           <Text style={{ color: '#94A3B8', fontSize: 12 }}>
                             Vigencia General:{' '}
                             <Text style={{ color: '#FFFFFF' }}>
-                              {r.fecha_inicio_vigencia} al {r.fecha_fin_vigencia}
+                              {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
                             </Text>
                           </Text>
                           <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700' }}>
@@ -1435,7 +1479,7 @@ export default function TeletrabajoScreen() {
                         </Text>
 
                         <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                          Fecha de Suscripción: {ac.fecha_suscripcion} • Vigencia: {ac.periodo_vigencia || 'ANUAL'}
+                          Fecha de Suscripción: {limpiarFecha(ac.fecha_suscripcion)} • Vigencia: {ac.periodo_vigencia || 'ANUAL'}
                         </Text>
                       </View>
 
@@ -1532,7 +1576,7 @@ export default function TeletrabajoScreen() {
                           }}
                         >
                           <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '800' }}>
-                            Corte: {s.fecha_corte_desde} al {s.fecha_corte_hasta}
+                            Corte: {limpiarFecha(s.fecha_corte_desde)} al {limpiarFecha(s.fecha_corte_hasta)}
                           </Text>
                         </View>
                       </View>
@@ -1759,29 +1803,80 @@ export default function TeletrabajoScreen() {
                   <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
                     Tipo de Modalidad:
                   </Text>
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
                     {[
-                      { id: 'TELETRABAJO', label: 'Teletrabajo (Ordinario/Suplementario)' },
-                      { id: 'TRABAJO_EN_CASA', label: 'Trabajo en Casa (Excepcional)' },
+                      {
+                        id: 'TELETRABAJO',
+                        label: 'Teletrabajo Suplementario',
+                        sub: 'Modalidad híbrida (días presenciales y días en casa)',
+                      },
+                      {
+                        id: 'TELETRABAJO_AUTONOMO',
+                        label: 'Teletrabajo Autónomo',
+                        sub: 'Modalidad 100% remota continua o permanente',
+                      },
+                      {
+                        id: 'TRABAJO_EN_CASA',
+                        label: 'Trabajo en Casa',
+                        sub: 'Modalidad temporal o excepcional (Ley 2088)',
+                      },
                     ].map((m) => {
                       const sel = formAsignacion.modalidad === m.id;
                       return (
                         <TouchableOpacity
                           key={m.id}
-                          onPress={() => setFormAsignacion((prev) => ({ ...prev, modalidad: m.id as any }))}
+                          onPress={() => {
+                            if (m.id === 'TELETRABAJO_AUTONOMO') {
+                              setFormAsignacion((prev) => ({
+                                ...prev,
+                                modalidad: 'TELETRABAJO_AUTONOMO',
+                                submodalidad: 'AUTONOMO',
+                                esquema_dias_tipo: 'TODOS',
+                                dias_por_semana: 5,
+                                dias_semana_fijos: [...DIAS_SEMANA],
+                              }));
+                            } else {
+                              setFormAsignacion((prev) => ({
+                                ...prev,
+                                modalidad: m.id as any,
+                                submodalidad: m.id === 'TELETRABAJO' ? 'SUPLEMENTARIO' : 'EXCEPCIONAL',
+                              }));
+                            }
+                          }}
                           style={{
                             flex: 1,
-                            backgroundColor: sel ? '#0284C7' : 'rgba(255, 255, 255, 0.06)',
+                            backgroundColor: sel
+                              ? m.id === 'TELETRABAJO_AUTONOMO'
+                                ? '#0284C7'
+                                : m.id === 'TELETRABAJO'
+                                ? '#0369A1'
+                                : '#6D28D9'
+                              : 'rgba(255, 255, 255, 0.05)',
                             paddingVertical: 10,
                             paddingHorizontal: 12,
-                            borderRadius: 8,
+                            borderRadius: 10,
                             borderWidth: 1,
                             borderColor: sel ? '#38BDF8' : COLORS.border,
-                            alignItems: 'center',
+                            gap: 3,
                           }}
                         >
-                          <Text style={{ color: sel ? '#FFFFFF' : '#94A3B8', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>
+                          <Text
+                            style={{
+                              color: sel ? '#FFFFFF' : '#CBD5E1',
+                              fontSize: 12.5,
+                              fontWeight: '800',
+                            }}
+                          >
                             {m.label}
+                          </Text>
+                          <Text
+                            style={{
+                              color: sel ? '#E0F2FE' : '#94A3B8',
+                              fontSize: 11,
+                              lineHeight: 14,
+                            }}
+                          >
+                            {m.sub}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -1817,21 +1912,26 @@ export default function TeletrabajoScreen() {
                               {r.numero_resolucion}
                             </Text>
                             <Text style={{ color: '#94A3B8', fontSize: 11 }}>
-                              Vigencia base: {r.fecha_inicio_vigencia} al {r.fecha_fin_vigencia}
+                              Vigencia base de la resolución: {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
                             </Text>
                           </View>
                           {sel && <Ionicons name="checkmark-circle" size={18} color="#38BDF8" />}
                         </TouchableOpacity>
                       );
                     })}
+                    {resoluciones.length === 0 && (
+                      <Text style={{ color: '#F59E0B', fontSize: 12 }}>
+                        No hay resoluciones registradas aún. Puedes definirlas en la pestaña de Resoluciones o ingresar fechas manualmente.
+                      </Text>
+                    )}
                   </View>
                 </View>
 
-                {/* Fechas de Vigencia (Heredadas de resolución o editables) */}
+                {/* Fechas de Vigencia (Aclarado: Otorgado a la persona por la resolución o editable si es menor) */}
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
-                      Periodo de Vigencia de la Persona:
+                      Periodo de Vigencia de la Autorización de Modalidad:
                     </Text>
                     <TouchableOpacity
                       onPress={() =>
@@ -1842,20 +1942,34 @@ export default function TeletrabajoScreen() {
                       }
                     >
                       <Text style={{ color: '#38BDF8', fontSize: 11.5, fontWeight: '700' }}>
-                        {formAsignacion.fechas_editadas_manualmente ? 'Modo Manual' : 'Heredando de Resolución'}
+                        {formAsignacion.fechas_editadas_manualmente ? 'Modo Manual Habilitado' : 'Heredando de Resolución'}
                       </Text>
                     </TouchableOpacity>
+                  </View>
+
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(56, 189, 248, 0.08)',
+                      padding: 8,
+                      borderRadius: 6,
+                      borderLeftWidth: 3,
+                      borderLeftColor: '#38BDF8',
+                    }}
+                  >
+                    <Text style={{ color: '#94A3B8', fontSize: 11.5, lineHeight: 16 }}>
+                      ℹ️ Corresponde al rango de fechas en que la persona tiene autorizada la modalidad. Por defecto hereda la vigencia de la Resolución seleccionada, pero puedes ajustarlo si a la persona se le concede un periodo menor o específico.
+                    </Text>
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1, gap: 4 }}>
                       <Text style={{ color: '#94A3B8', fontSize: 11 }}>Fecha Inicio:</Text>
                       <TextInput
-                        value={formAsignacion.fecha_inicio}
+                        value={limpiarFecha(formAsignacion.fecha_inicio)}
                         onChangeText={(t) =>
                           setFormAsignacion((prev) => ({
                             ...prev,
-                            fecha_inicio: t,
+                            fecha_inicio: limpiarFecha(t),
                             fechas_editadas_manualmente: true,
                           }))
                         }
@@ -1875,11 +1989,11 @@ export default function TeletrabajoScreen() {
                     <View style={{ flex: 1, gap: 4 }}>
                       <Text style={{ color: '#94A3B8', fontSize: 11 }}>Fecha Fin:</Text>
                       <TextInput
-                        value={formAsignacion.fecha_fin}
+                        value={limpiarFecha(formAsignacion.fecha_fin)}
                         onChangeText={(t) =>
                           setFormAsignacion((prev) => ({
                             ...prev,
-                            fecha_fin: t,
+                            fecha_fin: limpiarFecha(t),
                             fechas_editadas_manualmente: true,
                           }))
                         }
@@ -1899,14 +2013,22 @@ export default function TeletrabajoScreen() {
                   </View>
                 </View>
 
-                {/* Esquema de Días */}
+                {/* Esquema de Días: Título Dinámico según modalidad seleccionada */}
                 <View style={{ gap: 8 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
-                    Distribución de Días de Teletrabajo:
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
+                      {formAsignacion.modalidad === 'TRABAJO_EN_CASA'
+                        ? 'Distribución de Días de Trabajo en Casa:'
+                        : formAsignacion.modalidad === 'TELETRABAJO_AUTONOMO'
+                        ? 'Distribución de Días de Teletrabajo Autónomo:'
+                        : 'Distribución de Días de Teletrabajo:'}
+                    </Text>
+                  </View>
+
                   <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                     {[
                       { id: 'DIAS_FIJOS', label: 'Días Fijos por Semana' },
+                      { id: 'TODOS', label: 'Todos los Días (Lunes a Viernes)' },
                       { id: 'DIAS_PARES', label: 'Días Pares del Calendario' },
                       { id: 'DIAS_IMPARES', label: 'Días Impares del Calendario' },
                       { id: 'CANTIDAD_LIBRE', label: 'Días Libres Concertados' },
@@ -1915,11 +2037,20 @@ export default function TeletrabajoScreen() {
                       return (
                         <TouchableOpacity
                           key={esq.id}
-                          onPress={() => setFormAsignacion((prev) => ({ ...prev, esquema_dias_tipo: esq.id as any }))}
+                          onPress={() => {
+                            if (esq.id === 'TODOS') {
+                              seleccionarTodosLosDias();
+                            } else {
+                              setFormAsignacion((prev) => ({
+                                ...prev,
+                                esquema_dias_tipo: esq.id as any,
+                              }));
+                            }
+                          }}
                           style={{
                             backgroundColor: sel ? '#0284C7' : 'rgba(255, 255, 255, 0.05)',
                             paddingVertical: 8,
-                            paddingHorizontal: 10,
+                            paddingHorizontal: 11,
                             borderRadius: 6,
                             borderWidth: 1,
                             borderColor: sel ? '#38BDF8' : COLORS.border,
@@ -1933,10 +2064,51 @@ export default function TeletrabajoScreen() {
                     })}
                   </View>
 
-                  {/* Selector de días de la semana si es DIAS_FIJOS */}
-                  {formAsignacion.esquema_dias_tipo === 'DIAS_FIJOS' && (
+                  {/* Selector de días de la semana con botón TODOS */}
+                  {(formAsignacion.esquema_dias_tipo === 'DIAS_FIJOS' ||
+                    formAsignacion.esquema_dias_tipo === 'TODOS') && (
                     <View style={{ marginTop: 6, gap: 6 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 11 }}>Selecciona los días hábiles:</Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>Selecciona los días hábiles:</Text>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <TouchableOpacity
+                            onPress={seleccionarTodosLosDias}
+                            style={{
+                              backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                              borderWidth: 1,
+                              borderColor: '#0284C7',
+                            }}
+                          >
+                            <Text style={{ color: '#38BDF8', fontSize: 10.5, fontWeight: '800' }}>
+                              Marcar Todos (5)
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() =>
+                              setFormAsignacion((prev) => ({
+                                ...prev,
+                                dias_semana_fijos: [],
+                                dias_por_semana: 0,
+                                esquema_dias_tipo: 'DIAS_FIJOS',
+                              }))
+                            }
+                            style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text style={{ color: '#94A3B8', fontSize: 10.5, fontWeight: '600' }}>
+                              Limpiar
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
                       <View style={{ flexDirection: 'row', gap: 6 }}>
                         {DIAS_SEMANA.map((dia) => {
                           const activo = formAsignacion.dias_semana_fijos.includes(dia);

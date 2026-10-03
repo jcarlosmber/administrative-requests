@@ -375,8 +375,9 @@ module.exports = function (pool) {
         return res.status(400).json({ error: 'Datos incompletos para registrar la asignación de modalidad.' });
       }
 
-      // Regla de Negocio: Si el cargo no es teletrabajable y es modalidad TELETRABAJO, requiere aval del jefe
-      if (modalidad === 'TELETRABAJO' && !cargo_es_teletrabajable && !excepcion_jefe_aprobada) {
+      // Regla de Negocio: Si el cargo no es teletrabajable y es modalidad de teletrabajo, requiere aval del jefe
+      const esCualquierTeletrabajo = modalidad === 'TELETRABAJO' || modalidad === 'TELETRABAJO_AUTONOMO' || modalidad === 'AUTONOMO';
+      if (esCualquierTeletrabajo && !cargo_es_teletrabajable && !excepcion_jefe_aprobada) {
         return res.status(400).json({
           error: 'El cargo actual no figura como teletrabajable en el manual. Para habilitarlo se requiere marcar la Aprobación Excepcional de la Jefatura con su respectiva justificación.',
         });
@@ -738,7 +739,7 @@ module.exports = function (pool) {
       const activasQ = await pool.query(`
         SELECT 
           COUNT(*) as total_activas,
-          COUNT(*) FILTER (WHERE modalidad = 'TELETRABAJO') as en_teletrabajo,
+          COUNT(*) FILTER (WHERE modalidad IN ('TELETRABAJO', 'TELETRABAJO_AUTONOMO', 'AUTONOMO')) as en_teletrabajo,
           COUNT(*) FILTER (WHERE modalidad = 'TRABAJO_EN_CASA') as en_trabajo_en_casa,
           COUNT(*) FILTER (WHERE excepcion_jefe_aprobada = TRUE) as con_excepcion_jefe,
           COUNT(*) FILTER (WHERE esquema_dias_tipo = 'DIAS_PARES') as dias_pares,

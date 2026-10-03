@@ -16,13 +16,13 @@ export interface PersonaPlanta {
   cargo_es_teletrabajable: boolean;
   cargo_max_dias: number;
   asignacion_id?: string;
-  modalidad?: 'TELETRABAJO' | 'TRABAJO_EN_CASA';
+  modalidad?: 'TELETRABAJO' | 'TRABAJO_EN_CASA' | 'TELETRABAJO_AUTONOMO';
   submodalidad?: string;
   resolucion_id?: string;
   numero_resolucion_display?: string;
   asignacion_desde?: string;
   asignacion_hasta?: string;
-  esquema_dias_tipo?: 'DIAS_FIJOS' | 'DIAS_PARES' | 'DIAS_IMPARES' | 'CANTIDAD_LIBRE';
+  esquema_dias_tipo?: 'DIAS_FIJOS' | 'DIAS_PARES' | 'DIAS_IMPARES' | 'CANTIDAD_LIBRE' | 'TODOS';
   dias_por_semana?: number;
   dias_semana_fijos?: string[];
   excepcion_jefe_aprobada?: boolean;
@@ -73,7 +73,7 @@ export interface AsignacionModalidad {
   codigo_cargo?: string;
   grado_cargo?: string;
   dependencia?: string;
-  modalidad: 'TELETRABAJO' | 'TRABAJO_EN_CASA';
+  modalidad: 'TELETRABAJO' | 'TRABAJO_EN_CASA' | 'TELETRABAJO_AUTONOMO';
   submodalidad?: string;
   resolucion_id?: string | null;
   numero_resolucion_display?: string;
@@ -82,7 +82,7 @@ export interface AsignacionModalidad {
   cargo_es_teletrabajable: boolean;
   excepcion_jefe_aprobada: boolean;
   motivo_excepcion_jefe?: string;
-  esquema_dias_tipo: 'DIAS_FIJOS' | 'DIAS_PARES' | 'DIAS_IMPARES' | 'CANTIDAD_LIBRE';
+  esquema_dias_tipo: 'DIAS_FIJOS' | 'DIAS_PARES' | 'DIAS_IMPARES' | 'CANTIDAD_LIBRE' | 'TODOS';
   dias_por_semana: number;
   dias_semana_fijos: string[];
   estado?: 'ACTIVO' | 'VENCIDO' | 'SUSPENDIDO' | 'REVOCADO';

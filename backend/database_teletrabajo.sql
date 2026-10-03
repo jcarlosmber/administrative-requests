@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.teletrabajo_asignaciones (
     codigo_cargo TEXT,
     grado_cargo TEXT,
     dependencia TEXT,
-    modalidad TEXT NOT NULL CHECK (modalidad IN ('TELETRABAJO', 'TRABAJO_EN_CASA')),
+    modalidad TEXT NOT NULL CHECK (modalidad IN ('TELETRABAJO', 'TRABAJO_EN_CASA', 'TELETRABAJO_AUTONOMO', 'AUTONOMO')),
     submodalidad TEXT DEFAULT 'SUPLEMENTARIO', -- SUPLEMENTARIO, AUTONOMO, MOVIL, EXCEPCIONAL
     resolucion_id UUID REFERENCES public.teletrabajo_resoluciones(id) ON DELETE SET NULL,
     numero_resolucion_display TEXT,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS public.teletrabajo_asignaciones (
     cargo_es_teletrabajable BOOLEAN DEFAULT TRUE,
     excepcion_jefe_aprobada BOOLEAN DEFAULT FALSE,
     motivo_excepcion_jefe TEXT,
-    esquema_dias_tipo TEXT NOT NULL CHECK (esquema_dias_tipo IN ('DIAS_FIJOS', 'DIAS_PARES', 'DIAS_IMPARES', 'CANTIDAD_LIBRE')),
+    esquema_dias_tipo TEXT NOT NULL CHECK (esquema_dias_tipo IN ('DIAS_FIJOS', 'DIAS_PARES', 'DIAS_IMPARES', 'CANTIDAD_LIBRE', 'TODOS')),
     dias_por_semana INT DEFAULT 2 CHECK (dias_por_semana BETWEEN 1 AND 5),
     dias_semana_fijos JSONB DEFAULT '[]'::jsonb, -- ej: ["LUNES", "MIERCOLES"]
     estado TEXT CHECK (estado IN ('ACTIVO', 'VENCIDO', 'SUSPENDIDO', 'REVOCADO')) DEFAULT 'ACTIVO',
