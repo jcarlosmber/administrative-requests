@@ -44,6 +44,27 @@ CREATE TABLE IF NOT EXISTS public.planta_personal_sjd (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Asegurar columnas si la tabla ya existía previamente
+ALTER TABLE public.planta_personal_sjd
+  ADD COLUMN IF NOT EXISTS estado_cargo TEXT DEFAULT 'OCUPADO',
+  ADD COLUMN IF NOT EXISTS encargo_cedula TEXT,
+  ADD COLUMN IF NOT EXISTS encargo_nombre TEXT,
+  ADD COLUMN IF NOT EXISTS tipo_funcionario TEXT,
+  ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE,
+  ADD COLUMN IF NOT EXISTS direccion TEXT,
+  ADD COLUMN IF NOT EXISTS telefono TEXT,
+  ADD COLUMN IF NOT EXISTS sexo TEXT,
+  ADD COLUMN IF NOT EXISTS fondo_salud TEXT,
+  ADD COLUMN IF NOT EXISTS fondo_pension TEXT,
+  ADD COLUMN IF NOT EXISTS fondo_cesantias TEXT,
+  ADD COLUMN IF NOT EXISTS fecha_ingreso_entidad DATE,
+  ADD COLUMN IF NOT EXISTS fecha_ingreso_distrito DATE,
+  ADD COLUMN IF NOT EXISTS tipo_nombramiento TEXT,
+  ADD COLUMN IF NOT EXISTS acto_nombramiento TEXT,
+  ADD COLUMN IF NOT EXISTS numero_acto_nombramiento TEXT,
+  ADD COLUMN IF NOT EXISTS fecha_acto_nombramiento DATE,
+  ADD COLUMN IF NOT EXISTS total_devengado NUMERIC(14, 2);
+
 -- Índices de consulta rápida
 CREATE INDEX IF NOT EXISTS idx_planta_cargo ON public.planta_personal_sjd(cargo);
 CREATE INDEX IF NOT EXISTS idx_planta_nivel ON public.planta_personal_sjd(nivel);
