@@ -18,7 +18,8 @@ cd /opt/administrative-requests/frontend
 npx expo export -p web
 
 echo "=== 4. Desplegando en /var/www/administrative-requests ==="
-sudo cp -r dist/* /var/www/administrative-requests/
+echo '.Secjur-2026**' | sudo -S cp -r dist/* /var/www/administrative-requests/
+echo '.Secjur-2026**' | sudo -S chown -R nginx:nginx /var/www/administrative-requests/
 
 echo "=== 5. Estado de servicios ==="
 pm2 list || pm2 status
