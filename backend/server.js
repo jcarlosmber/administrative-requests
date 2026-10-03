@@ -3977,6 +3977,10 @@ app.use('/api/ingresos', ingresosRoutes);
 const teletrabajoRoutes = require('./routes/teletrabajoRoutes')(pool);
 app.use('/api/teletrabajo', teletrabajoRoutes);
 
+// Módulo 4: Gestión de Planta y Nómina (Plazas, Asignación de Cargos y Personal)
+const nominaRoutes = require('./routes/nominaRoutes')(pool);
+app.use('/api/nomina', nominaRoutes);
+
 // Fallback 404 para cualquier ruta /api para garantizar respuesta JSON y nunca HTML
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.originalUrl}` });

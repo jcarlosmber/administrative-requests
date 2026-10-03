@@ -119,6 +119,26 @@ export default function ModulosRRHHPagina() {
         'Notificación oportuna a nómina para la liquidación definitiva de prestaciones sociales.',
       ],
     },
+    {
+      id: 'nomina',
+      titulo: 'Gestión de Planta y Nómina',
+      subtitulo: 'Plazas, Asignación de Cargos y Personal',
+      icono: 'briefcase' as const,
+      colorIcono: '#10B981',
+      fondoIcono: 'rgba(16, 185, 129, 0.18)',
+      badge: 'NUEVO • ACTIVO',
+      badgeColor: '#059669',
+      descripcion:
+        'Control integral de las 170 plazas de la entidad, seguimiento de cargos (ocupados, vacantes y encargos) y alimentación masiva mediante archivos de Planta y Planta Perno.',
+      tags: ['Planta de Personal', 'Plazas y Cargos', 'Nómina Perno', 'Carga Masiva'],
+      ruta: '/rrhh/nomina',
+      activo: true,
+      detalles: [
+        'Visualización y búsqueda en tiempo real de plazas oficiales y servidores asignados.',
+        'Control de vacancias definitivas, temporales y situaciones administrativas.',
+        'Módulo de alimentación y actualización por carga de archivos de Planta y Planta Perno.',
+      ],
+    },
   ];
 
   return (
@@ -295,15 +315,16 @@ export default function ModulosRRHHPagina() {
               </View>
 
               {/* ====================================================
-                  CUADRÍCULA DE LOS 3 BOTONES / SECCIONES PRINCIPALES
+                  CUADRÍCULA DE LOS 4 MÓDULOS PRINCIPALES
                  ==================================================== */}
               <View
                 style={{
                   flexDirection: isDesktop ? 'row' : 'column',
+                  flexWrap: isDesktop ? 'wrap' : 'nowrap',
                   gap: 20,
                   justifyContent: 'center',
                   alignItems: 'stretch',
-                  maxWidth: 1200,
+                  maxWidth: 1240,
                   width: '100%',
                   alignSelf: 'center',
                 }}
@@ -313,12 +334,14 @@ export default function ModulosRRHHPagina() {
                     <View
                       key={item.id}
                       style={{
-                        flex: isDesktop ? 1 : undefined,
+                        width: isDesktop ? '48.5%' : '100%',
                         backgroundColor: COLORS.bgCardDarkSoft,
                         borderRadius: 20,
                         borderWidth: 1,
                         borderColor: item.activo
-                          ? 'rgba(190, 31, 45, 0.45)'
+                          ? item.id === 'nomina'
+                            ? 'rgba(16, 185, 129, 0.5)'
+                            : 'rgba(190, 31, 45, 0.45)'
                           : COLORS.borderDark,
                         padding: 24,
                         display: 'flex',
@@ -470,21 +493,21 @@ export default function ModulosRRHHPagina() {
                             borderRadius: 12,
                             backgroundColor: item.activo
                               ? pressed
-                                ? COLORS.primaryHover
-                                : COLORS.primary
+                                ? (item.id === 'nomina' ? '#059669' : COLORS.primaryHover)
+                                : (item.id === 'nomina' ? '#10B981' : COLORS.primary)
                               : pressed
                               ? '#1E3A5F'
                               : '#1E293B',
                             borderWidth: 1,
                             borderColor: item.activo
-                              ? COLORS.primary
+                              ? (item.id === 'nomina' ? '#10B981' : COLORS.primary)
                               : 'rgba(255, 255, 255, 0.15)',
                             flexDirection: 'row',
                             justifyContent: 'center',
                             alignItems: 'center',
                             gap: 8,
                             paddingHorizontal: 16,
-                            shadowColor: item.activo ? COLORS.primary : '#000',
+                            shadowColor: item.activo ? (item.id === 'nomina' ? '#10B981' : COLORS.primary) : '#000',
                             shadowOffset: { width: 0, height: 3 },
                             shadowOpacity: item.activo ? 0.35 : 0.15,
                             shadowRadius: 8,
