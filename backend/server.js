@@ -3973,6 +3973,10 @@ app.post('/api/settings/:key', authenticateToken, async (req, res) => {
 const ingresosRoutes = require('./routes/ingresosRoutes')(pool);
 app.use('/api/ingresos', ingresosRoutes);
 
+// Módulo de Gestión de Teletrabajo y Trabajo en Casa (RRHH - SASGE 2.0)
+const teletrabajoRoutes = require('./routes/teletrabajoRoutes')(pool);
+app.use('/api/teletrabajo', teletrabajoRoutes);
+
 // Fallback 404 para cualquier ruta /api para garantizar respuesta JSON y nunca HTML
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.originalUrl}` });
