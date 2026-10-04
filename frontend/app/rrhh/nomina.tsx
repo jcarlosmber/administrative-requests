@@ -59,6 +59,7 @@ export default function NominaScreen() {
   const [nivelSeleccionado, setNivelSeleccionado] = useState('TODOS');
   const [estadoSeleccionado, setEstadoSeleccionado] = useState('TODOS');
   const [dependenciaSeleccionada, setDependenciaSeleccionada] = useState('TODAS');
+  const [modoVista, setModoVista] = useState<'cards' | 'tabla'>('cards');
 
   // Plaza seleccionada para ver en Modal
   const [plazaModal, setPlazaModal] = useState<PlazaNomina | null>(null);
@@ -728,6 +729,91 @@ export default function NominaScreen() {
               </View>
             </View>
 
+            {/* Barra de visualización y conteo */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 12,
+                flexWrap: 'wrap',
+                gap: 10,
+              }}
+            >
+              <Text style={{ color: COLORS.textMuted, fontSize: 13, fontWeight: '700' }}>
+                Mostrando {plazas.length} plazas de personal
+              </Text>
+
+              {/* Selector de modo de vista: Tarjetas vs Tabla */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#0C1B2A',
+                  borderRadius: 8,
+                  padding: 3,
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                }}
+              >
+                <Pressable
+                  onPress={() => setModoVista('cards')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: modoVista === 'cards' ? COLORS.accentEmerald : 'transparent',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Ionicons
+                    name="grid"
+                    size={15}
+                    color={modoVista === 'cards' ? '#FFFFFF' : COLORS.textMuted}
+                  />
+                  <Text
+                    style={{
+                      color: modoVista === 'cards' ? '#FFFFFF' : COLORS.textMuted,
+                      fontSize: 12,
+                      fontWeight: '700',
+                    }}
+                  >
+                    Tarjetas
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setModoVista('tabla')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: modoVista === 'tabla' ? COLORS.accentEmerald : 'transparent',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Ionicons
+                    name="list"
+                    size={16}
+                    color={modoVista === 'tabla' ? '#FFFFFF' : COLORS.textMuted}
+                  />
+                  <Text
+                    style={{
+                      color: modoVista === 'tabla' ? '#FFFFFF' : COLORS.textMuted,
+                      fontSize: 12,
+                      fontWeight: '700',
+                    }}
+                  >
+                    Tabla
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
             {/* Listado de Plazas */}
             {cargando ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
@@ -755,7 +841,203 @@ export default function NominaScreen() {
                   Intente ajustar los términos de búsqueda o filtros seleccionados.
                 </Text>
               </View>
+            ) : modoVista === 'tabla' ? (
+              /* VISTA 2: TABLA INSTITUCIONAL COMPLETA */
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: COLORS.cardBg,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  overflow: 'hidden',
+                  marginBottom: 20,
+                }}
+              >
+                <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: 1180, flexDirection: 'column' }}>
+                  {/* Encabezado de la tabla */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      backgroundColor: '#0A1826',
+                      borderBottomWidth: 1,
+                      borderBottomColor: COLORS.border,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ width: 70, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>PLAZA</Text>
+                    <Text style={{ width: 230, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>CARGO OFICIAL</Text>
+                    <Text style={{ width: 120, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>NIVEL</Text>
+                    <Text style={{ width: 230, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>SERVIDOR / TITULAR</Text>
+                    <Text style={{ width: 150, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>ESTADO</Text>
+                    <Text style={{ width: 220, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>DEPENDENCIA</Text>
+                    <Text style={{ width: 130, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>ASIGNACIÓN</Text>
+                    <Text style={{ width: 170, color: COLORS.textMuted, fontSize: 11, fontWeight: '800' }}>SEGURIDAD SOCIAL</Text>
+                    <Text style={{ width: 90, color: COLORS.textMuted, fontSize: 11, fontWeight: '800', textAlign: 'center' }}>ACCIONES</Text>
+                  </View>
+
+                  {/* Cuerpo de la tabla con scroll vertical */}
+                  <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator>
+                    {plazas.map((item, index) => {
+                      const badge = getBadgeEstado(item.estado_cargo);
+                      const colorNivel = getColorNivel(item.nivel);
+                      const esPar = index % 2 === 0;
+
+                      return (
+                        <Pressable
+                          key={item.id_plaza}
+                          onPress={() => setPlazaModal(item)}
+                          style={({ pressed }) => ({
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 11,
+                            paddingHorizontal: 16,
+                            backgroundColor: pressed
+                              ? COLORS.cardBgHover
+                              : esPar
+                              ? 'rgba(255, 255, 255, 0.02)'
+                              : 'transparent',
+                            borderBottomWidth: 1,
+                            borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+                          })}
+                        >
+                          {/* Columna Plaza */}
+                          <View style={{ width: 70 }}>
+                            <View
+                              style={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                                alignSelf: 'flex-start',
+                              }}
+                            >
+                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                                #{item.id_plaza}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Columna Cargo */}
+                          <View style={{ width: 230, paddingRight: 10 }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }} numberOfLines={2}>
+                              {item.cargo}
+                            </Text>
+                            <Text style={{ color: COLORS.textMuted, fontSize: 11 }}>
+                              Cód. {item.codigo || '-'} • Grado {item.grado || '-'}
+                            </Text>
+                          </View>
+
+                          {/* Columna Nivel */}
+                          <View style={{ width: 120 }}>
+                            <View
+                              style={{
+                                backgroundColor: `${colorNivel}22`,
+                                paddingHorizontal: 8,
+                                paddingVertical: 3,
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: `${colorNivel}55`,
+                                alignSelf: 'flex-start',
+                              }}
+                            >
+                              <Text style={{ color: colorNivel, fontSize: 10.5, fontWeight: '800' }}>
+                                {item.nivel || 'N/A'}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Columna Funcionario / Titular */}
+                          <View style={{ width: 230, paddingRight: 10 }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                              {item.titular_nombre || 'Sin asignación'}
+                            </Text>
+                            {item.titular_cedula ? (
+                              <Text style={{ color: COLORS.textMuted, fontSize: 11 }}>
+                                C.C. {item.titular_cedula} • {item.tipo_vinculacion || 'Planta'}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          {/* Columna Estado */}
+                          <View style={{ width: 150 }}>
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                backgroundColor: badge.bg,
+                                borderWidth: 1,
+                                borderColor: badge.border,
+                                paddingHorizontal: 8,
+                                paddingVertical: 3,
+                                borderRadius: 12,
+                                alignSelf: 'flex-start',
+                              }}
+                            >
+                              <Ionicons name={badge.icono} size={12} color={badge.color} />
+                              <Text style={{ color: badge.color, fontSize: 10, fontWeight: '800' }}>
+                                {badge.texto}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* Columna Dependencia */}
+                          <View style={{ width: 220, paddingRight: 10 }}>
+                            <Text style={{ color: '#CBD5E1', fontSize: 12 }} numberOfLines={2}>
+                              {item.dependencia_cargo || '-'}
+                            </Text>
+                          </View>
+
+                          {/* Columna Asignación Básica */}
+                          <View style={{ width: 130 }}>
+                            <Text style={{ color: COLORS.accentEmerald, fontSize: 13, fontWeight: '800' }}>
+                              {formatearDinero(item.asignacion_basica)}
+                            </Text>
+                          </View>
+
+                          {/* Columna Seguridad Social */}
+                          <View style={{ width: 170, paddingRight: 10 }}>
+                            <Text style={{ color: '#93C5FD', fontSize: 11 }} numberOfLines={1}>
+                              {item.fondo_salud ? `EPS: ${item.fondo_salud}` : '-'}
+                            </Text>
+                            <Text style={{ color: COLORS.textMuted, fontSize: 10 }} numberOfLines={1}>
+                              {item.fondo_pension ? `Pens: ${item.fondo_pension}` : ''}
+                            </Text>
+                          </View>
+
+                          {/* Columna Acciones */}
+                          <View style={{ width: 90, alignItems: 'center' }}>
+                            <Pressable
+                              onPress={() => setPlazaModal(item)}
+                              style={({ pressed }) => ({
+                                backgroundColor: pressed ? COLORS.accentEmeraldDark : 'rgba(16, 185, 129, 0.16)',
+                                borderWidth: 1,
+                                borderColor: 'rgba(16, 185, 129, 0.35)',
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 6,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                              })}
+                            >
+                              <Ionicons name="eye-outline" size={13} color={COLORS.accentEmerald} />
+                              <Text style={{ color: COLORS.accentEmerald, fontSize: 11, fontWeight: '800' }}>
+                                Ver
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </ScrollView>
+              </View>
             ) : (
+              /* VISTA 1: TARJETAS (CARDS) */
               <FlatList
                 data={plazas}
                 keyExtractor={(item) => String(item.id_plaza)}

@@ -74,6 +74,7 @@ export default function TeletrabajoScreen() {
   const [busqueda, setBusqueda] = useState('');
   const [filtroModalidad, setFiltroModalidad] = useState<string>('TODOS');
   const [filtroDependencia, setFiltroDependencia] = useState<string>('TODOS');
+  const [modoVistaCenso, setModoVistaCenso] = useState<'cards' | 'tabla'>('cards');
 
   // Modal de Notificación / Mensajes (Regla: no alerts)
   const [notifModal, setNotifModal] = useState<{
@@ -923,12 +924,356 @@ export default function TeletrabajoScreen() {
                   </View>
                 </View>
 
-                {/* Listado de Servidores */}
-                <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: '700' }}>
-                  Mostrando {personasFiltradas.length} servidores de planta
-                </Text>
+                {/* Barra de visualización y conteo */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                  }}
+                >
+                  <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: '700' }}>
+                    Mostrando {personasFiltradas.length} servidores de planta
+                  </Text>
 
-                <View style={{ gap: 12 }}>
+                  {/* Selector de modo de vista: Tarjetas vs Tabla */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: COLORS.cardBg,
+                      borderRadius: 8,
+                      padding: 3,
+                      borderWidth: 1,
+                      borderColor: COLORS.border,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => setModoVistaCenso('cards')}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: modoVistaCenso === 'cards' ? '#0284C7' : 'transparent',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <Ionicons
+                        name="grid"
+                        size={15}
+                        color={modoVistaCenso === 'cards' ? '#FFFFFF' : '#94A3B8'}
+                      />
+                      <Text
+                        style={{
+                          color: modoVistaCenso === 'cards' ? '#FFFFFF' : '#94A3B8',
+                          fontSize: 12,
+                          fontWeight: '700',
+                        }}
+                      >
+                        Tarjetas
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => setModoVistaCenso('tabla')}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: modoVistaCenso === 'tabla' ? '#0284C7' : 'transparent',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <Ionicons
+                        name="list"
+                        size={16}
+                        color={modoVistaCenso === 'tabla' ? '#FFFFFF' : '#94A3B8'}
+                      />
+                      <Text
+                        style={{
+                          color: modoVistaCenso === 'tabla' ? '#FFFFFF' : '#94A3B8',
+                          fontSize: 12,
+                          fontWeight: '700',
+                        }}
+                      >
+                        Tabla
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {modoVistaCenso === 'tabla' ? (
+                  /* VISTA 2: TABLA DE CENSO DE TELETRABAJO */
+                  <View
+                    style={{
+                      backgroundColor: COLORS.cardBg,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: COLORS.border,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: 1440, flexDirection: 'column' }}>
+                      {/* Encabezado de la tabla */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          backgroundColor: '#0A1826',
+                          borderBottomWidth: 1,
+                          borderBottomColor: COLORS.border,
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ width: 110, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>PLAZA / C.C.</Text>
+                        <Text style={{ width: 220, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>SERVIDOR PÚBLICO</Text>
+                        <Text style={{ width: 230, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>CARGO & GRADO</Text>
+                        <Text style={{ width: 220, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>DEPENDENCIA</Text>
+                        <Text style={{ width: 170, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>MODALIDAD ACTUAL</Text>
+                        <Text style={{ width: 180, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>ESQUEMA / DÍAS</Text>
+                        <Text style={{ width: 170, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>VIGENCIA</Text>
+                        <Text style={{ width: 130, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>RESOLUCIÓN</Text>
+                        <Text style={{ width: 230, color: '#94A3B8', fontSize: 11, fontWeight: '800', textAlign: 'center' }}>ACCIONES</Text>
+                      </View>
+
+                      {/* Cuerpo con Scroll vertical */}
+                      <ScrollView style={{ maxHeight: 650 }} showsVerticalScrollIndicator>
+                        {personasFiltradas.map((p, index) => {
+                          const tieneModalidad = p.modalidad && p.asignacion_estado === 'ACTIVO';
+                          const esAutonomo = p.modalidad === 'TELETRABAJO_AUTONOMO';
+                          const esTeletrabajo = p.modalidad === 'TELETRABAJO' || esAutonomo;
+                          const esPar = index % 2 === 0;
+
+                          return (
+                            <View
+                              key={p.id_plaza}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 10,
+                                paddingHorizontal: 16,
+                                backgroundColor: esPar ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                                borderBottomWidth: 1,
+                                borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+                              }}
+                            >
+                              {/* Columna Plaza y Cédula */}
+                              <View style={{ width: 110, gap: 2 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '800' }}>
+                                    #{p.id_plaza}
+                                  </Text>
+                                </View>
+                                <Text style={{ color: '#94A3B8', fontSize: 11 }}>
+                                  {p.titular_cedula}
+                                </Text>
+                              </View>
+
+                              {/* Columna Servidor */}
+                              <View style={{ width: 220, paddingRight: 10 }}>
+                                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                                  {p.titular_nombre}
+                                </Text>
+                                {p.requiere_nuevo_acuerdo && (
+                                  <Text style={{ color: '#FCD34D', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                                    ⚠️ Requiere Nuevo Acuerdo
+                                  </Text>
+                                )}
+                              </View>
+
+                              {/* Columna Cargo */}
+                              <View style={{ width: 230, paddingRight: 10 }}>
+                                <Text style={{ color: '#E2E8F0', fontSize: 12.5, fontWeight: '600' }} numberOfLines={2}>
+                                  {p.cargo} {p.codigo ? `(${p.codigo}-${p.grado})` : ''}
+                                </Text>
+                                {!p.cargo_es_teletrabajable && (
+                                  <Text style={{ color: '#FCA5A5', fontSize: 10, marginTop: 1 }}>
+                                    {p.excepcion_jefe_aprobada ? 'Excepción aprobada' : 'No teletrabajable'}
+                                  </Text>
+                                )}
+                              </View>
+
+                              {/* Columna Dependencia */}
+                              <View style={{ width: 220, paddingRight: 10 }}>
+                                <Text style={{ color: '#94A3B8', fontSize: 11.5 }} numberOfLines={2}>
+                                  {p.dependencia_cargo}
+                                </Text>
+                              </View>
+
+                              {/* Columna Modalidad */}
+                              <View style={{ width: 170 }}>
+                                {tieneModalidad ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: esAutonomo
+                                        ? 'rgba(2, 132, 199, 0.25)'
+                                        : esTeletrabajo
+                                        ? 'rgba(56, 189, 248, 0.2)'
+                                        : 'rgba(167, 139, 250, 0.2)',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: esAutonomo ? '#0284C7' : esTeletrabajo ? '#38BDF8' : '#A78BFA',
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: esAutonomo ? '#7DD3FC' : esTeletrabajo ? '#38BDF8' : '#C4B5FD',
+                                        fontSize: 10.5,
+                                        fontWeight: '800',
+                                      }}
+                                    >
+                                      {esAutonomo
+                                        ? 'AUTÓNOMO'
+                                        : esTeletrabajo
+                                        ? 'TELETRABAJO'
+                                        : 'TRABAJO CASA'}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <View
+                                    style={{
+                                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    <Text style={{ color: '#94A3B8', fontSize: 10.5, fontWeight: '700' }}>
+                                      PRESENCIAL
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+
+                              {/* Columna Esquema / Días */}
+                              <View style={{ width: 180, paddingRight: 8 }}>
+                                {tieneModalidad ? (
+                                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>
+                                    {p.esquema_dias_tipo === 'TODOS'
+                                      ? 'Todos los días (L-V)'
+                                      : p.esquema_dias_tipo === 'DIAS_PARES'
+                                      ? 'Días Pares'
+                                      : p.esquema_dias_tipo === 'DIAS_IMPARES'
+                                      ? 'Días Impares'
+                                      : Array.isArray(p.dias_semana_fijos) && p.dias_semana_fijos.length > 0
+                                      ? p.dias_semana_fijos.join(', ')
+                                      : `${p.dias_por_semana || 2} días/sem`}
+                                  </Text>
+                                ) : (
+                                  <Text style={{ color: '#64748B', fontSize: 11 }}>5 días presenciales</Text>
+                                )}
+                              </View>
+
+                              {/* Columna Vigencia */}
+                              <View style={{ width: 170, paddingRight: 8 }}>
+                                {tieneModalidad && p.asignacion_desde ? (
+                                  <Text style={{ color: '#94A3B8', fontSize: 11 }}>
+                                    {limpiarFecha(p.asignacion_desde)} al {limpiarFecha(p.asignacion_hasta) || 'indef.'}
+                                  </Text>
+                                ) : (
+                                  <Text style={{ color: '#64748B', fontSize: 11 }}>-</Text>
+                                )}
+                              </View>
+
+                              {/* Columna Resolución */}
+                              <View style={{ width: 130, paddingRight: 8 }}>
+                                <Text style={{ color: p.numero_resolucion_display ? '#A7F3D0' : '#64748B', fontSize: 11 }}>
+                                  {p.numero_resolucion_display || '-'}
+                                </Text>
+                              </View>
+
+                              {/* Columna Acciones */}
+                              <View style={{ width: 230, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                <TouchableOpacity
+                                  onPress={() => abrirModalAsignacion(p)}
+                                  style={{
+                                    backgroundColor: '#0284C7',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <Ionicons name="options-outline" size={13} color="#FFFFFF" />
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                                    {tieneModalidad ? 'Editar' : 'Asignar'}
+                                  </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirModalAcuerdo(p)}
+                                  style={{
+                                    backgroundColor: p.requiere_nuevo_acuerdo ? '#D97706' : 'rgba(255, 255, 255, 0.08)',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: p.requiere_nuevo_acuerdo ? '#F59E0B' : 'rgba(255, 255, 255, 0.15)',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="ribbon-outline"
+                                    size={13}
+                                    color={p.requiere_nuevo_acuerdo ? '#FFFFFF' : '#CBD5E1'}
+                                  />
+                                  <Text style={{ color: p.requiere_nuevo_acuerdo ? '#FFFFFF' : '#CBD5E1', fontSize: 11, fontWeight: '700' }}>
+                                    Acuerdo
+                                  </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirModalSeguimiento(p)}
+                                  style={{
+                                    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(56, 189, 248, 0.3)',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                  }}
+                                >
+                                  <Ionicons name="calendar-outline" size={13} color="#38BDF8" />
+                                  <Text style={{ color: '#38BDF8', fontSize: 11, fontWeight: '700' }}>
+                                    Seg.
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </ScrollView>
+                    </ScrollView>
+                  </View>
+                ) : (
+                  /* VISTA 1: TARJETAS (CARDS) */
+                  <View style={{ gap: 12 }}>
                   {personasFiltradas.map((p) => {
                     const tieneModalidad = p.modalidad && p.asignacion_estado === 'ACTIVO';
                     const esAutonomo = p.modalidad === 'TELETRABAJO_AUTONOMO';
@@ -1187,8 +1532,9 @@ export default function TeletrabajoScreen() {
                     );
                   })}
                 </View>
-              </View>
-            )}
+              )}
+            </View>
+          )}
 
             {/* ------------------------------------------------------------- */}
             {/* PESTAÑA 2: RESOLUCIONES GENERALES                            */}
