@@ -2130,6 +2130,14 @@ export default function DetalleValidacionScreen() {
                             {c.tipo_vinculo ? (
                               <Text style={{ fontSize: 10, color: '#64748B' }}>{c.tipo_vinculo}</Text>
                             ) : null}
+                            {c.anexos && c.anexos.length > 1 ? (
+                              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                <Ionicons name="documents-outline" size={11} color="#B45309" />
+                                <Text style={{ fontSize: 9, fontWeight: '800', color: '#B45309' }}>
+                                  {c.anexos.length} Anexos Complementarios
+                                </Text>
+                              </View>
+                            ) : null}
                           </View>
 
                           {/* PERIODO */}
@@ -2215,23 +2223,58 @@ export default function DetalleValidacionScreen() {
                                   <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Pantalla Completa</Text>
                                 </TouchableOpacity>
 
-                                {c.nombre_archivo ? (
-                                  <TouchableOpacity
-                                    onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
-                                    style={{
-                                      backgroundColor: '#1E40AF',
-                                      paddingHorizontal: 10,
-                                      paddingVertical: 5,
-                                      borderRadius: 6,
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 4
-                                    }}
-                                  >
-                                    <Ionicons name="document-text" size={14} color="#FFFFFF" />
-                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Ver PDF Original</Text>
-                                  </TouchableOpacity>
-                                ) : null}
+                                {(() => {
+                                  const listaAnexos = (c.anexos && c.anexos.length > 0)
+                                    ? c.anexos
+                                    : (c.nombre_archivo ? [c.nombre_archivo] : []);
+
+                                  if (listaAnexos.length === 0) return null;
+
+                                  if (listaAnexos.length === 1) {
+                                    return (
+                                      <TouchableOpacity
+                                        onPress={() => verPdfDocumento(listaAnexos[0], `${c.id_certificado}: ${c.entidad}`)}
+                                        style={{
+                                          backgroundColor: '#1E40AF',
+                                          paddingHorizontal: 10,
+                                          paddingVertical: 5,
+                                          borderRadius: 6,
+                                          flexDirection: 'row',
+                                          alignItems: 'center',
+                                          gap: 4
+                                        }}
+                                      >
+                                        <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Ver PDF Original</Text>
+                                      </TouchableOpacity>
+                                    );
+                                  }
+
+                                  return (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                      {listaAnexos.map((anexo, aIdx) => (
+                                        <TouchableOpacity
+                                          key={aIdx}
+                                          onPress={() => verPdfDocumento(anexo, `${c.id_certificado} - Anexo ${aIdx + 1}: ${anexo}`)}
+                                          style={{
+                                            backgroundColor: aIdx === 0 ? '#1E40AF' : '#4338CA',
+                                            paddingHorizontal: 10,
+                                            paddingVertical: 5,
+                                            borderRadius: 6,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            gap: 4
+                                          }}
+                                        >
+                                          <Ionicons name="document-attach" size={14} color="#FFFFFF" />
+                                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
+                                            Anexo {aIdx + 1} ({anexo.length > 18 ? anexo.slice(0, 16) + '...' : anexo})
+                                          </Text>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  );
+                                })()}
 
                                 <TouchableOpacity
                                   onPress={() => toggleExpandirCertificado(certKey)}
@@ -3309,25 +3352,36 @@ export default function DetalleValidacionScreen() {
                       </Text>
                     </View>
 
-                    {/* Botón Ver PDF */}
-                    <TouchableOpacity
-                      onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 4,
-                        paddingHorizontal: 8,
-                        paddingVertical: 5,
-                        borderRadius: 6,
-                        backgroundColor: '#EFF6FF',
-                        borderWidth: 1,
-                        borderColor: '#BFDBFE'
-                      }}
-                      accessibilityLabel="Ver PDF del certificado"
-                    >
-                      <Ionicons name="document-text-outline" size={14} color="#1D4ED8" />
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
-                    </TouchableOpacity>
+                    {/* Botones Ver PDF / Anexos */}
+                    {(() => {
+                      const listaAnexos = (c.anexos && c.anexos.length > 0)
+                        ? c.anexos
+                        : (c.nombre_archivo ? [c.nombre_archivo] : []);
+
+                      return listaAnexos.map((anexo, aIdx) => (
+                        <TouchableOpacity
+                          key={aIdx}
+                          onPress={() => verPdfDocumento(anexo, `${c.id_certificado} - Anexo ${aIdx + 1}: ${anexo}`)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            paddingHorizontal: 8,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            backgroundColor: aIdx === 0 ? '#EFF6FF' : '#EEF2FF',
+                            borderWidth: 1,
+                            borderColor: aIdx === 0 ? '#BFDBFE' : '#C7D2FE'
+                          }}
+                          accessibilityLabel="Ver PDF del certificado"
+                        >
+                          <Ionicons name="document-text-outline" size={14} color={aIdx === 0 ? '#1D4ED8' : '#4338CA'} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: aIdx === 0 ? '#1D4ED8' : '#4338CA' }}>
+                            {listaAnexos.length > 1 ? `Anexo ${aIdx + 1}` : 'Ver PDF'}
+                          </Text>
+                        </TouchableOpacity>
+                      ));
+                    })()}
 
                     {/* Botón Eliminar Certificado */}
                     <TouchableOpacity
@@ -5107,27 +5161,36 @@ export default function DetalleValidacionScreen() {
                   ) : null}
 
                   {/* Botones de Acción */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
-                    {certModalDetalle.nombre_archivo ? (
-                      <TouchableOpacity
-                        onPress={() => {
-                          verPdfDocumento(certModalDetalle.nombre_archivo, `${certModalDetalle.id_certificado}: ${certModalDetalle.entidad}`);
-                          setCertModalDetalle(null);
-                        }}
-                        style={{
-                          backgroundColor: '#2563EB',
-                          paddingHorizontal: 14,
-                          paddingVertical: 10,
-                          borderRadius: 8,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6
-                        }}
-                      >
-                        <Ionicons name="document-text" size={16} color="#FFFFFF" />
-                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Abrir PDF Original</Text>
-                      </TouchableOpacity>
-                    ) : null}
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                    {(() => {
+                      const listaAnexos = (certModalDetalle.anexos && certModalDetalle.anexos.length > 0)
+                        ? certModalDetalle.anexos
+                        : (certModalDetalle.nombre_archivo ? [certModalDetalle.nombre_archivo] : []);
+
+                      return listaAnexos.map((anexo, aIdx) => (
+                        <TouchableOpacity
+                          key={aIdx}
+                          onPress={() => {
+                            verPdfDocumento(anexo, `${certModalDetalle.id_certificado} - Anexo ${aIdx + 1}: ${anexo}`);
+                            setCertModalDetalle(null);
+                          }}
+                          style={{
+                            backgroundColor: aIdx === 0 ? '#2563EB' : '#4338CA',
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6
+                          }}
+                        >
+                          <Ionicons name="document-text" size={16} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                            {listaAnexos.length > 1 ? `Abrir Anexo ${aIdx + 1}` : 'Abrir PDF Original'}
+                          </Text>
+                        </TouchableOpacity>
+                      ));
+                    })()}
 
                     <TouchableOpacity
                       onPress={() => setCertModalDetalle(null)}

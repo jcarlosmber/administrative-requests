@@ -2640,25 +2640,36 @@ export default function NuevaValidacionScreen() {
                         </Text>
                       </View>
 
-                      {/* Botón Ver PDF */}
-                      <TouchableOpacity
-                        onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 4,
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 6,
-                          backgroundColor: '#EFF6FF',
-                          borderWidth: 1,
-                          borderColor: '#BFDBFE'
-                        }}
-                        accessibilityLabel="Ver PDF del certificado"
-                      >
-                        <Ionicons name="document-text-outline" size={14} color="#1D4ED8" />
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Ver PDF</Text>
-                      </TouchableOpacity>
+                      {/* Botones Ver PDF / Anexos */}
+                      {(() => {
+                        const listaAnexos = (c.anexos && c.anexos.length > 0)
+                          ? c.anexos
+                          : (c.nombre_archivo ? [c.nombre_archivo] : []);
+
+                        return listaAnexos.map((anexo, aIdx) => (
+                          <TouchableOpacity
+                            key={aIdx}
+                            onPress={() => verPdfDocumento(anexo, `${c.id_certificado} - Anexo ${aIdx + 1}: ${anexo}`)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              backgroundColor: aIdx === 0 ? '#EFF6FF' : '#EEF2FF',
+                              borderWidth: 1,
+                              borderColor: aIdx === 0 ? '#BFDBFE' : '#C7D2FE'
+                            }}
+                            accessibilityLabel="Ver PDF del certificado"
+                          >
+                            <Ionicons name="document-text-outline" size={14} color={aIdx === 0 ? '#1D4ED8' : '#4338CA'} />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: aIdx === 0 ? '#1D4ED8' : '#4338CA' }}>
+                              {listaAnexos.length > 1 ? `Anexo ${aIdx + 1}` : 'Ver PDF'}
+                            </Text>
+                          </TouchableOpacity>
+                        ));
+                      })()}
 
                       {/* Botón Eliminar Certificado */}
                       <TouchableOpacity

@@ -100,6 +100,7 @@ export interface CertificadoAnalizado {
   id?: string;
   id_certificado: string;
   nombre_archivo?: string;
+  anexos?: string[];
   verificacion_formal?: VerificacionFormalCertificado;
   verificacion_experiencia_previa?: VerificacionExperienciaPrevia;
   cumple_excepcion_ley_2039?: boolean;

@@ -57,6 +57,16 @@ REGLAS OBLIGATORIAS:
 16. Cada conclusión debe incluir la EVIDENCIA TEXTUAL del documento que la sustenta (citas textuales entre comillas).
 17. No reemplaces la revisión humana cuando la certificación sea ambigua, incompleta o contradictoria.
 18. Devuelve exclusivamente un objeto JSON válido, sin explicaciones ni texto fuera del bloque JSON.
+19. REGLA OBLIGATORIA DE DIVISIÓN DE MÚLTIPLES CARGOS EN UN MISMO CERTIFICADO:
+    - Cuando un mismo documento o certificado laboral certifique que el aspirante desempeñó dos (2) o más cargos distintos o periodos sucesivos dentro de la misma entidad (por ejemplo: ascensos, traslados o cambios de denominación como: 1. Profesional Senior 2012-2016, 2. Profesional Experto 2016-2017, 3. Jefe de División 2017-actualidad), ESTÁ TERMINANTEMENTE PROHIBIDO agruparlos en un único registro o ignorar los cargos anteriores.
+    - DEBES crear obligatoriamente una entrada INDEPENDIENTE en el arreglo "certificados" para CADA CARGO desempeñado (ej. CERT-1, CERT-2, CERT-3).
+    - Cada registro debe incluir su nombre exacto de cargo, sus fechas precisas de inicio y fin, el nombre del PDF de origen en "nombre_archivo", el arreglo "anexos" con ese nombre de archivo, y el cotejo funcional correspondiente.
+20. REGLA OBLIGATORIA DE INTEGRACIÓN DE DOCUMENTOS COMPLEMENTARIOS (DOS ANEXOS EN EL MISMO CARGO):
+    - Es habitual que el aspirante aporte certificaciones complementarias de la misma relación laboral o empresas fusionadas/sustituidas (por ejemplo: un certificado histórico de Codensa con funciones detalladas de un cargo, y un certificado consolidado posterior de Enel que acredita el periodo extendido completo de ese mismo cargo por sustitución patronal).
+    - En estos casos, ambos documentos son COMPLEMENTARIOS para dicho cargo:
+      * NO los dupliques generando traslapes ficticios.
+      * Consolida el cargo en una ÚNICA entrada en "certificados" integrando la información: toma el periodo completo acreditado (fecha inicio y fecha fin del certificado consolidado), transcribe íntegramente las funciones aportadas en el documento que las detalla, y en el arreglo "anexos" incluye AMBOS nombres de archivo (ej. ["certificado_enel.pdf", "certificado_codensa.pdf"]).
+      * Deja constancia en "observaciones": "Certificación complementada con 2 anexos: Funciones acreditadas en [Anexo 1] y periodo extendido en [Anexo 2] (sustitución patronal / fusión / actualización)".
 
 CRITERIO DE COMPARACIÓN FUNCIONAL:
 Para cada función certificada:
@@ -233,7 +243,8 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
   "certificados": [
     {
       "id_certificado": "CERT-1",
-      "nombre_archivo": "string",
+      "nombre_archivo": "string (nombre del archivo PDF principal)",
+      "anexos": ["string (nombre de archivo 1)", "string (nombre de archivo 2 si es complementario)"],
       "entidad": "string",
       "nit_entidad": "string o NO CONSTA",
       "ciudad_expedicion": "string o NO CONSTA",
@@ -590,13 +601,100 @@ function repararJsonConCaracteresControl(raw) {
     throw new Error('La respuesta de Gemini no es un JSON válido: ' + err.message);
   }
 
-  // Asignar nombres de archivo y asegurar verificacion_formal a los certificados
+  // Asignar nombres de archivo, anexos y consolidar documentos complementarios
   if (Array.isArray(parsedJson.certificados)) {
+    // 1. Normalizar nombre_archivo y arreglo anexos
     parsedJson.certificados.forEach((cert, idx) => {
+      if (cert.nombre_archivo) {
+        const matchExacto = pdfFiles.find(f => f.name.toLowerCase() === cert.nombre_archivo.toLowerCase());
+        if (matchExacto) cert.nombre_archivo = matchExacto.name;
+      }
+      if (!cert.anexos || !Array.isArray(cert.anexos) || cert.anexos.length === 0) {
+        cert.anexos = cert.nombre_archivo ? [cert.nombre_archivo] : (pdfFiles[idx] ? [pdfFiles[idx].name] : []);
+      } else {
+        cert.anexos = cert.anexos.map(anx => {
+          const matchAnx = pdfFiles.find(f => f.name.toLowerCase() === (anx || '').toLowerCase());
+          return matchAnx ? matchAnx.name : anx;
+        }).filter(Boolean);
+      }
+      if (!cert.nombre_archivo && cert.anexos.length > 0) {
+        cert.nombre_archivo = cert.anexos[0];
+      }
       if (!cert.nombre_archivo && pdfFiles[idx]) {
         cert.nombre_archivo = pdfFiles[idx].name;
+        if (!cert.anexos.includes(pdfFiles[idx].name)) cert.anexos.push(pdfFiles[idx].name);
+      }
+    });
+
+    // 2. Pase de consolidación de documentos complementarios (Misma relación laboral / sustitución patronal / mismo cargo)
+    const certificadosConsolidados = [];
+    const fusionadosIdx = new Set();
+
+    for (let i = 0; i < parsedJson.certificados.length; i++) {
+      if (fusionadosIdx.has(i)) continue;
+      const c1 = parsedJson.certificados[i];
+
+      for (let j = i + 1; j < parsedJson.certificados.length; j++) {
+        if (fusionadosIdx.has(j)) continue;
+        const c2 = parsedJson.certificados[j];
+
+        const ent1 = (c1.entidad || '').toUpperCase();
+        const ent2 = (c2.entidad || '').toUpperCase();
+        const cargo1 = (c1.cargo_certificado || '').toUpperCase();
+        const cargo2 = (c2.cargo_certificado || '').toUpperCase();
+
+        const entidadesCompatibles = ent1 === ent2 ||
+          (ent1.includes('CODENSA') && ent2.includes('ENEL')) ||
+          (ent1.includes('ENEL') && ent2.includes('CODENSA')) ||
+          (ent1.length > 4 && ent2.length > 4 && (ent1.includes(ent2) || ent2.includes(ent1)));
+
+        const cargosCompatibles = cargo1 === cargo2 ||
+          (cargo1.length > 5 && cargo2.length > 5 && (cargo1.includes(cargo2) || cargo2.includes(cargo1)));
+
+        if (entidadesCompatibles && cargosCompatibles) {
+          // Unir anexos sin duplicados
+          const todosAnexos = Array.from(new Set([
+            ...(c1.anexos || (c1.nombre_archivo ? [c1.nombre_archivo] : [])),
+            ...(c2.anexos || (c2.nombre_archivo ? [c2.nombre_archivo] : []))
+          ]));
+          c1.anexos = todosAnexos;
+
+          // Integrar funciones si c2 tiene funciones y c1 no (o tiene más)
+          const f1Count = (c1.funciones_certificadas || []).length;
+          const f2Count = (c2.funciones_certificadas || []).length;
+          if (f2Count > f1Count) {
+            c1.funciones_certificadas = c2.funciones_certificadas;
+            c1.experiencia_relacionada = c2.experiencia_relacionada || c1.experiencia_relacionada;
+            c1.clasificacion_experiencia = c2.clasificacion_experiencia || c1.clasificacion_experiencia;
+          }
+
+          // Tomar el rango de fechas más amplio
+          if (c2.fecha_inicio && (!c1.fecha_inicio || c2.fecha_inicio < c1.fecha_inicio)) {
+            c1.fecha_inicio = c2.fecha_inicio;
+          }
+          if (c2.vinculo_vigente) {
+            c1.vinculo_vigente = true;
+            c1.fecha_fin = c2.fecha_fin;
+          } else if (c2.fecha_fin && (!c1.fecha_fin || c2.fecha_fin > c1.fecha_fin)) {
+            c1.fecha_fin = c2.fecha_fin;
+          }
+
+          // Observación de complemento documental
+          c1.observaciones = c1.observaciones || [];
+          c1.observaciones.push(`Certificación complementada con ${todosAnexos.length} anexos (${todosAnexos.join(', ')}): Funciones y periodos consolidados de la misma relación laboral / sustitución patronal.`);
+
+          fusionadosIdx.add(j);
+        }
       }
 
+      certificadosConsolidados.push(c1);
+    }
+
+    parsedJson.certificados = certificadosConsolidados;
+
+    // 3. Asegurar verificación formal y reasignar IDs CERT-1, CERT-2...
+    parsedJson.certificados.forEach((cert, idx) => {
+      cert.id_certificado = `CERT-${idx + 1}`;
       if (!cert.verificacion_formal) {
         cert.verificacion_formal = {
           corresponde_aspirante: true,
