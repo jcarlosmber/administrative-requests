@@ -1126,7 +1126,7 @@ export default function NuevaValidacionScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
+      <ScrollView contentContainerStyle={{ padding: 24, width: '100%' }}>
         {rehacerId && (
           <View
             style={{

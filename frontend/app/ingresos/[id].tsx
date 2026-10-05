@@ -1132,7 +1132,7 @@ export default function DetalleValidacionScreen() {
       </View>
 
       {modoVista === 'simplificada' ? (
-        <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 1150, alignSelf: 'center', width: '100%', gap: 20 }}>
+        <ScrollView contentContainerStyle={{ padding: 24, width: '100%', gap: 20 }}>
           {/* BANNER INFORMATIVO DE MODO */}
           <View
             style={{
@@ -2651,7 +2651,7 @@ export default function DetalleValidacionScreen() {
           </View>
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 1100, alignSelf: 'center', width: '100%' }}>
+        <ScrollView contentContainerStyle={{ padding: 24, width: '100%' }}>
         {/* TARJETA PRINCIPAL DE DICTAMEN */}
         <View
           style={{

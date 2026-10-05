@@ -204,7 +204,7 @@ export default function CargosOficialesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 1000, alignSelf: 'center', width: '100%' }}>
+      <ScrollView contentContainerStyle={{ padding: 24, width: '100%' }}>
         {/* FORMULARIO DE CARGO (CREAR O EDITAR) */}
         {mostrarForm && (
           <View
