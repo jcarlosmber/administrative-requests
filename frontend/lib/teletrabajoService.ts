@@ -127,6 +127,16 @@ export interface SeguimientoTeletrabajo {
   nombre_archivo?: string;
   concepto_recomendacion: 'CONTINUAR' | 'AJUSTAR_DIAS' | 'REVERSION_PRESENCIAL';
   observaciones?: string;
+  // Campos del Procedimiento 2311300-PR-117 Versión 06
+  dias_efectivos_teletrabajo?: number;
+  radicado_memorando_ft018?: string;
+  fecha_radicacion_memorando?: string;
+  tipo_seguimiento?: 'MENSUAL_ORDINARIO' | 'EVALUACION_PR012' | 'EXTRAORDINARIO';
+  aplica_auxilio_servicios?: boolean;
+  estrato_socioeconomico?: number;
+  novedad_cambio_domicilio?: boolean;
+  observaciones_cambio_domicilio?: string;
+  estado_visita_sst_tic?: 'VIGENTE' | 'PENDIENTE_INSPECCION_ANUAL' | 'REQUIERE_NUEVA_VISITA_POR_CAMBIO_DOMICILIO';
 }
 
 export interface EstadisticasTeletrabajo {

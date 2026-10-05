@@ -94,6 +94,16 @@ CREATE TABLE IF NOT EXISTS public.teletrabajo_seguimientos (
     soporte_evidencias_url TEXT,
     nombre_archivo_soporte TEXT,
     concepto_recomendacion TEXT CHECK (concepto_recomendacion IN ('CONTINUAR', 'AJUSTAR_DIAS', 'REVERSION_PRESENCIAL')) DEFAULT 'CONTINUAR',
+    -- Campos alineados con el Procedimiento 2311300-PR-117 Versión 06
+    dias_efectivos_teletrabajo INTEGER DEFAULT 0,
+    radicado_memorando_ft018 TEXT,
+    fecha_radicacion_memorando DATE,
+    tipo_seguimiento TEXT DEFAULT 'MENSUAL_ORDINARIO',
+    aplica_auxilio_servicios BOOLEAN DEFAULT TRUE,
+    estrato_socioeconomico INTEGER,
+    novedad_cambio_domicilio BOOLEAN DEFAULT FALSE,
+    observaciones_cambio_domicilio TEXT,
+    estado_visita_sst_tic TEXT DEFAULT 'VIGENTE',
     observaciones TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

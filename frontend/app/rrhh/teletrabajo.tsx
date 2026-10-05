@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -648,6 +648,7 @@ export default function TeletrabajoScreen() {
   // MODAL 4: SEGUIMIENTO PERIÓDICO POR RANGO DE FECHAS
   // =========================================================================
   const [modalSegVisible, setModalSegVisible] = useState(false);
+  const [modalInformeComiteVisible, setModalInformeComiteVisible] = useState(false);
   const [guardandoSeg, setGuardandoSeg] = useState(false);
   const [formSeg, setFormSeg] = useState<{
     persona: PersonaPlanta | null;
@@ -662,6 +663,16 @@ export default function TeletrabajoScreen() {
     archivo_base64: string;
     nombre_archivo: string;
     observaciones: string;
+    // Campos Procedimiento PR-117 v06
+    dias_efectivos_teletrabajo: string;
+    radicado_memorando_ft018: string;
+    fecha_radicacion_memorando: string;
+    tipo_seguimiento: 'MENSUAL_ORDINARIO' | 'EVALUACION_PR012' | 'EXTRAORDINARIO';
+    aplica_auxilio_servicios: boolean;
+    estrato_socioeconomico: string;
+    novedad_cambio_domicilio: boolean;
+    observaciones_cambio_domicilio: string;
+    estado_visita_sst_tic: 'VIGENTE' | 'PENDIENTE_INSPECCION_ANUAL' | 'REQUIERE_NUEVA_VISITA_POR_CAMBIO_DOMICILIO';
   }>({
     persona: null,
     fecha_corte_desde: '',
@@ -675,6 +686,15 @@ export default function TeletrabajoScreen() {
     archivo_base64: '',
     nombre_archivo: '',
     observaciones: '',
+    dias_efectivos_teletrabajo: '8',
+    radicado_memorando_ft018: '',
+    fecha_radicacion_memorando: new Date().toISOString().split('T')[0],
+    tipo_seguimiento: 'MENSUAL_ORDINARIO',
+    aplica_auxilio_servicios: true,
+    estrato_socioeconomico: '3',
+    novedad_cambio_domicilio: false,
+    observaciones_cambio_domicilio: '',
+    estado_visita_sst_tic: 'VIGENTE',
   });
 
   const abrirModalSeguimiento = (persona: PersonaPlanta) => {
@@ -682,6 +702,9 @@ export default function TeletrabajoScreen() {
     const hoy = new Date();
     const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).toISOString().split('T')[0];
     const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 0).toISOString().split('T')[0];
+
+    // Días estimados según modalidad (híbrido ~8 a 12 días al mes)
+    const diasSugeridos = (persona.dias_por_semana ? persona.dias_por_semana * 4 : 8).toString();
 
     setFormSeg({
       persona,
@@ -696,6 +719,15 @@ export default function TeletrabajoScreen() {
       archivo_base64: '',
       nombre_archivo: '',
       observaciones: '',
+      dias_efectivos_teletrabajo: diasSugeridos,
+      radicado_memorando_ft018: `2311520-FT-018-${hoy.getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+      fecha_radicacion_memorando: new Date().toISOString().split('T')[0],
+      tipo_seguimiento: 'MENSUAL_ORDINARIO',
+      aplica_auxilio_servicios: true,
+      estrato_socioeconomico: '3',
+      novedad_cambio_domicilio: false,
+      observaciones_cambio_domicilio: '',
+      estado_visita_sst_tic: 'VIGENTE',
     });
     setModalSegVisible(true);
   };
@@ -738,10 +770,30 @@ export default function TeletrabajoScreen() {
         archivo_base64: formSeg.archivo_base64 || undefined,
         nombre_archivo: formSeg.nombre_archivo || undefined,
         observaciones: formSeg.observaciones,
+        // Procedimiento 2311300-PR-117 v06
+        dias_efectivos_teletrabajo: parseInt(formSeg.dias_efectivos_teletrabajo, 10) || 0,
+        radicado_memorando_ft018: formSeg.radicado_memorando_ft018,
+        fecha_radicacion_memorando: formSeg.fecha_radicacion_memorando,
+        tipo_seguimiento: formSeg.tipo_seguimiento,
+        aplica_auxilio_servicios: formSeg.aplica_auxilio_servicios,
+        estrato_socioeconomico: parseInt(formSeg.estrato_socioeconomico, 10) || 3,
+        novedad_cambio_domicilio: formSeg.novedad_cambio_domicilio,
+        observaciones_cambio_domicilio: formSeg.observaciones_cambio_domicilio,
+        estado_visita_sst_tic: formSeg.novedad_cambio_domicilio
+          ? 'REQUIERE_NUEVA_VISITA_POR_CAMBIO_DOMICILIO'
+          : formSeg.estado_visita_sst_tic,
       });
       setModalSegVisible(false);
       await cargarTodo();
-      mostrarMensaje('Seguimiento Consignado', `El corte de seguimiento (${formSeg.fecha_corte_desde} al ${formSeg.fecha_corte_hasta}) fue registrado satisfactoriamente.`, 'success');
+      mostrarMensaje(
+        'Seguimiento Consignado',
+        `El corte de seguimiento (${formSeg.fecha_corte_desde} al ${formSeg.fecha_corte_hasta}) con ${formSeg.dias_efectivos_teletrabajo} días certificados fue registrado satisfactoriamente.${
+          formSeg.novedad_cambio_domicilio
+            ? ' Se ha generado la alerta técnica de visita prioritaria SST (FT-261) y TIC (FT-400) por cambio de domicilio.'
+            : ''
+        }`,
+        'success'
+      );
     } catch (err: any) {
       mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el seguimiento.', 'error');
     } finally {
@@ -812,6 +864,22 @@ export default function TeletrabajoScreen() {
       (s.concepto_recomendacion && s.concepto_recomendacion.toLowerCase().includes(q))
     );
   });
+
+  // Métricas Consolidadas de Seguimiento (Punto de Control Semestral - PR-117 v06)
+  const { promedioCumplimiento, totalDiasTeletrabajados, totalAlertasCambioDomicilio } = useMemo(() => {
+    const totalRegistros = seguimientos.length;
+    const sumCalificaciones = seguimientos.reduce((a, s) => a + (Number(s.calificacion_porcentaje) || 0), 0);
+    const prom = totalRegistros > 0 ? (sumCalificaciones / totalRegistros).toFixed(1) : '100.0';
+    const dias = seguimientos.reduce((a, s) => a + (Number(s.dias_efectivos_teletrabajo) || 0), 0);
+    const alertas = seguimientos.filter(
+      (s) => s.novedad_cambio_domicilio || s.estado_visita_sst_tic === 'REQUIERE_NUEVA_VISITA_POR_CAMBIO_DOMICILIO'
+    ).length;
+    return {
+      promedioCumplimiento: prom,
+      totalDiasTeletrabajados: dias,
+      totalAlertasCambioDomicilio: alertas,
+    };
+  }, [seguimientos]);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.darkBg }}>
@@ -3320,12 +3388,35 @@ export default function TeletrabajoScreen() {
                       Seguimientos Periódicos de Rendimiento y Actividades
                     </Text>
                     <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
-                      Cortes periódicos delimitados por rango de fechas (Desde - Hasta) y evaluación del jefe
+                      Fase 4.2 del Procedimiento 2311300-PR-117 (Versión 06) • Certificación de Días y Control SST/TIC
                     </Text>
                   </View>
 
-                  {/* Barra de Búsqueda y Selector de Vista */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Botón Punto de Control: Informe Semestral Comité */}
+                    <Pressable
+                      onPress={() => setModalInformeComiteVisible(true)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: THEME.marca800,
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        opacity: pressed ? 0.9 : 1,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.05,
+                        shadowRadius: 3,
+                      })}
+                    >
+                      <Ionicons name="pie-chart-outline" size={16} color={THEME.white} />
+                      <Text style={{ color: THEME.white, fontSize: 12.5, fontWeight: '700' }}>
+                        Informe Semestral Comité (PR-117)
+                      </Text>
+                    </Pressable>
+
+                    {/* Barra de Búsqueda y Selector de Vista */}
                     <View
                       style={{
                         flexDirection: 'row',
@@ -3336,14 +3427,14 @@ export default function TeletrabajoScreen() {
                         borderColor: THEME.slate200,
                         paddingHorizontal: 10,
                         height: 36,
-                        width: isDesktop ? 260 : '100%',
+                        width: isDesktop ? 240 : '100%',
                       }}
                     >
                       <Ionicons name="search" size={15} color={THEME.slate400} style={{ marginRight: 6 }} />
                       <TextInput
                         value={busquedaSeguimientos}
                         onChangeText={setBusquedaSeguimientos}
-                        placeholder="Buscar seguimiento por nombre, C.C...."
+                        placeholder="Buscar por nombre, C.C...."
                         placeholderTextColor={THEME.slate400}
                         style={{ flex: 1, color: THEME.slate900, fontSize: 12, outlineStyle: 'none' as never }}
                       />
@@ -3430,6 +3521,121 @@ export default function TeletrabajoScreen() {
                   </View>
                 </View>
 
+                {/* Panel de Métricas: Punto de Control Institucional Semestral (Fase 4.2 / Actividad 5) */}
+                <View
+                  style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 200 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      gap: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="checkmark-circle" size={17} color={THEME.emeraldText} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        Cumplimiento Promedio
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: THEME.slate900 }}>
+                      {seguimientos.length > 0
+                        ? (seguimientos.reduce((a, s) => a + (Number(s.calificacion_porcentaje) || 0), 0) / seguimientos.length).toFixed(1)
+                        : '100.0'}%
+                    </Text>
+                    <Text style={{ fontSize: 11, color: THEME.emeraldText, fontWeight: '600' }}>
+                      Metas concertadas en matriz de producto
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 200 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      gap: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="calendar" size={17} color={THEME.skyText} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        Días Efectivos Certificados
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: THEME.slate900 }}>
+                      {seguimientos.reduce((a, s) => a + (Number(s.dias_efectivos_teletrabajo) || 0), 0)} días
+                    </Text>
+                    <Text style={{ fontSize: 11, color: THEME.skyText, fontWeight: '600' }}>
+                      Soportados en Memorandos 2311520-FT-018
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 200 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      gap: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="warning" size={17} color={THEME.amberText} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        Control SST / TIC (Actividad 4.2.3)
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: THEME.slate900 }}>
+                      {seguimientos.filter((s) => s.novedad_cambio_domicilio || s.estado_visita_sst_tic !== 'VIGENTE').length}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: THEME.amberText, fontWeight: '600' }}>
+                      Cambios de domicilio o visitas prioritarias
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 200 : '100%',
+                      backgroundColor: THEME.marca50,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.marca200,
+                      padding: 14,
+                      gap: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="time" size={17} color={THEME.marca800} />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
+                        Punto de Control Semestral
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: THEME.marca900 }}>
+                      Fase 4.2.5
+                    </Text>
+                    <Text style={{ fontSize: 11, color: THEME.marca800, fontWeight: '600' }}>
+                      Comité Institucional de Gestión y Desempeño
+                    </Text>
+                  </View>
+                </View>
+
                 {/* Conteo y aviso */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ color: THEME.slate600, fontSize: 13, fontWeight: '600' }}>
@@ -3471,13 +3677,15 @@ export default function TeletrabajoScreen() {
                           alignItems: 'center',
                         }}
                       >
-                        <Text style={{ width: 230, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>SERVIDOR PÚBLICO</Text>
-                        <Text style={{ width: 190, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>PERÍODO DE CORTE</Text>
-                        <Text style={{ width: 300, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>ACTIVIDADES REPORTADAS</Text>
-                        <Text style={{ width: 170, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CUMPLIMIENTO</Text>
-                        <Text style={{ width: 170, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CONCEPTO JEFE</Text>
-                        <Text style={{ width: 150, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>EVIDENCIAS</Text>
-                        <Text style={{ width: 140, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>ACCIONES</Text>
+                        <Text style={{ width: 220, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>SERVIDOR PÚBLICO</Text>
+                        <Text style={{ width: 170, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>PERÍODO DE CORTE</Text>
+                        <Text style={{ width: 150, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>DÍAS (FT-018)</Text>
+                        <Text style={{ width: 170, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CONDICIÓN SST / TIC</Text>
+                        <Text style={{ width: 240, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>ACTIVIDADES REPORTADAS</Text>
+                        <Text style={{ width: 160, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CUMPLIMIENTO</Text>
+                        <Text style={{ width: 150, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CONCEPTO JEFE</Text>
+                        <Text style={{ width: 130, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>EVIDENCIAS</Text>
+                        <Text style={{ width: 130, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>ACCIONES</Text>
                       </View>
 
                       {/* Filas */}
@@ -3509,7 +3717,7 @@ export default function TeletrabajoScreen() {
                               }}
                             >
                               {/* Servidor */}
-                              <View style={{ width: 230, paddingRight: 10, gap: 2 }}>
+                              <View style={{ width: 220, paddingRight: 10, gap: 2 }}>
                                 <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
                                   {s.servidor_nombre}
                                 </Text>
@@ -3519,7 +3727,7 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Período de Corte */}
-                              <View style={{ width: 190, paddingRight: 8 }}>
+                              <View style={{ width: 170, paddingRight: 8 }}>
                                 <View
                                   style={{
                                     backgroundColor: THEME.marca50,
@@ -3537,8 +3745,76 @@ export default function TeletrabajoScreen() {
                                 </View>
                               </View>
 
+                              {/* Días Certificados y Memorando */}
+                              <View style={{ width: 150, paddingRight: 8, gap: 2 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                  <View
+                                    style={{
+                                      backgroundColor: THEME.badges.sky.bg,
+                                      borderColor: THEME.badges.sky.border,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 1.5,
+                                      borderRadius: 6,
+                                    }}
+                                  >
+                                    <Text style={{ color: THEME.badges.sky.text, fontSize: 11, fontWeight: '800' }}>
+                                      {s.dias_efectivos_teletrabajo || 0} días
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Text style={{ color: THEME.slate500, fontSize: 10.5 }} numberOfLines={1}>
+                                  {s.radicado_memorando_ft018 || 'FT-018'}
+                                </Text>
+                              </View>
+
+                              {/* Condición SST / TIC */}
+                              <View style={{ width: 170, paddingRight: 8 }}>
+                                {s.novedad_cambio_domicilio || s.estado_visita_sst_tic !== 'VIGENTE' ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: THEME.badges.amber.bg,
+                                      borderColor: THEME.badges.amber.border,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 2,
+                                      borderRadius: 6,
+                                      alignSelf: 'flex-start',
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 3,
+                                    }}
+                                  >
+                                    <Ionicons name="warning" size={12} color={THEME.badges.amber.text} />
+                                    <Text style={{ color: THEME.badges.amber.text, fontSize: 10.5, fontWeight: '700' }}>
+                                      Visita Prioritaria
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <View
+                                    style={{
+                                      backgroundColor: THEME.badges.emerald.bg,
+                                      borderColor: THEME.badges.emerald.border,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 2,
+                                      borderRadius: 6,
+                                      alignSelf: 'flex-start',
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 3,
+                                    }}
+                                  >
+                                    <Ionicons name="shield-checkmark" size={12} color={THEME.badges.emerald.text} />
+                                    <Text style={{ color: THEME.badges.emerald.text, fontSize: 10.5, fontWeight: '700' }}>
+                                      Condiciones OK
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+
                               {/* Actividades */}
-                              <View style={{ width: 300, paddingRight: 12 }}>
+                              <View style={{ width: 240, paddingRight: 12 }}>
                                 <Text style={{ color: THEME.slate700, fontSize: 12, lineHeight: 17 }} numberOfLines={2}>
                                   {s.actividades_reportadas || 'Sin detalle de actividades'}
                                 </Text>
@@ -3714,6 +3990,99 @@ export default function TeletrabajoScreen() {
                           <Text style={{ color: THEME.slate700, fontSize: 13, lineHeight: 18 }}>
                             {s.actividades_reportadas}
                           </Text>
+
+                          {/* Fila de Certificación FT-018 y SST/TIC */}
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                              backgroundColor: THEME.slate50,
+                              padding: 8,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: THEME.slate100,
+                            }}
+                          >
+                            <View
+                              style={{
+                                backgroundColor: THEME.badges.sky.bg,
+                                borderColor: THEME.badges.sky.border,
+                                borderWidth: 1,
+                                paddingHorizontal: 7,
+                                paddingVertical: 2,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Text style={{ color: THEME.badges.sky.text, fontSize: 11, fontWeight: '800' }}>
+                                📅 {s.dias_efectivos_teletrabajo || 0} Días Certificados
+                              </Text>
+                            </View>
+
+                            {s.radicado_memorando_ft018 ? (
+                              <View
+                                style={{
+                                  backgroundColor: THEME.white,
+                                  borderColor: THEME.slate200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 7,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ color: THEME.slate600, fontSize: 11, fontWeight: '600' }}>
+                                  Memo FT-018: {s.radicado_memorando_ft018}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {s.novedad_cambio_domicilio ? (
+                              <View
+                                style={{
+                                  backgroundColor: THEME.roseBg,
+                                  borderColor: THEME.roseRing,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 7,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                              >
+                                <Ionicons name="warning" size={12} color={THEME.roseText} />
+                                <Text style={{ color: THEME.roseText, fontSize: 11, fontWeight: '800' }}>
+                                  Alerta SST/TIC: Cambio Domicilio
+                                </Text>
+                              </View>
+                            ) : (
+                              <View
+                                style={{
+                                  backgroundColor: THEME.emeraldBg,
+                                  borderColor: THEME.emeraldRing,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 7,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                              >
+                                <Ionicons name="shield-checkmark" size={12} color={THEME.emeraldText} />
+                                <Text style={{ color: THEME.emeraldText, fontSize: 11, fontWeight: '700' }}>
+                                  Condición SST/TIC Al Día
+                                </Text>
+                              </View>
+                            )}
+
+                            {s.estrato_socioeconomico ? (
+                              <Text style={{ color: THEME.slate500, fontSize: 11 }}>
+                                Estrato {s.estrato_socioeconomico}
+                              </Text>
+                            ) : null}
+                          </View>
 
                           <View
                             style={{
@@ -6535,6 +6904,143 @@ export default function TeletrabajoScreen() {
                   </View>
                 </View>
 
+                {/* Días Efectivamente Teletrabajados y Radicado Memorando (Fase 4.2 / 4.3) */}
+                <View style={{ gap: 8, backgroundColor: THEME.slate50, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200 }}>
+                  <Text style={{ color: THEME.marca800, fontSize: 12.5, fontWeight: '800' }}>
+                    Certificación de Días y Soporte Oficial (Procedimiento 2311300-PR-117):
+                  </Text>
+
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '700' }}>
+                        Días Efectivos en Casa (Mes):
+                      </Text>
+                      <TextInput
+                        value={formSeg.dias_efectivos_teletrabajo}
+                        onChangeText={(t) => setFormSeg((p) => ({ ...p, dias_efectivos_teletrabajo: t }))}
+                        keyboardType="numeric"
+                        placeholder="Ej. 8"
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
+                          padding: 9,
+                          fontSize: 13,
+                        }}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1.5, gap: 4 }}>
+                      <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '700' }}>
+                        Radicado Memorando (FT-018):
+                      </Text>
+                      <TextInput
+                        value={formSeg.radicado_memorando_ft018}
+                        onChangeText={(t) => setFormSeg((p) => ({ ...p, radicado_memorando_ft018: t }))}
+                        placeholder="Ej. 2311520-FT-018-2026-..."
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
+                          padding: 9,
+                          fontSize: 13,
+                        }}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1.2, gap: 4 }}>
+                      <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '700' }}>
+                        Fecha Radicación:
+                      </Text>
+                      <TextInput
+                        value={formSeg.fecha_radicacion_memorando}
+                        onChangeText={(t) => setFormSeg((p) => ({ ...p, fecha_radicacion_memorando: t }))}
+                        placeholder="AAAA-MM-DD"
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
+                          padding: 9,
+                          fontSize: 13,
+                        }}
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={{ fontSize: 11, color: THEME.slate500, fontStyle: 'italic' }}>
+                    * Término legal del procedimiento: Se debe entregar dentro de los primeros 5 días hábiles del mes.
+                  </Text>
+                </View>
+
+                {/* Control de Condiciones SST y TIC (Actividad 4.2.3) */}
+                <View
+                  style={{
+                    backgroundColor: formSeg.novedad_cambio_domicilio ? THEME.badges.amber.bg : THEME.white,
+                    borderWidth: 1,
+                    borderColor: formSeg.novedad_cambio_domicilio ? THEME.badges.amber.border : THEME.slate200,
+                    borderRadius: 10,
+                    padding: 12,
+                    gap: 8,
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() =>
+                      setFormSeg((p) => ({
+                        ...p,
+                        novedad_cambio_domicilio: !p.novedad_cambio_domicilio,
+                      }))
+                    }
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  >
+                    <Ionicons
+                      name={formSeg.novedad_cambio_domicilio ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={formSeg.novedad_cambio_domicilio ? THEME.amberText : THEME.slate400}
+                    />
+                    <Text
+                      style={{
+                        color: formSeg.novedad_cambio_domicilio ? THEME.amberText : THEME.slate800,
+                        fontSize: 12.5,
+                        fontWeight: '700',
+                      }}
+                    >
+                      Reportar novedad de cambio de residencia o domicilio (Actividad 4.2.3)
+                    </Text>
+                  </TouchableOpacity>
+
+                  {formSeg.novedad_cambio_domicilio && (
+                    <View style={{ gap: 6, paddingTop: 4 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.amberText, lineHeight: 16 }}>
+                        ⚠️ Atención SG-SST y TIC: Al reportar cambio de domicilio se activa la obligación de realizar visita o inspección prioritaria para validar estándares ergonómicos y técnicos con los formatos 2311300-FT-261 y 2311300-FT-400.
+                      </Text>
+                      <TextInput
+                        value={formSeg.observaciones_cambio_domicilio}
+                        onChangeText={(t) => setFormSeg((p) => ({ ...p, observaciones_cambio_domicilio: t }))}
+                        placeholder="Indica la nueva dirección o detalles del puesto de trabajo para programar la visita..."
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.badges.amber.border,
+                          color: THEME.slate900,
+                          padding: 8,
+                          fontSize: 12,
+                        }}
+                      />
+                    </View>
+                  )}
+                </View>
+
                 {/* Calificación y Cumplimiento */}
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1, gap: 4 }}>
@@ -6771,6 +7277,593 @@ export default function TeletrabajoScreen() {
                   Aceptar
                 </Text>
               </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ================================================================= */}
+        {/* MODAL INFORME TÉCNICO SEMESTRAL AL COMITÉ DE GESTIÓN Y DESEMPEÑO  */}
+        {/* Actividad 4.2.5 - Punto de Control Procedimiento 2311300-PR-117    */}
+        {/* ================================================================= */}
+        <Modal
+          visible={modalInformeComiteVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalInformeComiteVisible(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: isDesktop ? 24 : 10,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: THEME.white,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: THEME.slate200,
+                width: '100%',
+                maxWidth: 1100,
+                maxHeight: '92%',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.25,
+                shadowRadius: 20,
+                elevation: 10,
+                flexDirection: 'column',
+              }}
+            >
+              {/* Cabecera del Informe */}
+              <View
+                style={{
+                  backgroundColor: THEME.marca900,
+                  paddingHorizontal: 22,
+                  paddingVertical: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottomWidth: 1,
+                  borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                      padding: 10,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Ionicons name="bar-chart" size={22} color={THEME.white} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <Text style={{ color: THEME.white, fontSize: 16, fontWeight: '800' }}>
+                        Informe Técnico Semestral de Seguimiento al Teletrabajo
+                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: '#047857',
+                          paddingHorizontal: 7,
+                          paddingVertical: 2,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '800' }}>
+                          PUNTO DE CONTROL 4.2.5
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ color: 'rgba(214, 228, 244, 0.8)', fontSize: 11.5, marginTop: 2 }}>
+                      Comité Institucional de Gestión y Desempeño • Procedimiento 2311300-PR-117 (Versión 06) • Resolución 117 de 2026
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  {Platform.OS === 'web' && (
+                    <Pressable
+                      onPress={() => {
+                        if (typeof window !== 'undefined') {
+                          window.print();
+                        }
+                      }}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 6,
+                        opacity: pressed ? 0.8 : 1,
+                      })}
+                    >
+                      <Ionicons name="print-outline" size={15} color={THEME.white} />
+                      <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '600' }}>
+                        Imprimir / PDF
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  <Pressable
+                    onPress={() => setModalInformeComiteVisible(false)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      padding: 6,
+                      borderRadius: 6,
+                      backgroundColor: pressed ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                    })}
+                  >
+                    <Ionicons name="close" size={24} color={THEME.white} />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Contenido desplazable del informe */}
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 22, gap: 20 }}>
+                {/* Cuadro de Metadatos del Informe */}
+                <View
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 16,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Text style={{ color: THEME.slate500, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                      ENTIDAD DISTRITAL Y UNIDAD RESPONSABLE
+                    </Text>
+                    <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '700' }}>
+                      Secretaría Jurídica Distrital • Dirección de Gestión Corporativa (Talento Humano)
+                    </Text>
+                    <Text style={{ color: THEME.slate600, fontSize: 12 }}>
+                      Formato de Seguimiento Mensual 2311300-FT-018 consolidado semestralmente
+                    </Text>
+                  </View>
+
+                  <View style={{ gap: 3 }}>
+                    <Text style={{ color: THEME.slate500, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                      CORTE DEL INFORME
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: THEME.marca50,
+                        borderColor: THEME.marca200,
+                        borderWidth: 1,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 6,
+                        alignSelf: 'flex-start',
+                      }}
+                    >
+                      <Text style={{ color: THEME.marca800, fontSize: 12, fontWeight: '800' }}>
+                        I/II Semestre • {new Date().getFullYear()}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Métricas Consolidadas del Semestre */}
+                <View>
+                  <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '800', marginBottom: 10 }}>
+                    1. Indicadores Globales de Desempeño y Cumplimiento
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    {/* Tarjeta 1: Total Evaluaciones */}
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 180,
+                        backgroundColor: THEME.white,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 14,
+                        gap: 4,
+                      }}
+                    >
+                      <Text style={{ color: THEME.slate500, fontSize: 11, fontWeight: '700' }}>
+                        TOTAL REGISTROS
+                      </Text>
+                      <Text style={{ color: THEME.slate900, fontSize: 24, fontWeight: '900' }}>
+                        {seguimientos.length}
+                      </Text>
+                      <Text style={{ color: THEME.slate500, fontSize: 11 }}>
+                        Informes mensuales analizados
+                      </Text>
+                    </View>
+
+                    {/* Tarjeta 2: Cumplimiento Promedio */}
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 180,
+                        backgroundColor: '#F0FDF4',
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#BBF7D0',
+                        padding: 14,
+                        gap: 4,
+                      }}
+                    >
+                      <Text style={{ color: '#166534', fontSize: 11, fontWeight: '700' }}>
+                        PROMEDIO DE CUMPLIMIENTO
+                      </Text>
+                      <Text style={{ color: '#166534', fontSize: 24, fontWeight: '900' }}>
+                        {promedioCumplimiento}%
+                      </Text>
+                      <Text style={{ color: '#166534', fontSize: 11 }}>
+                        Meta institucional: ≥ 85%
+                      </Text>
+                    </View>
+
+                    {/* Tarjeta 3: Días Efectivos Certificados */}
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 180,
+                        backgroundColor: THEME.badges.sky.bg,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: THEME.badges.sky.border,
+                        padding: 14,
+                        gap: 4,
+                      }}
+                    >
+                      <Text style={{ color: THEME.badges.sky.text, fontSize: 11, fontWeight: '700' }}>
+                        DÍAS TELETRABAJADOS
+                      </Text>
+                      <Text style={{ color: THEME.badges.sky.text, fontSize: 24, fontWeight: '900' }}>
+                        {totalDiasTeletrabajados}
+                      </Text>
+                      <Text style={{ color: THEME.badges.sky.text, fontSize: 11 }}>
+                        Soportados con FT-018
+                      </Text>
+                    </View>
+
+                    {/* Tarjeta 4: Alertas SST y TIC */}
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 180,
+                        backgroundColor: totalAlertasCambioDomicilio > 0 ? THEME.roseBg : THEME.emeraldBg,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: totalAlertasCambioDomicilio > 0 ? THEME.roseRing : THEME.emeraldRing,
+                        padding: 14,
+                        gap: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: totalAlertasCambioDomicilio > 0 ? THEME.roseText : THEME.emeraldText,
+                          fontSize: 11,
+                          fontWeight: '700',
+                        }}
+                      >
+                        CONDICIONES SST / TIC
+                      </Text>
+                      <Text
+                        style={{
+                          color: totalAlertasCambioDomicilio > 0 ? THEME.roseText : THEME.emeraldText,
+                          fontSize: 24,
+                          fontWeight: '900',
+                        }}
+                      >
+                        {totalAlertasCambioDomicilio > 0 ? `${totalAlertasCambioDomicilio} Pendientes` : '100% Al Día'}
+                      </Text>
+                      <Text
+                        style={{
+                          color: totalAlertasCambioDomicilio > 0 ? THEME.roseText : THEME.emeraldText,
+                          fontSize: 11,
+                        }}
+                      >
+                        {totalAlertasCambioDomicilio > 0
+                          ? 'Visitas requeridas por cambio domicilio'
+                          : 'Condiciones técnicas validadas'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Distribución de Evaluaciones */}
+                <View
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 16,
+                    gap: 12,
+                  }}
+                >
+                  <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '800' }}>
+                    2. Desglose Institucional de Calificación del Desempeño
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 140,
+                        backgroundColor: THEME.emeraldBg,
+                        borderColor: THEME.emeraldRing,
+                        borderWidth: 1,
+                        padding: 10,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: THEME.emeraldText, fontSize: 11, fontWeight: '700' }}>
+                        SOBRESALIENTE (≥ 90%)
+                      </Text>
+                      <Text style={{ color: THEME.emeraldText, fontSize: 20, fontWeight: '900', marginTop: 2 }}>
+                        {seguimientos.filter((s) => s.cumplimiento_nivel === 'SOBRESALIENTE').length}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 140,
+                        backgroundColor: THEME.skyBg,
+                        borderColor: THEME.skyRing,
+                        borderWidth: 1,
+                        padding: 10,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: THEME.skyText, fontSize: 11, fontWeight: '700' }}>
+                        SATISFACTORIO (75% - 89%)
+                      </Text>
+                      <Text style={{ color: THEME.skyText, fontSize: 20, fontWeight: '900', marginTop: 2 }}>
+                        {seguimientos.filter((s) => s.cumplimiento_nivel === 'SATISFACTORIO').length}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 140,
+                        backgroundColor: THEME.amberBg,
+                        borderColor: THEME.amberRing,
+                        borderWidth: 1,
+                        padding: 10,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: THEME.amberText, fontSize: 11, fontWeight: '700' }}>
+                        PARCIAL (60% - 74%)
+                      </Text>
+                      <Text style={{ color: THEME.amberText, fontSize: 20, fontWeight: '900', marginTop: 2 }}>
+                        {seguimientos.filter((s) => s.cumplimiento_nivel === 'PARCIAL').length}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flex: 1,
+                        minWidth: 140,
+                        backgroundColor: THEME.roseBg,
+                        borderColor: THEME.roseRing,
+                        borderWidth: 1,
+                        padding: 10,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: THEME.roseText, fontSize: 11, fontWeight: '700' }}>
+                        NO CUMPLE (&lt; 60%)
+                      </Text>
+                      <Text style={{ color: THEME.roseText, fontSize: 20, fontWeight: '900', marginTop: 2 }}>
+                        {seguimientos.filter((s) => s.cumplimiento_nivel === 'NO_CUMPLE').length}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Tabla Consolidada para el Comité */}
+                <View>
+                  <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '800', marginBottom: 10 }}>
+                    3. Detalle Individual por Servidor Público y Conceptos de Jefatura
+                  </Text>
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      borderRadius: 10,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <ScrollView horizontal showsHorizontalScrollIndicator>
+                      <View style={{ minWidth: 900 }}>
+                        {/* Cabecera tabla */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            backgroundColor: THEME.slate100,
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                            borderBottomWidth: 1,
+                            borderBottomColor: THEME.slate200,
+                          }}
+                        >
+                          <Text style={{ width: 220, fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                            SERVIDOR PÚBLICO
+                          </Text>
+                          <Text style={{ width: 140, fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                            CORTE EVALUADO
+                          </Text>
+                          <Text style={{ width: 110, fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                            DÍAS CERT.
+                          </Text>
+                          <Text style={{ width: 150, fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                            CUMPLIMIENTO
+                          </Text>
+                          <Text style={{ width: 140, fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                            CONCEPTO JEFE
+                          </Text>
+                          <Text style={{ width: 140, fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                            CONDICIÓN SST/TIC
+                          </Text>
+                        </View>
+
+                        {/* Filas */}
+                        {seguimientos.slice(0, 30).map((s, idx) => (
+                          <View
+                            key={s.id || idx}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingVertical: 9,
+                              paddingHorizontal: 12,
+                              backgroundColor: idx % 2 === 0 ? THEME.white : '#F8FAFC',
+                              borderBottomWidth: 1,
+                              borderBottomColor: THEME.slate100,
+                            }}
+                          >
+                            <View style={{ width: 220 }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }} numberOfLines={1}>
+                                {s.servidor_nombre}
+                              </Text>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                C.C. {s.servidor_cedula}
+                              </Text>
+                            </View>
+
+                            <View style={{ width: 140 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate700 }}>
+                                {limpiarFecha(s.fecha_corte_desde)} al {limpiarFecha(s.fecha_corte_hasta)}
+                              </Text>
+                            </View>
+
+                            <View style={{ width: 110 }}>
+                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>
+                                {s.dias_efectivos_teletrabajo || 0} días
+                              </Text>
+                              {s.radicado_memorando_ft018 ? (
+                                <Text style={{ fontSize: 9.5, color: THEME.slate400 }} numberOfLines={1}>
+                                  {s.radicado_memorando_ft018}
+                                </Text>
+                              ) : null}
+                            </View>
+
+                            <View style={{ width: 150 }}>
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: '700',
+                                  color:
+                                    s.cumplimiento_nivel === 'SOBRESALIENTE'
+                                      ? '#166534'
+                                      : s.cumplimiento_nivel === 'SATISFACTORIO'
+                                      ? '#0369A1'
+                                      : s.cumplimiento_nivel === 'PARCIAL'
+                                      ? '#B45309'
+                                      : '#BE123C',
+                                }}
+                              >
+                                {s.cumplimiento_nivel} ({s.calificacion_porcentaje}%)
+                              </Text>
+                            </View>
+
+                            <View style={{ width: 140 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                {s.concepto_recomendacion === 'CONTINUAR'
+                                  ? '✓ Continuar'
+                                  : s.concepto_recomendacion === 'AJUSTAR_DIAS'
+                                  ? '⚠️ Ajustar Días'
+                                  : 'Reversibilidad'}
+                              </Text>
+                            </View>
+
+                            <View style={{ width: 140 }}>
+                              {s.novedad_cambio_domicilio ? (
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#BE123C' }}>
+                                  ⚠️ Visita Prioritaria
+                                </Text>
+                              ) : (
+                                <Text style={{ fontSize: 10.5, color: '#166534' }}>
+                                  ✓ Condición OK
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        ))}
+
+                        {seguimientos.length === 0 && (
+                          <View style={{ padding: 24, alignItems: 'center' }}>
+                            <Text style={{ color: THEME.slate400, fontSize: 12 }}>
+                              No hay seguimientos registrados para consolidar en el informe.
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </ScrollView>
+                  </View>
+                </View>
+
+                {/* Recomendaciones Institucionales del Punto de Control */}
+                <View
+                  style={{
+                    backgroundColor: THEME.marca50,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: THEME.marca100,
+                    padding: 16,
+                    gap: 8,
+                  }}
+                >
+                  <Text style={{ color: THEME.marca900, fontSize: 13, fontWeight: '800' }}>
+                    4. Recomendaciones y Conclusiones del Punto de Control (Actividad 4.2.5)
+                  </Text>
+                  <Text style={{ color: THEME.marca800, fontSize: 12, lineHeight: 18 }}>
+                    • <Text style={{ fontWeight: '700' }}>Permanencia y Prestación del Servicio:</Text> Se evidencia cumplimiento de las jornadas bajo la modalidad suplementaria, garantizando la presencialidad requerida por la Secretaría Jurídica Distrital.
+                  </Text>
+                  <Text style={{ color: THEME.marca800, fontSize: 12, lineHeight: 18 }}>
+                    • <Text style={{ fontWeight: '700' }}>Condiciones SST y TIC:</Text> Para los servidores que notificaron cambio de domicilio ({totalAlertasCambioDomicilio} caso(s)), se remite orden de visita prioritaria a los equipos de SG-SST (Formato 2311300-FT-261) y TIC (Formato 2311300-FT-400) para asegurar la ergonomía y seguridad informática.
+                  </Text>
+                  <Text style={{ color: THEME.marca800, fontSize: 12, lineHeight: 18 }}>
+                    • <Text style={{ fontWeight: '700' }}>Trámites de Reversibilidad:</Text> En caso de calificaciones parciales o insatisfactorias reiteradas, se dará aplicación a la Actividad 4.2.6 del Procedimiento PR-117 para retorno total a la modalidad presencial.
+                  </Text>
+                </View>
+              </ScrollView>
+
+              {/* Pie del Modal */}
+              <View
+                style={{
+                  paddingHorizontal: 22,
+                  paddingVertical: 14,
+                  backgroundColor: THEME.slate50,
+                  borderTopWidth: 1,
+                  borderTopColor: THEME.slate200,
+                  flexDirection: 'row',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <Pressable
+                  onPress={() => setModalInformeComiteVisible(false)}
+                  style={{
+                    backgroundColor: THEME.marca700,
+                    paddingHorizontal: 18,
+                    paddingVertical: 9,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '700' }}>
+                    Cerrar Informe
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </Modal>

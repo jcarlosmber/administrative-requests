@@ -665,6 +665,16 @@ module.exports = function (pool) {
         nombre_archivo,
         concepto_recomendacion,
         observaciones,
+        // Nuevos campos del Procedimiento 2311300-PR-117 v06
+        dias_efectivos_teletrabajo,
+        radicado_memorando_ft018,
+        fecha_radicacion_memorando,
+        tipo_seguimiento,
+        aplica_auxilio_servicios,
+        estrato_socioeconomico,
+        novedad_cambio_domicilio,
+        observaciones_cambio_domicilio,
+        estado_visita_sst_tic,
       } = req.body;
 
       if (!servidor_cedula || !fecha_corte_desde || !fecha_corte_hasta) {
@@ -682,13 +692,30 @@ module.exports = function (pool) {
         }
       }
 
+      // Si se reporta novedad de cambio de domicilio, actualizar automáticamente el estado SST/TIC
+      let finalEstadoSST = estado_visita_sst_tic || 'VIGENTE';
+      if (novedad_cambio_domicilio) {
+        finalEstadoSST = 'REQUIERE_NUEVA_VISITA_POR_CAMBIO_DOMICILIO';
+      }
+
       const q = `
         INSERT INTO public.teletrabajo_seguimientos (
           asignacion_id, servidor_cedula, servidor_nombre, fecha_corte_desde, fecha_corte_hasta,
           evaluador_nombre, evaluador_cargo, cumplimiento_nivel, calificacion_porcentaje,
           actividades_reportadas, soporte_evidencias_url, nombre_archivo_soporte,
-          concepto_recomendacion, observaciones
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          concepto_recomendacion, observaciones,
+          dias_efectivos_teletrabajo, radicado_memorando_ft018, fecha_radicacion_memorando,
+          tipo_seguimiento, aplica_auxilio_servicios, estrato_socioeconomico,
+          novedad_cambio_domicilio, observaciones_cambio_domicilio, estado_visita_sst_tic
+        ) VALUES (
+          $1, $2, $3, $4, $5,
+          $6, $7, $8, $9,
+          $10, $11, $12,
+          $13, $14,
+          $15, $16, $17,
+          $18, $19, $20,
+          $21, $22, $23
+        )
         RETURNING *;
       `;
 
@@ -707,6 +734,15 @@ module.exports = function (pool) {
         final_nombre_archivo,
         concepto_recomendacion || 'CONTINUAR',
         observaciones || '',
+        parseInt(dias_efectivos_teletrabajo, 10) || 0,
+        radicado_memorando_ft018 ? radicado_memorando_ft018.trim() : null,
+        fecha_radicacion_memorando || null,
+        tipo_seguimiento || 'MENSUAL_ORDINARIO',
+        aplica_auxilio_servicios !== undefined ? aplica_auxilio_servicios : true,
+        estrato_socioeconomico ? parseInt(estrato_socioeconomico, 10) : null,
+        novedad_cambio_domicilio || false,
+        observaciones_cambio_domicilio || null,
+        finalEstadoSST,
       ];
 
       const result = await pool.query(q, values);
