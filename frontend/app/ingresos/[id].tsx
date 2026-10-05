@@ -75,6 +75,17 @@ export default function DetalleValidacionScreen() {
   const [modoVista, setModoVista] = useState<'simplificada' | 'auditoria'>('simplificada');
   const [modalSelectorVista, setModalSelectorVista] = useState(false);
 
+  // Estados para expansión interactiva de la tabla ejecutiva en vista simplificada
+  const [certificadosExpandidos, setCertificadosExpandidos] = useState<Record<string, boolean>>({});
+  const [certModalDetalle, setCertModalDetalle] = useState<CertificadoAnalizado | null>(null);
+
+  const toggleExpandirCertificado = (key: string) => {
+    setCertificadosExpandidos(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   // Estado para acordeón de los 3 grupos por cada certificado (predeterminado contraídos)
   const [expansionesGrupos, setExpansionesGrupos] = useState<Record<string, { formal?: boolean; previo?: boolean; funciones?: boolean }>>({});
 
@@ -1649,7 +1660,7 @@ export default function DetalleValidacionScreen() {
                   </Text>
                 </View>
                 <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-                  Desglose resumido de certificaciones con cálculo de tiempo neto válido y acceso al soporte PDF.
+                  💡 Haz clic sobre cualquier fila para desplegar su ficha técnica completa, análisis de funciones, sustento normativo y soportes.
                 </Text>
               </View>
 
@@ -1669,131 +1680,470 @@ export default function DetalleValidacionScreen() {
               </View>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                <View style={{ minWidth: 920, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+                <View style={{ minWidth: 940, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
                   {/* Encabezado Tabla */}
                   <View
                     style={{
                       flexDirection: 'row',
                       backgroundColor: '#F1F5F9',
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
+                      paddingVertical: 11,
+                      paddingHorizontal: 14,
                       borderBottomWidth: 1,
                       borderBottomColor: '#CBD5E1'
                     }}
                   >
-                    <Text style={{ width: 55, fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
+                    <Text style={{ width: 65, fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
                     <Text style={{ width: 230, fontSize: 11, fontWeight: '800', color: '#475569' }}>EMPRESA / ENTIDAD</Text>
                     <Text style={{ width: 220, fontSize: 11, fontWeight: '800', color: '#475569' }}>CARGO DESEMPEÑADO</Text>
-                    <Text style={{ width: 180, fontSize: 11, fontWeight: '800', color: '#475569' }}>PERIODO</Text>
+                    <Text style={{ width: 175, fontSize: 11, fontWeight: '800', color: '#475569' }}>PERIODO</Text>
                     <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>TIEMPO VÁLIDO</Text>
-                    <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>CALIFICACIÓN</Text>
-                    <Text style={{ width: 100, fontSize: 11, fontWeight: '800', color: '#475569', textAlign: 'center' }}>SOPORTE</Text>
+                    <Text style={{ width: 120, fontSize: 11, fontWeight: '800', color: '#475569' }}>CALIFICACIÓN</Text>
                   </View>
 
-                  {/* Filas */}
+                  {/* Filas Interactivas con Expansión Completa */}
                   {certificados.map((c, idx) => {
+                    const certKey = c.id_certificado || `cert-${idx}`;
+                    const estaExpandido = Boolean(certificadosExpandidos[certKey]);
                     const mesesVal = c.tiempo_valido?.meses_totales ?? c.tiempo_certificado?.meses_totales_aproximados ?? 0;
                     const esRel = c.clasificacion_experiencia === 'RELACIONADA';
                     const esPrevia = c.verificacion_experiencia_previa?.tipo_resultado === 'NO_COMPUTABLE_PREVIA_AL_GRADO';
 
                     return (
-                      <View
-                        key={c.id_certificado || idx}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 10,
-                          paddingHorizontal: 12,
-                          backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                          borderBottomWidth: idx < certificados.length - 1 ? 1 : 0,
-                          borderBottomColor: '#E2E8F0'
-                        }}
-                      >
-                        {/* REF */}
-                        <View style={{ width: 55 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B' }}>
-                            EXP-0{idx + 1}
-                          </Text>
-                        </View>
-
-                        {/* ENTIDAD */}
-                        <View style={{ width: 230, paddingRight: 8 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
-                            {c.entidad}
-                          </Text>
-                          {c.nit_entidad ? (
-                            <Text style={{ fontSize: 10, color: '#64748B' }}>NIT: {c.nit_entidad}</Text>
-                          ) : null}
-                        </View>
-
-                        {/* CARGO */}
-                        <View style={{ width: 220, paddingRight: 8 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }} numberOfLines={2}>
-                            {c.cargo_certificado}
-                          </Text>
-                          {c.tipo_vinculo ? (
-                            <Text style={{ fontSize: 10, color: '#64748B' }}>{c.tipo_vinculo}</Text>
-                          ) : null}
-                        </View>
-
-                        {/* PERIODO */}
-                        <View style={{ width: 180, paddingRight: 8 }}>
-                          <Text style={{ fontSize: 11, color: '#334155' }}>
-                            {c.fecha_inicio} al {c.fecha_fin || (c.vinculo_vigente ? 'Vigente' : 'N/A')}
-                          </Text>
-                        </View>
-
-                        {/* TIEMPO VÁLIDO */}
-                        <View style={{ width: 130, paddingRight: 8 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '800', color: mesesVal > 0 ? '#15803D' : '#94A3B8' }}>
-                            {mesesVal} meses
-                          </Text>
-                          {c.tiempo_valido ? (
-                            <Text style={{ fontSize: 10, color: '#64748B' }}>
-                              {c.tiempo_valido.anios || 0}a {c.tiempo_valido.meses || 0}m {c.tiempo_valido.dias || 0}d
+                      <View key={certKey} style={{ borderBottomWidth: idx < certificados.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}>
+                        {/* FILA PRINCIPAL CLIQUEABLE */}
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          onPress={() => toggleExpandirCertificado(certKey)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 12,
+                            paddingHorizontal: 14,
+                            backgroundColor: estaExpandido ? '#F0F9FF' : (idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC')
+                          }}
+                        >
+                          {/* REF con icono de expansión */}
+                          <View style={{ width: 65, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons
+                              name={estaExpandido ? 'chevron-up-circle' : 'chevron-down-circle-outline'}
+                              size={17}
+                              color={estaExpandido ? '#2563EB' : '#94A3B8'}
+                            />
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: estaExpandido ? '#2563EB' : '#64748B' }}>
+                              EXP-0{idx + 1}
                             </Text>
-                          ) : null}
-                        </View>
+                          </View>
 
-                        {/* CALIFICACIÓN */}
-                        <View style={{ width: 130, paddingRight: 8 }}>
-                          {esRel ? (
-                            <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Relacionada</Text>
-                            </View>
-                          ) : esPrevia ? (
-                            <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#B45309' }}>Previa a Grado</Text>
-                            </View>
-                          ) : (
-                            <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>No Relacionada</Text>
-                            </View>
-                          )}
-                        </View>
+                          {/* ENTIDAD */}
+                          <View style={{ width: 230, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
+                              {c.entidad}
+                            </Text>
+                            {c.nit_entidad ? (
+                              <Text style={{ fontSize: 10, color: '#64748B' }}>NIT: {c.nit_entidad}</Text>
+                            ) : null}
+                          </View>
 
-                        {/* SOPORTE PDF */}
-                        <View style={{ width: 100, alignItems: 'center' }}>
-                          <TouchableOpacity
-                            onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
+                          {/* CARGO */}
+                          <View style={{ width: 220, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }} numberOfLines={2}>
+                              {c.cargo_certificado}
+                            </Text>
+                            {c.tipo_vinculo ? (
+                              <Text style={{ fontSize: 10, color: '#64748B' }}>{c.tipo_vinculo}</Text>
+                            ) : null}
+                          </View>
+
+                          {/* PERIODO */}
+                          <View style={{ width: 175, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 11, color: '#334155' }}>
+                              {c.fecha_inicio} al {c.fecha_fin || (c.vinculo_vigente ? 'Vigente' : 'N/A')}
+                            </Text>
+                          </View>
+
+                          {/* TIEMPO VÁLIDO */}
+                          <View style={{ width: 130, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: mesesVal > 0 ? '#15803D' : '#94A3B8' }}>
+                              {mesesVal} meses
+                            </Text>
+                            {c.tiempo_valido ? (
+                              <Text style={{ fontSize: 10, color: '#64748B' }}>
+                                {c.tiempo_valido.anios || 0}a {c.tiempo_valido.meses || 0}m {c.tiempo_valido.dias || 0}d
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          {/* CALIFICACIÓN */}
+                          <View style={{ width: 120, paddingRight: 8 }}>
+                            {esRel ? (
+                              <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Relacionada</Text>
+                              </View>
+                            ) : esPrevia ? (
+                              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#B45309' }}>Previa a Grado</Text>
+                              </View>
+                            ) : (
+                              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>No Relacionada</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* INFORMACIÓN COMPLETA EXPANDIDA DEL CERTIFICADO CLICKEADO */}
+                        {estaExpandido && (
+                          <View
                             style={{
-                              backgroundColor: '#EFF6FF',
-                              borderWidth: 1,
-                              borderColor: '#BFDBFE',
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 6,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 4
+                              backgroundColor: '#F8FAFC',
+                              borderTopWidth: 1.5,
+                              borderTopColor: '#93C5FD',
+                              padding: 18,
+                              gap: 16
                             }}
                           >
-                            <Ionicons name="document-text" size={13} color="#2563EB" />
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#2563EB' }}>
-                              Ver PDF
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
+                            {/* Barra de título de la ficha expandida */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 }}>
+                                    FICHA COMPLETA: EXP-0{idx + 1}
+                                  </Text>
+                                </View>
+                                <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A' }}>
+                                  {c.entidad}
+                                </Text>
+                                {c.nit_entidad ? (
+                                  <Text style={{ fontSize: 12, color: '#64748B' }}>• NIT: {c.nit_entidad}</Text>
+                                ) : null}
+                              </View>
+
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <TouchableOpacity
+                                  onPress={() => setCertModalDetalle(c)}
+                                  style={{
+                                    backgroundColor: '#EFF6FF',
+                                    borderWidth: 1,
+                                    borderColor: '#BFDBFE',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="expand-outline" size={14} color="#1D4ED8" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Pantalla Completa</Text>
+                                </TouchableOpacity>
+
+                                {c.nombre_archivo ? (
+                                  <TouchableOpacity
+                                    onPress={() => verPdfDocumento(c.nombre_archivo, `${c.id_certificado}: ${c.entidad}`)}
+                                    style={{
+                                      backgroundColor: '#1E40AF',
+                                      paddingHorizontal: 10,
+                                      paddingVertical: 5,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4
+                                    }}
+                                  >
+                                    <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Ver PDF Original</Text>
+                                  </TouchableOpacity>
+                                ) : null}
+
+                                <TouchableOpacity
+                                  onPress={() => toggleExpandirCertificado(certKey)}
+                                  style={{
+                                    backgroundColor: '#FFFFFF',
+                                    borderWidth: 1,
+                                    borderColor: '#CBD5E1',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 2
+                                  }}
+                                >
+                                  <Ionicons name="chevron-up" size={14} color="#64748B" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>Cerrar</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            {/* 3 Paneles de Información Completa */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                              {/* Panel 1: Vinculación y Cargo */}
+                              <View style={{ flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                  <Ionicons name="briefcase-outline" size={16} color="#2563EB" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                                    Vinculación y Cargo Acreditado
+                                  </Text>
+                                </View>
+
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Denominación del Empleo:</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>{c.cargo_certificado || 'No registra cargo'}</Text>
+                                </View>
+
+                                {(c.codigo_cargo || c.grado_cargo) ? (
+                                  <View>
+                                    <Text style={{ fontSize: 11, color: '#64748B' }}>Código / Grado:</Text>
+                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>
+                                      Código {c.codigo_cargo || 'N/A'} • Grado {c.grado_cargo || 'N/A'}
+                                    </Text>
+                                  </View>
+                                ) : null}
+
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Tipo de Vinculación:</Text>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>{c.tipo_vinculo || 'No especifica'}</Text>
+                                </View>
+
+                                {c.numero_contrato_o_acto ? (
+                                  <View>
+                                    <Text style={{ fontSize: 11, color: '#64748B' }}>Contrato / Acto Administrativo:</Text>
+                                    <Text style={{ fontSize: 12, color: '#334155' }}>{c.numero_contrato_o_acto}</Text>
+                                  </View>
+                                ) : null}
+
+                                {c.dependencia ? (
+                                  <View>
+                                    <Text style={{ fontSize: 11, color: '#64748B' }}>Dependencia / Área:</Text>
+                                    <Text style={{ fontSize: 12, color: '#334155' }}>{c.dependencia}</Text>
+                                  </View>
+                                ) : null}
+
+                                {(c.firmante || c.cargo_firmante) ? (
+                                  <View style={{ paddingTop: 6, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                                    <Text style={{ fontSize: 10, color: '#64748B' }}>Suscriptor de la Certificación:</Text>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
+                                      {c.firmante || 'Autoridad facultada'}{c.cargo_firmante ? ` (${c.cargo_firmante})` : ''}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+
+                              {/* Panel 2: Periodos y Cómputo de Tiempos */}
+                              <View style={{ flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                  <Ionicons name="time-outline" size={16} color="#0D9488" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                                    Periodo y Cómputo de Tiempos
+                                  </Text>
+                                </View>
+
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Periodo Certificado:</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                    {c.fecha_inicio} al {c.fecha_fin || (c.vinculo_vigente ? 'Vigente / Actual' : 'No especifica')}
+                                  </Text>
+                                  {c.vinculo_vigente ? (
+                                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 3 }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#166534' }}>Vínculo Vigente</Text>
+                                    </View>
+                                  ) : null}
+                                </View>
+
+                                <View style={{ backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={{ fontSize: 11, color: '#64748B' }}>Tiempo Certificado Bruto:</Text>
+                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }}>
+                                      {c.tiempo_certificado?.meses_totales_aproximados ?? 0} meses
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 11, color: '#475569' }}>
+                                    ({c.tiempo_certificado?.anios || 0}a {c.tiempo_certificado?.meses || 0}m {c.tiempo_certificado?.dias || 0}d)
+                                  </Text>
+
+                                  <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 2 }} />
+
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#15803D' }}>Tiempo Válido Computable:</Text>
+                                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#15803D' }}>
+                                      {mesesVal} meses
+                                    </Text>
+                                  </View>
+                                  {c.tiempo_valido ? (
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#166534' }}>
+                                      ({c.tiempo_valido.anios || 0}a {c.tiempo_valido.meses || 0}m {c.tiempo_valido.dias || 0}d netos)
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              </View>
+
+                              {/* Panel 3: Calificación y Régimen Normativo */}
+                              <View style={{ flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                                  <Ionicons name="shield-checkmark-outline" size={16} color="#7C3AED" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                                    Calificación y Sustento Legal
+                                  </Text>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Clasificación:</Text>
+                                  {esRel ? (
+                                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#15803D' }}>✓ RELACIONADA</Text>
+                                    </View>
+                                  ) : esPrevia ? (
+                                    <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309' }}>PREVIA AL GRADO</Text>
+                                    </View>
+                                  ) : (
+                                    <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>{c.clasificacion_experiencia || 'NO RELACIONADA'}</Text>
+                                    </View>
+                                  )}
+                                </View>
+
+                                {c.verificacion_experiencia_previa?.conclusion_juridica ? (
+                                  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: 2 }}>
+                                      Dictamen Jurídico:
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#334155', lineHeight: 16 }}>
+                                      {c.verificacion_experiencia_previa.conclusion_juridica}
+                                    </Text>
+                                  </View>
+                                ) : null}
+
+                                {c.cumple_excepcion_ley_2039 ? (
+                                  <View style={{ backgroundColor: '#EEF2FF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#C7D2FE' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#3730A3' }}>
+                                      ✓ Aplica Excepción Ley 2039 de 2020: {c.modalidad_ley_2039 || 'Práctica formativa'}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            </View>
+
+                            {/* Concordancia Funcional Detallada */}
+                            {c.experiencia_relacionada?.funciones_coincidentes && c.experiencia_relacionada.funciones_coincidentes.length > 0 ? (
+                              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BBF7D0', gap: 10 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name="git-compare-outline" size={17} color="#15803D" />
+                                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D' }}>
+                                      Concordancia Funcional con el Empleo ({c.experiencia_relacionada.funciones_coincidentes.length} coincidencia(s))
+                                    </Text>
+                                  </View>
+                                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>Nivel de Confianza: {c.experiencia_relacionada.nivel_confianza || 'ALTO'}</Text>
+                                  </View>
+                                </View>
+
+                                <View style={{ gap: 8 }}>
+                                  {c.experiencia_relacionada.funciones_coincidentes.map((fc, fIdx) => (
+                                    <View key={fIdx} style={{ backgroundColor: '#F0FDF4', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#DCFCE7', gap: 4 }}>
+                                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#166534', flex: 1 }}>
+                                          • Función Certificada: {fc.funcion_certificada}
+                                        </Text>
+                                        <View style={{ backgroundColor: '#BBF7D0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                          <Text style={{ fontSize: 9, fontWeight: '800', color: '#14532D' }}>{fc.coincidencia}</Text>
+                                        </View>
+                                      </View>
+                                      <Text style={{ fontSize: 11, color: '#334155' }}>
+                                        <Text style={{ fontWeight: '700' }}>Función del Cargo:</Text> {fc.funcion_del_cargo}
+                                      </Text>
+                                      {fc.justificacion ? (
+                                        <Text style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', marginTop: 2 }}>
+                                          Sustento: {fc.justificacion}
+                                        </Text>
+                                      ) : null}
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                            ) : c.funciones_certificadas && c.funciones_certificadas.length > 0 ? (
+                              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>
+                                  Funciones Certificadas en el Documento ({c.funciones_certificadas.length}):
+                                </Text>
+                                <View style={{ gap: 4 }}>
+                                  {c.funciones_certificadas.map((fn, fnIdx) => (
+                                    <Text key={fnIdx} style={{ fontSize: 11, color: '#334155', lineHeight: 16 }}>
+                                      • {fn.funcion}
+                                    </Text>
+                                  ))}
+                                </View>
+                              </View>
+                            ) : (
+                              <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                <Text style={{ fontSize: 11, color: '#92400E' }}>
+                                  ℹ️ Esta certificación no incluye funciones detalladas; la relación técnica se evaluó con base en la denominación oficial del cargo y la naturaleza de la entidad.
+                                </Text>
+                              </View>
+                            )}
+
+                            {/* Traslapes Detectados si existen */}
+                            {c.traslapes && c.traslapes.length > 0 ? (
+                              <View style={{ backgroundColor: '#FEF2F2', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#FECACA', gap: 6 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#991B1B' }}>
+                                    Traslapes Temporales Registrados ({c.traslapes.length})
+                                  </Text>
+                                </View>
+                                {c.traslapes.map((tr, tIdx) => (
+                                  <View key={tIdx} style={{ backgroundColor: '#FFFFFF', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#7F1D1D' }}>
+                                      Coincidencia simultánea con {tr.entidad_coincidente || tr.otro_certificado_id}
+                                    </Text>
+                                    <Text style={{ fontSize: 10, color: '#991B1B', marginTop: 2 }}>
+                                      Periodo simultáneo: {tr.fecha_inicio_traslape} al {tr.fecha_fin_traslape} • Se excluyeron {tr.tiempo_a_excluir_meses} meses para no duplicar cómputo.
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            ) : null}
+
+                            {/* Verificación Formal Documental */}
+                            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                                Verificación Formal de Validez Documental
+                              </Text>
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                <View style={{ backgroundColor: c.verificacion_formal?.corresponde_aspirante !== false ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.verificacion_formal?.corresponde_aspirante !== false ? '#15803D' : '#B91C1C' }}>
+                                    {c.verificacion_formal?.corresponde_aspirante !== false ? '✓ Aspirante Coincide' : '❌ Nombre no coincide'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: c.verificacion_formal?.entidad_identificable !== false ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.verificacion_formal?.entidad_identificable !== false ? '#15803D' : '#B91C1C' }}>
+                                    {c.verificacion_formal?.entidad_identificable !== false ? '✓ Entidad Identificable' : '❌ Entidad dudosa'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: c.verificacion_formal?.cuenta_con_firma !== false ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.verificacion_formal?.cuenta_con_firma !== false ? '#15803D' : '#B91C1C' }}>
+                                    {c.verificacion_formal?.cuenta_con_firma !== false ? '✓ Documento Firmado' : '❌ Sin firma visible'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: c.verificacion_formal?.fecha_expedicion_identificable !== false ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.verificacion_formal?.fecha_expedicion_identificable !== false ? '#15803D' : '#B91C1C' }}>
+                                    {c.verificacion_formal?.fecha_expedicion_identificable !== false ? '✓ Fecha de Expedición' : '❌ Sin fecha cierta'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: c.verificacion_formal?.documento_legible_integro !== false ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: c.verificacion_formal?.documento_legible_integro !== false ? '#15803D' : '#B91C1C' }}>
+                                    {c.verificacion_formal?.documento_legible_integro !== false ? '✓ Legible e Íntegro' : '❌ Ilegible o truncado'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        )}
                       </View>
                     );
                   })}
@@ -4260,6 +4610,164 @@ export default function DetalleValidacionScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Modal Pantalla Completa de Detalle de Certificado */}
+      <Modal
+        visible={certModalDetalle !== null}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setCertModalDetalle(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 780,
+              maxHeight: '90%',
+              padding: 24,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 25,
+              elevation: 10,
+              gap: 16
+            }}
+          >
+            {certModalDetalle && (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>
+                        {certModalDetalle.id_certificado || 'CERTIFICADO'}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>
+                        {certModalDetalle.entidad}
+                      </Text>
+                      {certModalDetalle.nit_entidad ? (
+                        <Text style={{ fontSize: 12, color: '#64748B' }}>NIT: {certModalDetalle.nit_entidad}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity onPress={() => setCertModalDetalle(null)}>
+                    <Ionicons name="close" size={24} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+                  {/* PANELES DEL MODAL */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 240, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Cargo Acreditado</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>{certModalDetalle.cargo_certificado}</Text>
+                      <Text style={{ fontSize: 12, color: '#475569' }}>Vínculo: {certModalDetalle.tipo_vinculo || 'No especifica'}</Text>
+                      {certModalDetalle.numero_contrato_o_acto ? (
+                        <Text style={{ fontSize: 12, color: '#475569' }}>N°: {certModalDetalle.numero_contrato_o_acto}</Text>
+                      ) : null}
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 240, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Periodo y Tiempo Válido</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                        {certModalDetalle.fecha_inicio} al {certModalDetalle.fecha_fin || (certModalDetalle.vinculo_vigente ? 'Vigente' : 'N/A')}
+                      </Text>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: '#15803D' }}>
+                        Tiempo Computable: {certModalDetalle.tiempo_valido?.meses_totales ?? certModalDetalle.tiempo_certificado?.meses_totales_aproximados ?? 0} meses
+                      </Text>
+                      {certModalDetalle.tiempo_valido ? (
+                        <Text style={{ fontSize: 11, color: '#166534' }}>
+                          ({certModalDetalle.tiempo_valido.anios || 0}a {certModalDetalle.tiempo_valido.meses || 0}m {certModalDetalle.tiempo_valido.dias || 0}d)
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {/* Dictamen Jurídico */}
+                  {certModalDetalle.verificacion_experiencia_previa?.conclusion_juridica ? (
+                    <View style={{ backgroundColor: '#F0FDF4', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#BBF7D0', gap: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>
+                        Conclusión Jurídica Normativa:
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#14532D', lineHeight: 18 }}>
+                        {certModalDetalle.verificacion_experiencia_previa.conclusion_juridica}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* Funciones Coincidentes */}
+                  {certModalDetalle.experiencia_relacionada?.funciones_coincidentes && certModalDetalle.experiencia_relacionada.funciones_coincidentes.length > 0 ? (
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>
+                        Funciones Coincidentes con el Empleo ({certModalDetalle.experiencia_relacionada.funciones_coincidentes.length}):
+                      </Text>
+                      {certModalDetalle.experiencia_relacionada.funciones_coincidentes.map((fc, i) => (
+                        <View key={i} style={{ backgroundColor: '#F8FAFC', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#E2E8F0', gap: 4 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534' }}>• {fc.funcion_certificada}</Text>
+                          <Text style={{ fontSize: 11, color: '#475569' }}>Equivale a: {fc.funcion_del_cargo}</Text>
+                          {fc.justificacion ? (
+                            <Text style={{ fontSize: 10, color: '#64748B', fontStyle: 'italic' }}>Sustento: {fc.justificacion}</Text>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {/* Botones de Acción */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                    {certModalDetalle.nombre_archivo ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          verPdfDocumento(certModalDetalle.nombre_archivo, `${certModalDetalle.id_certificado}: ${certModalDetalle.entidad}`);
+                          setCertModalDetalle(null);
+                        }}
+                        style={{
+                          backgroundColor: '#2563EB',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="document-text" size={16} color="#FFFFFF" />
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Abrir PDF Original</Text>
+                      </TouchableOpacity>
+                    ) : null}
+
+                    <TouchableOpacity
+                      onPress={() => setCertModalDetalle(null)}
+                      style={{
+                        backgroundColor: '#0F172A',
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 8
+                      }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Cerrar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* Modal Visor de PDF integrado */}
