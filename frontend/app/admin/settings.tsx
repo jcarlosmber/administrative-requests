@@ -192,14 +192,27 @@ export default function AdminSettings() {
 
   // Estados de Despliegue y Control Git
   const [gitExecuting, setGitExecuting] = useState(false);
-  const [gitActionRunning, setGitActionRunning] = useState<'pull' | 'pull_and_build' | 'restart_backend' | 'status' | null>(null);
+  const [gitActionRunning, setGitActionRunning] = useState<'pull' | 'pull_and_build' | 'restart_backend' | 'status' | 'seed_teletrabajo' | null>(null);
   const [gitOutput, setGitOutput] = useState('');
   const [gitLastCheck, setGitLastCheck] = useState('');
   const [showGitConfirmModal, setShowGitConfirmModal] = useState(false);
-  const [pendingGitAction, setPendingGitAction] = useState<{ action: 'pull' | 'pull_and_build' | 'restart_backend'; title: string; desc: string; icon: string } | null>(null);
+  const [pendingGitAction, setPendingGitAction] = useState<{ action: 'pull' | 'pull_and_build' | 'restart_backend' | 'seed_teletrabajo'; title: string; desc: string; icon: string } | null>(null);
   const [showGitResultModal, setShowGitResultModal] = useState(false);
   const [gitResultStatus, setGitResultStatus] = useState<'success' | 'error'>('success');
   const [gitResultMessage, setGitResultMessage] = useState('');
+
+  // Estados para Terminal Interactiva en Settings
+  const [terminalInteractiveCommand, setTerminalInteractiveCommand] = useState('npm run seed:teletrabajo');
+  const [terminalInteractiveExecuting, setTerminalInteractiveExecuting] = useState(false);
+  const [terminalInteractiveLogs, setTerminalInteractiveLogs] = useState<
+    Array<{ tipo: 'info' | 'cmd' | 'stdout' | 'stderr' | 'success' | 'error'; texto: string; timestamp: string }>
+  >([
+    {
+      tipo: 'info',
+      texto: 'SASGE Terminal Engine conectado (servidor 10.54.80.209).\nComando preparado: npm run seed:teletrabajo\nPresiona "▶ Ejecutar Comando" para migrar las Resoluciones 117, 201, 366 y 409.',
+      timestamp: new Date().toLocaleTimeString('es-CO'),
+    }
+  ]);
 
   // Estados de Estadísticas e Infraestructura del Servidor
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
@@ -1407,7 +1420,7 @@ export default function AdminSettings() {
     ldapComments, ldapRelay, loading
   ]);
 
-  const triggerGitAction = (action: 'pull' | 'pull_and_build' | 'restart_backend') => {
+  const triggerGitAction = (action: 'pull' | 'pull_and_build' | 'restart_backend' | 'seed_teletrabajo') => {
     if (currentUserRole !== 'superadmin') {
       setSettingsNoticeModal({
         visible: true,
@@ -1430,13 +1443,17 @@ export default function AdminSettings() {
       title = '¿Reiniciar Servicio Backend?';
       desc = 'Reiniciará el proceso Node.js de SASGE mediante PM2 para aplicar cambios en los servicios del backend.';
       icon = 'reload-circle';
+    } else if (action === 'seed_teletrabajo') {
+      title = '¿Ejecutar Semilla de Teletrabajo?';
+      desc = 'Se ejecutará "npm run seed:teletrabajo" en el backend para migrar y sincronizar las Resoluciones 117, 201, 366 y 409 de 2026 y registrar a todos los servidores públicos en la base de datos.';
+      icon = 'terminal';
     }
 
     setPendingGitAction({ action, title, desc, icon });
     setShowGitConfirmModal(true);
   };
 
-  const handleExecuteGitAction = async (action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status') => {
+  const handleExecuteGitAction = async (action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status' | 'seed_teletrabajo') => {
     setShowGitConfirmModal(false);
     if (currentUserRole !== 'superadmin') {
       setSettingsNoticeModal({
@@ -1457,6 +1474,17 @@ export default function AdminSettings() {
       setGitResultStatus('success');
       setGitResultMessage(res.message);
       setShowGitResultModal(true);
+
+      // Si fue una semilla de teletrabajo, registrarlo en la terminal interactiva
+      if (action === 'seed_teletrabajo') {
+        const ahora = new Date().toLocaleTimeString('es-CO');
+        setTerminalInteractiveLogs(prev => [
+          ...prev,
+          { tipo: 'cmd', texto: '$ npm run seed:teletrabajo', timestamp: ahora },
+          { tipo: 'stdout', texto: res.output || res.message, timestamp: ahora },
+          { tipo: 'success', texto: `✓ ${res.message}`, timestamp: ahora }
+        ]);
+      }
     } catch (err: any) {
       setGitOutput(err.message || 'Error desconocido ejecutando operación Git');
       setGitResultStatus('error');
@@ -1466,6 +1494,64 @@ export default function AdminSettings() {
       setGitExecuting(false);
       setGitActionRunning(null);
     }
+  };
+
+  const runTerminalCommand = async (customCmd?: string) => {
+    const cmd = (customCmd || terminalInteractiveCommand).trim();
+    if (!cmd) return;
+
+    setTerminalInteractiveExecuting(true);
+    const ahora = new Date().toLocaleTimeString('es-CO');
+    setTerminalInteractiveLogs(prev => [
+      ...prev,
+      { tipo: 'cmd', texto: `$ ${cmd}`, timestamp: ahora },
+      { tipo: 'info', texto: 'Ejecutando en el backend de producción...', timestamp: ahora }
+    ]);
+
+    try {
+      let res: { success: boolean; message: string; output: string };
+      if (cmd === 'npm run seed:teletrabajo') {
+        res = await settingsService.executeGitOperation('seed_teletrabajo');
+      } else {
+        res = await settingsService.executeTerminalCommand(cmd);
+      }
+
+      if (res.output) {
+        setTerminalInteractiveLogs(prev => [
+          ...prev,
+          { tipo: 'stdout', texto: res.output, timestamp: new Date().toLocaleTimeString('es-CO') }
+        ]);
+      }
+      if (res.success) {
+        setTerminalInteractiveLogs(prev => [
+          ...prev,
+          { tipo: 'success', texto: `✓ ${res.message || 'Comando completado exitosamente.'}`, timestamp: new Date().toLocaleTimeString('es-CO') }
+        ]);
+        setGitOutput(res.output);
+      } else {
+        setTerminalInteractiveLogs(prev => [
+          ...prev,
+          { tipo: 'error', texto: `✗ Error: ${res.message}`, timestamp: new Date().toLocaleTimeString('es-CO') }
+        ]);
+      }
+    } catch (err: any) {
+      setTerminalInteractiveLogs(prev => [
+        ...prev,
+        { tipo: 'error', texto: `✗ Error de conexión: ${err.message}`, timestamp: new Date().toLocaleTimeString('es-CO') }
+      ]);
+    } finally {
+      setTerminalInteractiveExecuting(false);
+    }
+  };
+
+  const clearTerminalLogs = () => {
+    setTerminalInteractiveLogs([
+      {
+        tipo: 'info',
+        texto: 'Terminal de producción despejada. Lista para ejecutar.',
+        timestamp: new Date().toLocaleTimeString('es-CO')
+      }
+    ]);
   };
 
   const loadServerStats = useCallback(async () => {
@@ -2791,24 +2877,329 @@ export default function AdminSettings() {
                         </View>
                         <Ionicons name="chevron-forward" size={18} color={COLORS.accent} />
                       </TouchableOpacity>
+
+                      {/* Botón 5: Semilla Teletrabajo (npm run seed:teletrabajo) */}
+                      <TouchableOpacity
+                        style={[
+                          styles.gitActionBtn,
+                          {
+                            backgroundColor: '#0B132B',
+                            borderWidth: 1.5,
+                            borderColor: '#38BDF8',
+                          }
+                        ]}
+                        onPress={() => {
+                          setTerminalInteractiveCommand('npm run seed:teletrabajo');
+                          triggerGitAction('seed_teletrabajo');
+                        }}
+                        disabled={gitExecuting || terminalInteractiveExecuting}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons name="terminal" size={20} color="#38BDF8" />
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={[styles.gitActionBtnTitle, { color: '#F8FAFC' }]}>Semilla Teletrabajo</Text>
+                            <View style={{ backgroundColor: '#0284C7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
+                              <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '800' }}>npm run seed:teletrabajo</Text>
+                            </View>
+                          </View>
+                          <Text style={[styles.gitActionBtnDesc, { color: '#94A3B8' }]}>
+                            Migración oficial Resoluciones 117, 201, 366 y 409
+                          </Text>
+                        </View>
+                        <Ionicons name="play-circle" size={20} color="#38BDF8" />
+                      </TouchableOpacity>
                     </View>
 
-                    {/* Consola de terminal integrada si hay salida */}
-                    {gitOutput ? (
-                      <View style={styles.gitTerminalCard}>
-                        <View style={styles.gitTerminalHeader}>
-                          <View style={{ flexDirection: 'row', gap: 6 }}>
-                            <View style={[styles.gitTerminalDot, { backgroundColor: '#EF4444' }]} />
-                            <View style={[styles.gitTerminalDot, { backgroundColor: '#F59E0B' }]} />
-                            <View style={[styles.gitTerminalDot, { backgroundColor: '#10B981' }]} />
+                    {/* ========================================================= */}
+                    {/* TERMINAL INTERACTIVA DE SERVIDOR Y EJECUCIÓN DIRECTA     */}
+                    {/* ========================================================= */}
+                    <View
+                      style={{
+                        marginHorizontal: 16,
+                        marginBottom: 16,
+                        backgroundColor: '#090D16',
+                        borderRadius: 14,
+                        borderWidth: 1,
+                        borderColor: '#1E293B',
+                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOpacity: 0.3,
+                        shadowRadius: 10,
+                        elevation: 6,
+                      }}
+                    >
+                      {/* Cabecera Terminal Unix / macOS */}
+                      <View
+                        style={{
+                          backgroundColor: '#0F172A',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#1E293B',
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: '#EF4444' }} />
+                            <TouchableOpacity onPress={clearTerminalLogs} activeOpacity={0.7}>
+                              <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: '#F59E0B' }} />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => runTerminalCommand()} activeOpacity={0.7}>
+                              <View style={{ width: 11, height: 11, borderRadius: 6, backgroundColor: '#10B981' }} />
+                            </TouchableOpacity>
                           </View>
-                          <Text style={styles.gitTerminalTitle}>Terminal de Servidor (stdout / stderr)</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="terminal" size={14} color="#38BDF8" />
+                            <Text style={{ color: '#F1F5F9', fontSize: 12, fontWeight: '700', fontFamily: 'monospace' }}>
+                              bash • root@10.54.80.209:~/backend
+                            </Text>
+                          </View>
                         </View>
-                        <ScrollView style={styles.gitTerminalBody} nestedScrollEnabled={true}>
-                          <Text style={styles.gitTerminalText}>{gitOutput}</Text>
-                        </ScrollView>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 5,
+                              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                              borderColor: 'rgba(16, 185, 129, 0.3)',
+                              borderWidth: 1,
+                              paddingHorizontal: 7,
+                              paddingVertical: 2,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+                            <Text style={{ color: '#34D399', fontSize: 10, fontWeight: '800', fontFamily: 'monospace' }}>
+                              PRODUCCIÓN
+                            </Text>
+                          </View>
+
+                          {Platform.OS === 'web' && (
+                            <TouchableOpacity
+                              onPress={() => {
+                                const todoTexto = terminalInteractiveLogs.map((l) => `[${l.timestamp}] ${l.texto}`).join('\n');
+                                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                  navigator.clipboard.writeText(todoTexto);
+                                  setSettingsNoticeModal({
+                                    visible: true,
+                                    title: 'Copiado',
+                                    message: 'Registro de la terminal copiado al portapapeles.',
+                                    isError: false
+                                  });
+                                }
+                              }}
+                              activeOpacity={0.7}
+                              style={{
+                                padding: 4,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Ionicons name="copy-outline" size={15} color="#94A3B8" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
                       </View>
-                    ) : null}
+
+                      {/* Barra de Entrada de Comando */}
+                      <View
+                        style={{
+                          backgroundColor: '#0B0F19',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#1E293B',
+                          flexDirection: isDesktop ? 'row' : 'column',
+                          alignItems: isDesktop ? 'center' : 'stretch',
+                          gap: 10,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: '#030712',
+                            borderWidth: 1,
+                            borderColor: '#334155',
+                            borderRadius: 8,
+                            paddingHorizontal: 12,
+                            height: 38,
+                          }}
+                        >
+                          <Text style={{ color: '#38BDF8', fontFamily: 'monospace', fontWeight: '800', marginRight: 6 }}>
+                            $
+                          </Text>
+                          <TextInput
+                            value={terminalInteractiveCommand}
+                            onChangeText={setTerminalInteractiveCommand}
+                            placeholder="npm run seed:teletrabajo"
+                            placeholderTextColor="#475569"
+                            editable={!terminalInteractiveExecuting && !gitExecuting}
+                            style={{
+                              flex: 1,
+                              color: '#F8FAFC',
+                              fontFamily: 'monospace',
+                              fontSize: 12.5,
+                              outlineStyle: 'none' as never,
+                            }}
+                          />
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <TouchableOpacity
+                            onPress={() => runTerminalCommand()}
+                            disabled={terminalInteractiveExecuting || gitExecuting}
+                            activeOpacity={0.85}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              backgroundColor: terminalInteractiveExecuting ? '#0369A1' : '#0284C7',
+                              paddingHorizontal: 14,
+                              paddingVertical: 9,
+                              borderRadius: 8,
+                            }}
+                          >
+                            {terminalInteractiveExecuting ? (
+                              <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                              <Ionicons name="play" size={14} color="#FFFFFF" />
+                            )}
+                            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                              {terminalInteractiveExecuting ? 'Ejecutando...' : 'Ejecutar'}
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={clearTerminalLogs}
+                            activeOpacity={0.8}
+                            style={{
+                              backgroundColor: '#1E293B',
+                              paddingHorizontal: 10,
+                              paddingVertical: 9,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Ionicons name="trash-outline" size={14} color="#94A3B8" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      {/* Presets de Comandos Directos */}
+                      <View
+                        style={{
+                          backgroundColor: '#0F172A',
+                          paddingHorizontal: 14,
+                          paddingVertical: 6,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#1E293B',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <Text style={{ color: '#64748B', fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Atajos:
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('npm run seed:teletrabajo');
+                            runTerminalCommand('npm run seed:teletrabajo');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#38BDF8',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: 'monospace', fontWeight: '700' }}>
+                            npm run seed:teletrabajo
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('git status -s');
+                            runTerminalCommand('git status -s');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#475569',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: 'monospace' }}>
+                            git status -s
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Contenido / Pantalla de Salida */}
+                      <ScrollView
+                        style={{ maxHeight: 340, backgroundColor: '#030712' }}
+                        contentContainerStyle={{ padding: 14, gap: 6 }}
+                        nestedScrollEnabled={true}
+                      >
+                        {terminalInteractiveLogs.map((log, idx) => {
+                          const esCmd = log.tipo === 'cmd';
+                          const esSuccess = log.tipo === 'success';
+                          const esError = log.tipo === 'error';
+                          const esStderr = log.tipo === 'stderr';
+
+                          return (
+                            <View key={idx} style={{ gap: 2 }}>
+                              <Text style={{ color: '#475569', fontSize: 10, fontFamily: 'monospace' }}>
+                                [{log.timestamp}]
+                              </Text>
+                              <Text
+                                style={{
+                                  color: esCmd
+                                    ? '#38BDF8'
+                                    : esSuccess
+                                    ? '#34D399'
+                                    : esError || esStderr
+                                    ? '#F87171'
+                                    : log.tipo === 'info'
+                                    ? '#94A3B8'
+                                    : '#E2E8F0',
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                  lineHeight: 17,
+                                }}
+                              >
+                                {log.texto}
+                              </Text>
+                            </View>
+                          );
+                        })}
+
+                        {terminalInteractiveExecuting && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                            <ActivityIndicator size="small" color="#38BDF8" />
+                            <Text style={{ color: '#38BDF8', fontFamily: 'monospace', fontSize: 11.5 }}>
+                              Ejecutando en el servidor Node.js...
+                            </Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </View>
                   </View>
                 </>
               )}

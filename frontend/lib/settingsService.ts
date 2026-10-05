@@ -370,7 +370,7 @@ export const settingsService = {
   // ==========================================
   // DESPLIEGUE Y OPERACIONES GIT
   // ==========================================
-  async executeGitOperation(action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status'): Promise<{ success: boolean; message: string; output: string; timestamp?: string }> {
+  async executeGitOperation(action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status' | 'seed_teletrabajo'): Promise<{ success: boolean; message: string; output: string; timestamp?: string }> {
     const token = await appStorage.getItem('auth_token');
     const res = await fetch(`${API_URL}/api/admin/git`, {
       method: 'POST',
@@ -388,6 +388,28 @@ export const settingsService = {
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Error al ejecutar la operación de Git.');
+    }
+    return data;
+  },
+
+  async executeTerminalCommand(command: string): Promise<{ success: boolean; message: string; output: string; timestamp?: string }> {
+    const token = await appStorage.getItem('auth_token');
+    const res = await fetch(`${API_URL}/api/admin/git`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ action: 'terminal_exec', command })
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(!res.ok ? `Error ${res.status}: El servidor no devolvió una respuesta JSON.` : 'Respuesta no válida del servidor.');
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Error al ejecutar comando en la terminal.');
     }
     return data;
   },

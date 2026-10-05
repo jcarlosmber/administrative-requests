@@ -1061,33 +1061,7 @@ export default function TeletrabajoScreen() {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {/* Botón Terminal Web para ejecutar migraciones y seed */}
-              <Pressable
-                onPress={() => setModalTerminalVisible(true)}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: '#0F172A',
-                  borderColor: '#38BDF8',
-                  borderWidth: 1,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 8,
-                  opacity: pressed ? 0.85 : 1,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 2,
-                })}
-              >
-                <Ionicons name="terminal" size={15} color="#38BDF8" />
-                <Text style={{ color: '#F8FAFC', fontSize: 12, fontWeight: '700' }}>
-                  Terminal Seed DB
-                </Text>
-              </Pressable>
-
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Pressable
                 onPress={() => abrirModalNuevaRes()}
                 style={({ pressed }) => ({

@@ -838,7 +838,67 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
       return;
     }
 
-    return res.status(400).json({ error: 'Acción no válida. Acciones soportadas: status, pull, pull_and_build, restart_backend' });
+    if (action === 'seed_teletrabajo') {
+      console.log(`[SEED] Ejecutando npm run seed:teletrabajo solicitado por ${req.user.email}`);
+      const backendDir = path.join(projectRoot, 'backend');
+      exec('npm run seed:teletrabajo', { cwd: backendDir, timeout: 180000 }, (error, stdout, stderr) => {
+        const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
+        if (error) {
+          console.error('[SEED] Error en seed:teletrabajo:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Error al ejecutar seed:teletrabajo: ' + error.message,
+            output: fullOutput || error.message
+          });
+        }
+        res.json({
+          success: true,
+          message: 'Migración y Semilla de Teletrabajo ejecutada con éxito.',
+          output: fullOutput.trim() || 'Comando completado exitosamente.',
+          timestamp: new Date().toISOString()
+        });
+      });
+      return;
+    }
+
+    if (action === 'terminal_exec') {
+      const { command } = req.body;
+      const cmd = (command || '').trim();
+      const ALLOWED = [
+        'npm run seed:teletrabajo',
+        'node migracion_resoluciones_409_366.js',
+        'git status -s',
+        'git log -5 --oneline',
+        'pm2 list'
+      ];
+      if (!ALLOWED.includes(cmd)) {
+        return res.status(400).json({
+          success: false,
+          error: `Comando no permitido. Comandos autorizados: ${ALLOWED.join(' | ')}`
+        });
+      }
+
+      const cwd = cmd.startsWith('npm') || cmd.startsWith('node') ? path.join(projectRoot, 'backend') : projectRoot;
+      exec(cmd, { cwd, timeout: 180000 }, (error, stdout, stderr) => {
+        const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
+        if (error) {
+          return res.status(500).json({
+            success: false,
+            error: error.message,
+            output: fullOutput || error.message
+          });
+        }
+        res.json({
+          success: true,
+          message: `Comando '${cmd}' ejecutado con éxito.`,
+          output: fullOutput.trim() || 'Comando completado sin salida.',
+          timestamp: new Date().toISOString()
+        });
+      });
+      return;
+    }
+
+    return res.status(400).json({ error: 'Acción no válida. Acciones soportadas: status, pull, pull_and_build, restart_backend, seed_teletrabajo, terminal_exec' });
   } catch (err) {
     console.error('Error general en endpoint git:', err);
     res.status(500).json({ error: 'Error del servidor procesando solicitud de Git.' });
@@ -3892,45 +3952,6 @@ app.get('/api/admin/server-stats', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Error al obtener server stats:', err);
     res.status(500).json({ error: 'Error al consultar métricas del servidor.' });
-  }
-});
-
-// --- ENDPOINTS PARA OPERACIONES GIT Y DESPLIEGUE ---
-app.post('/api/admin/git', authenticateToken, async (req, res) => {
-  if (req.user?.role !== 'superadmin') {
-    return res.status(403).json({ error: 'Solo el Super Administrador puede ejecutar operaciones de despliegue y reinicio del backend.' });
-  }
-
-  const { action } = req.body;
-  const projectRoot = path.resolve(__dirname, '..');
-
-  try {
-    if (action === 'status') {
-      exec('git status -s', { cwd: projectRoot }, (err, stdout, stderr) => {
-        if (err) return res.json({ success: false, message: 'Error consultando estado Git.', output: stderr || err.message });
-        res.json({ success: true, message: 'Estado del repositorio consultado.', output: stdout || 'Repositorio al día y sin cambios pendientes.' });
-      });
-    } else if (action === 'pull') {
-      exec('git pull origin main', { cwd: projectRoot }, (err, stdout, stderr) => {
-        if (err) return res.json({ success: false, message: 'Error ejecutando Git Pull.', output: stderr || err.message });
-        res.json({ success: true, message: 'Git Pull completado correctamente.', output: stdout || 'Cambios sincronizados.' });
-      });
-    } else if (action === 'pull_and_build') {
-      exec('git pull origin main', { cwd: projectRoot }, (err, stdout, stderr) => {
-        if (err) return res.json({ success: false, message: 'Error al descargar cambios.', output: stderr || err.message });
-        res.json({ success: true, message: 'Código actualizado. Frontend listo.', output: stdout || 'Sincronizado.' });
-      });
-    } else if (action === 'restart_backend') {
-      res.json({ success: true, message: 'Reinicio programado.', output: 'El proceso backend se reiniciará en breve vía PM2.' });
-      setTimeout(() => {
-        exec('pm2 restart all', () => {});
-      }, 1000);
-    } else {
-      res.status(400).json({ error: `Acción '${action}' no reconocida.` });
-    }
-  } catch (err) {
-    console.error('Error en operación Git:', err);
-    res.status(500).json({ error: err.message || 'Error ejecutando operación Git.' });
   }
 });
 
