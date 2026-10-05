@@ -649,6 +649,111 @@ export default function TeletrabajoScreen() {
   // =========================================================================
   const [modalSegVisible, setModalSegVisible] = useState(false);
   const [modalInformeComiteVisible, setModalInformeComiteVisible] = useState(false);
+
+  // =========================================================================
+  // MODAL 5: TERMINAL WEB PARA EJECUTAR SEED / MIGRACIONES
+  // =========================================================================
+  const [modalTerminalVisible, setModalTerminalVisible] = useState(false);
+  const [terminalEjecutando, setTerminalEjecutando] = useState(false);
+  const [terminalComando, setTerminalComando] = useState('npm run seed:teletrabajo');
+  const [terminalLogs, setTerminalLogs] = useState<
+    Array<{ tipo: 'info' | 'cmd' | 'stdout' | 'stderr' | 'success' | 'error'; texto: string; timestamp: string }>
+  >([
+    {
+      tipo: 'info',
+      texto: 'SASGE Teletrabajo Terminal Engine v1.0.0 listo.\nServidor Node.js backend conectado.\nComando preparado: npm run seed:teletrabajo\nPresiona "▶ Ejecutar" para sembrar y actualizar la base de datos.',
+      timestamp: new Date().toLocaleTimeString(),
+    },
+  ]);
+
+  const ejecutarComandoTerminal = async (cmd?: string) => {
+    const comandoAEjecutar = (cmd || terminalComando).trim();
+    if (!comandoAEjecutar) return;
+
+    setTerminalEjecutando(true);
+    const ahora = new Date().toLocaleTimeString();
+    setTerminalLogs((prev) => [
+      ...prev,
+      {
+        tipo: 'cmd',
+        texto: `$ ${comandoAEjecutar}`,
+        timestamp: ahora,
+      },
+      {
+        tipo: 'info',
+        texto: 'Ejecutando script de migración en el backend...',
+        timestamp: ahora,
+      },
+    ]);
+
+    try {
+      const resp = await teletrabajoService.ejecutarSeed(comandoAEjecutar);
+      if (resp.stdout) {
+        setTerminalLogs((prev) => [
+          ...prev,
+          {
+            tipo: 'stdout',
+            texto: resp.stdout,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
+      if (resp.stderr) {
+        setTerminalLogs((prev) => [
+          ...prev,
+          {
+            tipo: 'stderr',
+            texto: resp.stderr,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
+
+      if (resp.ok) {
+        setTerminalLogs((prev) => [
+          ...prev,
+          {
+            tipo: 'success',
+            texto: `✓ Proceso terminado con éxito (código 0) en ${resp.durationMs || 0}ms. Recargando datos...`,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+        // Recargar datos para que todo se actualice de inmediato
+        await cargarTodo();
+      } else {
+        setTerminalLogs((prev) => [
+          ...prev,
+          {
+            tipo: 'error',
+            texto: `✗ Error en ejecución: ${resp.error || 'Código de salida distinto de 0'}`,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
+    } catch (err: any) {
+      setTerminalLogs((prev) => [
+        ...prev,
+        {
+          tipo: 'error',
+          texto: `✗ Error de conexión o ejecución: ${err.message || 'Error desconocido'}`,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+    } finally {
+      setTerminalEjecutando(false);
+    }
+  };
+
+  const limpiarConsola = () => {
+    setTerminalLogs([
+      {
+        tipo: 'info',
+        texto: 'Terminal despejada. Listo para ejecutar.',
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
+  };
+
   const [guardandoSeg, setGuardandoSeg] = useState(false);
   const [formSeg, setFormSeg] = useState<{
     persona: PersonaPlanta | null;
@@ -956,7 +1061,33 @@ export default function TeletrabajoScreen() {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {/* Botón Terminal Web para ejecutar migraciones y seed */}
+              <Pressable
+                onPress={() => setModalTerminalVisible(true)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: '#0F172A',
+                  borderColor: '#38BDF8',
+                  borderWidth: 1,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 8,
+                  opacity: pressed ? 0.85 : 1,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 2,
+                })}
+              >
+                <Ionicons name="terminal" size={15} color="#38BDF8" />
+                <Text style={{ color: '#F8FAFC', fontSize: 12, fontWeight: '700' }}>
+                  Terminal Seed DB
+                </Text>
+              </Pressable>
+
               <Pressable
                 onPress={() => abrirModalNuevaRes()}
                 style={({ pressed }) => ({
@@ -7883,6 +8014,426 @@ export default function TeletrabajoScreen() {
                     Cerrar Informe
                   </Text>
                 </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ================================================================= */}
+        {/* MODAL VENTANA DE TERMINAL WEB (npm run seed:teletrabajo)           */}
+        {/* ================================================================= */}
+        <Modal
+          visible={modalTerminalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalTerminalVisible(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(11, 15, 25, 0.82)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: isDesktop ? 24 : 10,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: '#0B0F19',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#1E293B',
+                width: '100%',
+                maxWidth: 980,
+                height: isDesktop ? 680 : '92%',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.5,
+                shadowRadius: 25,
+                elevation: 15,
+                flexDirection: 'column',
+              }}
+            >
+              {/* Cabecera de la Terminal (Estilo Consola macOS / Unix) */}
+              <View
+                style={{
+                  backgroundColor: '#0F172A',
+                  paddingHorizontal: 18,
+                  paddingVertical: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#1E293B',
+                }}
+              >
+                {/* Controles de Ventana (Rojo, Amarillo, Verde) */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                    <Pressable
+                      onPress={() => setModalTerminalVisible(false)}
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 6,
+                        backgroundColor: '#EF4444',
+                      }}
+                      accessibilityLabel="Cerrar terminal"
+                    />
+                    <Pressable
+                      onPress={limpiarConsola}
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 6,
+                        backgroundColor: '#F59E0B',
+                      }}
+                      accessibilityLabel="Limpiar consola"
+                    />
+                    <Pressable
+                      onPress={() => ejecutarComandoTerminal()}
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: 6,
+                        backgroundColor: '#10B981',
+                      }}
+                      accessibilityLabel="Ejecutar"
+                    />
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="terminal" size={15} color="#38BDF8" />
+                    <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '700', fontFamily: 'monospace' }}>
+                      bash • sjd-server:~/backend
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Badge de Estado del Servidor */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                      borderColor: 'rgba(16, 185, 129, 0.3)',
+                      borderWidth: 1,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+                    <Text style={{ color: '#34D399', fontSize: 11, fontWeight: '700', fontFamily: 'monospace' }}>
+                      ONLINE
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={() => setModalTerminalVisible(false)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      padding: 4,
+                      borderRadius: 6,
+                      backgroundColor: pressed ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                    })}
+                  >
+                    <Ionicons name="close" size={20} color="#94A3B8" />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Barra de Control de Comandos */}
+              <View
+                style={{
+                  backgroundColor: '#090D16',
+                  paddingHorizontal: 18,
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#1E293B',
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'stretch',
+                  gap: 10,
+                }}
+              >
+                {/* Selector / Input de Comando */}
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: '#030712',
+                    borderWidth: 1,
+                    borderColor: '#334155',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    height: 40,
+                  }}
+                >
+                  <Text style={{ color: '#38BDF8', fontFamily: 'monospace', fontWeight: '800', marginRight: 6 }}>
+                    $
+                  </Text>
+                  <TextInput
+                    value={terminalComando}
+                    onChangeText={setTerminalComando}
+                    placeholder="npm run seed:teletrabajo"
+                    placeholderTextColor="#475569"
+                    editable={!terminalEjecutando}
+                    style={{
+                      flex: 1,
+                      color: '#F8FAFC',
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      outlineStyle: 'none' as never,
+                    }}
+                  />
+                  {terminalComando.length > 0 && !terminalEjecutando && (
+                    <Pressable onPress={() => setTerminalComando('')}>
+                      <Ionicons name="close-circle" size={15} color="#64748B" />
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Botones de Acción */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Pressable
+                    onPress={() => ejecutarComandoTerminal()}
+                    disabled={terminalEjecutando}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: terminalEjecutando ? '#075985' : '#0284C7',
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      opacity: pressed ? 0.85 : 1,
+                    })}
+                  >
+                    {terminalEjecutando ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Ionicons name="play" size={15} color="#FFFFFF" />
+                    )}
+                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                      {terminalEjecutando ? 'Ejecutando...' : 'Ejecutar'}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={limpiarConsola}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: '#1E293B',
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      opacity: pressed ? 0.8 : 1,
+                    })}
+                  >
+                    <Ionicons name="trash-outline" size={15} color="#94A3B8" />
+                    <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '600' }}>
+                      Limpiar
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Presets Rápidos de Comandos */}
+              <View
+                style={{
+                  backgroundColor: '#0F172A',
+                  paddingHorizontal: 18,
+                  paddingVertical: 8,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#1E293B',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                  Comandos directos:
+                </Text>
+
+                <Pressable
+                  onPress={() => {
+                    setTerminalComando('npm run seed:teletrabajo');
+                    ejecutarComandoTerminal('npm run seed:teletrabajo');
+                  }}
+                  disabled={terminalEjecutando}
+                  style={({ pressed }) => ({
+                    backgroundColor: '#1E293B',
+                    borderColor: '#38BDF8',
+                    borderWidth: 1,
+                    paddingHorizontal: 10,
+                    paddingVertical: 3.5,
+                    borderRadius: 6,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: '#38BDF8', fontSize: 11.5, fontFamily: 'monospace', fontWeight: '700' }}>
+                    npm run seed:teletrabajo
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    setTerminalComando('node migracion_resoluciones_409_366.js');
+                    ejecutarComandoTerminal('node migracion_resoluciones_409_366.js');
+                  }}
+                  disabled={terminalEjecutando}
+                  style={({ pressed }) => ({
+                    backgroundColor: '#1E293B',
+                    borderColor: '#475569',
+                    borderWidth: 1,
+                    paddingHorizontal: 10,
+                    paddingVertical: 3.5,
+                    borderRadius: 6,
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ color: '#94A3B8', fontSize: 11.5, fontFamily: 'monospace' }}>
+                    node migracion_resoluciones_409_366.js
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Pantalla de Terminal / Consola de Salida */}
+              <ScrollView
+                style={{ flex: 1, backgroundColor: '#030712' }}
+                contentContainerStyle={{ padding: 18, gap: 8 }}
+              >
+                {terminalLogs.map((log, index) => {
+                  const esCmd = log.tipo === 'cmd';
+                  const esInfo = log.tipo === 'info';
+                  const esSuccess = log.tipo === 'success';
+                  const esError = log.tipo === 'error';
+                  const esStderr = log.tipo === 'stderr';
+
+                  return (
+                    <View key={index} style={{ gap: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Text style={{ color: '#475569', fontSize: 10.5, fontFamily: 'monospace' }}>
+                          [{log.timestamp}]
+                        </Text>
+                        {esCmd && (
+                          <Text style={{ color: '#F472B6', fontSize: 11, fontFamily: 'monospace', fontWeight: '800' }}>
+                            INPUT
+                          </Text>
+                        )}
+                        {esSuccess && (
+                          <Text style={{ color: '#34D399', fontSize: 11, fontFamily: 'monospace', fontWeight: '800' }}>
+                            SUCCESS
+                          </Text>
+                        )}
+                        {(esError || esStderr) && (
+                          <Text style={{ color: '#F87171', fontSize: 11, fontFamily: 'monospace', fontWeight: '800' }}>
+                            ERROR
+                          </Text>
+                        )}
+                      </View>
+
+                      <Text
+                        style={{
+                          color: esCmd
+                            ? '#38BDF8'
+                            : esSuccess
+                            ? '#34D399'
+                            : esError || esStderr
+                            ? '#FCA5A5'
+                            : esInfo
+                            ? '#94A3B8'
+                            : '#E2E8F0',
+                          fontFamily: 'monospace',
+                          fontSize: 12.5,
+                          lineHeight: 18,
+                        }}
+                      >
+                        {log.texto}
+                      </Text>
+                    </View>
+                  );
+                })}
+
+                {terminalEjecutando && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                    <ActivityIndicator size="small" color="#38BDF8" />
+                    <Text style={{ color: '#38BDF8', fontFamily: 'monospace', fontSize: 12 }}>
+                      Procesando en el servidor PostgreSQL...
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* Pie de Terminal con Notas y Ayuda */}
+              <View
+                style={{
+                  backgroundColor: '#0F172A',
+                  paddingHorizontal: 18,
+                  paddingVertical: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: '#1E293B',
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  justifyContent: 'space-between',
+                  alignItems: isDesktop ? 'center' : 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <View style={{ gap: 2 }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 11.5 }}>
+                    💡 <Text style={{ color: '#F1F5F9', fontWeight: '700' }}>npm run seed:teletrabajo:</Text> Actualiza las Resoluciones 117, 201, 366 y 409 de 2026, y siembra los 84 servidores de Trabajo en Casa y 31 de Teletrabajo Híbrido.
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {Platform.OS === 'web' && (
+                    <Pressable
+                      onPress={() => {
+                        const todoTexto = terminalLogs.map((l) => `[${l.timestamp}] ${l.texto}`).join('\n');
+                        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                          navigator.clipboard.writeText(todoTexto);
+                          mostrarMensaje('Copiado', 'Salida de terminal copiada al portapapeles.', 'success');
+                        }
+                      }}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: '#1E293B',
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 6,
+                        opacity: pressed ? 0.8 : 1,
+                      })}
+                    >
+                      <Ionicons name="copy-outline" size={14} color="#CBD5E1" />
+                      <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '600' }}>
+                        Copiar Log
+                      </Text>
+                    </Pressable>
+                  )}
+
+                  <Pressable
+                    onPress={() => setModalTerminalVisible(false)}
+                    style={({ pressed }) => ({
+                      backgroundColor: '#334155',
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 6,
+                      opacity: pressed ? 0.8 : 1,
+                    })}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                      Cerrar
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
           </View>

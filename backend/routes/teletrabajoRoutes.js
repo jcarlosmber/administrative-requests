@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 
 // Directorios para almacenamiento de archivos
 const BASE_UPLOADS = path.join(__dirname, '../uploads/teletrabajo');
@@ -795,6 +796,59 @@ module.exports = function (pool) {
     } catch (err) {
       console.error('[Teletrabajo] Error en /estadisticas:', err);
       res.status(500).json({ error: 'Error al calcular estadísticas: ' + err.message });
+    }
+  });
+
+  // =========================================================================
+  // 6. TERMINAL WEB / EJECUCIÓN DIRECTA DE SEED Y MIGRACIONES
+  // =========================================================================
+  router.post('/ejecutar-seed', async (req, res) => {
+    try {
+      const { comando } = req.body || {};
+      const cmdToRun = comando ? String(comando).trim() : 'npm run seed:teletrabajo';
+
+      const comandosValidos = [
+        'npm run seed:teletrabajo',
+        'node migracion_resoluciones_409_366.js',
+      ];
+
+      if (!comandosValidos.includes(cmdToRun)) {
+        return res.status(400).json({
+          ok: false,
+          error: `Comando no permitido. Comandos autorizados: ${comandosValidos.join(' | ')}`,
+        });
+      }
+
+      const cwd = path.join(__dirname, '..');
+      const startTime = Date.now();
+
+      exec(cmdToRun, { cwd, maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+        const durationMs = Date.now() - startTime;
+        if (error) {
+          console.error(`[Teletrabajo Terminal] Error al ejecutar "${cmdToRun}":`, error.message);
+          return res.status(500).json({
+            ok: false,
+            comando: cmdToRun,
+            error: error.message,
+            stdout: stdout ? stdout.toString() : '',
+            stderr: stderr ? stderr.toString() : '',
+            exitCode: error.code || 1,
+            durationMs,
+          });
+        }
+
+        return res.json({
+          ok: true,
+          comando: cmdToRun,
+          stdout: stdout ? stdout.toString() : '',
+          stderr: stderr ? stderr.toString() : '',
+          exitCode: 0,
+          durationMs,
+        });
+      });
+    } catch (err) {
+      console.error('[Teletrabajo Terminal] Error inesperado:', err);
+      res.status(500).json({ ok: false, error: err.message });
     }
   });
 

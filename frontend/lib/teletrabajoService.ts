@@ -278,4 +278,25 @@ export const teletrabajoService = {
   getSeguimientoUrl(nombre: string): string {
     return `${API_URL}/api/teletrabajo/seguimientos/archivo/${encodeURIComponent(nombre)}`;
   },
+
+  async ejecutarSeed(comando?: string): Promise<{
+    ok: boolean;
+    comando: string;
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+    durationMs: number;
+    error?: string;
+  }> {
+    const res = await fetch(`${API_URL}/api/teletrabajo/ejecutar-seed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comando: comando || 'npm run seed:teletrabajo' }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok && !data.stdout) {
+      throw new Error(data.error || 'Error al ejecutar comando en el servidor');
+    }
+    return data;
+  },
 };

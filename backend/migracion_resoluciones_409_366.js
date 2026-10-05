@@ -158,6 +158,28 @@ async function migrar() {
 
     // 1. Asegurar tablas
     await client.query(`
+      CREATE TABLE IF NOT EXISTS public.planta_personal_sjd (
+          id_plaza SERIAL PRIMARY KEY,
+          id_sideap INT,
+          id_perno INT,
+          nivel TEXT,
+          cargo TEXT NOT NULL,
+          codigo TEXT,
+          grado TEXT,
+          dependencia_cargo TEXT,
+          dependencia_funcional TEXT,
+          proposito TEXT,
+          funciones JSONB DEFAULT '[]'::jsonb,
+          requisitos TEXT,
+          asignacion_basica NUMERIC(14, 2) DEFAULT 0,
+          titular_cedula TEXT UNIQUE,
+          titular_nombre TEXT,
+          tipo_vinculacion TEXT,
+          situacion_administrativa TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS public.teletrabajo_resoluciones (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
           numero_resolucion TEXT NOT NULL,
@@ -297,7 +319,7 @@ async function migrar() {
       WHERE estado = 'ACTIVO' AND numero_resolucion_display LIKE '%201%';
     `);
 
-    // Helper para buscar datos de la persona en planta_personal_sjd
+    // Helper para buscar datos de la persona en planta_personal_sjd (o registrarla si no existe aún)
     async function obtenerDatosPersona(cedula, fallbackNombre, fallbackCargo, fallbackCod, fallbackGrado, fallbackDep) {
       const clean = limpiarDoc(cedula);
       try {
@@ -317,18 +339,38 @@ async function migrar() {
             grado: p.grado || fallbackGrado,
             dependencia: p.dependencia_cargo || fallbackDep
           };
+        } else {
+          const ins = await client.query(`
+            INSERT INTO public.planta_personal_sjd (
+              titular_cedula, titular_nombre, cargo, codigo, grado, dependencia_cargo
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (titular_cedula) DO UPDATE SET
+              titular_nombre = EXCLUDED.titular_nombre,
+              cargo = EXCLUDED.cargo,
+              codigo = EXCLUDED.codigo,
+              grado = EXCLUDED.grado,
+              dependencia_cargo = EXCLUDED.dependencia_cargo
+            RETURNING id_plaza;
+          `, [cedula, fallbackNombre, fallbackCargo, fallbackCod, fallbackGrado, fallbackDep]);
+          return {
+            id_plaza: ins.rows[0]?.id_plaza || null,
+            nombre: fallbackNombre,
+            cargo: fallbackCargo,
+            codigo: fallbackCod,
+            grado: fallbackGrado,
+            dependencia: fallbackDep
+          };
         }
       } catch (e) {
-        // tabla planta no disponible o sin registros
+        return {
+          id_plaza: null,
+          nombre: fallbackNombre,
+          cargo: fallbackCargo,
+          codigo: fallbackCod,
+          grado: fallbackGrado,
+          dependencia: fallbackDep
+        };
       }
-      return {
-        id_plaza: null,
-        nombre: fallbackNombre,
-        cargo: fallbackCargo,
-        codigo: fallbackCod,
-        grado: fallbackGrado,
-        dependencia: fallbackDep
-      };
     }
 
     // 4. Asignar Trabajo en Casa 5x5 (84 servidores)
