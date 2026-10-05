@@ -160,6 +160,71 @@ export default function TeletrabajoScreen() {
   const [filtroDependencia, setFiltroDependencia] = useState<string>('TODOS');
   const [modoVistaCenso, setModoVistaCenso] = useState<'cards' | 'tabla'>('cards');
 
+  // Estado para gestión y redimensionamiento dinámico de columnas de la tabla
+  const ANCHOS_COLUMNAS_DEFAULT: Record<string, number> = {
+    plaza: 95,
+    servidor: 230,
+    cargo: 220,
+    dependencia: 210,
+    modalidad: 145,
+    esquema: 170,
+    vigencia: 155,
+    resolucion: 120,
+    acciones: 195,
+  };
+
+  const [anchosColumnas, setAnchosColumnas] = useState<Record<string, number>>(ANCHOS_COLUMNAS_DEFAULT);
+  const [ajustarAPantalla, setAjustarAPantalla] = useState(true);
+  const [anchoContenedorTabla, setAnchoContenedorTabla] = useState<number>(0);
+
+  const anchoTotalBase = Object.values(ANCHOS_COLUMNAS_DEFAULT).reduce((a, b) => a + b, 0);
+
+  const anchoEfectivo = (colKey: string): number => {
+    const baseCol = anchosColumnas[colKey] || ANCHOS_COLUMNAS_DEFAULT[colKey];
+    if (!ajustarAPantalla || anchoContenedorTabla <= 0) {
+      return baseCol;
+    }
+    const espacioDisponible = Math.max(anchoContenedorTabla - 34, 1050);
+    const proporcion = (ANCHOS_COLUMNAS_DEFAULT[colKey] || baseCol) / anchoTotalBase;
+    const anchoProporcional = Math.round(espacioDisponible * proporcion);
+    const minCol = colKey === 'plaza' ? 85 : colKey === 'acciones' ? 160 : colKey === 'resolucion' ? 95 : 120;
+    return Math.max(minCol, anchoProporcional);
+  };
+
+  const iniciarRedimension = (colKey: string, e: any) => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    e.preventDefault?.();
+    e.stopPropagation?.();
+
+    setAjustarAPantalla(false);
+
+    const startX = e.clientX;
+    const startWidth = anchoEfectivo(colKey);
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const minPermitido = colKey === 'plaza' ? 75 : 90;
+      const nuevoAncho = Math.max(minPermitido, startWidth + delta);
+      setAnchosColumnas((prev) => ({
+        ...prev,
+        [colKey]: nuevoAncho,
+      }));
+    };
+
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const restablecerColumnas = () => {
+    setAnchosColumnas({ ...ANCHOS_COLUMNAS_DEFAULT });
+    setAjustarAPantalla(true);
+  };
+
   // Modal de Notificación / Mensajes (Regla: no alerts)
   const [notifModal, setNotifModal] = useState<{
     visible: boolean;
@@ -1068,86 +1133,179 @@ export default function TeletrabajoScreen() {
                     Mostrando {personasFiltradas.length} servidores de planta
                   </Text>
 
-                  {/* Selector de modo de vista: Tarjetas vs Tabla */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Botones de ajuste de columnas cuando la tabla está activa */}
+                    {modoVistaCenso === 'tabla' && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Pressable
+                          onPress={() => setAjustarAPantalla(!ajustarAPantalla)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 5,
+                            backgroundColor: ajustarAPantalla ? THEME.marca50 : THEME.white,
+                            borderColor: ajustarAPantalla ? THEME.marca600 : THEME.slate200,
+                            borderWidth: 1,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Ionicons
+                            name={ajustarAPantalla ? 'contract-outline' : 'expand-outline'}
+                            size={14}
+                            color={ajustarAPantalla ? THEME.marca700 : THEME.slate600}
+                          />
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: '600',
+                              color: ajustarAPantalla ? THEME.marca700 : THEME.slate600,
+                            }}
+                          >
+                            {ajustarAPantalla ? 'Ajustado a Pantalla (100%)' : 'Ajustar a Pantalla'}
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={restablecerColumnas}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            backgroundColor: THEME.white,
+                            borderColor: THEME.slate200,
+                            borderWidth: 1,
+                            paddingHorizontal: 9,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Ionicons name="refresh-outline" size={13} color={THEME.slate600} />
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
+                            Restablecer
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    {/* Selector de modo de vista: Tarjetas vs Tabla */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: THEME.slate100,
+                        borderRadius: 8,
+                        padding: 3,
+                      }}
+                    >
+                      <Pressable
+                        onPress={() => setModoVistaCenso('tabla')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: modoVistaCenso === 'tabla' ? THEME.white : 'transparent',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          shadowColor: modoVistaCenso === 'tabla' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="list"
+                          size={15}
+                          color={modoVistaCenso === 'tabla' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaCenso === 'tabla' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaCenso === 'tabla' ? '600' : '500',
+                          }}
+                        >
+                          Tabla
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setModoVistaCenso('cards')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: modoVistaCenso === 'cards' ? THEME.white : 'transparent',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          shadowColor: modoVistaCenso === 'cards' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="grid"
+                          size={15}
+                          color={modoVistaCenso === 'cards' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaCenso === 'cards' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaCenso === 'cards' ? '600' : '500',
+                          }}
+                        >
+                          Tarjetas
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+
+                {modoVistaCenso === 'tabla' && (
                   <View
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: THEME.slate100,
+                      justifyContent: 'space-between',
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
                       borderRadius: 8,
-                      padding: 3,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      gap: 8,
                     }}
                   >
-                    <Pressable
-                      onPress={() => setModoVistaCenso('tabla')}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        backgroundColor: modoVistaCenso === 'tabla' ? THEME.white : 'transparent',
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 6,
-                        shadowColor: modoVistaCenso === 'tabla' ? '#000' : 'transparent',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.08,
-                        shadowRadius: 2,
-                      }}
-                    >
-                      <Ionicons
-                        name="list"
-                        size={15}
-                        color={modoVistaCenso === 'tabla' ? THEME.marca700 : THEME.slate500}
-                      />
-                      <Text
-                        style={{
-                          color: modoVistaCenso === 'tabla' ? THEME.marca700 : THEME.slate500,
-                          fontSize: 12,
-                          fontWeight: modoVistaCenso === 'tabla' ? '600' : '500',
-                        }}
-                      >
-                        Tabla
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                      <Ionicons name="information-circle-outline" size={16} color={THEME.marca700} />
+                      <Text style={{ color: THEME.slate600, fontSize: 11.5, flex: 1 }}>
+                        💡 Haz clic en cualquier fila para <Text style={{ fontWeight: '700', color: THEME.slate900 }}>abrir el modal de cambios</Text>. Arrastra los divisores de cabecera con el ratón para ajustar el ancho de las columnas.
                       </Text>
-                    </Pressable>
-
-                    <Pressable
-                      onPress={() => setModoVistaCenso('cards')}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        backgroundColor: modoVistaCenso === 'cards' ? THEME.white : 'transparent',
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 6,
-                        shadowColor: modoVistaCenso === 'cards' ? '#000' : 'transparent',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.08,
-                        shadowRadius: 2,
-                      }}
-                    >
-                      <Ionicons
-                        name="grid"
-                        size={15}
-                        color={modoVistaCenso === 'cards' ? THEME.marca700 : THEME.slate500}
-                      />
-                      <Text
-                        style={{
-                          color: modoVistaCenso === 'cards' ? THEME.marca700 : THEME.slate500,
-                          fontSize: 12,
-                          fontWeight: modoVistaCenso === 'cards' ? '600' : '500',
-                        }}
-                      >
-                        Tarjetas
+                    </View>
+                    <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: THEME.slate600, fontSize: 10.5, fontWeight: '700' }}>
+                        {ajustarAPantalla ? 'Ajuste 100% Pantalla' : 'Ancho Manual'}
                       </Text>
-                    </Pressable>
+                    </View>
                   </View>
-                </View>
+                )}
 
                 {modoVistaCenso === 'tabla' ? (
                   /* VISTA 2: TABLA DE CENSO DE TELETRABAJO */
                   <View
+                    onLayout={(e) => {
+                      const w = e.nativeEvent.layout.width;
+                      if (w > 0 && Math.abs(w - anchoContenedorTabla) > 5) {
+                        setAnchoContenedorTabla(w);
+                      }
+                    }}
                     style={{
+                      width: '100%',
                       backgroundColor: THEME.white,
                       borderRadius: 12,
                       borderWidth: 1,
@@ -1159,7 +1317,14 @@ export default function TeletrabajoScreen() {
                       shadowRadius: 3,
                     }}
                   >
-                    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: 1440, flexDirection: 'column' }}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator
+                      contentContainerStyle={{
+                        minWidth: '100%',
+                        flexDirection: 'column',
+                      }}
+                    >
                       {/* Encabezado de la tabla */}
                       <View
                         style={{
@@ -1172,15 +1337,63 @@ export default function TeletrabajoScreen() {
                           alignItems: 'center',
                         }}
                       >
-                        <Text style={{ width: 110, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>PLAZA / C.C.</Text>
-                        <Text style={{ width: 220, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>SERVIDOR PÚBLICO</Text>
-                        <Text style={{ width: 230, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>CARGO & GRADO</Text>
-                        <Text style={{ width: 220, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>DEPENDENCIA</Text>
-                        <Text style={{ width: 170, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>MODALIDAD ACTUAL</Text>
-                        <Text style={{ width: 180, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>ESQUEMA / DÍAS</Text>
-                        <Text style={{ width: 170, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>VIGENCIA</Text>
-                        <Text style={{ width: 130, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>RESOLUCIÓN</Text>
-                        <Text style={{ width: 230, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', textAlign: 'center' }}>ACCIONES</Text>
+                        {[
+                          { key: 'plaza', label: 'PLAZA / C.C.' },
+                          { key: 'servidor', label: 'SERVIDOR PÚBLICO' },
+                          { key: 'cargo', label: 'CARGO & GRADO' },
+                          { key: 'dependencia', label: 'DEPENDENCIA' },
+                          { key: 'modalidad', label: 'MODALIDAD ACTUAL' },
+                          { key: 'esquema', label: 'ESQUEMA / DÍAS' },
+                          { key: 'vigencia', label: 'VIGENCIA' },
+                          { key: 'resolucion', label: 'RESOLUCIÓN' },
+                          { key: 'acciones', label: 'ACCIONES' },
+                        ].map((col) => {
+                          const w = anchoEfectivo(col.key);
+                          return (
+                            <View
+                              key={col.key}
+                              style={{
+                                width: w,
+                                position: 'relative',
+                                paddingRight: 10,
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: THEME.slate600,
+                                  fontSize: 11,
+                                  fontWeight: '700',
+                                  textTransform: 'uppercase',
+                                  textAlign: col.key === 'acciones' ? 'center' : 'left',
+                                }}
+                                numberOfLines={1}
+                              >
+                                {col.label}
+                              </Text>
+
+                              {/* Separador arrastrable para ajustar columnas */}
+                              <View
+                                // @ts-ignore
+                                onMouseDown={(e: any) => iniciarRedimension(col.key, e)}
+                                style={{
+                                  position: 'absolute',
+                                  right: 2,
+                                  top: -8,
+                                  bottom: -8,
+                                  width: 10,
+                                  // @ts-ignore
+                                  cursor: 'col-resize' as any,
+                                  zIndex: 10,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <View style={{ width: 1.5, height: 16, backgroundColor: THEME.slate300, borderRadius: 1 }} />
+                              </View>
+                            </View>
+                          );
+                        })}
                       </View>
 
                       {/* Cuerpo con Scroll vertical */}
@@ -1192,8 +1405,10 @@ export default function TeletrabajoScreen() {
                           const esPar = index % 2 === 0;
 
                           return (
-                            <View
+                            <TouchableOpacity
                               key={p.id_plaza}
+                              activeOpacity={0.7}
+                              onPress={() => abrirModalAsignacion(p)}
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
@@ -1202,10 +1417,12 @@ export default function TeletrabajoScreen() {
                                 backgroundColor: esPar ? THEME.white : '#FAFCFF',
                                 borderBottomWidth: 1,
                                 borderBottomColor: THEME.slate100,
+                                // @ts-ignore
+                                cursor: 'pointer',
                               }}
                             >
                               {/* Columna Plaza y Cédula */}
-                              <View style={{ width: 110, gap: 2 }}>
+                              <View style={{ width: anchoEfectivo('plaza'), gap: 2, paddingRight: 8 }}>
                                 <View
                                   style={{
                                     backgroundColor: THEME.slate100,
@@ -1213,6 +1430,8 @@ export default function TeletrabajoScreen() {
                                     paddingVertical: 2,
                                     borderRadius: 4,
                                     alignSelf: 'flex-start',
+                                    borderWidth: 1,
+                                    borderColor: THEME.slate200,
                                   }}
                                 >
                                   <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
@@ -1225,8 +1444,8 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Columna Servidor */}
-                              <View style={{ width: 220, paddingRight: 10 }}>
-                                <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
+                              <View style={{ width: anchoEfectivo('servidor'), paddingRight: 10 }}>
+                                <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
                                   {p.titular_nombre}
                                 </Text>
                                 {p.requiere_nuevo_acuerdo && (
@@ -1237,8 +1456,8 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Columna Cargo */}
-                              <View style={{ width: 230, paddingRight: 10 }}>
-                                <Text style={{ color: THEME.marca700, fontSize: 12.5, fontWeight: '600' }} numberOfLines={2}>
+                              <View style={{ width: anchoEfectivo('cargo'), paddingRight: 10 }}>
+                                <Text style={{ color: THEME.marca800, fontSize: 12.5, fontWeight: '600' }} numberOfLines={2}>
                                   {p.cargo} {p.codigo ? `(${p.codigo}-${p.grado})` : ''}
                                 </Text>
                                 {!p.cargo_es_teletrabajable && (
@@ -1249,14 +1468,14 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Columna Dependencia */}
-                              <View style={{ width: 220, paddingRight: 10 }}>
+                              <View style={{ width: anchoEfectivo('dependencia'), paddingRight: 10 }}>
                                 <Text style={{ color: THEME.slate600, fontSize: 11.5 }} numberOfLines={2}>
                                   {p.dependencia_cargo}
                                 </Text>
                               </View>
 
                               {/* Columna Modalidad */}
-                              <View style={{ width: 170 }}>
+                              <View style={{ width: anchoEfectivo('modalidad'), paddingRight: 8 }}>
                                 {tieneModalidad ? (
                                   <View
                                     style={{
@@ -1272,7 +1491,7 @@ export default function TeletrabajoScreen() {
                                         : THEME.purpleRing,
                                       borderWidth: 1,
                                       paddingHorizontal: 8,
-                                      paddingVertical: 2,
+                                      paddingVertical: 2.5,
                                       borderRadius: 9999,
                                       alignSelf: 'flex-start',
                                     }}
@@ -1285,7 +1504,7 @@ export default function TeletrabajoScreen() {
                                           ? THEME.emeraldText
                                           : THEME.purpleText,
                                         fontSize: 11,
-                                        fontWeight: '600',
+                                        fontWeight: '700',
                                       }}
                                     >
                                       {esAutonomo
@@ -1302,7 +1521,7 @@ export default function TeletrabajoScreen() {
                                       borderColor: THEME.slateBadgeRing,
                                       borderWidth: 1,
                                       paddingHorizontal: 8,
-                                      paddingVertical: 2,
+                                      paddingVertical: 2.5,
                                       borderRadius: 9999,
                                       alignSelf: 'flex-start',
                                     }}
@@ -1315,7 +1534,7 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Columna Esquema / Días */}
-                              <View style={{ width: 180, paddingRight: 8 }}>
+                              <View style={{ width: anchoEfectivo('esquema'), paddingRight: 8 }}>
                                 {tieneModalidad ? (
                                   <Text style={{ color: THEME.slate800, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
                                     {p.esquema_dias_tipo === 'TODOS'
@@ -1334,7 +1553,7 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Columna Vigencia */}
-                              <View style={{ width: 170, paddingRight: 8 }}>
+                              <View style={{ width: anchoEfectivo('vigencia'), paddingRight: 8 }}>
                                 {tieneModalidad && p.asignacion_desde ? (
                                   <Text style={{ color: THEME.slate600, fontSize: 11 }}>
                                     {limpiarFecha(p.asignacion_desde)} al {limpiarFecha(p.asignacion_hasta) || 'indef.'}
@@ -1345,16 +1564,19 @@ export default function TeletrabajoScreen() {
                               </View>
 
                               {/* Columna Resolución */}
-                              <View style={{ width: 130, paddingRight: 8 }}>
+                              <View style={{ width: anchoEfectivo('resolucion'), paddingRight: 8 }}>
                                 <Text style={{ color: p.numero_resolucion_display ? THEME.emeraldText : THEME.slate400, fontSize: 11, fontWeight: '600' }}>
                                   {p.numero_resolucion_display || '-'}
                                 </Text>
                               </View>
 
                               {/* Columna Acciones */}
-                              <View style={{ width: 230, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                              <View style={{ width: anchoEfectivo('acciones'), flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                                 <TouchableOpacity
-                                  onPress={() => abrirModalAsignacion(p)}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    abrirModalAsignacion(p);
+                                  }}
                                   style={{
                                     backgroundColor: THEME.marca700,
                                     paddingHorizontal: 9,
@@ -1372,7 +1594,10 @@ export default function TeletrabajoScreen() {
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                  onPress={() => abrirModalAcuerdo(p)}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    abrirModalAcuerdo(p);
+                                  }}
                                   style={{
                                     backgroundColor: p.requiere_nuevo_acuerdo ? THEME.amberBg : THEME.slate100,
                                     borderColor: p.requiere_nuevo_acuerdo ? THEME.amberRing : THEME.slate200,
@@ -1396,7 +1621,10 @@ export default function TeletrabajoScreen() {
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
-                                  onPress={() => abrirModalSeguimiento(p)}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    abrirModalSeguimiento(p);
+                                  }}
                                   style={{
                                     backgroundColor: THEME.marca50,
                                     borderWidth: 1,
@@ -1415,274 +1643,305 @@ export default function TeletrabajoScreen() {
                                   </Text>
                                 </TouchableOpacity>
                               </View>
-                            </View>
+                            </TouchableOpacity>
                           );
                         })}
                       </ScrollView>
                     </ScrollView>
                   </View>
                 ) : (
-                  /* VISTA 1: TARJETAS (CARDS) */
+                  /* VISTA 1: TARJETAS (CARDS) MEJORADAS EN FONDO CLARO */
                   <View style={{ gap: 12 }}>
-                  {personasFiltradas.map((p) => {
-                    const tieneModalidad = p.modalidad && p.asignacion_estado === 'ACTIVO';
-                    const esAutonomo = p.modalidad === 'TELETRABAJO_AUTONOMO';
-                    const esTeletrabajo = p.modalidad === 'TELETRABAJO' || esAutonomo;
-                    return (
-                      <View
-                        key={p.id_plaza}
-                        style={{
-                          backgroundColor: COLORS.cardBg,
-                          borderRadius: 14,
-                          borderWidth: 1,
-                          borderColor: tieneModalidad
-                            ? esAutonomo
-                              ? 'rgba(2, 132, 199, 0.5)'
-                              : esTeletrabajo
-                              ? 'rgba(56, 189, 248, 0.35)'
-                              : 'rgba(167, 139, 250, 0.35)'
-                            : COLORS.border,
-                          padding: 18,
-                          flexDirection: isDesktop ? 'row' : 'column',
-                          justifyContent: 'space-between',
-                          alignItems: isDesktop ? 'center' : 'stretch',
-                          gap: 16,
-                        }}
-                      >
-                        <View style={{ flex: 1, gap: 6 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                              {p.titular_nombre}
-                            </Text>
-                            <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '600' }}>
-                              C.C. {p.titular_cedula}
-                            </Text>
+                    {personasFiltradas.map((p) => {
+                      const tieneModalidad = p.modalidad && p.asignacion_estado === 'ACTIVO';
+                      const esAutonomo = p.modalidad === 'TELETRABAJO_AUTONOMO';
+                      const esTeletrabajo = p.modalidad === 'TELETRABAJO' || esAutonomo;
 
-                            {/* Badge Modalidad */}
-                            {tieneModalidad ? (
+                      return (
+                        <View
+                          key={p.id_plaza}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 14,
+                            borderWidth: 1,
+                            borderColor: tieneModalidad
+                              ? esAutonomo
+                                ? THEME.skyRing
+                                : esTeletrabajo
+                                ? THEME.emeraldRing
+                                : THEME.purpleRing
+                              : THEME.slate200,
+                            padding: 18,
+                            flexDirection: isDesktop ? 'row' : 'column',
+                            justifyContent: 'space-between',
+                            alignItems: isDesktop ? 'center' : 'stretch',
+                            gap: 16,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.04,
+                            shadowRadius: 6,
+                            elevation: 2,
+                          }}
+                        >
+                          <View style={{ flex: 1, gap: 8 }}>
+                            {/* Cabecera Tarjeta: Plaza, Nombre, Cédula, Badges */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                               <View
                                 style={{
-                                  backgroundColor: esAutonomo
-                                    ? 'rgba(2, 132, 199, 0.25)'
-                                    : esTeletrabajo
-                                    ? 'rgba(56, 189, 248, 0.2)'
-                                    : 'rgba(167, 139, 250, 0.2)',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 6,
+                                  backgroundColor: THEME.slate100,
+                                  paddingHorizontal: 7,
+                                  paddingVertical: 2,
+                                  borderRadius: 5,
                                   borderWidth: 1,
-                                  borderColor: esAutonomo ? '#0284C7' : esTeletrabajo ? '#38BDF8' : '#A78BFA',
+                                  borderColor: THEME.slate200,
                                 }}
                               >
-                                <Text
+                                <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
+                                  #{p.id_plaza}
+                                </Text>
+                              </View>
+
+                              <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
+                                {p.titular_nombre}
+                              </Text>
+
+                              <Text style={{ color: THEME.slate500, fontSize: 12.5, fontWeight: '600' }}>
+                                C.C. {p.titular_cedula}
+                              </Text>
+
+                              {/* Badge Modalidad */}
+                              {tieneModalidad ? (
+                                <View
                                   style={{
-                                    color: esAutonomo ? '#7DD3FC' : esTeletrabajo ? '#38BDF8' : '#C4B5FD',
-                                    fontSize: 11,
-                                    fontWeight: '800',
+                                    backgroundColor: esAutonomo
+                                      ? THEME.skyBg
+                                      : esTeletrabajo
+                                      ? THEME.emeraldBg
+                                      : THEME.purpleBg,
+                                    borderColor: esAutonomo
+                                      ? THEME.skyRing
+                                      : esTeletrabajo
+                                      ? THEME.emeraldRing
+                                      : THEME.purpleRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
                                   }}
                                 >
-                                  {esAutonomo
-                                    ? 'TELETRABAJO AUTÓNOMO'
-                                    : esTeletrabajo
-                                    ? 'TELETRABAJO'
-                                    : 'TRABAJO EN CASA'}
-                                </Text>
-                              </View>
-                            ) : (
-                              <View
-                                style={{
-                                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 6,
-                                }}
-                              >
-                                <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700' }}>
-                                  PRESENCIAL
-                                </Text>
-                              </View>
-                            )}
-
-                            {/* Alerta de acuerdo por cambio de cargo */}
-                            {p.requiere_nuevo_acuerdo && (
-                              <View
-                                style={{
-                                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 6,
-                                  borderWidth: 1,
-                                  borderColor: COLORS.amberWarning,
-                                }}
-                              >
-                                <Text style={{ color: '#FCD34D', fontSize: 10.5, fontWeight: '800' }}>
-                                  ⚠️ Requiere Nuevo Acuerdo
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* Cargo y Dependencia */}
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <Ionicons name="briefcase" size={14} color="#CBD5E1" />
-                            <Text style={{ color: '#E2E8F0', fontSize: 13, fontWeight: '700' }}>
-                              {p.cargo} {p.codigo ? `(${p.codigo}-${p.grado})` : ''}
-                            </Text>
-                            <Text style={{ color: '#64748B' }}>•</Text>
-                            <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                              {p.dependencia_cargo}
-                            </Text>
-
-                            {/* Indicador de cargo teletrabajable */}
-                            {!p.cargo_es_teletrabajable && (
-                              <View
-                                style={{
-                                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 2,
-                                  borderRadius: 4,
-                                }}
-                              >
-                                <Text style={{ color: '#FCA5A5', fontSize: 10, fontWeight: '700' }}>
-                                  {p.excepcion_jefe_aprobada ? 'Excepción Jefe Aprobada' : 'Cargo No Teletrabajable'}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {/* Detalle de Asignación si existe */}
-                          {tieneModalidad && (
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 14,
-                                flexWrap: 'wrap',
-                                marginTop: 4,
-                                paddingTop: 6,
-                                borderTopWidth: 1,
-                                borderTopColor: 'rgba(255, 255, 255, 0.05)',
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                <Ionicons name="calendar-outline" size={14} color="#38BDF8" />
-                                <Text style={{ color: '#CBD5E1', fontSize: 12 }}>
-                                  Esquema:{' '}
-                                  <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>
-                                    {p.esquema_dias_tipo === 'TODOS'
-                                      ? 'Todos los días (L-V)'
-                                      : p.esquema_dias_tipo === 'DIAS_PARES'
-                                      ? 'Días Pares'
-                                      : p.esquema_dias_tipo === 'DIAS_IMPARES'
-                                      ? 'Días Impares'
-                                      : Array.isArray(p.dias_semana_fijos) && p.dias_semana_fijos.length > 0
-                                      ? p.dias_semana_fijos.join(', ')
-                                      : `${p.dias_por_semana || 2} días`}
+                                  <Text
+                                    style={{
+                                      color: esAutonomo
+                                        ? THEME.skyText
+                                        : esTeletrabajo
+                                        ? THEME.emeraldText
+                                        : THEME.purpleText,
+                                      fontSize: 11,
+                                      fontWeight: '800',
+                                    }}
+                                  >
+                                    {esAutonomo
+                                      ? 'TELETRABAJO AUTÓNOMO'
+                                      : esTeletrabajo
+                                      ? 'TELETRABAJO'
+                                      : 'TRABAJO EN CASA'}
                                   </Text>
-                                </Text>
-                              </View>
-
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                <Ionicons name="time-outline" size={14} color="#94A3B8" />
-                                <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                                  Vigencia:{' '}
-                                  <Text style={{ color: '#CBD5E1', fontWeight: '600' }}>
-                                    {limpiarFecha(p.asignacion_desde) || 'N/A'} al {limpiarFecha(p.asignacion_hasta) || 'N/A'}
+                                </View>
+                              ) : (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.slate100,
+                                    borderColor: THEME.slate200,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
+                                    PRESENCIAL
                                   </Text>
-                                </Text>
-                              </View>
+                                </View>
+                              )}
 
-                              {p.numero_resolucion_display && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                  <Ionicons name="document-text" size={14} color="#10B981" />
-                                  <Text style={{ color: '#A7F3D0', fontSize: 12 }}>
-                                    {p.numero_resolucion_display}
+                              {/* Alerta de acuerdo por cambio de cargo */}
+                              {p.requiere_nuevo_acuerdo && (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.amberBg,
+                                    borderColor: THEME.amberRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.amberText, fontSize: 11, fontWeight: '800' }}>
+                                    ⚠️ Requiere Nuevo Acuerdo
                                   </Text>
                                 </View>
                               )}
                             </View>
-                          )}
-                        </View>
 
-                        {/* Botones de Acción */}
-                        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <TouchableOpacity
-                            onPress={() => abrirModalAsignacion(p)}
-                            style={{
-                              backgroundColor: '#0284C7',
-                              paddingHorizontal: 14,
-                              paddingVertical: 9,
-                              borderRadius: 8,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                          >
-                            <Ionicons name="options-outline" size={16} color="#FFFFFF" />
-                            <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
-                              {tieneModalidad ? 'Editar Modalidad' : 'Asignar Modalidad'}
-                            </Text>
-                          </TouchableOpacity>
+                            {/* Cargo y Dependencia */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <Ionicons name="briefcase" size={14} color={THEME.marca600} />
+                              <Text style={{ color: THEME.marca800, fontSize: 13, fontWeight: '700' }}>
+                                {p.cargo} {p.codigo ? `(${p.codigo}-${p.grado})` : ''}
+                              </Text>
+                              <Text style={{ color: THEME.slate400 }}>•</Text>
+                              <Text style={{ color: THEME.slate600, fontSize: 12 }}>
+                                {p.dependencia_cargo}
+                              </Text>
 
-                          <TouchableOpacity
-                            onPress={() => abrirModalAcuerdo(p)}
-                            style={{
-                              backgroundColor: p.requiere_nuevo_acuerdo
-                                ? '#D97706'
-                                : 'rgba(255, 255, 255, 0.08)',
-                              paddingHorizontal: 12,
-                              paddingVertical: 9,
-                              borderRadius: 8,
-                              borderWidth: 1,
-                              borderColor: p.requiere_nuevo_acuerdo
-                                ? '#F59E0B'
-                                : 'rgba(255, 255, 255, 0.15)',
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                          >
-                            <Ionicons
-                              name="ribbon-outline"
-                              size={16}
-                              color={p.requiere_nuevo_acuerdo ? '#FFFFFF' : '#CBD5E1'}
-                            />
-                            <Text
+                              {/* Indicador de cargo teletrabajable */}
+                              {!p.cargo_es_teletrabajable && (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.roseBg,
+                                    borderColor: THEME.roseRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.roseText, fontSize: 10.5, fontWeight: '700' }}>
+                                    {p.excepcion_jefe_aprobada ? 'Excepción Jefe Aprobada' : 'Cargo No Teletrabajable'}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* Detalle de Asignación si existe */}
+                            {tieneModalidad && (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 14,
+                                  flexWrap: 'wrap',
+                                  marginTop: 4,
+                                  paddingTop: 8,
+                                  borderTopWidth: 1,
+                                  borderTopColor: THEME.slate100,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                  <Ionicons name="calendar-outline" size={14} color={THEME.marca600} />
+                                  <Text style={{ color: THEME.slate600, fontSize: 12 }}>
+                                    Esquema:{' '}
+                                    <Text style={{ fontWeight: '800', color: THEME.slate900 }}>
+                                      {p.esquema_dias_tipo === 'TODOS'
+                                        ? 'Todos los días (L-V)'
+                                        : p.esquema_dias_tipo === 'DIAS_PARES'
+                                        ? 'Días Pares'
+                                        : p.esquema_dias_tipo === 'DIAS_IMPARES'
+                                        ? 'Días Impares'
+                                        : Array.isArray(p.dias_semana_fijos) && p.dias_semana_fijos.length > 0
+                                        ? p.dias_semana_fijos.join(', ')
+                                        : `${p.dias_por_semana || 2} días`}
+                                    </Text>
+                                  </Text>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                  <Ionicons name="time-outline" size={14} color={THEME.slate500} />
+                                  <Text style={{ color: THEME.slate600, fontSize: 12 }}>
+                                    Vigencia:{' '}
+                                    <Text style={{ color: THEME.slate800, fontWeight: '700' }}>
+                                      {limpiarFecha(p.asignacion_desde) || 'N/A'} al {limpiarFecha(p.asignacion_hasta) || 'N/A'}
+                                    </Text>
+                                  </Text>
+                                </View>
+
+                                {p.numero_resolucion_display && (
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                    <Ionicons name="document-text" size={14} color={THEME.emeraldText} />
+                                    <Text style={{ color: THEME.emeraldText, fontSize: 12, fontWeight: '700' }}>
+                                      {p.numero_resolucion_display}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Botones de Acción */}
+                          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <TouchableOpacity
+                              onPress={() => abrirModalAsignacion(p)}
                               style={{
-                                color: p.requiere_nuevo_acuerdo ? '#FFFFFF' : '#CBD5E1',
-                                fontSize: 12,
-                                fontWeight: '700',
+                                backgroundColor: THEME.marca700,
+                                paddingHorizontal: 14,
+                                paddingVertical: 9,
+                                borderRadius: 8,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
                               }}
                             >
-                              Acuerdo
-                            </Text>
-                          </TouchableOpacity>
+                              <Ionicons name="options-outline" size={16} color={THEME.white} />
+                              <Text style={{ color: THEME.white, fontSize: 12.5, fontWeight: '800' }}>
+                                {tieneModalidad ? 'Editar Modalidad' : 'Asignar Modalidad'}
+                              </Text>
+                            </TouchableOpacity>
 
-                          <TouchableOpacity
-                            onPress={() => abrirModalSeguimiento(p)}
-                            style={{
-                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                              paddingHorizontal: 12,
-                              paddingVertical: 9,
-                              borderRadius: 8,
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.15)',
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                          >
-                            <Ionicons name="calendar-outline" size={16} color="#38BDF8" />
-                            <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700' }}>
-                              Seguimiento
-                            </Text>
-                          </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => abrirModalAcuerdo(p)}
+                              style={{
+                                backgroundColor: p.requiere_nuevo_acuerdo ? THEME.amberBg : THEME.slate100,
+                                borderColor: p.requiere_nuevo_acuerdo ? THEME.amberRing : THEME.slate200,
+                                borderWidth: 1,
+                                paddingHorizontal: 12,
+                                paddingVertical: 9,
+                                borderRadius: 8,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
+                            >
+                              <Ionicons
+                                name="ribbon-outline"
+                                size={16}
+                                color={p.requiere_nuevo_acuerdo ? THEME.amberText : THEME.slate600}
+                              />
+                              <Text
+                                style={{
+                                  color: p.requiere_nuevo_acuerdo ? THEME.amberText : THEME.slate700,
+                                  fontSize: 12,
+                                  fontWeight: '700',
+                                }}
+                              >
+                                Acuerdo
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              onPress={() => abrirModalSeguimiento(p)}
+                              style={{
+                                backgroundColor: THEME.marca50,
+                                borderColor: THEME.marca100,
+                                borderWidth: 1,
+                                paddingHorizontal: 12,
+                                paddingVertical: 9,
+                                borderRadius: 8,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
+                            >
+                              <Ionicons name="calendar-outline" size={16} color={THEME.marca700} />
+                              <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
+                                Seguimiento
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
+                      );
+                    })}
+                  </View>
+                )}
             </View>
           )}
 
