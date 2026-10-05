@@ -297,23 +297,8 @@ export default function DetalleValidacionScreen() {
         const pctInicio = Math.round((i / totalArchivos) * 100);
         setProgresoIaPorcentaje(Math.max(5, pctInicio));
 
-        // Verificación preventiva anti-duplicados para AHORRO DE CRÉDITOS:
-        const nomBase = (asset.name || '').toLowerCase().trim();
-        const yaExiste = 
-          (expedienteActual?.certificados || []).some((c: any) => (c.nombre_archivo || '').toLowerCase().trim() === nomBase) ||
-          (expedienteActual?.formacion_academica || []).some((t: any) => (t.nombre_archivo || '').toLowerCase().trim() === nomBase) ||
-          (expedienteActual?.documentos_no_aplican || []).some((n: any) => (n.nombre_archivo || '').toLowerCase().trim() === nomBase);
-
-        if (yaExiste) {
-          setProgresoIaEstado(`ℹ️ Omitido: Ya fue evaluado previamente en este expediente.`);
-          resumenAcumulado.errores.push({
-            archivo: asset.name || `Documento ${numActual}`,
-            error: 'Omitido: Ya existe en el expediente (ahorro de créditos de IA).'
-          });
-          const pctFin = Math.round(((i + 1) / totalArchivos) * 100);
-          setProgresoIaPorcentaje(pctFin);
-          continue;
-        }
+        // Se procesa el documento con la IA para extraer todos los cargos, nombramientos o resoluciones
+        // (la deduplicación inteligente a nivel de entidad/cargo/fechas evitará duplicados en el backend).
 
         setProgresoIaEstado(`Leyendo contenido digital (${numActual} de ${totalArchivos})...`);
 
@@ -814,6 +799,87 @@ export default function DetalleValidacionScreen() {
       "Colaborar en el desarrollo de plataformas tecnológicas para el seguimiento de la gestión judicial y presupuestal para la ejecución de contratos con abogados/as externos.\n\n" +
       "Apropiar y dar cumplimiento a las políticas, documentación y estándares establecidos en los Sistemas Integrados de Gestión de la organización.\n\n" +
       "Desarrollar las demás actividades relacionadas e inherentes al cargo y aquellas que le sean asignadas, orientadas al cumplimiento de los objetivos, proyectos e iniciativas de la unidad y de la Organización."
+    );
+  };
+
+  const prellenarCargoIduEspecializado1 = () => {
+    setFormCertCargo('PROFESIONAL ESPECIALIZADO CÓDIGO 222 GRADO 05');
+    setFormCertEntidad('INSTITUTO DE DESARROLLO URBANO - IDU');
+    setFormCertTipoVinculo('NOMBRAMIENTO EN PROVISIONALIDAD');
+    setFormCertFechaInicio('2006-01-17');
+    setFormCertFechaFin('2010-03-02');
+    setFormCertVinculoVigente(false);
+    setFormCertClasificacion('RELACIONADA');
+    const certIdu = certificados.find(c => (c.entidad || '').toUpperCase().includes('IDU') || (c.entidad || '').toUpperCase().includes('DESARROLLO URBANO'));
+    if (certIdu) {
+      setFormCertArchivoAsociado(certIdu.nombre_archivo || certIdu.anexos?.[0] || '');
+    }
+    setFormCertFunciones(
+      "Intervenir como apoderado en los procesos judiciales asignados, en defensa de los intereses de la entidad ya sea como demandante, demandado o tercero interviniente.\n\n" +
+      "Intervenir como apoderado judicial en Tribunales de Arbitramento, conciliaciones prejudiciales y demás mecanismos alternativos de solución de conflictos, en los procesos en los cuales es vinculada la entidad.\n\n" +
+      "Proyectar e intervenir como apoderado si es del caso, en las acciones constitucionales (tutelas, acciones populares, de grupo) en defensa de los intereses de la entidad.\n\n" +
+      "Intervenir como apoderado judicial en asuntos administrativos que se adelanten ante cualquier autoridad especial ya sea judicial o administrativa.\n\n" +
+      "Intervenir en los incidentes o instancias que se generen en desarrollo de los procesos que cursan en jurisdicción coactiva.\n\n" +
+      "Interponer recursos ordinarios o extraordinarios ante las altas cortes, cuando el caso lo requiera.\n\n" +
+      "Proyectar los actos administrativos que se requieran, en cada uno de los procesos asignados hasta el agotamiento de la vía gubernativa.\n\n" +
+      "Proyectar informes y participar activamente en los comités, donde se vean involucrados aspectos jurídicos de los procesos.\n\n" +
+      "Vigilar periódicamente los procesos asignados, interviniendo en cada una de las etapas, procurando minimizar los efectos de una condena contra la entidad.\n\n" +
+      "Rendir informes periódicos, sobre el estado de cada uno de los procesos que se le asignen.\n\n" +
+      "Asesorar y proyectar conceptos sobre la aplicación de disposiciones legales, para apoyar la toma de decisiones en las diferentes áreas de la entidad.\n\n" +
+      "Dar trámite a los procedimientos presupuestales, para el pago de las obligaciones propias de cada proceso (costas, condenas, honorarios).\n\n" +
+      "Proyectar la respuesta a los derechos de petición y demás correspondencia que se le asigne, en forma oportuna y veraz.\n\n" +
+      "Colaborar con el Jefe Inmediato en el diseño de estrategias, para la actuación en los procesos judiciales en los que se encuentra vinculada la entidad."
+    );
+  };
+
+  const prellenarCargoIduEspecializado2 = () => {
+    setFormCertCargo('PROFESIONAL ESPECIALIZADO CÓDIGO 222 GRADO 05');
+    setFormCertEntidad('INSTITUTO DE DESARROLLO URBANO - IDU');
+    setFormCertTipoVinculo('PERIODO DE PRUEBA / CARRERA ADMINISTRATIVA');
+    setFormCertFechaInicio('2010-03-03');
+    setFormCertFechaFin('2012-06-14');
+    setFormCertVinculoVigente(false);
+    setFormCertClasificacion('RELACIONADA');
+    const certIdu = certificados.find(c => (c.entidad || '').toUpperCase().includes('IDU') || (c.entidad || '').toUpperCase().includes('DESARROLLO URBANO'));
+    if (certIdu) {
+      setFormCertArchivoAsociado(certIdu.nombre_archivo || certIdu.anexos?.[0] || '');
+    }
+    setFormCertFunciones(
+      "Intervenir como apoderado en los procesos judiciales asignados, en defensa de los intereses de la entidad ya sea como demandante, demandado o tercero interviniente (Resolución N° 1161 de 2009).\n\n" +
+      "Intervenir como apoderado judicial en Tribunales de Arbitramento, conciliaciones prejudiciales y demás mecanismos alternativos de solución de conflictos.\n\n" +
+      "Proyectar e intervenir como apoderado en las acciones constitucionales (tutelas, acciones populares, de grupo) en defensa de los intereses de la entidad.\n\n" +
+      "Intervenir como apoderado judicial en asuntos administrativos ante cualquier autoridad judicial o administrativa y en jurisdicción coactiva.\n\n" +
+      "Interponer recursos ordinarios o extraordinarios ante las altas cortes, cuando el caso lo requiera.\n\n" +
+      "Proyectar los actos administrativos requeridos en los procesos asignados hasta el agotamiento de la vía gubernativa.\n\n" +
+      "Vigilar periódicamente los procesos asignados, procurando minimizar los efectos de una condena contra la entidad.\n\n" +
+      "Asesorar y proyectar conceptos jurídicos sobre la aplicación de disposiciones legales para apoyar la toma de decisiones.\n\n" +
+      "Dar trámite a los procedimientos presupuestales para el pago de costas, condenas y honorarios.\n\n" +
+      "Colaborar con el Jefe Inmediato en el diseño de estrategias procesales en la Dirección Técnica de Gestión Judicial."
+    );
+  };
+
+  const prellenarCargoIduDirectorTecnico = () => {
+    setFormCertCargo('DIRECTOR TÉCNICO CÓDIGO 009 GRADO 05');
+    setFormCertEntidad('INSTITUTO DE DESARROLLO URBANO - IDU');
+    setFormCertTipoVinculo('ENCARGO');
+    setFormCertFechaInicio('2012-02-21');
+    setFormCertFechaFin('2012-04-15');
+    setFormCertVinculoVigente(false);
+    setFormCertClasificacion('RELACIONADA');
+    const certIdu = certificados.find(c => (c.entidad || '').toUpperCase().includes('IDU') || (c.entidad || '').toUpperCase().includes('DESARROLLO URBANO'));
+    if (certIdu) {
+      setFormCertArchivoAsociado(certIdu.nombre_archivo || certIdu.anexos?.[0] || '');
+    }
+    setFormCertFunciones(
+      "Dirigir, orientar, coordinar y controlar la gestión para la defensa judicial y extrajudicial de los intereses de la entidad, garantizando una eficiente actuación en los procesos (Resolución N° 1161 de 2009).\n\n" +
+      "Realizar el seguimiento y evaluación permanente de las actuaciones de los apoderados de los procesos judiciales para garantizar la debida defensa.\n\n" +
+      "Preparar los documentos y presentar las recomendaciones jurídicas sobre la instauración de acciones judiciales, policivas o administrativas encomendadas por la Dirección General.\n\n" +
+      "Dirigir, coordinar y controlar el desarrollo de las gestiones necesarias para adelantar las acciones de lesividad o repetición a que haya lugar.\n\n" +
+      "Supervisar y controlar el desarrollo de los procesos en los casos en que proceda el llamamiento en garantía.\n\n" +
+      "Prevenir el riesgo antijurídico mediante la información oportuna a todas las dependencias de la entidad, orientando la defensa institucional.\n\n" +
+      "Coordinar y controlar la representación de la entidad en las audiencias de conciliación y coordinar la realización del Comité de Conciliación y Defensa Judicial.\n\n" +
+      "Adelantar la supervisión, seguimiento, control y evaluación de la gestión administrativa, financiera, legal y técnica de los asuntos a su cargo.\n\n" +
+      "Organizar, dirigir y supervisar las labores del personal a cargo con el fin de cumplir con las metas propuestas para el área de Gestión Judicial."
     );
   };
 
@@ -6320,13 +6386,97 @@ export default function DetalleValidacionScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
-                      ⚡ Prellenar Cargo Faltante: JEFE DE DIVISIÓN LITIGIOS COLOMBIA
+                      ⚡ Prellenar Enel: JEFE DE DIVISIÓN LITIGIOS COLOMBIA
                     </Text>
                     <Text style={{ fontSize: 11, color: '#B45309' }}>
                       Enel Colombia • 2017-09-01 al 2022-11-15 (fecha certificación) • 14 funciones de litigios
                     </Text>
                   </View>
                 </TouchableOpacity>
+              )}
+
+              {/* Atajos Rápidos IDU */}
+              {certEditandoIndex === null && (
+                <View style={{ gap: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                    ⚡ Atajos Rápidos IDU (Certificación STRH-0516-C-293):
+                  </Text>
+                  
+                  {/* Botón IDU Especializado 2006-2010 */}
+                  <TouchableOpacity
+                    onPress={prellenarCargoIduEspecializado1}
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: '#3B82F6',
+                      padding: 10,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons name="flash" size={16} color="#1D4ED8" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>
+                        ⚡ IDU: PROFESIONAL ESPECIALIZADO GRADO 05 (2006 - 2010)
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#2563EB' }}>
+                        17.01.2006 a 02.03.2010 • Subd. Procesos Judiciales • Funciones litigiosas y conceptos
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Botón IDU Especializado 2010-2012 */}
+                  <TouchableOpacity
+                    onPress={prellenarCargoIduEspecializado2}
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: '#3B82F6',
+                      padding: 10,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons name="flash" size={16} color="#1D4ED8" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>
+                        ⚡ IDU: PROFESIONAL ESPECIALIZADO GRADO 05 (2010 - 2012)
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#2563EB' }}>
+                        03.03.2010 a 14.06.2012 • Dir. Gestión Judicial • Periodo de prueba / Carrera
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Botón IDU Director Técnico 2012 */}
+                  <TouchableOpacity
+                    onPress={prellenarCargoIduDirectorTecnico}
+                    style={{
+                      backgroundColor: '#F0FDF4',
+                      borderWidth: 1,
+                      borderColor: '#22C55E',
+                      padding: 10,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons name="flash" size={16} color="#15803D" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#166534' }}>
+                        ⚡ IDU: DIRECTOR TÉCNICO CÓDIGO 009 GRADO 05 (2012)
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#15803D' }}>
+                        21.02.2012 a 15.04.2012 • Encargo Directivo • 28 funciones directivas y judiciales
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {/* Denominación del Cargo */}

@@ -141,7 +141,14 @@ A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bac
    - ¡REGLA OBLIGATORIA CONTRA CLASIFICAR DIPLOMADOS COMO PREGRADO!: NUNCA clasifiques diplomados, cursos cortos, talleres, seminarios, congresos, simposios o certificados de asistencia como Educación Formal (Pregrado, Especialización, Maestría ni Doctorado). Un diplomado (ej. 'Diplomado Código General del Proceso', 'Diplomado en Derecho Administrativo') NO es un pregrado ni posgrado formal según la Ley 30 de 1992 y el Decreto 1083 de 2015. Debes clasificarlo OBLIGATORIAMENTE en "documentos_no_aplican".
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
    - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos, cotejo funcional y verifica si corresponde a modalidades de la Ley 2039 de 2020 si ocurrió previo al grado.
-   - ¡REGLA ESTRICTA DE MÚLTIPLES CARGOS O ASCENSOS EN UN MISMO DOCUMENTO!: Si una certificación laboral relaciona varios cargos desempeñados sucesivamente dentro de la misma entidad (ej. 1. Cargo A, 2. Cargo B, 3. Cargo C), DEBES generar UN objeto individual en el arreglo 'certificados' por CADA UNO de los cargos desempeñados. NUNCA omitas ninguno de los cargos ni los fusiones en uno solo.
+   - ¡REGLA ESTRICTA DE MÚLTIPLES CARGOS, SITUACIONES ADMINISTRATIVAS, NOMBRAMIENTOS Y ENCARGOS (DOCUMENTOS PÚBLICOS COMO IDU, ALCALDÍAS, MINISTERIOS, ENTIDADES DEL ESTADO O PRIVADAS)!:
+     En certificaciones laborales extensas (de 2 a 15 páginas), las entidades públicas y privadas suelen certificar la trayectoria del servidor a través de múltiples "situaciones administrativas", "resoluciones de nombramiento", "periodos de prueba", "encargos" o "ascensos sucesivos".
+     Por ejemplo:
+     1. Nombramiento en provisionalidad en un primer empleo (ej. PROFESIONAL UNIVERSITARIO CÓDIGO 340 GRADO 03, del 10/12/2003 al 16/01/2006 con sus funciones).
+     2. Nombramiento en provisionalidad en un segundo empleo superior (ej. PROFESIONAL ESPECIALIZADO CÓDIGO 222 GRADO 05, del 17/01/2006 al 02/03/2010 con sus funciones).
+     3. Nombramiento en periodo de prueba o carrera administrativa (ej. PROFESIONAL ESPECIALIZADO CÓDIGO 222 GRADO 05, del 03/03/2010 al 14/06/2012 con sus funciones).
+     4. Encargo en empleo directivo o superior (ej. DIRECTOR TÉCNICO CÓDIGO 009 GRADO 05, del 21/02/2012 al 15/04/2012 con sus funciones).
+     ¡OBLIGATORIO!: DEBES revisar el documento completo HASTA LA ÚLTIMA PÁGINA y generar UN OBJETO INDEPENDIENTE en el arreglo 'certificados' por CADA cargo o situación administrativa diferente. Para cada uno extrae la denominación completa (incluyendo código y grado), sus fechas exactas de inicio y fin, el tipo de nombramiento/vínculo, y las funciones asignadas descritas en las resoluciones citadas en el documento. NUNCA extraigas únicamente el primer cargo (ej. Grado 03) ignorando los cargos o grados posteriores (ej. Grado 05 o directivos).
    - ¡REGLA OBLIGATORIA DE FECHA FIN EN VÍNCULOS VIGENTES / ACTUALMENTE VINCULADO!: Cuando un cargo indique que el titular se encuentra 'Actualmente Vinculado', 'Vigente', 'a la fecha' o similar, la 'fecha_fin' DEBE ser exactamente la FECHA DE EXPEDICIÓN de la certificación (en formato YYYY-MM-DD, ej. si el certificado fue expedido a los 15 días del mes de noviembre de 2022, 'fecha_fin' DEBE ser '2022-11-15'), marcando obligatoriamente 'vinculo_vigente': true. Según el Decreto 1083 de 2015, la experiencia computable en vinculaciones vigentes se acredita y cuenta hasta la fecha cierta de expedición de la certificación.
 C. DOCUMENTOS QUE NO APLICAN AL CARGO (Documentos Descartados / No Computables):
    - DEBES clasificar aquí:
@@ -626,8 +633,9 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
           (ent1.length > 4 && ent2.length > 4 && (ent1.includes(ent2) || ent2.includes(ent1)));
 
         const cargosCompatibles = cargo1 === cargo2 && cargo1.length > 2;
+        const periodosDiferentes = c1.fecha_inicio && c2.fecha_inicio && c1.fecha_inicio !== c2.fecha_inicio;
 
-        if (entidadesCompatibles && cargosCompatibles) {
+        if (entidadesCompatibles && cargosCompatibles && !periodosDiferentes) {
           // Unir anexos sin duplicados
           const todosAnexos = Array.from(new Set([
             ...(c1.anexos || (c1.nombre_archivo ? [c1.nombre_archivo] : [])),

@@ -1557,27 +1557,9 @@ module.exports = function(pool) {
         telefono: val.candidato_telefono
       };
 
-      // 4. Filtrado PREVIO anti-duplicados para AHORRO DE CRÉDITOS Y TOKENS en Gemini:
-      // Si el archivo ya existe en certificados, títulos o no aplican, se omite de inmediato sin llamar a la IA.
-      const archivosParaAnalizar = [];
-      const archivosYaExistentes = [];
-
-      for (const arch of archivos) {
-        const nomBase = path.basename(arch.name || '').toLowerCase().trim();
-        const yaEnCerts = certificadosExistentes.some(c => c.nombre_archivo && path.basename(c.nombre_archivo).toLowerCase().trim() === nomBase);
-        const yaEnTitulos = formacionExistente.some(f => f.nombre_archivo && path.basename(f.nombre_archivo).toLowerCase().trim() === nomBase);
-        const yaEnNoAplican = noAplicanExistente.some(n => n.nombre_archivo && path.basename(n.nombre_archivo).toLowerCase().trim() === nomBase);
-
-        if (yaEnCerts || yaEnTitulos || yaEnNoAplican) {
-          archivosYaExistentes.push(arch.name || 'Documento');
-        } else {
-          archivosParaAnalizar.push(arch);
-        }
-      }
-
-      if (archivosYaExistentes.length > 0) {
-        console.log(`[Ingresos] ℹ️ Ahorro de créditos: Se omitieron ${archivosYaExistentes.length} archivo(s) ya evaluados:`, archivosYaExistentes);
-      }
+      // 4. Preparar archivos para análisis: Se analizan todos los documentos adjuntos
+      // para permitir extraer cargos faltantes o resoluciones múltiples de un mismo documento.
+      const archivosParaAnalizar = [...archivos];
 
       const titulosAgregados = [];
       const certsAgregados = [];
@@ -1592,11 +1574,11 @@ module.exports = function(pool) {
         }
       });
 
-      console.log(`[Ingresos] Analizando con IA ${archivosParaAnalizar.length} archivo(s) efectivamente nuevos para validación ${id}`);
+      console.log(`[Ingresos] Analizando con IA ${archivosParaAnalizar.length} archivo(s) para validación ${id}`);
 
       for (let i = 0; i < archivosParaAnalizar.length; i++) {
         const arch = archivosParaAnalizar[i];
-        console.log(`[Ingresos] Procesando archivo nuevo ${i + 1} de ${archivosParaAnalizar.length}: ${arch.name}`);
+        console.log(`[Ingresos] Procesando archivo ${i + 1} de ${archivosParaAnalizar.length}: ${arch.name}`);
         try {
           const analisisNuevo = await geminiIngresosService.analizarDocumentosConGemini(
             [arch],
@@ -1618,16 +1600,27 @@ module.exports = function(pool) {
             }
           });
 
-          // 6. Integrar Certificados Laborales con protección anti-duplicados
+          // 6. Integrar Certificados Laborales con protección anti-duplicados inteligente
+          const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').trim();
           const nuevosCerts = analisisNuevo.certificados || [];
           nuevosCerts.forEach(nc => {
             const existe = certificadosExistentes.some(ce => {
-              const mismoArchivo = ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase().trim() === nc.nombre_archivo.toLowerCase().trim();
-              const mismaVinculacion = ce.entidad && nc.entidad &&
-                ce.entidad.toLowerCase().trim() === nc.entidad.toLowerCase().trim() &&
-                ce.fecha_inicio && nc.fecha_inicio && String(ce.fecha_inicio).trim() === String(nc.fecha_inicio).trim() &&
-                ce.fecha_fin && nc.fecha_fin && String(ce.fecha_fin).trim() === String(nc.fecha_fin).trim();
-              return mismoArchivo || mismaVinculacion;
+              const ent1 = normStr(ce.entidad);
+              const ent2 = normStr(nc.entidad);
+              const mismaEntidad = ent1 && ent2 && (ent1 === ent2 || ent1.includes(ent2) || ent2.includes(ent1));
+
+              const cargo1 = normStr(ce.cargo_certificado || ce.cargo);
+              const cargo2 = normStr(nc.cargo_certificado || nc.cargo);
+              const mismoCargo = cargo1 && cargo2 && cargo1 === cargo2;
+
+              const fIni1 = String(ce.fecha_inicio || '').trim();
+              const fIni2 = String(nc.fecha_inicio || '').trim();
+              const fFin1 = String(ce.fecha_fin || '').trim();
+              const fFin2 = String(nc.fecha_fin || '').trim();
+
+              const mismaFecha = (fIni1 && fIni2 && fIni1 === fIni2) || (fFin1 && fFin2 && fFin1 === fFin2);
+
+              return mismaEntidad && mismoCargo && mismaFecha;
             });
             if (!existe) {
               maxCertNum++;

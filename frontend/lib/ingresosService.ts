@@ -497,14 +497,25 @@ export const ingresosService = {
         }
       });
 
+      const normStr = (s?: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ' ').trim();
       (analisisNuevo.certificados || []).forEach(nc => {
         const existe = certsExistentes.some(ce => {
-          const mismoArchivo = ce.nombre_archivo && nc.nombre_archivo && ce.nombre_archivo.toLowerCase().trim() === nc.nombre_archivo.toLowerCase().trim();
-          const mismaVinculacion = ce.entidad && nc.entidad &&
-            ce.entidad.toLowerCase().trim() === nc.entidad.toLowerCase().trim() &&
-            ce.fecha_inicio && nc.fecha_inicio && String(ce.fecha_inicio).trim() === String(nc.fecha_inicio).trim() &&
-            ce.fecha_fin && nc.fecha_fin && String(ce.fecha_fin).trim() === String(nc.fecha_fin).trim();
-          return mismoArchivo || mismaVinculacion;
+          const ent1 = normStr(ce.entidad);
+          const ent2 = normStr(nc.entidad);
+          const mismaEntidad = ent1 && ent2 && (ent1 === ent2 || ent1.includes(ent2) || ent2.includes(ent1));
+
+          const cargo1 = normStr(ce.cargo_certificado || (ce as any).cargo);
+          const cargo2 = normStr(nc.cargo_certificado || (nc as any).cargo);
+          const mismoCargo = cargo1 && cargo2 && cargo1 === cargo2;
+
+          const fIni1 = String(ce.fecha_inicio || '').trim();
+          const fIni2 = String(nc.fecha_inicio || '').trim();
+          const fFin1 = String(ce.fecha_fin || '').trim();
+          const fFin2 = String(nc.fecha_fin || '').trim();
+
+          const mismaFecha = (fIni1 && fIni2 && fIni1 === fIni2) || (fFin1 && fFin2 && fFin1 === fFin2);
+
+          return mismaEntidad && mismoCargo && mismaFecha;
         });
         if (!existe) {
           maxCertNum++;
