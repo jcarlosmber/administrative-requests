@@ -159,6 +159,10 @@ export default function TeletrabajoScreen() {
   const [filtroModalidad, setFiltroModalidad] = useState<string>('TODOS');
   const [filtroDependencia, setFiltroDependencia] = useState<string>('TODOS');
   const [modoVistaCenso, setModoVistaCenso] = useState<'cards' | 'tabla'>('cards');
+  const [modoVistaAcuerdos, setModoVistaAcuerdos] = useState<'cards' | 'tabla'>('tabla');
+  const [modoVistaSeguimientos, setModoVistaSeguimientos] = useState<'cards' | 'tabla'>('tabla');
+  const [busquedaAcuerdos, setBusquedaAcuerdos] = useState('');
+  const [busquedaSeguimientos, setBusquedaSeguimientos] = useState('');
 
   // Estado para gestión y redimensionamiento dinámico de columnas de la tabla
   const ANCHOS_COLUMNAS_DEFAULT: Record<string, number> = {
@@ -729,6 +733,29 @@ export default function TeletrabajoScreen() {
       filtroDependencia === 'TODOS' || p.dependencia_cargo === filtroDependencia;
 
     return coincideTexto && coincideModalidad && coincideDep;
+  });
+
+  const acuerdosFiltrados = acuerdos.filter((ac) => {
+    const q = busquedaAcuerdos.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (ac.servidor_nombre && ac.servidor_nombre.toLowerCase().includes(q)) ||
+      (ac.servidor_cedula && ac.servidor_cedula.includes(q)) ||
+      (ac.cargo_al_momento && ac.cargo_al_momento.toLowerCase().includes(q)) ||
+      (ac.periodo_vigencia && ac.periodo_vigencia.toLowerCase().includes(q))
+    );
+  });
+
+  const seguimientosFiltrados = seguimientos.filter((s) => {
+    const q = busquedaSeguimientos.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (s.servidor_nombre && s.servidor_nombre.toLowerCase().includes(q)) ||
+      (s.servidor_cedula && s.servidor_cedula.includes(q)) ||
+      (s.actividades_reportadas && s.actividades_reportadas.toLowerCase().includes(q)) ||
+      (s.cumplimiento_nivel && s.cumplimiento_nivel.toLowerCase().includes(q)) ||
+      (s.concepto_recomendacion && s.concepto_recomendacion.toLowerCase().includes(q))
+    );
   });
 
   return (
@@ -2218,105 +2245,475 @@ export default function TeletrabajoScreen() {
             {/* ------------------------------------------------------------- */}
             {/* PESTAÑA 4: ACUERDOS DE COMPROMISO                            */}
             {/* ------------------------------------------------------------- */}
+            {/* ------------------------------------------------------------- */}
+            {/* PESTAÑA 4: ACUERDOS DE COMPROMISO                            */}
+            {/* ------------------------------------------------------------- */}
             {tabActiva === 'acuerdos' && (
               <View style={{ gap: 16 }}>
-                <View>
-                  <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
-                    Expediente de Acuerdos de Compromiso
-                  </Text>
-                  <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
-                    Documentos formales suscritos por los servidores y sus jefes al iniciar o cambiar de cargo
-                  </Text>
-                </View>
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
+                  <View>
+                    <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
+                      Expediente de Acuerdos de Compromiso
+                    </Text>
+                    <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
+                      Documentos formales suscritos por los servidores y sus jefes al iniciar o cambiar de cargo
+                    </Text>
+                  </View>
 
-                <View style={{ gap: 12 }}>
-                  {acuerdos.map((ac) => (
+                  {/* Barra de Búsqueda y Selector de Vista */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <View
-                      key={ac.id}
                       style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
                         backgroundColor: THEME.white,
-                        borderRadius: 12,
+                        borderRadius: 8,
                         borderWidth: 1,
                         borderColor: THEME.slate200,
-                        padding: 18,
-                        flexDirection: isDesktop ? 'row' : 'column',
-                        justifyContent: 'space-between',
-                        alignItems: isDesktop ? 'center' : 'stretch',
-                        gap: 14,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.03,
-                        shadowRadius: 4,
-                        elevation: 1,
+                        paddingHorizontal: 10,
+                        height: 36,
+                        width: isDesktop ? 260 : '100%',
                       }}
                     >
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name="ribbon" size={20} color="#D97706" />
-                          <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
-                            {ac.servidor_nombre}
-                          </Text>
-                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                            C.C. {ac.servidor_cedula}
-                          </Text>
-                        </View>
-
-                        <Text style={{ color: THEME.slate600, fontSize: 13 }}>
-                          Cargo al momento del acuerdo:{' '}
-                          <Text style={{ fontWeight: '700', color: THEME.marca700 }}>
-                            {ac.cargo_al_momento}
-                          </Text>
-                        </Text>
-
-                        <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                          Fecha de Suscripción: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{limpiarFecha(ac.fecha_suscripcion)}</Text> • Vigencia: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{ac.periodo_vigencia || 'ANUAL'}</Text>
-                        </Text>
-                      </View>
-
-                      {ac.archivo_acuerdo_url && (
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (Platform.OS === 'web') {
-                              window.open(ac.archivo_acuerdo_url, '_blank');
-                            }
-                          }}
-                          style={{
-                            backgroundColor: THEME.badges.amber.bg,
-                            paddingHorizontal: 14,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            borderWidth: 1,
-                            borderColor: THEME.badges.amber.border,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
-                          }}
-                        >
-                          <Ionicons name="eye-outline" size={16} color={THEME.badges.amber.text} />
-                          <Text style={{ color: THEME.badges.amber.text, fontSize: 12.5, fontWeight: '700' }}>
-                            Ver Acuerdo Firmado
-                          </Text>
-                        </TouchableOpacity>
+                      <Ionicons name="search" size={15} color={THEME.slate400} style={{ marginRight: 6 }} />
+                      <TextInput
+                        value={busquedaAcuerdos}
+                        onChangeText={setBusquedaAcuerdos}
+                        placeholder="Buscar acuerdo por nombre, C.C...."
+                        placeholderTextColor={THEME.slate400}
+                        style={{ flex: 1, color: THEME.slate900, fontSize: 12, outlineStyle: 'none' as never }}
+                      />
+                      {busquedaAcuerdos.length > 0 && (
+                        <Pressable onPress={() => setBusquedaAcuerdos('')}>
+                          <Ionicons name="close-circle" size={15} color={THEME.slate400} />
+                        </Pressable>
                       )}
                     </View>
-                  ))}
-                  {acuerdos.length === 0 && (
+
                     <View
                       style={{
-                        backgroundColor: THEME.white,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        padding: 36,
+                        flexDirection: 'row',
                         alignItems: 'center',
+                        backgroundColor: THEME.slate100,
+                        borderRadius: 8,
+                        padding: 3,
                       }}
                     >
-                      <Ionicons name="ribbon-outline" size={40} color={THEME.slate300} />
-                      <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
-                        No se han subido acuerdos de compromiso aún.
-                      </Text>
+                      <Pressable
+                        onPress={() => setModoVistaAcuerdos('tabla')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: modoVistaAcuerdos === 'tabla' ? THEME.white : 'transparent',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          shadowColor: modoVistaAcuerdos === 'tabla' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="list"
+                          size={14}
+                          color={modoVistaAcuerdos === 'tabla' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaAcuerdos === 'tabla' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaAcuerdos === 'tabla' ? '600' : '500',
+                          }}
+                        >
+                          Tabla
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setModoVistaAcuerdos('cards')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: modoVistaAcuerdos === 'cards' ? THEME.white : 'transparent',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          shadowColor: modoVistaAcuerdos === 'cards' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="grid"
+                          size={14}
+                          color={modoVistaAcuerdos === 'cards' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaAcuerdos === 'cards' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaAcuerdos === 'cards' ? '600' : '500',
+                          }}
+                        >
+                          Tarjetas
+                        </Text>
+                      </Pressable>
                     </View>
+                  </View>
+                </View>
+
+                {/* Conteo y aviso */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: THEME.slate600, fontSize: 13, fontWeight: '600' }}>
+                    Mostrando {acuerdosFiltrados.length} acuerdos suscritos
+                  </Text>
+                  {modoVistaAcuerdos === 'tabla' && (
+                    <Text style={{ color: THEME.slate400, fontSize: 11.5 }}>
+                      💡 Haz clic en una fila para gestionar o actualizar el acuerdo
+                    </Text>
                   )}
                 </View>
+
+                {modoVistaAcuerdos === 'tabla' ? (
+                  /* TABLA DE ACUERDOS */
+                  <View
+                    style={{
+                      width: '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      overflow: 'hidden',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 3,
+                    }}
+                  >
+                    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: '100%', flexDirection: 'column' }}>
+                      {/* Cabecera */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          backgroundColor: THEME.slate50,
+                          borderBottomWidth: 1,
+                          borderBottomColor: THEME.slate200,
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ width: 240, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>SERVIDOR PÚBLICO</Text>
+                        <Text style={{ width: 230, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CARGO AL SUSCRIBIR</Text>
+                        <Text style={{ width: 150, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>FECHA SUSCRIPCIÓN</Text>
+                        <Text style={{ width: 140, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>VIGENCIA</Text>
+                        <Text style={{ width: 130, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>ESTADO</Text>
+                        <Text style={{ width: 180, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>DOCUMENTO FIRMADO</Text>
+                        <Text style={{ width: 140, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>ACCIONES</Text>
+                      </View>
+
+                      {/* Filas */}
+                      <ScrollView style={{ maxHeight: 600 }} showsVerticalScrollIndicator>
+                        {acuerdosFiltrados.map((ac, index) => {
+                          const esPar = index % 2 === 0;
+                          const persona = personas.find((p) => p.titular_cedula === ac.servidor_cedula);
+
+                          return (
+                            <TouchableOpacity
+                              key={ac.id}
+                              activeOpacity={0.7}
+                              onPress={() => {
+                                if (persona) abrirModalAcuerdo(persona);
+                              }}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 12,
+                                paddingHorizontal: 16,
+                                backgroundColor: esPar ? THEME.white : '#FAFCFF',
+                                borderBottomWidth: 1,
+                                borderBottomColor: THEME.slate100,
+                                // @ts-ignore
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {/* Servidor */}
+                              <View style={{ width: 240, paddingRight: 10, gap: 2 }}>
+                                <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                                  {ac.servidor_nombre}
+                                </Text>
+                                <Text style={{ color: THEME.slate500, fontSize: 11 }}>
+                                  C.C. {ac.servidor_cedula}
+                                </Text>
+                              </View>
+
+                              {/* Cargo */}
+                              <View style={{ width: 230, paddingRight: 10 }}>
+                                <Text style={{ color: THEME.marca800, fontSize: 12.5, fontWeight: '600' }} numberOfLines={2}>
+                                  {ac.cargo_al_momento}
+                                </Text>
+                              </View>
+
+                              {/* Fecha */}
+                              <View style={{ width: 150, paddingRight: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                  <Ionicons name="calendar-outline" size={13} color={THEME.slate500} />
+                                  <Text style={{ color: THEME.slate800, fontSize: 12, fontWeight: '600' }}>
+                                    {limpiarFecha(ac.fecha_suscripcion) || 'Sin fecha'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Vigencia */}
+                              <View style={{ width: 140, paddingRight: 8 }}>
+                                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '600' }}>
+                                  {ac.periodo_vigencia || 'ANUAL'}
+                                </Text>
+                              </View>
+
+                              {/* Estado */}
+                              <View style={{ width: 130, paddingRight: 8 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: ac.es_vigente !== false ? THEME.emeraldBg : THEME.slate100,
+                                    borderColor: ac.es_vigente !== false ? THEME.emeraldRing : THEME.slate200,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2.5,
+                                    borderRadius: 9999,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: ac.es_vigente !== false ? THEME.emeraldText : THEME.slate600,
+                                      fontSize: 11,
+                                      fontWeight: '700',
+                                    }}
+                                  >
+                                    {ac.es_vigente !== false ? '✓ Vigente' : 'Histórico'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Documento Firmado */}
+                              <View style={{ width: 180, paddingRight: 8 }}>
+                                {ac.archivo_acuerdo_url ? (
+                                  <TouchableOpacity
+                                    onPress={(e) => {
+                                      e?.stopPropagation?.();
+                                      if (Platform.OS === 'web') {
+                                        window.open(ac.archivo_acuerdo_url, '_blank');
+                                      }
+                                    }}
+                                    style={{
+                                      backgroundColor: THEME.amberBg,
+                                      borderColor: THEME.amberRing,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 9,
+                                      paddingVertical: 5,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    <Ionicons name="document-text-outline" size={13} color={THEME.amberText} />
+                                    <Text style={{ color: THEME.amberText, fontSize: 11.5, fontWeight: '700' }}>
+                                      Ver Acuerdo
+                                    </Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <Text style={{ color: THEME.slate400, fontSize: 11 }}>Sin PDF adjunto</Text>
+                                )}
+                              </View>
+
+                              {/* Acciones */}
+                              <View style={{ width: 140, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    if (persona) abrirModalAcuerdo(persona);
+                                  }}
+                                  style={{
+                                    backgroundColor: THEME.marca50,
+                                    borderColor: THEME.marca200,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <Ionicons name="create-outline" size={13} color={THEME.marca700} />
+                                  <Text style={{ color: THEME.marca700, fontSize: 11.5, fontWeight: '700' }}>
+                                    Gestionar
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+
+                        {acuerdosFiltrados.length === 0 && (
+                          <View style={{ padding: 32, alignItems: 'center' }}>
+                            <Ionicons name="ribbon-outline" size={36} color={THEME.slate300} />
+                            <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 8 }}>
+                              {busquedaAcuerdos.length > 0 ? 'No se encontraron acuerdos con el criterio de búsqueda.' : 'No se han suscrito acuerdos aún.'}
+                            </Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </ScrollView>
+                  </View>
+                ) : (
+                  /* TARJETAS DE ACUERDOS */
+                  <View style={{ gap: 12 }}>
+                    {acuerdosFiltrados.map((ac) => {
+                      const persona = personas.find((p) => p.titular_cedula === ac.servidor_cedula);
+
+                      return (
+                        <View
+                          key={ac.id}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            padding: 18,
+                            flexDirection: isDesktop ? 'row' : 'column',
+                            justifyContent: 'space-between',
+                            alignItems: isDesktop ? 'center' : 'stretch',
+                            gap: 14,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.04,
+                            shadowRadius: 4,
+                            elevation: 1,
+                          }}
+                        >
+                          <View style={{ flex: 1, gap: 4 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                              <Ionicons name="ribbon" size={20} color="#D97706" />
+                              <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
+                                {ac.servidor_nombre}
+                              </Text>
+                              <Text style={{ color: THEME.slate500, fontSize: 12.5 }}>
+                                C.C. {ac.servidor_cedula}
+                              </Text>
+                              <View
+                                style={{
+                                  backgroundColor: ac.es_vigente !== false ? THEME.emeraldBg : THEME.slate100,
+                                  borderColor: ac.es_vigente !== false ? THEME.emeraldRing : THEME.slate200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 9999,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: ac.es_vigente !== false ? THEME.emeraldText : THEME.slate600,
+                                    fontSize: 10.5,
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  {ac.es_vigente !== false ? 'VIGENTE' : 'HISTÓRICO'}
+                                </Text>
+                              </View>
+                            </View>
+
+                            <Text style={{ color: THEME.slate600, fontSize: 13 }}>
+                              Cargo al momento del acuerdo:{' '}
+                              <Text style={{ fontWeight: '700', color: THEME.marca800 }}>
+                                {ac.cargo_al_momento}
+                              </Text>
+                            </Text>
+
+                            <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                              Fecha de Suscripción: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{limpiarFecha(ac.fecha_suscripcion)}</Text> • Vigencia: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{ac.periodo_vigencia || 'ANUAL'}</Text>
+                            </Text>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            {ac.archivo_acuerdo_url && (
+                              <TouchableOpacity
+                                onPress={() => {
+                                  if (Platform.OS === 'web') {
+                                    window.open(ac.archivo_acuerdo_url, '_blank');
+                                  }
+                                }}
+                                style={{
+                                  backgroundColor: THEME.badges.amber.bg,
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: THEME.badges.amber.border,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                              >
+                                <Ionicons name="eye-outline" size={15} color={THEME.badges.amber.text} />
+                                <Text style={{ color: THEME.badges.amber.text, fontSize: 12, fontWeight: '700' }}>
+                                  Ver Acuerdo Firmado
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+
+                            {persona && (
+                              <TouchableOpacity
+                                onPress={() => abrirModalAcuerdo(persona)}
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  borderColor: THEME.marca200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  borderRadius: 8,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                              >
+                                <Ionicons name="create-outline" size={15} color={THEME.marca700} />
+                                <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
+                                  Gestionar
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+
+                    {acuerdosFiltrados.length === 0 && (
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 36,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Ionicons name="ribbon-outline" size={40} color={THEME.slate300} />
+                        <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+                          No se han subido acuerdos de compromiso aún.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             )}
 
@@ -2325,144 +2722,520 @@ export default function TeletrabajoScreen() {
             {/* ------------------------------------------------------------- */}
             {tabActiva === 'seguimientos' && (
               <View style={{ gap: 16 }}>
-                <View>
-                  <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
-                    Seguimientos Periódicos de Rendimiento y Actividades
-                  </Text>
-                  <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
-                    Cortes periódicos delimitados por rango de fechas (Desde - Hasta)
-                  </Text>
-                </View>
+                <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 12 }}>
+                  <View>
+                    <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
+                      Seguimientos Periódicos de Rendimiento y Actividades
+                    </Text>
+                    <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
+                      Cortes periódicos delimitados por rango de fechas (Desde - Hasta) y evaluación del jefe
+                    </Text>
+                  </View>
 
-                <View style={{ gap: 12 }}>
-                  {seguimientos.map((s) => (
+                  {/* Barra de Búsqueda y Selector de Vista */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <View
-                      key={s.id}
                       style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
                         backgroundColor: THEME.white,
-                        borderRadius: 12,
+                        borderRadius: 8,
                         borderWidth: 1,
                         borderColor: THEME.slate200,
-                        padding: 18,
-                        gap: 10,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.03,
-                        shadowRadius: 4,
-                        elevation: 1,
+                        paddingHorizontal: 10,
+                        height: 36,
+                        width: isDesktop ? 260 : '100%',
                       }}
                     >
-                      <View
-                        style={{
-                          flexDirection: isDesktop ? 'row' : 'column',
-                          justifyContent: 'space-between',
-                          alignItems: isDesktop ? 'center' : 'flex-start',
-                          gap: 10,
-                        }}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name="checkmark-circle" size={22} color="#047857" />
-                          <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
-                            {s.servidor_nombre}
-                          </Text>
-                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                            C.C. {s.servidor_cedula}
-                          </Text>
-                        </View>
+                      <Ionicons name="search" size={15} color={THEME.slate400} style={{ marginRight: 6 }} />
+                      <TextInput
+                        value={busquedaSeguimientos}
+                        onChangeText={setBusquedaSeguimientos}
+                        placeholder="Buscar seguimiento por nombre, C.C...."
+                        placeholderTextColor={THEME.slate400}
+                        style={{ flex: 1, color: THEME.slate900, fontSize: 12, outlineStyle: 'none' as never }}
+                      />
+                      {busquedaSeguimientos.length > 0 && (
+                        <Pressable onPress={() => setBusquedaSeguimientos('')}>
+                          <Ionicons name="close-circle" size={15} color={THEME.slate400} />
+                        </Pressable>
+                      )}
+                    </View>
 
-                        {/* Rango de Fechas */}
-                        <View
-                          style={{
-                            backgroundColor: THEME.marca50,
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
-                            borderRadius: 9999,
-                            borderWidth: 1,
-                            borderColor: THEME.marca200,
-                          }}
-                        >
-                          <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '800' }}>
-                            Corte: {limpiarFecha(s.fecha_corte_desde)} al {limpiarFecha(s.fecha_corte_hasta)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 18 }}>
-                        {s.actividades_reportadas}
-                      </Text>
-
-                      <View
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: THEME.slate100,
+                        borderRadius: 8,
+                        padding: 3,
+                      }}
+                    >
+                      <Pressable
+                        onPress={() => setModoVistaSeguimientos('tabla')}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
-                          gap: 10,
-                          paddingTop: 8,
-                          borderTopWidth: 1,
-                          borderTopColor: THEME.slate100,
+                          gap: 5,
+                          backgroundColor: modoVistaSeguimientos === 'tabla' ? THEME.white : 'transparent',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          shadowColor: modoVistaSeguimientos === 'tabla' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
                         }}
                       >
-                        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                            Nivel:{' '}
-                            <Text style={{ color: THEME.badges.emerald.text, fontWeight: '800' }}>
-                              {s.cumplimiento_nivel} ({s.calificacion_porcentaje}%)
-                            </Text>
-                          </Text>
-                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                            Concepto:{' '}
-                            <Text style={{ color: THEME.slate800, fontWeight: '700' }}>
-                              {s.concepto_recomendacion}
-                            </Text>
-                          </Text>
-                        </View>
+                        <Ionicons
+                          name="list"
+                          size={14}
+                          color={modoVistaSeguimientos === 'tabla' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaSeguimientos === 'tabla' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaSeguimientos === 'tabla' ? '600' : '500',
+                          }}
+                        >
+                          Tabla
+                        </Text>
+                      </Pressable>
 
-                        {s.soporte_evidencias_url && (
-                          <TouchableOpacity
-                            onPress={() => {
-                              if (Platform.OS === 'web') {
-                                window.open(s.soporte_evidencias_url, '_blank');
-                              }
+                      <Pressable
+                        onPress={() => setModoVistaSeguimientos('cards')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: modoVistaSeguimientos === 'cards' ? THEME.white : 'transparent',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          shadowColor: modoVistaSeguimientos === 'cards' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="grid"
+                          size={14}
+                          color={modoVistaSeguimientos === 'cards' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaSeguimientos === 'cards' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaSeguimientos === 'cards' ? '600' : '500',
+                          }}
+                        >
+                          Tarjetas
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Conteo y aviso */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: THEME.slate600, fontSize: 13, fontWeight: '600' }}>
+                    Mostrando {seguimientosFiltrados.length} seguimientos registrados
+                  </Text>
+                  {modoVistaSeguimientos === 'tabla' && (
+                    <Text style={{ color: THEME.slate400, fontSize: 11.5 }}>
+                      💡 Haz clic en una fila para registrar un nuevo corte o gestionar el seguimiento
+                    </Text>
+                  )}
+                </View>
+
+                {modoVistaSeguimientos === 'tabla' ? (
+                  /* TABLA DE SEGUIMIENTOS */
+                  <View
+                    style={{
+                      width: '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      overflow: 'hidden',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 3,
+                    }}
+                  >
+                    <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: '100%', flexDirection: 'column' }}>
+                      {/* Cabecera */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          backgroundColor: THEME.slate50,
+                          borderBottomWidth: 1,
+                          borderBottomColor: THEME.slate200,
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ width: 230, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>SERVIDOR PÚBLICO</Text>
+                        <Text style={{ width: 190, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>PERÍODO DE CORTE</Text>
+                        <Text style={{ width: 300, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>ACTIVIDADES REPORTADAS</Text>
+                        <Text style={{ width: 170, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CUMPLIMIENTO</Text>
+                        <Text style={{ width: 170, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>CONCEPTO JEFE</Text>
+                        <Text style={{ width: 150, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>EVIDENCIAS</Text>
+                        <Text style={{ width: 140, color: THEME.slate600, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>ACCIONES</Text>
+                      </View>
+
+                      {/* Filas */}
+                      <ScrollView style={{ maxHeight: 600 }} showsVerticalScrollIndicator>
+                        {seguimientosFiltrados.map((s, index) => {
+                          const esPar = index % 2 === 0;
+                          const persona = personas.find((p) => p.titular_cedula === s.servidor_cedula);
+                          const esSobresaliente = s.cumplimiento_nivel === 'SOBRESALIENTE';
+                          const esSatisfactorio = s.cumplimiento_nivel === 'SATISFACTORIO';
+                          const esParcial = s.cumplimiento_nivel === 'PARCIAL';
+
+                          return (
+                            <TouchableOpacity
+                              key={s.id}
+                              activeOpacity={0.7}
+                              onPress={() => {
+                                if (persona) abrirModalSeguimiento(persona);
+                              }}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 12,
+                                paddingHorizontal: 16,
+                                backgroundColor: esPar ? THEME.white : '#FAFCFF',
+                                borderBottomWidth: 1,
+                                borderBottomColor: THEME.slate100,
+                                // @ts-ignore
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {/* Servidor */}
+                              <View style={{ width: 230, paddingRight: 10, gap: 2 }}>
+                                <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                                  {s.servidor_nombre}
+                                </Text>
+                                <Text style={{ color: THEME.slate500, fontSize: 11 }}>
+                                  C.C. {s.servidor_cedula}
+                                </Text>
+                              </View>
+
+                              {/* Período de Corte */}
+                              <View style={{ width: 190, paddingRight: 8 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.marca50,
+                                    borderWidth: 1,
+                                    borderColor: THEME.marca100,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.marca700, fontSize: 11.5, fontWeight: '700' }}>
+                                    {limpiarFecha(s.fecha_corte_desde)} al {limpiarFecha(s.fecha_corte_hasta)}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Actividades */}
+                              <View style={{ width: 300, paddingRight: 12 }}>
+                                <Text style={{ color: THEME.slate700, fontSize: 12, lineHeight: 17 }} numberOfLines={2}>
+                                  {s.actividades_reportadas || 'Sin detalle de actividades'}
+                                </Text>
+                              </View>
+
+                              {/* Cumplimiento */}
+                              <View style={{ width: 170, paddingRight: 8 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: esSobresaliente ? THEME.emeraldBg : esSatisfactorio ? THEME.skyBg : esParcial ? THEME.amberBg : THEME.roseBg,
+                                    borderColor: esSobresaliente ? THEME.emeraldRing : esSatisfactorio ? THEME.skyRing : esParcial ? THEME.amberRing : THEME.roseRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2.5,
+                                    borderRadius: 9999,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: esSobresaliente ? THEME.emeraldText : esSatisfactorio ? THEME.skyText : esParcial ? THEME.amberText : THEME.roseText,
+                                      fontSize: 11,
+                                      fontWeight: '700',
+                                    }}
+                                  >
+                                    {s.cumplimiento_nivel} ({s.calificacion_porcentaje}%)
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Concepto Jefe */}
+                              <View style={{ width: 170, paddingRight: 8 }}>
+                                <Text style={{ color: THEME.slate800, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+                                  {s.concepto_recomendacion === 'CONTINUAR'
+                                    ? '✓ Continuar'
+                                    : s.concepto_recomendacion === 'AJUSTAR_DIAS'
+                                    ? '⚠️ Ajustar Días'
+                                    : 'Reversión'}
+                                </Text>
+                              </View>
+
+                              {/* Evidencias */}
+                              <View style={{ width: 150, paddingRight: 8 }}>
+                                {s.soporte_evidencias_url ? (
+                                  <TouchableOpacity
+                                    onPress={(e) => {
+                                      e?.stopPropagation?.();
+                                      if (Platform.OS === 'web') {
+                                        window.open(s.soporte_evidencias_url, '_blank');
+                                      }
+                                    }}
+                                    style={{
+                                      backgroundColor: THEME.marca50,
+                                      borderColor: THEME.marca200,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 9,
+                                      paddingVertical: 5,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    <Ionicons name="document-attach-outline" size={13} color={THEME.marca700} />
+                                    <Text style={{ color: THEME.marca700, fontSize: 11.5, fontWeight: '700' }}>
+                                      Ver Soporte
+                                    </Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <Text style={{ color: THEME.slate400, fontSize: 11 }}>Sin soporte</Text>
+                                )}
+                              </View>
+
+                              {/* Acciones */}
+                              <View style={{ width: 140, flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    if (persona) abrirModalSeguimiento(persona);
+                                  }}
+                                  style={{
+                                    backgroundColor: THEME.marca700,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <Ionicons name="add-circle-outline" size={13} color={THEME.white} />
+                                  <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700' }}>
+                                    Nuevo Corte
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        })}
+
+                        {seguimientosFiltrados.length === 0 && (
+                          <View style={{ padding: 32, alignItems: 'center' }}>
+                            <Ionicons name="calendar-outline" size={36} color={THEME.slate300} />
+                            <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 8 }}>
+                              {busquedaSeguimientos.length > 0 ? 'No se encontraron seguimientos con el criterio de búsqueda.' : 'No hay seguimientos registrados aún.'}
+                            </Text>
+                          </View>
+                        )}
+                      </ScrollView>
+                    </ScrollView>
+                  </View>
+                ) : (
+                  /* TARJETAS DE SEGUIMIENTOS */
+                  <View style={{ gap: 12 }}>
+                    {seguimientosFiltrados.map((s) => {
+                      const persona = personas.find((p) => p.titular_cedula === s.servidor_cedula);
+                      const esSobresaliente = s.cumplimiento_nivel === 'SOBRESALIENTE';
+                      const esSatisfactorio = s.cumplimiento_nivel === 'SATISFACTORIO';
+                      const esParcial = s.cumplimiento_nivel === 'PARCIAL';
+
+                      return (
+                        <View
+                          key={s.id}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            padding: 18,
+                            gap: 12,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.04,
+                            shadowRadius: 4,
+                            elevation: 1,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isDesktop ? 'center' : 'flex-start',
+                              gap: 10,
                             }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                              <Ionicons name="checkmark-circle" size={22} color="#047857" />
+                              <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
+                                {s.servidor_nombre}
+                              </Text>
+                              <Text style={{ color: THEME.slate500, fontSize: 12.5 }}>
+                                C.C. {s.servidor_cedula}
+                              </Text>
+                            </View>
+
+                            <View
+                              style={{
+                                backgroundColor: THEME.marca50,
+                                paddingHorizontal: 10,
+                                paddingVertical: 4,
+                                borderRadius: 9999,
+                                borderWidth: 1,
+                                borderColor: THEME.marca200,
+                              }}
+                            >
+                              <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '800' }}>
+                                Corte: {limpiarFecha(s.fecha_corte_desde)} al {limpiarFecha(s.fecha_corte_hasta)}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Text style={{ color: THEME.slate700, fontSize: 13, lineHeight: 18 }}>
+                            {s.actividades_reportadas}
+                          </Text>
+
+                          <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              gap: 6,
-                              backgroundColor: THEME.marca50,
-                              paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 6,
-                              borderWidth: 1,
-                              borderColor: THEME.marca200,
+                              justifyContent: 'space-between',
+                              flexWrap: 'wrap',
+                              gap: 10,
+                              paddingTop: 8,
+                              borderTopWidth: 1,
+                              borderTopColor: THEME.slate100,
                             }}
                           >
-                            <Ionicons name="document-attach" size={14} color={THEME.marca700} />
-                            <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
-                              Ver Evidencias
-                            </Text>
-                          </TouchableOpacity>
-                        )}
+                            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <View
+                                style={{
+                                  backgroundColor: esSobresaliente ? THEME.emeraldBg : esSatisfactorio ? THEME.skyBg : esParcial ? THEME.amberBg : THEME.roseBg,
+                                  borderColor: esSobresaliente ? THEME.emeraldRing : esSatisfactorio ? THEME.skyRing : esParcial ? THEME.amberRing : THEME.roseRing,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2.5,
+                                  borderRadius: 9999,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: esSobresaliente ? THEME.emeraldText : esSatisfactorio ? THEME.skyText : esParcial ? THEME.amberText : THEME.roseText,
+                                    fontSize: 11,
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  {s.cumplimiento_nivel} ({s.calificacion_porcentaje}%)
+                                </Text>
+                              </View>
+
+                              <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                                Concepto:{' '}
+                                <Text style={{ color: THEME.slate800, fontWeight: '700' }}>
+                                  {s.concepto_recomendacion}
+                                </Text>
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              {s.soporte_evidencias_url && (
+                                <TouchableOpacity
+                                  onPress={() => {
+                                    if (Platform.OS === 'web') {
+                                      window.open(s.soporte_evidencias_url, '_blank');
+                                    }
+                                  }}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    backgroundColor: THEME.marca50,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 6,
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: THEME.marca200,
+                                  }}
+                                >
+                                  <Ionicons name="document-attach" size={14} color={THEME.marca700} />
+                                  <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
+                                    Ver Evidencias
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+
+                              {persona && (
+                                <TouchableOpacity
+                                  onPress={() => abrirModalSeguimiento(persona)}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    backgroundColor: THEME.marca700,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Ionicons name="add-circle-outline" size={14} color={THEME.white} />
+                                  <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
+                                    Nuevo Corte
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+
+                    {seguimientosFiltrados.length === 0 && (
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 36,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Ionicons name="calendar-outline" size={40} color={THEME.slate300} />
+                        <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+                          No hay seguimientos registrados aún.
+                        </Text>
                       </View>
-                    </View>
-                  ))}
-                  {seguimientos.length === 0 && (
-                    <View
-                      style={{
-                        backgroundColor: THEME.white,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        padding: 36,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Ionicons name="calendar-outline" size={40} color={THEME.slate300} />
-                      <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
-                        No hay seguimientos registrados aún.
-                      </Text>
-                    </View>
-                  )}
-                </View>
+                    )}
+                  </View>
+                )}
               </View>
             )}
           </ScrollView>
