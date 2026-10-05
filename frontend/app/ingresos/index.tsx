@@ -7,7 +7,8 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
-  Platform
+  Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -88,43 +89,132 @@ export default function IngresosDashboardScreen() {
   const totalNoCumple = validaciones.filter(v => v.resultado_final === 'NO_CUMPLE').length;
   const totalRevision = validaciones.filter(v => v.resultado_final === 'REQUIERE_REVISION').length;
 
+  const pctCumple = totalEvaluados > 0 ? Math.round((totalCumple / totalEvaluados) * 100) : 0;
+  const pctNoCumple = totalEvaluados > 0 ? Math.round((totalNoCumple / totalEvaluados) * 100) : 0;
+  const pctRevision = totalEvaluados > 0 ? Math.round((totalRevision / totalEvaluados) * 100) : 0;
+
+  const kpis = [
+    {
+      id: 'TODOS',
+      title: 'Total Expedientes',
+      valor: totalEvaluados,
+      subtitulo: 'Cotejos IA en plataforma',
+      badge: '100% Censo',
+      badgeBg: '#F1F5F9',
+      badgeColor: '#475569',
+      badgeBorder: '#E2E8F0',
+      icon: 'folder-open',
+      iconColor: '#174A7E',
+      iconBg: '#EEF4FB',
+      iconBorder: '#D6E4F4',
+      accentColor: '#174A7E',
+      barColor: '#174A7E',
+      barPct: 100,
+      filtroLabel: 'Ver todos',
+    },
+    {
+      id: 'CUMPLE',
+      title: 'Cumplen Requisitos',
+      valor: totalCumple,
+      subtitulo: 'Perfil y experiencia idóneos',
+      badge: `${pctCumple}% Viables`,
+      badgeBg: '#ECFDF5',
+      badgeColor: '#047857',
+      badgeBorder: 'rgba(5, 150, 105, 0.25)',
+      icon: 'checkmark-done-circle',
+      iconColor: '#047857',
+      iconBg: '#ECFDF5',
+      iconBorder: 'rgba(5, 150, 105, 0.25)',
+      accentColor: '#047857',
+      barColor: '#059669',
+      barPct: pctCumple,
+      filtroLabel: 'Filtrar viables',
+    },
+    {
+      id: 'NO_CUMPLE',
+      title: 'No Cumplen Requisitos',
+      valor: totalNoCumple,
+      subtitulo: 'Déficit en tiempo o título',
+      badge: `${pctNoCumple}% No viables`,
+      badgeBg: '#FFF1F2',
+      badgeColor: '#BE123C',
+      badgeBorder: 'rgba(225, 29, 72, 0.25)',
+      icon: 'close-circle',
+      iconColor: '#BE123C',
+      iconBg: '#FFF1F2',
+      iconBorder: 'rgba(225, 29, 72, 0.25)',
+      accentColor: '#BE123C',
+      barColor: '#E11D48',
+      barPct: pctNoCumple,
+      filtroLabel: 'Filtrar no viables',
+    },
+    {
+      id: 'REQUIERE_REVISION',
+      title: 'Requieren Revisión',
+      valor: totalRevision,
+      subtitulo: 'Pendiente validar soportes',
+      badge: `${pctRevision}% Observaciones`,
+      badgeBg: '#FFFBEB',
+      badgeColor: '#B45309',
+      badgeBorder: 'rgba(217, 119, 6, 0.25)',
+      icon: 'time',
+      iconColor: '#D97706',
+      iconBg: '#FFFBEB',
+      iconBorder: 'rgba(217, 119, 6, 0.25)',
+      accentColor: '#D97706',
+      barColor: '#F59E0B',
+      barPct: pctRevision,
+      filtroLabel: 'Filtrar revisión',
+    },
+  ];
+
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
       {/* Header Institucional */}
       <View
         style={{
-          backgroundColor: '#0F172A',
+          backgroundColor: '#0D2A48',
           paddingTop: Platform.OS === 'ios' ? 50 : 20,
-          paddingBottom: 24,
+          paddingBottom: 22,
           paddingHorizontal: 24,
           borderBottomWidth: 1,
-          borderBottomColor: '#1E293B',
+          borderBottomColor: 'rgba(255, 255, 255, 0.1)',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: 16
+          gap: 16,
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <View
             style={{
-              width: 48,
-              height: 48,
+              width: 46,
+              height: 46,
               borderRadius: 12,
-              backgroundColor: '#991B1B',
+              backgroundColor: '#174A7E',
               justifyContent: 'center',
-              alignItems: 'center'
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
             }}
           >
-            <Ionicons name="shield-checkmark" size={26} color="#FFFFFF" />
+            <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700' }}>
-              Validación Técnica de Ingresos
+            <Text
+              style={{
+                color: 'rgba(214, 228, 244, 0.75)',
+                fontSize: 10.5,
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: 1.1,
+              }}
+            >
+              Secretaría Jurídica Distrital • Talento Humano
             </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 13 }}>
-              Cotejo Documental y Experiencia Laboral con IA • SJD
+            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginTop: 1 }}>
+              Validación Técnica de Ingresos
             </Text>
           </View>
         </View>
@@ -135,16 +225,16 @@ export default function IngresosDashboardScreen() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#0F2133',
-              paddingHorizontal: 14,
-              paddingVertical: 10,
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              paddingHorizontal: 13,
+              paddingVertical: 9,
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.2)'
+              borderColor: 'rgba(255, 255, 255, 0.18)',
             }}
           >
-            <Ionicons name="grid-outline" size={18} color="#FCA5A5" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#FCA5A5', fontSize: 14, fontWeight: '700' }}>Módulos RRHH</Text>
+            <Ionicons name="grid-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '700' }}>Módulos RRHH</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -152,16 +242,16 @@ export default function IngresosDashboardScreen() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#1E293B',
-              paddingHorizontal: 14,
-              paddingVertical: 10,
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              paddingHorizontal: 13,
+              paddingVertical: 9,
               borderRadius: 8,
               borderWidth: 1,
-              borderColor: '#334155'
+              borderColor: 'rgba(255, 255, 255, 0.18)',
             }}
           >
-            <Ionicons name="briefcase-outline" size={18} color="#CBD5E1" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#CBD5E1', fontSize: 14, fontWeight: '600' }}>Cargos Oficiales</Text>
+            <Ionicons name="briefcase-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '600' }}>Cargos Oficiales</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -169,14 +259,16 @@ export default function IngresosDashboardScreen() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#334155',
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 8
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              paddingHorizontal: 13,
+              paddingVertical: 9,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.18)',
             }}
           >
-            <Ionicons name="home-outline" size={18} color="#F1F5F9" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#F1F5F9', fontSize: 14, fontWeight: '600' }}>Ir a Solicitudes</Text>
+            <Ionicons name="home-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '600' }}>Ir a Solicitudes</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -184,95 +276,220 @@ export default function IngresosDashboardScreen() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#991B1B',
+              backgroundColor: '#174A7E',
               paddingHorizontal: 16,
-              paddingVertical: 10,
-              borderRadius: 8
+              paddingVertical: 9,
+              borderRadius: 8,
+              shadowColor: '#000',
+              shadowOpacity: 0.15,
+              shadowRadius: 4,
             }}
           >
-            <Ionicons name="add-circle" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>Nueva Validación</Text>
+            <Ionicons name="add-circle" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '800' }}>Nueva Validación</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 24 }}>
-        {/* Tarjetas de Métricas */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+        {/* ============================================================== */}
+        {/* KPI CARDS EJECUTIVOS E INTERACTIVOS                            */}
+        {/* ============================================================== */}
+        <View style={{ marginBottom: 24 }}>
           <View
             style={{
-              flex: 1,
-              minWidth: 180,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              padding: 18,
-              borderLeftWidth: 4,
-              borderLeftColor: '#3B82F6',
-              borderWidth: 1,
-              borderColor: '#E2E8F0'
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginBottom: 14,
             }}
           >
-            <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Total Expedientes</Text>
-            <Text style={{ color: '#0F172A', fontSize: 26, fontWeight: '800', marginTop: 4 }}>
-              {totalEvaluados}
-            </Text>
+            <View>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: '#0F172A',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Métricas de Idoneidad y Validación
+              </Text>
+              <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                Haz clic en una tarjeta para filtrar los expedientes en tiempo real
+              </Text>
+            </View>
+
+            {filtroEstado !== 'TODOS' && (
+              <TouchableOpacity
+                onPress={() => setFiltroEstado('TODOS')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: '#EEF4FB',
+                  paddingHorizontal: 12,
+                  paddingVertical: 5,
+                  borderRadius: 9999,
+                  borderWidth: 1,
+                  borderColor: '#D6E4F4',
+                }}
+              >
+                <Ionicons name="funnel-outline" size={13} color="#174A7E" />
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#174A7E' }}>
+                  Restablecer a todos ({totalEvaluados})
+                </Text>
+                <Ionicons name="close" size={14} color="#174A7E" />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <View
-            style={{
-              flex: 1,
-              minWidth: 180,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              padding: 18,
-              borderLeftWidth: 4,
-              borderLeftColor: '#16A34A',
-              borderWidth: 1,
-              borderColor: '#E2E8F0'
-            }}
-          >
-            <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Cumplen Requisitos</Text>
-            <Text style={{ color: '#16A34A', fontSize: 26, fontWeight: '800', marginTop: 4 }}>
-              {totalCumple}
-            </Text>
-          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+            {kpis.map((k) => {
+              const isSelected = filtroEstado === k.id;
+              return (
+                <TouchableOpacity
+                  key={k.id}
+                  onPress={() => setFiltroEstado(k.id)}
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1,
+                    minWidth: 220,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 14,
+                    padding: 18,
+                    borderWidth: isSelected ? 2 : 1,
+                    borderColor: isSelected ? k.accentColor : '#E2E8F0',
+                    shadowColor: '#0F172A',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: isSelected ? 0.08 : 0.03,
+                    shadowRadius: 8,
+                    elevation: 2,
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View>
+                    {/* Fila superior: Icono + Badge porcentual */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          backgroundColor: k.iconBg,
+                          borderWidth: 1,
+                          borderColor: k.iconBorder,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Ionicons name={k.icon as any} size={22} color={k.iconColor} />
+                      </View>
 
-          <View
-            style={{
-              flex: 1,
-              minWidth: 180,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              padding: 18,
-              borderLeftWidth: 4,
-              borderLeftColor: '#DC2626',
-              borderWidth: 1,
-              borderColor: '#E2E8F0'
-            }}
-          >
-            <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>No Cumplen</Text>
-            <Text style={{ color: '#DC2626', fontSize: 26, fontWeight: '800', marginTop: 4 }}>
-              {totalNoCumple}
-            </Text>
-          </View>
+                      <View
+                        style={{
+                          backgroundColor: isSelected ? k.accentColor : k.badgeBg,
+                          paddingHorizontal: 9,
+                          paddingVertical: 3,
+                          borderRadius: 9999,
+                          borderWidth: 1,
+                          borderColor: isSelected ? k.accentColor : k.badgeBorder,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
+                        {isSelected && <Ionicons name="checkmark" size={11} color="#FFFFFF" />}
+                        <Text
+                          style={{
+                            color: isSelected ? '#FFFFFF' : k.badgeColor,
+                            fontSize: 11,
+                            fontWeight: '700',
+                          }}
+                        >
+                          {isSelected ? 'Filtro Activo' : k.badge}
+                        </Text>
+                      </View>
+                    </View>
 
-          <View
-            style={{
-              flex: 1,
-              minWidth: 180,
-              backgroundColor: '#FFFFFF',
-              borderRadius: 12,
-              padding: 18,
-              borderLeftWidth: 4,
-              borderLeftColor: '#D97706',
-              borderWidth: 1,
-              borderColor: '#E2E8F0'
-            }}
-          >
-            <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600' }}>Requieren Revisión</Text>
-            <Text style={{ color: '#D97706', fontSize: 26, fontWeight: '800', marginTop: 4 }}>
-              {totalRevision}
-            </Text>
+                    {/* Número y Título */}
+                    <Text
+                      style={{
+                        fontSize: 32,
+                        fontWeight: '800',
+                        color: isSelected ? k.accentColor : '#0F172A',
+                        letterSpacing: -0.5,
+                        marginTop: 10,
+                      }}
+                    >
+                      {k.valor}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: '700',
+                        color: '#1E293B',
+                        marginTop: 2,
+                      }}
+                    >
+                      {k.title}
+                    </Text>
+                  </View>
+
+                  {/* Micro-barra de progreso y subtítulo */}
+                  <View style={{ marginTop: 14 }}>
+                    <View
+                      style={{
+                        height: 4,
+                        backgroundColor: '#F1F5F9',
+                        borderRadius: 9999,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: `${Math.max(k.barPct, 0)}%`,
+                          height: '100%',
+                          backgroundColor: k.barColor,
+                          borderRadius: 9999,
+                        }}
+                      />
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginTop: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11.5, color: '#64748B' }}>
+                        {k.subtitulo}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '600',
+                          color: isSelected ? k.accentColor : '#94A3B8',
+                        }}
+                      >
+                        {isSelected ? 'Mostrando' : k.filtroLabel}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -281,7 +498,7 @@ export default function IngresosDashboardScreen() {
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: 12,
-            padding: 16,
+            padding: 14,
             marginBottom: 20,
             borderWidth: 1,
             borderColor: '#E2E8F0',
@@ -289,7 +506,12 @@ export default function IngresosDashboardScreen() {
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: 12
+            gap: 12,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.03,
+            shadowRadius: 4,
+            elevation: 1,
           }}
         >
           <View
@@ -298,45 +520,83 @@ export default function IngresosDashboardScreen() {
               minWidth: 260,
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: '#F1F5F9',
+              backgroundColor: '#F8FAFC',
               borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
               paddingHorizontal: 12,
-              height: 42
+              height: 40,
             }}
           >
-            <Ionicons name="search" size={18} color="#64748B" style={{ marginRight: 8 }} />
+            <Ionicons name="search" size={17} color="#64748B" style={{ marginRight: 8 }} />
             <TextInput
               placeholder="Buscar por candidato, cédula o cargo..."
               placeholderTextColor="#94A3B8"
               value={searchTerm}
               onChangeText={setSearchTerm}
-              style={{ flex: 1, color: '#0F172A', fontSize: 14 }}
+              style={{ flex: 1, color: '#0F172A', fontSize: 13.5 }}
             />
+            {searchTerm.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchTerm('')}>
+                <Ionicons name="close-circle" size={16} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {['TODOS', 'CUMPLE', 'NO_CUMPLE', 'REQUIERE_REVISION'].map(estado => (
-              <TouchableOpacity
-                key={estado}
-                onPress={() => setFiltroEstado(estado)}
-                style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderRadius: 6,
-                  backgroundColor: filtroEstado === estado ? '#0F172A' : '#F1F5F9'
-                }}
-              >
-                <Text
+          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { id: 'TODOS', label: 'Todos', count: totalEvaluados },
+              { id: 'CUMPLE', label: 'Cumplen', count: totalCumple },
+              { id: 'NO_CUMPLE', label: 'No Cumplen', count: totalNoCumple },
+              { id: 'REQUIERE_REVISION', label: 'Revisión', count: totalRevision },
+            ].map((f) => {
+              const sel = filtroEstado === f.id;
+              return (
+                <TouchableOpacity
+                  key={f.id}
+                  onPress={() => setFiltroEstado(f.id)}
                   style={{
-                    fontSize: 12,
-                    fontWeight: '700',
-                    color: filtroEstado === estado ? '#FFFFFF' : '#475569'
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                    backgroundColor: sel ? '#0D2A48' : '#F1F5F9',
+                    borderWidth: 1,
+                    borderColor: sel ? '#0D2A48' : '#E2E8F0',
                   }}
                 >
-                  {estado.replace('_', ' ')}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '700',
+                      color: sel ? '#FFFFFF' : '#475569',
+                    }}
+                  >
+                    {f.label}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: sel ? 'rgba(255, 255, 255, 0.2)' : '#E2E8F0',
+                      paddingHorizontal: 6,
+                      paddingVertical: 1,
+                      borderRadius: 9999,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: '800',
+                        color: sel ? '#FFFFFF' : '#64748B',
+                      }}
+                    >
+                      {f.count}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
