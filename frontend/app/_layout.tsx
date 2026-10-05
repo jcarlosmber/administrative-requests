@@ -1,18 +1,15 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { TouchableOpacity, Platform, View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React from 'react';
 import { ChatbotModal } from '../components/ChatbotModal';
 import { AccessibilityToolbar } from '../components/AccessibilityToolbar';
 
 export default function RootLayout() {
-  const router = useRouter();
-
   return (
     <>
       <Stack
         screenOptions={{
+          headerShown: false,
           headerStyle: {
             backgroundColor: '#0F172A',
           },
@@ -20,20 +17,6 @@ export default function RootLayout() {
           headerTitleStyle: {
             fontWeight: 'bold',
           },
-          headerLeft: () => (
-            <TouchableOpacity 
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/dashboard');
-                }
-              }} 
-              style={{ marginLeft: Platform.OS === 'web' ? 16 : 8, marginRight: 16 }}
-            >
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-          )
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -58,7 +41,7 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             title: 'Mantenimientos Locativos',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
@@ -66,7 +49,7 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             title: 'Cupo de Parqueadero',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
@@ -74,7 +57,7 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             title: 'Transporte Institucional',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
@@ -82,7 +65,7 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             title: 'Ingreso de Visitantes',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
@@ -90,14 +73,14 @@ export default function RootLayout() {
           options={{ 
             presentation: 'modal',
             title: 'Reserva de Salas',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="notifications" 
           options={{ 
             title: 'Notificaciones',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
@@ -122,6 +105,22 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="ingresos/cargos" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="rrhh/index" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="rrhh/nomina" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="rrhh/teletrabajo" 
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen 
+          name="rrhh/desvinculaciones" 
           options={{ headerShown: false }} 
         />
       </Stack>
