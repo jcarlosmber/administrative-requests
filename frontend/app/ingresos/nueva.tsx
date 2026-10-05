@@ -271,8 +271,6 @@ export default function NuevaValidacionScreen() {
             setIdPlaza(expediente.cargo_evaluado.id_plaza);
           }
         }
-        // Precargar dictamen completo previo
-        setAnalisisResultado(expediente);
       }
     } catch (err: any) {
       mostrarMensaje('Error al Cargar Expediente', err.message || 'No se pudo cargar el expediente para rehacer.');
@@ -757,8 +755,35 @@ export default function NuevaValidacionScreen() {
       if (!resultado.cargo_evaluado.id_perno && idPerno) {
         resultado.cargo_evaluado.id_perno = parseInt(String(idPerno), 10);
       }
-      setAnalisisResultado(resultado);
-      setAnalizando(false);
+
+      setProgresoTexto('Generando dictamen oficial y guardando en el expediente...');
+      const payloadListo: AnalisisCompleto = {
+        ...resultado,
+        archivos: archivosPdf,
+        candidato: {
+          ...resultado.candidato,
+          email: candidatoEmail || resultado.candidato?.email || undefined,
+          telefono: candidatoTel || resultado.candidato?.telefono || undefined
+        },
+        cargo_evaluado: {
+          ...resultado.cargo_evaluado,
+          id_sideap: idSideap ? parseInt(String(idSideap), 10) : resultado.cargo_evaluado?.id_sideap,
+          id_perno: idPerno ? parseInt(String(idPerno), 10) : resultado.cargo_evaluado?.id_perno,
+          id_plaza: idPlaza ?? resultado.cargo_evaluado?.id_plaza,
+          requisitos_formacion: formacionExigida || resultado.cargo_evaluado?.requisitos_formacion,
+          dependencia: dependenciaCargo || resultado.cargo_evaluado?.dependencia
+        }
+      };
+
+      if (rehacerId) {
+        await ingresosService.actualizarValidacion(rehacerId, payloadListo);
+        setAnalizando(false);
+        router.replace(`/ingresos/${rehacerId}`);
+      } else {
+        const res = await ingresosService.guardarValidacion(payloadListo);
+        setAnalizando(false);
+        router.replace(`/ingresos/${res.id}`);
+      }
     } catch (err: any) {
       setAnalizando(false);
       mostrarMensaje('Error en el Análisis', err.message || 'Ocurrió un error al procesar los documentos.');
@@ -2114,22 +2139,23 @@ export default function NuevaValidacionScreen() {
               onPress={iniciarAnalisisIA}
               disabled={analizando}
               style={{
-                backgroundColor: '#991B1B',
+                backgroundColor: '#15803D',
                 paddingVertical: 16,
                 borderRadius: 10,
                 alignItems: 'center',
                 flexDirection: 'row',
                 justifyContent: 'center',
                 gap: 8,
-                shadowColor: '#991B1B',
+                shadowColor: '#15803D',
                 shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8
+                shadowOpacity: 0.25,
+                shadowRadius: 8,
+                elevation: 4
               }}
             >
-              <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+              <Ionicons name="sparkles" size={20} color="#FDE047" />
               <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
-                Ejecutar Análisis y Cotejo con IA Gemini
+                {rehacerId ? 'Rehacer y Generar Dictamen Oficial' : 'Crear Validación y Dictamen Oficial con IA'}
               </Text>
             </TouchableOpacity>
           </>
