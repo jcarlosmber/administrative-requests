@@ -248,6 +248,41 @@ export default function TeletrabajoScreen() {
     setNotifModal({ visible: true, titulo, mensaje, tipo });
   };
 
+  // Modal de Confirmación para Viabilidad del Cargo (Regla: no alerts)
+  const [confirmViabilidadModal, setConfirmViabilidadModal] = useState<{
+    visible: boolean;
+    cargo: CargoConfig | null;
+    cambiando: boolean;
+  }>({
+    visible: false,
+    cargo: null,
+    cambiando: false,
+  });
+
+  const ejecutarCambioViabilidad = async () => {
+    if (!confirmViabilidadModal.cargo) return;
+    const c = confirmViabilidadModal.cargo;
+    try {
+      setConfirmViabilidadModal((p) => ({ ...p, cambiando: true }));
+      const nuevoEstado = !c.es_teletrabajable;
+      await teletrabajoService.actualizarCargo(c.id, {
+        es_teletrabajable: nuevoEstado,
+        max_dias_semana: c.max_dias_semana || 2,
+        justificacion_estudio: c.justificacion_estudio || '',
+      });
+      setConfirmViabilidadModal({ visible: false, cargo: null, cambiando: false });
+      await cargarTodo();
+      mostrarMensaje(
+        'Viabilidad Actualizada',
+        `El cargo ${c.cargo_nombre} ahora figura como ${nuevoEstado ? 'Teletrabajable' : 'No teletrabajable'}.`,
+        'success'
+      );
+    } catch (err: any) {
+      setConfirmViabilidadModal((p) => ({ ...p, cambiando: false }));
+      mostrarMensaje('Error', err.message, 'error');
+    }
+  };
+
   // =========================================================================
   // CARGA DE DATOS
   // =========================================================================
@@ -2979,19 +3014,12 @@ export default function TeletrabajoScreen() {
                         </Text>
 
                         <TouchableOpacity
-                          onPress={async () => {
-                            try {
-                              const nuevoEstado = !c.es_teletrabajable;
-                              await teletrabajoService.actualizarCargo(c.id, {
-                                es_teletrabajable: nuevoEstado,
-                                max_dias_semana: c.max_dias_semana || 2,
-                                justificacion_estudio: c.justificacion_estudio || '',
-                              });
-                              await cargarTodo();
-                              mostrarMensaje('Viabilidad Actualizada', `El cargo ${c.cargo_nombre} ahora figura como ${nuevoEstado ? 'Teletrabajable' : 'No teletrabajable'}.`, 'success');
-                            } catch (err: any) {
-                              mostrarMensaje('Error', err.message, 'error');
-                            }
+                          onPress={() => {
+                            setConfirmViabilidadModal({
+                              visible: true,
+                              cargo: c,
+                              cambiando: false,
+                            });
                           }}
                           style={{
                             backgroundColor: THEME.slate100,
@@ -7421,6 +7449,205 @@ export default function TeletrabajoScreen() {
                   Aceptar
                 </Text>
               </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ================================================================= */}
+        {/* MODAL DE CONFIRMACIÓN: CAMBIAR VIABILIDAD DEL CARGO              */}
+        {/* ================================================================= */}
+        <Modal
+          visible={confirmViabilidadModal.visible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {
+            if (!confirmViabilidadModal.cambiando) {
+              setConfirmViabilidadModal({ visible: false, cargo: null, cambiando: false });
+            }
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 20,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: THEME.white,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: THEME.slate200,
+                padding: 24,
+                maxWidth: 480,
+                width: '100%',
+                gap: 16,
+                shadowColor: '#000',
+                shadowOpacity: 0.15,
+                shadowRadius: 20,
+                elevation: 6,
+              }}
+            >
+              {/* Encabezado con Icono */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    backgroundColor: confirmViabilidadModal.cargo?.es_teletrabajable ? '#FFF1F2' : '#ECFDF5',
+                    padding: 10,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: confirmViabilidadModal.cargo?.es_teletrabajable ? 'rgba(244, 63, 94, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                  }}
+                >
+                  <Ionicons
+                    name={confirmViabilidadModal.cargo?.es_teletrabajable ? 'ban' : 'laptop-outline'}
+                    size={24}
+                    color={confirmViabilidadModal.cargo?.es_teletrabajable ? '#BE123C' : '#047857'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
+                    ¿Modificar Viabilidad del Cargo?
+                  </Text>
+                  <Text style={{ color: THEME.slate500, fontSize: 12, marginTop: 1 }}>
+                    Configuración técnica de teletrabajabilidad
+                  </Text>
+                </View>
+              </View>
+
+              {/* Tarjeta de información del cargo */}
+              {confirmViabilidadModal.cargo && (
+                <View
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 10,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    gap: 8,
+                  }}
+                >
+                  <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '800' }}>
+                    {confirmViabilidadModal.cargo.cargo_nombre}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={{ color: THEME.slate500, fontSize: 11.5 }}>
+                      Código: <Text style={{ fontWeight: '700', color: THEME.slate700 }}>{confirmViabilidadModal.cargo.codigo || 'S/C'}</Text>
+                    </Text>
+                    <Text style={{ color: THEME.slate400, fontSize: 11 }}>•</Text>
+                    <Text style={{ color: THEME.slate500, fontSize: 11.5 }}>
+                      Grado: <Text style={{ fontWeight: '700', color: THEME.slate700 }}>{confirmViabilidadModal.cargo.grado || 'S/G'}</Text>
+                    </Text>
+                  </View>
+
+                  {/* Transición de Estado */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                    <View
+                      style={{
+                        backgroundColor: confirmViabilidadModal.cargo.es_teletrabajable ? THEME.badges.emerald.bg : THEME.badges.rose.bg,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: confirmViabilidadModal.cargo.es_teletrabajable ? THEME.badges.emerald.border : THEME.badges.rose.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: '800',
+                          color: confirmViabilidadModal.cargo.es_teletrabajable ? THEME.badges.emerald.text : THEME.badges.rose.text,
+                        }}
+                      >
+                        {confirmViabilidadModal.cargo.es_teletrabajable ? 'TELETRABAJABLE' : 'NO TELETRABAJABLE'}
+                      </Text>
+                    </View>
+
+                    <Ionicons name="arrow-forward" size={16} color={THEME.slate400} />
+
+                    <View
+                      style={{
+                        backgroundColor: !confirmViabilidadModal.cargo.es_teletrabajable ? THEME.badges.emerald.bg : THEME.badges.rose.bg,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: !confirmViabilidadModal.cargo.es_teletrabajable ? THEME.badges.emerald.border : THEME.badges.rose.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: '800',
+                          color: !confirmViabilidadModal.cargo.es_teletrabajable ? THEME.badges.emerald.text : THEME.badges.rose.text,
+                        }}
+                      >
+                        {!confirmViabilidadModal.cargo.es_teletrabajable ? 'TELETRABAJABLE' : 'NO TELETRABAJABLE'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Mensaje de confirmación explicativo */}
+              <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 19 }}>
+                ¿Deseas cambiar la condición de este cargo a{' '}
+                <Text style={{ fontWeight: '800', color: confirmViabilidadModal.cargo?.es_teletrabajable ? '#BE123C' : '#047857' }}>
+                  {confirmViabilidadModal.cargo?.es_teletrabajable ? 'No Teletrabajable' : 'Teletrabajable'}
+                </Text>
+                ? Esta configuración determinará la viabilidad directa al autorizar asignaciones de teletrabajo para este cargo.
+              </Text>
+
+              {/* Botones de acción */}
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                <Pressable
+                  onPress={() => setConfirmViabilidadModal({ visible: false, cargo: null, cambiando: false })}
+                  disabled={confirmViabilidadModal.cambiando}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 8,
+                    backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                  })}
+                >
+                  <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>
+                    Cancelar
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={ejecutarCambioViabilidad}
+                  disabled={confirmViabilidadModal.cambiando}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingHorizontal: 18,
+                    paddingVertical: 9,
+                    borderRadius: 8,
+                    backgroundColor: confirmViabilidadModal.cargo?.es_teletrabajable ? '#BE123C' : '#047857',
+                    opacity: pressed || confirmViabilidadModal.cambiando ? 0.8 : 1,
+                  })}
+                >
+                  {confirmViabilidadModal.cambiando ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons
+                      name={confirmViabilidadModal.cargo?.es_teletrabajable ? 'close-circle-outline' : 'checkmark-circle-outline'}
+                      size={16}
+                      color="#FFFFFF"
+                    />
+                  )}
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
+                    {confirmViabilidadModal.cambiando ? 'Actualizando...' : 'Sí, Cambiar Viabilidad'}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </View>
         </Modal>
