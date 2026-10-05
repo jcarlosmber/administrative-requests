@@ -146,7 +146,7 @@ async function generarReporteExcelValidacion(data) {
       posgrados.push(item);
     } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || tipo === 'UNIVERSITARIO' || (!titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
       pregrados.push(item);
-    } else if (tipo === 'TARJETA_PROFESIONAL' || titulo.includes('TARJETA') || item.numero_tarjeta_o_registro) {
+    } else if ((tipo === 'TARJETA_PROFESIONAL' || titulo.includes('TARJETA') || item.numero_tarjeta_o_registro) && tipo !== 'BACHILLER' && !titulo.includes('BACHILLER')) {
       if (!tarjeta) tarjeta = item;
     }
   });

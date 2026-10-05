@@ -760,7 +760,7 @@ export default function DetalleValidacionScreen() {
     setFormFechaGrado(item.fecha_grado || '');
     setFormCertificaMaterias(Boolean(item.certifica_terminacion_materias));
     setFormFechaMaterias(item.fecha_terminacion_materias || '');
-    setFormTarjeta(item.numero_tarjeta_o_registro || '');
+    setFormTarjeta(item.tipo === 'BACHILLER' ? '' : (item.numero_tarjeta_o_registro || ''));
     setFormCumple(item.cumple_requisito_cargo !== false);
     setFormJustificacion(item.justificacion || '');
     setModalTituloVisible(true);
@@ -833,7 +833,7 @@ export default function DetalleValidacionScreen() {
       fecha_grado: formFechaGrado.trim() || 'NO CONSTA',
       certifica_terminacion_materias: formTipo === 'PREGRADO' ? formCertificaMaterias : undefined,
       fecha_terminacion_materias: (formTipo === 'PREGRADO' && formCertificaMaterias) ? (formFechaMaterias.trim() || undefined) : undefined,
-      numero_tarjeta_o_registro: formTarjeta.trim() || undefined,
+      numero_tarjeta_o_registro: formTipo === 'BACHILLER' ? undefined : (formTarjeta.trim() || undefined),
       cumple_requisito_cargo: formCumple,
       justificacion: formJustificacion.trim()
     };
@@ -2487,8 +2487,9 @@ export default function DetalleValidacionScreen() {
                   {titulos.map((t, idx) => {
                     const titKey = t.id || `tit-${idx}`;
                     const estaExpandido = Boolean(titulosExpandidos[titKey]);
+                    const esBach = t.tipo === 'BACHILLER' || (t.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
                     const checksTitulo = obtenerChecksTitulo(t, candidato?.nombre, candidato?.documento);
-                    const checksTarjeta = t.numero_tarjeta_o_registro ? obtenerChecksTarjeta(t, candidato?.nombre, candidato?.documento) : null;
+                    const checksTarjeta = (!esBach && t.numero_tarjeta_o_registro) ? obtenerChecksTarjeta(t, candidato?.nombre, candidato?.documento) : null;
                     const cumple = t.cumple_requisito_cargo !== false;
 
                     return (
@@ -2531,7 +2532,7 @@ export default function DetalleValidacionScreen() {
                             <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
                               {t.titulo_obtenido}
                             </Text>
-                            {t.numero_tarjeta_o_registro ? (
+                            {!esBach && t.numero_tarjeta_o_registro ? (
                               <Text style={{ fontSize: 10, color: '#2563EB', fontWeight: '700' }}>
                                 Tarjeta: {t.numero_tarjeta_o_registro}
                               </Text>
@@ -2763,7 +2764,7 @@ export default function DetalleValidacionScreen() {
                                   </View>
                                 )}
 
-                                {t.numero_tarjeta_o_registro ? (
+                                {!esBach && t.numero_tarjeta_o_registro ? (
                                   <View>
                                     <Text style={{ fontSize: 11, color: '#64748B' }}>Tarjeta Profesional:</Text>
                                     <Text style={{ fontSize: 12, fontWeight: '800', color: '#2563EB' }}>
@@ -2848,8 +2849,8 @@ export default function DetalleValidacionScreen() {
                               </View>
                             </View>
 
-                            {/* Tarjeta Profesional si aplica */}
-                            {checksTarjeta ? (
+                            {/* Tarjeta Profesional si aplica (excluyendo Bachiller) */}
+                            {!esBach && checksTarjeta ? (
                               <View style={{ backgroundColor: '#F0F9FF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#BAE6FD', gap: 6 }}>
                                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#0369A1', textTransform: 'uppercase' }}>
                                   Verificación Tarjeta Profesional / Matrícula
@@ -4294,7 +4295,8 @@ export default function DetalleValidacionScreen() {
                   {(() => {
                     const tKey = fa.id || `TIT-${idx}`;
                     const abierta = Boolean(expansionesTitulos[tKey]);
-                    const esTarjeta = fa.tipo === 'TARJETA_PROFESIONAL' || (fa.titulo_obtenido || '').toUpperCase().includes('TARJETA') || Boolean(fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA');
+                    const esBachiller = fa.tipo === 'BACHILLER' || (fa.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
+                    const esTarjeta = !esBachiller && (fa.tipo === 'TARJETA_PROFESIONAL' || (fa.titulo_obtenido || '').toUpperCase().includes('TARJETA') || Boolean(fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA'));
                     const candNombre = data?.candidato?.nombre;
                     const candDoc = data?.candidato?.documento;
 
@@ -5445,27 +5447,30 @@ export default function DetalleValidacionScreen() {
                   />
                 </View>
 
-                <View style={{ flex: 1, minWidth: 160 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                    N° Tarjeta / Registro
-                  </Text>
-                  <TextInput
-                    value={formTarjeta}
-                    onChangeText={setFormTarjeta}
-                    placeholder="Opcional (Ej. 345612 CSJ)"
-                    placeholderTextColor="#94A3B8"
-                    style={{
-                      backgroundColor: '#F8FAFC',
-                      borderWidth: 1,
-                      borderColor: '#CBD5E1',
-                      borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      fontSize: 13,
-                      color: '#0F172A'
-                    }}
-                  />
-                </View>
+                {/* Solo mostrar N° Tarjeta / Registro si NO es Bachiller */}
+                {formTipo !== 'BACHILLER' ? (
+                  <View style={{ flex: 1, minWidth: 160 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                      N° Tarjeta / Registro
+                    </Text>
+                    <TextInput
+                      value={formTarjeta}
+                      onChangeText={setFormTarjeta}
+                      placeholder="Opcional (Ej. 345612 CSJ)"
+                      placeholderTextColor="#94A3B8"
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        fontSize: 13,
+                        color: '#0F172A'
+                      }}
+                    />
+                  </View>
+                ) : null}
               </View>
 
               {/* Decreto 1083 de 2015: Terminación de Pénsum / Materias (Solo Pregrado) */}
@@ -6589,8 +6594,9 @@ export default function DetalleValidacionScreen() {
             }}
           >
             {tituloModalDetalle && (() => {
+              const esBach = tituloModalDetalle.tipo === 'BACHILLER' || (tituloModalDetalle.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
               const checks = obtenerChecksTitulo(tituloModalDetalle, candidato?.nombre, candidato?.documento);
-              const checksTarjeta = tituloModalDetalle.numero_tarjeta_o_registro
+              const checksTarjeta = (!esBach && tituloModalDetalle.numero_tarjeta_o_registro)
                 ? obtenerChecksTarjeta(tituloModalDetalle, candidato?.nombre, candidato?.documento)
                 : null;
               const cumple = tituloModalDetalle.cumple_requisito_cargo ?? true;

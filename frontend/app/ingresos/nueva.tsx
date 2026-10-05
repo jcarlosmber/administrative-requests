@@ -996,7 +996,7 @@ export default function NuevaValidacionScreen() {
     setFormFechaGrado(item.fecha_grado || '');
     setFormCertificaMaterias(Boolean(item.certifica_terminacion_materias));
     setFormFechaMaterias(item.fecha_terminacion_materias || '');
-    setFormTarjeta(item.numero_tarjeta_o_registro || '');
+    setFormTarjeta(item.tipo === 'BACHILLER' ? '' : (item.numero_tarjeta_o_registro || ''));
     setFormCumple(item.cumple_requisito_cargo !== false);
     setFormJustificacion(item.justificacion || '');
     setModalTituloVisible(true);
@@ -1059,7 +1059,7 @@ export default function NuevaValidacionScreen() {
       fecha_grado: formFechaGrado.trim() || 'NO CONSTA',
       certifica_terminacion_materias: formTipo === 'PREGRADO' ? formCertificaMaterias : undefined,
       fecha_terminacion_materias: (formTipo === 'PREGRADO' && formCertificaMaterias) ? (formFechaMaterias.trim() || undefined) : undefined,
-      numero_tarjeta_o_registro: formTarjeta.trim() || undefined,
+      numero_tarjeta_o_registro: formTipo === 'BACHILLER' ? undefined : (formTarjeta.trim() || undefined),
       cumple_requisito_cargo: formCumple,
       justificacion: formJustificacion.trim()
     };
@@ -2491,7 +2491,8 @@ export default function NuevaValidacionScreen() {
                       {(() => {
                         const tKey = fa.id || `TIT-${idx}`;
                         const abierta = Boolean(expansionesTitulos[tKey]);
-                        const esTarjeta = fa.tipo === 'TARJETA_PROFESIONAL' || (fa.titulo_obtenido || '').toUpperCase().includes('TARJETA') || Boolean(fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA');
+                        const esBachiller = fa.tipo === 'BACHILLER' || (fa.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
+                        const esTarjeta = !esBachiller && (fa.tipo === 'TARJETA_PROFESIONAL' || (fa.titulo_obtenido || '').toUpperCase().includes('TARJETA') || Boolean(fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA'));
                         const candNombre = analisisResultado?.candidato?.nombre;
                         const candDoc = analisisResultado?.candidato?.documento;
 
@@ -3900,27 +3901,30 @@ export default function NuevaValidacionScreen() {
                   />
                 </View>
 
-                <View style={{ flex: 1, minWidth: 160 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                    N° Tarjeta / Registro
-                  </Text>
-                  <TextInput
-                    value={formTarjeta}
-                    onChangeText={setFormTarjeta}
-                    placeholder="Opcional (Ej. 345612 CSJ)"
-                    placeholderTextColor="#94A3B8"
-                    style={{
-                      backgroundColor: '#F8FAFC',
-                      borderWidth: 1,
-                      borderColor: '#CBD5E1',
-                      borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      fontSize: 13,
-                      color: '#0F172A'
-                    }}
-                  />
-                </View>
+                {/* Solo mostrar N° Tarjeta / Registro si NO es Bachiller */}
+                {formTipo !== 'BACHILLER' ? (
+                  <View style={{ flex: 1, minWidth: 160 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                      N° Tarjeta / Registro
+                    </Text>
+                    <TextInput
+                      value={formTarjeta}
+                      onChangeText={setFormTarjeta}
+                      placeholder="Opcional (Ej. 345612 CSJ)"
+                      placeholderTextColor="#94A3B8"
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        fontSize: 13,
+                        color: '#0F172A'
+                      }}
+                    />
+                  </View>
+                ) : null}
               </View>
 
               {/* Decreto 1083 de 2015: Terminación de Pénsum / Materias (Solo Pregrado) */}

@@ -786,7 +786,13 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
     if (!item.nombre_archivo && pdfFiles[idx]) item.nombre_archivo = pdfFiles[idx].name;
     if (item.cumple_requisito_cargo === undefined) item.cumple_requisito_cargo = true;
 
-    const esTarjeta = item.tipo === 'TARJETA_PROFESIONAL' || (item.titulo_obtenido || '').toUpperCase().includes('TARJETA') || (item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA');
+    const esBachiller = item.tipo === 'BACHILLER' || (item.titulo_obtenido || '').toUpperCase().includes('BACHILLER') || (item.titulo_obtenido || '').toUpperCase().includes('BACHILLERATO');
+    if (esBachiller) {
+      item.numero_tarjeta_o_registro = undefined;
+      delete item.verificacion_formal_tarjeta;
+    }
+
+    const esTarjeta = !esBachiller && (item.tipo === 'TARJETA_PROFESIONAL' || (item.titulo_obtenido || '').toUpperCase().includes('TARJETA') || (item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA'));
 
     if (esTarjeta) {
       if (!item.verificacion_formal_tarjeta) {
