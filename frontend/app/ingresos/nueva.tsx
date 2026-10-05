@@ -2750,15 +2750,20 @@ export default function NuevaValidacionScreen() {
                       <TouchableOpacity
                         onPress={() => pedirConfirmarEliminarCertificado(i)}
                         style={{
-                          padding: 5,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 8,
+                          paddingVertical: 5,
                           borderRadius: 6,
-                          backgroundColor: '#FEE2E2',
+                          backgroundColor: '#FEF2F2',
                           borderWidth: 1,
-                          borderColor: '#FCA5A5'
+                          borderColor: '#FECACA'
                         }}
-                        accessibilityLabel="Eliminar certificado"
+                        accessibilityLabel="Eliminar experiencia laboral"
                       >
-                        <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                        <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>Eliminar Experiencia</Text>
                       </TouchableOpacity>
                     </View>
                   </View>

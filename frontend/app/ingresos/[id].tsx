@@ -2434,8 +2434,8 @@ export default function DetalleValidacionScreen() {
                             ) : null}
                           </View>
 
-                          {/* CALIFICACIÓN */}
-                          <View style={{ width: '12%', paddingRight: 8 }}>
+                          {/* CALIFICACIÓN Y ACCIONES */}
+                          <View style={{ width: '12%', paddingRight: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                             {esRel ? (
                               <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
                                 <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Relacionada</Text>
@@ -2449,6 +2449,23 @@ export default function DetalleValidacionScreen() {
                                 <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>No Relacionada</Text>
                               </View>
                             )}
+
+                            <TouchableOpacity
+                              onPress={(e: any) => {
+                                if (e && e.stopPropagation) e.stopPropagation();
+                                pedirConfirmarEliminarCertificado(idx);
+                              }}
+                              style={{
+                                padding: 4,
+                                borderRadius: 5,
+                                backgroundColor: '#FEF2F2',
+                                borderWidth: 1,
+                                borderColor: '#FECACA'
+                              }}
+                              accessibilityLabel="Eliminar experiencia laboral"
+                            >
+                              <Ionicons name="trash-outline" size={13} color="#DC2626" />
+                            </TouchableOpacity>
                           </View>
                         </TouchableOpacity>
 
@@ -2532,6 +2549,24 @@ export default function DetalleValidacionScreen() {
                                 >
                                   <Ionicons name="close-circle-outline" size={13} color="#D97706" />
                                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => pedirConfirmarEliminarCertificado(idx)}
+                                  style={{
+                                    backgroundColor: '#FEF2F2',
+                                    borderWidth: 1,
+                                    borderColor: '#FECACA',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="trash-outline" size={13} color="#DC2626" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>Eliminar Experiencia</Text>
                                 </TouchableOpacity>
 
                                 {(() => {
@@ -3740,15 +3775,20 @@ export default function DetalleValidacionScreen() {
                     <TouchableOpacity
                       onPress={() => pedirConfirmarEliminarCertificado(index)}
                       style={{
-                        padding: 6,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 5,
                         borderRadius: 6,
-                        backgroundColor: '#FEE2E2',
+                        backgroundColor: '#FEF2F2',
                         borderWidth: 1,
                         borderColor: '#FCA5A5'
                       }}
                       accessibilityLabel="Eliminar certificado"
                     >
-                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>Eliminar Experiencia</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -5614,6 +5654,30 @@ export default function DetalleValidacionScreen() {
                       </TouchableOpacity>
 
                       <TouchableOpacity
+                        onPress={() => {
+                          const foundIdx = certificados.findIndex(c => (c.id && c.id === certModalDetalle.id) || (c.id_certificado && c.id_certificado === certModalDetalle.id_certificado));
+                          if (foundIdx !== -1) {
+                            setCertModalDetalle(null);
+                            pedirConfirmarEliminarCertificado(foundIdx);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#FEF2F2',
+                          borderWidth: 1,
+                          borderColor: '#FECACA',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                        <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '800' }}>Eliminar Experiencia</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
                         onPress={() => setCertModalDetalle(null)}
                         style={{
                           backgroundColor: '#0F172A',
@@ -6177,24 +6241,47 @@ export default function DetalleValidacionScreen() {
             {/* Botones Acciones Modal Certificado */}
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
               {certEditandoIndex !== null && (
-                <TouchableOpacity
-                  onPress={() => descartarCertificado(certEditandoIndex)}
-                  style={{
-                    paddingVertical: 9,
-                    paddingHorizontal: 12,
-                    borderRadius: 8,
-                    backgroundColor: '#FFFBEB',
-                    borderWidth: 1,
-                    borderColor: '#FDE68A',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginRight: 'auto'
-                  }}
-                >
-                  <Ionicons name="ban-outline" size={15} color="#D97706" />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 'auto', flexWrap: 'wrap' }}>
+                  <TouchableOpacity
+                    onPress={() => descartarCertificado(certEditandoIndex)}
+                    style={{
+                      paddingVertical: 9,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      backgroundColor: '#FFFBEB',
+                      borderWidth: 1,
+                      borderColor: '#FDE68A',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons name="ban-outline" size={15} color="#D97706" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      const idx = certEditandoIndex;
+                      setModalCertVisible(false);
+                      pedirConfirmarEliminarCertificado(idx);
+                    }}
+                    style={{
+                      paddingVertical: 9,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      backgroundColor: '#FEF2F2',
+                      borderWidth: 1,
+                      borderColor: '#FECACA',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#DC2626' }}>Eliminar Experiencia</Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               <TouchableOpacity
