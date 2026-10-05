@@ -867,8 +867,12 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
       const ALLOWED = [
         'git status -s',
         'git log -5 --oneline',
+        'git pull origin main',
+        'git pull',
+        'git fetch origin main',
         'pm2 list',
         'pm2 restart all',
+        'pm2 restart backend-solicitudes',
         'pm2 logs --lines 30 --nostream',
         'bash deploy_ingresos.sh',
         'git branch -a',
@@ -883,8 +887,24 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
         });
       }
 
+      // Si es un comando de reinicio directo de PM2, responder primero para evitar corte 502
+      if (cmd === 'pm2 restart all' || cmd === 'pm2 restart backend-solicitudes') {
+        res.json({
+          success: true,
+          message: 'Reinicio de servicios programado con éxito.',
+          output: `Comando '${cmd}' programado. El servidor se reiniciará en 1.5 segundos en segundo plano sin interrumpir la conexión web.`,
+          timestamp: new Date().toISOString()
+        });
+        setTimeout(() => {
+          exec(cmd, (err) => {
+            if (err) console.error('[PM2 Terminal] Error al ejecutar reinicio:', err);
+          });
+        }, 1500);
+        return;
+      }
+
       const cwd = cmd.startsWith('npm') || cmd.startsWith('node') ? path.join(projectRoot, 'backend') : projectRoot;
-      exec(cmd, { cwd, timeout: 180000 }, (error, stdout, stderr) => {
+      exec(cmd, { cwd, timeout: 240000 }, (error, stdout, stderr) => {
         const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
         if (error) {
           return res.status(500).json({

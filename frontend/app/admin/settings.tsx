@@ -3099,6 +3099,27 @@ export default function AdminSettings() {
 
                         <TouchableOpacity
                           onPress={() => {
+                            setTerminalInteractiveCommand('git pull origin main');
+                            runTerminalCommand('git pull origin main');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#38BDF8',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: 'monospace', fontWeight: '700' }}>
+                            git pull
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
                             setTerminalInteractiveCommand('git log -5 --oneline');
                             runTerminalCommand('git log -5 --oneline');
                           }}
