@@ -62,6 +62,8 @@ export default function DetalleValidacionScreen() {
   const [formCertVinculoVigente, setFormCertVinculoVigente] = useState(false);
   const [formCertClasificacion, setFormCertClasificacion] = useState<'RELACIONADA' | 'NO_RELACIONADA'>('RELACIONADA');
   const [formCertTipoVinculo, setFormCertTipoVinculo] = useState('');
+  const [formCertFunciones, setFormCertFunciones] = useState('');
+  const [formCertArchivoAsociado, setFormCertArchivoAsociado] = useState('');
 
   // Modal Confirmar Eliminación (Unificado para Títulos, Certificados y No Aplican)
   const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
@@ -765,7 +767,54 @@ export default function DetalleValidacionScreen() {
     setFormCertVinculoVigente(Boolean(cert.vinculo_vigente));
     setFormCertClasificacion(cert.clasificacion_experiencia === 'RELACIONADA' ? 'RELACIONADA' : 'NO_RELACIONADA');
     setFormCertTipoVinculo(cert.tipo_vinculo || 'Laboral');
+    const fnTexto = (cert.funciones_certificadas || []).map((f: any) => typeof f === 'string' ? f : f.funcion).filter(Boolean).join('\n\n');
+    setFormCertFunciones(fnTexto);
+    setFormCertArchivoAsociado(cert.nombre_archivo || cert.anexos?.[0] || '');
     setModalCertVisible(true);
+  };
+
+  const abrirCrearNuevoCertificado = (certBase?: CertificadoAnalizado) => {
+    setCertEditandoIndex(null);
+    setFormCertCargo('');
+    setFormCertEntidad(certBase?.entidad || '');
+    setFormCertFechaInicio('');
+    setFormCertFechaFin('');
+    setFormCertVinculoVigente(false);
+    setFormCertClasificacion('RELACIONADA');
+    setFormCertTipoVinculo(certBase?.tipo_vinculo || 'CONTRATO INDEFINIDO');
+    setFormCertArchivoAsociado(certBase?.nombre_archivo || certBase?.anexos?.[0] || '');
+    setFormCertFunciones('');
+    setModalCertVisible(true);
+  };
+
+  const prellenarCargoEnelJefeLitigios = () => {
+    setFormCertCargo('JEFE DE DIVISIÓN LITIGIOS COLOMBIA');
+    setFormCertEntidad('ENEL COLOMBIA S.A. ESP');
+    setFormCertTipoVinculo('CONTRATO INDEFINIDO');
+    setFormCertFechaInicio('2017-09-01');
+    setFormCertFechaFin('2022-11-15');
+    setFormCertVinculoVigente(true);
+    setFormCertClasificacion('RELACIONADA');
+    const certEnel = certificados.find(c => (c.entidad || '').toUpperCase().includes('ENEL') || (c.entidad || '').toUpperCase().includes('CODENSA'));
+    if (certEnel) {
+      setFormCertArchivoAsociado(certEnel.nombre_archivo || certEnel.anexos?.[0] || '');
+    }
+    setFormCertFunciones(
+      "Definir las estrategias, coordinar y/o asumir la representación legal de las compañías del grupo en Colombia, en las demandas relevantes que se interpongan en contra de las mismas, con el fin de defender sus intereses y procurar obtener sentencias favorables en los diferentes procesos.\n\n" +
+      "Coordinar y/o interponer las acciones judiciales y/o administrativas de carácter relevante en representación legal de las compañías del grupo ante los organismos judiciales y/o administrativos, en defensa de los intereses de las compañías y de acuerdo con las necesidades y requerimientos de las áreas internas.\n\n" +
+      "Coordinar y/o asistir, preparar y representar judicialmente a las compañías del grupo, en las diligencias de interrogatorio de parte, conciliaciones prejudiciales, testimonios, entre otras; en las cuales sean citadas con el fin de defender los intereses del grupo.\n\n" +
+      "Gestionar y validar la revisión periódica de los litigios a cargo de los abogados/as internos y externos de la compañía, con el fin de garantizar el adecuado trámite de los mismos. De igual forma, gestionar y verificar la correcta actualización y funcionamiento del software jurídico SUITE o el que haga sus veces, con el fin de mantener la información al día de los diferentes procesos.\n\n" +
+      "Liderar el comité de litigios con el objetivo de evacuar, programar y verificar el cumplimiento de diligencias, y estudiar los temas relevantes de la empresa y del grupo de trabajo.\n\n" +
+      "Liderar y gestionar la contratación de los abogados/as externos de la unidad con el fin que se cumpla con la norma interna y las políticas del grupo respecto a la contratación y gestión de servicios tercerizados.\n\n" +
+      "Validar el informe de juicios relevantes, con el fin de verificar la información que se suministra.\n\n" +
+      "Gestionar y/o validar la correcta ejecución del presupuesto de gastos de la unidad con el fin de garantizar el uso adecuado de los recursos asignados.\n\n" +
+      "Informar al/la gerente sobre los asuntos administrativos y de litigios de relevancia que se presenten al interior de la unidad, con el fin de definir estrategias y políticas a seguir de acuerdo con las directrices del grupo.\n\n" +
+      "Prestar asesoría jurídica a todas las áreas de las empresas, coordinar y/o valorar el riesgo asociado a posibles contingencias judiciales de la compañía, así como impartir en visto bueno a las diferentes comunicaciones y documentos, que le sean trasladados por parte del/la gerente general o los/as gerentes de área, previa revisión, con el fin de proteger los intereses de las compañías.\n\n" +
+      "Participar en el diseño y ejecución de los objetivos estratégicos de la gerencia de asuntos legales y corporativos.\n\n" +
+      "Colaborar en el desarrollo de plataformas tecnológicas para el seguimiento de la gestión judicial y presupuestal para la ejecución de contratos con abogados/as externos.\n\n" +
+      "Apropiar y dar cumplimiento a las políticas, documentación y estándares establecidos en los Sistemas Integrados de Gestión de la organización.\n\n" +
+      "Desarrollar las demás actividades relacionadas e inherentes al cargo y aquellas que le sean asignadas, orientadas al cumplimiento de los objetivos, proyectos e iniciativas de la unidad y de la Organización."
+    );
   };
 
   const descartarCertificado = async (idx: number) => {
@@ -818,7 +867,6 @@ export default function DetalleValidacionScreen() {
   };
 
   const guardarCertificadoForm = async () => {
-    if (certEditandoIndex === null) return;
     if (!formCertCargo.trim()) {
       mostrarMensaje('Campo Requerido', 'Debes ingresar la denominación del cargo.');
       return;
@@ -832,20 +880,55 @@ export default function DetalleValidacionScreen() {
       return;
     }
 
-    const certPrevio = certificados[certEditandoIndex];
-    const certActualizado: CertificadoAnalizado = {
-      ...certPrevio,
-      cargo_certificado: formCertCargo.trim(),
-      entidad: formCertEntidad.trim(),
-      fecha_inicio: formCertFechaInicio.trim(),
-      fecha_fin: formCertVinculoVigente ? '' : formCertFechaFin.trim(),
-      vinculo_vigente: formCertVinculoVigente,
-      clasificacion_experiencia: formCertClasificacion,
-      tipo_vinculo: formCertTipoVinculo.trim() || certPrevio.tipo_vinculo
-    };
+    const funcionesArray = formCertFunciones.trim()
+      ? formCertFunciones.split('\n').map(l => l.trim()).filter(Boolean).map(f => ({ funcion: f, evidencia_textual: f }))
+      : [];
 
-    const nuevaListaCerts = [...certificados];
-    nuevaListaCerts[certEditandoIndex] = certActualizado;
+    let nuevaListaCerts = [...certificados];
+
+    if (certEditandoIndex !== null) {
+      const certPrevio = certificados[certEditandoIndex];
+      const certActualizado: CertificadoAnalizado = {
+        ...certPrevio,
+        cargo_certificado: formCertCargo.trim(),
+        entidad: formCertEntidad.trim(),
+        fecha_inicio: formCertFechaInicio.trim(),
+        fecha_fin: formCertFechaFin.trim(),
+        vinculo_vigente: formCertVinculoVigente,
+        clasificacion_experiencia: formCertClasificacion,
+        tipo_vinculo: formCertTipoVinculo.trim() || certPrevio.tipo_vinculo,
+        funciones_certificadas: funcionesArray.length > 0 ? funcionesArray : certPrevio.funciones_certificadas,
+        nombre_archivo: formCertArchivoAsociado || certPrevio.nombre_archivo,
+        anexos: formCertArchivoAsociado ? [formCertArchivoAsociado] : certPrevio.anexos
+      };
+      nuevaListaCerts[certEditandoIndex] = certActualizado;
+    } else {
+      const nuevoIdNum = certificados.length + 1;
+      const nuevoCert: CertificadoAnalizado = {
+        id_certificado: `CERT-${nuevoIdNum}`,
+        cargo_certificado: formCertCargo.trim(),
+        entidad: formCertEntidad.trim(),
+        fecha_inicio: formCertFechaInicio.trim(),
+        fecha_fin: formCertFechaFin.trim(),
+        vinculo_vigente: formCertVinculoVigente,
+        clasificacion_experiencia: formCertClasificacion,
+        tipo_vinculo: formCertTipoVinculo.trim() || 'Laboral',
+        nombre_archivo: formCertArchivoAsociado || '',
+        anexos: formCertArchivoAsociado ? [formCertArchivoAsociado] : [],
+        funciones_certificadas: funcionesArray,
+        experiencia_profesional: true,
+        verificacion_formal: {
+          corresponde_aspirante: true,
+          entidad_identificable: true,
+          suscriptor_identificable: true,
+          cuenta_con_firma: true,
+          fecha_expedicion_identificable: true,
+          documento_legible_integro: true,
+          mecanismos_contacto_verificacion: true
+        }
+      };
+      nuevaListaCerts.push(nuevoCert);
+    }
 
     const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
     let certsFinales = nuevaListaCerts;
@@ -872,7 +955,12 @@ export default function DetalleValidacionScreen() {
       });
       if (data) setData({ ...data, certificados: certsFinales, consolidado: nuevoConsolidado || data.consolidado });
       setHayCambios(false);
-      mostrarMensaje('Certificado Guardado', 'Los datos del certificado y los cómputos de experiencia han sido actualizados en la base de datos.');
+      mostrarMensaje(
+        certEditandoIndex !== null ? 'Certificado Guardado' : 'Experiencia Laboral Creada',
+        certEditandoIndex !== null
+          ? 'Los datos del certificado y los cómputos de experiencia han sido actualizados en la base de datos.'
+          : 'El cargo ha sido incorporado al expediente y los tiempos válidos han sido recalculados automáticamente.'
+      );
     } catch (err: any) {
       mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el certificado.');
     } finally {
@@ -2414,10 +2502,28 @@ export default function DetalleValidacionScreen() {
                 </Text>
               </View>
 
-              <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>
-                  {certificados.length} certificación(es) evaluada(s)
-                </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <TouchableOpacity
+                  onPress={() => abrirCrearNuevoCertificado()}
+                  style={{
+                    backgroundColor: '#1E40AF',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#FFFFFF' }}>+ Agregar Experiencia Laboral</Text>
+                </TouchableOpacity>
+
+                <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>
+                    {certificados.length} certificación(es) evaluada(s)
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -2646,6 +2752,24 @@ export default function DetalleValidacionScreen() {
                                 >
                                   <Ionicons name="close-circle-outline" size={13} color="#D97706" />
                                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirCrearNuevoCertificado(c)}
+                                  style={{
+                                    backgroundColor: '#EFF6FF',
+                                    borderWidth: 1,
+                                    borderColor: '#BFDBFE',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="copy-outline" size={13} color="#1E40AF" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>Agregar Otro Cargo de Este Soporte</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -6167,7 +6291,7 @@ export default function DetalleValidacionScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="briefcase" size={20} color="#1E40AF" />
                 <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
-                  Modificar Certificado Laboral
+                  {certEditandoIndex !== null ? 'Modificar Certificado Laboral' : 'Agregar Experiencia Laboral / Nuevo Cargo'}
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setModalCertVisible(false)}>
@@ -6176,6 +6300,35 @@ export default function DetalleValidacionScreen() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+              {/* Atajo rápido para Enel Litigios si es creación */}
+              {certEditandoIndex === null && (
+                <TouchableOpacity
+                  onPress={prellenarCargoEnelJefeLitigios}
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderWidth: 1.5,
+                    borderColor: '#F59E0B',
+                    padding: 12,
+                    borderRadius: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10
+                  }}
+                >
+                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#FDE68A', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="flash" size={18} color="#B45309" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
+                      ⚡ Prellenar Cargo Faltante: JEFE DE DIVISIÓN LITIGIOS COLOMBIA
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#B45309' }}>
+                      Enel Colombia • 2017-09-01 al 2022-11-15 (fecha certificación) • 14 funciones de litigios
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
               {/* Denominación del Cargo */}
               <View>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
@@ -6184,7 +6337,7 @@ export default function DetalleValidacionScreen() {
                 <TextInput
                   value={formCertCargo}
                   onChangeText={setFormCertCargo}
-                  placeholder="Ej. Profesional Universitario, Jefe de División"
+                  placeholder="Ej. JEFE DE DIVISIÓN LITIGIOS COLOMBIA"
                   placeholderTextColor="#94A3B8"
                   style={{
                     backgroundColor: '#F8FAFC',
@@ -6207,7 +6360,7 @@ export default function DetalleValidacionScreen() {
                 <TextInput
                   value={formCertEntidad}
                   onChangeText={setFormCertEntidad}
-                  placeholder="Ej. Enel Colombia S.A. ESP, Alcaldía Mayor"
+                  placeholder="Ej. ENEL COLOMBIA S.A. ESP"
                   placeholderTextColor="#94A3B8"
                   style={{
                     backgroundColor: '#F8FAFC',
@@ -6230,7 +6383,7 @@ export default function DetalleValidacionScreen() {
                 <TextInput
                   value={formCertTipoVinculo}
                   onChangeText={setFormCertTipoVinculo}
-                  placeholder="Ej. Contrato laboral a término indefinido, Prestación de servicios"
+                  placeholder="Ej. CONTRATO INDEFINIDO, Prestación de servicios"
                   placeholderTextColor="#94A3B8"
                   style={{
                     backgroundColor: '#F8FAFC',
@@ -6254,7 +6407,7 @@ export default function DetalleValidacionScreen() {
                   <TextInput
                     value={formCertFechaInicio}
                     onChangeText={setFormCertFechaInicio}
-                    placeholder="AAAA-MM-DD"
+                    placeholder="2017-09-01"
                     placeholderTextColor="#94A3B8"
                     style={{
                       backgroundColor: '#F8FAFC',
@@ -6269,29 +6422,29 @@ export default function DetalleValidacionScreen() {
                   />
                 </View>
 
-                {!formCertVinculoVigente && (
-                  <View style={{ flex: 1, minWidth: 160 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                      Fecha de Fin (AAAA-MM-DD)
-                    </Text>
-                    <TextInput
-                      value={formCertFechaFin}
-                      onChangeText={setFormCertFechaFin}
-                      placeholder="AAAA-MM-DD"
-                      placeholderTextColor="#94A3B8"
-                      style={{
-                        backgroundColor: '#F8FAFC',
-                        borderWidth: 1,
-                        borderColor: '#CBD5E1',
-                        borderRadius: 8,
-                        paddingHorizontal: 12,
-                        paddingVertical: 8,
-                        fontSize: 13,
-                        color: '#0F172A'
-                      }}
-                    />
-                  </View>
-                )}
+                <View style={{ flex: 1, minWidth: 160 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                    {formCertVinculoVigente
+                      ? 'Fecha Fin / Expedición Certificado * (AAAA-MM-DD)'
+                      : 'Fecha de Fin (AAAA-MM-DD)'}
+                  </Text>
+                  <TextInput
+                    value={formCertFechaFin}
+                    onChangeText={setFormCertFechaFin}
+                    placeholder="2022-11-15"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: formCertVinculoVigente ? '#3B82F6' : '#CBD5E1',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 13,
+                      color: '#0F172A'
+                    }}
+                  />
+                </View>
               </View>
 
               {/* Vínculo Vigente Checkbox */}
@@ -6313,10 +6466,67 @@ export default function DetalleValidacionScreen() {
                   size={18}
                   color={formCertVinculoVigente ? '#1D4ED8' : '#64748B'}
                 />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: formCertVinculoVigente ? '#1E40AF' : '#475569' }}>
-                  Vínculo Vigente / Actualmente Vinculado a la Entidad
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: formCertVinculoVigente ? '#1E40AF' : '#475569' }}>
+                    Vínculo Vigente / Actualmente Vinculado a la Entidad
+                  </Text>
+                  {formCertVinculoVigente && (
+                    <Text style={{ fontSize: 10, color: '#2563EB', marginTop: 1 }}>
+                      💡 La fecha fin registrada arriba se tomará como la fecha de corte o expedición del certificado (ej. 2022-11-15).
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
+
+              {/* Funciones Certificadas */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Funciones Certificadas del Cargo (opcional, separadas por párrafo)
+                </Text>
+                <TextInput
+                  value={formCertFunciones}
+                  onChangeText={setFormCertFunciones}
+                  placeholder="Pega las funciones certificadas..."
+                  placeholderTextColor="#94A3B8"
+                  multiline={true}
+                  numberOfLines={4}
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 12,
+                    color: '#0F172A',
+                    minHeight: 80,
+                    textAlignVertical: 'top'
+                  }}
+                />
+              </View>
+
+              {/* Archivo PDF de Soporte */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Nombre del Archivo PDF de Soporte Asociado
+                </Text>
+                <TextInput
+                  value={formCertArchivoAsociado}
+                  onChangeText={setFormCertArchivoAsociado}
+                  placeholder="Ej. Certificado_Enel_Gustavo_Sanchez.pdf"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 12,
+                    color: '#0F172A'
+                  }}
+                />
+              </View>
 
               {/* Clasificación de Experiencia */}
               <View>

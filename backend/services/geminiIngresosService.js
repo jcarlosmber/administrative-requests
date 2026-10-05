@@ -141,6 +141,8 @@ A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bac
    - ¡REGLA OBLIGATORIA CONTRA CLASIFICAR DIPLOMADOS COMO PREGRADO!: NUNCA clasifiques diplomados, cursos cortos, talleres, seminarios, congresos, simposios o certificados de asistencia como Educación Formal (Pregrado, Especialización, Maestría ni Doctorado). Un diplomado (ej. 'Diplomado Código General del Proceso', 'Diplomado en Derecho Administrativo') NO es un pregrado ni posgrado formal según la Ley 30 de 1992 y el Decreto 1083 de 2015. Debes clasificarlo OBLIGATORIAMENTE en "documentos_no_aplican".
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
    - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos, cotejo funcional y verifica si corresponde a modalidades de la Ley 2039 de 2020 si ocurrió previo al grado.
+   - ¡REGLA ESTRICTA DE MÚLTIPLES CARGOS O ASCENSOS EN UN MISMO DOCUMENTO!: Si una certificación laboral relaciona varios cargos desempeñados sucesivamente dentro de la misma entidad (ej. 1. Cargo A, 2. Cargo B, 3. Cargo C), DEBES generar UN objeto individual en el arreglo 'certificados' por CADA UNO de los cargos desempeñados. NUNCA omitas ninguno de los cargos ni los fusiones en uno solo.
+   - ¡REGLA OBLIGATORIA DE FECHA FIN EN VÍNCULOS VIGENTES / ACTUALMENTE VINCULADO!: Cuando un cargo indique que el titular se encuentra 'Actualmente Vinculado', 'Vigente', 'a la fecha' o similar, la 'fecha_fin' DEBE ser exactamente la FECHA DE EXPEDICIÓN de la certificación (en formato YYYY-MM-DD, ej. si el certificado fue expedido a los 15 días del mes de noviembre de 2022, 'fecha_fin' DEBE ser '2022-11-15'), marcando obligatoriamente 'vinculo_vigente': true. Según el Decreto 1083 de 2015, la experiencia computable en vinculaciones vigentes se acredita y cuenta hasta la fecha cierta de expedición de la certificación.
 C. DOCUMENTOS QUE NO APLICAN AL CARGO (Documentos Descartados / No Computables):
    - DEBES clasificar aquí:
      1. DIPLOMADOS, cursos de actualización o capacitación corta, seminarios, talleres, congresos, simposios y certificaciones de educación no formal o continuada (ej. 'Diplomado Código General del Proceso (80 horas)' de Legis, diplomados universitarios no conducentes a título, etc.).
@@ -623,8 +625,7 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
           (ent1.includes('ENEL') && ent2.includes('CODENSA')) ||
           (ent1.length > 4 && ent2.length > 4 && (ent1.includes(ent2) || ent2.includes(ent1)));
 
-        const cargosCompatibles = cargo1 === cargo2 ||
-          (cargo1.length > 5 && cargo2.length > 5 && (cargo1.includes(cargo2) || cargo2.includes(cargo1)));
+        const cargosCompatibles = cargo1 === cargo2 && cargo1.length > 2;
 
         if (entidadesCompatibles && cargosCompatibles) {
           // Unir anexos sin duplicados
