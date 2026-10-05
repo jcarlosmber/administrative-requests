@@ -381,19 +381,50 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
 
 function repararJsonConCaracteresControl(raw) {
   let str = (raw || '').trim();
-  if (str.startsWith('```json')) str = str.slice(7);
-  else if (str.startsWith('```')) str = str.slice(3);
-  if (str.endsWith('```')) str = str.slice(0, -3);
-  str = str.trim();
+
+  // 1. Extraer bloque de código si viene envuelto en markdown ```json ... ```
+  const codeBlockMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch) {
+    str = codeBlockMatch[1].trim();
+  } else {
+    // Si viene con ``` al inicio o fin sin cierre regex estricto
+    if (str.startsWith('```json')) str = str.slice(7).trim();
+    else if (str.startsWith('```')) str = str.slice(3).trim();
+    if (str.endsWith('```')) str = str.slice(0, -3).trim();
+
+    // Si aún tiene texto previo al primer '{' o '['
+    if (!str.startsWith('{') && !str.startsWith('[')) {
+      const pLlave = str.indexOf('{');
+      const pCorch = str.indexOf('[');
+      let inicio = -1;
+      if (pLlave !== -1 && pCorch !== -1) inicio = Math.min(pLlave, pCorch);
+      else if (pLlave !== -1) inicio = pLlave;
+      else if (pCorch !== -1) inicio = pCorch;
+
+      if (inicio !== -1) {
+        str = str.substring(inicio).trim();
+      }
+    }
+  }
+
+  let errorOriginal = null;
 
   // Intento 1: Parseo directo estándar
   try {
     return JSON.parse(str);
-  } catch (e1) {
-    // Continuar a reparación de caracteres de control
+  } catch (err1) {
+    errorOriginal = err1;
   }
 
-  // Intento 2: Escapar caracteres de control que están dentro de cadenas de texto literales
+  // Intento 2: Limpieza de comas colgantes (trailing commas)
+  try {
+    const sinComas = str.replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(sinComas);
+  } catch (err2) {
+    // Continuar
+  }
+
+  // Intento 3: Escapar caracteres de control que están dentro de cadenas de texto literales
   try {
     let enCadena = false;
     let escapado = false;
@@ -439,16 +470,62 @@ function repararJsonConCaracteresControl(raw) {
       }
     }
 
-    return JSON.parse(resultado);
-  } catch (e2) {
-    // Intento 3: Limpiar caracteres no imprimibles
     try {
-      const sanitized = str.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
-      return JSON.parse(sanitized);
-    } catch (e3) {
-      throw e1;
+      return JSON.parse(resultado);
+    } catch (eRes) {
+      const resultadoSinComas = resultado.replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(resultadoSinComas);
     }
+  } catch (err3) {
+    // Continuar
   }
+
+  // Intento 4: Sanear caracteres no imprimibles
+  try {
+    const sanitized = str
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(sanitized);
+  } catch (err4) {
+    // Continuar
+  }
+
+  // Intento 5: Reparar llaves o corchetes no cerrados si la respuesta quedó truncada
+  try {
+    let reparado = str.trim();
+    const comillas = (reparado.match(/(?<!\\)"/g) || []).length;
+    if (comillas % 2 !== 0) {
+      reparado += '"';
+    }
+    const pila = [];
+    let enString = false;
+    let esc = false;
+    for (let i = 0; i < reparado.length; i++) {
+      const c = reparado[i];
+      if (esc) { esc = false; continue; }
+      if (c === '\\') { esc = true; continue; }
+      if (c === '"') { enString = !enString; continue; }
+      if (!enString) {
+        if (c === '{') pila.push('}');
+        else if (c === '[') pila.push(']');
+        else if (c === '}' || c === ']') {
+          if (pila.length > 0 && pila[pila.length - 1] === c) {
+            pila.pop();
+          }
+        }
+      }
+    }
+    while (pila.length > 0) {
+      reparado += pila.pop();
+    }
+    const reparadoSinComas = reparado.replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(reparadoSinComas);
+  } catch (err5) {
+    // Continuar
+  }
+
+  // Si todas las opciones fallan, arrojar el error original descriptivo
+  throw new Error(errorOriginal ? errorOriginal.message : 'Estructura JSON malformada');
 }
 
   let parsedJson;
