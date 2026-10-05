@@ -124,3 +124,23 @@ SELECT DISTINCT
 FROM public.planta_personal_sjd p
 WHERE p.cargo IS NOT NULL
 ON CONFLICT (cargo_nombre, codigo, grado) DO NOTHING;
+
+-- 7. Poblar Resoluciones Oficiales Marco
+INSERT INTO public.teletrabajo_resoluciones (
+    id, numero_resolucion, anio, fecha_expedicion, fecha_inicio_vigencia, fecha_fin_vigencia, 
+    descripcion, modalidad_principal, estado, created_at, updated_at
+) VALUES 
+('11700000-0000-0000-0000-000000002026', 'Resolución No. 117 de 2026', 2026, '2026-03-10', '2026-03-10', '2027-03-10', 'Por la cual se adopta la política interna de teletrabajo en la Secretaría Jurídica Distrital.', 'TELETRABAJO', 'VIGENTE', NOW(), NOW()),
+('20100000-0000-0000-0000-000000002026', 'Resolución No. 201 de 2026', 2026, '2026-05-04', '2026-05-04', '2026-09-14', 'Por la cual se autoriza la modalidad de teletrabajo a unos/as servidores/as públicos/as de la Secretaría Jurídica Distrital (Efectos suspendidos por Resolución No. 409 de 2026).', 'TELETRABAJO', 'DEROGADA', NOW(), NOW()),
+('36600000-0000-0000-0000-000000002026', 'Resolución No. 366 de 2026', 2026, '2026-08-20', '2026-08-20', '2027-02-20', 'Por la cual se autoriza la modalidad de teletrabajo autónomo a la servidora pública Rosa Isabel Sierra Laborde de la Dirección Distrital de Política Jurídica por el término de seis (6) meses.', 'TELETRABAJO', 'VIGENTE', NOW(), NOW()),
+('40900000-0000-0000-0000-000000002026', 'Resolución No. 409 de 2026', 2026, '2026-09-14', '2026-09-15', '2026-12-14', 'Por la cual se suspende temporalmente la Resolución No. 201 de 2026, se habilita temporalmente el trabajo en casa (5x5) a servidores/as públicos/as con ocasión de las obras en el Edificio Bicentenario II, y se autoriza la modalidad de teletrabajo híbrido a servidores/as públicos/as de la entidad.', 'TRABAJO_EN_CASA', 'VIGENTE', NOW(), NOW())
+ON CONFLICT (id) DO UPDATE SET
+    numero_resolucion = EXCLUDED.numero_resolucion,
+    fecha_expedicion = EXCLUDED.fecha_expedicion,
+    fecha_inicio_vigencia = EXCLUDED.fecha_inicio_vigencia,
+    fecha_fin_vigencia = EXCLUDED.fecha_fin_vigencia,
+    descripcion = EXCLUDED.descripcion,
+    modalidad_principal = EXCLUDED.modalidad_principal,
+    estado = EXCLUDED.estado,
+    updated_at = NOW();
+
