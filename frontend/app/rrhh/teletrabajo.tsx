@@ -26,22 +26,106 @@ import {
   EstadisticasTeletrabajo,
 } from '../../lib/teletrabajoService';
 
+// Sistema de diseño institucional versión clara basado en supervision-prueba (Marca Navy + Slate)
+const THEME = {
+  // Colores de marca (Marca 50 - 900)
+  marca900: '#0D2A48',
+  marca800: '#123A63',
+  marca700: '#174A7E',
+  marca600: '#1F5A96',
+  marca200: '#BFD7F0',
+  marca100: '#D6E4F4',
+  marca50: '#EEF4FB',
+  marcaHover: 'rgba(238, 244, 251, 0.75)',
+
+  // Escala de grises Slate
+  slate50: '#F8FAFC',
+  slate100: '#F1F5F9',
+  slate200: '#E2E8F0',
+  slate300: '#CBD5E1',
+  slate400: '#94A3B8',
+  slate500: '#64748B',
+  slate600: '#475569',
+  slate700: '#334155',
+  slate800: '#1E293B',
+  slate900: '#0F172A',
+  white: '#FFFFFF',
+
+  // Semáforo y estados (badges con ring-1 sutil)
+  emeraldBg: '#ECFDF5',
+  emeraldText: '#047857',
+  emeraldRing: 'rgba(5, 150, 105, 0.25)',
+
+  roseBg: '#FFF1F2',
+  roseText: '#BE123C',
+  roseRing: 'rgba(225, 29, 72, 0.25)',
+
+  amberBg: '#FFFBEB',
+  amberText: '#92400E',
+  amberRing: 'rgba(217, 119, 6, 0.25)',
+
+  skyBg: '#F0F9FF',
+  skyText: '#0369A1',
+  skyRing: 'rgba(2, 132, 199, 0.25)',
+
+  purpleBg: '#FAF5FF',
+  purpleText: '#6B21A8',
+  purpleRing: 'rgba(147, 51, 234, 0.25)',
+
+  slateBadgeBg: '#F1F5F9',
+  slateBadgeText: '#475569',
+  slateBadgeRing: 'rgba(100, 116, 139, 0.25)',
+
+  badges: {
+    emerald: {
+      bg: '#ECFDF5',
+      text: '#047857',
+      border: 'rgba(5, 150, 105, 0.25)',
+    },
+    rose: {
+      bg: '#FFF1F2',
+      text: '#BE123C',
+      border: 'rgba(225, 29, 72, 0.25)',
+    },
+    amber: {
+      bg: '#FFFBEB',
+      text: '#92400E',
+      border: 'rgba(217, 119, 6, 0.25)',
+    },
+    sky: {
+      bg: '#F0F9FF',
+      text: '#0369A1',
+      border: 'rgba(2, 132, 199, 0.25)',
+    },
+    purple: {
+      bg: '#FAF5FF',
+      text: '#6B21A8',
+      border: 'rgba(147, 51, 234, 0.25)',
+    },
+    slate: {
+      bg: '#F1F5F9',
+      text: '#475569',
+      border: 'rgba(100, 116, 139, 0.25)',
+    },
+  },
+};
+
 const COLORS = {
-  primary: '#BE1F2D', // Rojo BOGOTÁ
+  primary: '#BE1F2D',
   primaryHover: '#9B1623',
-  darkBg: '#0B1724',
-  cardBg: '#13283B',
-  cardBgLight: '#1B354C',
-  border: 'rgba(255, 255, 255, 0.12)',
-  textWhite: '#FFFFFF',
-  textLight: '#F8FAFC',
-  textMuted: '#94A3B8',
-  blueAccent: '#0284C7',
-  cyanBadge: '#38BDF8',
-  greenSuccess: '#10B981',
-  amberWarning: '#F59E0B',
-  purpleAccent: '#8B5CF6',
-  inputBg: '#091522',
+  darkBg: THEME.slate50,
+  cardBg: THEME.white,
+  cardBgLight: THEME.slate50,
+  border: THEME.slate200,
+  textWhite: THEME.slate900,
+  textLight: THEME.slate900,
+  textMuted: THEME.slate500,
+  blueAccent: '#1F5A96',
+  cyanBadge: '#0284C7',
+  greenSuccess: '#047857',
+  amberWarning: '#92400E',
+  purpleAccent: '#6B21A8',
+  inputBg: THEME.slate50,
 };
 
 const DIAS_SEMANA = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES'];
@@ -587,241 +671,282 @@ export default function TeletrabajoScreen() {
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }}>
         {/* ================================================================= */}
-        {/* CABECERA INSTITUCIONAL */}
+        {/* CABECERA INSTITUCIONAL (bg-marca-900 estilo supervision)         */}
         {/* ================================================================= */}
         <View
           style={{
-            backgroundColor: '#0F2133',
-            paddingTop: Platform.OS === 'ios' ? 16 : 14,
-            paddingBottom: 16,
-            paddingHorizontal: isDesktop ? 36 : 18,
+            backgroundColor: THEME.marca900,
             borderBottomWidth: 1,
-            borderBottomColor: COLORS.border,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: 12,
+            borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+            paddingHorizontal: isDesktop ? 32 : 16,
+            paddingVertical: 14,
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <Pressable
-              onPress={() => router.replace('/rrhh')}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: pressed ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: COLORS.border,
-              })}
-            >
-              <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-                Módulos RRHH
-              </Text>
-            </Pressable>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 12,
-                  backgroundColor: 'rgba(56, 189, 248, 0.16)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(56, 189, 248, 0.3)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Ionicons name="laptop-outline" size={24} color="#38BDF8" />
-              </View>
-              <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 19, fontWeight: '900' }}>
-                    Gestión de Teletrabajo y Trabajo en Casa
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: 'rgba(56, 189, 248, 0.2)',
-                      paddingHorizontal: 8,
-                      paddingVertical: 2,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(56, 189, 248, 0.4)',
-                    }}
-                  >
-                    <Text style={{ color: '#38BDF8', fontSize: 10.5, fontWeight: '800' }}>
-                      SASGE 2.0
-                    </Text>
-                  </View>
-                </View>
-                <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                  Talento Humano • Secretaría Jurídica Distrital • Planta Oficial ({personas.length} servidores)
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Pressable
-              onPress={() => abrirModalNuevaRes()}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: pressed ? COLORS.primaryHover : COLORS.primary,
-                paddingHorizontal: 14,
-                paddingVertical: 9,
-                borderRadius: 8,
-              })}
-            >
-              <Ionicons name="document-attach-outline" size={17} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                Nueva Resolución
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => cargarTodo()}
-              style={({ pressed }) => ({
-                backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
-                padding: 9,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: COLORS.border,
-              })}
-              accessibilityLabel="Refrescar datos"
-            >
-              <Ionicons name="refresh-outline" size={18} color="#CBD5E1" />
-            </Pressable>
-          </View>
-        </View>
-
-        {/* ================================================================= */}
-        {/* BANNER DE MÉTRICAS RÁPIDAS */}
-        {/* ================================================================= */}
-        <View
-          style={{
-            backgroundColor: '#0A1521',
-            paddingVertical: 12,
-            paddingHorizontal: isDesktop ? 36 : 18,
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 16,
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="people" size={16} color="#94A3B8" />
-              <Text style={{ color: '#94A3B8', fontSize: 12 }}>Planta Total:</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {estadisticas?.total_personal_planta || personas.length}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="laptop" size={16} color="#38BDF8" />
-              <Text style={{ color: '#38BDF8', fontSize: 12 }}>Teletrabajo Activo:</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {estadisticas?.activas?.en_teletrabajo || 0}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="home" size={16} color="#A78BFA" />
-              <Text style={{ color: '#A78BFA', fontSize: 12 }}>Trabajo en Casa:</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {estadisticas?.activas?.en_trabajo_en_casa || 0}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="calendar" size={16} color="#FBBF24" />
-              <Text style={{ color: '#FBBF24', fontSize: 12 }}>Pares / Impares:</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {estadisticas?.activas?.dias_pares || 0} / {estadisticas?.activas?.dias_impares || 0}
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="shield-half" size={16} color="#F87171" />
-              <Text style={{ color: '#F87171', fontSize: 12 }}>Excepción Jefe:</Text>
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {estadisticas?.activas?.con_excepcion_jefe || 0}
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="newspaper-outline" size={15} color="#10B981" />
-            <Text style={{ color: '#A7F3D0', fontSize: 12, fontWeight: '600' }}>
-              Resoluciones Vigentes: {resoluciones.filter((r) => r.estado === 'VIGENTE').length}
-            </Text>
-          </View>
-        </View>
-
-        {/* ================================================================= */}
-        {/* BARRA DE PESTAÑAS */}
-        {/* ================================================================= */}
-        <View
-          style={{
-            backgroundColor: '#0F2133',
-            borderBottomWidth: 1,
-            borderBottomColor: COLORS.border,
-            paddingHorizontal: isDesktop ? 36 : 18,
-            flexDirection: 'row',
-            gap: 10,
-            overflow: 'hidden',
-          }}
-        >
-          {[
-            { id: 'censo', label: 'Censo y Asignaciones', icon: 'people-outline' },
-            { id: 'resoluciones', label: 'Resoluciones Oficiales', icon: 'document-text-outline' },
-            { id: 'cargos', label: 'Cargos Teletrabajables', icon: 'briefcase-outline' },
-            { id: 'acuerdos', label: 'Acuerdos de Compromiso', icon: 'ribbon-outline' },
-            { id: 'seguimientos', label: 'Seguimientos por Fechas', icon: 'calendar-outline' },
-          ].map((tab) => {
-            const isSel = tabActiva === tab.id;
-            return (
+          <View
+            style={{
+              maxWidth: 1440,
+              width: '100%',
+              marginHorizontal: 'auto',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Pressable
-                key={tab.id}
-                onPress={() => setTabActiva(tab.id as any)}
-                style={{
-                  paddingVertical: 14,
-                  paddingHorizontal: 16,
-                  borderBottomWidth: 3,
-                  borderBottomColor: isSel ? '#38BDF8' : 'transparent',
+                onPress={() => router.replace('/rrhh')}
+                style={({ pressed }) => ({
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 8,
-                }}
+                  gap: 6,
+                  backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                })}
               >
-                <Ionicons
-                  name={tab.icon as any}
-                  size={18}
-                  color={isSel ? '#38BDF8' : '#94A3B8'}
-                />
-                <Text
-                  style={{
-                    color: isSel ? '#FFFFFF' : '#94A3B8',
-                    fontSize: 13,
-                    fontWeight: isSel ? '800' : '600',
-                  }}
-                >
-                  {tab.label}
+                <Ionicons name="arrow-back" size={16} color={THEME.marca100} />
+                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '500' }}>
+                  Volver al Portal
                 </Text>
               </Pressable>
-            );
-          })}
+
+              <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+
+              <View>
+                <Text
+                  style={{
+                    color: 'rgba(214, 228, 244, 0.65)',
+                    fontSize: 10,
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: 1.2,
+                  }}
+                >
+                  Secretaría Jurídica Distrital • Talento Humano
+                </Text>
+                <Text
+                  style={{
+                    color: THEME.white,
+                    fontSize: 18,
+                    fontWeight: '600',
+                    letterSpacing: 0.2,
+                    marginTop: 1,
+                  }}
+                >
+                  Gestión y Censo de Teletrabajo
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Pressable
+                onPress={() => abrirModalNuevaRes()}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: THEME.marca600,
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 8,
+                  opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Ionicons name="document-attach-outline" size={16} color={THEME.white} />
+                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '600' }}>
+                  Nueva Resolución
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => cargarTodo()}
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+                  padding: 8,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                })}
+                accessibilityLabel="Refrescar datos"
+              >
+                <Ionicons name="refresh-outline" size={16} color={THEME.marca100} />
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        {/* ================================================================= */}
+        {/* BANNER DE MÉTRICAS RÁPIDAS (Estilo tarjetas blancas Ri)           */}
+        {/* ================================================================= */}
+        <View
+          style={{
+            backgroundColor: THEME.white,
+            borderBottomWidth: 1,
+            borderBottomColor: THEME.slate200,
+            paddingHorizontal: isDesktop ? 32 : 16,
+            paddingVertical: 12,
+          }}
+        >
+          <View
+            style={{
+              maxWidth: 1440,
+              width: '100%',
+              marginHorizontal: 'auto',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 16,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="people" size={16} color={THEME.slate500} />
+                <Text style={{ color: THEME.slate500, fontSize: 12, fontWeight: '500' }}>Planta Total:</Text>
+                <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
+                  {estadisticas?.total_personal_planta || personas.length}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="laptop" size={16} color={THEME.skyText} />
+                <Text style={{ color: THEME.skyText, fontSize: 12, fontWeight: '500' }}>Teletrabajo Activo:</Text>
+                <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
+                  {estadisticas?.activas?.en_teletrabajo || 0}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="home" size={16} color={THEME.purpleText} />
+                <Text style={{ color: THEME.purpleText, fontSize: 12, fontWeight: '500' }}>Trabajo en Casa:</Text>
+                <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
+                  {estadisticas?.activas?.en_trabajo_en_casa || 0}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="calendar" size={16} color={THEME.amberText} />
+                <Text style={{ color: THEME.amberText, fontSize: 12, fontWeight: '500' }}>Pares / Impares:</Text>
+                <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
+                  {estadisticas?.activas?.dias_pares || 0} / {estadisticas?.activas?.dias_impares || 0}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="shield-half" size={16} color={THEME.roseText} />
+                <Text style={{ color: THEME.roseText, fontSize: 12, fontWeight: '500' }}>Excepción Jefe:</Text>
+                <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
+                  {estadisticas?.activas?.con_excepcion_jefe || 0}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                backgroundColor: THEME.emeraldBg,
+                borderColor: THEME.emeraldRing,
+                borderWidth: 1,
+                paddingHorizontal: 10,
+                paddingVertical: 3,
+                borderRadius: 9999,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <Ionicons name="newspaper-outline" size={13} color={THEME.emeraldText} />
+              <Text style={{ color: THEME.emeraldText, fontSize: 11, fontWeight: '600' }}>
+                Resoluciones Vigentes: {resoluciones.filter((r) => r.estado === 'VIGENTE').length}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ================================================================= */}
+        {/* BARRA DE PESTAÑAS (Estilo Underline de supervision-prueba)        */}
+        {/* ================================================================= */}
+        <View
+          style={{
+            backgroundColor: THEME.white,
+            borderBottomWidth: 1,
+            borderBottomColor: THEME.slate200,
+            paddingHorizontal: isDesktop ? 32 : 16,
+          }}
+        >
+          <View
+            style={{
+              maxWidth: 1440,
+              width: '100%',
+              marginHorizontal: 'auto',
+              flexDirection: 'row',
+              gap: 8,
+              overflow: 'hidden',
+            }}
+          >
+            {[
+              { id: 'censo', label: 'Censo y Asignaciones', icon: 'people-outline', count: personas.length },
+              { id: 'resoluciones', label: 'Resoluciones Oficiales', icon: 'document-text-outline', count: resoluciones.length },
+              { id: 'cargos', label: 'Cargos Teletrabajables', icon: 'briefcase-outline', count: cargos.length },
+              { id: 'acuerdos', label: 'Acuerdos de Compromiso', icon: 'ribbon-outline', count: acuerdos.length },
+              { id: 'seguimientos', label: 'Seguimientos por Fechas', icon: 'calendar-outline', count: seguimientos.length },
+            ].map((tab) => {
+              const isSel = tabActiva === tab.id;
+              return (
+                <Pressable
+                  key={tab.id}
+                  onPress={() => setTabActiva(tab.id as any)}
+                  style={{
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderBottomWidth: 2,
+                    borderBottomColor: isSel ? THEME.marca600 : 'transparent',
+                    marginBottom: -1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={16}
+                    color={isSel ? THEME.marca700 : THEME.slate400}
+                  />
+                  <Text
+                    style={{
+                      color: isSel ? THEME.marca700 : THEME.slate500,
+                      fontSize: 13,
+                      fontWeight: isSel ? '600' : '500',
+                    }}
+                  >
+                    {tab.label}
+                  </Text>
+                  {tab.count !== undefined && (
+                    <View
+                      style={{
+                        backgroundColor: isSel ? THEME.marca50 : THEME.slate100,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        borderRadius: 9999,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '600',
+                          color: isSel ? THEME.marca700 : THEME.slate600,
+                        }}
+                      >
+                        {tab.count}
+                      </Text>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* ================================================================= */}
@@ -848,14 +973,18 @@ export default function TeletrabajoScreen() {
                 {/* Barra de Filtros */}
                 <View
                   style={{
-                    backgroundColor: COLORS.cardBg,
-                    borderRadius: 14,
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: COLORS.border,
+                    borderColor: THEME.slate200,
                     padding: 16,
                     flexDirection: isDesktop ? 'row' : 'column',
                     gap: 12,
                     alignItems: isDesktop ? 'center' : 'stretch',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.03,
+                    shadowRadius: 2,
                   }}
                 >
                   <View
@@ -863,25 +992,25 @@ export default function TeletrabajoScreen() {
                       flex: 2,
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: COLORS.inputBg,
-                      borderRadius: 10,
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.15)',
+                      borderColor: THEME.slate200,
                       paddingHorizontal: 12,
-                      height: 42,
+                      height: 40,
                     }}
                   >
-                    <Ionicons name="search" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+                    <Ionicons name="search" size={17} color={THEME.slate400} style={{ marginRight: 8 }} />
                     <TextInput
                       value={busqueda}
                       onChangeText={setBusqueda}
                       placeholder="Buscar por cédula, nombre, cargo o dependencia..."
-                      placeholderTextColor="#64748B"
-                      style={{ flex: 1, color: '#FFFFFF', fontSize: 13, outlineStyle: 'none' as never }}
+                      placeholderTextColor={THEME.slate400}
+                      style={{ flex: 1, color: THEME.slate900, fontSize: 13, outlineStyle: 'none' as never }}
                     />
                     {busqueda.length > 0 && (
                       <Pressable onPress={() => setBusqueda('')}>
-                        <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                        <Ionicons name="close-circle" size={16} color={THEME.slate400} />
                       </Pressable>
                     )}
                   </View>
@@ -895,32 +1024,33 @@ export default function TeletrabajoScreen() {
                       { id: 'TRABAJO_EN_CASA', label: 'Trabajo en Casa' },
                       { id: 'SIN_MODALIDAD', label: 'Presencial' },
                       { id: 'NUEVO_ACUERDO', label: '⚠️ Requiere Acuerdo' },
-                    ].map((f) => (
-                      <Pressable
-                        key={f.id}
-                        onPress={() => setFiltroModalidad(f.id)}
-                        style={{
-                          backgroundColor:
-                            filtroModalidad === f.id ? '#0284C7' : 'rgba(255, 255, 255, 0.06)',
-                          paddingHorizontal: 12,
-                          paddingVertical: 7,
-                          borderRadius: 8,
-                          borderWidth: 1,
-                          borderColor:
-                            filtroModalidad === f.id ? '#38BDF8' : 'rgba(255, 255, 255, 0.1)',
-                        }}
-                      >
-                        <Text
+                    ].map((f) => {
+                      const sel = filtroModalidad === f.id;
+                      return (
+                        <Pressable
+                          key={f.id}
+                          onPress={() => setFiltroModalidad(f.id)}
                           style={{
-                            color: filtroModalidad === f.id ? '#FFFFFF' : '#CBD5E1',
-                            fontSize: 12,
-                            fontWeight: '700',
+                            backgroundColor: sel ? THEME.marca50 : THEME.white,
+                            paddingHorizontal: 11,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: sel ? THEME.marca600 : THEME.slate200,
                           }}
                         >
-                          {f.label}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <Text
+                            style={{
+                              color: sel ? THEME.marca700 : THEME.slate600,
+                              fontSize: 11.5,
+                              fontWeight: sel ? '600' : '500',
+                            }}
+                          >
+                            {f.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 </View>
 
@@ -934,7 +1064,7 @@ export default function TeletrabajoScreen() {
                     gap: 10,
                   }}
                 >
-                  <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: '700' }}>
+                  <Text style={{ color: THEME.slate600, fontSize: 13, fontWeight: '600' }}>
                     Mostrando {personasFiltradas.length} servidores de planta
                   </Text>
 
@@ -943,66 +1073,72 @@ export default function TeletrabajoScreen() {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      backgroundColor: COLORS.cardBg,
+                      backgroundColor: THEME.slate100,
                       borderRadius: 8,
                       padding: 3,
-                      borderWidth: 1,
-                      borderColor: COLORS.border,
                     }}
                   >
-                    <Pressable
-                      onPress={() => setModoVistaCenso('cards')}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        backgroundColor: modoVistaCenso === 'cards' ? '#0284C7' : 'transparent',
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 6,
-                      }}
-                    >
-                      <Ionicons
-                        name="grid"
-                        size={15}
-                        color={modoVistaCenso === 'cards' ? '#FFFFFF' : '#94A3B8'}
-                      />
-                      <Text
-                        style={{
-                          color: modoVistaCenso === 'cards' ? '#FFFFFF' : '#94A3B8',
-                          fontSize: 12,
-                          fontWeight: '700',
-                        }}
-                      >
-                        Tarjetas
-                      </Text>
-                    </Pressable>
-
                     <Pressable
                       onPress={() => setModoVistaCenso('tabla')}
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         gap: 6,
-                        backgroundColor: modoVistaCenso === 'tabla' ? '#0284C7' : 'transparent',
+                        backgroundColor: modoVistaCenso === 'tabla' ? THEME.white : 'transparent',
                         paddingHorizontal: 12,
                         paddingVertical: 6,
                         borderRadius: 6,
+                        shadowColor: modoVistaCenso === 'tabla' ? '#000' : 'transparent',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.08,
+                        shadowRadius: 2,
                       }}
                     >
                       <Ionicons
                         name="list"
-                        size={16}
-                        color={modoVistaCenso === 'tabla' ? '#FFFFFF' : '#94A3B8'}
+                        size={15}
+                        color={modoVistaCenso === 'tabla' ? THEME.marca700 : THEME.slate500}
                       />
                       <Text
                         style={{
-                          color: modoVistaCenso === 'tabla' ? '#FFFFFF' : '#94A3B8',
+                          color: modoVistaCenso === 'tabla' ? THEME.marca700 : THEME.slate500,
                           fontSize: 12,
-                          fontWeight: '700',
+                          fontWeight: modoVistaCenso === 'tabla' ? '600' : '500',
                         }}
                       >
                         Tabla
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => setModoVistaCenso('cards')}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        backgroundColor: modoVistaCenso === 'cards' ? THEME.white : 'transparent',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        shadowColor: modoVistaCenso === 'cards' ? '#000' : 'transparent',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.08,
+                        shadowRadius: 2,
+                      }}
+                    >
+                      <Ionicons
+                        name="grid"
+                        size={15}
+                        color={modoVistaCenso === 'cards' ? THEME.marca700 : THEME.slate500}
+                      />
+                      <Text
+                        style={{
+                          color: modoVistaCenso === 'cards' ? THEME.marca700 : THEME.slate500,
+                          fontSize: 12,
+                          fontWeight: modoVistaCenso === 'cards' ? '600' : '500',
+                        }}
+                      >
+                        Tarjetas
                       </Text>
                     </Pressable>
                   </View>
@@ -1012,11 +1148,15 @@ export default function TeletrabajoScreen() {
                   /* VISTA 2: TABLA DE CENSO DE TELETRABAJO */
                   <View
                     style={{
-                      backgroundColor: COLORS.cardBg,
-                      borderRadius: 14,
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
+                      borderColor: THEME.slate200,
                       overflow: 'hidden',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 3,
                     }}
                   >
                     <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={{ minWidth: 1440, flexDirection: 'column' }}>
@@ -1024,23 +1164,23 @@ export default function TeletrabajoScreen() {
                       <View
                         style={{
                           flexDirection: 'row',
-                          backgroundColor: '#0A1826',
+                          backgroundColor: THEME.slate50,
                           borderBottomWidth: 1,
-                          borderBottomColor: COLORS.border,
-                          paddingVertical: 12,
+                          borderBottomColor: THEME.slate200,
+                          paddingVertical: 10,
                           paddingHorizontal: 16,
                           alignItems: 'center',
                         }}
                       >
-                        <Text style={{ width: 110, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>PLAZA / C.C.</Text>
-                        <Text style={{ width: 220, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>SERVIDOR PÚBLICO</Text>
-                        <Text style={{ width: 230, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>CARGO & GRADO</Text>
-                        <Text style={{ width: 220, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>DEPENDENCIA</Text>
-                        <Text style={{ width: 170, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>MODALIDAD ACTUAL</Text>
-                        <Text style={{ width: 180, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>ESQUEMA / DÍAS</Text>
-                        <Text style={{ width: 170, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>VIGENCIA</Text>
-                        <Text style={{ width: 130, color: '#94A3B8', fontSize: 11, fontWeight: '800' }}>RESOLUCIÓN</Text>
-                        <Text style={{ width: 230, color: '#94A3B8', fontSize: 11, fontWeight: '800', textAlign: 'center' }}>ACCIONES</Text>
+                        <Text style={{ width: 110, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>PLAZA / C.C.</Text>
+                        <Text style={{ width: 220, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>SERVIDOR PÚBLICO</Text>
+                        <Text style={{ width: 230, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>CARGO & GRADO</Text>
+                        <Text style={{ width: 220, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>DEPENDENCIA</Text>
+                        <Text style={{ width: 170, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>MODALIDAD ACTUAL</Text>
+                        <Text style={{ width: 180, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>ESQUEMA / DÍAS</Text>
+                        <Text style={{ width: 170, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>VIGENCIA</Text>
+                        <Text style={{ width: 130, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' }}>RESOLUCIÓN</Text>
+                        <Text style={{ width: 230, color: THEME.slate500, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', textAlign: 'center' }}>ACCIONES</Text>
                       </View>
 
                       {/* Cuerpo con Scroll vertical */}
@@ -1059,38 +1199,38 @@ export default function TeletrabajoScreen() {
                                 alignItems: 'center',
                                 paddingVertical: 10,
                                 paddingHorizontal: 16,
-                                backgroundColor: esPar ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                                backgroundColor: esPar ? THEME.white : '#FAFCFF',
                                 borderBottomWidth: 1,
-                                borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+                                borderBottomColor: THEME.slate100,
                               }}
                             >
                               {/* Columna Plaza y Cédula */}
                               <View style={{ width: 110, gap: 2 }}>
                                 <View
                                   style={{
-                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                    backgroundColor: THEME.slate100,
                                     paddingHorizontal: 6,
                                     paddingVertical: 2,
                                     borderRadius: 4,
                                     alignSelf: 'flex-start',
                                   }}
                                 >
-                                  <Text style={{ color: '#FFFFFF', fontSize: 10.5, fontWeight: '800' }}>
+                                  <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
                                     #{p.id_plaza}
                                   </Text>
                                 </View>
-                                <Text style={{ color: '#94A3B8', fontSize: 11 }}>
+                                <Text style={{ color: THEME.slate500, fontSize: 11 }}>
                                   {p.titular_cedula}
                                 </Text>
                               </View>
 
                               {/* Columna Servidor */}
                               <View style={{ width: 220, paddingRight: 10 }}>
-                                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                                <Text style={{ color: THEME.slate900, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
                                   {p.titular_nombre}
                                 </Text>
                                 {p.requiere_nuevo_acuerdo && (
-                                  <Text style={{ color: '#FCD34D', fontSize: 10, fontWeight: '700', marginTop: 2 }}>
+                                  <Text style={{ color: THEME.amberText, fontSize: 10, fontWeight: '700', marginTop: 2 }}>
                                     ⚠️ Requiere Nuevo Acuerdo
                                   </Text>
                                 )}
@@ -1098,11 +1238,11 @@ export default function TeletrabajoScreen() {
 
                               {/* Columna Cargo */}
                               <View style={{ width: 230, paddingRight: 10 }}>
-                                <Text style={{ color: '#E2E8F0', fontSize: 12.5, fontWeight: '600' }} numberOfLines={2}>
+                                <Text style={{ color: THEME.marca700, fontSize: 12.5, fontWeight: '600' }} numberOfLines={2}>
                                   {p.cargo} {p.codigo ? `(${p.codigo}-${p.grado})` : ''}
                                 </Text>
                                 {!p.cargo_es_teletrabajable && (
-                                  <Text style={{ color: '#FCA5A5', fontSize: 10, marginTop: 1 }}>
+                                  <Text style={{ color: THEME.roseText, fontSize: 10, marginTop: 1 }}>
                                     {p.excepcion_jefe_aprobada ? 'Excepción aprobada' : 'No teletrabajable'}
                                   </Text>
                                 )}
@@ -1110,7 +1250,7 @@ export default function TeletrabajoScreen() {
 
                               {/* Columna Dependencia */}
                               <View style={{ width: 220, paddingRight: 10 }}>
-                                <Text style={{ color: '#94A3B8', fontSize: 11.5 }} numberOfLines={2}>
+                                <Text style={{ color: THEME.slate600, fontSize: 11.5 }} numberOfLines={2}>
                                   {p.dependencia_cargo}
                                 </Text>
                               </View>
@@ -1121,44 +1261,54 @@ export default function TeletrabajoScreen() {
                                   <View
                                     style={{
                                       backgroundColor: esAutonomo
-                                        ? 'rgba(2, 132, 199, 0.25)'
+                                        ? THEME.skyBg
                                         : esTeletrabajo
-                                        ? 'rgba(56, 189, 248, 0.2)'
-                                        : 'rgba(167, 139, 250, 0.2)',
-                                      paddingHorizontal: 8,
-                                      paddingVertical: 3,
-                                      borderRadius: 6,
+                                        ? THEME.emeraldBg
+                                        : THEME.purpleBg,
+                                      borderColor: esAutonomo
+                                        ? THEME.skyRing
+                                        : esTeletrabajo
+                                        ? THEME.emeraldRing
+                                        : THEME.purpleRing,
                                       borderWidth: 1,
-                                      borderColor: esAutonomo ? '#0284C7' : esTeletrabajo ? '#38BDF8' : '#A78BFA',
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 2,
+                                      borderRadius: 9999,
                                       alignSelf: 'flex-start',
                                     }}
                                   >
                                     <Text
                                       style={{
-                                        color: esAutonomo ? '#7DD3FC' : esTeletrabajo ? '#38BDF8' : '#C4B5FD',
-                                        fontSize: 10.5,
-                                        fontWeight: '800',
+                                        color: esAutonomo
+                                          ? THEME.skyText
+                                          : esTeletrabajo
+                                          ? THEME.emeraldText
+                                          : THEME.purpleText,
+                                        fontSize: 11,
+                                        fontWeight: '600',
                                       }}
                                     >
                                       {esAutonomo
-                                        ? 'AUTÓNOMO'
+                                        ? 'Autónomo'
                                         : esTeletrabajo
-                                        ? 'TELETRABAJO'
-                                        : 'TRABAJO CASA'}
+                                        ? 'Teletrabajo'
+                                        : 'Trabajo Casa'}
                                     </Text>
                                   </View>
                                 ) : (
                                   <View
                                     style={{
-                                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                      backgroundColor: THEME.slateBadgeBg,
+                                      borderColor: THEME.slateBadgeRing,
+                                      borderWidth: 1,
                                       paddingHorizontal: 8,
-                                      paddingVertical: 3,
-                                      borderRadius: 6,
+                                      paddingVertical: 2,
+                                      borderRadius: 9999,
                                       alignSelf: 'flex-start',
                                     }}
                                   >
-                                    <Text style={{ color: '#94A3B8', fontSize: 10.5, fontWeight: '700' }}>
-                                      PRESENCIAL
+                                    <Text style={{ color: THEME.slateBadgeText, fontSize: 11, fontWeight: '600' }}>
+                                      Presencial
                                     </Text>
                                   </View>
                                 )}
@@ -1167,7 +1317,7 @@ export default function TeletrabajoScreen() {
                               {/* Columna Esquema / Días */}
                               <View style={{ width: 180, paddingRight: 8 }}>
                                 {tieneModalidad ? (
-                                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }} numberOfLines={1}>
+                                  <Text style={{ color: THEME.slate800, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
                                     {p.esquema_dias_tipo === 'TODOS'
                                       ? 'Todos los días (L-V)'
                                       : p.esquema_dias_tipo === 'DIAS_PARES'
@@ -1179,24 +1329,24 @@ export default function TeletrabajoScreen() {
                                       : `${p.dias_por_semana || 2} días/sem`}
                                   </Text>
                                 ) : (
-                                  <Text style={{ color: '#64748B', fontSize: 11 }}>5 días presenciales</Text>
+                                  <Text style={{ color: THEME.slate400, fontSize: 11 }}>5 días presenciales</Text>
                                 )}
                               </View>
 
                               {/* Columna Vigencia */}
                               <View style={{ width: 170, paddingRight: 8 }}>
                                 {tieneModalidad && p.asignacion_desde ? (
-                                  <Text style={{ color: '#94A3B8', fontSize: 11 }}>
+                                  <Text style={{ color: THEME.slate600, fontSize: 11 }}>
                                     {limpiarFecha(p.asignacion_desde)} al {limpiarFecha(p.asignacion_hasta) || 'indef.'}
                                   </Text>
                                 ) : (
-                                  <Text style={{ color: '#64748B', fontSize: 11 }}>-</Text>
+                                  <Text style={{ color: THEME.slate400, fontSize: 11 }}>-</Text>
                                 )}
                               </View>
 
                               {/* Columna Resolución */}
                               <View style={{ width: 130, paddingRight: 8 }}>
-                                <Text style={{ color: p.numero_resolucion_display ? '#A7F3D0' : '#64748B', fontSize: 11 }}>
+                                <Text style={{ color: p.numero_resolucion_display ? THEME.emeraldText : THEME.slate400, fontSize: 11, fontWeight: '600' }}>
                                   {p.numero_resolucion_display || '-'}
                                 </Text>
                               </View>
@@ -1206,8 +1356,8 @@ export default function TeletrabajoScreen() {
                                 <TouchableOpacity
                                   onPress={() => abrirModalAsignacion(p)}
                                   style={{
-                                    backgroundColor: '#0284C7',
-                                    paddingHorizontal: 10,
+                                    backgroundColor: THEME.marca700,
+                                    paddingHorizontal: 9,
                                     paddingVertical: 5,
                                     borderRadius: 6,
                                     flexDirection: 'row',
@@ -1215,8 +1365,8 @@ export default function TeletrabajoScreen() {
                                     gap: 4,
                                   }}
                                 >
-                                  <Ionicons name="options-outline" size={13} color="#FFFFFF" />
-                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800' }}>
+                                  <Ionicons name="options-outline" size={13} color={THEME.white} />
+                                  <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '600' }}>
                                     {tieneModalidad ? 'Editar' : 'Asignar'}
                                   </Text>
                                 </TouchableOpacity>
@@ -1224,12 +1374,12 @@ export default function TeletrabajoScreen() {
                                 <TouchableOpacity
                                   onPress={() => abrirModalAcuerdo(p)}
                                   style={{
-                                    backgroundColor: p.requiere_nuevo_acuerdo ? '#D97706' : 'rgba(255, 255, 255, 0.08)',
+                                    backgroundColor: p.requiere_nuevo_acuerdo ? THEME.amberBg : THEME.slate100,
+                                    borderColor: p.requiere_nuevo_acuerdo ? THEME.amberRing : THEME.slate200,
+                                    borderWidth: 1,
                                     paddingHorizontal: 8,
                                     paddingVertical: 5,
                                     borderRadius: 6,
-                                    borderWidth: 1,
-                                    borderColor: p.requiere_nuevo_acuerdo ? '#F59E0B' : 'rgba(255, 255, 255, 0.15)',
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: 3,
@@ -1238,9 +1388,9 @@ export default function TeletrabajoScreen() {
                                   <Ionicons
                                     name="ribbon-outline"
                                     size={13}
-                                    color={p.requiere_nuevo_acuerdo ? '#FFFFFF' : '#CBD5E1'}
+                                    color={p.requiere_nuevo_acuerdo ? THEME.amberText : THEME.slate600}
                                   />
-                                  <Text style={{ color: p.requiere_nuevo_acuerdo ? '#FFFFFF' : '#CBD5E1', fontSize: 11, fontWeight: '700' }}>
+                                  <Text style={{ color: p.requiere_nuevo_acuerdo ? THEME.amberText : THEME.slate700, fontSize: 11, fontWeight: '600' }}>
                                     Acuerdo
                                   </Text>
                                 </TouchableOpacity>
@@ -1248,9 +1398,9 @@ export default function TeletrabajoScreen() {
                                 <TouchableOpacity
                                   onPress={() => abrirModalSeguimiento(p)}
                                   style={{
-                                    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                                    backgroundColor: THEME.marca50,
                                     borderWidth: 1,
-                                    borderColor: 'rgba(56, 189, 248, 0.3)',
+                                    borderColor: THEME.marca100,
                                     paddingHorizontal: 8,
                                     paddingVertical: 5,
                                     borderRadius: 6,
@@ -1259,8 +1409,8 @@ export default function TeletrabajoScreen() {
                                     gap: 3,
                                   }}
                                 >
-                                  <Ionicons name="calendar-outline" size={13} color="#38BDF8" />
-                                  <Text style={{ color: '#38BDF8', fontSize: 11, fontWeight: '700' }}>
+                                  <Ionicons name="calendar-outline" size={13} color={THEME.marca700} />
+                                  <Text style={{ color: THEME.marca700, fontSize: 11, fontWeight: '600' }}>
                                     Seg.
                                   </Text>
                                 </TouchableOpacity>
@@ -1539,6 +1689,9 @@ export default function TeletrabajoScreen() {
             {/* ------------------------------------------------------------- */}
             {/* PESTAÑA 2: RESOLUCIONES GENERALES                            */}
             {/* ------------------------------------------------------------- */}
+            {/* ------------------------------------------------------------- */}
+            {/* PESTAÑA 2: RESOLUCIONES GENERALES                            */}
+            {/* ------------------------------------------------------------- */}
             {tabActiva === 'resoluciones' && (
               <View style={{ gap: 16 }}>
                 <View
@@ -1551,10 +1704,10 @@ export default function TeletrabajoScreen() {
                   }}
                 >
                   <View>
-                    <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+                    <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
                       Catálogo de Resoluciones Institucionales
                     </Text>
-                    <Text style={{ color: '#94A3B8', fontSize: 13 }}>
+                    <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
                       Actos administrativos marco que confieren teletrabajo o trabajo en casa a la planta
                     </Text>
                   </View>
@@ -1562,13 +1715,16 @@ export default function TeletrabajoScreen() {
                   <Pressable
                     onPress={() => abrirModalNuevaRes()}
                     style={{
-                      backgroundColor: COLORS.primary,
+                      backgroundColor: THEME.marca700,
                       paddingHorizontal: 16,
                       paddingVertical: 10,
                       borderRadius: 10,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 8,
+                      shadowColor: '#000',
+                      shadowOpacity: 0.05,
+                      shadowRadius: 4,
                     }}
                   >
                     <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" />
@@ -1583,54 +1739,58 @@ export default function TeletrabajoScreen() {
                     <View
                       key={r.id}
                       style={{
-                        backgroundColor: COLORS.cardBg,
-                        borderRadius: 14,
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: COLORS.border,
+                        borderColor: THEME.slate200,
                         padding: 20,
                         flexDirection: isDesktop ? 'row' : 'column',
                         justifyContent: 'space-between',
                         alignItems: isDesktop ? 'center' : 'stretch',
                         gap: 16,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.03,
+                        shadowRadius: 6,
+                        elevation: 1,
                       }}
                     >
                       <View style={{ flex: 1, gap: 6 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name="document-text" size={24} color="#38BDF8" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                          <Ionicons name="document-text" size={22} color={THEME.marca700} />
+                          <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
                             {r.numero_resolucion}
                           </Text>
                           <View
                             style={{
-                              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                              backgroundColor: THEME.badges.emerald.bg,
                               paddingHorizontal: 8,
                               paddingVertical: 3,
-                              borderRadius: 6,
+                              borderRadius: 9999,
                               borderWidth: 1,
-                              borderColor: '#10B981',
+                              borderColor: THEME.badges.emerald.border,
                             }}
                           >
-                            <Text style={{ color: '#A7F3D0', fontSize: 11, fontWeight: '800' }}>
+                            <Text style={{ color: THEME.badges.emerald.text, fontSize: 11, fontWeight: '800' }}>
                               {r.estado}
                             </Text>
                           </View>
                         </View>
 
-                        <Text style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 19 }}>
+                        <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 19 }}>
                           {r.descripcion || 'Sin descripción adicional.'}
                         </Text>
 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                            Expedición: <Text style={{ color: '#FFFFFF' }}>{limpiarFecha(r.fecha_expedicion)}</Text>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                            Expedición: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{limpiarFecha(r.fecha_expedicion)}</Text>
                           </Text>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                             Vigencia General:{' '}
-                            <Text style={{ color: '#FFFFFF' }}>
+                            <Text style={{ color: THEME.slate800, fontWeight: '600' }}>
                               {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
                             </Text>
                           </Text>
-                          <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700' }}>
+                          <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
                             Personas Vinculadas: {r.total_personas_activas || 0} activas
                           </Text>
                         </View>
@@ -1644,19 +1804,19 @@ export default function TeletrabajoScreen() {
                             }
                           }}
                           style={{
-                            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                            backgroundColor: THEME.marca50,
                             paddingHorizontal: 14,
                             paddingVertical: 9,
                             borderRadius: 8,
                             borderWidth: 1,
-                            borderColor: '#0284C7',
+                            borderColor: THEME.marca200,
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
                           }}
                         >
-                          <Ionicons name="eye-outline" size={16} color="#38BDF8" />
-                          <Text style={{ color: '#38BDF8', fontSize: 13, fontWeight: '700' }}>
+                          <Ionicons name="eye-outline" size={16} color={THEME.marca700} />
+                          <Text style={{ color: THEME.marca700, fontSize: 13, fontWeight: '700' }}>
                             Ver Resolución PDF
                           </Text>
                         </TouchableOpacity>
@@ -1664,9 +1824,21 @@ export default function TeletrabajoScreen() {
                     </View>
                   ))}
                   {resoluciones.length === 0 && (
-                    <Text style={{ color: '#64748B', textAlign: 'center', marginVertical: 30 }}>
-                      No hay resoluciones registradas aún. Haz clic en "Subir Nueva Resolución".
-                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 36,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Ionicons name="documents-outline" size={40} color={THEME.slate300} />
+                      <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+                        No hay resoluciones registradas aún. Haz clic en "Subir Nueva Resolución".
+                      </Text>
+                    </View>
                   )}
                 </View>
               </View>
@@ -1678,10 +1850,10 @@ export default function TeletrabajoScreen() {
             {tabActiva === 'cargos' && (
               <View style={{ gap: 16 }}>
                 <View>
-                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
                     Matriz de Viabilidad de Cargos Teletrabajables
                   </Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
                     Criterios técnicos institucionales según el Manual de Funciones de la Secretaría Jurídica Distrital
                   </Text>
                 </View>
@@ -1691,40 +1863,48 @@ export default function TeletrabajoScreen() {
                     <View
                       key={c.id}
                       style={{
-                        backgroundColor: COLORS.cardBg,
+                        backgroundColor: THEME.white,
                         borderRadius: 12,
                         borderWidth: 1,
                         borderColor: c.es_teletrabajable
-                          ? 'rgba(16, 185, 129, 0.25)'
-                          : 'rgba(239, 68, 68, 0.25)',
+                          ? THEME.badges.emerald.border
+                          : THEME.badges.rose.border,
                         padding: 16,
                         flexDirection: isDesktop ? 'row' : 'column',
                         justifyContent: 'space-between',
                         alignItems: isDesktop ? 'center' : 'stretch',
                         gap: 12,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.03,
+                        shadowRadius: 4,
+                        elevation: 1,
                       }}
                     >
                       <View style={{ flex: 1, gap: 4 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <Text style={{ color: THEME.slate900, fontSize: 15, fontWeight: '800' }}>
                             {c.cargo_nombre}
                           </Text>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                             Código: {c.codigo} • Grado: {c.grado}
                           </Text>
                           <View
                             style={{
                               backgroundColor: c.es_teletrabajable
-                                ? 'rgba(16, 185, 129, 0.15)'
-                                : 'rgba(239, 68, 68, 0.15)',
+                                ? THEME.badges.emerald.bg
+                                : THEME.badges.rose.bg,
                               paddingHorizontal: 8,
                               paddingVertical: 2,
-                              borderRadius: 4,
+                              borderRadius: 9999,
+                              borderWidth: 1,
+                              borderColor: c.es_teletrabajable
+                                ? THEME.badges.emerald.border
+                                : THEME.badges.rose.border,
                             }}
                           >
                             <Text
                               style={{
-                                color: c.es_teletrabajable ? '#A7F3D0' : '#FCA5A5',
+                                color: c.es_teletrabajable ? THEME.badges.emerald.text : THEME.badges.rose.text,
                                 fontSize: 10.5,
                                 fontWeight: '800',
                               }}
@@ -1733,14 +1913,14 @@ export default function TeletrabajoScreen() {
                             </Text>
                           </View>
                         </View>
-                        <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                        <Text style={{ color: THEME.slate600, fontSize: 12, marginTop: 2 }}>
                           {c.justificacion_estudio || 'Sin justificación técnica registrada.'}
                         </Text>
                       </View>
 
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                        <Text style={{ color: '#CBD5E1', fontSize: 12 }}>
-                          Máx. Días: <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>{c.max_dias_semana} días/sem</Text>
+                        <Text style={{ color: THEME.slate600, fontSize: 12 }}>
+                          Máx. Días: <Text style={{ color: THEME.slate900, fontWeight: '800' }}>{c.max_dias_semana} días/sem</Text>
                         </Text>
 
                         <TouchableOpacity
@@ -1757,15 +1937,15 @@ export default function TeletrabajoScreen() {
                             }
                           }}
                           style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            backgroundColor: THEME.slate100,
                             paddingHorizontal: 12,
                             paddingVertical: 6,
                             borderRadius: 6,
                             borderWidth: 1,
-                            borderColor: COLORS.border,
+                            borderColor: THEME.slate200,
                           }}
                         >
-                          <Text style={{ color: '#CBD5E1', fontSize: 11, fontWeight: '700' }}>
+                          <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
                             Cambiar Viabilidad
                           </Text>
                         </TouchableOpacity>
@@ -1782,10 +1962,10 @@ export default function TeletrabajoScreen() {
             {tabActiva === 'acuerdos' && (
               <View style={{ gap: 16 }}>
                 <View>
-                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
                     Expediente de Acuerdos de Compromiso
                   </Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
                     Documentos formales suscritos por los servidores y sus jefes al iniciar o cambiar de cargo
                   </Text>
                 </View>
@@ -1795,37 +1975,41 @@ export default function TeletrabajoScreen() {
                     <View
                       key={ac.id}
                       style={{
-                        backgroundColor: COLORS.cardBg,
-                        borderRadius: 14,
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: COLORS.border,
+                        borderColor: THEME.slate200,
                         padding: 18,
                         flexDirection: isDesktop ? 'row' : 'column',
                         justifyContent: 'space-between',
                         alignItems: isDesktop ? 'center' : 'stretch',
                         gap: 14,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.03,
+                        shadowRadius: 4,
+                        elevation: 1,
                       }}
                     >
                       <View style={{ flex: 1, gap: 4 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name="ribbon" size={20} color="#F59E0B" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                          <Ionicons name="ribbon" size={20} color="#D97706" />
+                          <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
                             {ac.servidor_nombre}
                           </Text>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                             C.C. {ac.servidor_cedula}
                           </Text>
                         </View>
 
-                        <Text style={{ color: '#E2E8F0', fontSize: 13 }}>
+                        <Text style={{ color: THEME.slate600, fontSize: 13 }}>
                           Cargo al momento del acuerdo:{' '}
-                          <Text style={{ fontWeight: '700', color: '#93C5FD' }}>
+                          <Text style={{ fontWeight: '700', color: THEME.marca700 }}>
                             {ac.cargo_al_momento}
                           </Text>
                         </Text>
 
-                        <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-                          Fecha de Suscripción: {limpiarFecha(ac.fecha_suscripcion)} • Vigencia: {ac.periodo_vigencia || 'ANUAL'}
+                        <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                          Fecha de Suscripción: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{limpiarFecha(ac.fecha_suscripcion)}</Text> • Vigencia: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{ac.periodo_vigencia || 'ANUAL'}</Text>
                         </Text>
                       </View>
 
@@ -1837,19 +2021,19 @@ export default function TeletrabajoScreen() {
                             }
                           }}
                           style={{
-                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            backgroundColor: THEME.badges.amber.bg,
                             paddingHorizontal: 14,
                             paddingVertical: 8,
                             borderRadius: 8,
                             borderWidth: 1,
-                            borderColor: '#F59E0B',
+                            borderColor: THEME.badges.amber.border,
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
                           }}
                         >
-                          <Ionicons name="eye-outline" size={16} color="#FBBF24" />
-                          <Text style={{ color: '#FBBF24', fontSize: 12.5, fontWeight: '700' }}>
+                          <Ionicons name="eye-outline" size={16} color={THEME.badges.amber.text} />
+                          <Text style={{ color: THEME.badges.amber.text, fontSize: 12.5, fontWeight: '700' }}>
                             Ver Acuerdo Firmado
                           </Text>
                         </TouchableOpacity>
@@ -1857,9 +2041,21 @@ export default function TeletrabajoScreen() {
                     </View>
                   ))}
                   {acuerdos.length === 0 && (
-                    <Text style={{ color: '#64748B', textAlign: 'center', marginVertical: 30 }}>
-                      No se han subido acuerdos de compromiso aún.
-                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 36,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Ionicons name="ribbon-outline" size={40} color={THEME.slate300} />
+                      <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+                        No se han subido acuerdos de compromiso aún.
+                      </Text>
+                    </View>
                   )}
                 </View>
               </View>
@@ -1871,10 +2067,10 @@ export default function TeletrabajoScreen() {
             {tabActiva === 'seguimientos' && (
               <View style={{ gap: 16 }}>
                 <View>
-                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 18, fontWeight: '800' }}>
                     Seguimientos Periódicos de Rendimiento y Actividades
                   </Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 2 }}>
                     Cortes periódicos delimitados por rango de fechas (Desde - Hasta)
                   </Text>
                 </View>
@@ -1884,12 +2080,16 @@ export default function TeletrabajoScreen() {
                     <View
                       key={s.id}
                       style={{
-                        backgroundColor: COLORS.cardBg,
-                        borderRadius: 14,
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
                         borderWidth: 1,
-                        borderColor: COLORS.border,
+                        borderColor: THEME.slate200,
                         padding: 18,
                         gap: 10,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.03,
+                        shadowRadius: 4,
+                        elevation: 1,
                       }}
                     >
                       <View
@@ -1901,11 +2101,11 @@ export default function TeletrabajoScreen() {
                         }}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name="checkmark-circle" size={22} color="#10B981" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                          <Ionicons name="checkmark-circle" size={22} color="#047857" />
+                          <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
                             {s.servidor_nombre}
                           </Text>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                             C.C. {s.servidor_cedula}
                           </Text>
                         </View>
@@ -1913,21 +2113,21 @@ export default function TeletrabajoScreen() {
                         {/* Rango de Fechas */}
                         <View
                           style={{
-                            backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                            backgroundColor: THEME.marca50,
                             paddingHorizontal: 10,
                             paddingVertical: 4,
-                            borderRadius: 6,
+                            borderRadius: 9999,
                             borderWidth: 1,
-                            borderColor: '#0284C7',
+                            borderColor: THEME.marca200,
                           }}
                         >
-                          <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '800' }}>
+                          <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '800' }}>
                             Corte: {limpiarFecha(s.fecha_corte_desde)} al {limpiarFecha(s.fecha_corte_hasta)}
                           </Text>
                         </View>
                       </View>
 
-                      <Text style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 18 }}>
+                      <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 18 }}>
                         {s.actividades_reportadas}
                       </Text>
 
@@ -1940,19 +2140,19 @@ export default function TeletrabajoScreen() {
                           gap: 10,
                           paddingTop: 8,
                           borderTopWidth: 1,
-                          borderTopColor: 'rgba(255, 255, 255, 0.06)',
+                          borderTopColor: THEME.slate100,
                         }}
                       >
                         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                             Nivel:{' '}
-                            <Text style={{ color: '#10B981', fontWeight: '800' }}>
+                            <Text style={{ color: THEME.badges.emerald.text, fontWeight: '800' }}>
                               {s.cumplimiento_nivel} ({s.calificacion_porcentaje}%)
                             </Text>
                           </Text>
-                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                             Concepto:{' '}
-                            <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
+                            <Text style={{ color: THEME.slate800, fontWeight: '700' }}>
                               {s.concepto_recomendacion}
                             </Text>
                           </Text>
@@ -1969,14 +2169,16 @@ export default function TeletrabajoScreen() {
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 6,
-                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                              backgroundColor: THEME.marca50,
                               paddingHorizontal: 10,
                               paddingVertical: 5,
                               borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: THEME.marca200,
                             }}
                           >
-                            <Ionicons name="document-attach" size={14} color="#38BDF8" />
-                            <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '700' }}>
+                            <Ionicons name="document-attach" size={14} color={THEME.marca700} />
+                            <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
                               Ver Evidencias
                             </Text>
                           </TouchableOpacity>
@@ -1985,9 +2187,21 @@ export default function TeletrabajoScreen() {
                     </View>
                   ))}
                   {seguimientos.length === 0 && (
-                    <Text style={{ color: '#64748B', textAlign: 'center', marginVertical: 30 }}>
-                      No hay seguimientos registrados aún.
-                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 36,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Ionicons name="calendar-outline" size={40} color={THEME.slate300} />
+                      <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+                        No hay seguimientos registrados aún.
+                      </Text>
+                    </View>
                   )}
                 </View>
               </View>
@@ -2007,7 +2221,7 @@ export default function TeletrabajoScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.8)',
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
               justifyContent: 'center',
               alignItems: 'center',
               padding: 16,
@@ -2015,14 +2229,18 @@ export default function TeletrabajoScreen() {
           >
             <View
               style={{
-                backgroundColor: '#0F2133',
-                borderRadius: 18,
+                backgroundColor: THEME.white,
+                borderRadius: 16,
                 borderWidth: 1,
-                borderColor: COLORS.border,
+                borderColor: THEME.slate200,
                 padding: 24,
                 width: '100%',
-                maxWidth: 620,
+                maxWidth: 640,
                 maxHeight: '90%',
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 4,
               }}
             >
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
@@ -2034,35 +2252,37 @@ export default function TeletrabajoScreen() {
                     alignItems: 'center',
                     paddingBottom: 12,
                     borderBottomWidth: 1,
-                    borderBottomColor: COLORS.border,
+                    borderBottomColor: THEME.slate200,
                   }}
                 >
                   <View>
-                    <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                    <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
                       Configurar Modalidad de Trabajo
                     </Text>
-                    <Text style={{ color: '#38BDF8', fontSize: 13, fontWeight: '700' }}>
+                    <Text style={{ color: THEME.marca700, fontSize: 13, fontWeight: '700', marginTop: 2 }}>
                       {formAsignacion.persona?.titular_nombre} (C.C. {formAsignacion.persona?.titular_cedula})
                     </Text>
                   </View>
-                  <Pressable onPress={() => setModalAsignacionVisible(false)}>
-                    <Ionicons name="close" size={24} color="#94A3B8" />
+                  <Pressable onPress={() => setModalAsignacionVisible(false)} hitSlop={8}>
+                    <Ionicons name="close" size={24} color={THEME.slate500} />
                   </Pressable>
                 </View>
 
                 {/* Cargo Actual y Viabilidad */}
                 <View
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    padding: 12,
+                    backgroundColor: THEME.slate50,
+                    padding: 14,
                     borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
                     gap: 6,
                   }}
                 >
-                  <Text style={{ color: '#CBD5E1', fontSize: 13 }}>
-                    Cargo: <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>{formAsignacion.persona?.cargo}</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 13 }}>
+                    Cargo: <Text style={{ color: THEME.slate900, fontWeight: '800' }}>{formAsignacion.persona?.cargo}</Text>
                   </Text>
-                  <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                     Dependencia: {formAsignacion.persona?.dependencia_cargo}
                   </Text>
 
@@ -2070,11 +2290,11 @@ export default function TeletrabajoScreen() {
                     <Ionicons
                       name={formAsignacion.cargo_es_teletrabajable ? 'checkmark-circle' : 'alert-circle'}
                       size={18}
-                      color={formAsignacion.cargo_es_teletrabajable ? '#10B981' : '#F87171'}
+                      color={formAsignacion.cargo_es_teletrabajable ? '#047857' : '#BE123C'}
                     />
                     <Text
                       style={{
-                        color: formAsignacion.cargo_es_teletrabajable ? '#A7F3D0' : '#FCA5A5',
+                        color: formAsignacion.cargo_es_teletrabajable ? '#047857' : '#BE123C',
                         fontSize: 12,
                         fontWeight: '700',
                       }}
@@ -2090,16 +2310,16 @@ export default function TeletrabajoScreen() {
                 {!formAsignacion.cargo_es_teletrabajable && formAsignacion.modalidad === 'TELETRABAJO' && (
                   <View
                     style={{
-                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                      backgroundColor: THEME.badges.amber.bg,
                       padding: 14,
                       borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: '#F59E0B',
+                      borderColor: THEME.badges.amber.border,
                       gap: 10,
                     }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: '#FCD34D', fontSize: 13, fontWeight: '800' }}>
+                      <Text style={{ color: THEME.badges.amber.text, fontSize: 13, fontWeight: '800' }}>
                         ¿Aprobación Excepcional del Jefe Inmediato?
                       </Text>
                       <TouchableOpacity
@@ -2110,7 +2330,7 @@ export default function TeletrabajoScreen() {
                           }))
                         }
                         style={{
-                          backgroundColor: formAsignacion.excepcion_jefe_aprobada ? '#10B981' : '#475569',
+                          backgroundColor: formAsignacion.excepcion_jefe_aprobada ? '#047857' : THEME.slate500,
                           paddingHorizontal: 12,
                           paddingVertical: 6,
                           borderRadius: 6,
@@ -2129,13 +2349,13 @@ export default function TeletrabajoScreen() {
                           setFormAsignacion((prev) => ({ ...prev, motivo_excepcion_jefe: t }))
                         }
                         placeholder="Justificación de la jefatura para autorizar la excepción..."
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={THEME.slate400}
                         style={{
-                          backgroundColor: COLORS.inputBg,
+                          backgroundColor: THEME.white,
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: COLORS.border,
-                          color: '#FFFFFF',
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
                           padding: 10,
                           fontSize: 12.5,
                         }}
@@ -2146,7 +2366,7 @@ export default function TeletrabajoScreen() {
 
                 {/* Selección de Modalidad */}
                 <View style={{ gap: 8 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
+                  <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>
                     Tipo de Modalidad:
                   </Text>
                   <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
@@ -2191,24 +2411,18 @@ export default function TeletrabajoScreen() {
                           }}
                           style={{
                             flex: 1,
-                            backgroundColor: sel
-                              ? m.id === 'TELETRABAJO_AUTONOMO'
-                                ? '#0284C7'
-                                : m.id === 'TELETRABAJO'
-                                ? '#0369A1'
-                                : '#6D28D9'
-                              : 'rgba(255, 255, 255, 0.05)',
+                            backgroundColor: sel ? THEME.marca50 : THEME.slate50,
                             paddingVertical: 10,
                             paddingHorizontal: 12,
                             borderRadius: 10,
-                            borderWidth: 1,
-                            borderColor: sel ? '#38BDF8' : COLORS.border,
+                            borderWidth: sel ? 2 : 1,
+                            borderColor: sel ? THEME.marca600 : THEME.slate200,
                             gap: 3,
                           }}
                         >
                           <Text
                             style={{
-                              color: sel ? '#FFFFFF' : '#CBD5E1',
+                              color: sel ? THEME.marca900 : THEME.slate800,
                               fontSize: 12.5,
                               fontWeight: '800',
                             }}
@@ -2217,7 +2431,7 @@ export default function TeletrabajoScreen() {
                           </Text>
                           <Text
                             style={{
-                              color: sel ? '#E0F2FE' : '#94A3B8',
+                              color: sel ? THEME.marca700 : THEME.slate500,
                               fontSize: 11,
                               lineHeight: 14,
                             }}
@@ -2232,7 +2446,7 @@ export default function TeletrabajoScreen() {
 
                 {/* Selección de Resolución General */}
                 <View style={{ gap: 8 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
+                  <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>
                     Resolución que Otorga el Beneficio:
                   </Text>
                   <View style={{ gap: 6 }}>
@@ -2243,40 +2457,40 @@ export default function TeletrabajoScreen() {
                           key={r.id}
                           onPress={() => alCambiarResolucion(r.id)}
                           style={{
-                            backgroundColor: sel ? 'rgba(56, 189, 248, 0.15)' : 'rgba(255, 255, 255, 0.04)',
+                            backgroundColor: sel ? THEME.marca50 : THEME.slate50,
                             padding: 10,
                             borderRadius: 8,
                             borderWidth: 1,
-                            borderColor: sel ? '#38BDF8' : COLORS.border,
+                            borderColor: sel ? THEME.marca600 : THEME.slate200,
                             flexDirection: 'row',
                             justifyContent: 'space-between',
                             alignItems: 'center',
                           }}
                         >
                           <View>
-                            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                            <Text style={{ color: sel ? THEME.marca900 : THEME.slate900, fontSize: 13, fontWeight: '700' }}>
                               {r.numero_resolucion}
                             </Text>
-                            <Text style={{ color: '#94A3B8', fontSize: 11 }}>
+                            <Text style={{ color: THEME.slate500, fontSize: 11 }}>
                               Vigencia base de la resolución: {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
                             </Text>
                           </View>
-                          {sel && <Ionicons name="checkmark-circle" size={18} color="#38BDF8" />}
+                          {sel && <Ionicons name="checkmark-circle" size={18} color={THEME.marca700} />}
                         </TouchableOpacity>
                       );
                     })}
                     {resoluciones.length === 0 && (
-                      <Text style={{ color: '#F59E0B', fontSize: 12 }}>
+                      <Text style={{ color: THEME.badges.amber.text, fontSize: 12 }}>
                         No hay resoluciones registradas aún. Puedes definirlas en la pestaña de Resoluciones o ingresar fechas manualmente.
                       </Text>
                     )}
                   </View>
                 </View>
 
-                {/* Fechas de Vigencia (Aclarado: Otorgado a la persona por la resolución o editable si es menor) */}
+                {/* Fechas de Vigencia */}
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
+                    <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>
                       Periodo de Vigencia de la Autorización de Modalidad:
                     </Text>
                     <TouchableOpacity
@@ -2287,7 +2501,7 @@ export default function TeletrabajoScreen() {
                         }))
                       }
                     >
-                      <Text style={{ color: '#38BDF8', fontSize: 11.5, fontWeight: '700' }}>
+                      <Text style={{ color: THEME.marca700, fontSize: 11.5, fontWeight: '700' }}>
                         {formAsignacion.fechas_editadas_manualmente ? 'Modo Manual Habilitado' : 'Heredando de Resolución'}
                       </Text>
                     </TouchableOpacity>
@@ -2295,21 +2509,21 @@ export default function TeletrabajoScreen() {
 
                   <View
                     style={{
-                      backgroundColor: 'rgba(56, 189, 248, 0.08)',
-                      padding: 8,
-                      borderRadius: 6,
+                      backgroundColor: THEME.marca50,
+                      padding: 10,
+                      borderRadius: 8,
                       borderLeftWidth: 3,
-                      borderLeftColor: '#38BDF8',
+                      borderLeftColor: THEME.marca700,
                     }}
                   >
-                    <Text style={{ color: '#94A3B8', fontSize: 11.5, lineHeight: 16 }}>
+                    <Text style={{ color: THEME.slate600, fontSize: 11.5, lineHeight: 16 }}>
                       ℹ️ Corresponde al rango de fechas en que la persona tiene autorizada la modalidad. Por defecto hereda la vigencia de la Resolución seleccionada, pero puedes ajustarlo si a la persona se le concede un periodo menor o específico.
                     </Text>
                   </View>
 
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 11 }}>Fecha Inicio:</Text>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, fontWeight: '600' }}>Fecha Inicio:</Text>
                       <TextInput
                         value={limpiarFecha(formAsignacion.fecha_inicio)}
                         onChangeText={(t) =>
@@ -2320,20 +2534,20 @@ export default function TeletrabajoScreen() {
                           }))
                         }
                         placeholder="AAAA-MM-DD"
-                        placeholderTextColor="#64748B"
+                        placeholderTextColor={THEME.slate400}
                         style={{
-                          backgroundColor: COLORS.inputBg,
+                          backgroundColor: THEME.white,
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: COLORS.border,
-                          color: '#FFFFFF',
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
                           padding: 10,
                           fontSize: 13,
                         }}
                       />
                     </View>
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 11 }}>Fecha Fin:</Text>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, fontWeight: '600' }}>Fecha Fin:</Text>
                       <TextInput
                         value={limpiarFecha(formAsignacion.fecha_fin)}
                         onChangeText={(t) =>
@@ -2344,13 +2558,13 @@ export default function TeletrabajoScreen() {
                           }))
                         }
                         placeholder="AAAA-MM-DD"
-                        placeholderTextColor="#64748B"
+                        placeholderTextColor={THEME.slate400}
                         style={{
-                          backgroundColor: COLORS.inputBg,
+                          backgroundColor: THEME.white,
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: COLORS.border,
-                          color: '#FFFFFF',
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
                           padding: 10,
                           fontSize: 13,
                         }}
@@ -2362,7 +2576,7 @@ export default function TeletrabajoScreen() {
                 {/* Esquema de Días: Título Dinámico según modalidad seleccionada */}
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
+                    <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>
                       {formAsignacion.modalidad === 'TRABAJO_EN_CASA'
                         ? 'Distribución de Días de Trabajo en Casa:'
                         : formAsignacion.modalidad === 'TELETRABAJO_AUTONOMO'
@@ -2394,15 +2608,15 @@ export default function TeletrabajoScreen() {
                             }
                           }}
                           style={{
-                            backgroundColor: sel ? '#0284C7' : 'rgba(255, 255, 255, 0.05)',
+                            backgroundColor: sel ? THEME.marca700 : THEME.slate100,
                             paddingVertical: 8,
                             paddingHorizontal: 11,
                             borderRadius: 6,
                             borderWidth: 1,
-                            borderColor: sel ? '#38BDF8' : COLORS.border,
+                            borderColor: sel ? THEME.marca700 : THEME.slate200,
                           }}
                         >
-                          <Text style={{ color: sel ? '#FFFFFF' : '#CBD5E1', fontSize: 11.5, fontWeight: '700' }}>
+                          <Text style={{ color: sel ? '#FFFFFF' : THEME.slate700, fontSize: 11.5, fontWeight: '700' }}>
                             {esq.label}
                           </Text>
                         </TouchableOpacity>
@@ -2415,20 +2629,20 @@ export default function TeletrabajoScreen() {
                     formAsignacion.esquema_dias_tipo === 'TODOS') && (
                     <View style={{ marginTop: 6, gap: 6 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>Selecciona los días hábiles:</Text>
+                        <Text style={{ color: THEME.slate500, fontSize: 11 }}>Selecciona los días hábiles:</Text>
                         <View style={{ flexDirection: 'row', gap: 6 }}>
                           <TouchableOpacity
                             onPress={seleccionarTodosLosDias}
                             style={{
-                              backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                              backgroundColor: THEME.marca50,
                               paddingHorizontal: 8,
                               paddingVertical: 3,
                               borderRadius: 4,
                               borderWidth: 1,
-                              borderColor: '#0284C7',
+                              borderColor: THEME.marca200,
                             }}
                           >
-                            <Text style={{ color: '#38BDF8', fontSize: 10.5, fontWeight: '800' }}>
+                            <Text style={{ color: THEME.marca700, fontSize: 10.5, fontWeight: '800' }}>
                               Marcar Todos (5)
                             </Text>
                           </TouchableOpacity>
@@ -2442,13 +2656,15 @@ export default function TeletrabajoScreen() {
                               }))
                             }
                             style={{
-                              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                              backgroundColor: THEME.slate100,
                               paddingHorizontal: 8,
                               paddingVertical: 3,
                               borderRadius: 4,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
                             }}
                           >
-                            <Text style={{ color: '#94A3B8', fontSize: 10.5, fontWeight: '600' }}>
+                            <Text style={{ color: THEME.slate600, fontSize: 10.5, fontWeight: '600' }}>
                               Limpiar
                             </Text>
                           </TouchableOpacity>
@@ -2466,13 +2682,13 @@ export default function TeletrabajoScreen() {
                                 flex: 1,
                                 paddingVertical: 8,
                                 borderRadius: 6,
-                                backgroundColor: activo ? '#10B981' : 'rgba(255, 255, 255, 0.06)',
+                                backgroundColor: activo ? '#047857' : THEME.slate100,
                                 borderWidth: 1,
-                                borderColor: activo ? '#34D399' : COLORS.border,
+                                borderColor: activo ? '#059669' : THEME.slate200,
                                 alignItems: 'center',
                               }}
                             >
-                              <Text style={{ color: activo ? '#FFFFFF' : '#94A3B8', fontSize: 11, fontWeight: '800' }}>
+                              <Text style={{ color: activo ? '#FFFFFF' : THEME.slate600, fontSize: 11, fontWeight: '800' }}>
                                 {dia.substring(0, 3)}
                               </Text>
                             </TouchableOpacity>
@@ -2491,10 +2707,12 @@ export default function TeletrabajoScreen() {
                       paddingHorizontal: 16,
                       paddingVertical: 10,
                       borderRadius: 8,
-                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      backgroundColor: THEME.slate100,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
                     }}
                   >
-                    <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+                    <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
                   </Pressable>
 
                   <Pressable
@@ -2504,7 +2722,7 @@ export default function TeletrabajoScreen() {
                       paddingHorizontal: 20,
                       paddingVertical: 10,
                       borderRadius: 8,
-                      backgroundColor: '#0284C7',
+                      backgroundColor: THEME.marca700,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
@@ -2539,7 +2757,7 @@ export default function TeletrabajoScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.8)',
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
               justifyContent: 'center',
               alignItems: 'center',
               padding: 16,
@@ -2547,14 +2765,18 @@ export default function TeletrabajoScreen() {
           >
             <View
               style={{
-                backgroundColor: '#0F2133',
-                borderRadius: 18,
+                backgroundColor: THEME.white,
+                borderRadius: 16,
                 borderWidth: 1,
-                borderColor: COLORS.border,
+                borderColor: THEME.slate200,
                 padding: 24,
                 width: '100%',
-                maxWidth: 540,
+                maxWidth: 560,
                 gap: 14,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 4,
               }}
             >
               <View
@@ -2564,30 +2786,30 @@ export default function TeletrabajoScreen() {
                   alignItems: 'center',
                   paddingBottom: 10,
                   borderBottomWidth: 1,
-                  borderBottomColor: COLORS.border,
+                  borderBottomColor: THEME.slate200,
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
                   Subir Resolución Institucional
                 </Text>
-                <Pressable onPress={() => setModalResVisible(false)}>
-                  <Ionicons name="close" size={24} color="#94A3B8" />
+                <Pressable onPress={() => setModalResVisible(false)} hitSlop={8}>
+                  <Ionicons name="close" size={24} color={THEME.slate500} />
                 </Pressable>
               </View>
 
               <View style={{ gap: 4 }}>
-                <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Número de Resolución:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Número de Resolución:</Text>
                 <TextInput
                   value={formRes.numero_resolucion}
                   onChangeText={(t) => setFormRes((p) => ({ ...p, numero_resolucion: t }))}
                   placeholder="Ej: Resolución No. 124 de 2026"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={THEME.slate400}
                   style={{
-                    backgroundColor: COLORS.inputBg,
+                    backgroundColor: THEME.white,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: COLORS.border,
-                    color: '#FFFFFF',
+                    borderColor: THEME.slate300,
+                    color: THEME.slate900,
                     padding: 10,
                     fontSize: 13,
                   }}
@@ -2596,36 +2818,36 @@ export default function TeletrabajoScreen() {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Fecha Expedición:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Fecha Expedición:</Text>
                   <TextInput
                     value={formRes.fecha_expedicion}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, fecha_expedicion: t }))}
                     placeholder="AAAA-MM-DD"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={THEME.slate400}
                     style={{
-                      backgroundColor: COLORS.inputBg,
+                      backgroundColor: THEME.white,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
-                      color: '#FFFFFF',
+                      borderColor: THEME.slate300,
+                      color: THEME.slate900,
                       padding: 10,
                       fontSize: 13,
                     }}
                   />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Año:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Año:</Text>
                   <TextInput
                     value={formRes.anio}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, anio: t }))}
                     placeholder="2026"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={THEME.slate400}
                     style={{
-                      backgroundColor: COLORS.inputBg,
+                      backgroundColor: THEME.white,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
-                      color: '#FFFFFF',
+                      borderColor: THEME.slate300,
+                      color: THEME.slate900,
                       padding: 10,
                       fontSize: 13,
                     }}
@@ -2635,36 +2857,36 @@ export default function TeletrabajoScreen() {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Vigencia Inicio:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Vigencia Inicio:</Text>
                   <TextInput
                     value={formRes.fecha_inicio_vigencia}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, fecha_inicio_vigencia: t }))}
                     placeholder="AAAA-MM-DD"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={THEME.slate400}
                     style={{
-                      backgroundColor: COLORS.inputBg,
+                      backgroundColor: THEME.white,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
-                      color: '#FFFFFF',
+                      borderColor: THEME.slate300,
+                      color: THEME.slate900,
                       padding: 10,
                       fontSize: 13,
                     }}
                   />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Vigencia Fin:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Vigencia Fin:</Text>
                   <TextInput
                     value={formRes.fecha_fin_vigencia}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, fecha_fin_vigencia: t }))}
                     placeholder="AAAA-MM-DD"
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={THEME.slate400}
                     style={{
-                      backgroundColor: COLORS.inputBg,
+                      backgroundColor: THEME.white,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
-                      color: '#FFFFFF',
+                      borderColor: THEME.slate300,
+                      color: THEME.slate900,
                       padding: 10,
                       fontSize: 13,
                     }}
@@ -2673,20 +2895,20 @@ export default function TeletrabajoScreen() {
               </View>
 
               <View style={{ gap: 4 }}>
-                <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Descripción u Objeto:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Descripción u Objeto:</Text>
                 <TextInput
                   value={formRes.descripcion}
                   onChangeText={(t) => setFormRes((p) => ({ ...p, descripcion: t }))}
-                  placeholder="Descripción..."
-                  placeholderTextColor="#64748B"
+                  placeholder="Descripción del acto administrativo..."
+                  placeholderTextColor={THEME.slate400}
                   multiline
                   numberOfLines={2}
                   style={{
-                    backgroundColor: COLORS.inputBg,
+                    backgroundColor: THEME.white,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: COLORS.border,
-                    color: '#FFFFFF',
+                    borderColor: THEME.slate300,
+                    color: THEME.slate900,
                     padding: 10,
                     fontSize: 12.5,
                   }}
@@ -2695,7 +2917,7 @@ export default function TeletrabajoScreen() {
 
               {/* Subir Archivo PDF */}
               <View style={{ gap: 6 }}>
-                <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Archivo PDF Oficial:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Archivo PDF Oficial:</Text>
                 {Platform.OS === 'web' ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <input
@@ -2708,11 +2930,11 @@ export default function TeletrabajoScreen() {
                     <label
                       htmlFor="upload-res"
                       style={{
-                        backgroundColor: '#1E293B',
+                        backgroundColor: THEME.marca50,
                         padding: '8px 14px',
                         borderRadius: '6px',
-                        border: '1px solid #334155',
-                        color: '#38BDF8',
+                        border: `1px solid ${THEME.marca200}`,
+                        color: THEME.marca700,
                         fontSize: '12px',
                         fontWeight: '700',
                         cursor: 'pointer',
@@ -2720,12 +2942,12 @@ export default function TeletrabajoScreen() {
                     >
                       📁 {formRes.nombre_archivo ? 'Cambiar PDF' : 'Seleccionar PDF'}
                     </label>
-                    <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                    <Text style={{ color: THEME.slate600, fontSize: 12 }}>
                       {formRes.nombre_archivo || 'Ningún archivo seleccionado'}
                     </Text>
                   </View>
                 ) : (
-                  <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                     Carga de archivos disponible en versión web.
                   </Text>
                 )}
@@ -2738,10 +2960,12 @@ export default function TeletrabajoScreen() {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: THEME.slate100,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
                   }}
                 >
-                  <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
                 </Pressable>
 
                 <Pressable
@@ -2751,7 +2975,7 @@ export default function TeletrabajoScreen() {
                     paddingHorizontal: 20,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: COLORS.primary,
+                    backgroundColor: THEME.marca700,
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 6,
@@ -2785,7 +3009,7 @@ export default function TeletrabajoScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.8)',
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
               justifyContent: 'center',
               alignItems: 'center',
               padding: 16,
@@ -2793,14 +3017,18 @@ export default function TeletrabajoScreen() {
           >
             <View
               style={{
-                backgroundColor: '#0F2133',
-                borderRadius: 18,
+                backgroundColor: THEME.white,
+                borderRadius: 16,
                 borderWidth: 1,
-                borderColor: COLORS.border,
+                borderColor: THEME.slate200,
                 padding: 24,
                 width: '100%',
-                maxWidth: 520,
+                maxWidth: 540,
                 gap: 14,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 4,
               }}
             >
               <View
@@ -2810,25 +3038,25 @@ export default function TeletrabajoScreen() {
                   alignItems: 'center',
                   paddingBottom: 10,
                   borderBottomWidth: 1,
-                  borderBottomColor: COLORS.border,
+                  borderBottomColor: THEME.slate200,
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
                   Acuerdo de Compromiso de Teletrabajo
                 </Text>
-                <Pressable onPress={() => setModalAcuerdoVisible(false)}>
-                  <Ionicons name="close" size={24} color="#94A3B8" />
+                <Pressable onPress={() => setModalAcuerdoVisible(false)} hitSlop={8}>
+                  <Ionicons name="close" size={24} color={THEME.slate500} />
                 </Pressable>
               </View>
 
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8, gap: 4 }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
+              <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
                   Servidor: {formAcuerdo.persona?.titular_nombre}
                 </Text>
-                <Text style={{ color: '#93C5FD', fontSize: 12.5 }}>
+                <Text style={{ color: THEME.marca700, fontSize: 12.5, fontWeight: '600' }}>
                   Cargo Actual: {formAcuerdo.persona?.cargo}
                 </Text>
-                <Text style={{ color: '#94A3B8', fontSize: 11.5 }}>
+                <Text style={{ color: THEME.slate500, fontSize: 11.5 }}>
                   Dependencia: {formAcuerdo.persona?.dependencia_cargo}
                 </Text>
               </View>
@@ -2836,32 +3064,32 @@ export default function TeletrabajoScreen() {
               {formAcuerdo.persona?.requiere_nuevo_acuerdo && (
                 <View
                   style={{
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                    padding: 10,
+                    backgroundColor: THEME.badges.amber.bg,
+                    padding: 12,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#F59E0B',
+                    borderColor: THEME.badges.amber.border,
                   }}
                 >
-                  <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '700' }}>
+                  <Text style={{ color: THEME.badges.amber.text, fontSize: 12, fontWeight: '700', lineHeight: 17 }}>
                     ⚠️ Atención: El servidor presenta un cargo distinto al registrado en el acuerdo anterior. Se debe formalizar y subir el nuevo acuerdo de compromiso para el cargo actual.
                   </Text>
                 </View>
               )}
 
               <View style={{ gap: 4 }}>
-                <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Fecha de Suscripción:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Fecha de Suscripción:</Text>
                 <TextInput
                   value={formAcuerdo.fecha_suscripcion}
                   onChangeText={(t) => setFormAcuerdo((p) => ({ ...p, fecha_suscripcion: t }))}
                   placeholder="AAAA-MM-DD"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={THEME.slate400}
                   style={{
-                    backgroundColor: COLORS.inputBg,
+                    backgroundColor: THEME.white,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: COLORS.border,
-                    color: '#FFFFFF',
+                    borderColor: THEME.slate300,
+                    color: THEME.slate900,
                     padding: 10,
                     fontSize: 13,
                   }}
@@ -2870,7 +3098,7 @@ export default function TeletrabajoScreen() {
 
               {/* Subir Acuerdo PDF */}
               <View style={{ gap: 6 }}>
-                <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
                   Documento de Acuerdo Firmado (PDF):
                 </Text>
                 {Platform.OS === 'web' ? (
@@ -2885,11 +3113,11 @@ export default function TeletrabajoScreen() {
                     <label
                       htmlFor="upload-acuerdo"
                       style={{
-                        backgroundColor: '#1E293B',
+                        backgroundColor: THEME.badges.amber.bg,
                         padding: '8px 14px',
                         borderRadius: '6px',
-                        border: '1px solid #334155',
-                        color: '#FBBF24',
+                        border: `1px solid ${THEME.badges.amber.border}`,
+                        color: THEME.badges.amber.text,
                         fontSize: '12px',
                         fontWeight: '700',
                         cursor: 'pointer',
@@ -2897,12 +3125,12 @@ export default function TeletrabajoScreen() {
                     >
                       📁 {formAcuerdo.nombre_archivo ? 'Cambiar PDF' : 'Subir PDF Firmado'}
                     </label>
-                    <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                    <Text style={{ color: THEME.slate600, fontSize: 12 }}>
                       {formAcuerdo.nombre_archivo || 'Ningún archivo seleccionado'}
                     </Text>
                   </View>
                 ) : (
-                  <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 12 }}>
                     Carga disponible en versión web.
                   </Text>
                 )}
@@ -2915,10 +3143,12 @@ export default function TeletrabajoScreen() {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: THEME.slate100,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
                   }}
                 >
-                  <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
                 </Pressable>
 
                 <Pressable
@@ -2962,7 +3192,7 @@ export default function TeletrabajoScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.8)',
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
               justifyContent: 'center',
               alignItems: 'center',
               padding: 16,
@@ -2970,14 +3200,18 @@ export default function TeletrabajoScreen() {
           >
             <View
               style={{
-                backgroundColor: '#0F2133',
-                borderRadius: 18,
+                backgroundColor: THEME.white,
+                borderRadius: 16,
                 borderWidth: 1,
-                borderColor: COLORS.border,
+                borderColor: THEME.slate200,
                 padding: 24,
                 width: '100%',
-                maxWidth: 580,
+                maxWidth: 600,
                 maxHeight: '90%',
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 4,
               }}
             >
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
@@ -2988,63 +3222,63 @@ export default function TeletrabajoScreen() {
                     alignItems: 'center',
                     paddingBottom: 10,
                     borderBottomWidth: 1,
-                    borderBottomColor: COLORS.border,
+                    borderBottomColor: THEME.slate200,
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
                     Registrar Corte de Seguimiento
                   </Text>
-                  <Pressable onPress={() => setModalSegVisible(false)}>
-                    <Ionicons name="close" size={24} color="#94A3B8" />
+                  <Pressable onPress={() => setModalSegVisible(false)} hitSlop={8}>
+                    <Ionicons name="close" size={24} color={THEME.slate500} />
                   </Pressable>
                 </View>
 
-                <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', padding: 12, borderRadius: 8, gap: 4 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
+                <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 14, fontWeight: '700' }}>
                     Servidor: {formSeg.persona?.titular_nombre}
                   </Text>
-                  <Text style={{ color: '#93C5FD', fontSize: 12.5 }}>
+                  <Text style={{ color: THEME.marca700, fontSize: 12.5, fontWeight: '600' }}>
                     Cargo: {formSeg.persona?.cargo}
                   </Text>
                 </View>
 
                 {/* Rango de Fechas (Desde - Hasta) */}
                 <View style={{ gap: 6 }}>
-                  <Text style={{ color: '#38BDF8', fontSize: 13, fontWeight: '800' }}>
+                  <Text style={{ color: THEME.marca700, fontSize: 13, fontWeight: '800' }}>
                     Rango del Periodo Evaluado:
                   </Text>
                   <View style={{ flexDirection: 'row', gap: 10 }}>
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 11 }}>Fecha Desde:</Text>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, fontWeight: '600' }}>Fecha Desde:</Text>
                       <TextInput
                         value={formSeg.fecha_corte_desde}
                         onChangeText={(t) => setFormSeg((p) => ({ ...p, fecha_corte_desde: t }))}
                         placeholder="AAAA-MM-DD"
-                        placeholderTextColor="#64748B"
+                        placeholderTextColor={THEME.slate400}
                         style={{
-                          backgroundColor: COLORS.inputBg,
+                          backgroundColor: THEME.white,
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: COLORS.border,
-                          color: '#FFFFFF',
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
                           padding: 10,
                           fontSize: 13,
                         }}
                       />
                     </View>
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 11 }}>Fecha Hasta:</Text>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, fontWeight: '600' }}>Fecha Hasta:</Text>
                       <TextInput
                         value={formSeg.fecha_corte_hasta}
                         onChangeText={(t) => setFormSeg((p) => ({ ...p, fecha_corte_hasta: t }))}
                         placeholder="AAAA-MM-DD"
-                        placeholderTextColor="#64748B"
+                        placeholderTextColor={THEME.slate400}
                         style={{
-                          backgroundColor: COLORS.inputBg,
+                          backgroundColor: THEME.white,
                           borderRadius: 8,
                           borderWidth: 1,
-                          borderColor: COLORS.border,
-                          color: '#FFFFFF',
+                          borderColor: THEME.slate300,
+                          color: THEME.slate900,
                           padding: 10,
                           fontSize: 13,
                         }}
@@ -3056,7 +3290,7 @@ export default function TeletrabajoScreen() {
                 {/* Calificación y Cumplimiento */}
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Nivel de Cumplimiento:</Text>
+                    <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Nivel de Cumplimiento:</Text>
                     <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                       {['SOBRESALIENTE', 'SATISFACTORIO', 'PARCIAL', 'NO_CUMPLE'].map((niv) => {
                         const sel = formSeg.cumplimiento_nivel === niv;
@@ -3065,13 +3299,15 @@ export default function TeletrabajoScreen() {
                             key={niv}
                             onPress={() => setFormSeg((p) => ({ ...p, cumplimiento_nivel: niv as any }))}
                             style={{
-                              backgroundColor: sel ? '#10B981' : 'rgba(255, 255, 255, 0.05)',
+                              backgroundColor: sel ? '#047857' : THEME.slate100,
                               paddingVertical: 6,
                               paddingHorizontal: 8,
                               borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: sel ? '#059669' : THEME.slate200,
                             }}
                           >
-                            <Text style={{ color: sel ? '#FFFFFF' : '#94A3B8', fontSize: 10.5, fontWeight: '700' }}>
+                            <Text style={{ color: sel ? '#FFFFFF' : THEME.slate700, fontSize: 10.5, fontWeight: '700' }}>
                               {niv}
                             </Text>
                           </TouchableOpacity>
@@ -3080,20 +3316,20 @@ export default function TeletrabajoScreen() {
                     </View>
                   </View>
 
-                  <View style={{ width: 100, gap: 4 }}>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>% Calificación:</Text>
+                  <View style={{ width: 110, gap: 4 }}>
+                    <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>% Calificación:</Text>
                     <TextInput
                       value={formSeg.calificacion_porcentaje}
                       onChangeText={(t) => setFormSeg((p) => ({ ...p, calificacion_porcentaje: t }))}
                       keyboardType="numeric"
                       placeholder="100"
-                      placeholderTextColor="#64748B"
+                      placeholderTextColor={THEME.slate400}
                       style={{
-                        backgroundColor: COLORS.inputBg,
+                        backgroundColor: THEME.white,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: COLORS.border,
-                        color: '#FFFFFF',
+                        borderColor: THEME.slate300,
+                        color: THEME.slate900,
                         padding: 10,
                         fontSize: 13,
                       }}
@@ -3103,20 +3339,20 @@ export default function TeletrabajoScreen() {
 
                 {/* Actividades y Entregables */}
                 <View style={{ gap: 4 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Actividades y Entregables Reportados:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Actividades y Entregables Reportados:</Text>
                   <TextInput
                     value={formSeg.actividades_reportadas}
                     onChangeText={(t) => setFormSeg((p) => ({ ...p, actividades_reportadas: t }))}
                     placeholder="Detalle de actividades desarrolladas durante las jornadas de teletrabajo..."
-                    placeholderTextColor="#64748B"
+                    placeholderTextColor={THEME.slate400}
                     multiline
                     numberOfLines={3}
                     style={{
-                      backgroundColor: COLORS.inputBg,
+                      backgroundColor: THEME.white,
                       borderRadius: 8,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
-                      color: '#FFFFFF',
+                      borderColor: THEME.slate300,
+                      color: THEME.slate900,
                       padding: 10,
                       fontSize: 12.5,
                     }}
@@ -3125,7 +3361,7 @@ export default function TeletrabajoScreen() {
 
                 {/* Subir Evidencias */}
                 <View style={{ gap: 6 }}>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '700' }}>Archivo de Soportes / Evidencias:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Archivo de Soportes / Evidencias:</Text>
                   {Platform.OS === 'web' ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <input
@@ -3137,11 +3373,11 @@ export default function TeletrabajoScreen() {
                       <label
                         htmlFor="upload-seg"
                         style={{
-                          backgroundColor: '#1E293B',
+                          backgroundColor: THEME.marca50,
                           padding: '8px 14px',
                           borderRadius: '6px',
-                          border: '1px solid #334155',
-                          color: '#38BDF8',
+                          border: `1px solid ${THEME.marca200}`,
+                          color: THEME.marca700,
                           fontSize: '12px',
                           fontWeight: '700',
                           cursor: 'pointer',
@@ -3149,7 +3385,7 @@ export default function TeletrabajoScreen() {
                       >
                         📁 {formSeg.nombre_archivo ? 'Cambiar Soportes' : 'Adjuntar Evidencias'}
                       </label>
-                      <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                      <Text style={{ color: THEME.slate600, fontSize: 12 }}>
                         {formSeg.nombre_archivo || 'Ningún archivo adjunto'}
                       </Text>
                     </View>
@@ -3163,10 +3399,12 @@ export default function TeletrabajoScreen() {
                       paddingHorizontal: 16,
                       paddingVertical: 10,
                       borderRadius: 8,
-                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      backgroundColor: THEME.slate100,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
                     }}
                   >
-                    <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+                    <Text style={{ color: THEME.slate700, fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
                   </Pressable>
 
                   <Pressable
@@ -3176,7 +3414,7 @@ export default function TeletrabajoScreen() {
                       paddingHorizontal: 20,
                       paddingVertical: 10,
                       borderRadius: 8,
-                      backgroundColor: '#0284C7',
+                      backgroundColor: THEME.marca700,
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
@@ -3211,7 +3449,7 @@ export default function TeletrabajoScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0,0,0,0.75)',
+              backgroundColor: 'rgba(15, 23, 42, 0.65)',
               justifyContent: 'center',
               alignItems: 'center',
               padding: 20,
@@ -3219,19 +3457,23 @@ export default function TeletrabajoScreen() {
           >
             <View
               style={{
-                backgroundColor: '#0F2133',
+                backgroundColor: THEME.white,
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor:
                   notifModal.tipo === 'error'
-                    ? '#EF4444'
+                    ? THEME.badges.rose.border
                     : notifModal.tipo === 'success'
-                    ? '#10B981'
-                    : '#38BDF8',
+                    ? THEME.badges.emerald.border
+                    : THEME.marca200,
                 padding: 22,
                 maxWidth: 460,
                 width: '100%',
                 gap: 14,
+                shadowColor: '#000',
+                shadowOpacity: 0.1,
+                shadowRadius: 16,
+                elevation: 4,
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -3246,18 +3488,18 @@ export default function TeletrabajoScreen() {
                   size={26}
                   color={
                     notifModal.tipo === 'error'
-                      ? '#F87171'
+                      ? '#BE123C'
                       : notifModal.tipo === 'success'
-                      ? '#34D399'
-                      : '#38BDF8'
+                      ? '#047857'
+                      : THEME.marca700
                   }
                 />
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+                <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
                   {notifModal.titulo}
                 </Text>
               </View>
 
-              <Text style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 19 }}>
+              <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 19 }}>
                 {notifModal.mensaje}
               </Text>
 
@@ -3267,12 +3509,12 @@ export default function TeletrabajoScreen() {
                   alignSelf: 'flex-end',
                   backgroundColor:
                     notifModal.tipo === 'error'
-                      ? COLORS.primary
+                      ? '#BE123C'
                       : notifModal.tipo === 'success'
-                      ? '#10B981'
-                      : '#0284C7',
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
+                      ? '#047857'
+                      : THEME.marca700,
+                  paddingHorizontal: 18,
+                  paddingVertical: 9,
                   borderRadius: 8,
                   marginTop: 6,
                 }}
