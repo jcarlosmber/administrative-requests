@@ -193,7 +193,10 @@ export const teletrabajoService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error('Error al actualizar viabilidad del cargo');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.detail || err.message || `Error ${res.status}: Fallo al actualizar viabilidad del cargo`);
+    }
     return res.json();
   },
 

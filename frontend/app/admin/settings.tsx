@@ -3180,6 +3180,69 @@ export default function AdminSettings() {
                             node -v
                           </Text>
                         </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('pm2 restart all');
+                            runTerminalCommand('pm2 restart all');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#EC4899',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#F472B6', fontSize: 11, fontFamily: 'monospace', fontWeight: '700' }}>
+                            pm2 restart all
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('pm2 logs --lines 30 --nostream');
+                            runTerminalCommand('pm2 logs --lines 30 --nostream');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#06B6D4',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#22D3EE', fontSize: 11, fontFamily: 'monospace' }}>
+                            pm2 logs 30
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('bash deploy_ingresos.sh');
+                            runTerminalCommand('bash deploy_ingresos.sh');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#8B5CF6',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#A78BFA', fontSize: 11, fontFamily: 'monospace', fontWeight: '700' }}>
+                            deploy_ingresos.sh
+                          </Text>
+                        </TouchableOpacity>
                       </View>
 
                       {/* Contenido / Pantalla de Salida */}

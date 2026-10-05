@@ -278,6 +278,28 @@ module.exports = function (pool) {
   // =========================================================================
   // 3. CONFIGURACIÓN DE CARGOS TELETRABAJABLES
   // =========================================================================
+  // Asegurar columnas y estructura de teletrabajo_cargos_config
+  pool.query(`
+    CREATE TABLE IF NOT EXISTS public.teletrabajo_cargos_config (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        cargo_nombre TEXT NOT NULL,
+        codigo TEXT,
+        grado TEXT,
+        dependencia TEXT,
+        es_teletrabajable BOOLEAN DEFAULT TRUE,
+        max_dias_semana INT DEFAULT 2,
+        justificacion_estudio TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS es_teletrabajable BOOLEAN DEFAULT TRUE;
+    ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS max_dias_semana INT DEFAULT 2;
+    ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS justificacion_estudio TEXT;
+    ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+  `).catch((e) => console.warn('[Teletrabajo] Warning asegurando columnas de cargos_config:', e.message));
+
   router.get('/cargos', async (req, res) => {
     try {
       const q = `
@@ -303,33 +325,56 @@ module.exports = function (pool) {
       const { id } = req.params;
       const { es_teletrabajable, max_dias_semana, justificacion_estudio } = req.body;
 
+      console.log(`[Teletrabajo] Recibida actualización para cargo ${id}:`, { es_teletrabajable, max_dias_semana, justificacion_estudio });
+
       const actual = await pool.query('SELECT * FROM public.teletrabajo_cargos_config WHERE id = $1', [id]);
       if (actual.rows.length === 0) {
-        return res.status(404).json({ error: 'Cargo no encontrado' });
+        return res.status(404).json({ error: 'Cargo no encontrado en la base de datos.' });
       }
       const actualRow = actual.rows[0];
 
       const nuevoTeletrabajable = es_teletrabajable !== undefined ? Boolean(es_teletrabajable) : actualRow.es_teletrabajable;
-      const nuevoMaxDias = (max_dias_semana !== undefined && max_dias_semana !== null && !isNaN(parseInt(max_dias_semana, 10)))
-        ? Math.min(5, Math.max(1, parseInt(max_dias_semana, 10)))
+      const parsedDias = parseInt(max_dias_semana, 10);
+      const nuevoMaxDias = (!isNaN(parsedDias) && parsedDias >= 1 && parsedDias <= 5)
+        ? parsedDias
         : (actualRow.max_dias_semana || 2);
-      const nuevaJustificacion = justificacion_estudio !== undefined ? (justificacion_estudio || '') : (actualRow.justificacion_estudio || '');
+      const nuevaJustificacion = justificacion_estudio !== undefined 
+        ? String(justificacion_estudio || '') 
+        : (actualRow.justificacion_estudio || '');
 
-      const q = `
-        UPDATE public.teletrabajo_cargos_config
-        SET 
-          es_teletrabajable = $1,
-          max_dias_semana = $2,
-          justificacion_estudio = $3,
-          updated_at = NOW()
-        WHERE id = $4
-        RETURNING *;
-      `;
-      const result = await pool.query(q, [nuevoTeletrabajable, nuevoMaxDias, nuevaJustificacion, id]);
+      let result;
+      try {
+        result = await pool.query(`
+          UPDATE public.teletrabajo_cargos_config
+          SET 
+            es_teletrabajable = $1,
+            max_dias_semana = $2,
+            justificacion_estudio = $3,
+            updated_at = NOW()
+          WHERE id = $4
+          RETURNING *;
+        `, [nuevoTeletrabajable, nuevoMaxDias, nuevaJustificacion, id]);
+      } catch (colErr) {
+        console.warn('[Teletrabajo] Reintentando UPDATE cargo sin updated_at:', colErr.message);
+        result = await pool.query(`
+          UPDATE public.teletrabajo_cargos_config
+          SET 
+            es_teletrabajable = $1,
+            max_dias_semana = $2,
+            justificacion_estudio = $3
+          WHERE id = $4
+          RETURNING *;
+        `, [nuevoTeletrabajable, nuevoMaxDias, nuevaJustificacion, id]);
+      }
+
+      console.log(`[Teletrabajo] Cargo ${id} actualizado con éxito.`);
       res.json(result.rows[0]);
     } catch (err) {
       console.error('[Teletrabajo] Error actualizando cargo:', err);
-      res.status(500).json({ error: 'Error al actualizar viabilidad de cargo: ' + err.message });
+      res.status(500).json({ 
+        error: 'Error al actualizar viabilidad de cargo: ' + err.message,
+        detail: err.detail || err.hint || null
+      });
     }
   });
 
