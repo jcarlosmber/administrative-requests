@@ -130,7 +130,7 @@ Para la tarjeta profesional, matrícula y/o certificado de antecedentes discipli
 CLASIFICACIÓN DE DOCUMENTOS (3 CATEGORÍAS OBLIGATORIAS):
 Debes clasificar rigurosamente cada archivo adjunto en una de estas 3 categorías:
 A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bachiller, Técnico, Tecnólogo, Pregrado o Posgrados [Especialización, Maestría, Doctorado], Tarjeta Profesional o Matrícula):
-   - ¡REGLA CRÍTICA!: NUNCA clasifiques un título de Bachiller, Técnico, Tecnólogo, Pregrado, Posgrado ni Tarjeta Profesional en "documentos_no_aplican". El formato oficial institucional FT-318 exige registrar explícitamente:
+   - ¡REGLA CRÍTICA!: NUNCA clasifiques un título formal de Bachiller, Técnico, Tecnólogo, Pregrado, Posgrado ni Tarjeta Profesional en "documentos_no_aplican". El formato oficial institucional FT-318 exige registrar explícitamente:
      1. TÍTULO DE BACHILLER (Institución y Fecha de Grado)
      2. TÍTULO DE TÉCNICO / TECNÓLOGO (Institución y Fecha de Grado)
      3. TÍTULO DE PREGRADO (Institución, Fecha de Grado y Fecha de Terminación de Materias si aporta certificación)
@@ -138,11 +138,14 @@ A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bac
      5. TARJETA PROFESIONAL (Número de Registro y Fecha de Expedición)
    - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL"), título obtenido, institución educativa, fecha de grado, si aporta certificado de terminación de materias y la fecha de terminación.
    - Aplica los 7 checks normativos obligatorios de verificación formal en cada uno según sea título o tarjeta profesional.
+   - ¡REGLA OBLIGATORIA CONTRA CLASIFICAR DIPLOMADOS COMO PREGRADO!: NUNCA clasifiques diplomados, cursos cortos, talleres, seminarios, congresos, simposios o certificados de asistencia como Educación Formal (Pregrado, Especialización, Maestría ni Doctorado). Un diplomado (ej. 'Diplomado Código General del Proceso', 'Diplomado en Derecho Administrativo') NO es un pregrado ni posgrado formal según la Ley 30 de 1992 y el Decreto 1083 de 2015. Debes clasificarlo OBLIGATORIAMENTE en "documentos_no_aplican".
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
    - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos, cotejo funcional y verifica si corresponde a modalidades de la Ley 2039 de 2020 si ocurrió previo al grado.
-C. DOCUMENTOS QUE NO APLICAN AL CARGO:
-   - ÚNICAMENTE cursos de capacitación corta, seminarios, diplomados de educación continua o informal (de 20, 40 o 120 horas), certificados ilegibles o sin firma, o certificados sin vínculo laboral válido.
-   - ¡NO pongas aquí diplomas de bachiller, actas de grado ni títulos universitarios!
+C. DOCUMENTOS QUE NO APLICAN AL CARGO (Documentos Descartados / No Computables):
+   - DEBES clasificar aquí:
+     1. DIPLOMADOS, cursos de actualización o capacitación corta, seminarios, talleres, congresos, simposios y certificaciones de educación no formal o continuada (ej. 'Diplomado Código General del Proceso (80 horas)' de Legis, diplomados universitarios no conducentes a título, etc.).
+     2. Certificaciones laborales ilegibles, sin firmas o documentos que no constituyen relación laboral ni título de educación superior formal.
+   - ¡NO pongas aquí diplomas de bachiller, actas de grado de pregrado/posgrado ni tarjetas profesionales!
 `;
 
 /**
@@ -717,14 +720,54 @@ function repararJsonConCaracteresControl(raw) {
   }
 
   // Asegurar estructura y nombres de archivo en formacion_academica
-  const formacionAcademica = Array.isArray(parsedJson.formacion_academica) ? parsedJson.formacion_academica : [];
-  
-  // Rescate proactivo: Si Gemini colocó diplomas de bachiller, técnico, posgrado o tarjeta en no_aplican, los trasladamos
+  const formacionAcademicaRaw = Array.isArray(parsedJson.formacion_academica) ? parsedJson.formacion_academica : [];
+  const formacionAcademica = [];
   const documentosNoAplicanRaw = Array.isArray(parsedJson.documentos_no_aplican) ? parsedJson.documentos_no_aplican : [];
   const documentosNoAplican = [];
 
+  // Helper para detectar educación no formal (diplomados, cursos, seminarios)
+  const esEducacionNoFormal = (textoCompleto) => {
+    const t = (textoCompleto || '').toUpperCase();
+    const esNoFormal = t.includes('DIPLOMAD') || t.includes('CURSO') || t.includes('SEMINARIO') ||
+      t.includes('TALLER') || t.includes('CONGRESO') || t.includes('SIMPOSIO') ||
+      t.includes('CAPACITAC') || t.includes('ASISTENCIA AL') || t.includes('ASISTENCIA A') ||
+      t.includes('PARTICIPAC') || t.includes('EDUCACION CONTINUA') || t.includes('HORAS)') || t.includes(' HORAS');
+    const esFormalExplicito = t.includes('ACTA DE GRADO') || t.includes('DIPLOMA DE GRADO') ||
+      t.includes('TITULO DE ABOGADO') || t.includes('TITULO PROFESIONAL') ||
+      t.includes('PREGRADO EN') || t.includes('ESPECIALIZACION EN') || t.includes('MAESTRIA EN') || t.includes('DOCTORADO EN');
+    return esNoFormal && !esFormalExplicito;
+  };
+
+  // 1. Filtrar formación académica: Si Gemini clasificó un diplomado como pregrado, moverlo a documentos no aplicables
+  formacionAcademicaRaw.forEach((item, idx) => {
+    const textoItem = `${item.titulo_obtenido || ''} ${item.institucion || ''} ${item.nombre_archivo || ''} ${item.justificacion || ''}`.toUpperCase();
+    if (esEducacionNoFormal(textoItem)) {
+      documentosNoAplican.push({
+        id: `NO-APLICA-${documentosNoAplican.length + 1}`,
+        nombre_archivo: item.nombre_archivo || (pdfFiles[idx] ? pdfFiles[idx].name : 'Documento Formativo'),
+        descripcion: item.titulo_obtenido || item.nombre_archivo || 'Diplomado / Educación continua',
+        entidad: item.institucion || 'Entidad capacitadora',
+        motivo_no_aplica: 'Educación no formal o continuada (Diplomado / Curso corto): No constituye título formal de educación superior computable para el requisito académico (Decreto 1083 de 2015).'
+      });
+    } else {
+      formacionAcademica.push(item);
+    }
+  });
+
+  // 2. Rescate proactivo exclusivamente de títulos formales y tarjetas que hayan caído por error en no_aplican
   documentosNoAplicanRaw.forEach((item, idx) => {
     const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
+    
+    // Si es educación no formal (diplomado, curso, seminario, asistencia), se queda en documentosNoAplican
+    if (esEducacionNoFormal(texto)) {
+      documentosNoAplican.push({
+        ...item,
+        id: item.id || `NO-APLICA-${documentosNoAplican.length + 1}`,
+        motivo_no_aplica: item.motivo_no_aplica || 'Educación no formal o continuada (Diplomado / Curso corto): No constituye título formal de educación superior (Decreto 1083 de 2015).'
+      });
+      return;
+    }
+
     const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA');
     const esTecnico = texto.includes('TECNIC') || texto.includes('TECNOLOG');
     const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');

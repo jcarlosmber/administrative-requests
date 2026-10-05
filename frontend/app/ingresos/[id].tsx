@@ -50,6 +50,18 @@ export default function DetalleValidacionScreen() {
   const [formTarjeta, setFormTarjeta] = useState('');
   const [formCumple, setFormCumple] = useState(true);
   const [formJustificacion, setFormJustificacion] = useState('');
+  const [descartadoReactivandoIdx, setDescartadoReactivandoIdx] = useState<number | null>(null);
+
+  // Modal para Crear / Editar Certificado Laboral
+  const [modalCertVisible, setModalCertVisible] = useState(false);
+  const [certEditandoIndex, setCertEditandoIndex] = useState<number | null>(null);
+  const [formCertCargo, setFormCertCargo] = useState('');
+  const [formCertEntidad, setFormCertEntidad] = useState('');
+  const [formCertFechaInicio, setFormCertFechaInicio] = useState('');
+  const [formCertFechaFin, setFormCertFechaFin] = useState('');
+  const [formCertVinculoVigente, setFormCertVinculoVigente] = useState(false);
+  const [formCertClasificacion, setFormCertClasificacion] = useState<'RELACIONADA' | 'NO_RELACIONADA'>('RELACIONADA');
+  const [formCertTipoVinculo, setFormCertTipoVinculo] = useState('');
 
   // Modal Confirmar Eliminación (Unificado para Títulos, Certificados y No Aplican)
   const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
@@ -573,6 +585,7 @@ export default function DetalleValidacionScreen() {
 
   const abrirNuevoTitulo = () => {
     setEditandoIndex(null);
+    setDescartadoReactivandoIdx(null);
     setFormTipo('PREGRADO');
     setFormTitulo('');
     setFormInstitucion('');
@@ -589,6 +602,7 @@ export default function DetalleValidacionScreen() {
     const item = titulos[idx];
     if (!item) return;
     setEditandoIndex(idx);
+    setDescartadoReactivandoIdx(null);
     setFormTipo(item.tipo || 'PREGRADO');
     setFormTitulo(item.titulo_obtenido || '');
     setFormInstitucion(item.institucion || '');
@@ -599,6 +613,56 @@ export default function DetalleValidacionScreen() {
     setFormCumple(item.cumple_requisito_cargo !== false);
     setFormJustificacion(item.justificacion || '');
     setModalTituloVisible(true);
+  };
+
+  const abrirReactivarDescartado = (docIdx: number) => {
+    const doc = documentosNoAplican[docIdx];
+    if (!doc) return;
+    setEditandoIndex(null);
+    setDescartadoReactivandoIdx(docIdx);
+    setFormTipo('PREGRADO');
+    setFormTitulo(doc.descripcion || doc.nombre_archivo || '');
+    setFormInstitucion(doc.entidad || '');
+    setFormFechaGrado('');
+    setFormCertificaMaterias(false);
+    setFormFechaMaterias('');
+    setFormTarjeta('');
+    setFormCumple(true);
+    setFormJustificacion('Reactivado manualmente desde documentos descartados.');
+    setModalTituloVisible(true);
+  };
+
+  const descartarTitulo = async (idx: number) => {
+    const item = titulos[idx];
+    if (!item) return;
+    const nuevaListaTit = titulos.filter((_, i) => i !== idx);
+    const nuevoNoAplica = {
+      id: `NO-APLICA-${documentosNoAplican.length + 1}`,
+      nombre_archivo: item.nombre_archivo,
+      descripcion: item.titulo_obtenido || 'Documento Formativo',
+      entidad: item.institucion || 'Institución Educativa',
+      motivo_no_aplica: `Descartado manualmente por evaluador: ${item.tipo ? item.tipo.replace('_', ' ') : 'Documento'} no computable para el cumplimiento de requisitos de educación formal (diplomado / curso / no acreditable).`
+    };
+    const nuevaListaNoAplican = [...documentosNoAplican, nuevoNoAplica];
+    setTitulos(nuevaListaTit);
+    setDocumentosNoAplican(nuevaListaNoAplican);
+    setModalTituloVisible(false);
+    setTituloModalDetalle(null);
+    try {
+      setGuardandoCambios(true);
+      await ingresosService.actualizarValidacion(id, {
+        formacion_academica: nuevaListaTit,
+        documentos_no_aplican: nuevaListaNoAplican,
+        certificados: certificados
+      });
+      if (data) setData({ ...data, formacion_academica: nuevaListaTit, documentos_no_aplican: nuevaListaNoAplican });
+      setHayCambios(false);
+      mostrarMensaje('Título Descartado', `"${item.titulo_obtenido}" ha sido trasladado a la sección de "Documentos Descartados / No Computables".`);
+    } catch (err: any) {
+      mostrarMensaje('Error al Descartar', err.message || 'No se pudo mover el documento.');
+    } finally {
+      setGuardandoCambios(false);
+    }
   };
 
   const guardarTituloForm = async () => {
@@ -622,6 +686,37 @@ export default function DetalleValidacionScreen() {
       cumple_requisito_cargo: formCumple,
       justificacion: formJustificacion.trim()
     };
+
+    if (descartadoReactivandoIdx !== null) {
+      const docReactivado = documentosNoAplican[descartadoReactivandoIdx];
+      const nuevaListaNoAplican = documentosNoAplican.filter((_, i) => i !== descartadoReactivandoIdx);
+      const nuevoTitConArchivo: FormacionAcademicaItem = {
+        ...nuevoItem,
+        id: `TIT-${titulos.length + 1}`,
+        nombre_archivo: docReactivado?.nombre_archivo
+      };
+      const nuevaListaTit = [...titulos, nuevoTitConArchivo];
+      setTitulos(nuevaListaTit);
+      setDocumentosNoAplican(nuevaListaNoAplican);
+      setDescartadoReactivandoIdx(null);
+      setModalTituloVisible(false);
+      try {
+        setGuardandoCambios(true);
+        await ingresosService.actualizarValidacion(id, {
+          formacion_academica: nuevaListaTit,
+          documentos_no_aplican: nuevaListaNoAplican,
+          certificados: certificados
+        });
+        if (data) setData({ ...data, formacion_academica: nuevaListaTit, documentos_no_aplican: nuevaListaNoAplican });
+        setHayCambios(false);
+        mostrarMensaje('Documento Reactivado', 'El documento ha sido reclasificado como formación académica formal y retirado de los documentos descartados.');
+      } catch (err: any) {
+        mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar la reactivación.');
+      } finally {
+        setGuardandoCambios(false);
+      }
+      return;
+    }
 
     let nuevaLista: FormacionAcademicaItem[];
     if (editandoIndex !== null) {
@@ -649,6 +744,132 @@ export default function DetalleValidacionScreen() {
     } catch (err: any) {
       setHayCambios(true);
       mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el título en el servidor.');
+    } finally {
+      setGuardandoCambios(false);
+    }
+  };
+
+  const abrirEditarCertificado = (idx: number) => {
+    const cert = certificados[idx];
+    if (!cert) return;
+    setCertEditandoIndex(idx);
+    setFormCertCargo(cert.cargo_certificado || '');
+    setFormCertEntidad(cert.entidad || '');
+    setFormCertFechaInicio(cert.fecha_inicio || '');
+    setFormCertFechaFin(cert.fecha_fin || '');
+    setFormCertVinculoVigente(Boolean(cert.vinculo_vigente));
+    setFormCertClasificacion(cert.clasificacion_experiencia === 'RELACIONADA' ? 'RELACIONADA' : 'NO_RELACIONADA');
+    setFormCertTipoVinculo(cert.tipo_vinculo || 'Laboral');
+    setModalCertVisible(true);
+  };
+
+  const descartarCertificado = async (idx: number) => {
+    const cert = certificados[idx];
+    if (!cert) return;
+    const certId = cert.id || cert.id_certificado;
+    if (certId) {
+      await ingresosService.eliminarCertificado(id, certId).catch(() => {});
+    }
+    const nuevaListaCerts = certificados.filter((_, i) => i !== idx);
+    const nuevoNoAplica = {
+      id: `NO-APLICA-${documentosNoAplican.length + 1}`,
+      nombre_archivo: cert.nombre_archivo,
+      descripcion: `${cert.cargo_certificado || 'Certificado'} en ${cert.entidad || 'Entidad'}`,
+      entidad: cert.entidad || 'Entidad',
+      motivo_no_aplica: 'Descartado manualmente por evaluador: No computable para la experiencia laboral del cargo.'
+    };
+    const nuevaListaNoAplican = [...documentosNoAplican, nuevoNoAplica];
+
+    const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+    let certsFinales = nuevaListaCerts;
+    let nuevoConsolidado = data?.consolidado;
+    try {
+      const recalc = await ingresosService.recalcularTiempos(nuevaListaCerts, reqMeses);
+      if (recalc?.certificados) certsFinales = recalc.certificados;
+      if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
+    } catch (eRecalc) {
+      console.warn('Error recalculando:', eRecalc);
+    }
+
+    setCertificados(certsFinales);
+    setDocumentosNoAplican(nuevaListaNoAplican);
+    setCertModalDetalle(null);
+    try {
+      setGuardandoCambios(true);
+      await ingresosService.actualizarValidacion(id, {
+        certificados: certsFinales,
+        documentos_no_aplican: nuevaListaNoAplican,
+        formacion_academica: titulos,
+        consolidado: nuevoConsolidado
+      });
+      if (data) setData({ ...data, certificados: certsFinales, documentos_no_aplican: nuevaListaNoAplican, consolidado: nuevoConsolidado || data.consolidado });
+      setHayCambios(false);
+      mostrarMensaje('Certificado Descartado', 'El certificado ha sido trasladado a "Documentos Descartados / No Computables" y los tiempos se han recalculado.');
+    } catch (err: any) {
+      mostrarMensaje('Error al Descartar', err.message || 'No se pudo mover el certificado.');
+    } finally {
+      setGuardandoCambios(false);
+    }
+  };
+
+  const guardarCertificadoForm = async () => {
+    if (certEditandoIndex === null) return;
+    if (!formCertCargo.trim()) {
+      mostrarMensaje('Campo Requerido', 'Debes ingresar la denominación del cargo.');
+      return;
+    }
+    if (!formCertEntidad.trim()) {
+      mostrarMensaje('Campo Requerido', 'Debes ingresar la entidad.');
+      return;
+    }
+    if (!formCertFechaInicio.trim()) {
+      mostrarMensaje('Campo Requerido', 'Debes ingresar la fecha de inicio.');
+      return;
+    }
+
+    const certPrevio = certificados[certEditandoIndex];
+    const certActualizado: CertificadoAnalizado = {
+      ...certPrevio,
+      cargo_certificado: formCertCargo.trim(),
+      entidad: formCertEntidad.trim(),
+      fecha_inicio: formCertFechaInicio.trim(),
+      fecha_fin: formCertVinculoVigente ? '' : formCertFechaFin.trim(),
+      vinculo_vigente: formCertVinculoVigente,
+      clasificacion_experiencia: formCertClasificacion,
+      tipo_vinculo: formCertTipoVinculo.trim() || certPrevio.tipo_vinculo
+    };
+
+    const nuevaListaCerts = [...certificados];
+    nuevaListaCerts[certEditandoIndex] = certActualizado;
+
+    const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+    let certsFinales = nuevaListaCerts;
+    let nuevoConsolidado = data?.consolidado;
+    try {
+      const recalc = await ingresosService.recalcularTiempos(nuevaListaCerts, reqMeses);
+      if (recalc?.certificados) certsFinales = recalc.certificados;
+      if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
+    } catch (eRecalc) {
+      console.warn('Error recalculando:', eRecalc);
+    }
+
+    setCertificados(certsFinales);
+    setModalCertVisible(false);
+    setCertModalDetalle(null);
+
+    try {
+      setGuardandoCambios(true);
+      await ingresosService.actualizarValidacion(id, {
+        certificados: certsFinales,
+        formacion_academica: titulos,
+        documentos_no_aplican: documentosNoAplican,
+        consolidado: nuevoConsolidado
+      });
+      if (data) setData({ ...data, certificados: certsFinales, consolidado: nuevoConsolidado || data.consolidado });
+      setHayCambios(false);
+      mostrarMensaje('Certificado Guardado', 'Los datos del certificado y los cómputos de experiencia han sido actualizados en la base de datos.');
+    } catch (err: any) {
+      mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el certificado.');
     } finally {
       setGuardandoCambios(false);
     }
@@ -1797,8 +2018,62 @@ export default function DetalleValidacionScreen() {
                                     gap: 4
                                   }}
                                 >
-                                  <Ionicons name="expand-outline" size={14} color="#1D4ED8" />
-                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Pantalla Completa</Text>
+                                  <Ionicons name="analytics-outline" size={14} color="#1D4ED8" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Ver Análisis</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirEditarTitulo(idx)}
+                                  style={{
+                                    backgroundColor: '#F1F5F9',
+                                    borderWidth: 1,
+                                    borderColor: '#CBD5E1',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="pencil" size={13} color="#0F172A" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>Editar / Cambiar Tipo</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => descartarTitulo(idx)}
+                                  style={{
+                                    backgroundColor: '#FFFBEB',
+                                    borderWidth: 1,
+                                    borderColor: '#FDE68A',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="close-circle-outline" size={13} color="#D97706" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => pedirConfirmarEliminarTitulo(idx)}
+                                  style={{
+                                    backgroundColor: '#FEF2F2',
+                                    borderWidth: 1,
+                                    borderColor: '#FECACA',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="trash-outline" size={13} color="#DC2626" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>Eliminar</Text>
                                 </TouchableOpacity>
 
                                 {t.nombre_archivo ? (
@@ -2219,8 +2494,44 @@ export default function DetalleValidacionScreen() {
                                     gap: 4
                                   }}
                                 >
-                                  <Ionicons name="expand-outline" size={14} color="#1D4ED8" />
-                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Pantalla Completa</Text>
+                                  <Ionicons name="analytics-outline" size={14} color="#1D4ED8" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Ver Análisis</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirEditarCertificado(idx)}
+                                  style={{
+                                    backgroundColor: '#F1F5F9',
+                                    borderWidth: 1,
+                                    borderColor: '#CBD5E1',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="pencil" size={13} color="#0F172A" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>Editar Certificado</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => descartarCertificado(idx)}
+                                  style={{
+                                    backgroundColor: '#FFFBEB',
+                                    borderWidth: 1,
+                                    borderColor: '#FDE68A',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="close-circle-outline" size={13} color="#D97706" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
                                 </TouchableOpacity>
 
                                 {(() => {
@@ -2623,27 +2934,69 @@ export default function DetalleValidacionScreen() {
                       </Text>
                     </View>
 
-                    {doc.nombre_archivo ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <TouchableOpacity
-                        onPress={() => verPdfDocumento(doc.nombre_archivo, doc.descripcion || 'Documento no aplicable')}
+                        onPress={() => abrirReactivarDescartado(idx)}
                         style={{
-                          backgroundColor: '#F8FAFC',
+                          backgroundColor: '#EFF6FF',
                           borderWidth: 1,
-                          borderColor: '#CBD5E1',
+                          borderColor: '#BFDBFE',
                           paddingHorizontal: 8,
-                          paddingVertical: 4,
+                          paddingVertical: 5,
                           borderRadius: 6,
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 4
                         }}
                       >
-                        <Ionicons name="document-text-outline" size={13} color="#475569" />
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
-                          Ver Soporte
+                        <Ionicons name="school-outline" size={13} color="#1D4ED8" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>
+                          Reactivar como Título
                         </Text>
                       </TouchableOpacity>
-                    ) : null}
+
+                      {doc.nombre_archivo ? (
+                        <TouchableOpacity
+                          onPress={() => verPdfDocumento(doc.nombre_archivo, doc.descripcion || 'Documento no aplicable')}
+                          style={{
+                            backgroundColor: '#F8FAFC',
+                            borderWidth: 1,
+                            borderColor: '#CBD5E1',
+                            paddingHorizontal: 8,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}
+                        >
+                          <Ionicons name="document-text-outline" size={13} color="#475569" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
+                            Ver Soporte
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+
+                      <TouchableOpacity
+                        onPress={() => pedirConfirmarEliminarDocNoAplica(idx)}
+                        style={{
+                          backgroundColor: '#FEF2F2',
+                          borderWidth: 1,
+                          borderColor: '#FECACA',
+                          paddingHorizontal: 8,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={13} color="#DC2626" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#DC2626' }}>
+                          Eliminar
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -4402,7 +4755,28 @@ export default function DetalleValidacionScreen() {
             </ScrollView>
 
             {/* Botones Acciones Modal */}
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+              {editandoIndex !== null && (
+                <TouchableOpacity
+                  onPress={() => descartarTitulo(editandoIndex)}
+                  style={{
+                    paddingVertical: 9,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    backgroundColor: '#FFFBEB',
+                    borderWidth: 1,
+                    borderColor: '#FDE68A',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginRight: 'auto'
+                  }}
+                >
+                  <Ionicons name="ban-outline" size={15} color="#D97706" />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
                 onPress={() => setModalTituloVisible(false)}
                 style={{
@@ -5192,18 +5566,65 @@ export default function DetalleValidacionScreen() {
                       ));
                     })()}
 
-                    <TouchableOpacity
-                      onPress={() => setCertModalDetalle(null)}
-                      style={{
-                        backgroundColor: '#0F172A',
-                        paddingHorizontal: 16,
-                        paddingVertical: 10,
-                        borderRadius: 8
-                      }}
-                    >
-                      <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Cerrar</Text>
-                    </TouchableOpacity>
-                  </View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const foundIdx = certificados.findIndex(c => (c.id && c.id === certModalDetalle.id) || (c.id_certificado && c.id_certificado === certModalDetalle.id_certificado));
+                          if (foundIdx !== -1) {
+                            setCertModalDetalle(null);
+                            abrirEditarCertificado(foundIdx);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#F1F5F9',
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="pencil" size={15} color="#0F172A" />
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: '800' }}>Editar Certificado</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          const foundIdx = certificados.findIndex(c => (c.id && c.id === certModalDetalle.id) || (c.id_certificado && c.id_certificado === certModalDetalle.id_certificado));
+                          if (foundIdx !== -1) {
+                            descartarCertificado(foundIdx);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#FFFBEB',
+                          borderWidth: 1,
+                          borderColor: '#FDE68A',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="close-circle-outline" size={15} color="#D97706" />
+                        <Text style={{ color: '#B45309', fontSize: 13, fontWeight: '800' }}>Mover a Descartados</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => setCertModalDetalle(null)}
+                        style={{
+                          backgroundColor: '#0F172A',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 8
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
                 </ScrollView>
               </>
             )}
@@ -5416,7 +5837,54 @@ export default function DetalleValidacionScreen() {
                     ) : null}
 
                     {/* Botones de Acción */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const foundIdx = titulos.findIndex(t => (t.id && t.id === tituloModalDetalle.id) || (t.titulo_obtenido === tituloModalDetalle.titulo_obtenido && t.institucion === tituloModalDetalle.institucion));
+                          if (foundIdx !== -1) {
+                            setTituloModalDetalle(null);
+                            abrirEditarTitulo(foundIdx);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#F1F5F9',
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="pencil" size={15} color="#0F172A" />
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: '800' }}>Editar / Cambiar Tipo</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          const foundIdx = titulos.findIndex(t => (t.id && t.id === tituloModalDetalle.id) || (t.titulo_obtenido === tituloModalDetalle.titulo_obtenido && t.institucion === tituloModalDetalle.institucion));
+                          if (foundIdx !== -1) {
+                            descartarTitulo(foundIdx);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#FFFBEB',
+                          borderWidth: 1,
+                          borderColor: '#FDE68A',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="close-circle-outline" size={15} color="#D97706" />
+                        <Text style={{ color: '#B45309', fontSize: 13, fontWeight: '800' }}>Mover a Descartados</Text>
+                      </TouchableOpacity>
+
                       {tituloModalDetalle.nombre_archivo ? (
                         <TouchableOpacity
                           onPress={() => {
@@ -5454,6 +5922,311 @@ export default function DetalleValidacionScreen() {
                 </>
               );
             })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para Editar Certificado Laboral */}
+      <Modal
+        visible={modalCertVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalCertVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 620,
+              maxHeight: '90%',
+              padding: 24,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 25,
+              elevation: 10,
+              gap: 16
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="briefcase" size={20} color="#1E40AF" />
+                <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
+                  Modificar Certificado Laboral
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalCertVisible(false)}>
+                <Ionicons name="close" size={22} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+              {/* Denominación del Cargo */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Denominación del Cargo / Empleo *
+                </Text>
+                <TextInput
+                  value={formCertCargo}
+                  onChangeText={setFormCertCargo}
+                  placeholder="Ej. Profesional Universitario, Jefe de División"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                    color: '#0F172A'
+                  }}
+                />
+              </View>
+
+              {/* Entidad / Empresa */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Entidad o Empresa Contratante *
+                </Text>
+                <TextInput
+                  value={formCertEntidad}
+                  onChangeText={setFormCertEntidad}
+                  placeholder="Ej. Enel Colombia S.A. ESP, Alcaldía Mayor"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                    color: '#0F172A'
+                  }}
+                />
+              </View>
+
+              {/* Tipo de Vinculación */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                  Tipo de Vinculación / Contrato
+                </Text>
+                <TextInput
+                  value={formCertTipoVinculo}
+                  onChangeText={setFormCertTipoVinculo}
+                  placeholder="Ej. Contrato laboral a término indefinido, Prestación de servicios"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    fontSize: 13,
+                    color: '#0F172A'
+                  }}
+                />
+              </View>
+
+              {/* Fechas de Inicio y Fin */}
+              <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: 160 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                    Fecha de Inicio * (AAAA-MM-DD)
+                  </Text>
+                  <TextInput
+                    value={formCertFechaInicio}
+                    onChangeText={setFormCertFechaInicio}
+                    placeholder="AAAA-MM-DD"
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      fontSize: 13,
+                      color: '#0F172A'
+                    }}
+                  />
+                </View>
+
+                {!formCertVinculoVigente && (
+                  <View style={{ flex: 1, minWidth: 160 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
+                      Fecha de Fin (AAAA-MM-DD)
+                    </Text>
+                    <TextInput
+                      value={formCertFechaFin}
+                      onChangeText={setFormCertFechaFin}
+                      placeholder="AAAA-MM-DD"
+                      placeholderTextColor="#94A3B8"
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        fontSize: 13,
+                        color: '#0F172A'
+                      }}
+                    />
+                  </View>
+                )}
+              </View>
+
+              {/* Vínculo Vigente Checkbox */}
+              <TouchableOpacity
+                onPress={() => setFormCertVinculoVigente(!formCertVinculoVigente)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: formCertVinculoVigente ? '#EFF6FF' : '#F8FAFC',
+                  padding: 10,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: formCertVinculoVigente ? '#BFDBFE' : '#E2E8F0'
+                }}
+              >
+                <Ionicons
+                  name={formCertVinculoVigente ? 'checkbox' : 'square-outline'}
+                  size={18}
+                  color={formCertVinculoVigente ? '#1D4ED8' : '#64748B'}
+                />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: formCertVinculoVigente ? '#1E40AF' : '#475569' }}>
+                  Vínculo Vigente / Actualmente Vinculado a la Entidad
+                </Text>
+              </TouchableOpacity>
+
+              {/* Clasificación de Experiencia */}
+              <View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                  Clasificación de la Experiencia
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={() => setFormCertClasificacion('RELACIONADA')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: formCertClasificacion === 'RELACIONADA' ? '#DCFCE7' : '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: formCertClasificacion === 'RELACIONADA' ? '#16A34A' : '#CBD5E1',
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons
+                      name={formCertClasificacion === 'RELACIONADA' ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={16}
+                      color={formCertClasificacion === 'RELACIONADA' ? '#15803D' : '#64748B'}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: formCertClasificacion === 'RELACIONADA' ? '#15803D' : '#64748B' }}>
+                      Experiencia Relacionada
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setFormCertClasificacion('NO_RELACIONADA')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: formCertClasificacion === 'NO_RELACIONADA' ? '#FEF3C7' : '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: formCertClasificacion === 'NO_RELACIONADA' ? '#D97706' : '#CBD5E1',
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      gap: 6
+                    }}
+                  >
+                    <Ionicons
+                      name={formCertClasificacion === 'NO_RELACIONADA' ? 'alert-circle' : 'ellipse-outline'}
+                      size={16}
+                      color={formCertClasificacion === 'NO_RELACIONADA' ? '#B45309' : '#64748B'}
+                    />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: formCertClasificacion === 'NO_RELACIONADA' ? '#B45309' : '#64748B' }}>
+                      No Relacionada
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Botones Acciones Modal Certificado */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+              {certEditandoIndex !== null && (
+                <TouchableOpacity
+                  onPress={() => descartarCertificado(certEditandoIndex)}
+                  style={{
+                    paddingVertical: 9,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    backgroundColor: '#FFFBEB',
+                    borderWidth: 1,
+                    borderColor: '#FDE68A',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginRight: 'auto'
+                  }}
+                >
+                  <Ionicons name="ban-outline" size={15} color="#D97706" />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                onPress={() => setModalCertVisible(false)}
+                style={{
+                  paddingVertical: 9,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1'
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={guardarCertificadoForm}
+                style={{
+                  paddingVertical: 9,
+                  paddingHorizontal: 18,
+                  borderRadius: 8,
+                  backgroundColor: '#1E40AF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>Guardar Certificado</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

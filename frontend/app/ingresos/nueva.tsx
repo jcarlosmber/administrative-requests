@@ -84,6 +84,7 @@ export default function NuevaValidacionScreen() {
   const [formTarjeta, setFormTarjeta] = useState('');
   const [formCumple, setFormCumple] = useState(true);
   const [formJustificacion, setFormJustificacion] = useState('');
+  const [descartadoReactivandoIdx, setDescartadoReactivandoIdx] = useState<number | null>(null);
 
   // Modal Confirmar Eliminación
   const [modalEliminarVisible, setModalEliminarVisible] = useState(false);
@@ -945,6 +946,7 @@ export default function NuevaValidacionScreen() {
   // Funciones para gestión de títulos en dictamen preliminar
   const abrirNuevoTitulo = () => {
     setEditandoIndex(null);
+    setDescartadoReactivandoIdx(null);
     setFormTipo('PREGRADO');
     setFormTitulo('');
     setFormInstitucion('');
@@ -962,6 +964,7 @@ export default function NuevaValidacionScreen() {
     const item = analisisResultado.formacion_academica[idx];
     if (!item) return;
     setEditandoIndex(idx);
+    setDescartadoReactivandoIdx(null);
     setFormTipo(item.tipo || 'PREGRADO');
     setFormTitulo(item.titulo_obtenido || '');
     setFormInstitucion(item.institucion || '');
@@ -972,6 +975,45 @@ export default function NuevaValidacionScreen() {
     setFormCumple(item.cumple_requisito_cargo !== false);
     setFormJustificacion(item.justificacion || '');
     setModalTituloVisible(true);
+  };
+
+  const abrirReactivarDescartado = (idx: number) => {
+    if (!analisisResultado?.documentos_no_aplican) return;
+    const doc = analisisResultado.documentos_no_aplican[idx];
+    if (!doc) return;
+    setEditandoIndex(null);
+    setDescartadoReactivandoIdx(idx);
+    setFormTipo('PREGRADO');
+    setFormTitulo(doc.descripcion || doc.nombre_archivo || '');
+    setFormInstitucion(doc.entidad || '');
+    setFormFechaGrado('');
+    setFormCertificaMaterias(false);
+    setFormFechaMaterias('');
+    setFormTarjeta('');
+    setFormCumple(true);
+    setFormJustificacion('Reactivado manualmente desde documentos descartados.');
+    setModalTituloVisible(true);
+  };
+
+  const descartarTitulo = (idx: number) => {
+    if (!analisisResultado?.formacion_academica) return;
+    const it = analisisResultado.formacion_academica[idx];
+    if (!it) return;
+    const nuevaFormacion = analisisResultado.formacion_academica.filter((_, i) => i !== idx);
+    const nuevoNoAplica = {
+      id: `NO-APLICA-${(analisisResultado.documentos_no_aplican || []).length + 1}`,
+      nombre_archivo: it.nombre_archivo,
+      descripcion: it.titulo_obtenido || 'Documento Formativo',
+      entidad: it.institucion || 'Institución',
+      motivo_no_aplica: `Descartado manualmente por evaluador: ${it.tipo?.replace('_', ' ') || 'Documento'} no computable para el cumplimiento de requisitos de educación formal.`
+    };
+    const nuevosNoAplican = [...(analisisResultado.documentos_no_aplican || []), nuevoNoAplica];
+    setAnalisisResultado({
+      ...analisisResultado,
+      formacion_academica: nuevaFormacion,
+      documentos_no_aplican: nuevosNoAplican
+    });
+    setModalTituloVisible(false);
   };
 
   const guardarTituloForm = () => {
@@ -996,6 +1038,24 @@ export default function NuevaValidacionScreen() {
       cumple_requisito_cargo: formCumple,
       justificacion: formJustificacion.trim()
     };
+
+    if (descartadoReactivandoIdx !== null) {
+      const docReactivado = (analisisResultado.documentos_no_aplican || [])[descartadoReactivandoIdx];
+      const nuevosNoAplican = (analisisResultado.documentos_no_aplican || []).filter((_, i) => i !== descartadoReactivandoIdx);
+      const nuevoTitConArchivo: FormacionAcademicaItem = {
+        ...nuevoItem,
+        id: `TIT-${(analisisResultado.formacion_academica || []).length + 1}`,
+        nombre_archivo: docReactivado?.nombre_archivo
+      };
+      setAnalisisResultado({
+        ...analisisResultado,
+        formacion_academica: [...(analisisResultado.formacion_academica || []), nuevoTitConArchivo],
+        documentos_no_aplican: nuevosNoAplican
+      });
+      setDescartadoReactivandoIdx(null);
+      setModalTituloVisible(false);
+      return;
+    }
 
     const actual = analisisResultado.formacion_academica || [];
     let nuevaLista: FormacionAcademicaItem[];
@@ -2363,6 +2423,21 @@ export default function NuevaValidacionScreen() {
                             <Ionicons name="pencil-outline" size={15} color="#0F172A" />
                           </TouchableOpacity>
 
+                          {/* Botón Mover a Descartados */}
+                          <TouchableOpacity
+                            onPress={() => descartarTitulo(idx)}
+                            style={{
+                              padding: 6,
+                              borderRadius: 6,
+                              backgroundColor: '#FFFBEB',
+                              borderWidth: 1,
+                              borderColor: '#FDE68A'
+                            }}
+                            accessibilityLabel="Mover a descartados"
+                          >
+                            <Ionicons name="close-circle-outline" size={15} color="#D97706" />
+                          </TouchableOpacity>
+
                           {/* Botón Eliminar */}
                           <TouchableOpacity
                             onPress={() => pedirConfirmarEliminarTitulo(idx)}
@@ -3262,6 +3337,25 @@ export default function NuevaValidacionScreen() {
                             </Text>
                           </View>
                           <TouchableOpacity
+                            onPress={() => abrirReactivarDescartado(idx)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              backgroundColor: '#EFF6FF',
+                              borderWidth: 1,
+                              borderColor: '#BFDBFE'
+                            }}
+                            accessibilityLabel="Reactivar como título"
+                          >
+                            <Ionicons name="school-outline" size={13} color="#1D4ED8" />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Reactivar Título</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
                             onPress={() => verPdfDocumento(doc.nombre_archivo, doc.descripcion || 'Documento no aplicable')}
                             style={{
                               flexDirection: 'row',
@@ -3959,7 +4053,28 @@ export default function NuevaValidacionScreen() {
             </ScrollView>
 
             {/* Botones Acciones Modal */}
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 18, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 14 }}>
+              {editandoIndex !== null && (
+                <TouchableOpacity
+                  onPress={() => descartarTitulo(editandoIndex)}
+                  style={{
+                    paddingVertical: 9,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    backgroundColor: '#FFFBEB',
+                    borderWidth: 1,
+                    borderColor: '#FDE68A',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginRight: 'auto'
+                  }}
+                >
+                  <Ionicons name="ban-outline" size={15} color="#D97706" />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
                 onPress={() => setModalTituloVisible(false)}
                 style={{

@@ -44,7 +44,13 @@ const sanitizarDocumentosNoAplican = (noAplican, certs, formacion) => {
     const desc = (item.descripcion || '').toUpperCase();
     const ent = (item.entidad || '').toUpperCase();
 
-    // 1. Si coincide por nombre de archivo con un certificado o título formal
+    // Excepción vital: Diplomados, cursos y educación continuada SIEMPRE se conservan en noAplican
+    const motivo = (item.motivo_no_aplica || '').toUpperCase();
+    if (desc.includes('DIPLOMAD') || desc.includes('CURSO') || desc.includes('SEMINARIO') || motivo.includes('DIPLOMAD') || motivo.includes('NO FORMAL')) {
+      return true;
+    }
+
+    // 1. Si coincide por nombre de archivo con un certificado o título formal activo
     if (nom && (certFiles.has(nom) || acadFiles.has(nom))) return false;
 
     // 2. Si el ID o la descripción hace referencia a un CERT-X existente

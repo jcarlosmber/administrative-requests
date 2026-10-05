@@ -119,7 +119,7 @@ export interface CertificadoAnalizado {
   dependencia?: string;
   numero_contrato_o_acto?: string;
   fecha_inicio: string;
-  fecha_fin: string;
+  fecha_fin?: string;
   vinculo_vigente?: boolean;
   funciones_certificadas?: Array<{ funcion: string; evidencia_textual?: string }>;
   experiencia_profesional?: boolean;
