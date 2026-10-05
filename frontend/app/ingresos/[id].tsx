@@ -86,6 +86,17 @@ export default function DetalleValidacionScreen() {
     }));
   };
 
+  // Estados para expansión interactiva de la tabla de formación académica
+  const [titulosExpandidos, setTitulosExpandidos] = useState<Record<string, boolean>>({});
+  const [tituloModalDetalle, setTituloModalDetalle] = useState<FormacionAcademicaItem | null>(null);
+
+  const toggleExpandirTitulo = (key: string) => {
+    setTitulosExpandidos(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
   // Estado para acordeón de los 3 grupos por cada certificado (predeterminado contraídos)
   const [expansionesGrupos, setExpansionesGrupos] = useState<Record<string, { formal?: boolean; previo?: boolean; funciones?: boolean }>>({});
 
@@ -1383,7 +1394,7 @@ export default function DetalleValidacionScreen() {
                     <Ionicons name="school" size={18} color="#2563EB" />
                   </View>
                   <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A' }}>
-                    1. Formación Académica
+                    1. Requisito de Formación
                   </Text>
                 </View>
 
@@ -1412,84 +1423,40 @@ export default function DetalleValidacionScreen() {
                 </Text>
               </View>
 
-              {/* Títulos Aportados */}
-              <View style={{ gap: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#475569' }}>
-                  Títulos Acreditados ({titulos.length}):
+              {/* 3 Métricas de Formación */}
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                <View style={{ flex: 1, minWidth: 90, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Títulos</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', marginTop: 2 }}>
+                    {titulos.length} doc(s)
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>Acreditados</Text>
+                </View>
+
+                <View style={{ flex: 1.4, minWidth: 120, backgroundColor: '#F0FDF4', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#166534', textTransform: 'uppercase' }}>Título Principal</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D', marginTop: 2 }} numberOfLines={1}>
+                    {titulos[0]?.titulo_obtenido || 'No registra'}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#166534' }} numberOfLines={1}>{titulos[0]?.institucion || 'Sin institución'}</Text>
+                </View>
+
+                <View style={{ flex: 1, minWidth: 90, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>Tarjeta Prof.</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: titulos.some(t => t.numero_tarjeta_o_registro) ? '#2563EB' : '#64748B', marginTop: 2 }} numberOfLines={1}>
+                    {titulos.find(t => t.numero_tarjeta_o_registro)?.numero_tarjeta_o_registro || 'No requerida'}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                    {titulos.some(t => t.numero_tarjeta_o_registro) ? 'Acreditada' : 'No obligatoria'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: '#EFF6FF', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#BFDBFE', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="information-circle" size={16} color="#2563EB" />
+                <Text style={{ fontSize: 11, color: '#1E40AF', flex: 1, lineHeight: 16 }}>
+                  Desglose formal completo de títulos, fechas de corte y soportes disponible en la tabla de formación a continuación.
                 </Text>
-
-                {titulos.length === 0 ? (
-                  <View style={{ padding: 14, backgroundColor: '#F8FAFC', borderRadius: 8, alignItems: 'center' }}>
-                    <Text style={{ fontSize: 12, color: '#94A3B8' }}>No se han registrado títulos académicos en el expediente.</Text>
-                  </View>
-                ) : (
-                  titulos.map((t, idx) => (
-                    <View
-                      key={idx}
-                      style={{
-                        backgroundColor: '#FFFFFF',
-                        borderWidth: 1,
-                        borderColor: '#E2E8F0',
-                        borderRadius: 10,
-                        padding: 12,
-                        gap: 8
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
-                            {t.titulo_obtenido}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
-                            {t.institucion}
-                          </Text>
-                        </View>
-                        <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569' }}>
-                            {t.tipo.replace('_', ' ')}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
-                        <Text style={{ fontSize: 11, color: '#64748B' }}>
-                          <Text style={{ fontWeight: '700' }}>Grado:</Text> {t.fecha_grado || 'NO CONSTA'}
-                          {t.certifica_terminacion_materias && t.fecha_terminacion_materias ? ` • Materias: ${t.fecha_terminacion_materias}` : ''}
-                        </Text>
-
-                        {t.numero_tarjeta_o_registro ? (
-                          <Text style={{ fontSize: 11, color: '#2563EB', fontWeight: '700' }}>
-                            Tarjeta: {t.numero_tarjeta_o_registro}
-                          </Text>
-                        ) : null}
-                      </View>
-
-                      {t.nombre_archivo ? (
-                        <TouchableOpacity
-                          onPress={() => verPdfDocumento(t.nombre_archivo, t.titulo_obtenido)}
-                          style={{
-                            backgroundColor: '#F8FAFC',
-                            borderWidth: 1,
-                            borderColor: '#CBD5E1',
-                            paddingVertical: 5,
-                            paddingHorizontal: 10,
-                            borderRadius: 6,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 6,
-                            marginTop: 2
-                          }}
-                        >
-                          <Ionicons name="document-text-outline" size={14} color="#1E40AF" />
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>
-                            Ver Documento PDF ({t.nombre_archivo})
-                          </Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
-                  ))
-                )}
               </View>
             </View>
 
@@ -1633,6 +1600,417 @@ export default function DetalleValidacionScreen() {
                 </View>
               ) : null}
             </View>
+          </View>
+
+          {/* TABLA EJECUTIVA DE FORMACIÓN ACADÉMICA Y TARJETAS PROFESIONALES */}
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#0F172A',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.04,
+              shadowRadius: 6,
+              elevation: 1,
+              gap: 16
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="school-outline" size={20} color="#1E40AF" />
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                    Tabla Ejecutiva de Formación Académica y Tarjetas Profesionales
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                  💡 Haz clic sobre cualquier fila para desplegar la verificación formal completa (acta de grado, folio, firmas y convalidación).
+                </Text>
+              </View>
+
+              <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>
+                  {titulos.length} documento(s) formativo(s)
+                </Text>
+              </View>
+            </View>
+
+            {titulos.length === 0 ? (
+              <View style={{ padding: 24, backgroundColor: '#F8FAFC', borderRadius: 10, alignItems: 'center' }}>
+                <Ionicons name="folder-open-outline" size={32} color="#94A3B8" />
+                <Text style={{ fontSize: 13, color: '#64748B', marginTop: 6 }}>
+                  No se registran títulos académicos ni tarjetas profesionales en este dictamen.
+                </Text>
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={{ minWidth: 940, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+                  {/* Encabezado Tabla */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      backgroundColor: '#F1F5F9',
+                      paddingVertical: 11,
+                      paddingHorizontal: 14,
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#CBD5E1'
+                    }}
+                  >
+                    <Text style={{ width: 65, fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
+                    <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>NIVEL / TIPO</Text>
+                    <Text style={{ width: 220, fontSize: 11, fontWeight: '800', color: '#475569' }}>TÍTULO OBTENIDO</Text>
+                    <Text style={{ width: 220, fontSize: 11, fontWeight: '800', color: '#475569' }}>INSTITUCIÓN EMISORA</Text>
+                    <Text style={{ width: 140, fontSize: 11, fontWeight: '800', color: '#475569' }}>FECHA DE GRADO</Text>
+                    <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>ESTADO</Text>
+                  </View>
+
+                  {/* Filas de Formación Académica */}
+                  {titulos.map((t, idx) => {
+                    const titKey = t.id || `tit-${idx}`;
+                    const estaExpandido = Boolean(titulosExpandidos[titKey]);
+                    const checksTitulo = obtenerChecksTitulo(t, candidato?.nombre, candidato?.documento);
+                    const checksTarjeta = t.numero_tarjeta_o_registro ? obtenerChecksTarjeta(t, candidato?.nombre, candidato?.documento) : null;
+                    const cumple = t.cumple_requisito_cargo !== false;
+
+                    return (
+                      <View key={titKey} style={{ borderBottomWidth: idx < titulos.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}>
+                        {/* Fila Principal Cliqueable */}
+                        <TouchableOpacity
+                          activeOpacity={0.75}
+                          onPress={() => toggleExpandirTitulo(titKey)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 12,
+                            paddingHorizontal: 14,
+                            backgroundColor: estaExpandido ? '#F0F9FF' : (idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC')
+                          }}
+                        >
+                          {/* REF */}
+                          <View style={{ width: 65, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons
+                              name={estaExpandido ? 'chevron-up-circle' : 'chevron-down-circle-outline'}
+                              size={17}
+                              color={estaExpandido ? '#2563EB' : '#94A3B8'}
+                            />
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: estaExpandido ? '#2563EB' : '#64748B' }}>
+                              TIT-0{idx + 1}
+                            </Text>
+                          </View>
+
+                          {/* NIVEL / TIPO */}
+                          <View style={{ width: 130, paddingRight: 8 }}>
+                            <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#3730A3' }}>
+                                {t.tipo.replace('_', ' ')}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* TÍTULO */}
+                          <View style={{ width: 220, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
+                              {t.titulo_obtenido}
+                            </Text>
+                            {t.numero_tarjeta_o_registro ? (
+                              <Text style={{ fontSize: 10, color: '#2563EB', fontWeight: '700' }}>
+                                Tarjeta: {t.numero_tarjeta_o_registro}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          {/* INSTITUCIÓN */}
+                          <View style={{ width: 220, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 12, color: '#334155' }} numberOfLines={2}>
+                              {t.institucion}
+                            </Text>
+                          </View>
+
+                          {/* FECHA DE GRADO */}
+                          <View style={{ width: 140, paddingRight: 8 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>
+                              {t.fecha_grado || 'NO CONSTA'}
+                            </Text>
+                            {t.certifica_terminacion_materias && t.fecha_terminacion_materias ? (
+                              <Text style={{ fontSize: 10, color: '#059669', fontWeight: '700' }}>
+                                Mat: {t.fecha_terminacion_materias}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          {/* ESTADO */}
+                          <View style={{ width: 130, paddingRight: 8 }}>
+                            {cumple ? (
+                              <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Cumple Requisito</Text>
+                              </View>
+                            ) : (
+                              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>Doc. Adicional</Text>
+                              </View>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* INFORMACIÓN COMPLETA EXPANDIDA DEL TÍTULO CLICKEADO */}
+                        {estaExpandido && (
+                          <View
+                            style={{
+                              backgroundColor: '#F8FAFC',
+                              borderTopWidth: 1.5,
+                              borderTopColor: '#93C5FD',
+                              padding: 18,
+                              gap: 16
+                            }}
+                          >
+                            {/* Barra de título de la ficha */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                                <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 }}>
+                                    FICHA COMPLETA: TIT-0{idx + 1}
+                                  </Text>
+                                </View>
+                                <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A' }}>
+                                  {t.titulo_obtenido}
+                                </Text>
+                                <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>{t.tipo.replace('_', ' ')}</Text>
+                                </View>
+                              </View>
+
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <TouchableOpacity
+                                  onPress={() => setTituloModalDetalle(t)}
+                                  style={{
+                                    backgroundColor: '#EFF6FF',
+                                    borderWidth: 1,
+                                    borderColor: '#BFDBFE',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="expand-outline" size={14} color="#1D4ED8" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1D4ED8' }}>Pantalla Completa</Text>
+                                </TouchableOpacity>
+
+                                {t.nombre_archivo ? (
+                                  <TouchableOpacity
+                                    onPress={() => verPdfDocumento(t.nombre_archivo, t.titulo_obtenido)}
+                                    style={{
+                                      backgroundColor: '#1E40AF',
+                                      paddingHorizontal: 10,
+                                      paddingVertical: 5,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4
+                                    }}
+                                  >
+                                    <Ionicons name="document-text" size={14} color="#FFFFFF" />
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Ver PDF Original</Text>
+                                  </TouchableOpacity>
+                                ) : null}
+
+                                <TouchableOpacity
+                                  onPress={() => toggleExpandirTitulo(titKey)}
+                                  style={{
+                                    backgroundColor: '#FFFFFF',
+                                    borderWidth: 1,
+                                    borderColor: '#CBD5E1',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 2
+                                  }}
+                                >
+                                  <Ionicons name="chevron-up" size={14} color="#64748B" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>Cerrar</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+
+                            {/* 3 Paneles de Detalle del Título */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                              {/* Panel 1: Datos de Emisión */}
+                              <View style={{ flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Ionicons name="school-outline" size={16} color="#2563EB" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                                    Institución y Título
+                                  </Text>
+                                </View>
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Institución Educativa:</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>{t.institucion}</Text>
+                                </View>
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Denominación del Título:</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155' }}>{t.titulo_obtenido}</Text>
+                                </View>
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Nivel Académico:</Text>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>{t.tipo.replace('_', ' ')}</Text>
+                                </View>
+                              </View>
+
+                              {/* Panel 2: Fechas y Normativa de Corte */}
+                              <View style={{ flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Ionicons name="calendar-outline" size={16} color="#0D9488" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                                    Fechas y Regla de Corte
+                                  </Text>
+                                </View>
+                                <View>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Fecha de Grado / Expedición:</Text>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>{t.fecha_grado || 'NO CONSTA'}</Text>
+                                </View>
+
+                                {t.certifica_terminacion_materias ? (
+                                  <View style={{ backgroundColor: '#EFF6FF', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#BFDBFE', gap: 2 }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF' }}>
+                                      ✓ Certifica Terminación de Materias (Decreto 1083/2015)
+                                    </Text>
+                                    <Text style={{ fontSize: 11, color: '#1E3A8A' }}>
+                                      Fecha de corte profesional: {t.fecha_terminacion_materias || 'Acreditada'}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                    <Text style={{ fontSize: 11, color: '#64748B' }}>
+                                      Rige a partir de la fecha de grado para el cómputo de experiencia profesional.
+                                    </Text>
+                                  </View>
+                                )}
+
+                                {t.numero_tarjeta_o_registro ? (
+                                  <View>
+                                    <Text style={{ fontSize: 11, color: '#64748B' }}>Tarjeta Profesional:</Text>
+                                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#2563EB' }}>
+                                      N° {t.numero_tarjeta_o_registro}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+
+                              {/* Panel 3: Cumplimiento y Justificación */}
+                              <View style={{ flex: 1, minWidth: 260, backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Ionicons name="checkmark-done-circle-outline" size={16} color="#15803D" />
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A', textTransform: 'uppercase' }}>
+                                    Dictamen del Requisito
+                                  </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={{ fontSize: 11, color: '#64748B' }}>Resultado:</Text>
+                                  <View style={{ backgroundColor: cumple ? '#DCFCE7' : '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '800', color: cumple ? '#15803D' : '#B45309' }}>
+                                      {cumple ? '✓ Cumple Requisito del Empleo' : 'Doc. Complementario'}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                {t.justificacion ? (
+                                  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                    <Text style={{ fontSize: 11, color: '#334155', lineHeight: 16 }}>{t.justificacion}</Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            </View>
+
+                            {/* Verificación Formal del Título (7 Criterios) */}
+                            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                                Verificación Formal de Validez Documental del Título
+                              </Text>
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                <View style={{ backgroundColor: checksTitulo.institucion_reconocida ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.institucion_reconocida ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.institucion_reconocida ? '✓ Institución Reconocida' : '❌ Institución no identificada'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: checksTitulo.corresponde_aspirante ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.corresponde_aspirante ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.corresponde_aspirante ? '✓ Coincide con Aspirante' : '❌ Nombre no coincide'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: checksTitulo.titulo_y_nivel_formal ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.titulo_y_nivel_formal ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.titulo_y_nivel_formal ? '✓ Título y Nivel Válido' : '❌ Sin título formal'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: checksTitulo.fecha_grado_cierta ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.fecha_grado_cierta ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.fecha_grado_cierta ? '✓ Fecha de Grado Cierta' : '❌ Sin fecha cierta'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: checksTitulo.acta_o_registro_valido ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.acta_o_registro_valido ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.acta_o_registro_valido ? '✓ Acta / Folio Acreditado' : '❌ Sin acta o folio'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: checksTitulo.firmas_autoridades ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.firmas_autoridades ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.firmas_autoridades ? '✓ Firmas de Autoridades' : '❌ Sin firmas'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ backgroundColor: checksTitulo.convalidacion_men ? '#DCFCE7' : '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: checksTitulo.convalidacion_men ? '#15803D' : '#B91C1C' }}>
+                                    {checksTitulo.convalidacion_men ? '✓ Convalidación MEN / Título Nacional' : '⚠️ Requiere convalidación'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            {/* Tarjeta Profesional si aplica */}
+                            {checksTarjeta ? (
+                              <View style={{ backgroundColor: '#F0F9FF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#BAE6FD', gap: 6 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: '#0369A1', textTransform: 'uppercase' }}>
+                                  Verificación Tarjeta Profesional / Matrícula
+                                </Text>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                  <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0284C7' }}>
+                                      N°: {t.numero_tarjeta_o_registro}
+                                    </Text>
+                                  </View>
+                                  <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0284C7' }}>
+                                      {checksTarjeta.vigencia_temporal_valida ? '✓ Matrícula Vigente' : '⚠️ Verificar Vigencia'}
+                                    </Text>
+                                  </View>
+                                  <View style={{ backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0284C7' }}>
+                                      {checksTarjeta.certificado_vigencia_y_sanciones ? '✓ Sin Sanciones' : '⚠️ Pendiente antecedentes'}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </View>
+                            ) : null}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+            )}
           </View>
 
           {/* TABLA EJECUTIVA DE EXPERIENCIA LABORAL */}
@@ -4766,6 +5144,253 @@ export default function DetalleValidacionScreen() {
                 </ScrollView>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Pantalla Completa de Detalle de Formación Académica */}
+      <Modal
+        visible={tituloModalDetalle !== null}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setTituloModalDetalle(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 780,
+              maxHeight: '90%',
+              padding: 24,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 25,
+              elevation: 10,
+              gap: 16
+            }}
+          >
+            {tituloModalDetalle && (() => {
+              const checks = obtenerChecksTitulo(tituloModalDetalle, candidato?.nombre, candidato?.documento);
+              const checksTarjeta = tituloModalDetalle.numero_tarjeta_o_registro
+                ? obtenerChecksTarjeta(tituloModalDetalle, candidato?.nombre, candidato?.documento)
+                : null;
+              const cumple = tituloModalDetalle.cumple_requisito_cargo ?? true;
+
+              return (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 8 }}>
+                      <View style={{ backgroundColor: '#1E3A8A', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '900' }}>
+                          {tituloModalDetalle.tipo ? tituloModalDetalle.tipo.replace('_', ' ') : 'TÍTULO'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }} numberOfLines={2}>
+                          {tituloModalDetalle.titulo_obtenido}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#64748B' }}>
+                          {tituloModalDetalle.institucion || 'Institución no especificada'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <TouchableOpacity onPress={() => setTituloModalDetalle(null)} style={{ padding: 4 }}>
+                      <Ionicons name="close" size={24} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+                    {/* Tarjetas resumen */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 220, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>Grado Obtenido</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>{tituloModalDetalle.titulo_obtenido}</Text>
+                        <Text style={{ fontSize: 12, color: '#475569' }}>Fecha de Grado: <Text style={{ fontWeight: '700' }}>{tituloModalDetalle.fecha_grado || 'No consta'}</Text></Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 220, backgroundColor: cumple ? '#F0FDF4' : '#FFFBEB', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: cumple ? '#BBF7D0' : '#FDE68A', gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: cumple ? '#166534' : '#92400E', textTransform: 'uppercase' }}>Estado de Idoneidad</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name={cumple ? "checkmark-circle" : "information-circle"} size={18} color={cumple ? "#15803D" : "#D97706"} />
+                          <Text style={{ fontSize: 13, fontWeight: '900', color: cumple ? '#15803D' : '#B45309' }}>
+                            {cumple ? 'Acreditado para el Perfil' : 'Documento Complementario'}
+                          </Text>
+                        </View>
+                        {tituloModalDetalle.nombre_archivo ? (
+                          <Text style={{ fontSize: 11, color: '#64748B' }}>Archivo: {tituloModalDetalle.nombre_archivo}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {/* Justificación / Sustento */}
+                    {tituloModalDetalle.justificacion ? (
+                      <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                          Sustento Jurídico y Correspondencia con el Perfil:
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 18 }}>
+                          {tituloModalDetalle.justificacion}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    {/* 7 Criterios de Verificación Formal del Título */}
+                    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '900', color: '#0F172A', textTransform: 'uppercase' }}>
+                        Verificación Formal de Validez Documental (7 Criterios de Ley)
+                      </Text>
+                      <View style={{ gap: 8 }}>
+                        {[
+                          { num: '1', titulo: 'Institución Educativa Reconocida (MEN)', cumple: checks.institucion_reconocida, evidencia: checks.institucion_evidencia },
+                          { num: '2', titulo: 'Aspirante Identificado Coincidente', cumple: checks.corresponde_aspirante, evidencia: checks.aspirante_evidencia },
+                          { num: '3', titulo: 'Título y Nivel de Formación Formal', cumple: checks.titulo_y_nivel_formal, evidencia: checks.titulo_evidencia },
+                          { num: '4', titulo: 'Fecha de Grado Cierta y Válida', cumple: checks.fecha_grado_cierta, evidencia: checks.fecha_grado_evidencia },
+                          { num: '5', titulo: 'Acta de Grado o Registro Oficial Acreditado', cumple: checks.acta_o_registro_valido, evidencia: checks.acta_o_registro_evidencia },
+                          { num: '6', titulo: 'Suscripción por Autoridades Competentes', cumple: checks.firmas_autoridades, evidencia: checks.firmas_evidencia },
+                          { num: '7', titulo: 'Convalidación MEN / Título Nacional', cumple: checks.convalidacion_men, evidencia: checks.convalidacion_evidencia }
+                        ].map((c) => (
+                          <View
+                            key={c.num}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'flex-start',
+                              backgroundColor: c.cumple ? '#F0FDF4' : '#FEF2F2',
+                              borderRadius: 8,
+                              padding: 10,
+                              borderWidth: 1,
+                              borderColor: c.cumple ? '#DCFCE7' : '#FEE2E2',
+                              gap: 10
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: 22,
+                                height: 22,
+                                borderRadius: 11,
+                                backgroundColor: c.cumple ? '#15803D' : '#DC2626',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginTop: 1
+                              }}
+                            >
+                              <Ionicons
+                                name={c.cumple ? 'checkmark' : 'close'}
+                                size={14}
+                                color="#FFFFFF"
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: c.cumple ? '#14532D' : '#991B1B' }}>
+                                {c.num}. {c.titulo}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: c.cumple ? '#166534' : '#B91C1C', marginTop: 2 }}>
+                                {c.evidencia}
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Verificación de Tarjeta Profesional si aplica */}
+                    {checksTarjeta ? (
+                      <View style={{ backgroundColor: '#F0F9FF', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#BAE6FD', gap: 10 }}>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#0369A1', textTransform: 'uppercase' }}>
+                          Acreditación de Matrícula o Tarjeta Profesional
+                        </Text>
+                        <View style={{ gap: 6 }}>
+                          {[
+                            { num: 'A', titulo: 'Consejo o Colegio Profesional Identificado', cumple: checksTarjeta.consejo_emisor_identificable, evidencia: checksTarjeta.consejo_evidencia },
+                            { num: 'B', titulo: 'Aspirante Titular de la Matrícula', cumple: checksTarjeta.corresponde_profesional, evidencia: checksTarjeta.profesional_evidencia },
+                            { num: 'C', titulo: 'Número de Matrícula / Registro Visible', cumple: checksTarjeta.matricula_o_tarjeta_identificable, evidencia: checksTarjeta.matricula_evidencia },
+                            { num: 'D', titulo: 'Profesión Legalmente Autorizada', cumple: checksTarjeta.profesion_autorizada, evidencia: checksTarjeta.profesion_evidencia },
+                            { num: 'E', titulo: 'Certificado de Vigencia y Sin Sanciones', cumple: checksTarjeta.certificado_vigencia_y_sanciones, evidencia: checksTarjeta.vigencia_evidencia },
+                            { num: 'F', titulo: 'Vigencia Temporal Válida (< 90 días)', cumple: checksTarjeta.vigencia_temporal_valida, evidencia: checksTarjeta.vigencia_temporal_evidencia },
+                            { num: 'G', titulo: 'Mecanismo de Autenticación / Verificación Oficial', cumple: checksTarjeta.mecanismo_autenticacion_o_firma, evidencia: checksTarjeta.mecanismo_evidencia }
+                          ].map((c) => (
+                            <View
+                              key={c.num}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'flex-start',
+                                backgroundColor: '#FFFFFF',
+                                borderRadius: 6,
+                                padding: 8,
+                                borderWidth: 1,
+                                borderColor: '#BAE6FD',
+                                gap: 8
+                              }}
+                            >
+                              <Ionicons
+                                name={c.cumple ? 'checkmark-circle' : 'alert-circle'}
+                                size={16}
+                                color={c.cumple ? '#0284C7' : '#EA580C'}
+                              />
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: '#0369A1' }}>
+                                  {c.num}. {c.titulo}
+                                </Text>
+                                <Text style={{ fontSize: 10, color: '#475569' }}>{c.evidencia}</Text>
+                              </View>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {/* Botones de Acción */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                      {tituloModalDetalle.nombre_archivo ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            verPdfDocumento(tituloModalDetalle.nombre_archivo, tituloModalDetalle.titulo_obtenido);
+                            setTituloModalDetalle(null);
+                          }}
+                          style={{
+                            backgroundColor: '#1E40AF',
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6
+                          }}
+                        >
+                          <Ionicons name="document-text" size={16} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Abrir PDF Original</Text>
+                        </TouchableOpacity>
+                      ) : null}
+
+                      <TouchableOpacity
+                        onPress={() => setTituloModalDetalle(null)}
+                        style={{
+                          backgroundColor: '#0F172A',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 8
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Cerrar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </>
+              );
+            })()}
           </View>
         </View>
       </Modal>
