@@ -211,7 +211,7 @@ module.exports = function (pool) {
     }
   });
 
-  router.put('/resoluciones/:id', async (req, res) => {
+  const handleUpdateResolucion = async (req, res) => {
     try {
       const { id } = req.params;
       const {
@@ -260,7 +260,7 @@ module.exports = function (pool) {
           estado = $8,
           updated_at = NOW()
           ${archivoUpdateClause}
-        WHERE id = $9
+        WHERE id::text = $9
         RETURNING *;
       `;
 
@@ -273,7 +273,11 @@ module.exports = function (pool) {
       console.error('[Teletrabajo] Error actualizando resolución:', err);
       res.status(500).json({ error: 'Error al actualizar resolución: ' + err.message });
     }
-  });
+  };
+
+  router.put('/resoluciones/:id', handleUpdateResolucion);
+  router.post('/resoluciones/:id', handleUpdateResolucion);
+  router.post('/resoluciones/:id/update', handleUpdateResolucion);
 
   // =========================================================================
   // 3. CONFIGURACIÓN DE CARGOS TELETRABAJABLES
@@ -320,63 +324,108 @@ module.exports = function (pool) {
     }
   });
 
-  router.put('/cargos/:id', async (req, res) => {
+  const handleUpdateCargo = async (req, res) => {
     try {
       const { id } = req.params;
-      const { es_teletrabajable, max_dias_semana, justificacion_estudio } = req.body;
+      const { es_teletrabajable, max_dias_semana, justificacion_estudio } = req.body || {};
 
       console.log(`[Teletrabajo] Recibida actualización para cargo ${id}:`, { es_teletrabajable, max_dias_semana, justificacion_estudio });
 
-      const actual = await pool.query('SELECT * FROM public.teletrabajo_cargos_config WHERE id = $1', [id]);
+      // 1. Asegurar columnas de forma silenciosa y preventiva
+      await pool.query(`
+        ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS es_teletrabajable BOOLEAN DEFAULT TRUE;
+        ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS max_dias_semana INT DEFAULT 2;
+        ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS justificacion_estudio TEXT;
+        ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE public.teletrabajo_cargos_config ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      `).catch(e => console.warn('[Teletrabajo] DDL warning en cargos_config:', e.message));
+
+      // 2. Verificar existencia del cargo usando id::text para soportar UUID o serial/int
+      const actual = await pool.query('SELECT * FROM public.teletrabajo_cargos_config WHERE id::text = $1', [String(id)]);
       if (actual.rows.length === 0) {
         return res.status(404).json({ error: 'Cargo no encontrado en la base de datos.' });
       }
       const actualRow = actual.rows[0];
 
-      const nuevoTeletrabajable = es_teletrabajable !== undefined ? Boolean(es_teletrabajable) : actualRow.es_teletrabajable;
-      const parsedDias = parseInt(max_dias_semana, 10);
-      const nuevoMaxDias = (!isNaN(parsedDias) && parsedDias >= 1 && parsedDias <= 5)
-        ? parsedDias
-        : (actualRow.max_dias_semana || 2);
-      const nuevaJustificacion = justificacion_estudio !== undefined 
-        ? String(justificacion_estudio || '') 
-        : (actualRow.justificacion_estudio || '');
+      // 3. Inspeccionar columnas dinámicamente para nunca fallar por columnas faltantes
+      const colsRes = await pool.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'teletrabajo_cargos_config'
+      `);
+      const existingCols = new Map(colsRes.rows.map(r => [r.column_name.toLowerCase(), r.data_type.toLowerCase()]));
 
-      let result;
-      try {
-        result = await pool.query(`
-          UPDATE public.teletrabajo_cargos_config
-          SET 
-            es_teletrabajable = $1,
-            max_dias_semana = $2,
-            justificacion_estudio = $3,
-            updated_at = NOW()
-          WHERE id = $4
-          RETURNING *;
-        `, [nuevoTeletrabajable, nuevoMaxDias, nuevaJustificacion, id]);
-      } catch (colErr) {
-        console.warn('[Teletrabajo] Reintentando UPDATE cargo sin updated_at:', colErr.message);
-        result = await pool.query(`
-          UPDATE public.teletrabajo_cargos_config
-          SET 
-            es_teletrabajable = $1,
-            max_dias_semana = $2,
-            justificacion_estudio = $3
-          WHERE id = $4
-          RETURNING *;
-        `, [nuevoTeletrabajable, nuevoMaxDias, nuevaJustificacion, id]);
+      const setClauses = [];
+      const values = [];
+      let valIdx = 1;
+
+      // Columna es_teletrabajable
+      if (existingCols.has('es_teletrabajable')) {
+        const rawVal = es_teletrabajable !== undefined ? es_teletrabajable : actualRow.es_teletrabajable;
+        const boolVal = rawVal === true || rawVal === 'true' || rawVal === 1 || rawVal === '1';
+        const colType = existingCols.get('es_teletrabajable');
+        if (colType === 'boolean') {
+          setClauses.push(`es_teletrabajable = $${valIdx++}`);
+          values.push(boolVal);
+        } else {
+          setClauses.push(`es_teletrabajable = $${valIdx++}`);
+          values.push(boolVal ? 'true' : 'false');
+        }
       }
 
+      // Columna max_dias_semana
+      if (existingCols.has('max_dias_semana')) {
+        const parsedDias = parseInt(max_dias_semana, 10);
+        const curDias = parseInt(actualRow.max_dias_semana, 10);
+        const diasValidos = (!isNaN(parsedDias) && parsedDias >= 1 && parsedDias <= 5)
+          ? parsedDias
+          : ((!isNaN(curDias) && curDias >= 1 && curDias <= 5) ? curDias : 2);
+        setClauses.push(`max_dias_semana = $${valIdx++}`);
+        values.push(diasValidos);
+      }
+
+      // Columna justificacion_estudio
+      if (existingCols.has('justificacion_estudio')) {
+        const nuevaJustificacion = justificacion_estudio !== undefined 
+          ? String(justificacion_estudio || '') 
+          : String(actualRow.justificacion_estudio || '');
+        setClauses.push(`justificacion_estudio = $${valIdx++}`);
+        values.push(nuevaJustificacion);
+      }
+
+      // Columna updated_at
+      if (existingCols.has('updated_at')) {
+        setClauses.push(`updated_at = NOW()`);
+      }
+
+      if (setClauses.length === 0) {
+        return res.json(actualRow);
+      }
+
+      values.push(String(id));
+      const updateQuery = `
+        UPDATE public.teletrabajo_cargos_config
+        SET ${setClauses.join(', ')}
+        WHERE id::text = $${valIdx}
+        RETURNING *;
+      `;
+
+      const result = await pool.query(updateQuery, values);
       console.log(`[Teletrabajo] Cargo ${id} actualizado con éxito.`);
-      res.json(result.rows[0]);
+      return res.json(result.rows[0]);
     } catch (err) {
       console.error('[Teletrabajo] Error actualizando cargo:', err);
-      res.status(500).json({ 
+      return res.status(500).json({ 
         error: 'Error al actualizar viabilidad de cargo: ' + err.message,
-        detail: err.detail || err.hint || null
+        detail: err.detail || err.hint || null,
+        code: err.code || null
       });
     }
-  });
+  };
+
+  router.put('/cargos/:id', handleUpdateCargo);
+  router.post('/cargos/:id', handleUpdateCargo);
+  router.post('/cargos/:id/update', handleUpdateCargo);
 
   // =========================================================================
   // 4. ASIGNACIONES DE TELETRABAJO Y TRABAJO EN CASA POR SERVIDOR
@@ -504,7 +553,7 @@ module.exports = function (pool) {
     }
   });
 
-  router.put('/asignaciones/:id', async (req, res) => {
+  const handleUpdateAsignacion = async (req, res) => {
     try {
       const { id } = req.params;
       const {
@@ -525,7 +574,7 @@ module.exports = function (pool) {
 
       let numero_resolucion_display = null;
       if (resolucion_id) {
-        const resRes = await pool.query('SELECT numero_resolucion FROM public.teletrabajo_resoluciones WHERE id = $1', [resolucion_id]);
+        const resRes = await pool.query('SELECT numero_resolucion FROM public.teletrabajo_resoluciones WHERE id::text = $1', [String(resolucion_id)]);
         if (resRes.rows.length > 0) {
           numero_resolucion_display = resRes.rows[0].numero_resolucion;
         }
@@ -549,7 +598,7 @@ module.exports = function (pool) {
           estado = COALESCE($13, estado),
           observaciones = $14,
           updated_at = NOW()
-        WHERE id = $15
+        WHERE id::text = $15
         RETURNING *;
       `;
 
@@ -581,7 +630,11 @@ module.exports = function (pool) {
       console.error('[Teletrabajo] Error actualizando asignación:', err);
       res.status(500).json({ error: 'Error al actualizar asignación: ' + err.message });
     }
-  });
+  };
+
+  router.put('/asignaciones/:id', handleUpdateAsignacion);
+  router.post('/asignaciones/:id', handleUpdateAsignacion);
+  router.post('/asignaciones/:id/update', handleUpdateAsignacion);
 
   // =========================================================================
   // 5. ACUERDOS DE COMPROMISO

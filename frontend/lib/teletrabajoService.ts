@@ -169,14 +169,45 @@ export const teletrabajoService = {
   async guardarResolucion(data: Partial<ResolucionTeletrabajo> & { archivo_base64?: string }): Promise<ResolucionTeletrabajo> {
     const isEdit = !!data.id;
     const url = isEdit ? `${API_URL}/api/teletrabajo/resoluciones/${data.id}` : `${API_URL}/api/teletrabajo/resoluciones`;
-    const res = await fetch(url, {
-      method: isEdit ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al guardar resolución');
+    const payload = JSON.stringify(data);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(isEdit ? { 'X-HTTP-Method-Override': 'PUT' } : {}),
+    };
+
+    let res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: payload,
+    }).catch(() => null);
+
+    if (isEdit && (!res || !res.ok)) {
+      const resAlt = await fetch(`${API_URL}/api/teletrabajo/resoluciones/${data.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => null);
+      if (resAlt && resAlt.ok) res = resAlt;
+    }
+
+    if (isEdit && (!res || !res.ok)) {
+      const resPut = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => null);
+      if (resPut) res = resPut;
+    }
+
+    if (!res || !res.ok) {
+      let msg = 'Error al guardar resolución';
+      try {
+        if (res) {
+          const err = await res.json();
+          msg = err.error || err.detail || err.message || msg;
+        }
+      } catch (_) {}
+      throw new Error(msg);
     }
     return res.json();
   },
@@ -188,14 +219,52 @@ export const teletrabajoService = {
   },
 
   async actualizarCargo(id: string, data: Partial<CargoConfig>): Promise<CargoConfig> {
-    const res = await fetch(`${API_URL}/api/teletrabajo/cargos/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || err.detail || err.message || `Error ${res.status}: Fallo al actualizar viabilidad del cargo`);
+    const payload = JSON.stringify(data);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-HTTP-Method-Override': 'PUT',
+    };
+
+    // 1. Probar POST con X-HTTP-Method-Override (compatible con WAF institucional y Express)
+    let res = await fetch(`${API_URL}/api/teletrabajo/cargos/${id}`, {
+      method: 'POST',
+      headers,
+      body: payload,
+    }).catch(() => null);
+
+    // 2. Si da error o 404/500, probar POST directo a /cargos/:id/update
+    if (!res || !res.ok) {
+      const resAlt = await fetch(`${API_URL}/api/teletrabajo/cargos/${id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => null);
+      if (resAlt && resAlt.ok) {
+        res = resAlt;
+      }
+    }
+
+    // 3. Fallback a PUT nativo
+    if (!res || !res.ok) {
+      const resPut = await fetch(`${API_URL}/api/teletrabajo/cargos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => null);
+      if (resPut) {
+        res = resPut;
+      }
+    }
+
+    if (!res || !res.ok) {
+      let msg = `Error ${res ? res.status : 'de red'}: Fallo al actualizar viabilidad del cargo`;
+      try {
+        if (res) {
+          const err = await res.json();
+          msg = err.error || err.detail || err.message || msg;
+        }
+      } catch (_) {}
+      throw new Error(msg);
     }
     return res.json();
   },
@@ -209,14 +278,45 @@ export const teletrabajoService = {
   async guardarAsignacion(data: AsignacionModalidad): Promise<AsignacionModalidad> {
     const isEdit = !!data.id;
     const url = isEdit ? `${API_URL}/api/teletrabajo/asignaciones/${data.id}` : `${API_URL}/api/teletrabajo/asignaciones`;
-    const res = await fetch(url, {
-      method: isEdit ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Error al guardar asignación de modalidad');
+    const payload = JSON.stringify(data);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(isEdit ? { 'X-HTTP-Method-Override': 'PUT' } : {}),
+    };
+
+    let res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: payload,
+    }).catch(() => null);
+
+    if (isEdit && (!res || !res.ok)) {
+      const resAlt = await fetch(`${API_URL}/api/teletrabajo/asignaciones/${data.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => null);
+      if (resAlt && resAlt.ok) res = resAlt;
+    }
+
+    if (isEdit && (!res || !res.ok)) {
+      const resPut = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+      }).catch(() => null);
+      if (resPut) res = resPut;
+    }
+
+    if (!res || !res.ok) {
+      let msg = 'Error al guardar asignación de modalidad';
+      try {
+        if (res) {
+          const err = await res.json();
+          msg = err.error || err.detail || err.message || msg;
+        }
+      } catch (_) {}
+      throw new Error(msg);
     }
     return res.json();
   },
