@@ -1646,8 +1646,8 @@ export default function DetalleValidacionScreen() {
                 </Text>
               </View>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                <View style={{ minWidth: 940, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }} contentContainerStyle={{ width: '100%', minWidth: 900 }}>
+                <View style={{ width: '100%', minWidth: 900, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
                   {/* Encabezado Tabla */}
                   <View
                     style={{
@@ -1659,12 +1659,12 @@ export default function DetalleValidacionScreen() {
                       borderBottomColor: '#CBD5E1'
                     }}
                   >
-                    <Text style={{ width: 65, fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
-                    <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>NIVEL / TIPO</Text>
-                    <Text style={{ width: 220, fontSize: 11, fontWeight: '800', color: '#475569' }}>TÍTULO OBTENIDO</Text>
-                    <Text style={{ width: 220, fontSize: 11, fontWeight: '800', color: '#475569' }}>INSTITUCIÓN EMISORA</Text>
-                    <Text style={{ width: 140, fontSize: 11, fontWeight: '800', color: '#475569' }}>FECHA DE GRADO</Text>
-                    <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>ESTADO</Text>
+                    <Text style={{ width: '8%', fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
+                    <Text style={{ width: '14%', fontSize: 11, fontWeight: '800', color: '#475569' }}>NIVEL / TIPO</Text>
+                    <Text style={{ width: '28%', fontSize: 11, fontWeight: '800', color: '#475569' }}>TÍTULO OBTENIDO</Text>
+                    <Text style={{ width: '26%', fontSize: 11, fontWeight: '800', color: '#475569' }}>INSTITUCIÓN EMISORA</Text>
+                    <Text style={{ width: '12%', fontSize: 11, fontWeight: '800', color: '#475569' }}>FECHA DE GRADO</Text>
+                    <Text style={{ width: '12%', fontSize: 11, fontWeight: '800', color: '#475569' }}>ESTADO</Text>
                   </View>
 
                   {/* Filas de Formación Académica */}
@@ -1690,7 +1690,7 @@ export default function DetalleValidacionScreen() {
                           }}
                         >
                           {/* REF */}
-                          <View style={{ width: 65, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ width: '8%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Ionicons
                               name={estaExpandido ? 'chevron-up-circle' : 'chevron-down-circle-outline'}
                               size={17}
@@ -1702,7 +1702,7 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* NIVEL / TIPO */}
-                          <View style={{ width: 130, paddingRight: 8 }}>
+                          <View style={{ width: '14%', paddingRight: 8 }}>
                             <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
                               <Text style={{ fontSize: 10, fontWeight: '800', color: '#3730A3' }}>
                                 {t.tipo.replace('_', ' ')}
@@ -1711,7 +1711,7 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* TÍTULO */}
-                          <View style={{ width: 220, paddingRight: 8 }}>
+                          <View style={{ width: '28%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
                               {t.titulo_obtenido}
                             </Text>
@@ -1723,14 +1723,14 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* INSTITUCIÓN */}
-                          <View style={{ width: 220, paddingRight: 8 }}>
+                          <View style={{ width: '26%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 12, color: '#334155' }} numberOfLines={2}>
                               {t.institucion}
                             </Text>
                           </View>
 
                           {/* FECHA DE GRADO */}
-                          <View style={{ width: 140, paddingRight: 8 }}>
+                          <View style={{ width: '12%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>
                               {t.fecha_grado || 'NO CONSTA'}
                             </Text>
@@ -1742,7 +1742,7 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* ESTADO */}
-                          <View style={{ width: 130, paddingRight: 8 }}>
+                          <View style={{ width: '12%', paddingRight: 8 }}>
                             {cumple ? (
                               <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
                                 <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Cumple Requisito</Text>
@@ -2057,8 +2057,8 @@ export default function DetalleValidacionScreen() {
                 </Text>
               </View>
             ) : (
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                <View style={{ minWidth: 940, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }} contentContainerStyle={{ width: '100%', minWidth: 940 }}>
+                <View style={{ width: '100%', minWidth: 940, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
                   {/* Encabezado Tabla */}
                   <View
                     style={{
@@ -2070,12 +2070,12 @@ export default function DetalleValidacionScreen() {
                       borderBottomColor: '#CBD5E1'
                     }}
                   >
-                    <Text style={{ width: 65, fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
-                    <Text style={{ width: 230, fontSize: 11, fontWeight: '800', color: '#475569' }}>EMPRESA / ENTIDAD</Text>
-                    <Text style={{ width: 220, fontSize: 11, fontWeight: '800', color: '#475569' }}>CARGO DESEMPEÑADO</Text>
-                    <Text style={{ width: 175, fontSize: 11, fontWeight: '800', color: '#475569' }}>PERIODO</Text>
-                    <Text style={{ width: 130, fontSize: 11, fontWeight: '800', color: '#475569' }}>TIEMPO VÁLIDO</Text>
-                    <Text style={{ width: 120, fontSize: 11, fontWeight: '800', color: '#475569' }}>CALIFICACIÓN</Text>
+                    <Text style={{ width: '8%', fontSize: 11, fontWeight: '800', color: '#475569' }}>REF</Text>
+                    <Text style={{ width: '25%', fontSize: 11, fontWeight: '800', color: '#475569' }}>EMPRESA / ENTIDAD</Text>
+                    <Text style={{ width: '25%', fontSize: 11, fontWeight: '800', color: '#475569' }}>CARGO DESEMPEÑADO</Text>
+                    <Text style={{ width: '18%', fontSize: 11, fontWeight: '800', color: '#475569' }}>PERIODO</Text>
+                    <Text style={{ width: '12%', fontSize: 11, fontWeight: '800', color: '#475569' }}>TIEMPO VÁLIDO</Text>
+                    <Text style={{ width: '12%', fontSize: 11, fontWeight: '800', color: '#475569' }}>CALIFICACIÓN</Text>
                   </View>
 
                   {/* Filas Interactivas con Expansión Completa */}
@@ -2101,7 +2101,7 @@ export default function DetalleValidacionScreen() {
                           }}
                         >
                           {/* REF con icono de expansión */}
-                          <View style={{ width: 65, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ width: '8%', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Ionicons
                               name={estaExpandido ? 'chevron-up-circle' : 'chevron-down-circle-outline'}
                               size={17}
@@ -2113,7 +2113,7 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* ENTIDAD */}
-                          <View style={{ width: 230, paddingRight: 8 }}>
+                          <View style={{ width: '25%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
                               {c.entidad}
                             </Text>
@@ -2123,7 +2123,7 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* CARGO */}
-                          <View style={{ width: 220, paddingRight: 8 }}>
+                          <View style={{ width: '25%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }} numberOfLines={2}>
                               {c.cargo_certificado}
                             </Text>
@@ -2133,14 +2133,14 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* PERIODO */}
-                          <View style={{ width: 175, paddingRight: 8 }}>
+                          <View style={{ width: '18%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 11, color: '#334155' }}>
                               {c.fecha_inicio} al {c.fecha_fin || (c.vinculo_vigente ? 'Vigente' : 'N/A')}
                             </Text>
                           </View>
 
                           {/* TIEMPO VÁLIDO */}
-                          <View style={{ width: 130, paddingRight: 8 }}>
+                          <View style={{ width: '12%', paddingRight: 8 }}>
                             <Text style={{ fontSize: 12, fontWeight: '800', color: mesesVal > 0 ? '#15803D' : '#94A3B8' }}>
                               {mesesVal} meses
                             </Text>
@@ -2152,7 +2152,7 @@ export default function DetalleValidacionScreen() {
                           </View>
 
                           {/* CALIFICACIÓN */}
-                          <View style={{ width: 120, paddingRight: 8 }}>
+                          <View style={{ width: '12%', paddingRight: 8 }}>
                             {esRel ? (
                               <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
                                 <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Relacionada</Text>
