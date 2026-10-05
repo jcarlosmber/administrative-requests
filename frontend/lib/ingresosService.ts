@@ -228,7 +228,7 @@ export interface ConsolidadoValidacion {
   tiempo_excluido_por_traslapes_meses: number;
   requisito_minimo_meses: number;
   diferencia_meses: number;
-  resultado_final: 'CUMPLE' | 'NO_CUMPLE' | 'REQUIERE_REVISION';
+  resultado_final: 'CUMPLE' | 'NO_CUMPLE' | 'REQUIERE_REVISION' | 'REQUIERE REVISION';
   justificacion: string;
   faltantes?: string[];
   requiere_revision_humana: boolean;

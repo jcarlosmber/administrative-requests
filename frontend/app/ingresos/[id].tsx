@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import {
   ingresosService,
   AnalisisCompleto,
+  ConsolidadoValidacion,
   FormacionAcademicaItem,
   CertificadoAnalizado,
   DocumentoNoAplicaItem,
@@ -553,6 +554,9 @@ export default function DetalleValidacionScreen() {
     };
   };
 
+  // Estado para checklist interactivo de puntos que requieren revisión
+  const [itemsRevisados, setItemsRevisados] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (id) {
       cargarValidacion(id);
@@ -567,11 +571,166 @@ export default function DetalleValidacionScreen() {
       setTitulos(res.formacion_academica || []);
       setCertificados(res.certificados || []);
       setDocumentosNoAplican(res.documentos_no_aplican || []);
+      if ((res.consolidado as any)?.items_revisados) {
+        setItemsRevisados((res.consolidado as any).items_revisados);
+      }
       setHayCambios(false);
     } catch (err: any) {
       mostrarMensaje('Error al Cargar', err.message || 'No se pudo obtener el detalle de la validación.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Cálculo de la lista de puntos de control que requieren revisión técnica
+  const puntosRevision = useMemo(() => {
+    const lista: Array<{ id: string; titulo: string; descripcion: string; origen: string; badgeColor: string }> = [];
+
+    // 1. Faltantes de requisitos del consolidado
+    if (Array.isArray(data?.consolidado?.faltantes)) {
+      data.consolidado.faltantes.forEach((f: string, idx: number) => {
+        if (f && f.trim()) {
+          lista.push({
+            id: `faltante-${idx}`,
+            titulo: `Requisito Pendiente de Acreditación`,
+            descripcion: f.trim(),
+            origen: 'Faltante de Requisitos',
+            badgeColor: '#DC2626'
+          });
+        }
+      });
+    }
+
+    // 2. Certificados que tengan REQUIERE_REVISION o clasificación NO_DETERMINABLE
+    certificados.forEach((c, idx) => {
+      const idCert = c.id_certificado || `cert-${idx}`;
+      if (c.experiencia_relacionada?.resultado === 'REQUIERE_REVISION' || c.clasificacion_experiencia === 'NO_DETERMINABLE') {
+        lista.push({
+          id: `cert-rev-${idCert}`,
+          titulo: `Revisión de Concordancia Funcional: ${c.cargo_certificado || 'Cargo'}`,
+          descripcion: `En ${c.entidad}: Verificar manualmente la afinidad de las funciones descritas con el empleo evaluado.`,
+          origen: 'Experiencia Laboral',
+          badgeColor: '#D97706'
+        });
+      }
+      if (c.vinculo_vigente && (!c.fecha_fin || c.fecha_fin === '')) {
+        lista.push({
+          id: `cert-vig-${idCert}`,
+          titulo: `Confirmar Fecha Corte de Vinculación Vigente`,
+          descripcion: `En ${c.entidad} (${c.cargo_certificado}): Vínculo vigente sin fecha cierta de expedición. Validar fecha límite de cómputo.`,
+          origen: 'Vigencia Laboral',
+          badgeColor: '#2563EB'
+        });
+      }
+    });
+
+    // 3. Títulos con observaciones o no aprobados
+    titulos.forEach((t, idx) => {
+      if (t.cumple_requisito_cargo === false) {
+        lista.push({
+          id: `tit-rev-${idx}`,
+          titulo: `Revisión de Cumplimiento Formativo: ${t.titulo_obtenido}`,
+          descripcion: t.justificacion || `Título de ${t.tipo} en ${t.institucion}. Validar si es admisible según el manual de funciones.`,
+          origen: 'Formación Académica',
+          badgeColor: '#7C3AED'
+        });
+      }
+    });
+
+    // 4. Si el dictamen final es REQUIERE_REVISION y la lista está vacía, usar justificación
+    if (lista.length === 0 && (data?.consolidado?.resultado_final === 'REQUIERE_REVISION' || data?.consolidado?.resultado_final === 'REQUIERE REVISION' || data?.consolidado?.requiere_revision_humana)) {
+      lista.push({
+        id: 'rev-general-dictamen',
+        titulo: 'Revisión Técnica y Documental del Expediente',
+        descripcion: data?.consolidado?.justificacion || 'Se requiere revisión humana por parte del evaluador para contrastar los soportes aportados.',
+        origen: 'Control Jurídico',
+        badgeColor: '#D97706'
+      });
+    }
+
+    return lista;
+  }, [data?.consolidado, certificados, titulos]);
+
+  const toggleCheckItemRevision = async (itemId: string) => {
+    const nuevoEstado = {
+      ...itemsRevisados,
+      [itemId]: !itemsRevisados[itemId]
+    };
+    setItemsRevisados(nuevoEstado);
+
+    const todosMarcados = puntosRevision.length > 0 && puntosRevision.every(p => nuevoEstado[p.id]);
+
+    if (todosMarcados && data) {
+      const nuevoConsolidado: ConsolidadoValidacion = {
+        ...data.consolidado,
+        resultado_final: 'CUMPLE',
+        requiere_revision_humana: false,
+        justificacion: (data.consolidado.justificacion || '') + '\n\n[Revisión Humana Aprobada]: Todos los puntos de revisión técnica fueron verificados y validados formalmente por el evaluador.'
+      };
+      (nuevoConsolidado as any).items_revisados = nuevoEstado;
+
+      const dataActualizada = { ...data, consolidado: nuevoConsolidado };
+      setData(dataActualizada);
+
+      try {
+        await ingresosService.actualizarValidacion(id, {
+          consolidado: nuevoConsolidado,
+          certificados,
+          formacion_academica: titulos,
+          documentos_no_aplican: documentosNoAplican
+        });
+        mostrarMensaje(
+          '¡Dictamen Validado (OK)!',
+          'Has completado la revisión de todos los puntos observados. El Dictamen Final del expediente ahora figura formalmente en estado CUMPLE (OK).'
+        );
+      } catch (err: any) {
+        console.warn('Error al guardar cambio a CUMPLE:', err);
+      }
+    } else if (data) {
+      const nuevoConsolidado = {
+        ...data.consolidado,
+        items_revisados: nuevoEstado
+      };
+      setData({ ...data, consolidado: nuevoConsolidado as any });
+      await ingresosService.actualizarValidacion(id, {
+        consolidado: nuevoConsolidado as any
+      }).catch(() => {});
+    }
+  };
+
+  const marcarTodosComoRevisadosAprobar = async () => {
+    if (!data) return;
+    const nuevoEstado: Record<string, boolean> = {};
+    puntosRevision.forEach(p => { nuevoEstado[p.id] = true; });
+    setItemsRevisados(nuevoEstado);
+
+    const nuevoConsolidado: ConsolidadoValidacion = {
+      ...data.consolidado,
+      resultado_final: 'CUMPLE',
+      requiere_revision_humana: false,
+      justificacion: (data.consolidado.justificacion || '') + '\n\n[Revisión Humana Aprobada]: Todos los puntos de revisión técnica fueron verificados y validados formalmente por el evaluador.'
+    };
+    (nuevoConsolidado as any).items_revisados = nuevoEstado;
+
+    const dataActualizada = { ...data, consolidado: nuevoConsolidado };
+    setData(dataActualizada);
+
+    try {
+      setGuardandoCambios(true);
+      await ingresosService.actualizarValidacion(id, {
+        consolidado: nuevoConsolidado,
+        certificados,
+        formacion_academica: titulos,
+        documentos_no_aplican: documentosNoAplican
+      });
+      mostrarMensaje(
+        '¡Dictamen Aprobado y Validado (OK)!',
+        'Todos los puntos de revisión han sido marcados como verificados. El Dictamen Final del expediente ha quedado en estado CUMPLE (OK).'
+      );
+    } catch (err: any) {
+      mostrarMensaje('Error al Guardar', err.message || 'No se pudo actualizar el estado del dictamen.');
+    } finally {
+      setGuardandoCambios(false);
     }
   };
 
@@ -1338,6 +1497,7 @@ export default function DetalleValidacionScreen() {
   const { candidato, cargo_evaluado, consolidado } = data;
   const esCumple = consolidado.resultado_final === 'CUMPLE';
   const esNoCumple = consolidado.resultado_final === 'NO_CUMPLE';
+  const esRequiereRevision = consolidado.resultado_final === 'REQUIERE_REVISION' || consolidado.resultado_final === 'REQUIERE REVISION' || Boolean(consolidado.requiere_revision_humana);
   const colorEstado = esCumple ? '#16A34A' : esNoCumple ? '#DC2626' : '#D97706';
   const bgEstado = esCumple ? '#DCFCE7' : esNoCumple ? '#FEE2E2' : '#FEF3C7';
 
@@ -1838,6 +1998,190 @@ export default function DetalleValidacionScreen() {
                 {consolidado.justificacion}
               </Text>
             </View>
+
+            {/* LISTADO DE PUNTOS QUE REQUIEREN REVISIÓN TÉCNICA (CHECKLIST INTERACTIVO) */}
+            {(puntosRevision.length > 0 || esRequiereRevision) && (
+              <View
+                style={{
+                  backgroundColor: esCumple ? '#F0FDF4' : '#FFFBEB',
+                  borderRadius: 12,
+                  padding: 18,
+                  borderWidth: 1.5,
+                  borderColor: esCumple ? '#86EFAC' : '#F59E0B',
+                  gap: 14
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons
+                      name={esCumple ? 'checkmark-circle' : 'alert-circle'}
+                      size={24}
+                      color={esCumple ? '#15803D' : '#D97706'}
+                    />
+                    <View>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: esCumple ? '#166534' : '#92400E' }}>
+                        {esCumple
+                          ? '✓ Puntos de Control y Revisión Verificados (Dictamen OK)'
+                          : 'Puntos que Requieren Revisión Técnica del Evaluador'}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: esCumple ? '#15803D' : '#B45309', marginTop: 1 }}>
+                        {esCumple
+                          ? 'Todos los aspectos observados han sido validados formalmente por el evaluador.'
+                          : 'A medida que revises cada ítem, márcalo con check. Al completarlos todos, el Dictamen Final pasará automáticamente a CUMPLE (OK).'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <View
+                      style={{
+                        backgroundColor: esCumple ? '#DCFCE7' : '#FEF3C7',
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: esCumple ? '#86EFAC' : '#FDE68A'
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: esCumple ? '#15803D' : '#B45309' }}>
+                        {puntosRevision.filter(p => itemsRevisados[p.id]).length} / {puntosRevision.length} verificados
+                      </Text>
+                    </View>
+
+                    {!esCumple && (
+                      <TouchableOpacity
+                        onPress={marcarTodosComoRevisadosAprobar}
+                        style={{
+                          backgroundColor: '#16A34A',
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="checkmark-done" size={15} color="#FFFFFF" />
+                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
+                          Aprobar Todo (Dictamen OK)
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Listado de ítems con Checkbox interactivo */}
+                <View style={{ gap: 8 }}>
+                  {puntosRevision.map((item, pIdx) => {
+                    const estaRevisado = Boolean(itemsRevisados[item.id]);
+
+                    return (
+                      <TouchableOpacity
+                        key={item.id || pIdx}
+                        activeOpacity={0.8}
+                        onPress={() => toggleCheckItemRevision(item.id)}
+                        style={{
+                          backgroundColor: estaRevisado ? '#F0FDF4' : '#FFFFFF',
+                          borderRadius: 8,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: estaRevisado ? '#86EFAC' : '#FDE68A',
+                          flexDirection: 'row',
+                          alignItems: 'flex-start',
+                          gap: 12
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 6,
+                            borderWidth: 2,
+                            borderColor: estaRevisado ? '#16A34A' : '#D97706',
+                            backgroundColor: estaRevisado ? '#16A34A' : '#FFFFFF',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            marginTop: 2
+                          }}
+                        >
+                          {estaRevisado && (
+                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          )}
+                        </View>
+
+                        {/* Contenido del Ítem */}
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontWeight: '800',
+                                color: estaRevisado ? '#15803D' : '#0F172A',
+                                textDecorationLine: estaRevisado ? 'line-through' : 'none'
+                              }}
+                            >
+                              {item.titulo}
+                            </Text>
+                            <View
+                              style={{
+                                backgroundColor: estaRevisado ? '#DCFCE7' : '#FEF3C7',
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: 4
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: '700',
+                                  color: estaRevisado ? '#15803D' : item.badgeColor
+                                }}
+                              >
+                                {item.origen}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: estaRevisado ? '#4B5563' : '#334155',
+                              marginTop: 4,
+                              lineHeight: 17
+                            }}
+                          >
+                            {item.descripcion}
+                          </Text>
+                        </View>
+
+                        {/* Estado Badge a la derecha */}
+                        <View
+                          style={{
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                            backgroundColor: estaRevisado ? '#DCFCE7' : '#FEF3C7',
+                            borderWidth: 1,
+                            borderColor: estaRevisado ? '#86EFAC' : '#FDE68A'
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              fontWeight: '800',
+                              color: estaRevisado ? '#15803D' : '#B45309'
+                            }}
+                          >
+                            {estaRevisado ? '✓ Revisado' : 'Pendiente'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
           </View>
 
           {/* MATRIZ DE REQUISITOS MÍNIMOS (2 COLUMNAS) */}
@@ -3096,64 +3440,249 @@ export default function DetalleValidacionScreen() {
                               </View>
                             </View>
 
-                            {/* Concordancia Funcional Detallada */}
-                            {c.experiencia_relacionada?.funciones_coincidentes && c.experiencia_relacionada.funciones_coincidentes.length > 0 ? (
-                              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BBF7D0', gap: 10 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <Ionicons name="git-compare-outline" size={17} color="#15803D" />
-                                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D' }}>
-                                      Concordancia Funcional con el Empleo ({c.experiencia_relacionada.funciones_coincidentes.length} coincidencia(s))
-                                    </Text>
+                            {/* Concordancia Funcional Detallada (Cotejo de Actividades) */}
+                            <View style={{ gap: 10 }}>
+                              {c.experiencia_relacionada?.funciones_coincidentes && c.experiencia_relacionada.funciones_coincidentes.length > 0 ? (
+                                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BBF7D0', gap: 10 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                      <Ionicons name="git-compare-outline" size={17} color="#15803D" />
+                                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D' }}>
+                                        Cotejo Funcional: Funciones Coincidentes / Afines ({c.experiencia_relacionada.funciones_coincidentes.length} coincidencia(s))
+                                      </Text>
+                                    </View>
+                                    <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>Nivel de Confianza: {c.experiencia_relacionada.nivel_confianza || 'ALTO'}</Text>
+                                    </View>
                                   </View>
-                                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>Nivel de Confianza: {c.experiencia_relacionada.nivel_confianza || 'ALTO'}</Text>
+
+                                  <View style={{ gap: 8 }}>
+                                    {c.experiencia_relacionada.funciones_coincidentes.map((fc, fIdx) => (
+                                      <View key={fIdx} style={{ backgroundColor: '#F0FDF4', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#DCFCE7', gap: 4 }}>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#166534', flex: 1 }}>
+                                            • Función Certificada: {fc.funcion_certificada}
+                                          </Text>
+                                          <View style={{ backgroundColor: '#BBF7D0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#14532D' }}>{fc.coincidencia}</Text>
+                                          </View>
+                                        </View>
+                                        <Text style={{ fontSize: 11, color: '#334155' }}>
+                                          <Text style={{ fontWeight: '700' }}>Función del Cargo:</Text> {fc.funcion_del_cargo}
+                                        </Text>
+                                        {fc.justificacion ? (
+                                          <Text style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', marginTop: 2 }}>
+                                            Sustento: {fc.justificacion}
+                                          </Text>
+                                        ) : null}
+                                      </View>
+                                    ))}
                                   </View>
                                 </View>
+                              ) : c.funciones_certificadas && c.funciones_certificadas.length > 0 ? (
+                                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>
+                                    Funciones Certificadas en el Documento ({c.funciones_certificadas.length}):
+                                  </Text>
+                                  <View style={{ gap: 4 }}>
+                                    {c.funciones_certificadas.map((fn, fnIdx) => (
+                                      <Text key={fnIdx} style={{ fontSize: 11, color: '#334155', lineHeight: 16 }}>
+                                        • {fn.funcion}
+                                      </Text>
+                                    ))}
+                                  </View>
+                                </View>
+                              ) : (
+                                <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                  <Text style={{ fontSize: 11, color: '#92400E' }}>
+                                    ℹ️ Esta certificación no incluye funciones detalladas; la relación técnica se evaluó con base en la denominación oficial del cargo y la naturaleza de la entidad.
+                                  </Text>
+                                </View>
+                              )}
 
-                                <View style={{ gap: 8 }}>
-                                  {c.experiencia_relacionada.funciones_coincidentes.map((fc, fIdx) => (
-                                    <View key={fIdx} style={{ backgroundColor: '#F0FDF4', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#DCFCE7', gap: 4 }}>
-                                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-                                        <Text style={{ fontSize: 12, fontWeight: '800', color: '#166534', flex: 1 }}>
-                                          • Función Certificada: {fc.funcion_certificada}
-                                        </Text>
-                                        <View style={{ backgroundColor: '#BBF7D0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                                          <Text style={{ fontSize: 9, fontWeight: '800', color: '#14532D' }}>{fc.coincidencia}</Text>
+                              {/* Funciones NO Relacionadas con el Empleo */}
+                              {(() => {
+                                const fcCoincidentes = c.experiencia_relacionada?.funciones_coincidentes || [];
+                                const coincidentesTextos = fcCoincidentes.map(fc => (fc.funcion_certificada || '').toLowerCase().trim());
+                                const todasCertificadas = (c.funciones_certificadas || []).map(f => typeof f === 'string' ? f : f.funcion).filter(Boolean);
+                                const noCoincidentesGemini = c.experiencia_relacionada?.funciones_no_coincidentes || [];
+
+                                const noRelacionadas = (noCoincidentesGemini && noCoincidentesGemini.length > 0)
+                                  ? noCoincidentesGemini
+                                  : todasCertificadas.filter(fn => {
+                                      const fnNorm = (fn || '').toLowerCase().trim();
+                                      return fnNorm.length > 0 && !coincidentesTextos.some(ct => ct && (ct.includes(fnNorm) || fnNorm.includes(ct)));
+                                    });
+
+                                if (noRelacionadas.length > 0) {
+                                  return (
+                                    <View style={{ backgroundColor: '#FFFBEB', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#FDE68A', gap: 8 }}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                          <Ionicons name="close-circle-outline" size={17} color="#D97706" />
+                                          <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
+                                            Funciones Certificadas NO Relacionadas con el Empleo ({noRelacionadas.length})
+                                          </Text>
+                                        </View>
+                                        <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#B45309' }}>Sin Afinidad Funcional</Text>
                                         </View>
                                       </View>
-                                      <Text style={{ fontSize: 11, color: '#334155' }}>
-                                        <Text style={{ fontWeight: '700' }}>Función del Cargo:</Text> {fc.funcion_del_cargo}
+
+                                      <Text style={{ fontSize: 11, color: '#B45309', marginBottom: 2 }}>
+                                        Actividades certificadas que no guardan relación directa ni afinidad técnica con el propósito principal del cargo evaluado:
                                       </Text>
-                                      {fc.justificacion ? (
-                                        <Text style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', marginTop: 2 }}>
-                                          Sustento: {fc.justificacion}
-                                        </Text>
-                                      ) : null}
+
+                                      <View style={{ gap: 6 }}>
+                                        {noRelacionadas.map((fnNo, fnNoIdx) => (
+                                          <View key={fnNoIdx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#FEF3C7' }}>
+                                            <Text style={{ color: '#D97706', fontSize: 12, fontWeight: '800' }}>✕</Text>
+                                            <Text style={{ fontSize: 11, color: '#78350F', lineHeight: 16, flex: 1 }}>
+                                              {fnNo}
+                                            </Text>
+                                          </View>
+                                        ))}
+                                      </View>
                                     </View>
-                                  ))}
-                                </View>
-                              </View>
-                            ) : c.funciones_certificadas && c.funciones_certificadas.length > 0 ? (
-                              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
-                                <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>
-                                  Funciones Certificadas en el Documento ({c.funciones_certificadas.length}):
-                                </Text>
-                                <View style={{ gap: 4 }}>
-                                  {c.funciones_certificadas.map((fn, fnIdx) => (
-                                    <Text key={fnIdx} style={{ fontSize: 11, color: '#334155', lineHeight: 16 }}>
-                                      • {fn.funcion}
-                                    </Text>
-                                  ))}
-                                </View>
-                              </View>
-                            ) : (
-                              <View style={{ backgroundColor: '#FFFBEB', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#FDE68A' }}>
-                                <Text style={{ fontSize: 11, color: '#92400E' }}>
-                                  ℹ️ Esta certificación no incluye funciones detalladas; la relación técnica se evaluó con base en la denominación oficial del cargo y la naturaleza de la entidad.
-                                </Text>
-                              </View>
-                            )}
+                                  );
+                                } else if (c.funciones_certificadas && c.funciones_certificadas.length > 0) {
+                                  return (
+                                    <View style={{ backgroundColor: '#F0FDF4', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#DCFCE7', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                      <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#15803D' }}>
+                                        ✓ El 100% de las funciones certificadas guardan relación o afinidad directa con el empleo. No hay funciones descartadas.
+                                      </Text>
+                                    </View>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {/* Validación Previa al Grado (Auditoría Decreto 1083 / Ley 2039) */}
+                              {(() => {
+                                const auditoria = c.verificacion_experiencia_previa || calcularExpPreviaFallback(c, titulos);
+                                const tipoRes = auditoria.tipo_resultado;
+                                const esTotalPost = tipoRes === 'COMPUTABLE_TOTAL_POSTERIOR';
+                                const esLey2039 = tipoRes === 'COMPUTABLE_TOTAL_LEY_2039';
+                                const esParcial = tipoRes === 'COMPUTABLE_PARCIAL_DESDE_CORTE';
+
+                                const badgeBg = esTotalPost ? '#DCFCE7' : esLey2039 ? '#E0E7FF' : esParcial ? '#FEF3C7' : '#FEE2E2';
+                                const badgeColor = esTotalPost ? '#15803D' : esLey2039 ? '#3730A3' : esParcial ? '#B45309' : '#DC2626';
+                                const badgeBorder = esTotalPost ? '#86EFAC' : esLey2039 ? '#C7D2FE' : esParcial ? '#FDE68A' : '#FCA5A5';
+                                const badgeTexto = esTotalPost
+                                  ? '✓ COMPUTABLE TOTAL (POSTERIOR AL CORTE)'
+                                  : esLey2039
+                                  ? '✓ COMPUTABLE TOTAL (LEY 2039 DE 2020)'
+                                  : esParcial
+                                  ? '⚠️ COMPUTABLE PARCIAL (DESDE FECHA DE CORTE)'
+                                  : '✕ NO COMPUTABLE (FINALIZÓ ANTES DEL CORTE)';
+
+                                return (
+                                  <View
+                                    style={{
+                                      backgroundColor: '#FFFFFF',
+                                      borderRadius: 10,
+                                      padding: 14,
+                                      borderWidth: 1,
+                                      borderColor: badgeBorder,
+                                      gap: 10
+                                    }}
+                                  >
+                                    {/* Cabecera Auditoría Previa */}
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                        <Ionicons name="school-outline" size={17} color={badgeColor} />
+                                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                          Auditoría de Experiencia Previa al Grado (Decreto 1083 / Ley 2039)
+                                        </Text>
+                                      </View>
+
+                                      <View style={{ backgroundColor: badgeBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: badgeBorder }}>
+                                        <Text style={{ fontSize: 10, fontWeight: '800', color: badgeColor }}>
+                                          {badgeTexto}
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    {/* 3 Checks de la Auditoría */}
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                      {/* Check 1: Corte de Referencia */}
+                                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 3 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                          <Ionicons name="calendar-outline" size={14} color="#2563EB" />
+                                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase' }}>
+                                            Corte Profesional
+                                          </Text>
+                                        </View>
+                                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }}>
+                                          Fecha: {auditoria.corte_referencia?.fecha || 'NO CONSTA'}
+                                        </Text>
+                                        <Text style={{ fontSize: 10, color: '#64748B' }}>
+                                          Tipo: {auditoria.corte_referencia?.tipo === 'TERMINACION_MATERIAS' ? 'Terminación de materias' : (auditoria.corte_referencia?.tipo === 'FECHA_GRADO' ? 'Fecha de grado' : 'Sin acreditar')}
+                                        </Text>
+                                        <Text style={{ fontSize: 10, color: '#475569', fontStyle: 'italic', marginTop: 2 }}>
+                                          {auditoria.corte_referencia?.sustento_normativo}
+                                        </Text>
+                                      </View>
+
+                                      {/* Check 2: Acreditación Pénsum / Grado */}
+                                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 3 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                          <Ionicons
+                                            name={auditoria.check_terminacion_pensum?.acredita_terminacion_materias ? 'checkmark-circle' : 'information-circle-outline'}
+                                            size={14}
+                                            color={auditoria.check_terminacion_pensum?.acredita_terminacion_materias ? '#15803D' : '#64748B'}
+                                          />
+                                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#334155', textTransform: 'uppercase' }}>
+                                            Pénsum / Terminación
+                                          </Text>
+                                        </View>
+                                        <Text style={{ fontSize: 11, color: '#334155', lineHeight: 15 }}>
+                                          {auditoria.check_terminacion_pensum?.observacion || 'Evaluado con base en fecha de grado.'}
+                                        </Text>
+                                        {auditoria.fecha_inicio_computable ? (
+                                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309', marginTop: 2 }}>
+                                            Rige a partir del: {auditoria.fecha_inicio_computable}
+                                          </Text>
+                                        ) : null}
+                                      </View>
+
+                                      {/* Check 3: Modalidad Ley 2039 de 2020 */}
+                                      <View style={{ flex: 1, minWidth: 200, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0', gap: 3 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                          <Ionicons
+                                            name={auditoria.check_modalidad_ley_2039?.aplica_excepcion ? 'checkmark-circle' : 'close-circle-outline'}
+                                            size={14}
+                                            color={auditoria.check_modalidad_ley_2039?.aplica_excepcion ? '#15803D' : '#94A3B8'}
+                                          />
+                                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#334155', textTransform: 'uppercase' }}>
+                                            Excepción Ley 2039/2020
+                                          </Text>
+                                        </View>
+                                        <Text style={{ fontSize: 11, fontWeight: '700', color: auditoria.check_modalidad_ley_2039?.aplica_excepcion ? '#15803D' : '#64748B' }}>
+                                          {auditoria.check_modalidad_ley_2039?.aplica_excepcion ? `Aplica: ${auditoria.check_modalidad_ley_2039.modalidad}` : 'No aplica excepción'}
+                                        </Text>
+                                        <Text style={{ fontSize: 10, color: '#64748B', lineHeight: 14 }}>
+                                          {auditoria.check_modalidad_ley_2039?.observacion || 'No aplica'}
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    {/* Conclusión Jurídica Normativa */}
+                                    {auditoria.conclusion_juridica ? (
+                                      <View style={{ backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: 2 }}>
+                                          Conclusión Jurídica Aplicada:
+                                        </Text>
+                                        <Text style={{ fontSize: 12, color: '#334155', lineHeight: 17 }}>
+                                          {auditoria.conclusion_juridica}
+                                        </Text>
+                                      </View>
+                                    ) : null}
+                                  </View>
+                                );
+                              })()}
+                            </View>
 
                             {/* Traslapes Detectados si existen */}
                             {c.traslapes && c.traslapes.length > 0 ? (
