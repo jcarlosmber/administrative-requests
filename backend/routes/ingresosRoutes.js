@@ -959,6 +959,326 @@ module.exports = function(pool) {
     }
   };
 
+  /**
+   * 7.2.2 POST /api/ingresos/validaciones/:id/certificados/:certId/complementar
+   * Adjunta un nuevo PDF a un certificado laboral existente, extrae con IA lo que falta,
+   * fusiona funciones y fechas, actualiza los anexos y recalcula la idoneidad y tiempos.
+   */
+  const handlerComplementarCertificado = async (req, res) => {
+    const client = await pool.connect();
+    try {
+      const { id, certId } = req.params;
+      const { archivo, nuevoArchivo } = req.body;
+      const arch = nuevoArchivo || archivo;
+
+      if (!arch || !arch.base64 || !arch.name) {
+        return res.status(400).json({ error: 'Debes proporcionar el archivo PDF complementario (name y base64).' });
+      }
+
+      // 1. Obtener validación actual, cargo y candidato
+      const valQuery = `
+        SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email, c.telefono as candidato_telefono,
+               COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto,
+               COALESCE(p.funciones, ic.funciones_cargo, '[]'::jsonb) as funciones_cargo_resuelto
+        FROM ingreso_validaciones v
+        LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
+        LEFT JOIN LATERAL (
+          SELECT p.dependencia_cargo, p.requisitos, p.funciones
+          FROM planta_personal_sjd p
+          WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
+             OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
+             OR (v.id_perno IS NOT NULL AND p.id_perno = v.id_perno)
+             OR (v.id_plaza IS NULL AND v.id_sideap IS NULL AND v.id_perno IS NULL AND p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado)
+          ORDER BY 
+            CASE WHEN v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza THEN 1
+                 WHEN v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap THEN 2
+                 WHEN v.id_perno IS NOT NULL AND p.id_perno = v.id_perno THEN 3
+                 ELSE 4 END
+          LIMIT 1
+        ) p ON true
+        LEFT JOIN LATERAL (
+          SELECT ic.dependencia, ic.requisitos_formacion, ic.funciones_cargo
+          FROM ingreso_cargos ic
+          WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
+             OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
+          LIMIT 1
+        ) ic ON true
+        WHERE v.id = $1;
+      `;
+      const valRes = await client.query(valQuery, [id]);
+      if (valRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Validación no encontrada.' });
+      }
+      const val = valRes.rows[0];
+
+      // 2. Buscar el certificado existente
+      const certRes = await client.query(
+        'SELECT * FROM ingreso_certificados WHERE validacion_id = $1 AND (id::text = $2 OR id_certificado = $2) LIMIT 1',
+        [id, certId]
+      );
+      if (certRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Certificado no encontrado en esta validación.' });
+      }
+      const certDb = certRes.rows[0];
+
+      // Convertir a estructura de certificado
+      const certActual = {
+        id: certDb.id,
+        id_certificado: certDb.id_certificado,
+        entidad: certDb.entidad,
+        nit_entidad: certDb.nit_entidad,
+        ciudad_expedicion: certDb.ciudad_expedicion,
+        fecha_expedicion: certDb.fecha_expedicion,
+        firmante: certDb.firmante,
+        cargo_firmante: certDb.cargo_firmante,
+        tipo_vinculo: certDb.tipo_vinculo,
+        cargo_certificado: certDb.cargo_certificado,
+        codigo_cargo: certDb.codigo_cargo,
+        grado_cargo: certDb.grado_cargo,
+        dependencia: certDb.dependencia,
+        numero_contrato_o_acto: certDb.numero_contrato_o_acto,
+        fecha_inicio: certDb.fecha_inicio,
+        fecha_fin: certDb.fecha_fin,
+        vinculo_vigente: certDb.vinculo_vigente,
+        funciones_certificadas: certDb.funciones_certificadas || [],
+        experiencia_profesional: certDb.experiencia_profesional,
+        clasificacion_experiencia: certDb.clasificacion_experiencia,
+        experiencia_relacionada: certDb.experiencia_relacionada_json || {},
+        anexos: (certDb.documento_json && Array.isArray(certDb.documento_json.anexos) && certDb.documento_json.anexos.length > 0)
+          ? certDb.documento_json.anexos
+          : (certDb.nombre_archivo ? [certDb.nombre_archivo] : []),
+        nombre_archivo: certDb.nombre_archivo
+      };
+
+      // 3. Guardar el nuevo archivo en disco y en BD
+      const valFolder = path.join(UPLOADS_DIR, id);
+      guardarArchivoEnDisco(valFolder, arch.name, arch.base64);
+      try {
+        const cleanBase64 = arch.base64.includes(';base64,') ? arch.base64.split(';base64,')[1] : arch.base64;
+        await client.query(`
+          INSERT INTO ingreso_archivos (validacion_id, nombre_archivo, mime_type, archivo_base64, tamano_bytes)
+          VALUES ($1, $2, $3, $4, $5)
+          ON CONFLICT DO NOTHING
+        `, [id, path.basename(arch.name), arch.mimeType || 'application/pdf', cleanBase64, arch.size || cleanBase64.length]);
+      } catch (eArch) {
+        console.warn('[Ingresos] Error insertando anexo en BD:', eArch.message);
+      }
+
+      // 4. Preparar datos del cargo para Gemini
+      let funcionesCargo = [];
+      if (Array.isArray(val.funciones_cargo_resuelto)) {
+        funcionesCargo = val.funciones_cargo_resuelto;
+      } else if (typeof val.funciones_cargo_resuelto === 'string') {
+        try { funcionesCargo = JSON.parse(val.funciones_cargo_resuelto); } catch (_) {}
+      }
+
+      const cargoData = {
+        id: val.cargo_id,
+        nombre: val.cargo_nombre,
+        codigo: val.cargo_codigo,
+        grado: val.cargo_grado,
+        dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia,
+        requisito_experiencia_meses: Number(val.requisito_minimo_meses) || 54,
+        requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion,
+        funciones_cargo: funcionesCargo
+      };
+
+      const candidatoData = {
+        nombre: val.candidato_nombre,
+        documento: val.candidato_documento
+      };
+
+      // 5. Analizar y complementar con Gemini
+      console.log(`[Ingresos] Complementando certificado ${certActual.id_certificado} (${certActual.entidad}) con archivo ${arch.name}...`);
+      const certComplementado = await geminiIngresosService.complementarCertificadoConGemini(
+        certActual,
+        arch,
+        cargoData,
+        candidatoData
+      );
+
+      // 6. Calcular periodos y tiempos del certificado actualizado
+      const dIni = timeCalculatorService.parseDate(certComplementado.fecha_inicio || certActual.fecha_inicio);
+      let dFin = timeCalculatorService.parseDate(certComplementado.fecha_fin || certActual.fecha_fin);
+      if (!dFin && (certComplementado.vinculo_vigente || certActual.vinculo_vigente)) {
+        dFin = timeCalculatorService.parseDate(certComplementado.fecha_expedicion) || new Date();
+      }
+
+      let tiempoCalculado = certDb.tiempo_certificado_json || { anios: 0, meses: 0, dias: 0, meses_totales_aproximados: 0 };
+      if (dIni && dFin) {
+        const cp = timeCalculatorService.calculatePeriod(dIni, dFin);
+        tiempoCalculado = {
+          anios: cp.anios,
+          meses: cp.meses,
+          dias: cp.dias,
+          meses_totales_aproximados: cp.meses_totales,
+          metodo_calculo: 'DATEDIF_EXCEL_Y_CONVENCION_30_DIAS'
+        };
+      }
+
+      // Actualizar en base de datos
+      await client.query('BEGIN');
+
+      const docJsonFinal = {
+        ...(certDb.documento_json || {}),
+        anexos: certComplementado.anexos,
+        verificacion_formal: certComplementado.verificacion_formal || certDb.documento_json?.verificacion_formal || {}
+      };
+
+      const updateCertSql = `
+        UPDATE ingreso_certificados
+        SET entidad = COALESCE($1, entidad),
+            nit_entidad = COALESCE($2, nit_entidad),
+            ciudad_expedicion = COALESCE($3, ciudad_expedicion),
+            fecha_expedicion = COALESCE($4, fecha_expedicion),
+            firmante = COALESCE($5, firmante),
+            cargo_firmante = COALESCE($6, cargo_firmante),
+            tipo_vinculo = COALESCE($7, tipo_vinculo),
+            cargo_certificado = COALESCE($8, cargo_certificado),
+            codigo_cargo = COALESCE($9, codigo_cargo),
+            grado_cargo = COALESCE($10, grado_cargo),
+            dependencia = COALESCE($11, dependencia),
+            numero_contrato_o_acto = COALESCE($12, numero_contrato_o_acto),
+            fecha_inicio = COALESCE($13, fecha_inicio),
+            fecha_fin = $14,
+            vinculo_vigente = $15,
+            funciones_certificadas = $16,
+            clasificacion_experiencia = $17,
+            experiencia_relacionada_json = $18,
+            tiempo_certificado_json = $19,
+            meses_certificados = $20,
+            documento_json = $21,
+            verificacion_formal = $22,
+            observaciones_json = $23
+        WHERE id = $24
+        RETURNING *;
+      `;
+      const updateValues = [
+        certComplementado.entidad || certActual.entidad,
+        certComplementado.nit_entidad || certActual.nit_entidad || null,
+        certComplementado.ciudad_expedicion || certActual.ciudad_expedicion || null,
+        certComplementado.fecha_expedicion || certActual.fecha_expedicion || null,
+        certComplementado.firmante || certActual.firmante || null,
+        certComplementado.cargo_firmante || certActual.cargo_firmante || null,
+        certComplementado.tipo_vinculo || certActual.tipo_vinculo || null,
+        certComplementado.cargo_certificado || certActual.cargo_certificado,
+        certComplementado.codigo_cargo || certActual.codigo_cargo || null,
+        certComplementado.grado_cargo || certActual.grado_cargo || null,
+        certComplementado.dependencia || certActual.dependencia || null,
+        certComplementado.numero_contrato_o_acto || certActual.numero_contrato_o_acto || null,
+        certComplementado.fecha_inicio || certActual.fecha_inicio,
+        certComplementado.fecha_fin || certActual.fecha_fin || null,
+        Boolean(certComplementado.vinculo_vigente),
+        JSON.stringify(certComplementado.funciones_certificadas || certActual.funciones_certificadas || []),
+        certComplementado.clasificacion_experiencia || certActual.clasificacion_experiencia || 'RELACIONADA',
+        JSON.stringify(certComplementado.experiencia_relacionada || {}),
+        JSON.stringify(tiempoCalculado),
+        tiempoCalculado.meses_totales_aproximados || 0,
+        JSON.stringify(docJsonFinal),
+        JSON.stringify(certComplementado.verificacion_formal || {}),
+        JSON.stringify(certComplementado.observaciones || []),
+        certDb.id
+      ];
+      await client.query(updateCertSql, updateValues);
+
+      // 7. Cargar todos los certificados para recalcular experiencia consolidada y traslapes
+      const todosCertsRes = await client.query(
+        'SELECT * FROM ingreso_certificados WHERE validacion_id = $1 ORDER BY fecha_inicio ASC',
+        [id]
+      );
+      const todosCerts = todosCertsRes.rows.map(r => ({
+        id: r.id,
+        id_certificado: r.id_certificado,
+        entidad: r.entidad,
+        nit_entidad: r.nit_entidad,
+        cargo_certificado: r.cargo_certificado,
+        codigo_cargo: r.codigo_cargo,
+        grado_cargo: r.grado_cargo,
+        dependencia: r.dependencia,
+        tipo_vinculo: r.tipo_vinculo,
+        numero_contrato_o_acto: r.numero_contrato_o_acto,
+        fecha_inicio: r.fecha_inicio,
+        fecha_fin: r.fecha_fin,
+        vinculo_vigente: r.vinculo_vigente,
+        clasificacion_experiencia: r.clasificacion_experiencia,
+        funciones_certificadas: r.funciones_certificadas,
+        experiencia_relacionada: r.experiencia_relacionada_json,
+        tiempo_certificado: r.tiempo_certificado_json,
+        tiempo_valido: { meses_totales: Number(r.tiempo_valido_meses) },
+        anexos: r.documento_json?.anexos || (r.nombre_archivo ? [r.nombre_archivo] : []),
+        nombre_archivo: r.nombre_archivo,
+        verificacion_formal: r.documento_json?.verificacion_formal || r.verificacion_formal || null,
+        observaciones: r.observaciones_json
+      }));
+
+      const reqMeses = Number(val.requisito_minimo_meses) || 0;
+      let certsAuditados = todosCerts;
+      let nuevoConsolidado = null;
+
+      try {
+        const recalc = timeCalculatorService.auditCertificatesAndCalculateTotals(todosCerts, reqMeses);
+        if (recalc?.certificados) certsAuditados = recalc.certificados;
+        if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
+
+        for (const ca of certsAuditados) {
+          await client.query(`
+            UPDATE ingreso_certificados
+            SET tiempo_valido_meses = $1,
+                traslapes_json = $2
+            WHERE id = $3
+          `, [ca.tiempo_valido?.meses_totales || 0, JSON.stringify(ca.traslapes || []), ca.id]);
+        }
+
+        if (nuevoConsolidado) {
+          await client.query(`
+            UPDATE ingreso_validaciones
+            SET experiencia_relacionada_meses = $1,
+                experiencia_no_relacionada_meses = $2,
+                tiempo_excluido_traslapes_meses = $3,
+                diferencia_meses = $4,
+                resultado_final = $5,
+                updated_at = NOW()
+            WHERE id = $6
+          `, [
+            nuevoConsolidado.experiencia_relacionada_meses || 0,
+            nuevoConsolidado.experiencia_no_relacionada_meses || 0,
+            nuevoConsolidado.tiempo_excluido_por_traslapes_meses || 0,
+            nuevoConsolidado.diferencia_meses || 0,
+            (nuevoConsolidado.diferencia_meses >= 0 ? 'CUMPLE' : 'NO_CUMPLE'),
+            id
+          ]);
+        }
+      } catch (eRecalc) {
+        console.warn('[Ingresos] Advertencia recalculando tras complementar certificado:', eRecalc.message);
+      }
+
+      await client.query('COMMIT');
+
+      const certRetornado = certsAuditados.find(c => c.id === certDb.id) || certComplementado;
+      certRetornado.anexos = docJsonFinal.anexos;
+      certRetornado.verificacion_formal = certComplementado.verificacion_formal;
+
+      res.json({
+        success: true,
+        mensaje: `Certificado ${certActual.id_certificado} complementado exitosamente con "${arch.name}".`,
+        certificado: certRetornado,
+        certificados: certsAuditados,
+        consolidado: nuevoConsolidado
+      });
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('[Ingresos] Error en complementar certificado:', err);
+      res.status(500).json({ error: 'Error al complementar certificado: ' + err.message });
+    } finally {
+      client.release();
+    }
+  };
+
+  router.post('/validaciones/:id/certificados/:certId/complementar', handlerComplementarCertificado);
+  router.put('/validaciones/:id/certificados/:certId/complementar', handlerComplementarCertificado);
+  router.post('/validaciones/:id/certificados/:certId/anexo', handlerComplementarCertificado);
+
   router.delete('/validaciones/:id/certificados/:certId', handlerEliminarCertificadoIndividual);
   router.delete('/validaciones/:id/certificados/:certId/delete', handlerEliminarCertificadoIndividual);
   router.post('/validaciones/:id/certificados/:certId/delete', handlerEliminarCertificadoIndividual);

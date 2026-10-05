@@ -87,9 +87,14 @@ export default function DetalleValidacionScreen() {
   const [modoVista, setModoVista] = useState<'simplificada' | 'auditoria'>('simplificada');
   const [modalSelectorVista, setModalSelectorVista] = useState(false);
 
-  // Estados para expansión interactiva de la tabla ejecutiva en vista simplificada
   const [certificadosExpandidos, setCertificadosExpandidos] = useState<Record<string, boolean>>({});
   const [certModalDetalle, setCertModalDetalle] = useState<CertificadoAnalizado | null>(null);
+
+  // Estados para Complementar Experiencia con Anexo / Segundo Certificado vía IA
+  const [modalComplementarVisible, setModalComplementarVisible] = useState(false);
+  const [certAComplementar, setCertAComplementar] = useState<{ cert: CertificadoAnalizado; idx: number } | null>(null);
+  const [archivoComplementario, setArchivoComplementario] = useState<{ name: string; base64: string; size?: number } | null>(null);
+  const [procesandoComplementarIa, setProcesandoComplementarIa] = useState(false);
 
   const toggleExpandirCertificado = (key: string) => {
     setCertificadosExpandidos(prev => ({
@@ -872,6 +877,98 @@ export default function DetalleValidacionScreen() {
       mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar el certificado.');
     } finally {
       setGuardandoCambios(false);
+    }
+  };
+
+  const abrirModalComplementarCertificado = (idx: number) => {
+    const c = certificados[idx];
+    if (!c) return;
+    setCertAComplementar({ cert: c, idx });
+    setArchivoComplementario(null);
+    setModalComplementarVisible(true);
+  };
+
+  const seleccionarPdfComplementario = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        multiple: false,
+        copyToCacheDirectory: true
+      });
+      if (result.canceled || !result.assets || result.assets.length === 0) return;
+      const asset = result.assets[0];
+
+      let base64 = '';
+      if (Platform.OS === 'web' && (asset as any).file) {
+        base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL((asset as any).file as Blob);
+        });
+      } else {
+        const FileSystem = require('expo-file-system');
+        base64 = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.Base64
+        });
+      }
+
+      setArchivoComplementario({
+        name: asset.name,
+        base64: base64,
+        size: asset.size
+      });
+    } catch (err: any) {
+      mostrarMensaje('Error al Seleccionar Archivo', err.message || 'No se pudo leer el archivo PDF.');
+    }
+  };
+
+  const ejecutarComplementarCertificado = async () => {
+    if (!id || !certAComplementar || !archivoComplementario) {
+      mostrarMensaje('Atención', 'Por favor selecciona un archivo PDF complementario para continuar.');
+      return;
+    }
+
+    try {
+      setProcesandoComplementarIa(true);
+      const targetCertId = certAComplementar.cert.id || certAComplementar.cert.id_certificado || `cert-${certAComplementar.idx}`;
+
+      const res = await ingresosService.complementarCertificado(
+        id,
+        targetCertId,
+        archivoComplementario
+      );
+
+      if (res.success) {
+        const nuevosCerts = res.certificados || certificados.map((c, i) => i === certAComplementar.idx ? res.certificado : c);
+        setCertificados(nuevosCerts);
+        if (res.consolidado && data) {
+          setData({
+            ...data,
+            certificados: nuevosCerts,
+            consolidado: res.consolidado
+          });
+        } else if (data) {
+          setData({
+            ...data,
+            certificados: nuevosCerts
+          });
+        }
+        setHayCambios(false);
+        setModalComplementarVisible(false);
+        setCertAComplementar(null);
+        setArchivoComplementario(null);
+
+        mostrarMensaje(
+          '¡Experiencia Complementada con Éxito!',
+          `Se ha incorporado "${archivoComplementario.name}" como soporte complementario de este empleo. La IA enriqueció las funciones, actualizó los periodos y recalculó la concordancia con el perfil del cargo.`
+        );
+      }
+    } catch (err: any) {
+      const rawMsg = err.message || String(err);
+      const { resumen } = sanitizarMensajeErrorIa(rawMsg);
+      mostrarMensaje('Error al Complementar', resumen);
+    } finally {
+      setProcesandoComplementarIa(false);
     }
   };
 
@@ -2549,6 +2646,24 @@ export default function DetalleValidacionScreen() {
                                 >
                                   <Ionicons name="close-circle-outline" size={13} color="#D97706" />
                                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>Mover a Descartados</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirModalComplementarCertificado(idx)}
+                                  style={{
+                                    backgroundColor: '#F0FDF4',
+                                    borderWidth: 1,
+                                    borderColor: '#BBF7D0',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="add-circle-outline" size={13} color="#15803D" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#15803D' }}>Adjuntar Soporte (IA)</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -5658,6 +5773,30 @@ export default function DetalleValidacionScreen() {
                           const foundIdx = certificados.findIndex(c => (c.id && c.id === certModalDetalle.id) || (c.id_certificado && c.id_certificado === certModalDetalle.id_certificado));
                           if (foundIdx !== -1) {
                             setCertModalDetalle(null);
+                            abrirModalComplementarCertificado(foundIdx);
+                          }
+                        }}
+                        style={{
+                          backgroundColor: '#F0FDF4',
+                          borderWidth: 1,
+                          borderColor: '#BBF7D0',
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        <Ionicons name="add-circle-outline" size={16} color="#15803D" />
+                        <Text style={{ color: '#15803D', fontSize: 13, fontWeight: '800' }}>Adjuntar Soporte Complementario (IA)</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          const foundIdx = certificados.findIndex(c => (c.id && c.id === certModalDetalle.id) || (c.id_certificado && c.id_certificado === certModalDetalle.id_certificado));
+                          if (foundIdx !== -1) {
+                            setCertModalDetalle(null);
                             pedirConfirmarEliminarCertificado(foundIdx);
                           }
                         }}
@@ -6312,6 +6451,220 @@ export default function DetalleValidacionScreen() {
               >
                 <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>Guardar Certificado</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para Complementar Experiencia con Nuevo Certificado / Anexo */}
+      <Modal
+        visible={modalComplementarVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          if (!procesandoComplementarIa) setModalComplementarVisible(false);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 620,
+              maxHeight: '90%',
+              padding: 24,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 25,
+              elevation: 10,
+              gap: 16
+            }}
+          >
+            {/* Header del Modal */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 8 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="sparkles" size={18} color="#15803D" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                    Adjuntar Soporte y Complementar con IA
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#64748B' }}>
+                    Agrega un segundo certificado o anexo a esta experiencia para que la IA extraiga lo que falta
+                  </Text>
+                </View>
+              </View>
+              {!procesandoComplementarIa && (
+                <TouchableOpacity onPress={() => setModalComplementarVisible(false)}>
+                  <Ionicons name="close" size={22} color="#64748B" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+              {/* Resumen del Certificado Actual */}
+              {certAComplementar?.cert && (
+                <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '800' }}>
+                        EXP-0{certAComplementar.idx + 1}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', flex: 1 }} numberOfLines={1}>
+                      {certAComplementar.cert.entidad}
+                    </Text>
+                  </View>
+
+                  <View style={{ gap: 3 }}>
+                    <Text style={{ fontSize: 12, color: '#334155' }}>
+                      Cargo: <Text style={{ fontWeight: '700' }}>{certAComplementar.cert.cargo_certificado || 'No registrado'}</Text>
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#64748B' }}>
+                      Periodo actual: {certAComplementar.cert.fecha_inicio} al {certAComplementar.cert.fecha_fin || (certAComplementar.cert.vinculo_vigente ? 'Vigente' : 'N/A')}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>
+                      Soportes ya vinculados: {(certAComplementar.cert.anexos && certAComplementar.cert.anexos.length > 0)
+                        ? certAComplementar.cert.anexos.join(', ')
+                        : (certAComplementar.cert.nombre_archivo || '1 archivo')}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Guía explicativa */}
+              <View style={{ backgroundColor: '#EFF6FF', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#BFDBFE', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                <Ionicons name="information-circle" size={20} color="#1D4ED8" style={{ marginTop: 1 }} />
+                <Text style={{ fontSize: 12, color: '#1E40AF', lineHeight: 17, flex: 1 }}>
+                  La IA leerá el nuevo PDF y <Text style={{ fontWeight: '700' }}>fusionará automáticamente las funciones</Text>, actualizará las fechas si el documento las amplía o aclara, y conservará ambos documentos como anexos de este cargo.
+                </Text>
+              </View>
+
+              {/* Selector de Archivo PDF */}
+              <View style={{ gap: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E293B' }}>
+                  Documento PDF Complementario (Otrosí, Constancia, Anexo de Funciones, etc.):
+                </Text>
+
+                {archivoComplementario ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F0FDF4', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#86EFAC' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, paddingRight: 8 }}>
+                      <Ionicons name="document-attach" size={22} color="#15803D" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D' }} numberOfLines={1}>
+                          {archivoComplementario.name}
+                        </Text>
+                        {archivoComplementario.size ? (
+                          <Text style={{ fontSize: 11, color: '#166534' }}>
+                            {(archivoComplementario.size / 1024).toFixed(1)} KB • Listo para complementar
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {!procesandoComplementarIa && (
+                      <TouchableOpacity
+                        onPress={seleccionarPdfComplementario}
+                        style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#86EFAC' }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#15803D' }}>Cambiar</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={seleccionarPdfComplementario}
+                    disabled={procesandoComplementarIa}
+                    style={{
+                      borderWidth: 2,
+                      borderColor: '#93C5FD',
+                      borderStyle: 'dashed',
+                      borderRadius: 10,
+                      backgroundColor: '#F8FAFC',
+                      padding: 24,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons name="cloud-upload-outline" size={32} color="#2563EB" />
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1D4ED8' }}>
+                      Seleccionar Archivo PDF Complementario
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>
+                      Haz clic para buscar en tus archivos locales
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Spinner de procesamiento IA */}
+              {procesandoComplementarIa && (
+                <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 16, alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <ActivityIndicator size="small" color="#1E40AF" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E293B' }}>
+                    Gemini IA analizando el documento complementario...
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center' }}>
+                    Extrayendo funciones, fusionando con las anteriores y recalculando la concordancia con el perfil.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Botones del Modal */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14 }}>
+              <TouchableOpacity
+                onPress={() => setModalComplementarVisible(false)}
+                disabled={procesandoComplementarIa}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  opacity: procesandoComplementarIa ? 0.5 : 1
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569' }}>Cancelar</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={ejecutarComplementarCertificado}
+                disabled={procesandoComplementarIa || !archivoComplementario}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 18,
+                  borderRadius: 8,
+                  backgroundColor: (procesandoComplementarIa || !archivoComplementario) ? '#94A3B8' : '#15803D',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                {procesandoComplementarIa ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+                )}
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>
+                  {procesandoComplementarIa ? 'Analizando...' : 'Analizar y Complementar con IA'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

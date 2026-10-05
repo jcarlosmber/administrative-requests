@@ -413,6 +413,34 @@ export const ingresosService = {
     return json || { success: true, mensaje: 'Validación actualizada exitosamente.' };
   },
 
+  async complementarCertificado(
+    id: string,
+    certId: string,
+    nuevoArchivo: { base64: string; name: string; size?: number; mimeType?: string }
+  ): Promise<{ success: boolean; mensaje: string; certificado: CertificadoAnalizado; certificados?: CertificadoAnalizado[]; consolidado?: any }> {
+    const res = await fetch(`${API_URL}/api/ingresos/validaciones/${id}/certificados/${encodeURIComponent(certId)}/complementar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nuevoArchivo })
+    });
+
+    let json: any = null;
+    try {
+      json = await res.json();
+    } catch (_) {
+      const text = await res.text().catch(() => '');
+      if (!res.ok) {
+        throw new Error(`Error del servidor (${res.status}): ${text.slice(0, 120) || 'Error de conexión'}`);
+      }
+    }
+
+    if (!res.ok) {
+      throw new Error(json?.error || `Error ${res.status} al complementar certificado`);
+    }
+
+    return json;
+  },
+
   async adjuntarYAnalizarDocumentos(
     id: string,
     archivos: Array<{ base64: string; name: string; size?: number; mimeType?: string }>,

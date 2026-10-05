@@ -148,6 +148,179 @@ C. DOCUMENTOS QUE NO APLICAN AL CARGO (Documentos Descartados / No Computables):
    - ¡NO pongas aquí diplomas de bachiller, actas de grado de pregrado/posgrado ni tarjetas profesionales!
 `;
 
+function repararJsonConCaracteresControl(raw) {
+  let str = (raw || '').trim();
+
+  // 1. Extraer bloque de código si viene envuelto en markdown ```json ... ```
+  const codeBlockMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (codeBlockMatch) {
+    str = codeBlockMatch[1].trim();
+  } else {
+    if (str.startsWith('```json')) str = str.slice(7).trim();
+    else if (str.startsWith('```')) str = str.slice(3).trim();
+    if (str.endsWith('```')) str = str.slice(0, -3).trim();
+
+    if (!str.startsWith('{') && !str.startsWith('[')) {
+      const pLlave = str.indexOf('{');
+      const pCorch = str.indexOf('[');
+      let inicio = -1;
+      if (pLlave !== -1 && pCorch !== -1) inicio = Math.min(pLlave, pCorch);
+      else if (pLlave !== -1) inicio = pLlave;
+      else if (pCorch !== -1) inicio = pCorch;
+
+      if (inicio !== -1) {
+        str = str.substring(inicio).trim();
+      }
+    }
+  }
+
+  let errorOriginal = null;
+
+  // Intento 1: Parseo directo estándar
+  try {
+    return JSON.parse(str);
+  } catch (err1) {
+    errorOriginal = err1;
+  }
+
+  // Intento 2: Limpieza de comas colgantes (trailing commas)
+  try {
+    const sinComas = str.replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(sinComas);
+  } catch (err2) {
+    // Continuar
+  }
+
+  // Intento 3: Escapar caracteres de control que están dentro de cadenas de texto literales
+  try {
+    let resultadoEscapado = '';
+    let enCadena = false;
+    let escapado = false;
+
+    for (let i = 0; i < str.length; i++) {
+      const char = str[i];
+      if (escapado) {
+        resultadoEscapado += char;
+        escapado = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        resultadoEscapado += char;
+        escapado = true;
+        continue;
+      }
+
+      if (char === '"') {
+        enCadena = !enCadena;
+        resultadoEscapado += char;
+        continue;
+      }
+
+      if (enCadena) {
+        if (char === '\n') {
+          resultadoEscapado += '\\n';
+        } else if (char === '\r') {
+          resultadoEscapado += '\\r';
+        } else if (char === '\t') {
+          resultadoEscapado += '\\t';
+        } else {
+          const code = char.charCodeAt(0);
+          if (code < 32) {
+            resultadoEscapado += `\\u${code.toString(16).padStart(4, '0')}`;
+          } else {
+            resultadoEscapado += char;
+          }
+        }
+      } else {
+        resultadoEscapado += char;
+      }
+    }
+
+    try {
+      return JSON.parse(resultadoEscapado);
+    } catch (eRes) {
+      const resultadoSinComas = resultadoEscapado.replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(resultadoSinComas);
+    }
+  } catch (err3) {
+    // Continuar
+  }
+
+  // Intento 4: Sanear caracteres no imprimibles
+  try {
+    const sanitized = str
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(sanitized);
+  } catch (err4) {
+    // Continuar
+  }
+
+  // Intento 5: Reparación heurística de JSON truncado
+  const cortes = [
+    str.lastIndexOf('},'),
+    str.lastIndexOf('}')
+  ].filter(idx => idx > 0);
+
+  for (const pos of cortes) {
+    try {
+      const s = str.substring(0, pos + 1);
+      const stack = [];
+      let inString = false;
+      let esc = false;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (esc) {
+          esc = false;
+          continue;
+        }
+        if (c === '\\') {
+          esc = true;
+          continue;
+        }
+        if (c === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (c === '{') stack.push('}');
+          else if (c === '[') stack.push(']');
+          else if (c === '}' || c === ']') {
+            if (stack.length > 0 && stack[stack.length - 1] === c) {
+              stack.pop();
+            }
+          }
+        }
+      }
+
+      let closing = '';
+      while (stack.length > 0) {
+        closing += stack.pop();
+      }
+
+      let resTruncado = s.replace(/,\s*$/, '') + closing;
+      resTruncado = resTruncado.replace(/,\s*([}\]])/g, '$1');
+
+      try {
+        return JSON.parse(resTruncado);
+      } catch (eT1) {
+        try {
+          const conNulls = resTruncado.replace(/:\s*([}\]])/g, ': null$1');
+          return JSON.parse(conNulls);
+        } catch (eT2) {
+          const sinHuerfanas = resTruncado.replace(/,\s*"[^"]*"\s*([}\]])/g, '$1');
+          return JSON.parse(sinHuerfanas);
+        }
+      }
+    } catch (err5) {
+      // Continuar
+    }
+  }
+
+  throw new Error(errorOriginal ? errorOriginal.message : 'Estructura JSON malformada');
+}
+
 /**
  * Analiza uno o más certificados en PDF comparándolos contra el perfil del cargo.
  * @param {Array<{ base64: string, name: string, mimeType?: string }>} pdfFiles
@@ -393,208 +566,7 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
     throw new Error('No se pudo completar el análisis con los modelos de Gemini: ' + (ultimoError ? ultimoError.message : 'Error desconocido'));
   }
 
-function repararJsonConCaracteresControl(raw) {
-  let str = (raw || '').trim();
 
-  // 1. Extraer bloque de código si viene envuelto en markdown ```json ... ```
-  const codeBlockMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (codeBlockMatch) {
-    str = codeBlockMatch[1].trim();
-  } else {
-    // Si viene con ``` al inicio o fin sin cierre regex estricto
-    if (str.startsWith('```json')) str = str.slice(7).trim();
-    else if (str.startsWith('```')) str = str.slice(3).trim();
-    if (str.endsWith('```')) str = str.slice(0, -3).trim();
-
-    // Si aún tiene texto previo al primer '{' o '['
-    if (!str.startsWith('{') && !str.startsWith('[')) {
-      const pLlave = str.indexOf('{');
-      const pCorch = str.indexOf('[');
-      let inicio = -1;
-      if (pLlave !== -1 && pCorch !== -1) inicio = Math.min(pLlave, pCorch);
-      else if (pLlave !== -1) inicio = pLlave;
-      else if (pCorch !== -1) inicio = pCorch;
-
-      if (inicio !== -1) {
-        str = str.substring(inicio).trim();
-      }
-    }
-  }
-
-  let errorOriginal = null;
-
-  // Intento 1: Parseo directo estándar
-  try {
-    return JSON.parse(str);
-  } catch (err1) {
-    errorOriginal = err1;
-  }
-
-  // Intento 2: Limpieza de comas colgantes (trailing commas)
-  try {
-    const sinComas = str.replace(/,\s*([}\]])/g, '$1');
-    return JSON.parse(sinComas);
-  } catch (err2) {
-    // Continuar
-  }
-
-  // Intento 3: Escapar caracteres de control que están dentro de cadenas de texto literales
-  let resultadoEscapado = '';
-  try {
-    let enCadena = false;
-    let escapado = false;
-
-    for (let i = 0; i < str.length; i++) {
-      const char = str[i];
-      if (escapado) {
-        resultadoEscapado += char;
-        escapado = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        resultadoEscapado += char;
-        escapado = true;
-        continue;
-      }
-
-      if (char === '"') {
-        enCadena = !enCadena;
-        resultadoEscapado += char;
-        continue;
-      }
-
-      if (enCadena) {
-        if (char === '\n') {
-          resultadoEscapado += '\\n';
-        } else if (char === '\r') {
-          resultadoEscapado += '\\r';
-        } else if (char === '\t') {
-          resultadoEscapado += '\\t';
-        } else {
-          const code = char.charCodeAt(0);
-          if (code < 32) {
-            resultadoEscapado += `\\u${code.toString(16).padStart(4, '0')}`;
-          } else {
-            resultadoEscapado += char;
-          }
-        }
-      } else {
-        resultadoEscapado += char;
-      }
-    }
-
-    try {
-      return JSON.parse(resultadoEscapado);
-    } catch (eRes) {
-      const resultadoSinComas = resultadoEscapado.replace(/,\s*([}\]])/g, '$1');
-      return JSON.parse(resultadoSinComas);
-    }
-  } catch (err3) {
-    // Continuar
-  }
-
-  // Intento 4: Sanear caracteres no imprimibles
-  try {
-    const sanitized = str
-      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
-      .replace(/,\s*([}\]])/g, '$1');
-    return JSON.parse(sanitized);
-  } catch (err4) {
-    // Continuar
-  }
-
-  // Intento 5: Reparar de forma exhaustiva JSON truncado (cadena no terminada, tokens cortados, llaves abiertas)
-  const candidatosReparacion = [resultadoEscapado || str, str];
-
-  for (const origen of candidatosReparacion) {
-    if (!origen) continue;
-    try {
-      let s = origen.trim();
-
-      // 5.1: Detectar si el corte ocurrió dentro de una cadena de texto sin cerrar
-      let inString = false;
-      let esc = false;
-      for (let i = 0; i < s.length; i++) {
-        const c = s[i];
-        if (esc) {
-          esc = false;
-          continue;
-        }
-        if (c === '\\') {
-          esc = true;
-          continue;
-        }
-        if (c === '"') {
-          inString = !inString;
-        }
-      }
-
-      // Si quedó una cadena sin cerrar, cerramos la comilla
-      if (inString) {
-        if (s.endsWith('\\')) s = s.slice(0, -1);
-        s += '"';
-      }
-
-      // 5.2: Balancear llaves y corchetes
-      const stack = [];
-      inString = false;
-      esc = false;
-      for (let i = 0; i < s.length; i++) {
-        const c = s[i];
-        if (esc) {
-          esc = false;
-          continue;
-        }
-        if (c === '\\') {
-          esc = true;
-          continue;
-        }
-        if (c === '"') {
-          inString = !inString;
-          continue;
-        }
-        if (!inString) {
-          if (c === '{') stack.push('}');
-          else if (c === '[') stack.push(']');
-          else if (c === '}' || c === ']') {
-            if (stack.length > 0 && stack[stack.length - 1] === c) {
-              stack.pop();
-            }
-          }
-        }
-      }
-
-      // Cerrar estructuras abiertas
-      let closing = '';
-      while (stack.length > 0) {
-        closing += stack.pop();
-      }
-
-      let resTruncado = s.replace(/,\s*$/, '') + closing;
-      resTruncado = resTruncado.replace(/,\s*([}\]])/g, '$1');
-
-      try {
-        return JSON.parse(resTruncado);
-      } catch (eT1) {
-        // Si quedó clave sin valor antes del cierre: ej "prop": }
-        try {
-          const conNulls = resTruncado.replace(/:\s*([}\]])/g, ': null$1');
-          return JSON.parse(conNulls);
-        } catch (eT2) {
-          // Si quedó clave huérfana: ej , "prop" }
-          const sinHuerfanas = resTruncado.replace(/,\s*"[^"]*"\s*([}\]])/g, '$1');
-          return JSON.parse(sinHuerfanas);
-        }
-      }
-    } catch (err5) {
-      // Continuar al siguiente candidato
-    }
-  }
-
-  // Si todas las opciones fallan, arrojar el error original descriptivo
-  throw new Error(errorOriginal ? errorOriginal.message : 'Estructura JSON malformada');
-}
 
   let parsedJson;
   try {
@@ -927,6 +899,195 @@ function repararJsonConCaracteresControl(raw) {
   };
 }
 
+/**
+ * Complementa un certificado laboral existente con un nuevo archivo PDF (anexo, constancia de funciones, otrosí, etc.).
+ * La IA extrae los datos del nuevo documento, los fusiona con los datos previos del certificado (funciones, fechas, cargos, entidad),
+ * vuelve a contrastar con el Manual de Funciones del cargo evaluado y retorna el certificado enriquecido.
+ * @param {Object} certActual - Objeto del certificado actual existente en el expediente
+ * @param {Object} nuevoArchivo - { base64: string, name: string, mimeType?: string }
+ * @param {Object} cargoData - Datos y manual de funciones del empleo a proveer
+ * @param {Object} candidatoData - Datos del candidato
+ */
+async function complementarCertificadoConGemini(certActual, nuevoArchivo, cargoData, candidatoData = {}) {
+  const apiKeys = getApiKeys();
+  if (apiKeys.length === 0) {
+    throw new Error('No se encontraron claves de API de Gemini configuradas en el backend.');
+  }
+
+  const MODELOS_GEMINI = [
+    'gemini-flash-lite-latest',
+    'gemini-flash-latest',
+    'gemini-3.8-flash'
+  ];
+
+  const anexosPrevios = (certActual.anexos && certActual.anexos.length > 0)
+    ? certActual.anexos
+    : (certActual.nombre_archivo ? [certActual.nombre_archivo] : []);
+
+  const promptUser = `
+DATOS DEL EMPLEO A EVALUAR:
+- Cargo: ${cargoData.nombre || 'Profesional'} (Código ${cargoData.codigo || ''}, Grado ${cargoData.grado || ''})
+- Dependencia: ${cargoData.dependencia || 'Secretaría Jurídica Distrital'}
+- Requisito de experiencia: ${cargoData.requisito_experiencia_meses || 0} meses de experiencia profesional relacionada.
+- Manual de Funciones del Cargo:
+${JSON.stringify(cargoData.funciones_cargo || [], null, 2)}
+
+DATOS ACTUALES DEL CERTIFICADO LABORAL A COMPLEMENTAR:
+- ID Certificado: ${certActual.id_certificado || 'CERT-1'}
+- Entidad: ${certActual.entidad || 'No identificada'}
+- NIT: ${certActual.nit_entidad || 'No consta'}
+- Cargo registrado previamente: ${certActual.cargo_certificado || 'No consta'}
+- Tipo de vínculo: ${certActual.tipo_vinculo || 'No especificado'}
+- Número de contrato o acto: ${certActual.numero_contrato_o_acto || 'No consta'}
+- Periodo registrado previamente: ${certActual.fecha_inicio || 'No consta'} al ${certActual.fecha_fin || (certActual.vinculo_vigente ? 'Vigente' : 'No consta')}
+- Clasificación previa: ${certActual.clasificacion_experiencia || 'NO_RELACIONADA'}
+- Funciones previamente registradas (${(certActual.funciones_certificadas || []).length}):
+${JSON.stringify(certActual.funciones_certificadas || [], null, 2)}
+- Anexos existentes:
+${JSON.stringify(anexosPrevios)}
+
+NUEVO DOCUMENTO ADJUNTO:
+Se adjunta el documento complementario: "${nuevoArchivo.name}".
+(Es un segundo certificado, constancia de funciones, otrosí, acta de posesión, liquidación o soporte complementario de la MISMA relación laboral).
+
+INSTRUCCIONES CLAVE PARA LA IA:
+1. Extrae e integra toda la información que aporte el nuevo documento para completar esta experiencia laboral:
+   - Nuevas funciones: Extrae todas las funciones específicas que certifique este nuevo documento. Fusiona estas funciones con las funciones que ya estaban registradas previamente, sin duplicados exactos, para conformar un listado exhaustivo e integral.
+   - Periodo contractual: Si el nuevo documento contiene, precisa o amplía la fecha de inicio o fecha de fin, actualízalas. Si este nuevo documento no menciona fechas, conserva las que ya estaban registradas.
+   - Cargo y denominación: Si el nuevo documento precisa mejor el nombre del cargo, código, grado o tipo de vinculación, actualízalos.
+   - Anexos: Agrega "${nuevoArchivo.name}" a la lista de anexos junto con los existentes (${JSON.stringify(anexosPrevios)}).
+2. Re-evaluación frente al Manual de Funciones:
+   - Con la totalidad de las funciones consolidadas (previas + nuevas), realiza un análisis exhaustivo frente a las funciones del empleo a proveer.
+   - Determina si la experiencia ahora califica como 'RELACIONADA' (al menos 2 funciones coincidentes o equivalencia sustancial de responsabilidades) o 'NO_RELACIONADA'.
+   - Actualiza 'experiencia_relacionada' con el listado de 'funciones_coincidentes' (indicando coincidencia DIRECTA/PARCIAL, justificación técnica y evidencia textual) y 'funciones_no_coincidentes'.
+3. Verificación formal:
+   - Revisa si este nuevo documento aporta firmas, datos de suscriptor o entidad que antes faltaban.
+
+RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA:
+{
+  "id_certificado": "${certActual.id_certificado || 'CERT-1'}",
+  "entidad": "string",
+  "nit_entidad": "string o NO CONSTA",
+  "ciudad_expedicion": "string o NO CONSTA",
+  "fecha_expedicion": "YYYY-MM-DD o NO CONSTA",
+  "firmante": "string o NO CONSTA",
+  "cargo_firmante": "string o NO CONSTA",
+  "tipo_vinculo": "string",
+  "cargo_certificado": "string",
+  "codigo_cargo": "string o NO CONSTA",
+  "grado_cargo": "string o NO CONSTA",
+  "dependencia": "string o NO CONSTA",
+  "numero_contrato_o_acto": "string o NO CONSTA",
+  "fecha_inicio": "YYYY-MM-DD",
+  "fecha_fin": "YYYY-MM-DD o NO CONSTA",
+  "vinculo_vigente": false,
+  "anexos": ["nombre_archivo_previo", "${nuevoArchivo.name}"],
+  "funciones_certificadas": [
+    { "funcion": "Texto completo", "evidencia_textual": "Cita textual" }
+  ],
+  "clasificacion_experiencia": "RELACIONADA | NO_RELACIONADA",
+  "experiencia_relacionada": {
+    "resultado": "RELACIONADA | NO_RELACIONADA",
+    "nivel_confianza": "ALTO | MEDIO",
+    "funciones_coincidentes": [
+      {
+        "funcion_certificada": "string",
+        "funcion_del_cargo": "string",
+        "coincidencia": "DIRECTA | PARCIAL",
+        "justificacion": "string",
+        "evidencia_textual": "string"
+      }
+    ],
+    "funciones_no_coincidentes": ["string"]
+  },
+  "verificacion_formal": {
+    "corresponde_aspirante": true,
+    "entidad_identificable": true,
+    "suscriptor_identificable": true,
+    "cuenta_con_firma": true,
+    "fecha_expedicion_identificable": true,
+    "documento_legible_integro": true
+  },
+  "observaciones": ["Detalle de lo que complementó el nuevo documento..."]
+}
+`;
+
+  let cleanBase64 = nuevoArchivo.base64;
+  if (cleanBase64.includes(';base64,')) {
+    cleanBase64 = cleanBase64.split(';base64,')[1];
+  }
+
+  const parts = [
+    { text: promptUser },
+    {
+      inlineData: {
+        data: cleanBase64,
+        mimeType: nuevoArchivo.mimeType || 'application/pdf'
+      }
+    },
+    { text: `[Documento Complementario Adjunto: ${nuevoArchivo.name}]` }
+  ];
+
+  let responseText = null;
+  let ultimoError = null;
+
+  claveLoop:
+  for (let kIndex = 0; kIndex < apiKeys.length; kIndex++) {
+    const currentKey = apiKeys[kIndex];
+    const genAIInstance = new GoogleGenerativeAI(currentKey);
+
+    for (const modeloNombre of MODELOS_GEMINI) {
+      try {
+        console.log(`[GeminiIngresos] Complementando certificado con ${modeloNombre} (Clave ${kIndex + 1})...`);
+        const model = genAIInstance.getGenerativeModel({
+          model: modeloNombre,
+          systemInstruction: SYSTEM_PROMPT,
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+            maxOutputTokens: 65536
+          }
+        });
+        const result = await model.generateContent(parts);
+        responseText = result.response.text();
+        if (responseText) {
+          console.log(`[GeminiIngresos] ✓ Certificado complementado con éxito con modelo ${modeloNombre}`);
+          break claveLoop;
+        }
+      } catch (err) {
+        ultimoError = err;
+        const msg = err.message || '';
+        const esErrorCuota = msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('too many requests') || msg.includes('RESOURCE_EXHAUSTED');
+        console.warn(`[GeminiIngresos] Error en modelo ${modeloNombre}: ${msg}`);
+        if (esErrorCuota && kIndex < apiKeys.length - 1) {
+          break;
+        }
+      }
+    }
+  }
+
+  if (!responseText) {
+    throw new Error('No se pudo completar el análisis complementario con Gemini: ' + (ultimoError ? ultimoError.message : 'Error desconocido'));
+  }
+
+  let parsed = repararJsonConCaracteresControl(responseText);
+
+  // Garantizar lista de anexos completa
+  const listaFinalAnexos = Array.from(new Set([
+    ...anexosPrevios,
+    ...(Array.isArray(parsed.anexos) ? parsed.anexos : []),
+    nuevoArchivo.name
+  ])).filter(Boolean);
+
+  parsed.anexos = listaFinalAnexos;
+  parsed.nombre_archivo = certActual.nombre_archivo || listaFinalAnexos[0];
+  parsed.id = certActual.id;
+  parsed.id_certificado = certActual.id_certificado || parsed.id_certificado;
+
+  return parsed;
+}
+
 module.exports = {
-  analizarDocumentosConGemini
+  analizarDocumentosConGemini,
+  complementarCertificadoConGemini
 };
