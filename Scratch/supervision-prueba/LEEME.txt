@@ -1,0 +1,14 @@
+PRUEBA LOCAL - App de supervision de contratos y convenios
+
+1. Descomprime esta carpeta (no la abras desde dentro del .zip).
+2. Doble clic en iniciar.bat.
+   - La primera vez instala lo necesario (1-2 minutos, requiere internet).
+   - Luego abre el navegador en http://localhost:8000
+3. En "Modo de pruebas" elige una persona y un rol, y presiona Entrar.
+   - Supervisor / apoyo: ve su equipo y sus asignados.
+   - Administrador: ve todo.
+4. Para cerrar sesion y probar con otra persona: "Cerrar sesion" abajo a la izquierda.
+5. Para detener la app, cierra la ventana negra.
+
+Datos: copia del Excel consolidado (4 de octubre de 2026), en supervision.db.
+Esta version usa SQLite y entrada sin Google: es solo para probar en este computador.
