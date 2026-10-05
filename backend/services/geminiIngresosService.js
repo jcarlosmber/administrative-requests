@@ -351,7 +351,7 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
           generationConfig: {
             responseMimeType: 'application/json',
             temperature: 0.1,
-            maxOutputTokens: 8192
+            maxOutputTokens: 65536
           },
         });
         const result = await model.generateContent(parts);
@@ -425,55 +425,55 @@ function repararJsonConCaracteresControl(raw) {
   }
 
   // Intento 3: Escapar caracteres de control que están dentro de cadenas de texto literales
+  let resultadoEscapado = '';
   try {
     let enCadena = false;
     let escapado = false;
-    let resultado = '';
 
     for (let i = 0; i < str.length; i++) {
       const char = str[i];
       if (escapado) {
-        resultado += char;
+        resultadoEscapado += char;
         escapado = false;
         continue;
       }
 
       if (char === '\\') {
-        resultado += char;
+        resultadoEscapado += char;
         escapado = true;
         continue;
       }
 
       if (char === '"') {
         enCadena = !enCadena;
-        resultado += char;
+        resultadoEscapado += char;
         continue;
       }
 
       if (enCadena) {
         if (char === '\n') {
-          resultado += '\\n';
+          resultadoEscapado += '\\n';
         } else if (char === '\r') {
-          resultado += '\\r';
+          resultadoEscapado += '\\r';
         } else if (char === '\t') {
-          resultado += '\\t';
+          resultadoEscapado += '\\t';
         } else {
           const code = char.charCodeAt(0);
           if (code < 32) {
-            resultado += `\\u${code.toString(16).padStart(4, '0')}`;
+            resultadoEscapado += `\\u${code.toString(16).padStart(4, '0')}`;
           } else {
-            resultado += char;
+            resultadoEscapado += char;
           }
         }
       } else {
-        resultado += char;
+        resultadoEscapado += char;
       }
     }
 
     try {
-      return JSON.parse(resultado);
+      return JSON.parse(resultadoEscapado);
     } catch (eRes) {
-      const resultadoSinComas = resultado.replace(/,\s*([}\]])/g, '$1');
+      const resultadoSinComas = resultadoEscapado.replace(/,\s*([}\]])/g, '$1');
       return JSON.parse(resultadoSinComas);
     }
   } catch (err3) {
@@ -490,38 +490,92 @@ function repararJsonConCaracteresControl(raw) {
     // Continuar
   }
 
-  // Intento 5: Reparar llaves o corchetes no cerrados si la respuesta quedó truncada
-  try {
-    let reparado = str.trim();
-    const comillas = (reparado.match(/(?<!\\)"/g) || []).length;
-    if (comillas % 2 !== 0) {
-      reparado += '"';
-    }
-    const pila = [];
-    let enString = false;
-    let esc = false;
-    for (let i = 0; i < reparado.length; i++) {
-      const c = reparado[i];
-      if (esc) { esc = false; continue; }
-      if (c === '\\') { esc = true; continue; }
-      if (c === '"') { enString = !enString; continue; }
-      if (!enString) {
-        if (c === '{') pila.push('}');
-        else if (c === '[') pila.push(']');
-        else if (c === '}' || c === ']') {
-          if (pila.length > 0 && pila[pila.length - 1] === c) {
-            pila.pop();
+  // Intento 5: Reparar de forma exhaustiva JSON truncado (cadena no terminada, tokens cortados, llaves abiertas)
+  const candidatosReparacion = [resultadoEscapado || str, str];
+
+  for (const origen of candidatosReparacion) {
+    if (!origen) continue;
+    try {
+      let s = origen.trim();
+
+      // 5.1: Detectar si el corte ocurrió dentro de una cadena de texto sin cerrar
+      let inString = false;
+      let esc = false;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (esc) {
+          esc = false;
+          continue;
+        }
+        if (c === '\\') {
+          esc = true;
+          continue;
+        }
+        if (c === '"') {
+          inString = !inString;
+        }
+      }
+
+      // Si quedó una cadena sin cerrar, cerramos la comilla
+      if (inString) {
+        if (s.endsWith('\\')) s = s.slice(0, -1);
+        s += '"';
+      }
+
+      // 5.2: Balancear llaves y corchetes
+      const stack = [];
+      inString = false;
+      esc = false;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (esc) {
+          esc = false;
+          continue;
+        }
+        if (c === '\\') {
+          esc = true;
+          continue;
+        }
+        if (c === '"') {
+          inString = !inString;
+          continue;
+        }
+        if (!inString) {
+          if (c === '{') stack.push('}');
+          else if (c === '[') stack.push(']');
+          else if (c === '}' || c === ']') {
+            if (stack.length > 0 && stack[stack.length - 1] === c) {
+              stack.pop();
+            }
           }
         }
       }
+
+      // Cerrar estructuras abiertas
+      let closing = '';
+      while (stack.length > 0) {
+        closing += stack.pop();
+      }
+
+      let resTruncado = s.replace(/,\s*$/, '') + closing;
+      resTruncado = resTruncado.replace(/,\s*([}\]])/g, '$1');
+
+      try {
+        return JSON.parse(resTruncado);
+      } catch (eT1) {
+        // Si quedó clave sin valor antes del cierre: ej "prop": }
+        try {
+          const conNulls = resTruncado.replace(/:\s*([}\]])/g, ': null$1');
+          return JSON.parse(conNulls);
+        } catch (eT2) {
+          // Si quedó clave huérfana: ej , "prop" }
+          const sinHuerfanas = resTruncado.replace(/,\s*"[^"]*"\s*([}\]])/g, '$1');
+          return JSON.parse(sinHuerfanas);
+        }
+      }
+    } catch (err5) {
+      // Continuar al siguiente candidato
     }
-    while (pila.length > 0) {
-      reparado += pila.pop();
-    }
-    const reparadoSinComas = reparado.replace(/,\s*([}\]])/g, '$1');
-    return JSON.parse(reparadoSinComas);
-  } catch (err5) {
-    // Continuar
   }
 
   // Si todas las opciones fallan, arrojar el error original descriptivo
