@@ -3240,8 +3240,12 @@ export default function TeletrabajoScreen() {
                       const persona = personas.find((p) => p.titular_cedula === ac.servidor_cedula);
 
                       return (
-                        <View
+                        <TouchableOpacity
                           key={ac.id}
+                          activeOpacity={0.85}
+                          onPress={() => {
+                            if (persona) abrirModalAcuerdo(persona);
+                          }}
                           style={{
                             backgroundColor: THEME.white,
                             borderRadius: 12,
@@ -3257,6 +3261,8 @@ export default function TeletrabajoScreen() {
                             shadowOpacity: 0.04,
                             shadowRadius: 4,
                             elevation: 1,
+                            // @ts-ignore
+                            cursor: 'pointer',
                           }}
                         >
                           <View style={{ flex: 1, gap: 4 }}>
@@ -3305,7 +3311,8 @@ export default function TeletrabajoScreen() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             {ac.archivo_acuerdo_url && (
                               <TouchableOpacity
-                                onPress={() => {
+                                onPress={(e) => {
+                                  e?.stopPropagation?.();
                                   if (Platform.OS === 'web') {
                                     window.open(ac.archivo_acuerdo_url, '_blank');
                                   }
@@ -3331,7 +3338,10 @@ export default function TeletrabajoScreen() {
 
                             {persona && (
                               <TouchableOpacity
-                                onPress={() => abrirModalAcuerdo(persona)}
+                                onPress={(e) => {
+                                  e?.stopPropagation?.();
+                                  abrirModalAcuerdo(persona);
+                                }}
                                 style={{
                                   backgroundColor: THEME.marca50,
                                   borderColor: THEME.marca200,
@@ -3351,7 +3361,7 @@ export default function TeletrabajoScreen() {
                               </TouchableOpacity>
                             )}
                           </View>
-                        </View>
+                        </TouchableOpacity>
                       );
                     })}
 
@@ -3937,8 +3947,12 @@ export default function TeletrabajoScreen() {
                       const esParcial = s.cumplimiento_nivel === 'PARCIAL';
 
                       return (
-                        <View
+                        <TouchableOpacity
                           key={s.id}
+                          activeOpacity={0.85}
+                          onPress={() => {
+                            if (persona) abrirModalSeguimiento(persona);
+                          }}
                           style={{
                             backgroundColor: THEME.white,
                             borderRadius: 12,
@@ -3951,6 +3965,8 @@ export default function TeletrabajoScreen() {
                             shadowOpacity: 0.04,
                             shadowRadius: 4,
                             elevation: 1,
+                            // @ts-ignore
+                            cursor: 'pointer',
                           }}
                         >
                           <View
@@ -4129,7 +4145,8 @@ export default function TeletrabajoScreen() {
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               {s.soporte_evidencias_url && (
                                 <TouchableOpacity
-                                  onPress={() => {
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
                                     if (Platform.OS === 'web') {
                                       window.open(s.soporte_evidencias_url, '_blank');
                                     }
@@ -4155,7 +4172,10 @@ export default function TeletrabajoScreen() {
 
                               {persona && (
                                 <TouchableOpacity
-                                  onPress={() => abrirModalSeguimiento(persona)}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    abrirModalSeguimiento(persona);
+                                  }}
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
@@ -4174,7 +4194,7 @@ export default function TeletrabajoScreen() {
                               )}
                             </View>
                           </View>
-                        </View>
+                        </TouchableOpacity>
                       );
                     })}
 
