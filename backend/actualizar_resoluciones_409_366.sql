@@ -12,12 +12,12 @@ BEGIN;
 -- 1. REGISTRAR O ACTUALIZAR LAS 4 RESOLUCIONES
 INSERT INTO public.teletrabajo_resoluciones (
     id, numero_resolucion, anio, fecha_expedicion, fecha_inicio_vigencia, fecha_fin_vigencia, 
-    descripcion, modalidad_principal, estado, created_at, updated_at
+    descripcion, modalidad_principal, estado, archivo_pdf_url, nombre_archivo, created_at, updated_at
 ) VALUES 
-('11700000-0000-0000-0000-000000002026', 'Resolución No. 117 de 2026', 2026, '2026-03-10', '2026-03-10', '2027-03-10', 'Por la cual se adopta la política interna de teletrabajo en la Secretaría Jurídica Distrital.', 'TELETRABAJO', 'VIGENTE', NOW(), NOW()),
-('20100000-0000-0000-0000-000000002026', 'Resolución No. 201 de 2026', 2026, '2026-05-04', '2026-05-04', '2026-09-14', 'Por la cual se autoriza la modalidad de teletrabajo a unos/as servidores/as públicos/as de la Secretaría Jurídica Distrital (Efectos suspendidos por Resolución No. 409 de 2026).', 'TELETRABAJO', 'DEROGADA', NOW(), NOW()),
-('36600000-0000-0000-0000-000000002026', 'Resolución No. 366 de 2026', 2026, '2026-08-20', '2026-08-20', '2027-02-20', 'Por la cual se autoriza la modalidad de teletrabajo autónomo a la servidora pública Rosa Isabel Sierra Laborde de la Dirección Distrital de Política Jurídica por el término de seis (6) meses.', 'TELETRABAJO', 'VIGENTE', NOW(), NOW()),
-('40900000-0000-0000-0000-000000002026', 'Resolución No. 409 de 2026', 2026, '2026-09-14', '2026-09-15', '2026-12-14', 'Por la cual se suspende temporalmente la Resolución No. 201 de 2026, se habilita temporalmente el trabajo en casa (5x5) a servidores/as públicos/as con ocasión de las obras en el Edificio Bicentenario II, y se autoriza la modalidad de teletrabajo híbrido a servidores/as públicos/as de la entidad.', 'TRABAJO_EN_CASA', 'VIGENTE', NOW(), NOW())
+('11700000-0000-0000-0000-000000002026', 'Resolución No. 117 de 2026', 2026, '2026-03-10', '2026-03-10', '2027-03-10', 'Por la cual se adopta la política interna de teletrabajo en la Secretaría Jurídica Distrital.', 'TELETRABAJO', 'VIGENTE', '/api/teletrabajo/resoluciones/archivo/Resolucion_117_de_2026_Politica_Teletrabajo.pdf', 'Resolucion_117_de_2026_Politica_Teletrabajo.pdf', NOW(), NOW()),
+('20100000-0000-0000-0000-000000002026', 'Resolución No. 201 de 2026', 2026, '2026-05-04', '2026-05-04', '2026-09-14', 'Por la cual se autoriza la modalidad de teletrabajo a unos/as servidores/as públicos/as de la Secretaría Jurídica Distrital (Efectos suspendidos por Resolución No. 409 de 2026).', 'TELETRABAJO', 'DEROGADA', NULL, NULL, NOW(), NOW()),
+('36600000-0000-0000-0000-000000002026', 'Resolución No. 366 de 2026', 2026, '2026-08-20', '2026-08-20', '2027-02-20', 'Por la cual se autoriza la modalidad de teletrabajo autónomo a la servidora pública Rosa Isabel Sierra Laborde de la Dirección Distrital de Política Jurídica por el término de seis (6) meses.', 'TELETRABAJO', 'VIGENTE', NULL, NULL, NOW(), NOW()),
+('40900000-0000-0000-0000-000000002026', 'Resolución No. 409 de 2026', 2026, '2026-09-14', '2026-09-15', '2026-12-14', 'Por la cual se suspende temporalmente la Resolución No. 201 de 2026, se habilita temporalmente el trabajo en casa (5x5) a servidores/as públicos/as con ocasión de las obras en el Edificio Bicentenario II, y se autoriza la modalidad de teletrabajo híbrido a servidores/as públicos/as de la entidad.', 'TRABAJO_EN_CASA', 'VIGENTE', NULL, NULL, NOW(), NOW())
 ON CONFLICT (id) DO UPDATE SET
     numero_resolucion = EXCLUDED.numero_resolucion,
     fecha_expedicion = EXCLUDED.fecha_expedicion,
@@ -26,6 +26,8 @@ ON CONFLICT (id) DO UPDATE SET
     descripcion = EXCLUDED.descripcion,
     modalidad_principal = EXCLUDED.modalidad_principal,
     estado = EXCLUDED.estado,
+    archivo_pdf_url = COALESCE(EXCLUDED.archivo_pdf_url, public.teletrabajo_resoluciones.archivo_pdf_url),
+    nombre_archivo = COALESCE(EXCLUDED.nombre_archivo, public.teletrabajo_resoluciones.nombre_archivo),
     updated_at = NOW();
 
 -- 2. SUSPENDER / REVOCAR EFECTOS DE LA RESOLUCIÓN 201 DE 2026

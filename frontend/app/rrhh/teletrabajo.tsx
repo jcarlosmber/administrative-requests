@@ -142,8 +142,13 @@ export default function TeletrabajoScreen() {
 
   // Pestañas principales
   const [tabActiva, setTabActiva] = useState<
-    'censo' | 'resoluciones' | 'cargos' | 'acuerdos' | 'seguimientos'
+    'censo' | 'resoluciones' | 'procedimiento' | 'cargos' | 'acuerdos' | 'seguimientos'
   >('censo');
+
+  // Estados específicos de la Política y Procedimiento (Resolución 117 de 2026 - PR-117)
+  const [faseProcedimiento, setFaseProcedimiento] = useState<'4.1' | '4.2' | '4.3' | '4.4'>('4.1');
+  const [modalPdfVisorVisible, setModalPdfVisorVisible] = useState(false);
+  const urlPdfPolitica117 = teletrabajoService.getResolucionUrl('Resolucion_117_de_2026_Politica_Teletrabajo.pdf');
 
   // Estados de datos
   const [loading, setLoading] = useState(true);
@@ -1031,8 +1036,9 @@ export default function TeletrabajoScreen() {
             {[
               { id: 'censo', label: 'Censo y Asignaciones', icon: 'people-outline', count: personas.length },
               { id: 'resoluciones', label: 'Resoluciones Oficiales', icon: 'document-text-outline', count: resoluciones.length },
+              { id: 'procedimiento', label: 'Política y Procedimiento (PR-117)', icon: 'book-outline', badge: 'v06' },
               { id: 'cargos', label: 'Cargos Teletrabajables', icon: 'briefcase-outline', count: cargos.length },
-              { id: 'acuerdos', label: 'Acuerdos de Compromiso', icon: 'ribbon-outline', count: acuerdos.length },
+              { id: 'acuerdos', label: 'Acuerdos de Voluntariedad', icon: 'ribbon-outline', count: acuerdos.length },
               { id: 'seguimientos', label: 'Seguimientos por Fechas', icon: 'calendar-outline', count: seguimientos.length },
             ].map((tab) => {
               const isSel = tabActiva === tab.id;
@@ -1082,6 +1088,28 @@ export default function TeletrabajoScreen() {
                         }}
                       >
                         {tab.count}
+                      </Text>
+                    </View>
+                  )}
+                  {tab.badge && (
+                    <View
+                      style={{
+                        backgroundColor: isSel ? THEME.badges.emerald.bg : THEME.slate100,
+                        borderColor: isSel ? THEME.badges.emerald.border : THEME.slate300,
+                        borderWidth: 1,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        borderRadius: 9999,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: '700',
+                          color: isSel ? THEME.badges.emerald.text : THEME.slate600,
+                        }}
+                      >
+                        {tab.badge}
                       </Text>
                     </View>
                   )}
@@ -2168,6 +2196,99 @@ export default function TeletrabajoScreen() {
                       <Ionicons name="cloud-upload-outline" size={17} color="#FFFFFF" />
                       <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
                         Subir Resolución
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Banner Destacado: Resolución 117 de 2026 */}
+                <View
+                  style={{
+                    backgroundColor: THEME.marca50,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: THEME.marca200,
+                    padding: 14,
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    justifyContent: 'space-between',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <View
+                      style={{
+                        backgroundColor: THEME.marca800,
+                        padding: 8,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Ionicons name="shield-checkmark" size={20} color={THEME.white} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca900 }}>
+                          Resolución No. 117 de 2026 — Política Interna Vigente
+                        </Text>
+                        <View
+                          style={{
+                            backgroundColor: THEME.badges.emerald.bg,
+                            borderColor: THEME.badges.emerald.border,
+                            borderWidth: 1,
+                            paddingHorizontal: 6,
+                            paddingVertical: 1,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.badges.emerald.text }}>
+                            Procedimiento PR-117 v06
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 11.5, color: THEME.marca800, marginTop: 2 }}>
+                        Establece las directrices operativas, criterios de prioridad, visitas SST/TIC y liquidación de servicios para la SJD.
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Pressable
+                      onPress={() => setTabActiva('procedimiento')}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        backgroundColor: THEME.white,
+                        borderColor: THEME.marca200,
+                        borderWidth: 1,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        opacity: pressed ? 0.8 : 1,
+                      })}
+                    >
+                      <Ionicons name="book-outline" size={14} color={THEME.marca800} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca800 }}>
+                        Ver Flujo y Fases
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => setModalPdfVisorVisible(true)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        backgroundColor: THEME.marca800,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        opacity: pressed ? 0.85 : 1,
+                      })}
+                    >
+                      <Ionicons name="document-text" size={14} color={THEME.white} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.white }}>
+                        Ver PDF Oficial
                       </Text>
                     </Pressable>
                   </View>
@@ -3709,6 +3830,1441 @@ export default function TeletrabajoScreen() {
                 )}
               </View>
             )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* PESTAÑA: POLÍTICA Y PROCEDIMIENTO (2311300-PR-117 V06)         */}
+            {/* ------------------------------------------------------------- */}
+            {tabActiva === 'procedimiento' && (
+              <View style={{ gap: 20 }}>
+                {/* 1. FICHA TÉCNICA PRINCIPAL E INSTRUMENTO NORMATIVO */}
+                <View
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: isDesktop ? 24 : 16,
+                    borderLeftWidth: 5,
+                    borderLeftColor: THEME.marca800,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 4,
+                    gap: 16,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: isDesktop ? 'row' : 'column',
+                      justifyContent: 'space-between',
+                      alignItems: isDesktop ? 'center' : 'flex-start',
+                      gap: 14,
+                    }}
+                  >
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <View
+                          style={{
+                            backgroundColor: THEME.marca50,
+                            borderColor: THEME.marca200,
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>
+                            CÓDIGO: 2311300-PR-117
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: THEME.badges.emerald.bg,
+                            borderColor: THEME.badges.emerald.border,
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.badges.emerald.text }}>
+                            VERSIÓN 06 (19/03/2026)
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: THEME.slate100,
+                            borderColor: THEME.slate200,
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                            Proceso: Gestión del Talento Humano
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={{ color: THEME.slate900, fontSize: 20, fontWeight: '800', marginTop: 4 }}>
+                        Procedimiento de Teletrabajo e Implementación de la Política Interna
+                      </Text>
+                      <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 19 }}>
+                        Adopta la Resolución 117 de 2026 de la Secretaría Jurídica Distrital. Reglamenta la selección,
+                        vinculación, seguimiento, liquidación de auxilio compensatorio y reversibilidad de servidores públicos bajo las modalidades híbrida y autónoma.
+                      </Text>
+                    </View>
+
+                    {/* Botones de Consulta y Descarga del Documento */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <Pressable
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            setModalPdfVisorVisible(true);
+                          }
+                        }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: THEME.marca800,
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          opacity: pressed ? 0.9 : 1,
+                        })}
+                      >
+                        <Ionicons name="document-text" size={17} color={THEME.white} />
+                        <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '700' }}>
+                          Ver Documento Oficial (PDF)
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => {
+                          if (Platform.OS === 'web') {
+                            window.open(urlPdfPolitica117, '_blank');
+                          }
+                        }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: THEME.slate50,
+                          borderColor: THEME.slate300,
+                          borderWidth: 1,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          opacity: pressed ? 0.8 : 1,
+                        })}
+                      >
+                        <Ionicons name="open-outline" size={16} color={THEME.slate700} />
+                        <Text style={{ color: THEME.slate700, fontSize: 12.5, fontWeight: '600' }}>
+                          Abrir en Nueva Pestaña
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* Metadatos normativos clave */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      gap: 12,
+                      paddingTop: 12,
+                      borderTopWidth: 1,
+                      borderTopColor: THEME.slate100,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="shield-checkmark" size={15} color={THEME.marca700} />
+                      <Text style={{ fontSize: 12, color: THEME.slate500 }}>Resolución Marco:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
+                        Resolución No. 117 de 2026
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="time" size={15} color={THEME.amberText} />
+                      <Text style={{ fontSize: 12, color: THEME.slate500 }}>Jornada Laboral:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
+                        Decreto Distrital 640 de 2025
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="business" size={15} color={THEME.skyText} />
+                      <Text style={{ fontSize: 12, color: THEME.slate500 }}>Régimen General:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
+                        Decreto Nacional 1072 de 2015
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="lock-open" size={15} color={THEME.emeraldText} />
+                      <Text style={{ fontSize: 12, color: THEME.slate500 }}>Clasificación de Información:</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.emeraldText }}>
+                        Pública (Formato 2310100-FT-002 v03)
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* 2. PILARES Y MARCO OPERACIONAL */}
+                <View
+                  style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  {/* Tarjeta 1: Modalidad Híbrida */}
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 220 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      gap: 6,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ backgroundColor: THEME.badges.sky.bg, padding: 6, borderRadius: 8 }}>
+                        <Ionicons name="laptop" size={18} color={THEME.badges.sky.text} />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        Teletrabajo Híbrido
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 16, marginTop: 4 }}>
+                      Modalidad principal de la SJD: 2 o 3 días a la semana en residencia y el resto presencial en sede, garantizando flexibilidad y orientación a resultados.
+                    </Text>
+                  </View>
+
+                  {/* Tarjeta 2: Modalidad Autónoma */}
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 220 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      gap: 6,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ backgroundColor: THEME.badges.purple.bg, padding: 6, borderRadius: 8 }}>
+                        <Ionicons name="home" size={18} color={THEME.badges.purple.text} />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        Teletrabajo Autónomo
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 16, marginTop: 4 }}>
+                      Modalidad excepcional: Requiere condiciones especiales debidamente soportadas y concepto previo favorable del Equipo Técnico de Apoyo al Teletrabajo.
+                    </Text>
+                  </View>
+
+                  {/* Tarjeta 3: Principios Rectores */}
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 220 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      gap: 6,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ backgroundColor: THEME.badges.emerald.bg, padding: 6, borderRadius: 8 }}>
+                        <Ionicons name="checkmark-done-circle" size={18} color={THEME.badges.emerald.text} />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        Principios Rectores
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 16, marginTop: 4 }}>
+                      Voluntariedad bilateral, igualdad de trato (mismos derechos salariales y prestacionales) y reversibilidad en cualquier momento por mutuo acuerdo o necesidad del servicio.
+                    </Text>
+                  </View>
+
+                  {/* Tarjeta 4: Auxilio Compensatorio */}
+                  <View
+                    style={{
+                      flex: isDesktop ? 1 : undefined,
+                      minWidth: isDesktop ? 220 : '100%',
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      gap: 6,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ backgroundColor: THEME.badges.amber.bg, padding: 6, borderRadius: 8 }}>
+                        <Ionicons name="cash-outline" size={18} color={THEME.badges.amber.text} />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        Auxilio Compensatorio
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 16, marginTop: 4 }}>
+                      Reconocimiento mensual de internet y energía liquidados por días teletrabajados según tabla por estrato expedida por la Secretaría General. No tiene carácter salarial.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 3. SELECTOR DE FASES OPERACIONALES PHVA */}
+                <View
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 8,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: isDesktop ? 'row' : 'column',
+                      gap: 6,
+                    }}
+                  >
+                    {[
+                      {
+                        id: '4.1',
+                        numero: 'Fase 4.1',
+                        label: 'Postulación y Selección',
+                        sub: '12 Actividades • Convocatoria, SST, TIC y Vinculación',
+                        icon: 'person-add-outline',
+                      },
+                      {
+                        id: '4.2',
+                        numero: 'Fase 4.2',
+                        label: 'Seguimiento, Evaluación y Medición',
+                        sub: '5 Actividades • Seguimiento de metas, PR-012 y Comité',
+                        icon: 'analytics-outline',
+                      },
+                      {
+                        id: '4.3',
+                        numero: 'Fase 4.3',
+                        label: 'Liquidación y Auxilio de Servicios',
+                        sub: '5 Actividades • Certificación días, CDP, RP y pago',
+                        icon: 'receipt-outline',
+                      },
+                      {
+                        id: '4.4',
+                        numero: 'Fase 4.4',
+                        label: 'Reversibilidad, Prórroga y Situaciones',
+                        sub: '3 Actividades • Retorno, renovación y novedades',
+                        icon: 'repeat-outline',
+                      },
+                    ].map((fase) => {
+                      const isSel = faseProcedimiento === fase.id;
+                      return (
+                        <Pressable
+                          key={fase.id}
+                          onPress={() => setFaseProcedimiento(fase.id as any)}
+                          style={{
+                            flex: 1,
+                            backgroundColor: isSel ? THEME.marca50 : 'transparent',
+                            borderColor: isSel ? THEME.marca600 : 'transparent',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            padding: 10,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 10,
+                          }}
+                        >
+                          <View
+                            style={{
+                              backgroundColor: isSel ? THEME.marca800 : THEME.slate100,
+                              padding: 8,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Ionicons
+                              name={fase.icon as any}
+                              size={18}
+                              color={isSel ? THEME.white : THEME.slate500}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: '700',
+                                color: isSel ? THEME.marca800 : THEME.slate400,
+                                textTransform: 'uppercase',
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {fase.numero}
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontWeight: '700',
+                                color: isSel ? THEME.marca900 : THEME.slate700,
+                              }}
+                            >
+                              {fase.label}
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                color: isSel ? THEME.marca700 : THEME.slate500,
+                                marginTop: 1,
+                              }}
+                            >
+                              {fase.sub}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* 4. DETALLE DE ACTIVIDADES DE LA FASE SELECCIONADA */}
+                <View style={{ gap: 12 }}>
+                  {/* FASE 4.1: POSTULACIÓN Y SELECCIÓN */}
+                  {faseProcedimiento === '4.1' && (
+                    <View style={{ gap: 10 }}>
+                      <View
+                        style={{
+                          backgroundColor: THEME.marca50,
+                          borderRadius: 10,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.marca200,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="information-circle" size={18} color={THEME.marca800} />
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900 }}>
+                            Fase 4.1: Flujo Oficial de Postulación, Verificación y Vinculación
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: THEME.marca800, fontWeight: '600' }}>
+                          Punto de Control Principal: Actividad 7 (Informe de Verificación)
+                        </Text>
+                      </View>
+
+                      {[
+                        {
+                          num: 1,
+                          actividad: 'Elaborar listado de cargos aptos para realizar teletrabajo',
+                          responsable: 'El/la Jefe/a de dependencia / Dirección de Gestión Corporativa',
+                          tarea: 'El jefe de cada dependencia identifica y remite el listado de empleos teletrabajables y no teletrabajables basándose en el Manual de Funciones y procedimientos internos. Gestión Corporativa consolida y elabora la relación general, sometiéndola a aprobación definitiva del Equipo Técnico de Apoyo al Teletrabajo antes de la convocatoria.',
+                          tiempo: '10 días',
+                          registro: 'Listado de Cargos Aptos para Teletrabajar',
+                          badgeFormato: 'Cargos Aptos Aprobados',
+                        },
+                        {
+                          num: 2,
+                          actividad: 'Socializar la convocatoria',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Se realiza la convocatoria formal estableciendo lineamientos de modalidad, postulantes habilitados, criterios de prioridad y cómo postularse; divulgando a través de correo electrónico y boletín interno.',
+                          tiempo: 'Hasta 5 días',
+                          registro: 'Correo electrónico / Boletín Interno',
+                          badgeFormato: 'Divulgación Institucional',
+                        },
+                        {
+                          num: 3,
+                          actividad: 'Recibir las postulaciones de Teletrabajo',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Recibe y verifica que las postulaciones enviadas mediante el formulario oficial 2311300-FT-328 hayan ingresado dentro de términos y cuenten con los soportes de prioridad y/o debida postulación.',
+                          tiempo: 'Hasta 5 días',
+                          registro: 'Solicitud de vinculación Teletrabajo (2311300-FT-328)',
+                          badgeFormato: '2311300-FT-328',
+                        },
+                        {
+                          num: 4,
+                          actividad: 'Validar cumplimiento de requisitos mínimos de la postulación',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Valida que el cargo del postulante esté en el listado aprobado por el Equipo Técnico. Verifica simultáneamente antigüedad y evaluación de desempeño laboral, y califica criterios de priorización de la Resolución 117 de 2026. Si no cumple, notifica y finaliza; si cumple, remite al jefe de dependencia.',
+                          tiempo: 'Hasta 5 días',
+                          registro: 'Matriz de análisis de solicitudes de teletrabajo / Memorando 2311520-FT-018',
+                          badgeFormato: '2311520-FT-018',
+                        },
+                        {
+                          num: 5,
+                          actividad: 'Avalar postulación por parte del/la Jefe/a de dependencia',
+                          responsable: 'El/la Jefe/a de dependencia',
+                          tarea: 'Analiza la solicitud considerando actitudes, aptitudes, habilidades y competencias del servidor para el trabajo remoto. De ser procedente, emite autorización o visto bueno por escrito a Gestión Corporativa garantizando la no afectación del servicio.',
+                          tiempo: 'Hasta 3 días',
+                          registro: 'Memorando 2311520-FT-018 (Aval del Jefe)',
+                          badgeFormato: '2311520-FT-018',
+                        },
+                        {
+                          num: 6,
+                          actividad: 'Verificar condiciones de Seguridad y Salud en el Trabajo y tecnológicas',
+                          responsable: 'Profesional de Riesgos Laborales/ARL y Profesional del Área de Tecnología',
+                          tarea: 'Con el aval del jefe, se coordinan y efectúan visitas domiciliarias (presenciales o virtuales) para validar el puesto: 1. Componente TIC (hardware, software, conectividad). 2. Componente SST (condiciones biomecánicas, ambientales y familiares bajo el Manual SG-SST).',
+                          tiempo: '5 días',
+                          registro: 'SST: 2311300-FT-261 | TIC: 2311300-FT-400',
+                          badgeFormato: 'FT-261 & FT-400',
+                        },
+                        {
+                          num: 7,
+                          actividad: 'Presentar informe de resultados de la verificación de requisitos',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Consolida la información de puestos de trabajo y requisitos evaluados para generar el informe de resultados del proceso de selección con los servidores que cumplen criterios de acceso a la modalidad.',
+                          tiempo: '5 días',
+                          registro: 'Informe de resultados de la convocatoria',
+                          badgeFormato: 'Punto de Control',
+                          esPuntoControl: true,
+                        },
+                        {
+                          num: 8,
+                          actividad: 'Expedir Acto Administrativo particular de autorización',
+                          responsable: 'Profesional Universitario (a) - Especializado (a) / Director(a) Gestión Corporativa',
+                          tarea: 'Se proyecta la resolución particular de autorización bajo teletrabajo para la firma del Director(a) de Gestión Corporativa. Numerada y comunicada formalmente al servidor público.',
+                          tiempo: '5 días',
+                          registro: 'Resolución Particular 2311520-FT-130',
+                          badgeFormato: '2311520-FT-130',
+                        },
+                        {
+                          num: 9,
+                          actividad: 'Suscribir el Acuerdo de Voluntariedad',
+                          responsable: 'Teletrabajador(a) / El/la Jefe/a de dependencia',
+                          tarea: 'Por ser una decisión voluntaria y concertada, el servidor y su jefe suscriben el Acuerdo de Voluntariedad en SIGA con las tareas, funciones, días, horarios, sitio, duración e insumos. Debe entregarse dentro de los cinco (5) días hábiles siguientes a la resolución como requisito indispensable para iniciar.',
+                          tiempo: '5 días hábiles',
+                          registro: 'Acuerdo de Voluntariedad 2311300-FT-269',
+                          badgeFormato: '2311300-FT-269',
+                        },
+                        {
+                          num: 10,
+                          actividad: 'Solicitar ajuste de concertación de compromisos laborales',
+                          responsable: 'Profesional Universitario (a) / Jefe/a de dependencia',
+                          tarea: 'Gestión Corporativa solicita al jefe verificar si se requiere ajustar compromisos laborales para reflejar la operatividad remota y garantizar evaluación objetiva. Si son suficientes, el jefe informa que no aplica por suficiencia vigente.',
+                          tiempo: '1 día',
+                          registro: 'Memorando 2311520-FT-018',
+                          badgeFormato: '2311520-FT-018',
+                        },
+                        {
+                          num: 11,
+                          actividad: 'Reportar teletrabajador(es) en aplicativos obligatorios',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Reporte a plataformas externas y distritales obligatorias: 1. Plataforma ARL (cobertura de riesgos laborales). 2. Ministerio del Trabajo (formato oficial vigente). 3. SIDEAP 2.0 (ingreso y novedades en el sistema distrital).',
+                          tiempo: '5 días',
+                          registro: '2311520-FT-019 / MinTrabajo / SIDEAP 2.0 / ARL',
+                          badgeFormato: 'ARL - MinTrabajo - SIDEAP',
+                        },
+                        {
+                          num: 12,
+                          actividad: 'Archivar documentos de teletrabajo en historia laboral',
+                          responsable: 'Secretario Ejecutivo (a)',
+                          tarea: 'Se archiva en historia laboral y Base de Datos: solicitud de vinculación (FT-328), autorización del jefe, actas de visitas domiciliarias (FT-261 y FT-400), resolución particular (FT-130), acuerdo de voluntariedad (FT-269) y comunicación ARL.',
+                          tiempo: '2 días',
+                          registro: 'Historia Laboral y Base de Datos Teletrabajo',
+                          badgeFormato: 'Archivo Oficial',
+                        },
+                      ].map((item) => (
+                        <View
+                          key={item.num}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: item.esPuntoControl ? THEME.amberRing : THEME.slate200,
+                            padding: 14,
+                            gap: 8,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isDesktop ? 'center' : 'flex-start',
+                              gap: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                              <View
+                                style={{
+                                  backgroundColor: item.esPuntoControl ? THEME.amberBg : THEME.marca800,
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 13,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: item.esPuntoControl ? THEME.amberText : THEME.white,
+                                    fontSize: 12,
+                                    fontWeight: '800',
+                                  }}
+                                >
+                                  {item.num}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
+                                {item.actividad}
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              {item.esPuntoControl && (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.amberBg,
+                                    borderColor: THEME.amberRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: THEME.amberText }}>
+                                    ★ PUNTO DE CONTROL
+                                  </Text>
+                                </View>
+                              )}
+                              <View
+                                style={{
+                                  backgroundColor: THEME.slate100,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                  SLA: {item.tiempo}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  borderColor: THEME.marca200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca800 }}>
+                                  {item.badgeFormato}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12.5, color: THEME.slate600, lineHeight: 18 }}>
+                            {item.tarea}
+                          </Text>
+
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingTop: 8,
+                              borderTopWidth: 1,
+                              borderTopColor: THEME.slate100,
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                              <Text style={{ fontWeight: '600', color: THEME.slate700 }}>Responsable:</Text> {item.responsable}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: THEME.marca700, fontWeight: '500' }}>
+                              Registro: {item.registro}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* FASE 4.2: SEGUIMIENTO, EVALUACIÓN Y MEDICIÓN */}
+                  {faseProcedimiento === '4.2' && (
+                    <View style={{ gap: 10 }}>
+                      <View
+                        style={{
+                          backgroundColor: THEME.badges.purple.bg,
+                          borderRadius: 10,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.badges.purple.border,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="analytics" size={18} color={THEME.badges.purple.text} />
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.badges.purple.text }}>
+                            Fase 4.2: Seguimiento Continuo, Evaluación de Desempeño y Medición Semestral
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: THEME.badges.purple.text, fontWeight: '600' }}>
+                          Punto de Control: Actividad 5 (Informe al Comité de Gestión y Desempeño)
+                        </Text>
+                      </View>
+
+                      {[
+                        {
+                          num: 1,
+                          actividad: 'Realizar seguimiento permanente',
+                          responsable: 'El/la Jefe/a de dependencia',
+                          tarea: 'Seguimiento continuo a las actividades del teletrabajador según lo pactado en compromisos laborales, verificando calidad y oportunidad de las metas institucionales. Es deber del jefe informar oportunamente cualquier novedad o incumplimiento para adoptar medidas correctivas o evaluar continuidad.',
+                          tiempo: 'Permanente',
+                          registro: 'Reportes periódicos / Novedades a Gestión Corporativa',
+                          badgeFormato: 'Monitoreo Activo',
+                        },
+                        {
+                          num: 2,
+                          actividad: 'Efectuar evaluación del desempeño laboral',
+                          responsable: 'El/la Jefe/a de dependencia / teletrabajador(a)',
+                          tarea: 'Evaluación del desempeño laboral con base en los plazos y parámetros del Procedimiento 2311300-PR-012 "Permanencia de Servidores Públicos". Garantiza que los resultados remotos se valoren conforme al empleo y la normatividad con objetividad.',
+                          tiempo: '15 días',
+                          registro: 'Evaluaciones según vinculación y reporte a historia laboral',
+                          badgeFormato: '2311300-PR-012',
+                        },
+                        {
+                          num: 3,
+                          actividad: 'Verificar anualmente las condiciones SST y TIC',
+                          responsable: 'Profesional de Riesgos Laborales/ARL y Profesional del Área de Tecnología',
+                          tarea: 'Gestión Corporativa y la Oficina TIC realizan mínimo una vez al año verificación de SG-SST y TIC (formularios, encuestas o visitas según formatos 2311300-FT-261 y 2311300-FT-400). Si el servidor cambia de domicilio, debe comunicarlo de inmediato para validar el nuevo puesto.',
+                          tiempo: '5 días',
+                          registro: 'FT-261 (SST) & FT-400 (TIC)',
+                          badgeFormato: 'Auditoría Anual',
+                        },
+                        {
+                          num: 4,
+                          actividad: 'Medir semestralmente la modalidad de teletrabajo',
+                          responsable: 'Dirección de Gestión Corporativa / Oficina Asesora de Planeación',
+                          tarea: 'Seguimiento semestral para validar el cumplimiento de objetivos y fines del teletrabajo mediante encuestas a jefes y teletrabajadores, midiendo indicadores de producto y oportunidad.',
+                          tiempo: '20 días',
+                          registro: 'Instrumentos de medición diligenciados',
+                          badgeFormato: 'Indicadores Semestrales',
+                        },
+                        {
+                          num: 5,
+                          actividad: 'Presentar informe de resultados al Comité Institucional',
+                          responsable: 'Dirección de Gestión Corporativa / Oficina de Planeación',
+                          tarea: 'Consolidación de resultados semestrales en informe técnico al Equipo Técnico de Apoyo al Teletrabajo, y posterior presentación al Comité Institucional de Gestión y Desempeño para determinar ajustes a la política y publicación en portal web institucional.',
+                          tiempo: '10 días',
+                          registro: 'Informe de Evaluación Semestral',
+                          badgeFormato: 'Punto de Control',
+                          esPuntoControl: true,
+                        },
+                      ].map((item) => (
+                        <View
+                          key={item.num}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: item.esPuntoControl ? THEME.amberRing : THEME.slate200,
+                            padding: 14,
+                            gap: 8,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isDesktop ? 'center' : 'flex-start',
+                              gap: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                              <View
+                                style={{
+                                  backgroundColor: item.esPuntoControl ? THEME.amberBg : THEME.marca800,
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 13,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: item.esPuntoControl ? THEME.amberText : THEME.white,
+                                    fontSize: 12,
+                                    fontWeight: '800',
+                                  }}
+                                >
+                                  {item.num}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
+                                {item.actividad}
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              {item.esPuntoControl && (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.amberBg,
+                                    borderColor: THEME.amberRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: THEME.amberText }}>
+                                    ★ PUNTO DE CONTROL
+                                  </Text>
+                                </View>
+                              )}
+                              <View
+                                style={{
+                                  backgroundColor: THEME.slate100,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                  SLA: {item.tiempo}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  borderColor: THEME.marca200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca800 }}>
+                                  {item.badgeFormato}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12.5, color: THEME.slate600, lineHeight: 18 }}>
+                            {item.tarea}
+                          </Text>
+
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingTop: 8,
+                              borderTopWidth: 1,
+                              borderTopColor: THEME.slate100,
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                              <Text style={{ fontWeight: '600', color: THEME.slate700 }}>Responsable:</Text> {item.responsable}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: THEME.marca700, fontWeight: '500' }}>
+                              Registro: {item.registro}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* FASE 4.3: LIQUIDACIÓN Y PAGO DE AUXILIO COMPENSATORIO */}
+                  {faseProcedimiento === '4.3' && (
+                    <View style={{ gap: 10 }}>
+                      <View
+                        style={{
+                          backgroundColor: THEME.badges.amber.bg,
+                          borderRadius: 10,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.badges.amber.border,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="cash" size={18} color={THEME.badges.amber.text} />
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.badges.amber.text }}>
+                            Fase 4.3: Liquidación y Pago de Auxilio Compensatorio de Servicios Públicos
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: THEME.badges.amber.text, fontWeight: '600' }}>
+                          Punto de Control: Actividad 3 (Resolución de Liquidación - 5 días)
+                        </Text>
+                      </View>
+
+                      {[
+                        {
+                          num: 1,
+                          actividad: 'Certificar días efectivamente teletrabajados',
+                          responsable: 'El/la Jefe/a de dependencia',
+                          tarea: 'Con base en los seguimientos, el jefe reporta formalmente a Gestión Corporativa el número exacto de días que el servidor laboró bajo teletrabajo en el periodo. Soporte esencial para liquidar y validar cumplimiento de compromisos y acuerdo.',
+                          tiempo: '1 día',
+                          registro: 'Memorando 2311520-FT-018',
+                          badgeFormato: '2311520-FT-018',
+                        },
+                        {
+                          num: 2,
+                          actividad: 'Liquidar la compensación de gastos (energía e internet)',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Consolida certificaciones y liquida el gasto de servicios según la tabla de costeo por estrato expedida por la Secretaría General de la Alcaldía Mayor. Se solicita el Certificado de Disponibilidad Presupuestal (CDP). Sin efectos prestacionales.',
+                          tiempo: '2 días',
+                          registro: 'Consolidado y Liquidación de Gastos',
+                          badgeFormato: 'Tabla por Estrato',
+                        },
+                        {
+                          num: 3,
+                          actividad: 'Elaborar Acto Administrativo para el pago de compensación',
+                          responsable: 'Profesional Universitario (a) - Especializado (a) / Director(a) Gestión Corporativa',
+                          tarea: 'Se proyecta la resolución particular de liquidación para la firma del Director(a) de Gestión Corporativa ordenando el reconocimiento de compensación de servicios.',
+                          tiempo: '5 días',
+                          registro: 'Resolución 2311520-FT-130',
+                          badgeFormato: 'Punto de Control',
+                          esPuntoControl: true,
+                        },
+                        {
+                          num: 4,
+                          actividad: 'Solicitar el Registro Presupuestal (RP)',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Se remite solicitud formal al proceso de Gestión Financiera para la expedición del Registro Presupuestal que ampara el pago de la compensación.',
+                          tiempo: '1 día',
+                          registro: 'Memorando 2311520-FT-018 a Gestión Financiera',
+                          badgeFormato: '2311520-FT-018',
+                        },
+                        {
+                          num: 5,
+                          actividad: 'Solicitar el pago de la liquidación de compensación',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Se radica paquete completo ante Gestión Financiera: Certificado de Disponibilidad Presupuestal (CDP), Liquidación de compensación de gastos, Resolución de liquidación firmada y Registro Presupuestal (RP).',
+                          tiempo: '1 día',
+                          registro: 'Memorando 2311520-FT-018 y carpeta de pago',
+                          badgeFormato: 'Trámite Financiero',
+                        },
+                      ].map((item) => (
+                        <View
+                          key={item.num}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: item.esPuntoControl ? THEME.amberRing : THEME.slate200,
+                            padding: 14,
+                            gap: 8,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isDesktop ? 'center' : 'flex-start',
+                              gap: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                              <View
+                                style={{
+                                  backgroundColor: item.esPuntoControl ? THEME.amberBg : THEME.marca800,
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 13,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: item.esPuntoControl ? THEME.amberText : THEME.white,
+                                    fontSize: 12,
+                                    fontWeight: '800',
+                                  }}
+                                >
+                                  {item.num}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
+                                {item.actividad}
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              {item.esPuntoControl && (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.amberBg,
+                                    borderColor: THEME.amberRing,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10.5, fontWeight: '800', color: THEME.amberText }}>
+                                    ★ PUNTO DE CONTROL
+                                  </Text>
+                                </View>
+                              )}
+                              <View
+                                style={{
+                                  backgroundColor: THEME.slate100,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                  SLA: {item.tiempo}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  borderColor: THEME.marca200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca800 }}>
+                                  {item.badgeFormato}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12.5, color: THEME.slate600, lineHeight: 18 }}>
+                            {item.tarea}
+                          </Text>
+
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingTop: 8,
+                              borderTopWidth: 1,
+                              borderTopColor: THEME.slate100,
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                              <Text style={{ fontWeight: '600', color: THEME.slate700 }}>Responsable:</Text> {item.responsable}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: THEME.marca700, fontWeight: '500' }}>
+                              Registro: {item.registro}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* FASE 4.4: REVERSIBILIDAD, PRÓRROGA Y SITUACIONES ADMINISTRATIVAS */}
+                  {faseProcedimiento === '4.4' && (
+                    <View style={{ gap: 10 }}>
+                      <View
+                        style={{
+                          backgroundColor: THEME.badges.emerald.bg,
+                          borderRadius: 10,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.badges.emerald.border,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="repeat" size={18} color={THEME.badges.emerald.text} />
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.badges.emerald.text }}>
+                            Fase 4.4: Reversibilidad a la Presencialidad, Prórrogas y Novedades Laborales
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11.5, color: THEME.badges.emerald.text, fontWeight: '600' }}>
+                          Aplica para Traslados, Ascensos, Reubicaciones y Retorno
+                        </Text>
+                      </View>
+
+                      {[
+                        {
+                          num: 1,
+                          actividad: 'Recibir solicitudes de reversibilidad, prórroga y/o novedades administrativas',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Consolida y verifica solicitudes radicadas por servidores o jefes: retorno a la presencialidad (reversibilidad), prórroga al vencimiento del término, o modificaciones derivadas de traslado, ascenso o reubicación. Se determina si requiere concepto técnico previo o formalización inmediata.',
+                          tiempo: '8 días',
+                          registro: 'Memorando 2311520-FT-018 / Solicitud',
+                          badgeFormato: '2311520-FT-018',
+                        },
+                        {
+                          num: 2,
+                          actividad: 'Presentar ante el Equipo Técnico de Apoyo al Teletrabajo',
+                          responsable: 'Profesional Universitario (a) - Profesional Especializado (a)',
+                          tarea: 'Únicamente cuando el caso presente dudas técnicas o jurídicas, se presenta formalmente al Equipo Técnico para que estudie los antecedentes y emita recomendación motivada.',
+                          tiempo: '1 día',
+                          registro: 'Acta de Reunión 2310100-FT-048',
+                          badgeFormato: '2310100-FT-048',
+                        },
+                        {
+                          num: 3,
+                          actividad: 'Elaborar Acto Administrativo con la novedad sobre el teletrabajo',
+                          responsable: 'Profesional Universitario (a) - Especializado (a) / Director(a) Gestión Corporativa',
+                          tarea: 'Se proyecta la resolución particular formalizando la novedad (reversibilidad, prórroga o ajuste) para firma del Director(a) de Gestión Corporativa. Incluye comunicación al servidor, reporte en aplicativos y archivo en historia laboral.',
+                          tiempo: '3 días',
+                          registro: 'Resolución Particular 2311520-FT-130',
+                          badgeFormato: '2311520-FT-130',
+                        },
+                      ].map((item) => (
+                        <View
+                          key={item.num}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            padding: 14,
+                            gap: 8,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isDesktop ? 'center' : 'flex-start',
+                              gap: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca800,
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 13,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '800' }}>
+                                  {item.num}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
+                                {item.actividad}
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.slate100,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                  SLA: {item.tiempo}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  borderColor: THEME.marca200,
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca800 }}>
+                                  {item.badgeFormato}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12.5, color: THEME.slate600, lineHeight: 18 }}>
+                            {item.tarea}
+                          </Text>
+
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingTop: 8,
+                              borderTopWidth: 1,
+                              borderTopColor: THEME.slate100,
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                              <Text style={{ fontWeight: '600', color: THEME.slate700 }}>Responsable:</Text> {item.responsable}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: THEME.marca700, fontWeight: '500' }}>
+                              Registro: {item.registro}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {/* 5. CATÁLOGO DE FORMATOS OFICIALES SIGA (FT) */}
+                <View
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: isDesktop ? 20 : 16,
+                    gap: 14,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <View>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                        Formatos y Registros Oficiales del Sistema Integrado de Gestión (SIGA)
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.slate500, marginTop: 2 }}>
+                        Instrumentos requeridos en las etapas del Procedimiento 2311300-PR-117 (Versión 06)
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: THEME.marca50,
+                        borderColor: THEME.marca200,
+                        borderWidth: 1,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>
+                        8 Formatos Mapeados
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: isDesktop ? 'row' : 'column',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                    }}
+                  >
+                    {[
+                      {
+                        codigo: '2311300-FT-328',
+                        nombre: 'Solicitud de Vinculación a Teletrabajo',
+                        uso: 'Formulario oficial diligenciado por el servidor público para postularse a la convocatoria institucional.',
+                        fase: 'Fase 4.1 • Actividad 3',
+                      },
+                      {
+                        codigo: '2311300-FT-269',
+                        nombre: 'Acuerdo de Voluntariedad de Teletrabajo',
+                        uso: 'Documento concertado y firmado entre teletrabajador y jefe en SIGA dentro de 5 días hábiles tras la resolución.',
+                        fase: 'Fase 4.1 • Actividad 9',
+                      },
+                      {
+                        codigo: '2311300-FT-261',
+                        nombre: 'Verificación Condiciones Mínimas de SST para Teletrabajo',
+                        uso: 'Acta de visita domiciliaria (presencial o virtual) biomecánica, ambiental y del puesto evaluada por ARL/SST.',
+                        fase: 'Fase 4.1 & 4.2 • Actividades 6 y 3',
+                      },
+                      {
+                        codigo: '2311300-FT-400',
+                        nombre: 'Verificación Equipo de Cómputo para Teletrabajo (TIC)',
+                        uso: 'Validación de requerimientos técnicos de hardware, software, seguridad digital y conectividad remota.',
+                        fase: 'Fase 4.1 & 4.2 • Actividades 6 y 3',
+                      },
+                      {
+                        codigo: '2311520-FT-130',
+                        nombre: 'Resolución Particular de Teletrabajo / Liquidación',
+                        uso: 'Acto administrativo formal expedido por el Director(a) de Gestión Corporativa para autorizar o liquidar auxilio.',
+                        fase: 'Fases 4.1, 4.3 & 4.4',
+                      },
+                      {
+                        codigo: '2311520-FT-018',
+                        nombre: 'Memorando Oficial de Trámite / Aval / Certificación de Días',
+                        uso: 'Comunicaciones formales internas para aval del jefe, trámite presupuestal y reporte mensual de días laborados.',
+                        fase: 'Fases 4.1, 4.2, 4.3 & 4.4',
+                      },
+                      {
+                        codigo: '2310100-FT-048',
+                        nombre: 'Acta del Equipo Técnico de Apoyo al Teletrabajo',
+                        uso: 'Soporte de análisis y concepto motivado en casos especiales de modalidad autónoma, reversibilidad o dudas jurídicas.',
+                        fase: 'Fases 4.1 & 4.4',
+                      },
+                      {
+                        codigo: '2311300-PR-012',
+                        nombre: 'Procedimiento Permanencia de Servidores Públicos',
+                        uso: 'Marco para evaluación periódica y objetiva del desempeño laboral bajo la concertación de compromisos remotos.',
+                        fase: 'Fase 4.2 • Actividad 2',
+                      },
+                    ].map((f) => (
+                      <View
+                        key={f.codigo}
+                        style={{
+                          width: isDesktop ? ('49%' as never) : '100%',
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 12,
+                          gap: 4,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.marca800 }}>
+                            {f.codigo}
+                          </Text>
+                          <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.slate500 }}>
+                            {f.fase}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                          {f.nombre}
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate600, lineHeight: 16 }}>
+                          {f.uso}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 6. PLATAFORMAS EXTERNAS OBLIGATORIAS (Actividad 11 de la Fase 4.1) */}
+                <View
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: isDesktop ? 20 : 16,
+                    gap: 12,
+                  }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900 }}>
+                    Reportes Externos y Plataformas Distritales Obligatorias
+                  </Text>
+                  <Text style={{ fontSize: 12, color: THEME.slate500 }}>
+                    Trámites obligatorios ejecutados por Talento Humano previo al inicio efectivo de la modalidad
+                  </Text>
+
+                  <View
+                    style={{
+                      flexDirection: isDesktop ? 'row' : 'column',
+                      flexWrap: 'wrap',
+                      gap: 12,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: isDesktop ? 220 : '100%',
+                        backgroundColor: THEME.badges.emerald.bg,
+                        borderColor: THEME.badges.emerald.border,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        padding: 14,
+                        gap: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="medkit" size={18} color={THEME.badges.emerald.text} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.badges.emerald.text }}>
+                          Plataforma ARL
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>
+                        Reporte del listado oficial de teletrabajadores informando novedades para garantizar la cobertura integral de riesgos laborales.
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: isDesktop ? 220 : '100%',
+                        backgroundColor: THEME.badges.sky.bg,
+                        borderColor: THEME.badges.sky.border,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        padding: 14,
+                        gap: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="briefcase" size={18} color={THEME.badges.sky.text} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.badges.sky.text }}>
+                          Ministerio del Trabajo
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>
+                        Reporte formal de la novedad utilizando el formato oficial de recolección de información de teletrabajadores vigente a nivel nacional.
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: isDesktop ? 220 : '100%',
+                        backgroundColor: THEME.badges.purple.bg,
+                        borderColor: THEME.badges.purple.border,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        padding: 14,
+                        gap: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="server" size={18} color={THEME.badges.purple.text} />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.badges.purple.text }}>
+                          SIDEAP 2.0
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>
+                        Registro de ingreso y novedades de los teletrabajadores en el Sistema de Información Distrital del Empleo y la Administración Pública.
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </ScrollView>
         )}
 
@@ -4723,9 +6279,14 @@ export default function TeletrabajoScreen() {
                   borderBottomColor: THEME.slate200,
                 }}
               >
-                <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
-                  Acuerdo de Compromiso de Teletrabajo
-                </Text>
+                <View>
+                  <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
+                    Acuerdo de Voluntariedad de Teletrabajo
+                  </Text>
+                  <Text style={{ color: THEME.marca800, fontSize: 11.5, fontWeight: '600', marginTop: 2 }}>
+                    Formato Oficial SIGA: 2311300-FT-269 • Plazo: 5 días hábiles tras la resolución
+                  </Text>
+                </View>
                 <Pressable onPress={() => setModalAcuerdoVisible(false)} hitSlop={8}>
                   <Ionicons name="close" size={24} color={THEME.slate500} />
                 </Pressable>
@@ -4907,9 +6468,14 @@ export default function TeletrabajoScreen() {
                     borderBottomColor: THEME.slate200,
                   }}
                 >
-                  <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
-                    Registrar Corte de Seguimiento
-                  </Text>
+                  <View>
+                    <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
+                      Registrar Corte de Seguimiento y Certificación
+                    </Text>
+                    <Text style={{ color: THEME.marca800, fontSize: 11.5, fontWeight: '600', marginTop: 2 }}>
+                      Fase 4.2 / Memorando 2311520-FT-018 • Base para liquidación de servicios (Fase 4.3)
+                    </Text>
+                  </View>
                   <Pressable onPress={() => setModalSegVisible(false)} hitSlop={8}>
                     <Ionicons name="close" size={24} color={THEME.slate500} />
                   </Pressable>
@@ -5205,6 +6771,153 @@ export default function TeletrabajoScreen() {
                   Aceptar
                 </Text>
               </Pressable>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ================================================================= */}
+        {/* MODAL VISOR DE LA RESOLUCIÓN 117 DE 2026 Y PROCEDIMIENTO PR-117    */}
+        {/* ================================================================= */}
+        <Modal
+          visible={modalPdfVisorVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalPdfVisorVisible(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: isDesktop ? 24 : 12,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: THEME.white,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: THEME.slate200,
+                width: '100%',
+                maxWidth: 1240,
+                height: '92%',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 10,
+              }}
+            >
+              {/* Cabecera del Visor */}
+              <View
+                style={{
+                  backgroundColor: THEME.marca900,
+                  paddingHorizontal: 20,
+                  paddingVertical: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottomWidth: 1,
+                  borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                      padding: 8,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Ionicons name="document-text" size={20} color={THEME.white} />
+                  </View>
+                  <View>
+                    <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '800' }}>
+                      Resolución No. 117 de 2026 • Procedimiento 2311300-PR-117 (Versión 06)
+                    </Text>
+                    <Text style={{ color: 'rgba(214, 228, 244, 0.7)', fontSize: 11.5, marginTop: 1 }}>
+                      Secretaría Jurídica Distrital • Política Interna de Teletrabajo (Publicación Oficial)
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Pressable
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(urlPdfPolitica117, '_blank');
+                      }
+                    }}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 6,
+                      opacity: pressed ? 0.8 : 1,
+                    })}
+                  >
+                    <Ionicons name="open-outline" size={15} color={THEME.white} />
+                    <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '600' }}>
+                      Abrir en pestaña
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setModalPdfVisorVisible(false)}
+                    hitSlop={8}
+                    style={({ pressed }) => ({
+                      padding: 6,
+                      borderRadius: 6,
+                      backgroundColor: pressed ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+                    })}
+                  >
+                    <Ionicons name="close" size={24} color={THEME.white} />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Contenido / Iframe en Web */}
+              <View style={{ flex: 1, backgroundColor: THEME.slate100 }}>
+                {Platform.OS === 'web' ? (
+                  <iframe
+                    src={urlPdfPolitica117}
+                    title="Resolución 117 de 2026 y Procedimiento PR-117"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      border: 'none',
+                    }}
+                  />
+                ) : (
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 12 }}>
+                    <Ionicons name="document-attach" size={48} color={THEME.slate400} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate800, textAlign: 'center' }}>
+                      Documento PDF de la Política y Procedimiento
+                    </Text>
+                    <Pressable
+                      onPress={() => {
+                        if (Platform.OS === 'web') {
+                          window.open(urlPdfPolitica117, '_blank');
+                        }
+                      }}
+                      style={{
+                        backgroundColor: THEME.marca800,
+                        paddingHorizontal: 16,
+                        paddingVertical: 10,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 13 }}>
+                        Ver en el navegador
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </Modal>
