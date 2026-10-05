@@ -2984,6 +2984,8 @@ export default function TeletrabajoScreen() {
                               const nuevoEstado = !c.es_teletrabajable;
                               await teletrabajoService.actualizarCargo(c.id, {
                                 es_teletrabajable: nuevoEstado,
+                                max_dias_semana: c.max_dias_semana || 2,
+                                justificacion_estudio: c.justificacion_estudio || '',
                               });
                               await cargarTodo();
                               mostrarMensaje('Viabilidad Actualizada', `El cargo ${c.cargo_nombre} ahora figura como ${nuevoEstado ? 'Teletrabajable' : 'No teletrabajable'}.`, 'success');

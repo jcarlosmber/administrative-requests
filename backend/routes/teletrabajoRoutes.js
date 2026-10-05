@@ -303,6 +303,18 @@ module.exports = function (pool) {
       const { id } = req.params;
       const { es_teletrabajable, max_dias_semana, justificacion_estudio } = req.body;
 
+      const actual = await pool.query('SELECT * FROM public.teletrabajo_cargos_config WHERE id = $1', [id]);
+      if (actual.rows.length === 0) {
+        return res.status(404).json({ error: 'Cargo no encontrado' });
+      }
+      const actualRow = actual.rows[0];
+
+      const nuevoTeletrabajable = es_teletrabajable !== undefined ? Boolean(es_teletrabajable) : actualRow.es_teletrabajable;
+      const nuevoMaxDias = (max_dias_semana !== undefined && max_dias_semana !== null && !isNaN(parseInt(max_dias_semana, 10)))
+        ? Math.min(5, Math.max(1, parseInt(max_dias_semana, 10)))
+        : (actualRow.max_dias_semana || 2);
+      const nuevaJustificacion = justificacion_estudio !== undefined ? (justificacion_estudio || '') : (actualRow.justificacion_estudio || '');
+
       const q = `
         UPDATE public.teletrabajo_cargos_config
         SET 
@@ -313,10 +325,7 @@ module.exports = function (pool) {
         WHERE id = $4
         RETURNING *;
       `;
-      const result = await pool.query(q, [es_teletrabajable, max_dias_semana, justificacion_estudio, id]);
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Cargo no encontrado' });
-      }
+      const result = await pool.query(q, [nuevoTeletrabajable, nuevoMaxDias, nuevaJustificacion, id]);
       res.json(result.rows[0]);
     } catch (err) {
       console.error('[Teletrabajo] Error actualizando cargo:', err);
@@ -517,7 +526,8 @@ module.exports = function (pool) {
         id,
       ];
 
-      const result = await pool.query(q, values);
+      const safeValues = values.map((v) => (v === undefined ? null : v));
+      const result = await pool.query(q, safeValues);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: 'Asignación no encontrada' });
       }
