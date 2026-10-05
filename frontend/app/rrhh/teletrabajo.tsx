@@ -159,8 +159,10 @@ export default function TeletrabajoScreen() {
   const [filtroModalidad, setFiltroModalidad] = useState<string>('TODOS');
   const [filtroDependencia, setFiltroDependencia] = useState<string>('TODOS');
   const [modoVistaCenso, setModoVistaCenso] = useState<'cards' | 'tabla'>('cards');
+  const [modoVistaResoluciones, setModoVistaResoluciones] = useState<'cards' | 'tabla'>('tabla');
   const [modoVistaAcuerdos, setModoVistaAcuerdos] = useState<'cards' | 'tabla'>('tabla');
   const [modoVistaSeguimientos, setModoVistaSeguimientos] = useState<'cards' | 'tabla'>('tabla');
+  const [busquedaResoluciones, setBusquedaResoluciones] = useState('');
   const [busquedaAcuerdos, setBusquedaAcuerdos] = useState('');
   const [busquedaSeguimientos, setBusquedaSeguimientos] = useState('');
 
@@ -446,11 +448,12 @@ export default function TeletrabajoScreen() {
   };
 
   // =========================================================================
-  // MODAL 2: NUEVA RESOLUCIÓN GENERAL
+  // MODAL 2: SUBIR / EDITAR RESOLUCIÓN INSTITUCIONAL
   // =========================================================================
   const [modalResVisible, setModalResVisible] = useState(false);
   const [guardandoRes, setGuardandoRes] = useState(false);
   const [formRes, setFormRes] = useState<{
+    id?: string;
     numero_resolucion: string;
     anio: string;
     fecha_expedicion: string;
@@ -458,9 +461,12 @@ export default function TeletrabajoScreen() {
     fecha_fin_vigencia: string;
     descripcion: string;
     modalidad_principal: 'TELETRABAJO' | 'TRABAJO_EN_CASA' | 'MIXTA';
+    estado: 'VIGENTE' | 'DEROGADA' | 'FINALIZADA';
     archivo_base64: string;
     nombre_archivo: string;
+    archivo_pdf_url?: string;
   }>({
+    id: undefined,
     numero_resolucion: '',
     anio: new Date().getFullYear().toString(),
     fecha_expedicion: new Date().toISOString().split('T')[0],
@@ -468,12 +474,15 @@ export default function TeletrabajoScreen() {
     fecha_fin_vigencia: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
     descripcion: '',
     modalidad_principal: 'TELETRABAJO',
+    estado: 'VIGENTE',
     archivo_base64: '',
     nombre_archivo: '',
+    archivo_pdf_url: undefined,
   });
 
   const abrirModalNuevaRes = () => {
     setFormRes({
+      id: undefined,
       numero_resolucion: 'Resolución No. ',
       anio: new Date().getFullYear().toString(),
       fecha_expedicion: new Date().toISOString().split('T')[0],
@@ -481,8 +490,28 @@ export default function TeletrabajoScreen() {
       fecha_fin_vigencia: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
       descripcion: 'Por la cual se confiere la modalidad de teletrabajo a servidores públicos de la Secretaría Jurídica Distrital.',
       modalidad_principal: 'TELETRABAJO',
+      estado: 'VIGENTE',
       archivo_base64: '',
       nombre_archivo: '',
+      archivo_pdf_url: undefined,
+    });
+    setModalResVisible(true);
+  };
+
+  const abrirModalEditarRes = (r: ResolucionTeletrabajo) => {
+    setFormRes({
+      id: r.id,
+      numero_resolucion: r.numero_resolucion || '',
+      anio: (r.anio || new Date().getFullYear()).toString(),
+      fecha_expedicion: r.fecha_expedicion ? r.fecha_expedicion.split('T')[0] : '',
+      fecha_inicio_vigencia: r.fecha_inicio_vigencia ? r.fecha_inicio_vigencia.split('T')[0] : '',
+      fecha_fin_vigencia: r.fecha_fin_vigencia ? r.fecha_fin_vigencia.split('T')[0] : '',
+      descripcion: r.descripcion || '',
+      modalidad_principal: r.modalidad_principal || 'TELETRABAJO',
+      estado: r.estado || 'VIGENTE',
+      archivo_base64: '',
+      nombre_archivo: r.nombre_archivo || '',
+      archivo_pdf_url: r.archivo_pdf_url || undefined,
     });
     setModalResVisible(true);
   };
@@ -507,9 +536,11 @@ export default function TeletrabajoScreen() {
       mostrarMensaje('Datos Obligatorios', 'Por favor ingresa el número y la fecha de la resolución.', 'error');
       return;
     }
+    const esEdicion = !!formRes.id;
     try {
       setGuardandoRes(true);
       await teletrabajoService.guardarResolucion({
+        id: formRes.id,
         numero_resolucion: formRes.numero_resolucion.trim(),
         anio: parseInt(formRes.anio, 10) || new Date().getFullYear(),
         fecha_expedicion: formRes.fecha_expedicion,
@@ -517,12 +548,19 @@ export default function TeletrabajoScreen() {
         fecha_fin_vigencia: formRes.fecha_fin_vigencia,
         descripcion: formRes.descripcion,
         modalidad_principal: formRes.modalidad_principal,
+        estado: formRes.estado,
         archivo_base64: formRes.archivo_base64 || undefined,
         nombre_archivo: formRes.nombre_archivo || undefined,
       });
       setModalResVisible(false);
       await cargarTodo();
-      mostrarMensaje('Resolución Registrada', 'El acto administrativo ha sido cargado con éxito en el catálogo general.', 'success');
+      mostrarMensaje(
+        esEdicion ? 'Resolución Actualizada' : 'Resolución Registrada',
+        esEdicion
+          ? 'Los cambios en el acto administrativo se han guardado exitosamente.'
+          : 'El acto administrativo ha sido cargado con éxito en el catálogo general.',
+        'success'
+      );
     } catch (err: any) {
       mostrarMensaje('Error al Guardar', err.message || 'No se pudo guardar la resolución.', 'error');
     } finally {
@@ -733,6 +771,18 @@ export default function TeletrabajoScreen() {
       filtroDependencia === 'TODOS' || p.dependencia_cargo === filtroDependencia;
 
     return coincideTexto && coincideModalidad && coincideDep;
+  });
+
+  const resolucionesFiltradas = resoluciones.filter((r) => {
+    const q = busquedaResoluciones.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (r.numero_resolucion && r.numero_resolucion.toLowerCase().includes(q)) ||
+      (r.descripcion && r.descripcion.toLowerCase().includes(q)) ||
+      (r.estado && r.estado.toLowerCase().includes(q)) ||
+      (r.modalidad_principal && r.modalidad_principal.toLowerCase().includes(q)) ||
+      (r.anio ? r.anio.toString() : '').includes(q)
+    );
   });
 
   const acuerdosFiltrados = acuerdos.filter((ac) => {
@@ -1975,17 +2025,13 @@ export default function TeletrabajoScreen() {
             {/* ------------------------------------------------------------- */}
             {/* PESTAÑA 2: RESOLUCIONES GENERALES                            */}
             {/* ------------------------------------------------------------- */}
-            {/* ------------------------------------------------------------- */}
-            {/* PESTAÑA 2: RESOLUCIONES GENERALES                            */}
-            {/* ------------------------------------------------------------- */}
             {tabActiva === 'resoluciones' && (
               <View style={{ gap: 16 }}>
                 <View
                   style={{
-                    flexDirection: 'row',
+                    flexDirection: isDesktop ? 'row' : 'column',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
+                    alignItems: isDesktop ? 'center' : 'stretch',
                     gap: 12,
                   }}
                 >
@@ -1998,135 +2044,560 @@ export default function TeletrabajoScreen() {
                     </Text>
                   </View>
 
-                  <Pressable
-                    onPress={() => abrirModalNuevaRes()}
-                    style={{
-                      backgroundColor: THEME.marca700,
-                      paddingHorizontal: 16,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 8,
-                      shadowColor: '#000',
-                      shadowOpacity: 0.05,
-                      shadowRadius: 4,
-                    }}
-                  >
-                    <Ionicons name="cloud-upload-outline" size={18} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                      Subir Nueva Resolución
-                    </Text>
-                  </Pressable>
-                </View>
-
-                <View style={{ gap: 12 }}>
-                  {resoluciones.map((r) => (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    {/* Buscador de Resoluciones */}
                     <View
-                      key={r.id}
                       style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
                         backgroundColor: THEME.white,
-                        borderRadius: 12,
                         borderWidth: 1,
                         borderColor: THEME.slate200,
-                        padding: 20,
-                        flexDirection: isDesktop ? 'row' : 'column',
-                        justifyContent: 'space-between',
-                        alignItems: isDesktop ? 'center' : 'stretch',
-                        gap: 16,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.03,
-                        shadowRadius: 6,
-                        elevation: 1,
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        height: 38,
+                        width: isDesktop ? 260 : '100%',
+                        gap: 6,
                       }}
                     >
-                      <View style={{ flex: 1, gap: 6 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name="document-text" size={22} color={THEME.marca700} />
-                          <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
-                            {r.numero_resolucion}
-                          </Text>
-                          <View
-                            style={{
-                              backgroundColor: THEME.badges.emerald.bg,
-                              paddingHorizontal: 8,
-                              paddingVertical: 3,
-                              borderRadius: 9999,
-                              borderWidth: 1,
-                              borderColor: THEME.badges.emerald.border,
-                            }}
-                          >
-                            <Text style={{ color: THEME.badges.emerald.text, fontSize: 11, fontWeight: '800' }}>
-                              {r.estado}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 19 }}>
-                          {r.descripcion || 'Sin descripción adicional.'}
-                        </Text>
-
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                            Expedición: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{limpiarFecha(r.fecha_expedicion)}</Text>
-                          </Text>
-                          <Text style={{ color: THEME.slate500, fontSize: 12 }}>
-                            Vigencia General:{' '}
-                            <Text style={{ color: THEME.slate800, fontWeight: '600' }}>
-                              {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
-                            </Text>
-                          </Text>
-                          <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
-                            Personas Vinculadas: {r.total_personas_activas || 0} activas
-                          </Text>
-                        </View>
-                      </View>
-
-                      {r.archivo_pdf_url && (
-                        <TouchableOpacity
-                          onPress={() => {
-                            if (Platform.OS === 'web') {
-                              window.open(r.archivo_pdf_url, '_blank');
-                            }
-                          }}
-                          style={{
-                            backgroundColor: THEME.marca50,
-                            paddingHorizontal: 14,
-                            paddingVertical: 9,
-                            borderRadius: 8,
-                            borderWidth: 1,
-                            borderColor: THEME.marca200,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
-                          }}
-                        >
-                          <Ionicons name="eye-outline" size={16} color={THEME.marca700} />
-                          <Text style={{ color: THEME.marca700, fontSize: 13, fontWeight: '700' }}>
-                            Ver Resolución PDF
-                          </Text>
-                        </TouchableOpacity>
+                      <Ionicons name="search" size={15} color={THEME.slate400} />
+                      <TextInput
+                        value={busquedaResoluciones}
+                        onChangeText={setBusquedaResoluciones}
+                        placeholder="Buscar resolución, año, objeto..."
+                        placeholderTextColor={THEME.slate400}
+                        style={{ flex: 1, color: THEME.slate900, fontSize: 12, outlineStyle: 'none' as never }}
+                      />
+                      {busquedaResoluciones.length > 0 && (
+                        <Pressable onPress={() => setBusquedaResoluciones('')}>
+                          <Ionicons name="close-circle" size={15} color={THEME.slate400} />
+                        </Pressable>
                       )}
                     </View>
-                  ))}
-                  {resoluciones.length === 0 && (
+
+                    {/* Selector de Vista: Tabla / Tarjetas */}
                     <View
                       style={{
-                        backgroundColor: THEME.white,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        padding: 36,
+                        flexDirection: 'row',
                         alignItems: 'center',
+                        backgroundColor: THEME.slate100,
+                        borderRadius: 8,
+                        padding: 3,
                       }}
                     >
-                      <Ionicons name="documents-outline" size={40} color={THEME.slate300} />
-                      <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
-                        No hay resoluciones registradas aún. Haz clic en "Subir Nueva Resolución".
-                      </Text>
+                      <Pressable
+                        onPress={() => setModoVistaResoluciones('tabla')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: modoVistaResoluciones === 'tabla' ? THEME.white : 'transparent',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          shadowColor: modoVistaResoluciones === 'tabla' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="list"
+                          size={14}
+                          color={modoVistaResoluciones === 'tabla' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaResoluciones === 'tabla' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaResoluciones === 'tabla' ? '600' : '500',
+                          }}
+                        >
+                          Tabla
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setModoVistaResoluciones('cards')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: modoVistaResoluciones === 'cards' ? THEME.white : 'transparent',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                          shadowColor: modoVistaResoluciones === 'cards' ? '#000' : 'transparent',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Ionicons
+                          name="grid"
+                          size={14}
+                          color={modoVistaResoluciones === 'cards' ? THEME.marca700 : THEME.slate500}
+                        />
+                        <Text
+                          style={{
+                            color: modoVistaResoluciones === 'cards' ? THEME.marca700 : THEME.slate500,
+                            fontSize: 12,
+                            fontWeight: modoVistaResoluciones === 'cards' ? '600' : '500',
+                          }}
+                        >
+                          Tarjetas
+                        </Text>
+                      </Pressable>
                     </View>
+
+                    <Pressable
+                      onPress={() => abrirModalNuevaRes()}
+                      style={{
+                        backgroundColor: THEME.marca700,
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 7,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.05,
+                        shadowRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="cloud-upload-outline" size={17} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
+                        Subir Resolución
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Subcabecera informativa */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                    Mostrando <Text style={{ color: THEME.slate800, fontWeight: '700' }}>{resolucionesFiltradas.length}</Text> de {resoluciones.length} resoluciones oficiales
+                  </Text>
+                  {modoVistaResoluciones === 'tabla' && (
+                    <Text style={{ color: THEME.slate400, fontSize: 11, fontStyle: 'italic' }}>
+                      💡 Haz clic en cualquier fila para editar la resolución
+                    </Text>
                   )}
                 </View>
+
+                {modoVistaResoluciones === 'tabla' ? (
+                  /* ======================================================== */
+                  /* TABLA EJECUTIVA DE RESOLUCIONES                          */
+                  /* ======================================================== */
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      overflow: 'hidden',
+                      shadowColor: '#000',
+                      shadowOpacity: 0.04,
+                      shadowRadius: 6,
+                      elevation: 2,
+                    }}
+                  >
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                      <View style={{ minWidth: 1040 }}>
+                        {/* Cabecera de la Tabla */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            backgroundColor: THEME.slate50,
+                            borderBottomWidth: 1,
+                            borderBottomColor: THEME.slate200,
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{ width: 230, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            RESOLUCIÓN / ACTO
+                          </Text>
+                          <Text style={{ width: 110, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            ESTADO
+                          </Text>
+                          <Text style={{ width: 140, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            MODALIDAD
+                          </Text>
+                          <Text style={{ width: 120, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            EXPEDICIÓN
+                          </Text>
+                          <Text style={{ width: 190, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            VIGENCIA GENERAL
+                          </Text>
+                          <Text style={{ width: 110, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            VINCULADOS
+                          </Text>
+                          <Text style={{ width: 110, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>
+                            DOCUMENTO
+                          </Text>
+                          <Text style={{ width: 110, color: THEME.slate500, fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textAlign: 'right' }}>
+                            ACCIONES
+                          </Text>
+                        </View>
+
+                        {/* Filas */}
+                        {resolucionesFiltradas.map((r, index) => {
+                          const badgeEstado =
+                            r.estado === 'VIGENTE'
+                              ? THEME.badges.emerald
+                              : r.estado === 'DEROGADA'
+                              ? THEME.badges.rose
+                              : THEME.badges.amber;
+
+                          const modalidadLabel =
+                            r.modalidad_principal === 'TELETRABAJO'
+                              ? 'Teletrabajo'
+                              : r.modalidad_principal === 'TRABAJO_EN_CASA'
+                              ? 'Trabajo Casa'
+                              : 'Mixta / Alt.';
+
+                          return (
+                            <Pressable
+                              key={r.id}
+                              onPress={() => abrirModalEditarRes(r)}
+                              style={({ hovered }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 12,
+                                paddingHorizontal: 16,
+                                borderBottomWidth: index === resolucionesFiltradas.length - 1 ? 0 : 1,
+                                borderBottomColor: THEME.slate100,
+                                backgroundColor: hovered ? THEME.slate50 : index % 2 === 0 ? THEME.white : '#FCFCFD',
+                                cursor: 'pointer',
+                              })}
+                            >
+                              {/* 1. Resolución / Acto */}
+                              <View style={{ width: 230, paddingRight: 10 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                                  <Ionicons name="document-text" size={17} color={THEME.marca700} />
+                                  <Text style={{ color: THEME.slate900, fontSize: 12.5, fontWeight: '800' }} numberOfLines={1}>
+                                    {r.numero_resolucion}
+                                  </Text>
+                                </View>
+                                {r.descripcion ? (
+                                  <Text style={{ color: THEME.slate500, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                                    {r.descripcion}
+                                  </Text>
+                                ) : (
+                                  <Text style={{ color: THEME.slate400, fontSize: 11, marginTop: 2 }}>
+                                    Año {r.anio || '-'}
+                                  </Text>
+                                )}
+                              </View>
+
+                              {/* 2. Estado */}
+                              <View style={{ width: 110, paddingRight: 8 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: badgeEstado.bg,
+                                    borderColor: badgeEstado.border,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 9999,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text style={{ color: badgeEstado.text, fontSize: 10.5, fontWeight: '800' }}>
+                                    {r.estado}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* 3. Modalidad */}
+                              <View style={{ width: 140, paddingRight: 8 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.marca50,
+                                    borderColor: THEME.marca200,
+                                    borderWidth: 1,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.marca700, fontSize: 10.5, fontWeight: '700' }}>
+                                    {modalidadLabel}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* 4. Expedición */}
+                              <View style={{ width: 120, paddingRight: 8 }}>
+                                <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '600' }}>
+                                  {limpiarFecha(r.fecha_expedicion) || '-'}
+                                </Text>
+                                <Text style={{ color: THEME.slate400, fontSize: 10 }}>Expedida</Text>
+                              </View>
+
+                              {/* 5. Vigencia General */}
+                              <View style={{ width: 190, paddingRight: 8 }}>
+                                <Text style={{ color: THEME.slate800, fontSize: 11.5, fontWeight: '600' }}>
+                                  {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
+                                </Text>
+                                <Text style={{ color: THEME.slate400, fontSize: 10 }}>Período formal</Text>
+                              </View>
+
+                              {/* 6. Vinculados */}
+                              <View style={{ width: 110, paddingRight: 8 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.slate100,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
+                                    alignSelf: 'flex-start',
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.slate800, fontSize: 11, fontWeight: '700' }}>
+                                    {r.total_personas_activas || 0} activos
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* 7. Documento */}
+                              <View style={{ width: 110, paddingRight: 8 }}>
+                                {r.archivo_pdf_url ? (
+                                  <TouchableOpacity
+                                    onPress={(e) => {
+                                      e?.stopPropagation?.();
+                                      if (Platform.OS === 'web') {
+                                        window.open(r.archivo_pdf_url, '_blank');
+                                      }
+                                    }}
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      backgroundColor: THEME.marca50,
+                                      borderColor: THEME.marca200,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 4,
+                                      borderRadius: 6,
+                                      alignSelf: 'flex-start',
+                                    }}
+                                  >
+                                    <Ionicons name="eye-outline" size={13} color={THEME.marca700} />
+                                    <Text style={{ color: THEME.marca700, fontSize: 11, fontWeight: '700' }}>Ver PDF</Text>
+                                  </TouchableOpacity>
+                                ) : (
+                                  <Text style={{ color: THEME.slate400, fontSize: 11 }}>Sin PDF</Text>
+                                )}
+                              </View>
+
+                              {/* 8. Acciones */}
+                              <View style={{ width: 110, alignItems: 'flex-end' }}>
+                                <TouchableOpacity
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    abrirModalEditarRes(r);
+                                  }}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    backgroundColor: THEME.marca700,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  <Ionicons name="pencil-outline" size={13} color="#FFFFFF" />
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
+                                    Editar
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </Pressable>
+                          );
+                        })}
+
+                        {resolucionesFiltradas.length === 0 && (
+                          <View style={{ padding: 40, alignItems: 'center' }}>
+                            <Ionicons name="search-outline" size={38} color={THEME.slate300} />
+                            <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 8 }}>
+                              {busquedaResoluciones.length > 0
+                                ? 'No se encontraron resoluciones con el criterio de búsqueda.'
+                                : 'No se han registrado resoluciones aún.'}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </ScrollView>
+                  </View>
+                ) : (
+                  /* ======================================================== */
+                  /* TARJETAS DE RESOLUCIONES                                 */
+                  /* ======================================================== */
+                  <View style={{ gap: 12 }}>
+                    {resolucionesFiltradas.map((r) => {
+                      const badgeEstado =
+                        r.estado === 'VIGENTE'
+                          ? THEME.badges.emerald
+                          : r.estado === 'DEROGADA'
+                          ? THEME.badges.rose
+                          : THEME.badges.amber;
+
+                      return (
+                        <Pressable
+                          key={r.id}
+                          onPress={() => abrirModalEditarRes(r)}
+                          style={({ hovered }: any) => ({
+                            backgroundColor: THEME.white,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: hovered ? THEME.marca200 : THEME.slate200,
+                            padding: 20,
+                            flexDirection: isDesktop ? 'row' : 'column',
+                            justifyContent: 'space-between',
+                            alignItems: isDesktop ? 'center' : 'stretch',
+                            gap: 16,
+                            shadowColor: '#000',
+                            shadowOpacity: hovered ? 0.07 : 0.03,
+                            shadowRadius: 6,
+                            elevation: 1,
+                            cursor: 'pointer',
+                          })}
+                        >
+                          <View style={{ flex: 1, gap: 6 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                              <Ionicons name="document-text" size={22} color={THEME.marca700} />
+                              <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '800' }}>
+                                {r.numero_resolucion}
+                              </Text>
+                              <View
+                                style={{
+                                  backgroundColor: badgeEstado.bg,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 9999,
+                                  borderWidth: 1,
+                                  borderColor: badgeEstado.border,
+                                }}
+                              >
+                                <Text style={{ color: badgeEstado.text, fontSize: 11, fontWeight: '800' }}>
+                                  {r.estado}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                  borderWidth: 1,
+                                  borderColor: THEME.marca200,
+                                }}
+                              >
+                                <Text style={{ color: THEME.marca700, fontSize: 11, fontWeight: '700' }}>
+                                  {r.modalidad_principal || 'TELETRABAJO'}
+                                </Text>
+                              </View>
+                            </View>
+
+                            <Text style={{ color: THEME.slate600, fontSize: 13, lineHeight: 19 }}>
+                              {r.descripcion || 'Sin descripción adicional.'}
+                            </Text>
+
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                              <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                                Expedición: <Text style={{ color: THEME.slate800, fontWeight: '600' }}>{limpiarFecha(r.fecha_expedicion)}</Text>
+                              </Text>
+                              <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                                Vigencia General:{' '}
+                                <Text style={{ color: THEME.slate800, fontWeight: '600' }}>
+                                  {limpiarFecha(r.fecha_inicio_vigencia)} al {limpiarFecha(r.fecha_fin_vigencia)}
+                                </Text>
+                              </Text>
+                              <Text style={{ color: THEME.marca700, fontSize: 12, fontWeight: '700' }}>
+                                Personas Vinculadas: {r.total_personas_activas || 0} activas
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <TouchableOpacity
+                              onPress={(e) => {
+                                e?.stopPropagation?.();
+                                abrirModalEditarRes(r);
+                              }}
+                              style={{
+                                backgroundColor: THEME.marca700,
+                                paddingHorizontal: 14,
+                                paddingVertical: 9,
+                                borderRadius: 8,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
+                            >
+                              <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                                Editar Resolución
+                              </Text>
+                            </TouchableOpacity>
+
+                            {r.archivo_pdf_url && (
+                              <TouchableOpacity
+                                onPress={(e) => {
+                                  e?.stopPropagation?.();
+                                  if (Platform.OS === 'web') {
+                                    window.open(r.archivo_pdf_url, '_blank');
+                                  }
+                                }}
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  paddingHorizontal: 14,
+                                  paddingVertical: 9,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: THEME.marca200,
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                              >
+                                <Ionicons name="eye-outline" size={16} color={THEME.marca700} />
+                                <Text style={{ color: THEME.marca700, fontSize: 13, fontWeight: '700' }}>
+                                  Ver PDF
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+
+                    {resolucionesFiltradas.length === 0 && (
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 36,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Ionicons name="documents-outline" size={40} color={THEME.slate300} />
+                        <Text style={{ color: THEME.slate500, textAlign: 'center', marginTop: 8, fontSize: 13 }}>
+                          {busquedaResoluciones.length > 0
+                            ? 'No se encontraron resoluciones con el criterio de búsqueda.'
+                            : 'No hay resoluciones registradas aún. Haz clic en "Subir Nueva Resolución".'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
             )}
 
@@ -3778,7 +4249,7 @@ export default function TeletrabajoScreen() {
         </Modal>
 
         {/* ================================================================= */}
-        {/* MODAL 2: NUEVA RESOLUCIÓN GENERAL                                */}
+        {/* MODAL 2: SUBIR / EDITAR RESOLUCIÓN INSTITUCIONAL                  */}
         {/* ================================================================= */}
         <Modal
           visible={modalResVisible}
@@ -3803,7 +4274,7 @@ export default function TeletrabajoScreen() {
                 borderColor: THEME.slate200,
                 padding: 24,
                 width: '100%',
-                maxWidth: 560,
+                maxWidth: 580,
                 gap: 14,
                 shadowColor: '#000',
                 shadowOpacity: 0.1,
@@ -3821,16 +4292,133 @@ export default function TeletrabajoScreen() {
                   borderBottomColor: THEME.slate200,
                 }}
               >
-                <Text style={{ color: THEME.slate900, fontSize: 17, fontWeight: '800' }}>
-                  Subir Resolución Institucional
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      backgroundColor: formRes.id ? THEME.marca50 : '#F0FDF4',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons
+                      name={formRes.id ? 'pencil' : 'cloud-upload'}
+                      size={18}
+                      color={formRes.id ? THEME.marca700 : '#16A34A'}
+                    />
+                  </View>
+                  <View>
+                    <Text style={{ color: THEME.slate900, fontSize: 16.5, fontWeight: '800' }}>
+                      {formRes.id ? 'Editar Resolución Institucional' : 'Subir Nueva Resolución'}
+                    </Text>
+                    <Text style={{ color: THEME.slate400, fontSize: 11 }}>
+                      {formRes.id
+                        ? 'Modifica los parámetros y vigencia del acto administrativo'
+                        : 'Registra un acto administrativo marco para el régimen laboral'}
+                    </Text>
+                  </View>
+                </View>
+
                 <Pressable onPress={() => setModalResVisible(false)} hitSlop={8}>
                   <Ionicons name="close" size={24} color={THEME.slate500} />
                 </Pressable>
               </View>
 
+              {/* Selector de Estado */}
               <View style={{ gap: 4 }}>
-                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Número de Resolución:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                  Estado Jurídico del Acto:
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {(['VIGENTE', 'DEROGADA', 'FINALIZADA'] as const).map((est) => {
+                    const isSel = formRes.estado === est;
+                    const badge =
+                      est === 'VIGENTE'
+                        ? THEME.badges.emerald
+                        : est === 'DEROGADA'
+                        ? THEME.badges.rose
+                        : THEME.badges.amber;
+                    return (
+                      <Pressable
+                        key={est}
+                        onPress={() => setFormRes((p) => ({ ...p, estado: est }))}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 7,
+                          paddingHorizontal: 8,
+                          borderRadius: 8,
+                          borderWidth: 1.5,
+                          borderColor: isSel ? badge.text : THEME.slate200,
+                          backgroundColor: isSel ? badge.bg : THEME.slate50,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: isSel ? badge.text : THEME.slate600,
+                            fontSize: 11.5,
+                            fontWeight: isSel ? '800' : '600',
+                          }}
+                        >
+                          {est}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Selector de Modalidad Principal */}
+              <View style={{ gap: 4 }}>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                  Modalidad Principal Regulada:
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {([
+                    { key: 'TELETRABAJO', label: 'Teletrabajo' },
+                    { key: 'TRABAJO_EN_CASA', label: 'Trabajo en Casa' },
+                    { key: 'MIXTA', label: 'Mixta / Alternancia' },
+                  ] as const).map((m) => {
+                    const isSel = formRes.modalidad_principal === m.key;
+                    return (
+                      <Pressable
+                        key={m.key}
+                        onPress={() => setFormRes((p) => ({ ...p, modalidad_principal: m.key }))}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 7,
+                          paddingHorizontal: 6,
+                          borderRadius: 8,
+                          borderWidth: 1.5,
+                          borderColor: isSel ? THEME.marca700 : THEME.slate200,
+                          backgroundColor: isSel ? THEME.marca50 : THEME.slate50,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: isSel ? THEME.marca700 : THEME.slate600,
+                            fontSize: 11.5,
+                            fontWeight: isSel ? '800' : '600',
+                          }}
+                        >
+                          {m.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Número de Resolución */}
+              <View style={{ gap: 4 }}>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                  Número de Resolución:
+                </Text>
                 <TextInput
                   value={formRes.numero_resolucion}
                   onChangeText={(t) => setFormRes((p) => ({ ...p, numero_resolucion: t }))}
@@ -3842,7 +4430,7 @@ export default function TeletrabajoScreen() {
                     borderWidth: 1,
                     borderColor: THEME.slate300,
                     color: THEME.slate900,
-                    padding: 10,
+                    padding: 9,
                     fontSize: 13,
                   }}
                 />
@@ -3850,7 +4438,9 @@ export default function TeletrabajoScreen() {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Fecha Expedición:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                    Fecha Expedición:
+                  </Text>
                   <TextInput
                     value={formRes.fecha_expedicion}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, fecha_expedicion: t }))}
@@ -3862,7 +4452,7 @@ export default function TeletrabajoScreen() {
                       borderWidth: 1,
                       borderColor: THEME.slate300,
                       color: THEME.slate900,
-                      padding: 10,
+                      padding: 9,
                       fontSize: 13,
                     }}
                   />
@@ -3880,7 +4470,7 @@ export default function TeletrabajoScreen() {
                       borderWidth: 1,
                       borderColor: THEME.slate300,
                       color: THEME.slate900,
-                      padding: 10,
+                      padding: 9,
                       fontSize: 13,
                     }}
                   />
@@ -3889,7 +4479,9 @@ export default function TeletrabajoScreen() {
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Vigencia Inicio:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                    Vigencia Inicio:
+                  </Text>
                   <TextInput
                     value={formRes.fecha_inicio_vigencia}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, fecha_inicio_vigencia: t }))}
@@ -3901,13 +4493,15 @@ export default function TeletrabajoScreen() {
                       borderWidth: 1,
                       borderColor: THEME.slate300,
                       color: THEME.slate900,
-                      padding: 10,
+                      padding: 9,
                       fontSize: 13,
                     }}
                   />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Vigencia Fin:</Text>
+                  <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                    Vigencia Fin:
+                  </Text>
                   <TextInput
                     value={formRes.fecha_fin_vigencia}
                     onChangeText={(t) => setFormRes((p) => ({ ...p, fecha_fin_vigencia: t }))}
@@ -3919,7 +4513,7 @@ export default function TeletrabajoScreen() {
                       borderWidth: 1,
                       borderColor: THEME.slate300,
                       color: THEME.slate900,
-                      padding: 10,
+                      padding: 9,
                       fontSize: 13,
                     }}
                   />
@@ -3927,7 +4521,9 @@ export default function TeletrabajoScreen() {
               </View>
 
               <View style={{ gap: 4 }}>
-                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Descripción u Objeto:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                  Descripción u Objeto:
+                </Text>
                 <TextInput
                   value={formRes.descripcion}
                   onChangeText={(t) => setFormRes((p) => ({ ...p, descripcion: t }))}
@@ -3941,15 +4537,65 @@ export default function TeletrabajoScreen() {
                     borderWidth: 1,
                     borderColor: THEME.slate300,
                     color: THEME.slate900,
-                    padding: 10,
+                    padding: 9,
                     fontSize: 12.5,
                   }}
                 />
               </View>
 
-              {/* Subir Archivo PDF */}
+              {/* Subir o Actualizar Archivo PDF */}
               <View style={{ gap: 6 }}>
-                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>Archivo PDF Oficial:</Text>
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
+                  Archivo PDF Oficial:
+                </Text>
+
+                {formRes.archivo_pdf_url && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: THEME.slate50,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                      <Ionicons name="document-attach" size={17} color={THEME.marca700} />
+                      <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+                        Documento oficial adjunto registrado
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (Platform.OS === 'web' && formRes.archivo_pdf_url) {
+                          window.open(formRes.archivo_pdf_url, '_blank');
+                        }
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 4,
+                        borderRadius: 6,
+                        backgroundColor: THEME.marca50,
+                        borderWidth: 1,
+                        borderColor: THEME.marca200,
+                      }}
+                    >
+                      <Ionicons name="eye-outline" size={13} color={THEME.marca700} />
+                      <Text style={{ color: THEME.marca700, fontSize: 11, fontWeight: '700' }}>
+                        Ver PDF
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {Platform.OS === 'web' ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <input
@@ -3972,10 +4618,10 @@ export default function TeletrabajoScreen() {
                         cursor: 'pointer',
                       }}
                     >
-                      📁 {formRes.nombre_archivo ? 'Cambiar PDF' : 'Seleccionar PDF'}
+                      📁 {formRes.nombre_archivo ? 'Cambiar PDF' : formRes.archivo_pdf_url ? 'Reemplazar PDF' : 'Seleccionar PDF'}
                     </label>
                     <Text style={{ color: THEME.slate600, fontSize: 12 }}>
-                      {formRes.nombre_archivo || 'Ningún archivo seleccionado'}
+                      {formRes.nombre_archivo || (formRes.archivo_pdf_url ? 'Conservar archivo actual' : 'Ningún archivo nuevo seleccionado')}
                     </Text>
                   </View>
                 ) : (
@@ -4017,9 +4663,13 @@ export default function TeletrabajoScreen() {
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <>
-                      <Ionicons name="cloud-upload" size={18} color="#FFFFFF" />
+                      <Ionicons
+                        name={formRes.id ? 'save-outline' : 'cloud-upload'}
+                        size={18}
+                        color="#FFFFFF"
+                      />
                       <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                        Guardar Resolución
+                        {formRes.id ? 'Actualizar Resolución' : 'Guardar Resolución'}
                       </Text>
                     </>
                   )}
