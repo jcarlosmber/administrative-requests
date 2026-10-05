@@ -285,7 +285,7 @@ async function migrar() {
         ini: '2026-09-15',
         fin: '2026-12-14',
         desc: 'Por la cual se suspende temporalmente la Resolución No. 201 de 2026, se habilita temporalmente el trabajo en casa (5x5) a servidores/as públicos/as con ocasión de las obras en el Edificio Bicentenario II, y se autoriza la modalidad de teletrabajo híbrido a servidores/as públicos/as de la entidad.',
-        mod: 'TRABAJO_EN_CASA',
+        mod: 'MIXTA',
         est: 'VIGENTE'
       }
     ];

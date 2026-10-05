@@ -113,6 +113,13 @@ module.exports = function (pool) {
   // =========================================================================
   // 2. GESTIÓN DE RESOLUCIONES GENERALES
   // =========================================================================
+  // Asegurar que la Resolución 409 de 2026 tenga modalidad_principal = 'MIXTA' (regula Trabajo en Casa y Teletrabajo)
+  pool.query(`
+    UPDATE public.teletrabajo_resoluciones
+    SET modalidad_principal = 'MIXTA'
+    WHERE numero_resolucion LIKE '%409%' AND modalidad_principal != 'MIXTA';
+  `).catch(() => {});
+
   router.get('/resoluciones', async (req, res) => {
     try {
       const q = `

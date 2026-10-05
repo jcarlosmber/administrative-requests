@@ -2550,7 +2550,7 @@ export default function TeletrabajoScreen() {
                               ? 'Teletrabajo'
                               : r.modalidad_principal === 'TRABAJO_EN_CASA'
                               ? 'Trabajo Casa'
-                              : 'Mixta / Alt.';
+                              : 'Teletrabajo y Casa (Mixta)';
 
                           return (
                             <Pressable
@@ -2793,7 +2793,11 @@ export default function TeletrabajoScreen() {
                                 }}
                               >
                                 <Text style={{ color: THEME.marca700, fontSize: 11, fontWeight: '700' }}>
-                                  {r.modalidad_principal || 'TELETRABAJO'}
+                                  {r.modalidad_principal === 'MIXTA'
+                                    ? 'Teletrabajo y Trabajo en Casa (Mixta)'
+                                    : r.modalidad_principal === 'TRABAJO_EN_CASA'
+                                    ? 'Trabajo en Casa'
+                                    : 'Teletrabajo'}
                                 </Text>
                               </View>
                             </View>
@@ -6324,7 +6328,8 @@ export default function TeletrabajoScreen() {
                 borderColor: THEME.slate200,
                 padding: 24,
                 width: '100%',
-                maxWidth: 580,
+                maxWidth: 620,
+                maxHeight: '92%',
                 gap: 14,
                 shadowColor: '#000',
                 shadowOpacity: 0.1,
@@ -6376,8 +6381,14 @@ export default function TeletrabajoScreen() {
                 </Pressable>
               </View>
 
-              {/* Selector de Estado */}
-              <View style={{ gap: 4 }}>
+              <ScrollView
+                style={{ maxHeight: 520 }}
+                contentContainerStyle={{ gap: 14, paddingRight: 4 }}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled={true}
+              >
+                {/* Selector de Estado */}
+                <View style={{ gap: 4 }}>
                 <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
                   Estado Jurídico del Acto:
                 </Text>
@@ -6426,11 +6437,11 @@ export default function TeletrabajoScreen() {
                 <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
                   Modalidad Principal Regulada:
                 </Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                   {([
-                    { key: 'TELETRABAJO', label: 'Teletrabajo' },
-                    { key: 'TRABAJO_EN_CASA', label: 'Trabajo en Casa' },
-                    { key: 'MIXTA', label: 'Mixta / Alternancia' },
+                    { key: 'TELETRABAJO', label: 'Solo Teletrabajo' },
+                    { key: 'TRABAJO_EN_CASA', label: 'Solo Trabajo en Casa' },
+                    { key: 'MIXTA', label: 'Teletrabajo y Trabajo en Casa (Mixta)' },
                   ] as const).map((m) => {
                     const isSel = formRes.modalidad_principal === m.key;
                     return (
@@ -6438,9 +6449,10 @@ export default function TeletrabajoScreen() {
                         key={m.key}
                         onPress={() => setFormRes((p) => ({ ...p, modalidad_principal: m.key }))}
                         style={{
-                          flex: 1,
-                          paddingVertical: 7,
-                          paddingHorizontal: 6,
+                          flex: m.key === 'MIXTA' ? 1.4 : 1,
+                          minWidth: 120,
+                          paddingVertical: 8,
+                          paddingHorizontal: 8,
                           borderRadius: 8,
                           borderWidth: 1.5,
                           borderColor: isSel ? THEME.marca700 : THEME.slate200,
@@ -6454,6 +6466,7 @@ export default function TeletrabajoScreen() {
                             color: isSel ? THEME.marca700 : THEME.slate600,
                             fontSize: 11.5,
                             fontWeight: isSel ? '800' : '600',
+                            textAlign: 'center',
                           }}
                         >
                           {m.label}
@@ -6572,23 +6585,26 @@ export default function TeletrabajoScreen() {
 
               <View style={{ gap: 4 }}>
                 <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '700' }}>
-                  Descripción u Objeto:
+                  Descripción u Objeto del Acto Administrativo:
                 </Text>
                 <TextInput
                   value={formRes.descripcion}
                   onChangeText={(t) => setFormRes((p) => ({ ...p, descripcion: t }))}
-                  placeholder="Descripción del acto administrativo..."
+                  placeholder="Descripción detallada del objeto y alcance del acto administrativo marco..."
                   placeholderTextColor={THEME.slate400}
                   multiline
-                  numberOfLines={2}
+                  numberOfLines={5}
                   style={{
                     backgroundColor: THEME.white,
                     borderRadius: 8,
                     borderWidth: 1,
                     borderColor: THEME.slate300,
                     color: THEME.slate900,
-                    padding: 9,
-                    fontSize: 12.5,
+                    padding: 12,
+                    fontSize: 13,
+                    lineHeight: 20,
+                    minHeight: 125,
+                    textAlignVertical: 'top',
                   }}
                 />
               </View>
@@ -6680,6 +6696,7 @@ export default function TeletrabajoScreen() {
                   </Text>
                 )}
               </View>
+              </ScrollView>
 
               <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
                 <Pressable
