@@ -2489,7 +2489,7 @@ export default function NuevaValidacionScreen() {
 
                       {/* ACORDEÓN DE VERIFICACIÓN FORMAL NORMATIVA (Dcto 1083/2015) */}
                       {(() => {
-                        const tKey = fa.id || `TIT-${idx}`;
+                        const tKey = `tit-row-${idx}`;
                         const abierta = Boolean(expansionesTitulos[tKey]);
                         const esBachiller = fa.tipo === 'BACHILLER' || (fa.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
                         const esTarjeta = !esBachiller && (fa.tipo === 'TARJETA_PROFESIONAL' || (fa.titulo_obtenido || '').toUpperCase().includes('TARJETA') || Boolean(fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA'));
@@ -2805,7 +2805,7 @@ export default function NuevaValidacionScreen() {
 
                   {/* ACORDEÓN DE 3 GRUPOS (PREDETERMINADO CONTRAÍDOS) */}
                   {(() => {
-                    const certKey = c.id_certificado || `cert_${i}`;
+                    const certKey = `exp-row-${i}`;
                     const expandidoFormal = Boolean(expansionesGrupos[certKey]?.formal);
                     const expandidoPrevio = Boolean(expansionesGrupos[certKey]?.previo);
                     const expandidoFunciones = Boolean(expansionesGrupos[certKey]?.funciones);

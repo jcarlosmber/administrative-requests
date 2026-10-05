@@ -207,9 +207,14 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
   const infoCorte = obtenerFechaCorteProfesional(formacionAcademica);
 
   // Paso 1: Parsear fechas, auditar corte profesional y calcular periodos individuales
+  const usedCertIds = new Set();
   for (let i = 0; i < certificados.length; i++) {
     const cert = { ...certificados[i] };
-    const certId = cert.id_certificado || `CERT-${i + 1}`;
+    let certId = cert.id_certificado || `CERT-${i + 1}`;
+    if (usedCertIds.has(certId)) {
+      certId = `CERT-${i + 1}`;
+    }
+    usedCertIds.add(certId);
     cert.id_certificado = certId;
     cert.observaciones = cert.observaciones || [];
 

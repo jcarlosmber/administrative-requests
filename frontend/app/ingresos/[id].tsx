@@ -2485,7 +2485,7 @@ export default function DetalleValidacionScreen() {
 
                   {/* Filas de Formación Académica */}
                   {titulos.map((t, idx) => {
-                    const titKey = t.id || `tit-${idx}`;
+                    const titKey = `tit-row-${idx}`;
                     const estaExpandido = Boolean(titulosExpandidos[titKey]);
                     const esBach = t.tipo === 'BACHILLER' || (t.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
                     const checksTitulo = obtenerChecksTitulo(t, candidato?.nombre, candidato?.documento);
@@ -2969,7 +2969,7 @@ export default function DetalleValidacionScreen() {
 
                   {/* Filas Interactivas con Expansión Completa */}
                   {certificados.map((c, idx) => {
-                    const certKey = c.id_certificado || `cert-${idx}`;
+                    const certKey = `exp-cert-row-${idx}`;
                     const estaExpandido = Boolean(certificadosExpandidos[certKey]);
                     const mesesVal = c.tiempo_valido?.meses_totales ?? c.tiempo_certificado?.meses_totales_aproximados ?? 0;
                     const esRel = c.clasificacion_experiencia === 'RELACIONADA';
@@ -4293,7 +4293,7 @@ export default function DetalleValidacionScreen() {
 
                   {/* ACORDEÓN DE VERIFICACIÓN FORMAL NORMATIVA (Dcto 1083/2015) */}
                   {(() => {
-                    const tKey = fa.id || `TIT-${idx}`;
+                    const tKey = `aud-tit-row-${idx}`;
                     const abierta = Boolean(expansionesTitulos[tKey]);
                     const esBachiller = fa.tipo === 'BACHILLER' || (fa.titulo_obtenido || '').toUpperCase().includes('BACHILLER');
                     const esTarjeta = !esBachiller && (fa.tipo === 'TARJETA_PROFESIONAL' || (fa.titulo_obtenido || '').toUpperCase().includes('TARJETA') || Boolean(fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA'));
@@ -4673,7 +4673,7 @@ export default function DetalleValidacionScreen() {
 
                 {/* ACORDEÓN DE 3 GRUPOS (PREDETERMINADO CONTRAÍDOS) */}
                 {(() => {
-                  const certKey = c.id_certificado || `cert_${index}`;
+                  const certKey = `aud-cert-row-${index}`;
                   const expandidoFormal = Boolean(expansionesGrupos[certKey]?.formal);
                   const expandidoPrevio = Boolean(expansionesGrupos[certKey]?.previo);
                   const expandidoFunciones = Boolean(expansionesGrupos[certKey]?.funciones);
