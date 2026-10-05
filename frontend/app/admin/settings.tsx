@@ -202,14 +202,14 @@ export default function AdminSettings() {
   const [gitResultMessage, setGitResultMessage] = useState('');
 
   // Estados para Terminal Interactiva en Settings
-  const [terminalInteractiveCommand, setTerminalInteractiveCommand] = useState('npm run seed:teletrabajo');
+  const [terminalInteractiveCommand, setTerminalInteractiveCommand] = useState('git status -s');
   const [terminalInteractiveExecuting, setTerminalInteractiveExecuting] = useState(false);
   const [terminalInteractiveLogs, setTerminalInteractiveLogs] = useState<
     Array<{ tipo: 'info' | 'cmd' | 'stdout' | 'stderr' | 'success' | 'error'; texto: string; timestamp: string }>
   >([
     {
       tipo: 'info',
-      texto: 'SASGE Terminal Engine conectado (servidor 10.54.80.209).\nComando preparado: npm run seed:teletrabajo\nPresiona "▶ Ejecutar Comando" para migrar las Resoluciones 117, 201, 366 y 409.',
+      texto: 'SASGE Terminal Engine conectado (servidor 10.54.80.209).\nTerminal lista para ejecutar comandos autorizados de diagnóstico y control de versiones.',
       timestamp: new Date().toLocaleTimeString('es-CO'),
     }
   ]);
@@ -2877,38 +2877,6 @@ export default function AdminSettings() {
                         </View>
                         <Ionicons name="chevron-forward" size={18} color={COLORS.accent} />
                       </TouchableOpacity>
-
-                      {/* Botón 5: Semilla Teletrabajo (npm run seed:teletrabajo) */}
-                      <TouchableOpacity
-                        style={[
-                          styles.gitActionBtn,
-                          {
-                            backgroundColor: '#0B132B',
-                            borderWidth: 1.5,
-                            borderColor: '#38BDF8',
-                          }
-                        ]}
-                        onPress={() => {
-                          setTerminalInteractiveCommand('npm run seed:teletrabajo');
-                          triggerGitAction('seed_teletrabajo');
-                        }}
-                        disabled={gitExecuting || terminalInteractiveExecuting}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons name="terminal" size={20} color="#38BDF8" />
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={[styles.gitActionBtnTitle, { color: '#F8FAFC' }]}>Semilla Teletrabajo</Text>
-                            <View style={{ backgroundColor: '#0284C7', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
-                              <Text style={{ color: '#FFFFFF', fontSize: 9.5, fontWeight: '800' }}>npm run seed:teletrabajo</Text>
-                            </View>
-                          </View>
-                          <Text style={[styles.gitActionBtnDesc, { color: '#94A3B8' }]}>
-                            Migración oficial Resoluciones 117, 201, 366 y 409
-                          </Text>
-                        </View>
-                        <Ionicons name="play-circle" size={20} color="#38BDF8" />
-                      </TouchableOpacity>
                     </View>
 
                     {/* ========================================================= */}
@@ -3038,7 +3006,7 @@ export default function AdminSettings() {
                           <TextInput
                             value={terminalInteractiveCommand}
                             onChangeText={setTerminalInteractiveCommand}
-                            placeholder="npm run seed:teletrabajo"
+                            placeholder="git status -s"
                             placeholderTextColor="#475569"
                             editable={!terminalInteractiveExecuting && !gitExecuting}
                             style={{
@@ -3110,8 +3078,8 @@ export default function AdminSettings() {
                         </Text>
                         <TouchableOpacity
                           onPress={() => {
-                            setTerminalInteractiveCommand('npm run seed:teletrabajo');
-                            runTerminalCommand('npm run seed:teletrabajo');
+                            setTerminalInteractiveCommand('git status -s');
+                            runTerminalCommand('git status -s');
                           }}
                           disabled={terminalInteractiveExecuting || gitExecuting}
                           activeOpacity={0.7}
@@ -3125,14 +3093,14 @@ export default function AdminSettings() {
                           }}
                         >
                           <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: 'monospace', fontWeight: '700' }}>
-                            npm run seed:teletrabajo
+                            git status -s
                           </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
                           onPress={() => {
-                            setTerminalInteractiveCommand('git status -s');
-                            runTerminalCommand('git status -s');
+                            setTerminalInteractiveCommand('git log -5 --oneline');
+                            runTerminalCommand('git log -5 --oneline');
                           }}
                           disabled={terminalInteractiveExecuting || gitExecuting}
                           activeOpacity={0.7}
@@ -3146,7 +3114,70 @@ export default function AdminSettings() {
                           }}
                         >
                           <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: 'monospace' }}>
-                            git status -s
+                            git log -5 --oneline
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('pm2 list');
+                            runTerminalCommand('pm2 list');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#10B981',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#34D399', fontSize: 11, fontFamily: 'monospace', fontWeight: '600' }}>
+                            pm2 list
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('git branch -a');
+                            runTerminalCommand('git branch -a');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#475569',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: 'monospace' }}>
+                            git branch -a
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => {
+                            setTerminalInteractiveCommand('node -v');
+                            runTerminalCommand('node -v');
+                          }}
+                          disabled={terminalInteractiveExecuting || gitExecuting}
+                          activeOpacity={0.7}
+                          style={{
+                            backgroundColor: '#1E293B',
+                            borderColor: '#F59E0B',
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ color: '#FBBF24', fontSize: 11, fontFamily: 'monospace' }}>
+                            node -v
                           </Text>
                         </TouchableOpacity>
                       </View>

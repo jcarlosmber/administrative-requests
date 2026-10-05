@@ -865,11 +865,13 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
       const { command } = req.body;
       const cmd = (command || '').trim();
       const ALLOWED = [
-        'npm run seed:teletrabajo',
-        'node migracion_resoluciones_409_366.js',
         'git status -s',
         'git log -5 --oneline',
-        'pm2 list'
+        'pm2 list',
+        'git branch -a',
+        'node -v',
+        'npm run seed:teletrabajo',
+        'node migracion_resoluciones_409_366.js'
       ];
       if (!ALLOWED.includes(cmd)) {
         return res.status(400).json({
