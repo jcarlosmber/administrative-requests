@@ -58,6 +58,9 @@ export const nominaService = {
     dependencia?: string;
     cargo?: string;
     id_sieap?: string;
+    codigo_grado?: string;
+    situacion?: string;
+    id_perno?: string;
     solo_encargo?: boolean;
   }): Promise<PlazaNomina[]> {
     try {
@@ -68,6 +71,9 @@ export const nominaService = {
       if (filtros?.dependencia && filtros.dependencia !== 'TODAS') searchParams.append('dependencia', filtros.dependencia);
       if (filtros?.cargo && filtros.cargo !== 'TODOS') searchParams.append('cargo', filtros.cargo);
       if (filtros?.id_sieap && filtros.id_sieap !== 'TODOS') searchParams.append('id_sieap', filtros.id_sieap);
+      if (filtros?.codigo_grado) searchParams.append('codigo_grado', filtros.codigo_grado);
+      if (filtros?.situacion) searchParams.append('situacion', filtros.situacion);
+      if (filtros?.id_perno) searchParams.append('id_perno', filtros.id_perno);
       if (filtros?.solo_encargo) searchParams.append('solo_encargo', 'true');
 
       const url = `${API_URL}/api/nomina/plazas?${searchParams.toString()}`;
@@ -125,6 +131,27 @@ export const nominaService = {
     if (filtros?.id_sieap && filtros.id_sieap.trim()) {
       const sieapQuery = filtros.id_sieap.trim();
       result = result.filter((p) => p.id_sideap && p.id_sideap.toString() === sieapQuery);
+    }
+
+    if (filtros?.codigo_grado && filtros.codigo_grado.trim()) {
+      result = result.filter(
+        (p) => `${p.codigo || ''}-${p.grado || ''}` === filtros.codigo_grado
+      );
+    }
+
+    if (filtros?.situacion && filtros.situacion.trim()) {
+      const sitQuery = filtros.situacion.trim().toLowerCase();
+      result = result.filter(
+        (p) =>
+          (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(sitQuery)) ||
+          (p.situacion_titular && p.situacion_titular.toLowerCase().includes(sitQuery)) ||
+          (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(sitQuery))
+      );
+    }
+
+    if (filtros?.id_perno && filtros.id_perno.trim()) {
+      const pernoQuery = filtros.id_perno.trim();
+      result = result.filter((p) => p.id_perno && p.id_perno.toString() === pernoQuery);
     }
 
     if (filtros?.solo_encargo) {
