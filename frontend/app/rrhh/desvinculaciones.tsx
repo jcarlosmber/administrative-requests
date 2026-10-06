@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Modal,
   Platform,
@@ -15,23 +15,174 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import mockPlazasData from '../../lib/plantaMockData.json';
 
-const COLORS = {
+// === SISTEMA DE TEMAS: VERSIÓN OSCURA (ACTUAL) Y VERSIÓN CLARA (ACCESIBILIDAD) ===
+
+const DARK_THEME = {
+  isDark: true,
   primary: '#BE1F2D',
   primaryHover: '#9B1623',
   darkBg: '#0B1724',
   cardBg: '#13283B',
   cardBgHover: '#1B354D',
   cardBgLight: '#18324A',
+  cardSecondaryBg: '#0C1B2A',
   border: 'rgba(255, 255, 255, 0.12)',
   borderLight: 'rgba(255, 255, 255, 0.08)',
   textLight: '#F8FAFC',
   textMuted: '#94A3B8',
+  textSecondary: '#CBD5E1',
+  textTitle: '#FFFFFF',
   blueAccent: '#38BDF8',
   amberAccent: '#F59E0B',
   purpleAccent: '#A78BFA',
   purpleDark: '#7C3AED',
   emeraldAccent: '#10B981',
   danger: '#EF4444',
+  headerBg: '#0F2133',
+  tabBarBg: '#0C1B2A',
+  tabActiveBorder: '#A78BFA',
+  tabActiveText: '#FFFFFF',
+  tabInactiveText: '#94A3B8',
+  badgePurpleBg: 'rgba(167, 139, 250, 0.16)',
+  badgePurpleText: '#C4B5FD',
+  badgePurpleBorder: '#7C3AED',
+  chipActiveBg: '#7C3AED',
+  chipActiveText: '#FFFFFF',
+  chipInactiveBg: 'rgba(255, 255, 255, 0.05)',
+  chipInactiveText: '#94A3B8',
+  chipInactiveBorder: 'rgba(255, 255, 255, 0.12)',
+  inputBg: '#0C1B2A',
+  inputText: '#FFFFFF',
+  inputBorder: 'rgba(255, 255, 255, 0.12)',
+  inputPlaceholder: '#94A3B8',
+  bannerBg: 'rgba(245, 158, 11, 0.1)',
+  bannerBorder: 'rgba(245, 158, 11, 0.35)',
+  bannerIconBg: 'rgba(245, 158, 11, 0.2)',
+  bannerTitle: '#FCD34D',
+  bannerText: '#CBD5E1',
+  bannerButtonBg: 'rgba(255, 255, 255, 0.08)',
+  bannerButtonText: '#FFFFFF',
+  cardBorderSimoOk: 'rgba(16, 185, 129, 0.35)',
+  cardBorderSimoPending: 'rgba(245, 158, 11, 0.45)',
+  checkSimoOkBg: 'rgba(16, 185, 129, 0.18)',
+  checkSimoOkBorder: 'rgba(16, 185, 129, 0.5)',
+  checkSimoOkText: '#34D399',
+  checkSimoPendingBg: 'rgba(245, 158, 11, 0.18)',
+  checkSimoPendingBorder: 'rgba(245, 158, 11, 0.5)',
+  checkSimoPendingText: '#FCD34D',
+  checkBnleOkBg: 'rgba(16, 185, 129, 0.15)',
+  checkBnleOkBorder: 'rgba(16, 185, 129, 0.45)',
+  checkBnlePendingBg: 'rgba(255, 255, 255, 0.05)',
+  checkBnlePendingBorder: 'rgba(255, 255, 255, 0.12)',
+  checkPazSalvoOkBg: 'rgba(16, 185, 129, 0.12)',
+  checkPazSalvoOkBorder: 'rgba(16, 185, 129, 0.4)',
+  checkPazSalvoPendingBg: 'rgba(255, 255, 255, 0.05)',
+  checkPazSalvoPendingBorder: 'rgba(255, 255, 255, 0.12)',
+  checkNominaBg: 'rgba(16, 185, 129, 0.12)',
+  checkNominaBorder: 'rgba(16, 185, 129, 0.4)',
+  btnExpedienteBg: 'rgba(124, 58, 237, 0.2)',
+  btnExpedienteBorder: '#7C3AED',
+  btnExpedienteText: '#C4B5FD',
+  modalOverlay: 'rgba(0, 0, 0, 0.75)',
+  modalCardBg: '#112233',
+  modalHeaderBg: '#0F2133',
+  modalFooterBg: '#0F2133',
+  modalCloseColor: '#FFFFFF',
+  modalSubtitle: '#A78BFA',
+  modalSelectBg: '#0C1B2A',
+  modalSelectActiveBg: 'rgba(124, 58, 237, 0.25)',
+  modalSelectActiveText: '#C4B5FD',
+  modalItemBorder: 'rgba(255, 255, 255, 0.05)',
+  btnCancelBg: 'rgba(255, 255, 255, 0.08)',
+  btnCancelText: '#FFFFFF',
+  btnPrimaryBg: '#7C3AED',
+  btnPrimaryHover: '#6D28D9',
+  btnPrimaryText: '#FFFFFF',
+  detailBoxBg: '#0B1724',
+};
+
+const LIGHT_THEME = {
+  isDark: false,
+  primary: '#BE1F2D',
+  primaryHover: '#9B1623',
+  darkBg: '#F8FAFC',
+  cardBg: '#FFFFFF',
+  cardBgHover: '#F8FAFC',
+  cardBgLight: '#F1F5F9',
+  cardSecondaryBg: '#F8FAFC',
+  border: '#E2E8F0',
+  borderLight: '#F1F5F9',
+  textLight: '#0F172A',
+  textMuted: '#64748B',
+  textSecondary: '#475569',
+  textTitle: '#0F172A',
+  blueAccent: '#0284C7',
+  amberAccent: '#D97706',
+  purpleAccent: '#7C3AED',
+  purpleDark: '#6D28D9',
+  emeraldAccent: '#059669',
+  danger: '#DC2626',
+  headerBg: '#FFFFFF',
+  tabBarBg: '#FFFFFF',
+  tabActiveBorder: '#7C3AED',
+  tabActiveText: '#6D28D9',
+  tabInactiveText: '#64748B',
+  badgePurpleBg: '#F3E8FF',
+  badgePurpleText: '#6D28D9',
+  badgePurpleBorder: '#DDD6FE',
+  chipActiveBg: '#7C3AED',
+  chipActiveText: '#FFFFFF',
+  chipInactiveBg: '#F1F5F9',
+  chipInactiveText: '#64748B',
+  chipInactiveBorder: '#CBD5E1',
+  inputBg: '#FFFFFF',
+  inputText: '#0F172A',
+  inputBorder: '#CBD5E1',
+  inputPlaceholder: '#94A3B8',
+  bannerBg: '#FFFBEB',
+  bannerBorder: '#FCD34D',
+  bannerIconBg: '#FEF3C7',
+  bannerTitle: '#B45309',
+  bannerText: '#78350F',
+  bannerButtonBg: '#FEF3C7',
+  bannerButtonText: '#92400E',
+  cardBorderSimoOk: '#A7F3D0',
+  cardBorderSimoPending: '#FDE68A',
+  checkSimoOkBg: '#ECFDF5',
+  checkSimoOkBorder: '#A7F3D0',
+  checkSimoOkText: '#065F46',
+  checkSimoPendingBg: '#FFFBEB',
+  checkSimoPendingBorder: '#FDE68A',
+  checkSimoPendingText: '#92400E',
+  checkBnleOkBg: '#ECFDF5',
+  checkBnleOkBorder: '#A7F3D0',
+  checkBnlePendingBg: '#F1F5F9',
+  checkBnlePendingBorder: '#E2E8F0',
+  checkPazSalvoOkBg: '#ECFDF5',
+  checkPazSalvoOkBorder: '#A7F3D0',
+  checkPazSalvoPendingBg: '#F1F5F9',
+  checkPazSalvoPendingBorder: '#E2E8F0',
+  checkNominaBg: '#ECFDF5',
+  checkNominaBorder: '#A7F3D0',
+  btnExpedienteBg: '#F3E8FF',
+  btnExpedienteBorder: '#DDD6FE',
+  btnExpedienteText: '#6D28D9',
+  modalOverlay: 'rgba(15, 23, 42, 0.6)',
+  modalCardBg: '#FFFFFF',
+  modalHeaderBg: '#F8FAFC',
+  modalFooterBg: '#F8FAFC',
+  modalCloseColor: '#475569',
+  modalSubtitle: '#6D28D9',
+  modalSelectBg: '#F8FAFC',
+  modalSelectActiveBg: '#EDE9FE',
+  modalSelectActiveText: '#6D28D9',
+  modalItemBorder: '#E2E8F0',
+  btnCancelBg: '#E2E8F0',
+  btnCancelText: '#334155',
+  btnPrimaryBg: '#7C3AED',
+  btnPrimaryHover: '#6D28D9',
+  btnPrimaryText: '#FFFFFF',
+  detailBoxBg: '#F8FAFC',
 };
 
 // Causales legales de retiro según el artículo 41 de la Ley 909 de 2004
@@ -125,6 +276,71 @@ export default function DesvinculacionesScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
   const isTablet = width >= 640;
+
+  // Estado del tema: 'dark' (versión actual predeterminada) o 'light' (versión clara seleccionable en accesibilidad)
+  const [colorMode, setColorMode] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Inicialización según preferencia guardada o tema actual del documento
+    try {
+      const savedTheme = localStorage.getItem('sasge_color_mode');
+      const docTheme = document.documentElement.getAttribute('data-theme');
+      if (savedTheme === 'light' || docTheme === 'light') {
+        setColorMode('light');
+      } else {
+        setColorMode('dark');
+      }
+    } catch (e) {}
+
+    // 2. Escuchar cambios emitidos por la barra de accesibilidad (AccessibilityToolbar)
+    const handleThemeChange = (e: any) => {
+      const mode = e?.detail;
+      if (mode === 'light') {
+        setColorMode('light');
+      } else if (mode === 'dark' || mode === 'normal' || mode === 'grayscale') {
+        setColorMode('dark');
+      }
+    };
+    window.addEventListener('sasge_color_mode_change', handleThemeChange);
+
+    // 3. MutationObserver para reaccionar a cambios en data-theme
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.attributeName === 'data-theme') {
+          const theme = document.documentElement.getAttribute('data-theme');
+          if (theme === 'light') {
+            setColorMode('light');
+          } else {
+            setColorMode('dark');
+          }
+        }
+      }
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    return () => {
+      window.removeEventListener('sasge_color_mode_change', handleThemeChange);
+      observer.disconnect();
+    };
+  }, []);
+
+  const isDark = colorMode === 'dark';
+  const COLORS = isDark ? DARK_THEME : LIGHT_THEME;
+
+  const alternarTema = () => {
+    const nuevo = isDark ? 'light' : 'dark';
+    setColorMode(nuevo);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sasge_color_mode', nuevo);
+        document.documentElement.setAttribute('data-theme', nuevo);
+        window.dispatchEvent(new CustomEvent('sasge_color_mode_change', { detail: nuevo }));
+      } catch (e) {}
+    }
+  };
 
   // Pestañas del módulo
   const [tabActiva, setTabActiva] = useState<'casos' | 'matriz_normativa' | 'paz_salvo'>('casos');
@@ -273,12 +489,12 @@ export default function DesvinculacionesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.darkBg }}>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <SafeAreaView style={{ flex: 1 }}>
         {/* Cabecera Superior Institucional */}
         <View
           style={{
-            backgroundColor: '#0F2133',
+            backgroundColor: COLORS.headerBg,
             paddingTop: Platform.OS === 'ios' ? 14 : 12,
             paddingBottom: 14,
             paddingHorizontal: isDesktop ? 36 : 18,
@@ -298,7 +514,9 @@ export default function DesvinculacionesScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 6,
-                backgroundColor: pressed ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
+                backgroundColor: pressed
+                  ? (isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0')
+                  : (isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9'),
                 paddingHorizontal: 12,
                 paddingVertical: 8,
                 borderRadius: 8,
@@ -306,8 +524,8 @@ export default function DesvinculacionesScreen() {
                 borderColor: COLORS.border,
               })}
             >
-              <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+              <Ionicons name="arrow-back" size={18} color={COLORS.textTitle} />
+              <Text style={{ color: COLORS.textTitle, fontSize: 13, fontWeight: '700' }}>
                 Módulos RRHH
               </Text>
             </Pressable>
@@ -318,31 +536,31 @@ export default function DesvinculacionesScreen() {
                   width: 44,
                   height: 44,
                   borderRadius: 12,
-                  backgroundColor: 'rgba(167, 139, 250, 0.18)',
+                  backgroundColor: isDark ? 'rgba(167, 139, 250, 0.18)' : '#F3E8FF',
                   borderWidth: 1.5,
-                  borderColor: 'rgba(167, 139, 250, 0.4)',
+                  borderColor: isDark ? 'rgba(167, 139, 250, 0.4)' : '#DDD6FE',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Ionicons name="exit" size={24} color="#A78BFA" />
+                <Ionicons name="exit" size={24} color={COLORS.purpleAccent} />
               </View>
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 }}>
+                  <Text style={{ color: COLORS.textTitle, fontSize: 20, fontWeight: '900', letterSpacing: 0.3 }}>
                     Desvinculaciones y Reportes CNSC
                   </Text>
                   <View
                     style={{
-                      backgroundColor: 'rgba(124, 58, 237, 0.2)',
+                      backgroundColor: COLORS.badgePurpleBg,
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 12,
                       borderWidth: 1,
-                      borderColor: '#7C3AED',
+                      borderColor: COLORS.badgePurpleBorder,
                     }}
                   >
-                    <Text style={{ color: '#C4B5FD', fontSize: 10, fontWeight: '800' }}>
+                    <Text style={{ color: COLORS.badgePurpleText, fontSize: 10, fontWeight: '800' }}>
                       SIMO 4.4 • BNLE
                     </Text>
                   </View>
@@ -356,13 +574,50 @@ export default function DesvinculacionesScreen() {
 
           {/* Botones de acción rápida */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {/* Selector Accesible de Versión Clara / Oscura (Sincronizado con barra de accesibilidad) */}
+            <Pressable
+              onPress={alternarTema}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={isDark ? "Cambiar a versión clara" : "Cambiar a versión oscura"}
+              accessibilityHint="Alterna entre la versión oscura actual y la versión clara institucional"
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 7,
+                backgroundColor: pressed
+                  ? (isDark ? 'rgba(255, 255, 255, 0.16)' : '#E2E8F0')
+                  : (isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'),
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : '#CBD5E1',
+              })}
+            >
+              <Ionicons
+                name={isDark ? 'sunny-outline' : 'moon-outline'}
+                size={17}
+                color={isDark ? '#FCD34D' : '#6D28D9'}
+              />
+              <Text
+                style={{
+                  color: isDark ? '#FFFFFF' : '#1E293B',
+                  fontSize: 12.5,
+                  fontWeight: '700',
+                }}
+              >
+                {isDark ? '☀️ Versión Clara' : '🌙 Versión Oscura'}
+              </Text>
+            </Pressable>
+
             <Pressable
               onPress={() => setModalRegistroVisible(true)}
               style={({ pressed }) => ({
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 8,
-                backgroundColor: pressed ? '#6D28D9' : COLORS.purpleDark,
+                backgroundColor: pressed ? COLORS.btnPrimaryHover : COLORS.btnPrimaryBg,
                 paddingHorizontal: 14,
                 paddingVertical: 9,
                 borderRadius: 8,
@@ -381,7 +636,7 @@ export default function DesvinculacionesScreen() {
         <View
           style={{
             flexDirection: 'row',
-            backgroundColor: '#0C1B2A',
+            backgroundColor: COLORS.tabBarBg,
             borderBottomWidth: 1,
             borderBottomColor: COLORS.border,
             paddingHorizontal: isDesktop ? 36 : 18,
@@ -393,7 +648,7 @@ export default function DesvinculacionesScreen() {
               paddingVertical: 14,
               paddingHorizontal: 16,
               borderBottomWidth: 3,
-              borderBottomColor: tabActiva === 'casos' ? '#A78BFA' : 'transparent',
+              borderBottomColor: tabActiva === 'casos' ? COLORS.tabActiveBorder : 'transparent',
               flexDirection: 'row',
               alignItems: 'center',
               gap: 8,
@@ -402,11 +657,11 @@ export default function DesvinculacionesScreen() {
             <Ionicons
               name="people"
               size={18}
-              color={tabActiva === 'casos' ? '#A78BFA' : COLORS.textMuted}
+              color={tabActiva === 'casos' ? COLORS.tabActiveBorder : COLORS.tabInactiveText}
             />
             <Text
               style={{
-                color: tabActiva === 'casos' ? '#FFFFFF' : COLORS.textMuted,
+                color: tabActiva === 'casos' ? COLORS.tabActiveText : COLORS.tabInactiveText,
                 fontWeight: tabActiva === 'casos' ? '800' : '600',
                 fontSize: 14,
               }}
@@ -421,7 +676,7 @@ export default function DesvinculacionesScreen() {
               paddingVertical: 14,
               paddingHorizontal: 16,
               borderBottomWidth: 3,
-              borderBottomColor: tabActiva === 'matriz_normativa' ? '#A78BFA' : 'transparent',
+              borderBottomColor: tabActiva === 'matriz_normativa' ? COLORS.tabActiveBorder : 'transparent',
               flexDirection: 'row',
               alignItems: 'center',
               gap: 8,
@@ -430,11 +685,11 @@ export default function DesvinculacionesScreen() {
             <Ionicons
               name="book"
               size={18}
-              color={tabActiva === 'matriz_normativa' ? '#A78BFA' : COLORS.textMuted}
+              color={tabActiva === 'matriz_normativa' ? COLORS.tabActiveBorder : COLORS.tabInactiveText}
             />
             <Text
               style={{
-                color: tabActiva === 'matriz_normativa' ? '#FFFFFF' : COLORS.textMuted,
+                color: tabActiva === 'matriz_normativa' ? COLORS.tabActiveText : COLORS.tabInactiveText,
                 fontWeight: tabActiva === 'matriz_normativa' ? '800' : '600',
                 fontSize: 14,
               }}
@@ -449,7 +704,7 @@ export default function DesvinculacionesScreen() {
               paddingVertical: 14,
               paddingHorizontal: 16,
               borderBottomWidth: 3,
-              borderBottomColor: tabActiva === 'paz_salvo' ? '#A78BFA' : 'transparent',
+              borderBottomColor: tabActiva === 'paz_salvo' ? COLORS.tabActiveBorder : 'transparent',
               flexDirection: 'row',
               alignItems: 'center',
               gap: 8,
@@ -458,11 +713,11 @@ export default function DesvinculacionesScreen() {
             <Ionicons
               name="checkmark-done-circle"
               size={18}
-              color={tabActiva === 'paz_salvo' ? '#A78BFA' : COLORS.textMuted}
+              color={tabActiva === 'paz_salvo' ? COLORS.tabActiveBorder : COLORS.tabInactiveText}
             />
             <Text
               style={{
-                color: tabActiva === 'paz_salvo' ? '#FFFFFF' : COLORS.textMuted,
+                color: tabActiva === 'paz_salvo' ? COLORS.tabActiveText : COLORS.tabInactiveText,
                 fontWeight: tabActiva === 'paz_salvo' ? '800' : '600',
                 fontSize: 14,
               }}
@@ -487,9 +742,9 @@ export default function DesvinculacionesScreen() {
             {/* Banner de alerta de plazos legales CNSC */}
             <View
               style={{
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                backgroundColor: COLORS.bannerBg,
                 borderWidth: 1.5,
-                borderColor: 'rgba(245, 158, 11, 0.35)',
+                borderColor: COLORS.bannerBorder,
                 borderRadius: 14,
                 padding: 16,
                 flexDirection: isTablet ? 'row' : 'column',
@@ -504,7 +759,7 @@ export default function DesvinculacionesScreen() {
                     width: 40,
                     height: 40,
                     borderRadius: 10,
-                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    backgroundColor: COLORS.bannerIconBg,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
@@ -512,14 +767,14 @@ export default function DesvinculacionesScreen() {
                   <Ionicons name="time" size={22} color={COLORS.amberAccent} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#FCD34D', fontSize: 13, fontWeight: '800' }}>
+                  <Text style={{ color: COLORS.bannerTitle, fontSize: 13, fontWeight: '800' }}>
                     OBLIGACIÓN LEGAL INMEDIATA: CIRCULAR EXTERNA 011 DE 2021 (CNSC)
                   </Text>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, marginTop: 2, lineHeight: 18 }}>
+                  <Text style={{ color: COLORS.bannerText, fontSize: 12, marginTop: 2, lineHeight: 18 }}>
                     Toda vacancia definitiva generada por desvinculación debe ser reportada en el aplicativo{' '}
-                    <Text style={{ color: '#FFFFFF', fontWeight: '800' }}>SIMO 4.4</Text> dentro de los{' '}
-                    <Text style={{ color: '#FCD34D', fontWeight: '800' }}>cinco (5) días hábiles siguientes</Text>{' '}
-                    y consultar el Banco Nacional de Listas de Elegibles (<Text style={{ color: '#FFFFFF', fontWeight: '800' }}>BNLE</Text>).
+                    <Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: '800' }}>SIMO 4.4</Text> dentro de los{' '}
+                    <Text style={{ color: COLORS.bannerTitle, fontWeight: '800' }}>cinco (5) días hábiles siguientes</Text>{' '}
+                    y consultar el Banco Nacional de Listas de Elegibles (<Text style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: '800' }}>BNLE</Text>).
                   </Text>
                 </View>
               </View>
@@ -527,15 +782,15 @@ export default function DesvinculacionesScreen() {
               <Pressable
                 onPress={() => setTabActiva('matriz_normativa')}
                 style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  backgroundColor: COLORS.bannerButtonBg,
                   paddingHorizontal: 12,
                   paddingVertical: 7,
                   borderRadius: 8,
                   borderWidth: 1,
-                  borderColor: COLORS.border,
+                  borderColor: COLORS.bannerBorder,
                 }}
               >
-                <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                <Text style={{ color: COLORS.bannerButtonText, fontSize: 12, fontWeight: '700' }}>
                   Ver Normatividad
                 </Text>
               </Pressable>
@@ -553,6 +808,7 @@ export default function DesvinculacionesScreen() {
                 justifyContent: 'space-between',
                 alignItems: isTablet ? 'center' : 'stretch',
                 gap: 12,
+                boxShadow: isDark ? undefined : '0 1px 3px rgba(0,0,0,0.05)',
               }}
             >
               <View
@@ -560,7 +816,7 @@ export default function DesvinculacionesScreen() {
                   flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: '#0C1B2A',
+                  backgroundColor: COLORS.inputBg,
                   borderRadius: 8,
                   paddingHorizontal: 12,
                   borderWidth: 1,
@@ -572,10 +828,10 @@ export default function DesvinculacionesScreen() {
                   value={busqueda}
                   onChangeText={setBusqueda}
                   placeholder="Buscar por funcionario, cédula, cargo o dependencia..."
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.inputPlaceholder}
                   style={{
                     flex: 1,
-                    color: '#FFFFFF',
+                    color: COLORS.inputText,
                     paddingVertical: 9,
                     paddingHorizontal: 8,
                     fontSize: 13,
@@ -592,17 +848,17 @@ export default function DesvinculacionesScreen() {
                       key={filtro}
                       onPress={() => setFiltroEstadoSimo(filtro)}
                       style={{
-                        backgroundColor: sel ? '#7C3AED' : 'rgba(255, 255, 255, 0.05)',
+                        backgroundColor: sel ? COLORS.chipActiveBg : COLORS.chipInactiveBg,
                         paddingHorizontal: 10,
                         paddingVertical: 5,
                         borderRadius: 6,
                         borderWidth: 1,
-                        borderColor: sel ? '#7C3AED' : COLORS.border,
+                        borderColor: sel ? COLORS.chipActiveBg : COLORS.chipInactiveBorder,
                       }}
                     >
                       <Text
                         style={{
-                          color: sel ? '#FFFFFF' : COLORS.textMuted,
+                          color: sel ? COLORS.chipActiveText : COLORS.chipInactiveText,
                           fontSize: 11,
                           fontWeight: sel ? '800' : '600',
                         }}
@@ -625,10 +881,11 @@ export default function DesvinculacionesScreen() {
                   alignItems: 'center',
                   borderWidth: 1,
                   borderColor: COLORS.border,
+                  boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
                 }}
               >
                 <Ionicons name="document-text-outline" size={48} color={COLORS.textMuted} />
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginTop: 12 }}>
+                <Text style={{ color: COLORS.textTitle, fontSize: 16, fontWeight: '700', marginTop: 12 }}>
                   No se encontraron casos de desvinculación
                 </Text>
                 <Text style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 4 }}>
@@ -645,9 +902,10 @@ export default function DesvinculacionesScreen() {
                         backgroundColor: COLORS.cardBg,
                         borderRadius: 14,
                         borderWidth: 1,
-                        borderColor: caso.reportado_simo ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.45)',
+                        borderColor: caso.reportado_simo ? COLORS.cardBorderSimoOk : COLORS.cardBorderSimoPending,
                         padding: 18,
                         gap: 14,
+                        boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
                       }}
                     >
                       {/* Cabecera del caso */}
@@ -664,93 +922,92 @@ export default function DesvinculacionesScreen() {
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <View
                               style={{
-                                backgroundColor: 'rgba(167, 139, 250, 0.16)',
+                                backgroundColor: COLORS.badgePurpleBg,
                                 paddingHorizontal: 8,
                                 paddingVertical: 2,
                                 borderRadius: 6,
                               }}
                             >
-                              <Text style={{ color: '#C4B5FD', fontSize: 11, fontWeight: '800' }}>
+                              <Text style={{ color: COLORS.badgePurpleText, fontSize: 11, fontWeight: '800' }}>
                                 CASO {caso.id} • PLAZA #{caso.id_plaza}
                               </Text>
                             </View>
                             <Text style={{ color: COLORS.textMuted, fontSize: 12 }}>
-                              Retiro efectivo: <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{caso.fecha_efectiva_retiro}</Text>
+                              Retiro efectivo: <Text style={{ color: COLORS.textTitle, fontWeight: '700' }}>{caso.fecha_efectiva_retiro}</Text>
                             </Text>
                           </View>
-                          <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800', marginTop: 4 }}>
+
+                          <Text style={{ color: COLORS.textTitle, fontSize: 16, fontWeight: '800', marginTop: 4 }}>
                             {caso.servidor_nombre}
                           </Text>
                           <Text style={{ color: COLORS.textMuted, fontSize: 12 }}>
-                            C.C. {caso.servidor_cedula} • {caso.cargo} ({caso.codigo}-{caso.grado})
+                            C.C. {caso.servidor_cedula}
                           </Text>
-                          <Text style={{ color: '#93C5FD', fontSize: 12 }}>
+                        </View>
+
+                        <View style={{ alignItems: isTablet ? 'flex-end' : 'flex-start', gap: 2 }}>
+                          <Text style={{ color: isDark ? '#E2E8F0' : '#1E293B', fontSize: 13, fontWeight: '700' }}>
+                            {caso.cargo}
+                          </Text>
+                          <Text style={{ color: COLORS.textMuted, fontSize: 12 }}>
+                            Cód. {caso.codigo} - Grado {caso.grado}
+                          </Text>
+                          <Text style={{ color: COLORS.textSecondary, fontSize: 12 }}>
                             {caso.dependencia}
                           </Text>
                         </View>
+                      </View>
 
-                        {/* Estado ante SIMO 4.4 */}
+                      {/* Detalles del retiro */}
+                      <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 12 }}>
                         <View
                           style={{
-                            backgroundColor: caso.reportado_simo
-                              ? 'rgba(16, 185, 129, 0.16)'
-                              : 'rgba(245, 158, 11, 0.16)',
-                            borderWidth: 1,
-                            borderColor: caso.reportado_simo ? '#10B981' : '#F59E0B',
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
+                            flex: 1,
+                            backgroundColor: COLORS.cardSecondaryBg,
+                            padding: 10,
                             borderRadius: 8,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            gap: 3,
                           }}
                         >
-                          <Ionicons
-                            name={caso.reportado_simo ? 'checkmark-circle' : 'alert-circle'}
-                            size={16}
-                            color={caso.reportado_simo ? '#10B981' : '#F59E0B'}
-                          />
-                          <Text
-                            style={{
-                              color: caso.reportado_simo ? '#34D399' : '#FCD34D',
-                              fontSize: 11.5,
-                              fontWeight: '800',
-                            }}
-                          >
-                            {caso.reportado_simo ? 'REPORTADO EN SIMO 4.4' : 'PENDIENTE SIMO 4.4 (5 DÍAS)'}
+                          <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
+                            CAUSAL LEGAL DE RETIRO:
+                          </Text>
+                          <Text style={{ color: COLORS.textTitle, fontSize: 12.5, fontWeight: '600' }}>
+                            {caso.causal_retiro}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={{
+                            flex: 1,
+                            backgroundColor: COLORS.cardSecondaryBg,
+                            padding: 10,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: COLORS.border,
+                            gap: 3,
+                          }}
+                        >
+                          <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
+                            ACTO ADMINISTRATIVO:
+                          </Text>
+                          <Text style={{ color: COLORS.textTitle, fontSize: 12.5, fontWeight: '600' }}>
+                            {caso.acto_administrativo} ({caso.fecha_acto})
                           </Text>
                         </View>
                       </View>
 
-                      {/* Causal y Acto Administrativo */}
-                      <View
-                        style={{
-                          backgroundColor: '#0C1B2A',
-                          borderRadius: 8,
-                          padding: 12,
-                          borderLeftWidth: 3,
-                          borderLeftColor: '#A78BFA',
-                          gap: 4,
-                        }}
-                      >
-                        <Text style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: '700' }}>
-                          CAUSAL DE RETIRO & ACTO ADMINISTRATIVO:
-                        </Text>
-                        <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '700' }}>
-                          {caso.causal_retiro}
-                        </Text>
-                        <Text style={{ color: '#CBD5E1', fontSize: 12 }}>
-                          Acto: {caso.acto_administrativo} • Fecha Expedición: {caso.fecha_acto}
-                        </Text>
-                      </View>
-
-                      {/* Checklist de Trámites Obligatorios (SIMO, BNLE, Paz y Salvo, Nómina) */}
+                      {/* Checklist Legal y Estado ante Entidades de Control */}
                       <View
                         style={{
                           flexDirection: 'row',
                           flexWrap: 'wrap',
-                          gap: 10,
+                          gap: 8,
                           paddingTop: 4,
+                          borderTopWidth: 1,
+                          borderTopColor: COLORS.border,
                         }}
                       >
                         {/* Check 1: SIMO 4.4 */}
@@ -760,45 +1017,45 @@ export default function DesvinculacionesScreen() {
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
-                            backgroundColor: caso.reportado_simo ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                            backgroundColor: caso.reportado_simo ? COLORS.checkSimoOkBg : COLORS.checkSimoPendingBg,
                             paddingHorizontal: 10,
                             paddingVertical: 6,
                             borderRadius: 6,
                             borderWidth: 1,
-                            borderColor: caso.reportado_simo ? 'rgba(16, 185, 129, 0.4)' : COLORS.border,
+                            borderColor: caso.reportado_simo ? COLORS.checkSimoOkBorder : COLORS.checkSimoPendingBorder,
                           }}
                         >
                           <Ionicons
-                            name={caso.reportado_simo ? 'checkbox' : 'square-outline'}
+                            name={caso.reportado_simo ? 'checkmark-circle' : 'alert-circle'}
                             size={16}
-                            color={caso.reportado_simo ? '#10B981' : COLORS.textMuted}
+                            color={caso.reportado_simo ? COLORS.emeraldAccent : COLORS.amberAccent}
                           />
-                          <Text style={{ color: caso.reportado_simo ? '#FFFFFF' : COLORS.textMuted, fontSize: 11.5, fontWeight: '700' }}>
-                            1. SIMO 4.4 Vacante
+                          <Text style={{ color: caso.reportado_simo ? COLORS.checkSimoOkText : COLORS.checkSimoPendingText, fontSize: 11.5, fontWeight: '700' }}>
+                            {caso.reportado_simo ? '1. SIMO 4.4 Reportado' : '1. SIMO 4.4 Pendiente'}
                           </Text>
                         </Pressable>
 
-                        {/* Check 2: BNLE Listas Elegibles */}
+                        {/* Check 2: BNLE */}
                         <Pressable
                           onPress={() => alternarCheckBnle(caso.id)}
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
-                            backgroundColor: caso.consultado_bnle ? 'rgba(56, 189, 248, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                            backgroundColor: caso.consultado_bnle ? COLORS.checkBnleOkBg : COLORS.checkBnlePendingBg,
                             paddingHorizontal: 10,
                             paddingVertical: 6,
                             borderRadius: 6,
                             borderWidth: 1,
-                            borderColor: caso.consultado_bnle ? 'rgba(56, 189, 248, 0.4)' : COLORS.border,
+                            borderColor: caso.consultado_bnle ? COLORS.checkBnleOkBorder : COLORS.checkBnlePendingBorder,
                           }}
                         >
                           <Ionicons
-                            name={caso.consultado_bnle ? 'checkbox' : 'square-outline'}
+                            name={caso.consultado_bnle ? 'checkmark-circle' : 'time-outline'}
                             size={16}
-                            color={caso.consultado_bnle ? '#38BDF8' : COLORS.textMuted}
+                            color={caso.consultado_bnle ? COLORS.emeraldAccent : COLORS.textMuted}
                           />
-                          <Text style={{ color: caso.consultado_bnle ? '#FFFFFF' : COLORS.textMuted, fontSize: 11.5, fontWeight: '700' }}>
+                          <Text style={{ color: caso.consultado_bnle ? (isDark ? '#FFFFFF' : '#065F46') : COLORS.textMuted, fontSize: 11.5, fontWeight: '700' }}>
                             2. BNLE Consulta Lista
                           </Text>
                         </Pressable>
@@ -809,20 +1066,20 @@ export default function DesvinculacionesScreen() {
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
-                            backgroundColor: caso.paz_y_salvo_completo ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                            backgroundColor: caso.paz_y_salvo_completo ? COLORS.checkPazSalvoOkBg : COLORS.checkPazSalvoPendingBg,
                             paddingHorizontal: 10,
                             paddingVertical: 6,
                             borderRadius: 6,
                             borderWidth: 1,
-                            borderColor: caso.paz_y_salvo_completo ? 'rgba(16, 185, 129, 0.4)' : COLORS.border,
+                            borderColor: caso.paz_y_salvo_completo ? COLORS.checkPazSalvoOkBorder : COLORS.checkPazSalvoPendingBorder,
                           }}
                         >
                           <Ionicons
                             name={caso.paz_y_salvo_completo ? 'checkmark-circle' : 'time-outline'}
                             size={16}
-                            color={caso.paz_y_salvo_completo ? '#10B981' : COLORS.amberAccent}
+                            color={caso.paz_y_salvo_completo ? COLORS.emeraldAccent : COLORS.amberAccent}
                           />
-                          <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                          <Text style={{ color: caso.paz_y_salvo_completo ? (isDark ? '#FFFFFF' : '#065F46') : (isDark ? '#FFFFFF' : '#92400E'), fontSize: 11.5, fontWeight: '700' }}>
                             3. Paz y Salvo (TIC/Almacén/TH)
                           </Text>
                         </View>
@@ -833,16 +1090,16 @@ export default function DesvinculacionesScreen() {
                             flexDirection: 'row',
                             alignItems: 'center',
                             gap: 6,
-                            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                            backgroundColor: COLORS.checkNominaBg,
                             paddingHorizontal: 10,
                             paddingVertical: 6,
                             borderRadius: 6,
                             borderWidth: 1,
-                            borderColor: 'rgba(16, 185, 129, 0.4)',
+                            borderColor: COLORS.checkNominaBorder,
                           }}
                         >
-                          <Ionicons name="cash-outline" size={16} color="#10B981" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                          <Ionicons name="cash-outline" size={16} color={COLORS.emeraldAccent} />
+                          <Text style={{ color: isDark ? '#FFFFFF' : '#065F46', fontSize: 11.5, fontWeight: '700' }}>
                             4. Nómina Notificada
                           </Text>
                         </View>
@@ -853,9 +1110,9 @@ export default function DesvinculacionesScreen() {
                         <Pressable
                           onPress={() => setCasoDetalle(caso)}
                           style={({ pressed }) => ({
-                            backgroundColor: pressed ? '#6D28D9' : 'rgba(124, 58, 237, 0.2)',
+                            backgroundColor: pressed ? COLORS.btnPrimaryHover : COLORS.btnExpedienteBg,
                             borderWidth: 1,
-                            borderColor: '#7C3AED',
+                            borderColor: COLORS.btnExpedienteBorder,
                             paddingHorizontal: 14,
                             paddingVertical: 7,
                             borderRadius: 8,
@@ -864,8 +1121,8 @@ export default function DesvinculacionesScreen() {
                             gap: 6,
                           })}
                         >
-                          <Ionicons name="newspaper-outline" size={15} color="#C4B5FD" />
-                          <Text style={{ color: '#C4B5FD', fontSize: 12, fontWeight: '800' }}>
+                          <Ionicons name="newspaper-outline" size={15} color={COLORS.btnExpedienteText} />
+                          <Text style={{ color: COLORS.btnExpedienteText, fontSize: 12, fontWeight: '800' }}>
                             Ver Expediente & Reporte CNSC
                           </Text>
                         </Pressable>
@@ -897,15 +1154,16 @@ export default function DesvinculacionesScreen() {
                 borderWidth: 1,
                 borderColor: COLORS.border,
                 gap: 10,
+                boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Ionicons name="shield-checkmark" size={24} color="#A78BFA" />
-                <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+                <Ionicons name="shield-checkmark" size={24} color={COLORS.purpleAccent} />
+                <Text style={{ color: COLORS.textTitle, fontSize: 18, fontWeight: '800' }}>
                   Marco Normativo Obligatorio para Ingresos y Desvinculaciones (Sector Público)
                 </Text>
               </View>
-              <Text style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 20 }}>
+              <Text style={{ color: COLORS.textSecondary, fontSize: 13, lineHeight: 20 }}>
                 La Comisión Nacional del Servicio Civil (CNSC) y el Departamento Administrativo de la Función Pública
                 (DAFP) regulan estrictamente la trazabilidad de los cargos de carrera administrativa y libre
                 nombramiento. A continuación se detallan las obligaciones normativas exactas:
@@ -926,9 +1184,10 @@ export default function DesvinculacionesScreen() {
                   backgroundColor: COLORS.cardBg,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: 'rgba(239, 68, 68, 0.4)',
+                  borderColor: isDark ? 'rgba(239, 68, 68, 0.4)' : '#FECACA',
                   padding: 20,
                   gap: 14,
+                  boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -937,18 +1196,18 @@ export default function DesvinculacionesScreen() {
                       width: 40,
                       height: 40,
                       borderRadius: 10,
-                      backgroundColor: 'rgba(239, 68, 68, 0.16)',
+                      backgroundColor: isDark ? 'rgba(239, 68, 68, 0.16)' : '#FEE2E2',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name="exit" size={22} color="#EF4444" />
+                    <Ionicons name="exit" size={22} color={COLORS.danger} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#F87171', fontSize: 11, fontWeight: '800' }}>
+                    <Text style={{ color: isDark ? '#F87171' : '#DC2626', fontSize: 11, fontWeight: '800' }}>
                       PROCEDIMIENTO DE RETIRO
                     </Text>
-                    <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                    <Text style={{ color: COLORS.textTitle, fontSize: 17, fontWeight: '800' }}>
                       Al Ocurrir una Desvinculación
                     </Text>
                   </View>
@@ -956,38 +1215,38 @@ export default function DesvinculacionesScreen() {
 
                 {/* Paso a paso normativo de Desvinculación */}
                 <View style={{ gap: 10 }}>
-                  <View style={{ backgroundColor: '#0C1B2A', padding: 12, borderRadius: 8, gap: 4 }}>
-                    <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>
+                  <View style={{ backgroundColor: isDark ? '#0C1B2A' : '#FEF2F2', padding: 12, borderRadius: 8, gap: 4 }}>
+                    <Text style={{ color: isDark ? '#FCD34D' : '#991B1B', fontSize: 12, fontWeight: '800' }}>
                       1. REPORTE EN SIMO 4.4 (Circular Externa 011 de 2021 CNSC)
                     </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 18 }}>
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Plazo legal:</Text> Máximo{' '}
-                      <Text style={{ color: '#FCD34D', fontWeight: '800' }}>cinco (5) días hábiles</Text> a partir de
+                    <Text style={{ color: isDark ? '#CBD5E1' : '#7F1D1D', fontSize: 12, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#991B1B' }}>Plazo legal:</Text> Máximo{' '}
+                      <Text style={{ color: isDark ? '#FCD34D' : '#B91C1C', fontWeight: '800' }}>cinco (5) días hábiles</Text> a partir de
                       la ejecutoria del acto administrativo de retiro.{'\n'}
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Datos:</Text> Causal de retiro (Art. 41 Ley 909/04), número y fecha del acto, fecha de retiro y archivo PDF.{'\n'}
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Efecto:</Text> La plaza pasa a estado{' '}
-                      <Text style={{ color: '#F87171', fontWeight: '700' }}>VACANTE DEFINITIVA</Text> en la OPEC.
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#991B1B' }}>Datos:</Text> Causal de retiro (Art. 41 Ley 909/04), número y fecha del acto, fecha de retiro y archivo PDF.{'\n'}
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#991B1B' }}>Efecto:</Text> La plaza pasa a estado{' '}
+                      <Text style={{ color: COLORS.danger, fontWeight: '700' }}>VACANTE DEFINITIVA</Text> en la OPEC.
                     </Text>
                   </View>
 
-                  <View style={{ backgroundColor: '#0C1B2A', padding: 12, borderRadius: 8, gap: 4 }}>
-                    <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '800' }}>
+                  <View style={{ backgroundColor: isDark ? '#0C1B2A' : '#FEF2F2', padding: 12, borderRadius: 8, gap: 4 }}>
+                    <Text style={{ color: isDark ? '#38BDF8' : '#0284C7', fontSize: 12, fontWeight: '800' }}>
                       2. BANCO NACIONAL DE LISTAS DE ELEGIBLES - BNLE (Acuerdo 019 de 2024)
                     </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 18 }}>
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Obligatoriedad:</Text> Antes de encargar o
+                    <Text style={{ color: isDark ? '#CBD5E1' : '#7F1D1D', fontSize: 12, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#991B1B' }}>Obligatoriedad:</Text> Antes de encargar o
                       nombrar provisionalmente, la entidad debe verificar si en el BNLE existen listas vigentes para el
                       mismo empleo o equivalentes.{'\n'}
-                      • Si existe lista, es <Text style={{ color: '#F87171', fontWeight: '800' }}>mandatorio</Text>{' '}
+                      • Si existe lista, es <Text style={{ color: COLORS.danger, fontWeight: '800' }}>mandatorio</Text>{' '}
                       solicitar a la CNSC el uso de lista y no se puede proveer en provisionalidad.
                     </Text>
                   </View>
 
-                  <View style={{ backgroundColor: '#0C1B2A', padding: 12, borderRadius: 8, gap: 4 }}>
-                    <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '800' }}>
+                  <View style={{ backgroundColor: isDark ? '#0C1B2A' : '#FEF2F2', padding: 12, borderRadius: 8, gap: 4 }}>
+                    <Text style={{ color: isDark ? '#A78BFA' : '#6D28D9', fontSize: 12, fontWeight: '800' }}>
                       3. PAZ Y SALVO Y ACTA DE ENTREGA (Ley 1952 de 2019 / CGD)
                     </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ color: isDark ? '#CBD5E1' : '#7F1D1D', fontSize: 12, lineHeight: 18 }}>
                       • Entrega formal bajo inventario de computadores, expedientes y accesos a sistemas.{'\n'}
                       • Firma de no adeudar nada en TIC, Almacén, Archivo y Talento Humano.{'\n'}
                       • Reporte de novedad a Nómina para la liquidación definitiva de prestaciones.
@@ -1003,9 +1262,10 @@ export default function DesvinculacionesScreen() {
                   backgroundColor: COLORS.cardBg,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: 'rgba(16, 185, 129, 0.4)',
+                  borderColor: isDark ? 'rgba(16, 185, 129, 0.4)' : '#A7F3D0',
                   padding: 20,
                   gap: 14,
+                  boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
                 }}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -1014,18 +1274,18 @@ export default function DesvinculacionesScreen() {
                       width: 40,
                       height: 40,
                       borderRadius: 10,
-                      backgroundColor: 'rgba(16, 185, 129, 0.16)',
+                      backgroundColor: isDark ? 'rgba(16, 185, 129, 0.16)' : '#D1FAE5',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name="enter" size={22} color="#10B981" />
+                    <Ionicons name="enter" size={22} color={COLORS.emeraldAccent} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#34D399', fontSize: 11, fontWeight: '800' }}>
+                    <Text style={{ color: isDark ? '#34D399' : '#059669', fontSize: 11, fontWeight: '800' }}>
                       PROCEDIMIENTO DE INGRESO
                     </Text>
-                    <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800' }}>
+                    <Text style={{ color: COLORS.textTitle, fontSize: 17, fontWeight: '800' }}>
                       Al Ocurrir un Ingreso o Provisión
                     </Text>
                   </View>
@@ -1033,34 +1293,34 @@ export default function DesvinculacionesScreen() {
 
                 {/* Paso a paso normativo de Ingreso */}
                 <View style={{ gap: 10 }}>
-                  <View style={{ backgroundColor: '#0C1B2A', padding: 12, borderRadius: 8, gap: 4 }}>
-                    <Text style={{ color: '#34D399', fontSize: 12, fontWeight: '800' }}>
+                  <View style={{ backgroundColor: isDark ? '#0C1B2A' : '#ECFDF5', padding: 12, borderRadius: 8, gap: 4 }}>
+                    <Text style={{ color: isDark ? '#34D399' : '#065F46', fontSize: 12, fontWeight: '800' }}>
                       1. REPORTE DE POSESIÓN EN SIMO 4.4 (CNSC)
                     </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 18 }}>
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Plazo:</Text> Dentro de los{' '}
-                      <Text style={{ color: '#34D399', fontWeight: '800' }}>diez (10) días siguientes</Text> a la posesión del servidor.{'\n'}
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Modalidad de Provisión:</Text> Concurso de méritos (Periodo de prueba), Encargo preferente (Ley 1960/19), o Nombramiento provisional.{'\n'}
-                      • <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>Efecto:</Text> La plaza cambia a estado{' '}
-                      <Text style={{ color: '#34D399', fontWeight: '700' }}>OCUPADO</Text> en la OPEC.
+                    <Text style={{ color: isDark ? '#CBD5E1' : '#064E3B', fontSize: 12, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#065F46' }}>Plazo:</Text> Dentro de los{' '}
+                      <Text style={{ color: isDark ? '#34D399' : '#047857', fontWeight: '800' }}>diez (10) días siguientes</Text> a la posesión del servidor.{'\n'}
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#065F46' }}>Modalidad de Provisión:</Text> Concurso de méritos (Periodo de prueba), Encargo preferente (Ley 1960/19), o Nombramiento provisional.{'\n'}
+                      • <Text style={{ fontWeight: '800', color: isDark ? '#FFFFFF' : '#065F46' }}>Efecto:</Text> La plaza cambia a estado{' '}
+                      <Text style={{ color: isDark ? '#34D399' : '#059669', fontWeight: '700' }}>OCUPADO</Text> en la OPEC.
                     </Text>
                   </View>
 
-                  <View style={{ backgroundColor: '#0C1B2A', padding: 12, borderRadius: 8, gap: 4 }}>
-                    <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '800' }}>
+                  <View style={{ backgroundColor: isDark ? '#0C1B2A' : '#ECFDF5', padding: 12, borderRadius: 8, gap: 4 }}>
+                    <Text style={{ color: isDark ? '#38BDF8' : '#0284C7', fontSize: 12, fontWeight: '800' }}>
                       2. DESCARGUE DE LISTA EN BNLE (Si fue por mérito)
                     </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ color: isDark ? '#CBD5E1' : '#064E3B', fontSize: 12, lineHeight: 18 }}>
                       • Si la persona fue nombrada mediante uso de Lista de Elegibles del BNLE, se reporta el Acta de
                       Posesión para que la CNSC descuente la vacante del Registro Público de Carrera Administrativa (RPCA).
                     </Text>
                   </View>
 
-                  <View style={{ backgroundColor: '#0C1B2A', padding: 12, borderRadius: 8, gap: 4 }}>
-                    <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>
+                  <View style={{ backgroundColor: isDark ? '#0C1B2A' : '#ECFDF5', padding: 12, borderRadius: 8, gap: 4 }}>
+                    <Text style={{ color: isDark ? '#FCD34D' : '#D97706', fontSize: 12, fontWeight: '800' }}>
                       3. DECLARACIÓN JURAMENTADA & SIDEAP (Ley 2013 de 2019)
                     </Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, lineHeight: 18 }}>
+                    <Text style={{ color: isDark ? '#CBD5E1' : '#064E3B', fontSize: 12, lineHeight: 18 }}>
                       • Publicación obligatoria en el aplicativo por la Integridad y SIDEAP Bogotá de la Declaración de
                       Bienes y Rentas y Registro de Conflicto de Intereses previa a la posesión.{'\n'}
                       • Afiliación inmediata a EPS, Pensión, ARL y Caja de Compensación Familiar.
@@ -1079,9 +1339,10 @@ export default function DesvinculacionesScreen() {
                 borderWidth: 1,
                 borderColor: COLORS.border,
                 gap: 12,
+                boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '800' }}>
+              <Text style={{ color: COLORS.textTitle, fontSize: 16, fontWeight: '800' }}>
                 Artículos y Circulares Clave Aplicables
               </Text>
               <View style={{ gap: 8 }}>
@@ -1110,15 +1371,17 @@ export default function DesvinculacionesScreen() {
                   <View
                     key={idx}
                     style={{
-                      backgroundColor: '#0C1B2A',
+                      backgroundColor: COLORS.cardSecondaryBg,
                       padding: 12,
                       borderRadius: 8,
                       borderLeftWidth: 3,
-                      borderLeftColor: '#7C3AED',
+                      borderLeftColor: COLORS.purpleDark,
+                      borderWidth: isDark ? 0 : 1,
+                      borderColor: COLORS.border,
                     }}
                   >
-                    <Text style={{ color: '#C4B5FD', fontSize: 13, fontWeight: '800' }}>{item.norma}</Text>
-                    <Text style={{ color: '#CBD5E1', fontSize: 12, marginTop: 2 }}>{item.tema}</Text>
+                    <Text style={{ color: COLORS.badgePurpleText, fontSize: 13, fontWeight: '800' }}>{item.norma}</Text>
+                    <Text style={{ color: COLORS.textSecondary, fontSize: 12, marginTop: 2 }}>{item.tema}</Text>
                   </View>
                 ))}
               </View>
@@ -1144,12 +1407,13 @@ export default function DesvinculacionesScreen() {
                 borderWidth: 1,
                 borderColor: COLORS.border,
                 gap: 8,
+                boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '800' }}>
+              <Text style={{ color: COLORS.textTitle, fontSize: 18, fontWeight: '800' }}>
                 Circuito de Paz y Salvo Institucional (SJD)
               </Text>
-              <Text style={{ color: '#CBD5E1', fontSize: 13, lineHeight: 19 }}>
+              <Text style={{ color: COLORS.textSecondary, fontSize: 13, lineHeight: 19 }}>
                 Para formalizar la desvinculación y proceder con la liquidación definitiva en Nómina, el servidor saliente debe contar con el paz y salvo aprobado por cada una de las 4 dependencias responsables:
               </Text>
             </View>
@@ -1205,19 +1469,20 @@ export default function DesvinculacionesScreen() {
                     borderColor: COLORS.border,
                     padding: 18,
                     gap: 12,
+                    boxShadow: isDark ? undefined : '0 2px 8px rgba(0,0,0,0.04)',
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Ionicons name={c.icono as any} size={22} color="#A78BFA" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '800', flex: 1 }}>
+                    <Ionicons name={c.icono as any} size={22} color={COLORS.purpleAccent} />
+                    <Text style={{ color: COLORS.textTitle, fontSize: 14, fontWeight: '800', flex: 1 }}>
                       {c.area}
                     </Text>
                   </View>
                   <View style={{ gap: 6 }}>
                     {c.items.map((it, idx) => (
                       <View key={idx} style={{ flexDirection: 'row', gap: 6 }}>
-                        <Ionicons name="checkmark-circle" size={14} color="#10B981" style={{ marginTop: 2 }} />
-                        <Text style={{ color: '#CBD5E1', fontSize: 12, flex: 1, lineHeight: 17 }}>
+                        <Ionicons name="checkmark-circle" size={14} color={COLORS.emeraldAccent} style={{ marginTop: 2 }} />
+                        <Text style={{ color: COLORS.textSecondary, fontSize: 12, flex: 1, lineHeight: 17 }}>
                           {it}
                         </Text>
                       </View>
@@ -1239,7 +1504,7 @@ export default function DesvinculacionesScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backgroundColor: COLORS.modalOverlay,
               justifyContent: 'center',
               alignItems: 'center',
               padding: 16,
@@ -1247,7 +1512,7 @@ export default function DesvinculacionesScreen() {
           >
             <View
               style={{
-                backgroundColor: '#112233',
+                backgroundColor: COLORS.modalCardBg,
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: COLORS.border,
@@ -1255,12 +1520,13 @@ export default function DesvinculacionesScreen() {
                 maxWidth: 680,
                 maxHeight: '90%',
                 overflow: 'hidden',
+                boxShadow: isDark ? undefined : '0 10px 30px rgba(0,0,0,0.15)',
               }}
             >
               {/* Cabecera */}
               <View
                 style={{
-                  backgroundColor: '#0F2133',
+                  backgroundColor: COLORS.modalHeaderBg,
                   paddingHorizontal: 20,
                   paddingVertical: 16,
                   borderBottomWidth: 1,
@@ -1271,15 +1537,15 @@ export default function DesvinculacionesScreen() {
                 }}
               >
                 <View>
-                  <Text style={{ color: '#A78BFA', fontSize: 11, fontWeight: '800' }}>
+                  <Text style={{ color: COLORS.modalSubtitle, fontSize: 11, fontWeight: '800' }}>
                     TALENTO HUMANO • SECRETARÍA JURÍDICA DISTRITAL
                   </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800', marginTop: 2 }}>
+                  <Text style={{ color: COLORS.textTitle, fontSize: 17, fontWeight: '800', marginTop: 2 }}>
                     Registrar Retiro / Desvinculación de Servidor
                   </Text>
                 </View>
                 <Pressable onPress={() => setModalRegistroVisible(false)}>
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                  <Ionicons name="close" size={24} color={COLORS.modalCloseColor} />
                 </Pressable>
               </View>
 
@@ -1293,7 +1559,7 @@ export default function DesvinculacionesScreen() {
                   <ScrollView
                     style={{
                       maxHeight: 140,
-                      backgroundColor: '#0C1B2A',
+                      backgroundColor: COLORS.modalSelectBg,
                       borderRadius: 8,
                       borderWidth: 1,
                       borderColor: COLORS.border,
@@ -1308,12 +1574,12 @@ export default function DesvinculacionesScreen() {
                           onPress={() => setPlazaSeleccionadaId(serv.id_plaza)}
                           style={{
                             padding: 10,
-                            backgroundColor: sel ? 'rgba(124, 58, 237, 0.25)' : 'transparent',
+                            backgroundColor: sel ? COLORS.modalSelectActiveBg : 'transparent',
                             borderBottomWidth: 1,
-                            borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+                            borderBottomColor: COLORS.modalItemBorder,
                           }}
                         >
-                          <Text style={{ color: sel ? '#C4B5FD' : '#FFFFFF', fontSize: 12.5, fontWeight: '700' }}>
+                          <Text style={{ color: sel ? COLORS.modalSelectActiveText : COLORS.textTitle, fontSize: 12.5, fontWeight: '700' }}>
                             {serv.titular_nombre} (C.C. {serv.titular_cedula})
                           </Text>
                           <Text style={{ color: COLORS.textMuted, fontSize: 11 }}>
@@ -1333,7 +1599,7 @@ export default function DesvinculacionesScreen() {
                   <ScrollView
                     style={{
                       maxHeight: 120,
-                      backgroundColor: '#0C1B2A',
+                      backgroundColor: COLORS.modalSelectBg,
                       borderRadius: 8,
                       borderWidth: 1,
                       borderColor: COLORS.border,
@@ -1348,12 +1614,12 @@ export default function DesvinculacionesScreen() {
                           onPress={() => setCausalSeleccionada(c.label)}
                           style={{
                             padding: 9,
-                            backgroundColor: sel ? 'rgba(124, 58, 237, 0.25)' : 'transparent',
+                            backgroundColor: sel ? COLORS.modalSelectActiveBg : 'transparent',
                             borderBottomWidth: 1,
-                            borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+                            borderBottomColor: COLORS.modalItemBorder,
                           }}
                         >
-                          <Text style={{ color: sel ? '#C4B5FD' : '#CBD5E1', fontSize: 12, fontWeight: sel ? '700' : '500' }}>
+                          <Text style={{ color: sel ? COLORS.modalSelectActiveText : COLORS.textSecondary, fontSize: 12, fontWeight: sel ? '700' : '500' }}>
                             {c.label}
                           </Text>
                         </Pressable>
@@ -1372,14 +1638,14 @@ export default function DesvinculacionesScreen() {
                       value={actoAdminInput}
                       onChangeText={setActoAdminInput}
                       placeholder="Ej: Resolución No. 064 de 2026"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={COLORS.inputPlaceholder}
                       style={{
-                        backgroundColor: '#0C1B2A',
-                        color: '#FFFFFF',
+                        backgroundColor: COLORS.inputBg,
+                        color: COLORS.inputText,
                         borderRadius: 8,
                         padding: 10,
                         borderWidth: 1,
-                        borderColor: COLORS.border,
+                        borderColor: COLORS.inputBorder,
                         fontSize: 13,
                       }}
                     />
@@ -1393,14 +1659,14 @@ export default function DesvinculacionesScreen() {
                       value={fechaRetiroInput}
                       onChangeText={setFechaRetiroInput}
                       placeholder="Ej: 2026-04-30"
-                      placeholderTextColor={COLORS.textMuted}
+                      placeholderTextColor={COLORS.inputPlaceholder}
                       style={{
-                        backgroundColor: '#0C1B2A',
-                        color: '#FFFFFF',
+                        backgroundColor: COLORS.inputBg,
+                        color: COLORS.inputText,
                         borderRadius: 8,
                         padding: 10,
                         borderWidth: 1,
-                        borderColor: COLORS.border,
+                        borderColor: COLORS.inputBorder,
                         fontSize: 13,
                       }}
                     />
@@ -1416,16 +1682,16 @@ export default function DesvinculacionesScreen() {
                     value={observacionesInput}
                     onChangeText={setObservacionesInput}
                     placeholder="Detalles sobre entrega de puesto, estado de bienes o reemplazo..."
-                    placeholderTextColor={COLORS.textMuted}
+                    placeholderTextColor={COLORS.inputPlaceholder}
                     multiline
                     numberOfLines={3}
                     style={{
-                      backgroundColor: '#0C1B2A',
-                      color: '#FFFFFF',
+                      backgroundColor: COLORS.inputBg,
+                      color: COLORS.inputText,
                       borderRadius: 8,
                       padding: 10,
                       borderWidth: 1,
-                      borderColor: COLORS.border,
+                      borderColor: COLORS.inputBorder,
                       fontSize: 13,
                       minHeight: 60,
                     }}
@@ -1436,7 +1702,7 @@ export default function DesvinculacionesScreen() {
               {/* Pie del modal */}
               <View
                 style={{
-                  backgroundColor: '#0F2133',
+                  backgroundColor: COLORS.modalFooterBg,
                   paddingHorizontal: 20,
                   paddingVertical: 14,
                   borderTopWidth: 1,
@@ -1449,24 +1715,24 @@ export default function DesvinculacionesScreen() {
                 <Pressable
                   onPress={() => setModalRegistroVisible(false)}
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: COLORS.btnCancelBg,
                     paddingHorizontal: 16,
                     paddingVertical: 9,
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+                  <Text style={{ color: COLORS.btnCancelText, fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleCrearDesvinculacion}
                   style={{
-                    backgroundColor: COLORS.purpleDark,
+                    backgroundColor: COLORS.btnPrimaryBg,
                     paddingHorizontal: 16,
                     paddingVertical: 9,
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Guardar & Generar Checklist</Text>
+                  <Text style={{ color: COLORS.btnPrimaryText, fontSize: 13, fontWeight: '800' }}>Guardar & Generar Checklist</Text>
                 </Pressable>
               </View>
             </View>
@@ -1483,7 +1749,7 @@ export default function DesvinculacionesScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backgroundColor: COLORS.modalOverlay,
               justifyContent: 'center',
               alignItems: 'center',
               padding: 16,
@@ -1491,7 +1757,7 @@ export default function DesvinculacionesScreen() {
           >
             <View
               style={{
-                backgroundColor: '#112233',
+                backgroundColor: COLORS.modalCardBg,
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: COLORS.border,
@@ -1499,11 +1765,12 @@ export default function DesvinculacionesScreen() {
                 maxWidth: 700,
                 maxHeight: '90%',
                 overflow: 'hidden',
+                boxShadow: isDark ? undefined : '0 10px 30px rgba(0,0,0,0.15)',
               }}
             >
               <View
                 style={{
-                  backgroundColor: '#0F2133',
+                  backgroundColor: COLORS.modalHeaderBg,
                   paddingHorizontal: 20,
                   paddingVertical: 16,
                   borderBottomWidth: 1,
@@ -1514,36 +1781,36 @@ export default function DesvinculacionesScreen() {
                 }}
               >
                 <View>
-                  <Text style={{ color: '#A78BFA', fontSize: 11, fontWeight: '800' }}>
+                  <Text style={{ color: COLORS.modalSubtitle, fontSize: 11, fontWeight: '800' }}>
                     EXPEDIENTE DE DESVINCULACIÓN #{casoDetalle?.id}
                   </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800', marginTop: 2 }}>
+                  <Text style={{ color: COLORS.textTitle, fontSize: 17, fontWeight: '800', marginTop: 2 }}>
                     {casoDetalle?.servidor_nombre}
                   </Text>
                 </View>
                 <Pressable onPress={() => setCasoDetalle(null)}>
-                  <Ionicons name="close" size={24} color="#FFFFFF" />
+                  <Ionicons name="close" size={24} color={COLORS.modalCloseColor} />
                 </Pressable>
               </View>
 
               <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
-                <View style={{ backgroundColor: '#0B1724', padding: 14, borderRadius: 10, gap: 6 }}>
-                  <Text style={{ color: '#38BDF8', fontSize: 12, fontWeight: '800' }}>DATOS DEL EMPLEO</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 14 }}>
+                <View style={{ backgroundColor: COLORS.detailBoxBg, padding: 14, borderRadius: 10, borderWidth: isDark ? 0 : 1, borderColor: COLORS.border, gap: 6 }}>
+                  <Text style={{ color: isDark ? '#38BDF8' : '#0284C7', fontSize: 12, fontWeight: '800' }}>DATOS DEL EMPLEO</Text>
+                  <Text style={{ color: COLORS.textTitle, fontSize: 14, fontWeight: '600' }}>
                     {casoDetalle?.cargo} (Cód. {casoDetalle?.codigo} - Grado {casoDetalle?.grado})
                   </Text>
                   <Text style={{ color: COLORS.textMuted, fontSize: 12 }}>
                     Plaza #{casoDetalle?.id_plaza} • {casoDetalle?.dependencia}
                   </Text>
-                  <Text style={{ color: '#CBD5E1', fontSize: 12, marginTop: 4 }}>
-                    Acto de Retiro: <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{casoDetalle?.acto_administrativo}</Text> ({casoDetalle?.fecha_acto})
+                  <Text style={{ color: COLORS.textSecondary, fontSize: 12, marginTop: 4 }}>
+                    Acto de Retiro: <Text style={{ color: COLORS.textTitle, fontWeight: '700' }}>{casoDetalle?.acto_administrativo}</Text> ({casoDetalle?.fecha_acto})
                   </Text>
                 </View>
 
                 {/* Reporte SIMO 4.4 */}
-                <View style={{ backgroundColor: '#0B1724', padding: 14, borderRadius: 10, gap: 6 }}>
-                  <Text style={{ color: '#FCD34D', fontSize: 12, fontWeight: '800' }}>ESTADO EN SIMO 4.4 (CNSC)</Text>
-                  <Text style={{ color: casoDetalle?.reportado_simo ? '#34D399' : '#FCD34D', fontSize: 13, fontWeight: '700' }}>
+                <View style={{ backgroundColor: COLORS.detailBoxBg, padding: 14, borderRadius: 10, borderWidth: isDark ? 0 : 1, borderColor: COLORS.border, gap: 6 }}>
+                  <Text style={{ color: isDark ? '#FCD34D' : '#D97706', fontSize: 12, fontWeight: '800' }}>ESTADO EN SIMO 4.4 (CNSC)</Text>
+                  <Text style={{ color: casoDetalle?.reportado_simo ? (isDark ? '#34D399' : '#059669') : (isDark ? '#FCD34D' : '#D97706'), fontSize: 13, fontWeight: '700' }}>
                     {casoDetalle?.reportado_simo ? `✓ Reportado Radicado: ${casoDetalle.radicado_simo || 'SIMO-OK'}` : '⚠️ PENDIENTE DE REPORTE (Plazo: 5 días hábiles)'}
                   </Text>
                   <Text style={{ color: COLORS.textMuted, fontSize: 12 }}>
@@ -1552,9 +1819,9 @@ export default function DesvinculacionesScreen() {
                 </View>
 
                 {/* Consulta BNLE */}
-                <View style={{ backgroundColor: '#0B1724', padding: 14, borderRadius: 10, gap: 6 }}>
-                  <Text style={{ color: '#A78BFA', fontSize: 12, fontWeight: '800' }}>BANCO NACIONAL DE LISTAS DE ELEGIBLES (BNLE)</Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 13 }}>
+                <View style={{ backgroundColor: COLORS.detailBoxBg, padding: 14, borderRadius: 10, borderWidth: isDark ? 0 : 1, borderColor: COLORS.border, gap: 6 }}>
+                  <Text style={{ color: isDark ? '#A78BFA' : '#6D28D9', fontSize: 12, fontWeight: '800' }}>BANCO NACIONAL DE LISTAS DE ELEGIBLES (BNLE)</Text>
+                  <Text style={{ color: COLORS.textTitle, fontSize: 13 }}>
                     {casoDetalle?.solicitud_uso_bnle || 'Pendiente de consulta formal en SIMO 4.4'}
                   </Text>
                 </View>
@@ -1562,7 +1829,7 @@ export default function DesvinculacionesScreen() {
 
               <View
                 style={{
-                  backgroundColor: '#0F2133',
+                  backgroundColor: COLORS.modalFooterBg,
                   paddingHorizontal: 20,
                   paddingVertical: 14,
                   borderTopWidth: 1,
@@ -1574,13 +1841,13 @@ export default function DesvinculacionesScreen() {
                 <Pressable
                   onPress={() => setCasoDetalle(null)}
                   style={{
-                    backgroundColor: COLORS.purpleDark,
+                    backgroundColor: COLORS.btnPrimaryBg,
                     paddingHorizontal: 16,
                     paddingVertical: 9,
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Cerrar Expediente</Text>
+                  <Text style={{ color: COLORS.btnPrimaryText, fontSize: 13, fontWeight: '800' }}>Cerrar Expediente</Text>
                 </Pressable>
               </View>
             </View>
@@ -1597,7 +1864,7 @@ export default function DesvinculacionesScreen() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backgroundColor: COLORS.modalOverlay,
               justifyContent: 'center',
               alignItems: 'center',
               padding: 20,
@@ -1605,7 +1872,7 @@ export default function DesvinculacionesScreen() {
           >
             <View
               style={{
-                backgroundColor: '#112233',
+                backgroundColor: COLORS.modalCardBg,
                 borderRadius: 14,
                 borderWidth: 1,
                 borderColor: COLORS.border,
@@ -1613,6 +1880,7 @@ export default function DesvinculacionesScreen() {
                 maxWidth: 480,
                 padding: 22,
                 gap: 14,
+                boxShadow: isDark ? undefined : '0 10px 30px rgba(0,0,0,0.15)',
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -1623,10 +1891,10 @@ export default function DesvinculacionesScreen() {
                     borderRadius: 10,
                     backgroundColor:
                       infoModalTipo === 'success'
-                        ? 'rgba(16, 185, 129, 0.2)'
+                        ? (isDark ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5')
                         : infoModalTipo === 'warning'
-                        ? 'rgba(245, 158, 11, 0.2)'
-                        : 'rgba(56, 189, 248, 0.2)',
+                        ? (isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7')
+                        : (isDark ? 'rgba(56, 189, 248, 0.2)' : '#E0F2FE'),
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
@@ -1642,19 +1910,19 @@ export default function DesvinculacionesScreen() {
                     size={24}
                     color={
                       infoModalTipo === 'success'
-                        ? '#10B981'
+                        ? COLORS.emeraldAccent
                         : infoModalTipo === 'warning'
-                        ? '#F59E0B'
-                        : '#38BDF8'
+                        ? COLORS.amberAccent
+                        : COLORS.blueAccent
                     }
                   />
                 </View>
-                <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '800', flex: 1 }}>
+                <Text style={{ color: COLORS.textTitle, fontSize: 17, fontWeight: '800', flex: 1 }}>
                   {infoModalTitulo}
                 </Text>
               </View>
 
-              <Text style={{ color: '#CBD5E1', fontSize: 13.5, lineHeight: 20 }}>
+              <Text style={{ color: COLORS.textSecondary, fontSize: 13.5, lineHeight: 20 }}>
                 {infoModalMensaje}
               </Text>
 
@@ -1662,13 +1930,13 @@ export default function DesvinculacionesScreen() {
                 <Pressable
                   onPress={() => setInfoModalVisible(false)}
                   style={{
-                    backgroundColor: COLORS.purpleDark,
+                    backgroundColor: COLORS.btnPrimaryBg,
                     paddingHorizontal: 16,
                     paddingVertical: 9,
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Entendido</Text>
+                  <Text style={{ color: COLORS.btnPrimaryText, fontSize: 13, fontWeight: '800' }}>Entendido</Text>
                 </Pressable>
               </View>
             </View>

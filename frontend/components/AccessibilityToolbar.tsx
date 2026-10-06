@@ -1369,6 +1369,9 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
       try {
         localStorage.setItem('sasge_zoom_scale', String(fontSizeMultiplier));
         localStorage.setItem('sasge_color_mode', colorMode);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('sasge_color_mode_change', { detail: colorMode }));
+        }
       } catch (e) {}
 
       // Aplicar zoom sobre html y body manteniendo responsive sin desbordamiento
@@ -1868,6 +1871,21 @@ export const AccessibilityToolbar: React.FC<AccessibilityToolbarProps> = ({ onAp
           setColorMode(savedTheme as any);
         }
       } catch (e) {}
+
+      const handleExternalTheme = (e: any) => {
+        const mode = e?.detail;
+        if (mode && ['light', 'dark', 'grayscale', 'normal'].includes(mode)) {
+          setColorMode(mode as any);
+        }
+      };
+      if (typeof window !== 'undefined') {
+        window.addEventListener('sasge_color_mode_change', handleExternalTheme);
+      }
+      return () => {
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('sasge_color_mode_change', handleExternalTheme);
+        }
+      };
     }
   }, []);
 
