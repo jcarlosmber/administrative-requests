@@ -112,7 +112,7 @@ module.exports = function (pool) {
   router.get('/plazas', async (req, res) => {
     try {
       await ensureTables();
-      const { busqueda, nivel, estado, dependencia } = req.query;
+      const { busqueda, nivel, estado, dependencia, cargo, id_sieap, id_sideap, solo_encargo } = req.query;
 
       let query = 'SELECT * FROM public.planta_personal_sjd WHERE 1=1';
       const params = [];
@@ -124,8 +124,12 @@ module.exports = function (pool) {
           cargo ILIKE $${idx} OR 
           titular_nombre ILIKE $${idx} OR 
           titular_cedula ILIKE $${idx} OR 
+          encargo_nombre ILIKE $${idx} OR 
+          encargo_cedula ILIKE $${idx} OR 
           dependencia_cargo ILIKE $${idx} OR 
-          codigo ILIKE $${idx}
+          codigo ILIKE $${idx} OR
+          id_plaza::text ILIKE $${idx} OR
+          id_sideap::text ILIKE $${idx}
         )`;
       }
 
@@ -142,6 +146,24 @@ module.exports = function (pool) {
       if (dependencia && dependencia !== 'TODAS') {
         params.push(dependencia);
         query += ` AND dependencia_cargo = $${params.length}`;
+      }
+
+      if (cargo && cargo !== 'TODOS') {
+        params.push(cargo);
+        query += ` AND cargo = $${params.length}`;
+      }
+
+      const sieapVal = id_sieap || id_sideap;
+      if (sieapVal && sieapVal !== 'TODOS') {
+        const sieapNum = parseInt(sieapVal, 10);
+        if (!isNaN(sieapNum)) {
+          params.push(sieapNum);
+          query += ` AND id_sideap = $${params.length}`;
+        }
+      }
+
+      if (solo_encargo === 'true' || solo_encargo === true) {
+        query += ` AND es_encargo = TRUE`;
       }
 
       query += ' ORDER BY id_plaza ASC';

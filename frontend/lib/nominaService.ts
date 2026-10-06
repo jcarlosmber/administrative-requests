@@ -14,14 +14,16 @@ export interface PlazaNomina {
   proposito?: string;
   funciones?: string[] | string;
   requisitos?: string;
-  asignacion_basica: number;
+  asignacion_basica?: number | string;
   estado_cargo: 'OCUPADO' | 'VACANTE DEFINITIVA' | 'VACANTE TEMPORAL' | 'ENCARGO' | string;
   titular_cedula?: string;
   titular_nombre?: string;
-  tipo_vinculacion?: string;
-  situacion_administrativa?: string;
+  situacion_titular?: string;
   encargo_cedula?: string;
   encargo_nombre?: string;
+  es_encargo?: boolean;
+  tipo_vinculacion?: string;
+  situacion_administrativa?: string;
   // Campos complementarios de Planta Perno
   tipo_funcionario?: string;
   fecha_nacimiento?: string;
@@ -54,6 +56,9 @@ export const nominaService = {
     nivel?: string;
     estado?: string;
     dependencia?: string;
+    cargo?: string;
+    id_sieap?: string;
+    solo_encargo?: boolean;
   }): Promise<PlazaNomina[]> {
     try {
       const searchParams = new URLSearchParams();
@@ -61,6 +66,9 @@ export const nominaService = {
       if (filtros?.nivel && filtros.nivel !== 'TODOS') searchParams.append('nivel', filtros.nivel);
       if (filtros?.estado && filtros.estado !== 'TODOS') searchParams.append('estado', filtros.estado);
       if (filtros?.dependencia && filtros.dependencia !== 'TODAS') searchParams.append('dependencia', filtros.dependencia);
+      if (filtros?.cargo && filtros.cargo !== 'TODOS') searchParams.append('cargo', filtros.cargo);
+      if (filtros?.id_sieap && filtros.id_sieap !== 'TODOS') searchParams.append('id_sieap', filtros.id_sieap);
+      if (filtros?.solo_encargo) searchParams.append('solo_encargo', 'true');
 
       const url = `${API_URL}/api/nomina/plazas?${searchParams.toString()}`;
       const controller = new AbortController();
@@ -80,7 +88,7 @@ export const nominaService = {
     }
 
     // Filtrar sobre los datos precargados reales
-    let result = (mockPlazasData as PlazaNomina[]) || [];
+    let result = (mockPlazasData as unknown as PlazaNomina[]) || [];
 
     if (filtros?.busqueda && filtros.busqueda.trim()) {
       const q = filtros.busqueda.trim().toLowerCase();
@@ -89,8 +97,12 @@ export const nominaService = {
           (p.cargo && p.cargo.toLowerCase().includes(q)) ||
           (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
           (p.titular_cedula && p.titular_cedula.toString().includes(q)) ||
+          (p.encargo_nombre && p.encargo_nombre.toLowerCase().includes(q)) ||
+          (p.encargo_cedula && p.encargo_cedula.toString().includes(q)) ||
           (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q)) ||
-          (p.codigo && p.codigo.toString().includes(q))
+          (p.codigo && p.codigo.toString().includes(q)) ||
+          (p.id_plaza && p.id_plaza.toString().includes(q)) ||
+          (p.id_sideap && p.id_sideap.toString().includes(q))
       );
     }
 
@@ -104,6 +116,19 @@ export const nominaService = {
 
     if (filtros?.dependencia && filtros.dependencia !== 'TODAS') {
       result = result.filter((p) => p.dependencia_cargo?.toUpperCase() === filtros.dependencia?.toUpperCase());
+    }
+
+    if (filtros?.cargo && filtros.cargo !== 'TODOS') {
+      result = result.filter((p) => p.cargo?.toUpperCase() === filtros.cargo?.toUpperCase());
+    }
+
+    if (filtros?.id_sieap && filtros.id_sieap.trim()) {
+      const sieapQuery = filtros.id_sieap.trim();
+      result = result.filter((p) => p.id_sideap && p.id_sideap.toString() === sieapQuery);
+    }
+
+    if (filtros?.solo_encargo) {
+      result = result.filter((p) => p.es_encargo === true);
     }
 
     return result;
@@ -134,7 +159,7 @@ export const nominaService = {
       // Fallback con datos calculados
     }
 
-    const data = (mockPlazasData as PlazaNomina[]) || [];
+    const data = (mockPlazasData as unknown as PlazaNomina[]) || [];
     const total = data.length;
     let ocupadas = 0;
     let vacDef = 0;

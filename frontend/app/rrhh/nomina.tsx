@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Modal,
   Platform,
   Pressable,
@@ -13,14 +12,15 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
 import { nominaService, PlazaNomina, EstadisticasNomina } from '../../lib/nominaService';
+import mockPlazasData from '../../lib/plantaMockData.json';
 
-// Sistema de diseño institucional basado en supervision-prueba (Marca Navy + Slate)
+// Sistema de diseño institucional Navy + Slate
 const THEME = {
-  // Colores de marca (Marca 50 - 900)
+  // Colores de marca
   marca900: '#0D2A48',
   marca800: '#123A63',
   marca700: '#174A7E',
@@ -42,7 +42,7 @@ const THEME = {
   slate900: '#0F172A',
   white: '#FFFFFF',
 
-  // Semáforo y estados (badges con ring-1 sutil)
+  // Semáforo y estados (badges institucionales)
   emeraldBg: '#ECFDF5',
   emeraldText: '#047857',
   emeraldRing: 'rgba(5, 150, 105, 0.25)',
@@ -81,10 +81,19 @@ export default function NominaScreen() {
 
   // Filtros
   const [busqueda, setBusqueda] = useState('');
+  const [idSieapFiltro, setIdSieapFiltro] = useState('');
   const [nivelSeleccionado, setNivelSeleccionado] = useState('TODOS');
   const [estadoSeleccionado, setEstadoSeleccionado] = useState('TODOS');
   const [dependenciaSeleccionada, setDependenciaSeleccionada] = useState('TODAS');
+  const [cargoSeleccionado, setCargoSeleccionado] = useState('TODOS');
+  const [soloEncargo, setSoloEncargo] = useState(false);
   const [modoVista, setModoVista] = useState<'tabla' | 'cards'>('tabla');
+
+  // Modales de selección de filtros
+  const [modalDependenciaVisible, setModalDependenciaVisible] = useState(false);
+  const [busquedaModalDep, setBusquedaModalDep] = useState('');
+  const [modalCargoVisible, setModalCargoVisible] = useState(false);
+  const [busquedaModalCargo, setBusquedaModalCargo] = useState('');
 
   // Modal de Detalle de Plaza
   const [plazaModal, setPlazaModal] = useState<PlazaNomina | null>(null);
@@ -114,9 +123,12 @@ export default function NominaScreen() {
       const [listado, stats] = await Promise.all([
         nominaService.getPlazas({
           busqueda,
+          id_sieap: idSieapFiltro,
           nivel: nivelSeleccionado,
           estado: estadoSeleccionado,
           dependencia: dependenciaSeleccionada,
+          cargo: cargoSeleccionado,
+          solo_encargo: soloEncargo,
         }),
         nominaService.getEstadisticas(),
       ]);
@@ -131,16 +143,44 @@ export default function NominaScreen() {
 
   useEffect(() => {
     cargarDatos();
-  }, [busqueda, nivelSeleccionado, estadoSeleccionado, dependenciaSeleccionada]);
+  }, [busqueda, idSieapFiltro, nivelSeleccionado, estadoSeleccionado, dependenciaSeleccionada, cargoSeleccionado, soloEncargo]);
 
-  // Dependencias para filtro
+  // Listado consolidado de dependencias para el filtro
   const listaDependencias = useMemo(() => {
     const deps = new Set<string>();
-    plazas.forEach((p) => {
+    (mockPlazasData as unknown as PlazaNomina[]).forEach((p) => {
       if (p.dependencia_cargo) deps.add(p.dependencia_cargo);
     });
     return ['TODAS', ...Array.from(deps).sort()];
-  }, [plazas]);
+  }, []);
+
+  // Listado consolidado de cargos para el filtro
+  const listaCargos = useMemo(() => {
+    const c = new Set<string>();
+    (mockPlazasData as unknown as PlazaNomina[]).forEach((p) => {
+      if (p.cargo) c.add(p.cargo);
+    });
+    return ['TODOS', ...Array.from(c).sort()];
+  }, []);
+
+  const hayFiltrosActivos =
+    busqueda.trim() !== '' ||
+    idSieapFiltro.trim() !== '' ||
+    nivelSeleccionado !== 'TODOS' ||
+    estadoSeleccionado !== 'TODOS' ||
+    dependenciaSeleccionada !== 'TODAS' ||
+    cargoSeleccionado !== 'TODOS' ||
+    soloEncargo;
+
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setIdSieapFiltro('');
+    setNivelSeleccionado('TODOS');
+    setEstadoSeleccionado('TODOS');
+    setDependenciaSeleccionada('TODAS');
+    setCargoSeleccionado('TODOS');
+    setSoloEncargo(false);
+  };
 
   // Distribución por nivel jerárquico
   const distribucionPorNivel = useMemo(() => {
@@ -258,12 +298,14 @@ export default function NominaScreen() {
     }
   };
 
-  const formatearDinero = (val?: number) => {
+  const formatearDinero = (val?: number | string) => {
     if (!val) return '$0';
-    return '$' + Math.round(val).toLocaleString('es-CO');
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    if (isNaN(num)) return '$0';
+    return '$' + Math.round(num).toLocaleString('es-CO');
   };
 
-  // Badges inspirados en supervision-prueba
+  // Badges institucionales
   const renderBadgeEstado = (estado?: string) => {
     const e = (estado || '').toUpperCase();
     if (e === 'OCUPADO') {
@@ -380,13 +422,13 @@ export default function NominaScreen() {
           backgroundColor: bg,
           borderColor: ring,
           borderWidth: 1,
-          paddingHorizontal: 8,
+          paddingHorizontal: 7,
           paddingVertical: 2,
           borderRadius: 9999,
           alignSelf: 'flex-start',
         }}
       >
-        <Text style={{ color, fontSize: 11, fontWeight: '600', textTransform: 'capitalize' }}>
+        <Text style={{ color, fontSize: 10.5, fontWeight: '600', textTransform: 'capitalize' }}>
           {nivel?.toLowerCase() || 'Sin nivel'}
         </Text>
       </View>
@@ -394,18 +436,21 @@ export default function NominaScreen() {
   };
 
   // Cálculos de KPIs
-  const totalOcupadas = estadisticas?.ocupadas ?? 153;
-  const vacDefinitivas = estadisticas?.vacantes_definitivas ?? 13;
-  const vacTemporales = estadisticas?.vacantes_temporales ?? 4;
+  const totalOcupadas = estadisticas?.ocupadas ?? 155;
+  const vacDefinitivas = estadisticas?.vacantes_definitivas ?? 5;
+  const vacTemporales = estadisticas?.vacantes_temporales ?? 10;
   const totalVacantes = vacDefinitivas + vacTemporales;
   const pctOcupacion = Math.round((totalOcupadas / (estadisticas?.total_plazas || 170)) * 100);
+  const totalEncargos = plazas.filter((p) => p.es_encargo).length;
 
   return (
     <View style={{ flex: 1, backgroundColor: THEME.slate50 }}>
+      {/* Ocultar el Header nativo del Stack para evitar el doble header */}
+      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }}>
         {/* ============================================================== */}
-        {/* CABECERA INSTITUCIONAL ESTILO SUPERVISION (bg-marca-900)       */}
+        {/* CABECERA INSTITUCIONAL ÚNICA (AZUL MARCA-900, ANCHO 100%)       */}
         {/* ============================================================== */}
         <View
           style={{
@@ -414,13 +459,12 @@ export default function NominaScreen() {
             borderBottomColor: 'rgba(255, 255, 255, 0.1)',
             paddingHorizontal: isDesktop ? 32 : 16,
             paddingVertical: 14,
+            width: '100%',
           }}
         >
           <View
             style={{
-              maxWidth: 1400,
               width: '100%',
-              marginHorizontal: 'auto',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -428,7 +472,7 @@ export default function NominaScreen() {
               gap: 12,
             }}
           >
-            {/* Lado izquierdo: Regresar + Título con subtítulo de marca */}
+            {/* Lado izquierdo: Regresar + Título con subtítulo */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
               <Pressable
                 onPress={() => router.replace('/rrhh')}
@@ -521,16 +565,14 @@ export default function NominaScreen() {
         </View>
 
         {/* ============================================================== */}
-        {/* CUERPO PRINCIPAL                                              */}
+        {/* CUERPO PRINCIPAL (USA EL 100% DEL ANCHO DE LA PÁGINA)          */}
         {/* ============================================================== */}
         <ScrollView
-          style={{ flex: 1 }}
+          style={{ flex: 1, width: '100%' }}
           contentContainerStyle={{
             paddingHorizontal: isDesktop ? 32 : 16,
             paddingVertical: 24,
-            maxWidth: 1400,
             width: '100%',
-            marginHorizontal: 'auto',
           }}
         >
           {/* TÍTULO Y SUBTÍTULO DE PÁGINA */}
@@ -539,12 +581,12 @@ export default function NominaScreen() {
               Censo Oficial de Planta y Nómina
             </Text>
             <Text style={{ fontSize: 13, color: THEME.slate500, marginTop: 4 }}>
-              Consulta unificada de las 170 plazas institucionales, vinculaciones activas, vacantes y reporte perno.
+              Consulta unificada de las 170 plazas institucionales, titulares, servidores en encargo y nómina perno.
             </Text>
           </View>
 
           {/* ============================================================== */}
-          {/* KPI CARDS (Patrón Ri de supervision-prueba)                    */}
+          {/* KPI CARDS (ANCHO COMPLETO Y FLEXIBLE)                         */}
           {/* ============================================================== */}
           <View
             style={{
@@ -552,19 +594,20 @@ export default function NominaScreen() {
               flexWrap: 'wrap',
               gap: 14,
               marginBottom: 24,
+              width: '100%',
             }}
           >
             {/* KPI 1: Total Plazas */}
             <View
               style={{
                 flex: 1,
-                minWidth: isTablet ? 220 : '100%',
+                minWidth: isTablet ? 190 : '100%',
                 backgroundColor: THEME.white,
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: THEME.slate200,
-                paddingHorizontal: 20,
-                paddingVertical: 16,
+                paddingHorizontal: 18,
+                paddingVertical: 14,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.04,
@@ -594,13 +637,13 @@ export default function NominaScreen() {
             <View
               style={{
                 flex: 1,
-                minWidth: isTablet ? 220 : '100%',
+                minWidth: isTablet ? 190 : '100%',
                 backgroundColor: THEME.white,
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: THEME.slate200,
-                paddingHorizontal: 20,
-                paddingVertical: 16,
+                paddingHorizontal: 18,
+                paddingVertical: 14,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.04,
@@ -626,17 +669,53 @@ export default function NominaScreen() {
               </Text>
             </View>
 
-            {/* KPI 3: Vacantes */}
+            {/* KPI 3: Plazas con Encargo */}
             <View
               style={{
                 flex: 1,
-                minWidth: isTablet ? 220 : '100%',
+                minWidth: isTablet ? 190 : '100%',
                 backgroundColor: THEME.white,
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: THEME.slate200,
-                paddingHorizontal: 20,
-                paddingVertical: 16,
+                paddingHorizontal: 18,
+                paddingVertical: 14,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '600',
+                  color: THEME.slate500,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Plazas en Encargo
+              </Text>
+              <Text style={{ fontSize: 26, fontWeight: '600', color: THEME.amberText, marginTop: 4 }}>
+                {totalEncargos}
+              </Text>
+              <Text style={{ fontSize: 12, color: THEME.slate400, marginTop: 2 }}>
+                Con servidor encargado activo
+              </Text>
+            </View>
+
+            {/* KPI 4: Vacantes */}
+            <View
+              style={{
+                flex: 1,
+                minWidth: isTablet ? 190 : '100%',
+                backgroundColor: THEME.white,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: THEME.slate200,
+                paddingHorizontal: 18,
+                paddingVertical: 14,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.04,
@@ -662,7 +741,7 @@ export default function NominaScreen() {
               </Text>
             </View>
 
-            {/* KPI 4: Masa Salarial Mensual */}
+            {/* KPI 5: Masa Salarial Mensual */}
             <View
               style={{
                 flex: 1,
@@ -671,8 +750,8 @@ export default function NominaScreen() {
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: THEME.slate200,
-                paddingHorizontal: 20,
-                paddingVertical: 16,
+                paddingHorizontal: 18,
+                paddingVertical: 14,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.04,
@@ -690,7 +769,7 @@ export default function NominaScreen() {
               >
                 Masa Salarial Básica
               </Text>
-              <Text style={{ fontSize: 24, fontWeight: '600', color: THEME.slate900, marginTop: 4 }}>
+              <Text style={{ fontSize: 22, fontWeight: '600', color: THEME.slate900, marginTop: 4 }}>
                 {formatearDinero(estadisticas?.masa_salarial_mensual || 1789230000)}
               </Text>
               <Text style={{ fontSize: 12, color: THEME.slate400, marginTop: 2 }}>
@@ -700,7 +779,7 @@ export default function NominaScreen() {
           </View>
 
           {/* ============================================================== */}
-          {/* PESTAÑAS (Patrón de navegación underline de supervision)       */}
+          {/* PESTAÑAS (NAVEGACIÓN)                                         */}
           {/* ============================================================== */}
           <View
             style={{
@@ -710,6 +789,7 @@ export default function NominaScreen() {
               borderBottomColor: THEME.slate200,
               marginBottom: 20,
               overflow: 'hidden',
+              width: '100%',
             }}
           >
             {/* Pestaña 1: Censo de Plazas */}
@@ -817,8 +897,8 @@ export default function NominaScreen() {
           {/* CONTENIDO SEGÚN PESTAÑA ACTIVA                                */}
           {/* ============================================================== */}
           {tabActiva === 'plazas' && (
-            <View>
-              {/* FILTROS Y BARRA DE BÚSQUEDA */}
+            <View style={{ width: '100%' }}>
+              {/* FILTROS Y BARRA DE BÚSQUEDA AVANZADA */}
               <View
                 style={{
                   backgroundColor: THEME.white,
@@ -831,9 +911,10 @@ export default function NominaScreen() {
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.03,
                   shadowRadius: 2,
+                  width: '100%',
                 }}
               >
-                {/* Fila 1: Input de búsqueda + Toggle Cards/Tabla */}
+                {/* Fila 1: Búsqueda General + Búsqueda por ID SIEAP + Toggle Cards/Tabla */}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -843,10 +924,11 @@ export default function NominaScreen() {
                     flexWrap: 'wrap',
                   }}
                 >
+                  {/* Input de búsqueda por nombre, cédula, cargo */}
                   <View
                     style={{
-                      flex: 1,
-                      minWidth: isTablet ? 300 : '100%',
+                      flex: 2,
+                      minWidth: isTablet ? 280 : '100%',
                       flexDirection: 'row',
                       alignItems: 'center',
                       backgroundColor: THEME.slate50,
@@ -861,7 +943,7 @@ export default function NominaScreen() {
                     <TextInput
                       value={busqueda}
                       onChangeText={setBusqueda}
-                      placeholder="Buscar por cédula, nombre, cargo, código o dependencia..."
+                      placeholder="Buscar por cédula, nombre de titular o encargado, cargo o código..."
                       placeholderTextColor={THEME.slate400}
                       style={{
                         flex: 1,
@@ -873,6 +955,43 @@ export default function NominaScreen() {
                     />
                     {busqueda ? (
                       <Pressable onPress={() => setBusqueda('')}>
+                        <Ionicons name="close-circle" size={17} color={THEME.slate400} />
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  {/* Input específico para ID SIEAP / SIDEAP */}
+                  <View
+                    style={{
+                      flex: 1,
+                      minWidth: isTablet ? 170 : '100%',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: THEME.slate50,
+                      borderWidth: 1,
+                      borderColor: idSieapFiltro ? THEME.marca600 : THEME.slate200,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Ionicons name="card-outline" size={17} color={idSieapFiltro ? THEME.marca700 : THEME.slate400} />
+                    <TextInput
+                      value={idSieapFiltro}
+                      onChangeText={setIdSieapFiltro}
+                      placeholder="Filtro ID SIEAP..."
+                      placeholderTextColor={THEME.slate400}
+                      keyboardType="numeric"
+                      style={{
+                        flex: 1,
+                        marginLeft: 8,
+                        fontSize: 13,
+                        color: THEME.slate900,
+                        padding: 0,
+                      }}
+                    />
+                    {idSieapFiltro ? (
+                      <Pressable onPress={() => setIdSieapFiltro('')}>
                         <Ionicons name="close-circle" size={17} color={THEME.slate400} />
                       </Pressable>
                     ) : null}
@@ -953,21 +1072,160 @@ export default function NominaScreen() {
                   </View>
                 </View>
 
-                {/* Fila 2: Filtros por Nivel y Estado */}
+                {/* Fila 2: Selectores de Dependencia, Cargo y Toggle Encargos */}
                 <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
                     flexWrap: 'wrap',
-                    gap: 12,
+                    gap: 10,
                     marginTop: 14,
                     paddingTop: 12,
                     borderTopWidth: 1,
                     borderTopColor: THEME.slate100,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate500 }}>
-                    NIVEL:
+                  {/* Selector de Dependencia */}
+                  <Pressable
+                    onPress={() => setModalDependenciaVisible(true)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: dependenciaSeleccionada !== 'TODAS' ? THEME.marca600 : THEME.slate200,
+                      backgroundColor: dependenciaSeleccionada !== 'TODAS' ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
+                    })}
+                  >
+                    <Ionicons
+                      name="business-outline"
+                      size={15}
+                      color={dependenciaSeleccionada !== 'TODAS' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: dependenciaSeleccionada !== 'TODAS' ? '600' : '500',
+                        color: dependenciaSeleccionada !== 'TODAS' ? THEME.marca800 : THEME.slate700,
+                        maxWidth: 220,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {dependenciaSeleccionada === 'TODAS'
+                        ? 'Dependencia: Todas'
+                        : `Dep: ${dependenciaSeleccionada}`}
+                    </Text>
+                    <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
+                  </Pressable>
+
+                  {/* Selector de Cargo */}
+                  <Pressable
+                    onPress={() => setModalCargoVisible(true)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: cargoSeleccionado !== 'TODOS' ? THEME.marca600 : THEME.slate200,
+                      backgroundColor: cargoSeleccionado !== 'TODOS' ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
+                    })}
+                  >
+                    <Ionicons
+                      name="briefcase-outline"
+                      size={15}
+                      color={cargoSeleccionado !== 'TODOS' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: cargoSeleccionado !== 'TODOS' ? '600' : '500',
+                        color: cargoSeleccionado !== 'TODOS' ? THEME.marca800 : THEME.slate700,
+                        maxWidth: 200,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {cargoSeleccionado === 'TODOS' ? 'Cargo: Todos' : `Cargo: ${cargoSeleccionado}`}
+                    </Text>
+                    <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
+                  </Pressable>
+
+                  {/* Toggle "¿Solo Encargos?" */}
+                  <Pressable
+                    onPress={() => setSoloEncargo(!soloEncargo)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: soloEncargo ? '#F59E0B' : THEME.slate200,
+                      backgroundColor: soloEncargo ? '#FEF3C7' : THEME.white,
+                    }}
+                  >
+                    <Ionicons
+                      name={soloEncargo ? 'swap-horizontal' : 'swap-horizontal-outline'}
+                      size={15}
+                      color={soloEncargo ? '#B45309' : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: soloEncargo ? '700' : '500',
+                        color: soloEncargo ? '#B45309' : THEME.slate600,
+                      }}
+                    >
+                      ¿En Encargo? {soloEncargo ? '(Activo)' : ''}
+                    </Text>
+                  </Pressable>
+
+                  {/* Botón para limpiar filtros */}
+                  {hayFiltrosActivos && (
+                    <Pressable
+                      onPress={limpiarFiltros}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        backgroundColor: THEME.roseBg,
+                        borderWidth: 1,
+                        borderColor: THEME.roseRing,
+                        marginLeft: 'auto',
+                      }}
+                    >
+                      <Ionicons name="close-circle-outline" size={14} color={THEME.roseText} />
+                      <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.roseText }}>
+                        Limpiar Filtros
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Fila 3: Chips de Niveles y Estados */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                    marginTop: 12,
+                    paddingTop: 10,
+                    borderTopWidth: 1,
+                    borderTopColor: THEME.slate100,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                    Nivel:
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {NIVELES.map((niv) => {
@@ -977,8 +1235,8 @@ export default function NominaScreen() {
                           key={niv}
                           onPress={() => setNivelSeleccionado(niv)}
                           style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
+                            paddingHorizontal: 9,
+                            paddingVertical: 3,
                             borderRadius: 6,
                             backgroundColor: activo ? THEME.marca50 : THEME.white,
                             borderWidth: 1,
@@ -999,10 +1257,10 @@ export default function NominaScreen() {
                     })}
                   </View>
 
-                  <View style={{ width: 1, height: 18, backgroundColor: THEME.slate200, marginHorizontal: 4 }} />
+                  <View style={{ width: 1, height: 16, backgroundColor: THEME.slate200, marginHorizontal: 2 }} />
 
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate500 }}>
-                    ESTADO:
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                    Estado:
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {ESTADOS.map((est) => {
@@ -1012,8 +1270,8 @@ export default function NominaScreen() {
                           key={est}
                           onPress={() => setEstadoSeleccionado(est)}
                           style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
+                            paddingHorizontal: 9,
+                            paddingVertical: 3,
                             borderRadius: 6,
                             backgroundColor: activo ? THEME.marca50 : THEME.white,
                             borderWidth: 1,
@@ -1036,7 +1294,7 @@ export default function NominaScreen() {
                 </View>
               </View>
 
-              {/* LISTADO / TABLA */}
+              {/* LISTADO / TABLA O TARJETAS */}
               {cargando ? (
                 <View
                   style={{
@@ -1047,11 +1305,12 @@ export default function NominaScreen() {
                     paddingVertical: 60,
                     alignItems: 'center',
                     justifyContent: 'center',
+                    width: '100%',
                   }}
                 >
                   <ActivityIndicator size="large" color={THEME.marca600} />
                   <Text style={{ color: THEME.slate500, fontSize: 13, marginTop: 12 }}>
-                    Cargando plazas y registros de nómina...
+                    Cargando plazas, titulares y encargos de nómina...
                   </Text>
                 </View>
               ) : plazas.length === 0 ? (
@@ -1064,6 +1323,7 @@ export default function NominaScreen() {
                     paddingVertical: 60,
                     alignItems: 'center',
                     justifyContent: 'center',
+                    width: '100%',
                   }}
                 >
                   <Ionicons name="folder-open-outline" size={38} color={THEME.slate300} />
@@ -1071,12 +1331,26 @@ export default function NominaScreen() {
                     No se encontraron plazas con los filtros seleccionados
                   </Text>
                   <Text style={{ color: THEME.slate400, fontSize: 12, marginTop: 4 }}>
-                    Intenta modificar la búsqueda o limpiar los filtros.
+                    Intenta modificar los filtros de cargo, dependencia, id sieap o limpiar filtros.
                   </Text>
+                  <Pressable
+                    onPress={limpiarFiltros}
+                    style={{
+                      marginTop: 16,
+                      backgroundColor: THEME.marca700,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '600' }}>
+                      Restablecer Filtros
+                    </Text>
+                  </Pressable>
                 </View>
               ) : modoVista === 'tabla' ? (
                 /* ============================================================== */
-                /* VISTA TABLA (Estilo Bi de supervision-prueba)                  */
+                /* VISTA TABLA (ANCHO 100%, COLUMNAS EN PORCENTAJE)               */
                 /* ============================================================== */
                 <View
                   style={{
@@ -1089,50 +1363,59 @@ export default function NominaScreen() {
                     shadowOffset: { width: 0, height: 1 },
                     shadowOpacity: 0.04,
                     shadowRadius: 3,
+                    width: '100%',
                   }}
                 >
-                  <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                    <View style={{ minWidth: 1100 }}>
-                      {/* Cabecera de la tabla */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+                    <View style={{ width: '100%', minWidth: 1100 }}>
+                      {/* Cabecera de la tabla con porcentajes exactos */}
                       <View
                         style={{
                           flexDirection: 'row',
                           backgroundColor: THEME.slate50,
                           borderBottomWidth: 1,
                           borderBottomColor: THEME.slate200,
-                          paddingVertical: 10,
+                          paddingVertical: 11,
                           paddingHorizontal: 16,
+                          alignItems: 'center',
                         }}
                       >
-                        <Text style={{ width: 70, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
-                          ID / Plaza
+                        {/* 1. ID / SIDEAP: 9% */}
+                        <Text style={{ width: '9%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                          Plaza / SIEAP
                         </Text>
-                        <Text style={{ width: 230, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
-                          Denominación del Empleo
+                        {/* 2. Denominación / Nivel: 21% */}
+                        <Text style={{ width: '21%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                          Cargo & Nivel
                         </Text>
-                        <Text style={{ width: 110, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
-                          Nivel
+                        {/* 3. Servidor (Encargado y Titular): 27% */}
+                        <Text style={{ width: '27%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                          Servidor (Encargado / Titular)
                         </Text>
-                        <Text style={{ width: 210, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
-                          Servidor / Titular
-                        </Text>
-                        <Text style={{ width: 140, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        {/* 4. Estado: 11% */}
+                        <Text style={{ width: '11%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
                           Estado
                         </Text>
-                        <Text style={{ width: 200, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        {/* 5. Dependencia: 16% */}
+                        <Text style={{ width: '16%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
                           Dependencia
                         </Text>
-                        <Text style={{ width: 120, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase', textAlign: 'right' }}>
-                          Básico Mensual
+                        {/* 6. Asignación Básica: 9% */}
+                        <Text style={{ width: '9%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase', textAlign: 'right' }}>
+                          Básico
                         </Text>
-                        <Text style={{ width: 90, fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase', textAlign: 'center' }}>
-                          Acción
+                        {/* 7. Acción: 7% */}
+                        <Text style={{ width: '7%', fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase', textAlign: 'center' }}>
+                          Ficha
                         </Text>
                       </View>
 
                       {/* Filas */}
                       {plazas.map((p, index) => {
-                        const esOcupado = (p.estado_cargo || '').toUpperCase() === 'OCUPADO';
+                        const estadoNorm = (p.estado_cargo || '').toUpperCase();
+                        const esVacante = estadoNorm.includes('VACANTE') || (!p.titular_nombre && !p.encargo_nombre);
+                        const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
+
                         return (
                           <Pressable
                             key={p.id_plaza || index}
@@ -1140,7 +1423,7 @@ export default function NominaScreen() {
                             style={({ pressed }) => ({
                               flexDirection: 'row',
                               alignItems: 'center',
-                              paddingVertical: 11,
+                              paddingVertical: 12,
                               paddingHorizontal: 16,
                               borderBottomWidth: 1,
                               borderBottomColor: THEME.slate100,
@@ -1151,73 +1434,143 @@ export default function NominaScreen() {
                                 : '#FAFCFF',
                             })}
                           >
-                            {/* ID */}
-                            <View style={{ width: 70 }}>
-                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
+                            {/* 1. ID Plaza & ID SIDEAP (SIEAP): 9% */}
+                            <View style={{ width: '9%' }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
                                 #{p.id_plaza}
                               </Text>
-                              <Text style={{ fontSize: 10, color: THEME.slate400 }}>
-                                Cód. {p.codigo || '---'}
+                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                SIEAP: <Text style={{ fontWeight: '600', color: THEME.marca700 }}>{p.id_sideap || '---'}</Text>
                               </Text>
                             </View>
 
-                            {/* Cargo */}
-                            <View style={{ width: 230, paddingRight: 10 }}>
+                            {/* 2. Denominación del Empleo & Nivel: 21% */}
+                            <View style={{ width: '21%', paddingRight: 10 }}>
                               <Text
                                 numberOfLines={1}
                                 style={{ fontSize: 13, fontWeight: '600', color: THEME.marca700 }}
                               >
                                 {p.cargo || 'Sin denominación'}
                               </Text>
-                              <Text style={{ fontSize: 11, color: THEME.slate400 }}>
-                                Grado {p.grado || '00'} • {p.tipo_vinculacion || 'Planta'}
-                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                                {renderBadgeNivel(p.nivel)}
+                                <Text style={{ fontSize: 10.5, color: THEME.slate400 }}>
+                                  Cód. {p.codigo || '---'} Gr. {p.grado || '00'}
+                                </Text>
+                              </View>
                             </View>
 
-                            {/* Nivel */}
-                            <View style={{ width: 110 }}>{renderBadgeNivel(p.nivel)}</View>
+                            {/* 3. Servidor: Primero quién está ENCARGADO, luego TITULAR: 27% */}
+                            <View style={{ width: '27%', paddingRight: 12, justifyContent: 'center' }}>
+                              {esVacante ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                  <Ionicons name="alert-circle-outline" size={14} color={THEME.roseText} />
+                                  <Text style={{ fontSize: 12, fontStyle: 'italic', color: THEME.slate400 }}>
+                                    Sin servidor vinculado ({p.estado_cargo || 'Vacante'})
+                                  </Text>
+                                </View>
+                              ) : tieneEncargo ? (
+                                <View style={{ gap: 2 }}>
+                                  {/* Primero: ENCARGADO */}
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                    <View
+                                      style={{
+                                        backgroundColor: '#FEF3C7',
+                                        borderColor: '#F59E0B',
+                                        borderWidth: 1,
+                                        paddingHorizontal: 5,
+                                        paddingVertical: 1,
+                                        borderRadius: 4,
+                                      }}
+                                    >
+                                      <Text style={{ color: '#B45309', fontSize: 9.5, fontWeight: '700' }}>
+                                        ENCARGADO(A)
+                                      </Text>
+                                    </View>
+                                    <Text
+                                      numberOfLines={1}
+                                      style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}
+                                    >
+                                      {p.encargo_nombre}
+                                    </Text>
+                                  </View>
+                                  {p.encargo_cedula ? (
+                                    <Text style={{ fontSize: 10.5, color: THEME.slate500, marginLeft: 2 }}>
+                                      C.C. {p.encargo_cedula} • {p.situacion_administrativa || 'Encargo'}
+                                    </Text>
+                                  ) : null}
 
-                            {/* Servidor */}
-                            <View style={{ width: 210, paddingRight: 10 }}>
-                              {esOcupado ? (
-                                <>
-                                  <Text
-                                    numberOfLines={1}
-                                    style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900 }}
-                                  >
-                                    {p.titular_nombre || 'Servidor Registrado'}
-                                  </Text>
-                                  <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                                    C.C. {p.titular_cedula || 'No registrada'}
-                                  </Text>
-                                </>
+                                  {/* Luego: TITULAR */}
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.slate400, textTransform: 'uppercase' }}>
+                                      Titular:
+                                    </Text>
+                                    <Text
+                                      numberOfLines={1}
+                                      style={{ fontSize: 11, fontWeight: '500', color: THEME.slate600, flexShrink: 1 }}
+                                    >
+                                      {p.titular_nombre || 'Vacante Definitiva'}
+                                    </Text>
+                                    {p.situacion_titular ? (
+                                      <Text style={{ fontSize: 9.5, color: THEME.slate400, fontStyle: 'italic' }}>
+                                        ({p.situacion_titular})
+                                      </Text>
+                                    ) : null}
+                                  </View>
+                                </View>
                               ) : (
-                                <Text style={{ fontSize: 12, fontStyle: 'italic', color: THEME.slate400 }}>
-                                  Sin servidor vinculado
-                                </Text>
+                                /* Titular directo sin encargo */
+                                <View style={{ gap: 2 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                    <View
+                                      style={{
+                                        backgroundColor: THEME.slate100,
+                                        borderColor: THEME.slate300,
+                                        borderWidth: 1,
+                                        paddingHorizontal: 5,
+                                        paddingVertical: 1,
+                                        borderRadius: 4,
+                                      }}
+                                    >
+                                      <Text style={{ color: THEME.slate600, fontSize: 9.5, fontWeight: '600' }}>
+                                        TITULAR
+                                      </Text>
+                                    </View>
+                                    <Text
+                                      numberOfLines={1}
+                                      style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900, flexShrink: 1 }}
+                                    >
+                                      {p.titular_nombre || 'Servidor Registrado'}
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 10.5, color: THEME.slate500, marginLeft: 2 }}>
+                                    {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
+                                    {p.situacion_administrativa || p.tipo_vinculacion || 'En Propiedad'}
+                                  </Text>
+                                </View>
                               )}
                             </View>
 
-                            {/* Estado */}
-                            <View style={{ width: 140 }}>{renderBadgeEstado(p.estado_cargo)}</View>
+                            {/* 4. Estado: 11% */}
+                            <View style={{ width: '11%' }}>{renderBadgeEstado(p.estado_cargo)}</View>
 
-                            {/* Dependencia */}
-                            <View style={{ width: 200, paddingRight: 10 }}>
-                              <Text numberOfLines={2} style={{ fontSize: 12, color: THEME.slate600 }}>
+                            {/* 5. Dependencia: 16% */}
+                            <View style={{ width: '16%', paddingRight: 8 }}>
+                              <Text numberOfLines={2} style={{ fontSize: 11.5, color: THEME.slate700 }}>
                                 {p.dependencia_cargo || 'Secretaría Jurídica Distrital'}
                               </Text>
                             </View>
 
-                            {/* Asignación Básica */}
-                            <View style={{ width: 120, alignItems: 'flex-end', paddingRight: 8 }}>
-                              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900 }}>
+                            {/* 6. Asignación Básica: 9% */}
+                            <View style={{ width: '9%', alignItems: 'flex-end', paddingRight: 8 }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900 }}>
                                 {formatearDinero(p.asignacion_basica)}
                               </Text>
-                              <Text style={{ fontSize: 10, color: THEME.slate400 }}>COP</Text>
+                              <Text style={{ fontSize: 9.5, color: THEME.slate400 }}>COP</Text>
                             </View>
 
-                            {/* Acción */}
-                            <View style={{ width: 90, alignItems: 'center' }}>
+                            {/* 7. Acción: 7% */}
+                            <View style={{ width: '7%', alignItems: 'center' }}>
                               <View
                                 style={{
                                   paddingHorizontal: 8,
@@ -1239,17 +1592,21 @@ export default function NominaScreen() {
                 </View>
               ) : (
                 /* ============================================================== */
-                /* VISTA TARJETAS (Cards en Grid de supervision-prueba)           */
+                /* VISTA TARJETAS (CARDS GRID COMPLETO)                           */
                 /* ============================================================== */
                 <View
                   style={{
                     flexDirection: 'row',
                     flexWrap: 'wrap',
                     gap: 16,
+                    width: '100%',
                   }}
                 >
                   {plazas.map((p, index) => {
-                    const esOcupado = (p.estado_cargo || '').toUpperCase() === 'OCUPADO';
+                    const estadoNorm = (p.estado_cargo || '').toUpperCase();
+                    const esVacante = estadoNorm.includes('VACANTE') || (!p.titular_nombre && !p.encargo_nombre);
+                    const tieneEncargo = p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim() !== '' && p.encargo_nombre.trim() !== (p.titular_nombre || '').trim());
+
                     return (
                       <Pressable
                         key={p.id_plaza || index}
@@ -1277,16 +1634,25 @@ export default function NominaScreen() {
                             marginBottom: 8,
                           }}
                         >
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400 }}>
-                            PLAZA #{p.id_plaza}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400 }}>
+                              PLAZA #{p.id_plaza}
+                            </Text>
+                            {p.id_sideap ? (
+                              <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca700 }}>
+                                  SIEAP: {p.id_sideap}
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
                           {renderBadgeEstado(p.estado_cargo)}
                         </View>
 
                         {/* Título del cargo */}
                         <Text
                           numberOfLines={2}
-                          style={{ fontSize: 15, fontWeight: '600', color: THEME.marca700, marginBottom: 4 }}
+                          style={{ fontSize: 14.5, fontWeight: '600', color: THEME.marca700, marginBottom: 4 }}
                         >
                           {p.cargo || 'Sin denominación'}
                         </Text>
@@ -1308,40 +1674,74 @@ export default function NominaScreen() {
                           </View>
                         </View>
 
-                        <View style={{ height: 1, backgroundColor: THEME.slate100, marginBottom: 12 }} />
+                        <View style={{ height: 1, backgroundColor: THEME.slate100, marginBottom: 10 }} />
 
-                        {/* Datos del servidor */}
+                        {/* Servidores: Encargado primero y luego Titular */}
                         <View style={{ marginBottom: 10 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
-                            Servidor Vinculado
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase', marginBottom: 4 }}>
+                            Servidor Asignado
                           </Text>
-                          {esOcupado ? (
-                            <View style={{ marginTop: 2 }}>
-                              <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900 }}>
-                                {p.titular_nombre}
-                              </Text>
-                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                                C.C. {p.titular_cedula || 'No registrada'}
-                              </Text>
-                            </View>
-                          ) : (
-                            <Text style={{ fontSize: 12, fontStyle: 'italic', color: THEME.slate400, marginTop: 2 }}>
+
+                          {esVacante ? (
+                            <Text style={{ fontSize: 12, fontStyle: 'italic', color: THEME.slate400 }}>
                               Vacante disponible en planta
                             </Text>
+                          ) : tieneEncargo ? (
+                            <View style={{ gap: 4 }}>
+                              {/* Encargado */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                                  <Text style={{ color: '#B45309', fontSize: 9, fontWeight: '700' }}>ENCARGADO</Text>
+                                </View>
+                                <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
+                                  {p.encargo_nombre}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                C.C. {p.encargo_cedula || '---'} • {p.situacion_administrativa || 'Encargo'}
+                              </Text>
+
+                              {/* Titular */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.slate400 }}>Titular:</Text>
+                                <Text numberOfLines={1} style={{ fontSize: 11, color: THEME.slate600, flexShrink: 1 }}>
+                                  {p.titular_nombre}
+                                </Text>
+                                {p.situacion_titular ? (
+                                  <Text style={{ fontSize: 9.5, color: THEME.slate400, fontStyle: 'italic' }}>
+                                    ({p.situacion_titular})
+                                  </Text>
+                                ) : null}
+                              </View>
+                            </View>
+                          ) : (
+                            <View style={{ gap: 2 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                                  <Text style={{ color: THEME.slate600, fontSize: 9, fontWeight: '600' }}>TITULAR</Text>
+                                </View>
+                                <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate900, flexShrink: 1 }}>
+                                  {p.titular_nombre}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}{p.situacion_administrativa || 'En propiedad'}
+                              </Text>
+                            </View>
                           )}
                         </View>
 
                         {/* Dependencia */}
                         <View style={{ marginBottom: 12 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
                             Dependencia
                           </Text>
-                          <Text numberOfLines={1} style={{ fontSize: 12, color: THEME.slate700, marginTop: 1 }}>
+                          <Text numberOfLines={1} style={{ fontSize: 11.5, color: THEME.slate700, marginTop: 1 }}>
                             {p.dependencia_cargo || 'Secretaría Jurídica Distrital'}
                           </Text>
                         </View>
 
-                        {/* Pie de tarjeta con Asignación Básica y botón */}
+                        {/* Pie de tarjeta */}
                         <View
                           style={{
                             paddingTop: 10,
@@ -1353,10 +1753,10 @@ export default function NominaScreen() {
                           }}
                         >
                           <View>
-                            <Text style={{ fontSize: 10, color: THEME.slate400, textTransform: 'uppercase' }}>
+                            <Text style={{ fontSize: 9.5, color: THEME.slate400, textTransform: 'uppercase' }}>
                               Asignación Básica
                             </Text>
-                            <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
+                            <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate900 }}>
                               {formatearDinero(p.asignacion_basica)}
                             </Text>
                           </View>
@@ -1390,7 +1790,7 @@ export default function NominaScreen() {
           {/* PESTAÑA: ESTRUCTURA POR NIVELES                                */}
           {/* ============================================================== */}
           {tabActiva === 'estructura' && (
-            <View>
+            <View style={{ width: '100%' }}>
               <View
                 style={{
                   backgroundColor: THEME.white,
@@ -1399,6 +1799,7 @@ export default function NominaScreen() {
                   borderColor: THEME.slate200,
                   padding: 20,
                   marginBottom: 20,
+                  width: '100%',
                 }}
               >
                 <Text style={{ fontSize: 16, fontWeight: '600', color: THEME.slate900 }}>
@@ -1414,6 +1815,7 @@ export default function NominaScreen() {
                     flexWrap: 'wrap',
                     gap: 16,
                     marginTop: 20,
+                    width: '100%',
                   }}
                 >
                   {Object.entries(distribucionPorNivel).map(([nivel, cant]) => {
@@ -1447,7 +1849,6 @@ export default function NominaScreen() {
                         <Text style={{ fontSize: 24, fontWeight: '700', color: THEME.slate900, marginTop: 8 }}>
                           {cant} <Text style={{ fontSize: 13, fontWeight: '400', color: THEME.slate500 }}>plazas</Text>
                         </Text>
-                        {/* Barra de progreso */}
                         <View
                           style={{
                             height: 6,
@@ -1459,8 +1860,8 @@ export default function NominaScreen() {
                         >
                           <View
                             style={{
-                              width: `${porcentaje}%`,
                               height: '100%',
+                              width: `${porcentaje}%`,
                               backgroundColor: THEME.marca600,
                               borderRadius: 3,
                             }}
@@ -1475,26 +1876,25 @@ export default function NominaScreen() {
           )}
 
           {/* ============================================================== */}
-          {/* PESTAÑA: CARGA DE ARCHIVOS DE NÓMINA (PLANTA + PERNO)          */}
+          {/* PESTAÑA: CARGA DE ARCHIVOS                                     */}
           {/* ============================================================== */}
           {tabActiva === 'archivos' && (
-            <View>
+            <View style={{ width: '100%' }}>
               <View
                 style={{
                   backgroundColor: THEME.white,
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: THEME.slate200,
-                  padding: 20,
-                  marginBottom: 20,
+                  padding: 24,
+                  width: '100%',
                 }}
               >
                 <Text style={{ fontSize: 17, fontWeight: '600', color: THEME.slate900 }}>
-                  Alimentación de Nómina mediante Archivos Excel
+                  Alimentación de Nómina y Actualización de Planta
                 </Text>
                 <Text style={{ fontSize: 13, color: THEME.slate500, marginTop: 4 }}>
-                  Actualiza de manera autónoma las plazas y la información pormenorizada de personal subiendo los dos
-                  formatos oficiales de la Secretaría Jurídica Distrital.
+                  Carga los archivos oficiales en Excel para actualizar los cargos de planta o alimentar la seguridad social y nómina perno.
                 </Text>
 
                 <View
@@ -1502,9 +1902,10 @@ export default function NominaScreen() {
                     flexDirection: isTablet ? 'row' : 'column',
                     gap: 20,
                     marginTop: 20,
+                    width: '100%',
                   }}
                 >
-                  {/* ARCHIVO 1: PLANTA (IMAGEN 1) */}
+                  {/* ARCHIVO 1: PLANTA */}
                   <View
                     style={{
                       flex: 1,
@@ -1526,7 +1927,7 @@ export default function NominaScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Ionicons name="document-text" size={20} color={THEME.marca700} />
                         <Text style={{ fontSize: 15, fontWeight: '600', color: THEME.slate900 }}>
-                          1. Archivo de Planta
+                          1. Archivo de Planta Oficial
                         </Text>
                       </View>
                       <View
@@ -1544,8 +1945,7 @@ export default function NominaScreen() {
                     </View>
 
                     <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 16 }}>
-                      Contiene el censo de cargos, plazas, código, grado, dependencia, asignación básica mensual y
-                      gastos de representación.
+                      Contiene el censo de cargos, plazas, ID SIDEAP, dependencias, asignación básica mensual y personas encargadas o titulares.
                     </Text>
 
                     <View
@@ -1566,7 +1966,7 @@ export default function NominaScreen() {
                         {nombreArchivoPlanta || 'Formato Excel (.xlsx, .xls)'}
                       </Text>
                       <Text style={{ fontSize: 11, color: THEME.slate400, marginTop: 2 }}>
-                        Estructura: Nivel, Denominación, Cód, Grado, Básico
+                        Estructura: Nivel, Cargo, ID SIDEAP, Básico, Titular, Encargo
                       </Text>
                     </View>
 
@@ -1593,7 +1993,7 @@ export default function NominaScreen() {
                     </Pressable>
                   </View>
 
-                  {/* ARCHIVO 2: PLANTA PERNO (IMAGEN 2) */}
+                  {/* ARCHIVO 2: PLANTA PERNO */}
                   <View
                     style={{
                       flex: 1,
@@ -1635,8 +2035,7 @@ export default function NominaScreen() {
                     </View>
 
                     <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 16 }}>
-                      Contiene la información detallada del personal: EPS, Fondos de Pensiones, Cesantías, ARL, acto de
-                      nombramiento, posesión y correo institucional.
+                      Contiene la información detallada del personal: EPS, Fondos de Pensiones, Cesantías, acto de nombramiento y datos de contacto.
                     </Text>
 
                     <View
@@ -1690,7 +2089,261 @@ export default function NominaScreen() {
         </ScrollView>
 
         {/* ============================================================== */}
-        {/* MODAL DE DETALLE DE PLAZA (FICHA TÉCNICA INSTITUCIONAL)       */}
+        {/* MODAL DE SELECCIÓN DE DEPENDENCIA                              */}
+        {/* ============================================================== */}
+        <Modal
+          visible={modalDependenciaVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalDependenciaVisible(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.55)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 520,
+                maxHeight: '80%',
+                backgroundColor: THEME.white,
+                borderRadius: 14,
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.15,
+                shadowRadius: 20,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: THEME.marca900,
+                  paddingHorizontal: 18,
+                  paddingVertical: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="business" size={18} color={THEME.marca100} />
+                  <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '600' }}>
+                    Filtrar por Dependencia
+                  </Text>
+                </View>
+                <Pressable onPress={() => setModalDependenciaVisible(false)} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={20} color={THEME.white} />
+                </Pressable>
+              </View>
+
+              {/* Input de filtro dentro del modal */}
+              <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: THEME.slate100 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: THEME.slate50,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    borderRadius: 8,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                  }}
+                >
+                  <Ionicons name="search-outline" size={16} color={THEME.slate400} />
+                  <TextInput
+                    value={busquedaModalDep}
+                    onChangeText={setBusquedaModalDep}
+                    placeholder="Buscar dependencia..."
+                    placeholderTextColor={THEME.slate400}
+                    style={{ flex: 1, marginLeft: 8, fontSize: 13, color: THEME.slate900, padding: 0 }}
+                  />
+                  {busquedaModalDep ? (
+                    <Pressable onPress={() => setBusquedaModalDep('')}>
+                      <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+
+              <ScrollView style={{ paddingVertical: 6 }}>
+                {listaDependencias
+                  .filter((d) => d.toLowerCase().includes(busquedaModalDep.toLowerCase()))
+                  .map((dep) => {
+                    const seleccionado = dependenciaSeleccionada === dep;
+                    return (
+                      <Pressable
+                        key={dep}
+                        onPress={() => {
+                          setDependenciaSeleccionada(dep);
+                          setModalDependenciaVisible(false);
+                          setBusquedaModalDep('');
+                        }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingVertical: 11,
+                          paddingHorizontal: 18,
+                          backgroundColor: seleccionado ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
+                          borderBottomWidth: 1,
+                          borderBottomColor: THEME.slate100,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: seleccionado ? '700' : '500',
+                            color: seleccionado ? THEME.marca800 : THEME.slate700,
+                            flex: 1,
+                            paddingRight: 10,
+                          }}
+                        >
+                          {dep}
+                        </Text>
+                        {seleccionado && <Ionicons name="checkmark-circle" size={18} color={THEME.marca600} />}
+                      </Pressable>
+                    );
+                  })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ============================================================== */}
+        {/* MODAL DE SELECCIÓN DE CARGO                                    */}
+        {/* ============================================================== */}
+        <Modal
+          visible={modalCargoVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalCargoVisible(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.55)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 520,
+                maxHeight: '80%',
+                backgroundColor: THEME.white,
+                borderRadius: 14,
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.15,
+                shadowRadius: 20,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: THEME.marca900,
+                  paddingHorizontal: 18,
+                  paddingVertical: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="briefcase" size={18} color={THEME.marca100} />
+                  <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '600' }}>
+                    Filtrar por Denominación del Empleo
+                  </Text>
+                </View>
+                <Pressable onPress={() => setModalCargoVisible(false)} style={{ padding: 4 }}>
+                  <Ionicons name="close" size={20} color={THEME.white} />
+                </Pressable>
+              </View>
+
+              {/* Input de filtro dentro del modal */}
+              <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: THEME.slate100 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: THEME.slate50,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    borderRadius: 8,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                  }}
+                >
+                  <Ionicons name="search-outline" size={16} color={THEME.slate400} />
+                  <TextInput
+                    value={busquedaModalCargo}
+                    onChangeText={setBusquedaModalCargo}
+                    placeholder="Buscar denominación del cargo..."
+                    placeholderTextColor={THEME.slate400}
+                    style={{ flex: 1, marginLeft: 8, fontSize: 13, color: THEME.slate900, padding: 0 }}
+                  />
+                  {busquedaModalCargo ? (
+                    <Pressable onPress={() => setBusquedaModalCargo('')}>
+                      <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+
+              <ScrollView style={{ paddingVertical: 6 }}>
+                {listaCargos
+                  .filter((c) => c.toLowerCase().includes(busquedaModalCargo.toLowerCase()))
+                  .map((cargo) => {
+                    const seleccionado = cargoSeleccionado === cargo;
+                    return (
+                      <Pressable
+                        key={cargo}
+                        onPress={() => {
+                          setCargoSeleccionado(cargo);
+                          setModalCargoVisible(false);
+                          setBusquedaModalCargo('');
+                        }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          paddingVertical: 11,
+                          paddingHorizontal: 18,
+                          backgroundColor: seleccionado ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
+                          borderBottomWidth: 1,
+                          borderBottomColor: THEME.slate100,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: seleccionado ? '700' : '500',
+                            color: seleccionado ? THEME.marca800 : THEME.slate700,
+                            flex: 1,
+                            paddingRight: 10,
+                          }}
+                        >
+                          {cargo}
+                        </Text>
+                        {seleccionado && <Ionicons name="checkmark-circle" size={18} color={THEME.marca600} />}
+                      </Pressable>
+                    );
+                  })}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ============================================================== */}
+        {/* MODAL DE DETALLE DE PLAZA (ENCARGADO PRIMERO Y LUEGO TITULAR)   */}
         {/* ============================================================== */}
         <Modal
           visible={!!plazaModal}
@@ -1710,7 +2363,7 @@ export default function NominaScreen() {
             <View
               style={{
                 width: '100%',
-                maxWidth: 720,
+                maxWidth: 740,
                 maxHeight: '90%',
                 backgroundColor: THEME.white,
                 borderRadius: 14,
@@ -1721,7 +2374,7 @@ export default function NominaScreen() {
                 shadowRadius: 20,
               }}
             >
-              {/* Cabecera del Modal (bg-marca-900) */}
+              {/* Cabecera del Modal */}
               <View
                 style={{
                   backgroundColor: THEME.marca900,
@@ -1733,18 +2386,27 @@ export default function NominaScreen() {
                 }}
               >
                 <View>
-                  <Text
-                    style={{
-                      color: 'rgba(214, 228, 244, 0.7)',
-                      fontSize: 11,
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: 1,
-                    }}
-                  >
-                    Ficha Técnica de Plaza #{plazaModal?.id_plaza}
-                  </Text>
-                  <Text style={{ color: THEME.white, fontSize: 17, fontWeight: '600', marginTop: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text
+                      style={{
+                        color: 'rgba(214, 228, 244, 0.7)',
+                        fontSize: 11,
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                      }}
+                    >
+                      Ficha Técnica Plaza #{plazaModal?.id_plaza}
+                    </Text>
+                    {plazaModal?.id_sideap ? (
+                      <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                          SIEAP: #{plazaModal.id_sideap}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={{ color: THEME.white, fontSize: 17, fontWeight: '600', marginTop: 3 }}>
                     {plazaModal?.cargo}
                   </Text>
                 </View>
@@ -1763,8 +2425,8 @@ export default function NominaScreen() {
 
               {/* Contenido scrolleable de la ficha */}
               <ScrollView style={{ padding: 20 }}>
-                {/* Sección 1: Datos del Cargo Oficial */}
-                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                {/* SECCIÓN 1: ESPECIFICACIONES DE PLANTA */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
                   1. Especificaciones de Planta
                 </Text>
 
@@ -1801,76 +2463,208 @@ export default function NominaScreen() {
                   </View>
 
                   <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Asignación Básica</Text>
+                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Asignación Básica Mensual</Text>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.emeraldText, marginTop: 2 }}>
                       {formatearDinero(plazaModal?.asignacion_basica)}
                     </Text>
                   </View>
 
                   <View style={{ width: '100%' }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Asignada</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
+                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Oficial del Cargo</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                       {plazaModal?.dependencia_cargo || 'Secretaría Jurídica Distrital'}
                     </Text>
                   </View>
+
+                  {plazaModal?.dependencia_funcional && plazaModal.dependencia_funcional !== plazaModal.dependencia_cargo ? (
+                    <View style={{ width: '100%' }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Funcional Asignada</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '500', color: THEME.slate700, marginTop: 2 }}>
+                        {plazaModal.dependencia_funcional}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
 
-                {/* Sección 2: Titular o Servidor Asignado */}
-                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-                  2. Servidor Público Asignado
+                {/* SECCIÓN 2: SERVIDORES (PRIMERO QUIÉN ESTÁ ENCARGADO, LUEGO EL TITULAR) */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                  2. Servidores Públicos Asignados (Encargo y Titularidad)
                 </Text>
 
-                <View
-                  style={{
-                    backgroundColor: THEME.slate50,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: THEME.slate200,
-                    padding: 14,
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 14,
-                    marginBottom: 20,
-                  }}
-                >
-                  <View style={{ width: '100%' }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nombre Completo</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.slate900, marginTop: 2 }}>
-                      {plazaModal?.titular_nombre || 'Plaza actualmente Vacante'}
-                    </Text>
-                  </View>
+                {plazaModal?.es_encargo || (plazaModal?.encargo_nombre && plazaModal.encargo_nombre.trim() !== '') ? (
+                  <View style={{ gap: 12, marginBottom: 20 }}>
+                    {/* BLOQUE 1: SERVIDOR EN ENCARGO (PRIMERO) */}
+                    <View
+                      style={{
+                        backgroundColor: '#FFFBEB',
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#FDE68A',
+                        padding: 14,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View
+                            style={{
+                              backgroundColor: '#F59E0B',
+                              paddingHorizontal: 6,
+                              paddingVertical: 2,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                              PRIMERO: ENCARGADO(A)
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400E' }}>
+                            Servidor desempeñando actualmente la plaza
+                          </Text>
+                        </View>
+                        <Ionicons name="swap-horizontal" size={16} color="#B45309" />
+                      </View>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
-                    </Text>
-                  </View>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
+                        {plazaModal.encargo_nombre}
+                      </Text>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.tipo_vinculacion || '---'}
-                    </Text>
-                  </View>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaModal.encargo_cedula ? `C.C. ${plazaModal.encargo_cedula}` : 'No registrada'}
+                          </Text>
+                        </View>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.situacion_administrativa || 'Servicio Activo'}
-                    </Text>
-                  </View>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#B45309', marginTop: 1 }}>
+                            {plazaModal.situacion_administrativa || 'ENCARGO'}
+                          </Text>
+                        </View>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.acto_nombramiento || plazaModal?.numero_acto_nombramiento || '---'}
-                    </Text>
-                  </View>
-                </View>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Vinculación</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaModal.tipo_vinculacion || 'Planta'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
 
-                {/* Sección 3: Seguridad Social & Datos Nómina Perno */}
-                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                    {/* BLOQUE 2: SERVIDOR TITULAR DEL CARGO (LUEGO) */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 14,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View
+                            style={{
+                              backgroundColor: THEME.slate600,
+                              paddingHorizontal: 6,
+                              paddingVertical: 2,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                              LUEGO: TITULAR DEL CARGO
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
+                            Servidor titular en propiedad de la plaza
+                          </Text>
+                        </View>
+                        <Ionicons name="ribbon-outline" size={16} color={THEME.slate500} />
+                      </View>
+
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
+                        {plazaModal.titular_nombre || 'Plaza Vacante Definitiva'}
+                      </Text>
+
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaModal.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : 'No registrada'}
+                          </Text>
+                        </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
+                            {plazaModal.situacion_titular || 'En comisión o encargo en otro empleo'}
+                          </Text>
+                        </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            Plaza en encargo activo
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  /* CUANDO NO HAY ENCARGO (TITULAR DIRECTO O VACANTE) */
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      gap: 14,
+                      marginBottom: 20,
+                    }}
+                  >
+                    <View style={{ width: '100%' }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Servidor Titular Vinculado</Text>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
+                        {plazaModal?.titular_nombre || 'Plaza actualmente Vacante'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModal?.tipo_vinculacion || '---'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModal?.situacion_administrativa || 'Servicio Activo en Propiedad'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModal?.acto_nombramiento || plazaModal?.numero_acto_nombramiento || '---'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* SECCIÓN 3: SEGURIDAD SOCIAL Y NÓMINA PERNO */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
                   3. Seguridad Social y Nómina Perno
                 </Text>
 
@@ -1889,28 +2683,28 @@ export default function NominaScreen() {
                 >
                   <View style={{ flex: 1, minWidth: 140 }}>
                     <Text style={{ fontSize: 11, color: THEME.slate500 }}>EPS / Salud</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                       {plazaModal?.fondo_salud || 'No reportada'}
                     </Text>
                   </View>
 
                   <View style={{ flex: 1, minWidth: 140 }}>
                     <Text style={{ fontSize: 11, color: THEME.slate500 }}>Fondo de Pensiones</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                       {plazaModal?.fondo_pension || 'No reportado'}
                     </Text>
                   </View>
 
                   <View style={{ flex: 1, minWidth: 140 }}>
                     <Text style={{ fontSize: 11, color: THEME.slate500 }}>Fondo de Cesantías</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                       {plazaModal?.fondo_cesantias || 'No reportado'}
                     </Text>
                   </View>
 
                   <View style={{ flex: 1, minWidth: 140 }}>
                     <Text style={{ fontSize: 11, color: THEME.slate500 }}>Teléfono de Contacto</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate800, marginTop: 2 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                       {plazaModal?.telefono || 'No registrado'}
                     </Text>
                   </View>
