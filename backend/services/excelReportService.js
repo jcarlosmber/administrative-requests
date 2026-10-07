@@ -7,40 +7,42 @@
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
+const JSZip = require('jszip');
 
 /**
  * Genera la síntesis concisa de cotejo funcional para la observación en el FT-318
- * Ejemplo solicitado: Obl. 1 del cert. ➔ Func. 1, 3 y 4; Obl. 2 ➔ Func. 2 y 5; Obl. 3 ➔ Func. 6.
+ * Formato solicitado:
+ * Obligación 1 del certificado ➔ Función del empleo 5; Obligación 2 ➔ Funciones 1 y 3; Obligación 3 ➔ Función 6; Obligación 4 ➔ Función 7; Obligación 6 ➔ Función 6; Obligación 8 ➔ Función 6.
  */
 function formatearSintesisFunciones(cert, cargoEvaluado) {
   const funcionesCoincidentes = cert.experiencia_relacionada?.funciones_coincidentes || [];
   if (!Array.isArray(funcionesCoincidentes) || funcionesCoincidentes.length === 0) return '';
 
-  const esContrato = (cert.tipo_vinculo || '').toUpperCase().includes('CONTRAT') || 
-                     (cert.cargo_certificado || '').toUpperCase().includes('CONTRAT') ||
-                     Boolean(cert.numero_contrato_o_acto && cert.numero_contrato_o_acto !== 'NO CONSTA');
-  
-  const prefijoCert = esContrato ? 'Obl.' : 'Func.';
+  const prefijoCert = 'Obligación';
 
   // Mapear funciones del cargo si existen
-  const listaFuncionesCargo = Array.isArray(cargoEvaluado?.funciones_cargo) ? cargoEvaluado.funciones_cargo : [];
+  const listaFuncionesCargo = Array.isArray(cargoEvaluado?.funciones_cargo) 
+    ? cargoEvaluado.funciones_cargo 
+    : (Array.isArray(cargoEvaluado?.funciones_del_cargo) ? cargoEvaluado.funciones_del_cargo : []);
 
-  // Mapear funciones certificadas si existen
-  const listaFuncionesCert = Array.isArray(cert.funciones_certificadas) ? cert.funciones_certificadas : [];
+  // Mapear funciones/obligaciones certificadas si existen
+  const listaFuncionesCert = Array.isArray(cert.funciones_certificadas) 
+    ? cert.funciones_certificadas 
+    : (Array.isArray(cert.obligaciones) ? cert.obligaciones : []);
 
   const oblToFuncs = new Map();
 
   funcionesCoincidentes.forEach((f, idx) => {
-    // 1. Determinar número de obligación/función del certificado
+    // 1. Determinar número de obligación en el certificado
     let oblNum = null;
     const fCertTexto = (f.funcion_certificada || f.funcion || '').trim();
 
-    const mObl = fCertTexto.match(/^(?:obligaci[oó]n|obl\.?|num\.?|n°|numeral)?\s*(\d+)/i);
+    const mObl = fCertTexto.match(/^(?:obligaci[oó]n|funci[oó]n|obl\.?|func\.?|num\.?|n°|numeral)?\s*(\d+)/i);
     if (mObl) {
       oblNum = parseInt(mObl[1], 10);
     } else if (listaFuncionesCert.length > 0) {
       const idxEncontrado = listaFuncionesCert.findIndex(fc => {
-        const txt = typeof fc === 'string' ? fc : (fc.funcion || '');
+        const txt = typeof fc === 'string' ? fc : (fc.funcion || fc.descripcion || fc.obligacion || '');
         return txt.toLowerCase().includes(fCertTexto.toLowerCase()) || fCertTexto.toLowerCase().includes(txt.toLowerCase());
       });
       if (idxEncontrado !== -1) oblNum = idxEncontrado + 1;
@@ -77,19 +79,24 @@ function formatearSintesisFunciones(cert, cargoEvaluado) {
 
   sortedObls.forEach((obl, index) => {
     const funcs = Array.from(oblToFuncs.get(obl)).sort((a, b) => a - b);
-    let funcsStr = '';
+    let funcsListStr = '';
     if (funcs.length === 1) {
-      funcsStr = `Func. ${funcs[0]}`;
+      funcsListStr = `${funcs[0]}`;
     } else if (funcs.length === 2) {
-      funcsStr = `Func. ${funcs[0]} y ${funcs[1]}`;
+      funcsListStr = `${funcs[0]} y ${funcs[1]}`;
     } else {
       const primeros = funcs.slice(0, -1).join(', ');
       const ultimo = funcs[funcs.length - 1];
-      funcsStr = `Func. ${primeros} y ${ultimo}`;
+      funcsListStr = `${primeros} y ${ultimo}`;
     }
 
-    const etiquetaObl = index === 0 ? `${prefijoCert} ${obl} del cert.` : `${prefijoCert} ${obl}`;
-    partes.push(`${etiquetaObl} ➔ ${funcsStr}`);
+    if (index === 0) {
+      const palabraFunc = funcs.length === 1 ? 'Función del empleo' : 'Funciones del empleo';
+      partes.push(`${prefijoCert} ${obl} del certificado ➔ ${palabraFunc} ${funcsListStr}`);
+    } else {
+      const palabraFunc = funcs.length === 1 ? 'Función' : 'Funciones';
+      partes.push(`${prefijoCert} ${obl} ➔ ${palabraFunc} ${funcsListStr}`);
+    }
   });
 
   return partes.join('; ') + (partes.length > 0 ? '.' : '');
@@ -125,6 +132,7 @@ function resolverNombreCargoConContrato(cert) {
 
 async function generarReporteExcelValidacion(data) {
   const templatePath = path.join(__dirname, '../templates/2311300-FT-318_template.xlsx');
+  const sjgLogoPath = path.join(__dirname, '../templates/SJG logo.png');
   const workbook = new ExcelJS.Workbook();
 
   // 1. Cargar plantilla oficial
@@ -140,6 +148,17 @@ async function generarReporteExcelValidacion(data) {
     });
     ws.tables = {};
   }
+
+  // Asegurar que el logo SJG esté inyectado en el workbook
+  if (fs.existsSync(sjgLogoPath) && workbook.media && workbook.media.length > 0) {
+    const logoBuffer = fs.readFileSync(sjgLogoPath);
+    workbook.media.forEach(m => {
+      m.buffer = logoBuffer;
+    });
+  }
+
+  // Ajustar ancho de columna F para visualización óptima
+  ws.getColumn('F').width = 46;
 
   const candidato = data.candidato || {};
   const cargo = data.cargo_evaluado || {};
@@ -703,7 +722,54 @@ async function generarReporteExcelValidacion(data) {
   }
 
   // Generar Buffer del libro completo
-  const buffer = await workbook.xlsx.writeBuffer();
+  let buffer = await workbook.xlsx.writeBuffer();
+
+  // Post-procesar con JSZip para ampliar el tamaño de los comentarios (Cotejo Detallado) y blindar el logo SJG
+  try {
+    const zip = await JSZip.loadAsync(buffer);
+    let modificado = false;
+
+    // 1. Ampliar el ancho y dimensiones de las notas VML (comentarios de cotejo)
+    for (const filename of Object.keys(zip.files)) {
+      if (/xl\/drawings\/vmlDrawing\d*\.vml/i.test(filename)) {
+        let vmlContent = await zip.files[filename].async('string');
+
+        // Reemplazar dimensiones por defecto estrechas (97.8pt x 59.1pt) por un ancho amplio (480pt x 240pt)
+        vmlContent = vmlContent.replace(/width:97\.8pt;height:59\.1pt;/g, 'width:480pt;height:240pt;');
+
+        // Expandir el Anchor (de 2 columnas y 4 filas a 7 columnas y 12 filas)
+        vmlContent = vmlContent.replace(
+          /<x:Anchor>(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)<\/x:Anchor>/g,
+          (m, c1, off1, r1, off2, c2, off3, r2, off4) => {
+            const newC2 = parseInt(c1, 10) + 7;
+            const newR2 = parseInt(r1, 10) + 12;
+            return `<x:Anchor>${c1}, ${off1}, ${r1}, ${off2}, ${newC2}, ${off3}, ${newR2}, ${off4}</x:Anchor>`;
+          }
+        );
+
+        zip.file(filename, vmlContent);
+        modificado = true;
+      }
+    }
+
+    // 2. Garantizar que todas las imágenes en xl/media contengan siempre SJG logo.png
+    if (fs.existsSync(sjgLogoPath)) {
+      const logoBuffer = fs.readFileSync(sjgLogoPath);
+      for (const filename of Object.keys(zip.files)) {
+        if (/xl\/media\/image\d+\.png/i.test(filename)) {
+          zip.file(filename, logoBuffer);
+          modificado = true;
+        }
+      }
+    }
+
+    if (modificado) {
+      buffer = await zip.generateAsync({ type: 'nodebuffer' });
+    }
+  } catch (errZip) {
+    console.warn('Aviso: no se pudo post-procesar el buffer Excel con JSZip:', errZip.message);
+  }
+
   return buffer;
 }
 

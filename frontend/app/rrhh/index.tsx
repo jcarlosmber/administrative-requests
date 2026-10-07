@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   ImageBackground,
   Modal,
@@ -8,6 +9,8 @@ import {
   SafeAreaView,
   ScrollView,
   Text,
+  TextInput,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -15,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { settingsService } from '../../lib/settingsService';
 
 const COLORS = {
   primary: '#BE1F2D', // Rojo BOGOTÁ
@@ -56,6 +60,97 @@ export default function ModulosRRHHPagina() {
   }) => {
     setModalInfo(modulo);
     setModalVisible(true);
+  };
+
+  // ==============================================================
+  // ESTADOS Y ACCIONES PARA MODAL SERVIDOR / DEVOPS (10.54.80.209)
+  // ==============================================================
+  const [modalDevopsVisible, setModalDevopsVisible] = useState(false);
+  const [devopsExecuting, setDevopsExecuting] = useState(false);
+  const [devopsActionRunning, setDevopsActionRunning] = useState<string | null>(null);
+  const [terminalCommand, setTerminalCommand] = useState('');
+  const [terminalLogs, setTerminalLogs] = useState<Array<{
+    tipo: 'cmd' | 'stdout' | 'stderr' | 'info' | 'success' | 'error';
+    texto: string;
+    timestamp: string;
+  }>>([
+    {
+      tipo: 'info',
+      texto: 'SASGE Terminal Engine conectado (servidor 10.54.80.209).\nTerminal lista para ejecutar operaciones autorizadas en root@10.54.80.209:~/backend',
+      timestamp: new Date().toLocaleTimeString('es-CO')
+    }
+  ]);
+
+  const agregarLogTerminal = (tipo: 'cmd' | 'stdout' | 'stderr' | 'info' | 'success' | 'error', texto: string) => {
+    setTerminalLogs(prev => [
+      ...prev,
+      { tipo, texto, timestamp: new Date().toLocaleTimeString('es-CO') }
+    ]);
+  };
+
+  const ejecutarOperacionDevops = async (action: 'pull' | 'build_front' | 'restart_backend' | 'status') => {
+    const nombres: Record<string, string> = {
+      pull: 'git pull origin main',
+      build_front: 'npx expo export (Build Frontend)',
+      restart_backend: 'pm2 restart all (Reinicio Backend)',
+      status: 'git status -s && git log -1'
+    };
+    const cmdNombre = nombres[action] || action;
+    agregarLogTerminal('cmd', `$ ${cmdNombre}`);
+    agregarLogTerminal('info', 'Ejecutando en servidor de producción (10.54.80.209)...');
+    try {
+      setDevopsExecuting(true);
+      setDevopsActionRunning(action);
+      const res = await settingsService.executeGitOperation(action);
+      if (res.output) {
+        agregarLogTerminal('stdout', res.output);
+      }
+      agregarLogTerminal('success', `✓ ${res.message || 'Operación completada exitosamente.'}`);
+    } catch (err: any) {
+      agregarLogTerminal('error', `✗ Error: ${err.message || 'Fallo de conexión o permisos insuficientes.'}`);
+    } finally {
+      setDevopsExecuting(false);
+      setDevopsActionRunning(null);
+    }
+  };
+
+  const ejecutarComandoTerminal = async (comandoCustom?: string) => {
+    const cmd = (comandoCustom || terminalCommand).trim();
+    if (!cmd) return;
+    agregarLogTerminal('cmd', `$ ${cmd}`);
+    try {
+      setDevopsExecuting(true);
+      setDevopsActionRunning('cmd');
+      const res = await settingsService.executeTerminalCommand(cmd);
+      if (res.output) {
+        agregarLogTerminal('stdout', res.output);
+      }
+      agregarLogTerminal('success', `✓ ${res.message || 'Comando finalizado.'}`);
+      setTerminalCommand('');
+    } catch (err: any) {
+      agregarLogTerminal('error', `✗ ${err.message || 'Error al ejecutar comando.'}`);
+    } finally {
+      setDevopsExecuting(false);
+      setDevopsActionRunning(null);
+    }
+  };
+
+  const copiarLogsTerminal = () => {
+    const todo = terminalLogs.map(l => `[${l.timestamp}] ${l.texto}`).join('\n');
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(todo);
+      agregarLogTerminal('info', 'ℹ Registro de la terminal copiado al portapapeles.');
+    }
+  };
+
+  const limpiarLogsTerminal = () => {
+    setTerminalLogs([
+      {
+        tipo: 'info',
+        texto: 'Terminal reiniciada. Servidor: root@10.54.80.209:~/backend',
+        timestamp: new Date().toLocaleTimeString('es-CO')
+      }
+    ]);
   };
 
   const modulos = [
@@ -218,6 +313,26 @@ export default function ModulosRRHHPagina() {
                     <Ionicons name="home-outline" size={16} color="#CBD5E1" />
                     <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '600' }}>
                       Servicios Generales
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setModalDevopsVisible(true)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 13,
+                      paddingVertical: 9,
+                      borderRadius: 10,
+                      backgroundColor: pressed ? 'rgba(56, 189, 248, 0.25)' : 'rgba(56, 189, 248, 0.12)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(56, 189, 248, 0.35)',
+                    })}
+                  >
+                    <Ionicons name="terminal" size={16} color="#38BDF8" />
+                    <Text style={{ color: '#38BDF8', fontSize: 13, fontWeight: '700' }}>
+                      bash • root@10.54.80.209:~/backend
                     </Text>
                   </Pressable>
 
@@ -781,6 +896,436 @@ export default function ModulosRRHHPagina() {
                     <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
                   </Pressable>
                 )}
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ==============================================================
+            MODAL DEVOPS & TERMINAL BASH (root@10.54.80.209:~/backend)
+           ============================================================== */}
+        <Modal
+          visible={modalDevopsVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setModalDevopsVisible(false)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(2, 6, 23, 0.82)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: '#0B0F19',
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#1E293B',
+                width: '100%',
+                maxWidth: 820,
+                maxHeight: '92%',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.5,
+                shadowRadius: 20,
+                elevation: 12,
+              }}
+            >
+              {/* Barra Superior estilo Terminal Unix */}
+              <View
+                style={{
+                  backgroundColor: '#0F172A',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#1E293B',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  {/* Semáforo Unix */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <TouchableOpacity onPress={() => setModalDevopsVisible(false)} activeOpacity={0.7}>
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#EF4444' }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={limpiarLogsTerminal} activeOpacity={0.7}>
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#F59E0B' }} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => ejecutarOperacionDevops('status')} activeOpacity={0.7}>
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#10B981' }} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="terminal" size={16} color="#38BDF8" />
+                    <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '800', fontFamily: 'monospace' }}>
+                      bash • root@10.54.80.209:~/backend
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      backgroundColor: 'rgba(16, 185, 129, 0.14)',
+                      borderColor: 'rgba(16, 185, 129, 0.35)',
+                      borderWidth: 1,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+                    <Text style={{ color: '#34D399', fontSize: 10.5, fontWeight: '800', fontFamily: 'monospace' }}>
+                      PRODUCCIÓN (10.54.80.209)
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setModalDevopsVisible(false)}
+                    style={{ padding: 4, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.08)' }}
+                  >
+                    <Ionicons name="close" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <ScrollView style={{ padding: 16 }} contentContainerStyle={{ gap: 16 }}>
+                {/* ====================================================
+                    ACCIONES RÁPIDAS SOLICITADAS
+                   ==================================================== */}
+                <View>
+                  <Text
+                    style={{
+                      color: '#94A3B8',
+                      fontSize: 11,
+                      fontWeight: '800',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.8,
+                      marginBottom: 10,
+                    }}
+                  >
+                    Acciones de Despliegue y Control de Versiones
+                  </Text>
+
+                  <View
+                    style={{
+                      flexDirection: isDesktop ? 'row' : 'column',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                    }}
+                  >
+                    {/* Botón 1: Git Pull */}
+                    <TouchableOpacity
+                      onPress={() => ejecutarOperacionDevops('pull')}
+                      disabled={devopsExecuting}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: 170,
+                        backgroundColor: '#1E293B',
+                        borderRadius: 10,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: devopsActionRunning === 'pull' ? '#38BDF8' : 'rgba(56, 189, 248, 0.25)',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
+                      <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(56, 189, 248, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
+                        {devopsActionRunning === 'pull' ? (
+                          <ActivityIndicator size="small" color="#38BDF8" />
+                        ) : (
+                          <Ionicons name="cloud-download-outline" size={18} color="#38BDF8" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '700' }}>Hacer Git Pull</Text>
+                        <Text style={{ color: '#94A3B8', fontSize: 10.5 }}>git pull origin main</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Botón 2: Build Front */}
+                    <TouchableOpacity
+                      onPress={() => ejecutarOperacionDevops('build_front')}
+                      disabled={devopsExecuting}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: 170,
+                        backgroundColor: '#1E293B',
+                        borderRadius: 10,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: devopsActionRunning === 'build_front' ? '#10B981' : 'rgba(16, 185, 129, 0.25)',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
+                      <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(16, 185, 129, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
+                        {devopsActionRunning === 'build_front' ? (
+                          <ActivityIndicator size="small" color="#10B981" />
+                        ) : (
+                          <Ionicons name="cube-outline" size={18} color="#10B981" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '700' }}>Build Front</Text>
+                        <Text style={{ color: '#94A3B8', fontSize: 10.5 }}>npx expo export (Web)</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Botón 3: Reiniciar Backend */}
+                    <TouchableOpacity
+                      onPress={() => ejecutarOperacionDevops('restart_backend')}
+                      disabled={devopsExecuting}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: 170,
+                        backgroundColor: '#1E293B',
+                        borderRadius: 10,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: devopsActionRunning === 'restart_backend' ? '#F43F5E' : 'rgba(244, 63, 94, 0.25)',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
+                      <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(244, 63, 94, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
+                        {devopsActionRunning === 'restart_backend' ? (
+                          <ActivityIndicator size="small" color="#F43F5E" />
+                        ) : (
+                          <Ionicons name="reload-circle-outline" size={18} color="#F43F5E" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '700' }}>Reiniciar Backend</Text>
+                        <Text style={{ color: '#94A3B8', fontSize: 10.5 }}>pm2 restart all (PM2)</Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Botón 4: Verificar Estado Git */}
+                    <TouchableOpacity
+                      onPress={() => ejecutarOperacionDevops('status')}
+                      disabled={devopsExecuting}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: isDesktop ? 1 : undefined,
+                        minWidth: 170,
+                        backgroundColor: '#1E293B',
+                        borderRadius: 10,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: devopsActionRunning === 'status' ? '#A855F7' : 'rgba(168, 85, 247, 0.25)',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                      }}
+                    >
+                      <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: 'rgba(168, 85, 247, 0.15)', justifyContent: 'center', alignItems: 'center' }}>
+                        {devopsActionRunning === 'status' ? (
+                          <ActivityIndicator size="small" color="#A855F7" />
+                        ) : (
+                          <Ionicons name="git-branch-outline" size={18} color="#A855F7" />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#F1F5F9', fontSize: 13, fontWeight: '700' }}>Verificar Estado Git</Text>
+                        <Text style={{ color: '#94A3B8', fontSize: 10.5 }}>git status -s && git log</Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* ====================================================
+                    CONSOLA INTERACTIVA BASH (root@10.54.80.209:~/backend)
+                   ==================================================== */}
+                <View
+                  style={{
+                    backgroundColor: '#030712',
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#1E293B',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Encabezado de la Terminal */}
+                  <View
+                    style={{
+                      backgroundColor: '#0A0F1D',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderBottomWidth: 1,
+                      borderBottomColor: '#1E293B',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: 'monospace', fontWeight: '800' }}>
+                        root@10.54.80.209:~/backend#
+                      </Text>
+                      <Text style={{ color: '#64748B', fontSize: 11, fontFamily: 'monospace' }}>
+                        /bin/bash
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={copiarLogsTerminal}
+                        style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.06)', flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                      >
+                        <Ionicons name="copy-outline" size={12} color="#94A3B8" />
+                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>Copiar</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={limpiarLogsTerminal}
+                        style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: 'rgba(255, 255, 255, 0.06)', flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                      >
+                        <Ionicons name="trash-outline" size={12} color="#94A3B8" />
+                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>Limpiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Salida de Logs */}
+                  <ScrollView
+                    style={{ height: 220, padding: 12, backgroundColor: '#020617' }}
+                    nestedScrollEnabled={true}
+                  >
+                    {terminalLogs.map((item, idx) => {
+                      let col = '#E2E8F0';
+                      if (item.tipo === 'cmd') col = '#38BDF8';
+                      else if (item.tipo === 'info') col = '#94A3B8';
+                      else if (item.tipo === 'success') col = '#34D399';
+                      else if (item.tipo === 'error') col = '#F87171';
+
+                      return (
+                        <View key={idx} style={{ marginBottom: 6 }}>
+                          <Text style={{ color: '#475569', fontSize: 10, fontFamily: 'monospace' }}>
+                            [{item.timestamp}]
+                          </Text>
+                          <Text
+                            style={{
+                              color: col,
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                              lineHeight: 18,
+                              fontWeight: item.tipo === 'cmd' ? '700' : '400',
+                            }}
+                            selectable={true}
+                          >
+                            {item.texto}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                    {devopsExecuting && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                        <ActivityIndicator size="small" color="#38BDF8" />
+                        <Text style={{ color: '#38BDF8', fontSize: 11, fontFamily: 'monospace' }}>
+                          Procesando en el servidor de producción...
+                        </Text>
+                      </View>
+                    )}
+                  </ScrollView>
+
+                  {/* Input de Comando Libre */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderTopWidth: 1,
+                      borderTopColor: '#1E293B',
+                      backgroundColor: '#090D1A',
+                      gap: 8,
+                    }}
+                  >
+                    <Text style={{ color: '#38BDF8', fontFamily: 'monospace', fontWeight: '800', fontSize: 13 }}>
+                      $
+                    </Text>
+                    <TextInput
+                      value={terminalCommand}
+                      onChangeText={setTerminalCommand}
+                      placeholder="git pull origin main | pm2 restart all | git status -s"
+                      placeholderTextColor="#475569"
+                      onSubmitEditing={() => ejecutarComandoTerminal()}
+                      editable={!devopsExecuting}
+                      style={{
+                        flex: 1,
+                        color: '#F8FAFC',
+                        fontFamily: 'monospace',
+                        fontSize: 12.5,
+                        paddingVertical: 4,
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => ejecutarComandoTerminal()}
+                      disabled={devopsExecuting || !terminalCommand.trim()}
+                      style={{
+                        backgroundColor: devopsExecuting || !terminalCommand.trim() ? '#1E293B' : '#0284C7',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <Ionicons name="play" size={12} color="#FFFFFF" />
+                      <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Ejecutar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* Footer Modal */}
+              <View
+                style={{
+                  backgroundColor: '#0F172A',
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderTopWidth: 1,
+                  borderTopColor: '#1E293B',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#64748B', fontSize: 11.5 }}>
+                  Servidor Host: <Text style={{ color: '#94A3B8', fontWeight: '700' }}>10.54.80.209</Text> • Ruta: <Text style={{ color: '#94A3B8', fontWeight: '700' }}>~/backend</Text>
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => setModalDevopsVisible(false)}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: '#CBD5E1', fontSize: 12.5, fontWeight: '700' }}>Cerrar</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>

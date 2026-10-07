@@ -370,7 +370,7 @@ export const settingsService = {
   // ==========================================
   // DESPLIEGUE Y OPERACIONES GIT
   // ==========================================
-  async executeGitOperation(action: 'pull' | 'pull_and_build' | 'restart_backend' | 'status' | 'seed_teletrabajo'): Promise<{ success: boolean; message: string; output: string; timestamp?: string }> {
+  async executeGitOperation(action: 'pull' | 'build_front' | 'pull_and_build' | 'restart_backend' | 'status' | 'seed_teletrabajo'): Promise<{ success: boolean; message: string; output: string; timestamp?: string }> {
     const token = await appStorage.getItem('auth_token');
     const res = await fetch(`${API_URL}/api/admin/git`, {
       method: 'POST',

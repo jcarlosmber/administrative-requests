@@ -821,6 +821,33 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
       return;
     }
 
+    if (action === 'build_front' || action === 'build') {
+      console.log(`[BUILD] Ejecutando compilación del frontend solicitada por ${req.user.email}`);
+      const cmd = process.platform === 'win32'
+        ? `cd "${frontendDir}" && npx expo export`
+        : `(cd "${frontendDir}" && npx expo export)`;
+
+      exec(cmd, { cwd: projectRoot, timeout: 300000 }, (error, stdout, stderr) => {
+        const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
+        if (error) {
+          console.error('[BUILD] Error en compilación de frontend:', error);
+          return res.status(500).json({
+            success: false,
+            error: 'Error durante la compilación del frontend.',
+            output: fullOutput || error.message
+          });
+        }
+        console.log('[BUILD] Compilación de frontend completada exitosamente');
+        res.json({
+          success: true,
+          message: 'Compilación del frontend completada exitosamente.',
+          output: fullOutput.trim(),
+          timestamp: new Date().toISOString()
+        });
+      });
+      return;
+    }
+
     if (action === 'restart_backend') {
       console.log(`[GIT] Reinicio de backend solicitado por ${req.user.email}`);
       res.json({
@@ -923,7 +950,7 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
       return;
     }
 
-    return res.status(400).json({ error: 'Acción no válida. Acciones soportadas: status, pull, pull_and_build, restart_backend, seed_teletrabajo, terminal_exec' });
+    return res.status(400).json({ error: 'Acción no válida. Acciones soportadas: status, pull, build_front, pull_and_build, restart_backend, seed_teletrabajo, terminal_exec' });
   } catch (err) {
     console.error('Error general en endpoint git:', err);
     res.status(500).json({ error: 'Error del servidor procesando solicitud de Git.' });
