@@ -3834,8 +3834,8 @@ export default function NominaScreen() {
             <View
               style={{
                 width: '100%',
-                maxWidth: 740,
-                maxHeight: '90%',
+                maxWidth: 1040,
+                maxHeight: '92%',
                 backgroundColor: THEME.white,
                 borderRadius: 14,
                 overflow: 'hidden',
