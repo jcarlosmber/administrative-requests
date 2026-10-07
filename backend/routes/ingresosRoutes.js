@@ -5,6 +5,7 @@ const path = require('path');
 const geminiIngresosService = require('../services/geminiIngresosService');
 const timeCalculatorService = require('../services/timeCalculatorService');
 const excelReportService = require('../services/excelReportService');
+const iduTramosService = require('../services/iduTramosService');
 
 // Directorio base para almacenamiento de archivos PDF de ingresos
 const UPLOADS_DIR = path.join(__dirname, '../uploads/ingresos');
@@ -1283,6 +1284,64 @@ module.exports = function(pool) {
   router.delete('/validaciones/:id/certificados/:certId/delete', handlerEliminarCertificadoIndividual);
   router.post('/validaciones/:id/certificados/:certId/delete', handlerEliminarCertificadoIndividual);
   router.post('/validaciones/:id/certificados/:certId', handlerEliminarCertificadoIndividual);
+
+  /**
+   * 7.2.3 GET /api/ingresos/idu-6-tramos-oficiales
+   * Retorna los 6 tramos oficiales con todas sus funciones y el cruce funcional detallado
+   */
+  router.get('/idu-6-tramos-oficiales', (req, res) => {
+    try {
+      const tramos = iduTramosService.obtenerTramosIDUOficiales();
+      res.json(tramos);
+    } catch (err) {
+      res.status(500).json({ error: 'Error obteniendo tramos IDU: ' + err.message });
+    }
+  });
+
+  /**
+   * 7.2.4 POST /api/ingresos/validaciones/:id/ajustar-idu-6-tramos
+   * Aplica los 6 tramos oficiales del IDU con su cruce funcional a la validación especificada
+   */
+  router.post('/validaciones/:id/ajustar-idu-6-tramos', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const resultado = await iduTramosService.aplicarTramosIDUAValidacion(pool, id);
+      res.json(resultado);
+    } catch (err) {
+      res.status(500).json({ error: 'Error ajustando tramos IDU: ' + err.message });
+    }
+  });
+
+  /**
+   * 7.2.5 POST /api/ingresos/ajustar-idu-6-tramos
+   * Busca la validación por documento o ID y le aplica los 6 tramos con el cruce
+   */
+  router.post('/ajustar-idu-6-tramos', async (req, res) => {
+    try {
+      const { validacionId, documento } = req.body || {};
+      let targetId = validacionId;
+
+      if (!targetId) {
+        const docBuscar = documento || '79906841';
+        const busq = await pool.query(`
+          SELECT v.id FROM public.ingreso_validaciones v
+          JOIN public.ingreso_candidatos c ON v.candidato_id = c.id
+          WHERE c.documento ILIKE $1 OR c.nombre ILIKE '%Gustavo%Sanchez%'
+          ORDER BY v.created_at DESC LIMIT 1
+        `, [`%${docBuscar}%`]);
+
+        if (busq.rows.length === 0) {
+          return res.status(404).json({ error: 'No se encontró validación para el aspirante con documento ' + docBuscar });
+        }
+        targetId = busq.rows[0].id;
+      }
+
+      const resultado = await iduTramosService.aplicarTramosIDUAValidacion(pool, targetId);
+      res.json({ ...resultado, validacion_id: targetId });
+    } catch (err) {
+      res.status(500).json({ error: 'Error ajustando tramos IDU: ' + err.message });
+    }
+  });
 
   /**
    * 7.3 GET /api/ingresos/validaciones/:id/archivos - Lista archivos de la validación
