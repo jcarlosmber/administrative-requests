@@ -44,6 +44,164 @@ module.exports = function (pool) {
     return isNaN(parsed) ? 0 : parsed;
   }
 
+  // Helper para convertir cualquier formato de fecha (serial numérico de Excel ej. 31103, Date nativo o String)
+  function cleanDate(val) {
+    if (val === null || val === undefined || val === '') return null;
+
+    // 1. Si ya es objeto Date nativo de JS
+    if (val instanceof Date) {
+      if (isNaN(val.getTime())) return null;
+      return val.toISOString().split('T')[0];
+    }
+
+    // 2. Si viene como número serial de Excel (ej: 31103 o 44927)
+    let num = null;
+    if (typeof val === 'number') {
+      num = val;
+    } else if (typeof val === 'string' && /^\d{4,6}(\.\d+)?$/.test(val.trim())) {
+      num = parseFloat(val.trim());
+    }
+
+    if (num !== null && !isNaN(num) && num > 1000 && num < 100000) {
+      // Excel epoch estándar: 1899-12-30 (compensa el año 1900 no bisiesto de Lotus)
+      const msPerDay = 86400000;
+      const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      const jsDate = new Date(excelEpoch.getTime() + Math.round(num * msPerDay));
+      if (!isNaN(jsDate.getTime())) {
+        return jsDate.toISOString().split('T')[0];
+      }
+    }
+
+    // 3. Si viene como cadena de texto
+    const str = String(val).trim();
+    if (!str) return null;
+
+    // Formato ISO YYYY-MM-DD o YYYY/MM/DD
+    const isoMatch = str.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if (isoMatch) {
+      const y = isoMatch[1];
+      const m = isoMatch[2].padStart(2, '0');
+      const d = isoMatch[3].padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // Formato latinoamericano DD/MM/YYYY o DD-MM-YYYY
+    const latMatch = str.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+    if (latMatch) {
+      const d = latMatch[1].padStart(2, '0');
+      const m = latMatch[2].padStart(2, '0');
+      const y = latMatch[3];
+      return `${y}-${m}-${d}`;
+    }
+
+    // Intento general
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toISOString().split('T')[0];
+    }
+
+    return null;
+  }
+
+  // Helper para reparar texto con problemas de codificación (Mojibake UTF-8 vs Latin1 / Windows-1252)
+  function cleanText(val) {
+    if (val === null || val === undefined) return '';
+    let str = String(val).trim();
+    if (!str) return '';
+
+    // Si tiene secuencias típicas de mojibake (ej: DIRECCIÃ“N, SECRETARÃA)
+    if (/[ÃÂâ]/.test(str)) {
+      try {
+        const decoded = Buffer.from(str, 'binary').toString('utf8');
+        if (!decoded.includes('') && !/[ÃÂ]/.test(decoded)) {
+          str = decoded;
+        }
+      } catch (e) {}
+    }
+
+    // Diccionario de correcciones de mojibake frecuentes en exportaciones de SIDEAP/PERNO
+    str = str
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã‰/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã“/g, 'Ó')
+      .replace(/Ã”/g, 'Ô')
+      .replace(/Ãš/g, 'Ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã‘/g, 'Ñ')
+      .replace(/â€œ/g, '"')
+      .replace(/â€/g, '"')
+      .replace(/â€“/g, '-')
+      .replace(/â€”/g, '—')
+      .replace(/SECRETARÃA/gi, 'SECRETARÍA')
+      .replace(/JURÃDICA/gi, 'JURÍDICA')
+      .replace(/JURÃDICO/gi, 'JURÍDICO')
+      .replace(/DIRECCIÃN/gi, 'DIRECCIÓN')
+      .replace(/ADMINISTRACIÃN/gi, 'ADMINISTRACIÓN')
+      .replace(/GESTIÃN/gi, 'GESTIÓN')
+      .replace(/PLANEACIÃN/gi, 'PLANEACIÓN')
+      .replace(/INSPECCIÃN/gi, 'INSPECCIÓN')
+      .replace(/COMISIÃN/gi, 'COMISIÓN')
+      .replace(/DISCIPLINARIÃ/gi, 'DISCIPLINARIA')
+      .replace(/VINCULACIÃN/gi, 'VINCULACIÓN')
+      .replace(/SITUACIÃN/gi, 'SITUACIÓN')
+      .replace(/ASIGNACIÃN/gi, 'ASIGNACIÓN')
+      .replace(/ÃA/g, 'ÍA')
+      .replace(/Ãa/g, 'ía')
+      .replace(/ÃO/g, 'ÍO')
+      .replace(/Ão/g, 'ío');
+
+    return str.replace(/\s+/g, ' ').trim();
+  }
+
+  // Helper especializado para normalizar dependencias de la Secretaría Jurídica Distrital
+  function cleanDependencia(val) {
+    let dep = cleanText(val).toUpperCase();
+    if (!dep) return '';
+
+    // Normalizaciones canónicas exactas de la entidad
+    if (dep.includes('DOCTRINA') && dep.includes('NORMATIV')) {
+      return 'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS';
+    }
+    if (dep.includes('DESPACHO') && (dep.includes('SECRETAR') || dep.includes('JURIDIC') || dep.includes('JURÍDIC'))) {
+      return 'DESPACHO SECRETARÍA JURÍDICA DISTRITAL';
+    }
+    if (dep.includes('GESTION JUDICIAL') || dep.includes('GESTIÓN JUDICIAL')) {
+      return 'DIRECCIÓN DISTRITAL DE GESTIÓN JUDICIAL';
+    }
+    if (dep.includes('POLITICA JURIDICA') || dep.includes('POLÍTICA JURÍDICA')) {
+      return 'DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA';
+    }
+    if (dep.includes('DEFENSA JUDICIAL') || dep.includes('DAÑO ANTIJURIDICO') || dep.includes('DAÑO ANTIJURÍDICO')) {
+      return 'DIRECCIÓN DISTRITAL DE DEFENSA JUDICIAL Y PREVENCIÓN DEL DAÑO ANTIJURÍDICO';
+    }
+    if (dep.includes('INSPECCION') || dep.includes('INSPECCIÓN') || dep.includes('VIGILANCIA') || dep.includes('SIN ANIMO') || dep.includes('SIN ÁNIMO')) {
+      return 'DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL DE PERSONAS JURÍDICAS SIN ÁNIMO DE LUCRO';
+    }
+    if (dep.includes('PLANEACION') || dep.includes('PLANEACIÓN')) {
+      return 'OFICINA ASESORA DE PLANEACIÓN';
+    }
+    if (dep.includes('CONTROL INTERNO') && !dep.includes('DISCIPLINARI')) {
+      return 'OFICINA DE CONTROL INTERNO';
+    }
+    if (dep.includes('DISCIPLINARI')) {
+      return 'OFICINA DE CONTROL DISCIPLINARIO INTERNO';
+    }
+    if (dep.includes('TECNOLOG') || dep.includes('TIC') || dep.includes('INFORMACION') || dep.includes('INFORMACIÓN')) {
+      return 'OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES';
+    }
+    if (dep.includes('CORPORATIVA') || dep.includes('GESTION CORPORATIVA') || dep.includes('GESTIÓN CORPORATIVA')) {
+      return 'SUBDIRECCIÓN DE GESTIÓN CORPORATIVA';
+    }
+
+    return dep;
+  }
+
   // Parseador de funciones
   function parseFunctions(funcionesText) {
     if (!funcionesText || typeof funcionesText !== 'string') return [];
@@ -69,7 +227,7 @@ module.exports = function (pool) {
     return result.length > 0 ? result : [funcionesText.trim()];
   }
 
-  // Asegurar tabla creada
+  // Asegurar tabla creada y columnas existentes
   async function ensureTables() {
     try {
       await pool.query(`
@@ -90,10 +248,13 @@ module.exports = function (pool) {
             estado_cargo TEXT DEFAULT 'OCUPADO',
             titular_cedula TEXT,
             titular_nombre TEXT,
+            situacion_titular TEXT,
             tipo_vinculacion TEXT,
             situacion_administrativa TEXT,
             encargo_cedula TEXT,
             encargo_nombre TEXT,
+            es_encargo BOOLEAN DEFAULT FALSE,
+            opec TEXT,
             tipo_funcionario TEXT,
             fecha_nacimiento DATE,
             direccion TEXT,
@@ -112,6 +273,34 @@ module.exports = function (pool) {
             created_at TIMESTAMPTZ DEFAULT NOW(),
             updated_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        -- Garantizar la presencia de todas las columnas si la tabla ya existía con un esquema previo
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS situacion_titular TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS es_encargo BOOLEAN DEFAULT FALSE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS opec TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS tipo_vinculacion TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS situacion_administrativa TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS encargo_cedula TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS encargo_nombre TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS tipo_funcionario TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS direccion TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS telefono TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS sexo TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fondo_salud TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fondo_pension TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fondo_cesantias TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS tipo_nombramiento TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS acto_nombramiento TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS numero_acto_nombramiento TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_acto_nombramiento DATE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS total_devengado NUMERIC(14, 2);
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS dependencia_funcional TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS proposito TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS funciones JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS requisitos TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS asignacion_basica NUMERIC(14, 2) DEFAULT 0;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS estado_cargo TEXT DEFAULT 'OCUPADO';
+
         CREATE TABLE IF NOT EXISTS public.nomina_import_logs (
             id SERIAL PRIMARY KEY,
             tipo_archivo TEXT NOT NULL,
@@ -122,6 +311,14 @@ module.exports = function (pool) {
             usuario_email TEXT,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
+
+        -- Corregir mojibake en registros existentes de la tabla
+        UPDATE public.planta_personal_sjd SET
+          dependencia_cargo = REPLACE(REPLACE(REPLACE(dependencia_cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
+          dependencia_funcional = REPLACE(REPLACE(REPLACE(dependencia_funcional, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
+          cargo = REPLACE(REPLACE(REPLACE(cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
+          titular_nombre = REPLACE(REPLACE(REPLACE(titular_nombre, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA')
+        WHERE dependencia_cargo LIKE '%Ã%' OR dependencia_funcional LIKE '%Ã%' OR cargo LIKE '%Ã%' OR titular_nombre LIKE '%Ã%';
       `);
     } catch (e) {
       console.warn('Advertencia al verificar tablas de nómina:', e.message);
@@ -321,6 +518,7 @@ module.exports = function (pool) {
         else if (txt.includes('VINCULACIÓN A LA ENTIDAD') || txt.includes('TIPO DE VINCULACION')) colMap.tipo_vinculacion = colNum;
         else if (txt === 'SITUACIÓN ADMINISTRATIVA' || txt === 'SITUACION ADMINISTRATIVA') colMap.situacion_admin = colNum;
         else if (txt.includes('SITUACIÓN ADMINISTRATIVA TITULAR') || txt.includes('SITUACION ADMINISTRATIVA TITULAR')) colMap.situacion_titular = colNum;
+        else if (txt.includes('OPEC')) colMap.opec = colNum;
         else if (txt.includes('ESTADO DEL CARGO') || txt.includes('ESTADO CARGO')) colMap.estado_cargo = colNum;
         else if (txt === 'NIVEL') colMap.nivel = colNum;
         else if (txt.includes('NOMENCLATURA') || txt === 'CARGO' || txt.includes('DENOMINACION')) colMap.cargo = colNum;
@@ -393,17 +591,17 @@ module.exports = function (pool) {
         const idPerno = parseInt(getVal(row.getCell(colMap.id_perno || 3)), 10) || null;
         
         let cedulaActual = cleanDoc(getVal(row.getCell(colMap.cedula_actual || 4)));
-        let nombreActual = String(getVal(row.getCell(colMap.nombre_actual || 5)) || '').trim();
-        const tipoVinculacion = String(getVal(row.getCell(colMap.tipo_vinculacion || 6)) || '').trim();
+        let nombreActual = cleanText(getVal(row.getCell(colMap.nombre_actual || 5)) || '').toUpperCase();
+        const tipoVinculacion = cleanText(getVal(row.getCell(colMap.tipo_vinculacion || 6)) || '').toUpperCase();
         
-        let situacionAdmin = String(getVal(row.getCell(colMap.situacion_admin || 12)) || getVal(row.getCell(13)) || '').trim();
-        if (situacionAdmin === '[object Object]') situacionAdmin = '';
+        let situacionAdmin = cleanText(getVal(row.getCell(colMap.situacion_admin || 12)) || getVal(row.getCell(13)) || '').toUpperCase();
+        if (situacionAdmin === '[OBJECT OBJECT]') situacionAdmin = '';
 
-        let situacionTitular = String(getVal(row.getCell(colMap.situacion_titular || 13)) || getVal(row.getCell(14)) || '').trim();
-        if (situacionTitular === '[object Object]') situacionTitular = '';
+        let situacionTitular = cleanText(getVal(row.getCell(colMap.situacion_titular || 13)) || getVal(row.getCell(14)) || '').toUpperCase();
+        if (situacionTitular === '[OBJECT OBJECT]') situacionTitular = '';
 
         let titularCedula = cleanDoc(getVal(row.getCell(colMap.titular_cedula || 14)) || getVal(row.getCell(15)));
-        let titularNombre = String(getVal(row.getCell(colMap.titular_nombre || 15)) || getVal(row.getCell(16)) || '').trim();
+        let titularNombre = cleanText(getVal(row.getCell(colMap.titular_nombre || 15)) || getVal(row.getCell(16)) || '').toUpperCase();
 
         let estadoCargo = String(getVal(row.getCell(colMap.estado_cargo || 23)) || getVal(row.getCell(24)) || getVal(row.getCell(25)) || '').trim().toUpperCase();
         if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
@@ -453,14 +651,15 @@ module.exports = function (pool) {
         else if (nivel.includes('TECNIC') || nivel.includes('TÉCNIC')) nivel = 'TECNICO';
         else if (nivel.includes('ASISTENCIAL')) nivel = 'ASISTENCIAL';
 
-        const cargoNom = String(getVal(row.getCell(colMap.cargo || 25)) || getVal(row.getCell(26)) || getVal(row.getCell(27)) || '').trim().toUpperCase();
-        const codigo = String(getVal(row.getCell(colMap.codigo || 26)) || getVal(row.getCell(27)) || getVal(row.getCell(28)) || '').trim();
-        const grado = String(getVal(row.getCell(colMap.grado || 27)) || getVal(row.getCell(28)) || getVal(row.getCell(29)) || '').trim();
-        const depCargo = String(getVal(row.getCell(colMap.dep_cargo || 29)) || getVal(row.getCell(30)) || getVal(row.getCell(31)) || '').trim().toUpperCase();
-        const depFuncional = String(getVal(row.getCell(colMap.dep_funcional || 30)) || getVal(row.getCell(31)) || getVal(row.getCell(32)) || depCargo).trim().toUpperCase();
-        const proposito = String(getVal(row.getCell(colMap.proposito || 31)) || getVal(row.getCell(32)) || getVal(row.getCell(33)) || '').trim();
-        const funcionesRaw = String(getVal(row.getCell(colMap.funciones || 32)) || getVal(row.getCell(33)) || getVal(row.getCell(34)) || '').trim();
-        const requisitos = String(getVal(row.getCell(colMap.requisitos || 33)) || getVal(row.getCell(34)) || getVal(row.getCell(35)) || '').trim();
+        const cargoNom = cleanText(getVal(row.getCell(colMap.cargo || 25)) || getVal(row.getCell(26)) || getVal(row.getCell(27)) || '').toUpperCase();
+        const codigo = cleanText(getVal(row.getCell(colMap.codigo || 26)) || getVal(row.getCell(27)) || getVal(row.getCell(28)) || '');
+        const grado = cleanText(getVal(row.getCell(colMap.grado || 27)) || getVal(row.getCell(28)) || getVal(row.getCell(29)) || '');
+        const opec = cleanText(getVal(row.getCell(colMap.opec || 22)) || '');
+        const depCargo = cleanDependencia(getVal(row.getCell(colMap.dep_cargo || 29)) || getVal(row.getCell(30)) || getVal(row.getCell(31)) || '');
+        const depFuncional = cleanDependencia(getVal(row.getCell(colMap.dep_funcional || 30)) || getVal(row.getCell(31)) || getVal(row.getCell(32)) || depCargo);
+        const proposito = cleanText(getVal(row.getCell(colMap.proposito || 31)) || getVal(row.getCell(32)) || getVal(row.getCell(33)) || '');
+        const funcionesRaw = cleanText(getVal(row.getCell(colMap.funciones || 32)) || getVal(row.getCell(33)) || getVal(row.getCell(34)) || '');
+        const requisitos = cleanText(getVal(row.getCell(colMap.requisitos || 33)) || getVal(row.getCell(34)) || getVal(row.getCell(35)) || '');
         const asignacion = cleanMoney(getVal(row.getCell(colMap.asignacion || 35)) || getVal(row.getCell(36)) || getVal(row.getCell(37)));
 
         const funcionesArr = parseFunctions(funcionesRaw);
@@ -472,14 +671,14 @@ module.exports = function (pool) {
             requisitos, asignacion_basica, estado_cargo,
             titular_cedula, titular_nombre, situacion_titular,
             encargo_cedula, encargo_nombre, es_encargo,
-            tipo_vinculacion, situacion_administrativa, updated_at
+            tipo_vinculacion, situacion_administrativa, opec, updated_at
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
             $8, $9, $10, $11,
             $12, $13, $14,
             $15, $16, $17,
             $18, $19, $20,
-            $21, $22, NOW()
+            $21, $22, $23, NOW()
           )
           ON CONFLICT (id_plaza) DO UPDATE SET
             id_sideap = COALESCE(EXCLUDED.id_sideap, public.planta_personal_sjd.id_sideap),
@@ -503,6 +702,7 @@ module.exports = function (pool) {
             es_encargo = EXCLUDED.es_encargo,
             tipo_vinculacion = EXCLUDED.tipo_vinculacion,
             situacion_administrativa = EXCLUDED.situacion_administrativa,
+            opec = EXCLUDED.opec,
             updated_at = NOW();
         `, [
           idPlaza, idSideap, idPerno, nivel, cargoNom, codigo, grado,
@@ -510,7 +710,7 @@ module.exports = function (pool) {
           requisitos, asignacion, estadoCargo,
           titularCedula, titularNombre, situacionTitular,
           encargoCedula, encargoNombre, esEncargo,
-          tipoVinculacion, situacionAdmin
+          tipoVinculacion, situacionAdmin, opec
         ]);
 
         procesados++;
@@ -626,6 +826,10 @@ module.exports = function (pool) {
         else if (txt.includes('ACTO_NOMB') && !txt.includes('NUMERO')) colMap.acto_nomb = colNum;
         else if (txt.includes('NUMERO_ACTO_NOMB') || txt.includes('NUM_ACTO')) colMap.num_acto = colNum;
         else if (txt.includes('DEVENGADO')) colMap.devengado = colNum;
+        else if (txt.includes('FECHA_NACIMIENTO') || txt.includes('NACIMIENTO')) colMap.fecha_nacimiento = colNum;
+        else if (txt.includes('FECHA_INGRESO_ENTIDAD') || txt.includes('INGRESO_ENTIDAD')) colMap.fecha_ingreso_entidad = colNum;
+        else if (txt.includes('FECHA_INGRESO_DISTRITO') || txt.includes('INGRESO_DISTRITO')) colMap.fecha_ingreso_distrito = colNum;
+        else if (txt.includes('FECHA_ACTO_NOMB') || txt.includes('FECHA_ACTO')) colMap.fecha_acto_nomb = colNum;
       });
 
       // 5. Comprobación de columna obligatoria de identificación
@@ -647,17 +851,23 @@ module.exports = function (pool) {
         const cedula = cleanDoc(cedulaRaw);
         if (!cedula) continue;
 
-        const direccion = String(getVal(row.getCell(colMap.direccion || 7)) || '').trim();
-        const telefono = String(getVal(row.getCell(colMap.telefono || 8)) || '').trim();
-        const sexo = String(getVal(row.getCell(colMap.sexo || 9)) || '').trim();
-        const tipoFuncionario = String(getVal(row.getCell(colMap.tipo_funcionario || 15)) || '').trim();
-        const fondoSalud = String(getVal(row.getCell(colMap.fondo_salud || 20)) || '').trim();
-        const fondoPension = String(getVal(row.getCell(colMap.fondo_pension || 22)) || '').trim();
-        const fondoCesantias = String(getVal(row.getCell(colMap.fondo_cesantias || 24)) || '').trim();
-        const tipoNomb = String(getVal(row.getCell(colMap.tipo_nomb || 34)) || '').trim();
-        const actoNomb = String(getVal(row.getCell(colMap.acto_nomb || 35)) || '').trim();
-        const numActo = String(getVal(row.getCell(colMap.num_acto || 37)) || '').trim();
+        const direccion = cleanText(getVal(row.getCell(colMap.direccion || 7)) || '').toUpperCase();
+        const telefono = cleanText(getVal(row.getCell(colMap.telefono || 8)) || '');
+        const sexo = cleanText(getVal(row.getCell(colMap.sexo || 9)) || '').toUpperCase();
+        const tipoFuncionario = cleanText(getVal(row.getCell(colMap.tipo_funcionario || 15)) || '').toUpperCase();
+        const fondoSalud = cleanText(getVal(row.getCell(colMap.fondo_salud || 20)) || '').toUpperCase();
+        const fondoPension = cleanText(getVal(row.getCell(colMap.fondo_pension || 22)) || '').toUpperCase();
+        const fondoCesantias = cleanText(getVal(row.getCell(colMap.fondo_cesantias || 24)) || '').toUpperCase();
+        const tipoNomb = cleanText(getVal(row.getCell(colMap.tipo_nomb || 34)) || '').toUpperCase();
+        const actoNomb = cleanText(getVal(row.getCell(colMap.acto_nomb || 35)) || '').toUpperCase();
+        const numActo = cleanText(getVal(row.getCell(colMap.num_acto || 37)) || '');
         const totalDevengado = cleanMoney(getVal(row.getCell(colMap.devengado || 43))) || null;
+
+        // Limpieza y soporte de fechas tanto en serial numérico (ej. 31103) como en fecha formateada
+        const fechaNacimiento = cleanDate(getVal(row.getCell(colMap.fecha_nacimiento || 6)));
+        const fechaIngresoEntidad = cleanDate(getVal(row.getCell(colMap.fecha_ingreso_entidad || 16)));
+        const fechaIngresoDistrito = cleanDate(getVal(row.getCell(colMap.fecha_ingreso_distrito || 17)));
+        const fechaActoNomb = cleanDate(getVal(row.getCell(colMap.fecha_acto_nomb || 38)));
 
         // Actualizar la persona en la plaza vinculando por cédula (titular o encargo)
         const updateRes = await pool.query(`
@@ -673,11 +883,16 @@ module.exports = function (pool) {
             acto_nombramiento = COALESCE(NULLIF($9, ''), acto_nombramiento),
             numero_acto_nombramiento = COALESCE(NULLIF($10, ''), numero_acto_nombramiento),
             total_devengado = COALESCE($11, total_devengado),
+            fecha_nacimiento = COALESCE($12::date, fecha_nacimiento),
+            fecha_ingreso_entidad = COALESCE($13::date, fecha_ingreso_entidad),
+            fecha_ingreso_distrito = COALESCE($14::date, fecha_ingreso_distrito),
+            fecha_acto_nombramiento = COALESCE($15::date, fecha_acto_nombramiento),
             updated_at = NOW()
-          WHERE titular_cedula = $12 OR encargo_cedula = $12 OR titular_cedula = $13 OR encargo_cedula = $13
+          WHERE titular_cedula = $16 OR encargo_cedula = $16 OR titular_cedula = $17 OR encargo_cedula = $17
         `, [
           tipoFuncionario, direccion, telefono, sexo, fondoSalud, fondoPension,
           fondoCesantias, tipoNomb, actoNomb, numActo, totalDevengado,
+          fechaNacimiento, fechaIngresoEntidad, fechaIngresoDistrito, fechaActoNomb,
           cedula, String(parseInt(cedula, 10) || '')
         ]);
 
