@@ -893,7 +893,12 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
       const cmd = (command || '').trim();
       const ALLOWED = [
         'git status -s',
+        'git status',
+        'git status -s && git log -1',
+        'git status -s && git log -1 --pretty=format:"Último commit: %h - %s (%cr) por %an"',
+        'git log -1',
         'git log -5 --oneline',
+        'git log -3 --oneline',
         'git pull origin main',
         'git pull',
         'git fetch origin main',

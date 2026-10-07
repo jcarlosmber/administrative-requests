@@ -292,19 +292,40 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
           // NO cumple excepción Ley 2039 de 2020 -> No computable como profesional
           cumpleLey2039 = false;
           if (endDate.getTime() <= infoCorte.fechaCorte.getTime()) {
-            // Periodo completamente previo al corte -> 0 meses computables
-            decisionComputo = 'NO_COMPUTABLE_PREVIA_AL_GRADO';
-            cert.clasificacion_experiencia = 'NO_PROFESIONAL';
-            cert.es_previa_no_computable = true;
-            cert.observaciones.push(`Periodo previo al grado / terminación de pénsum (${infoCorte.fechaCorteStr}). No computable como experiencia profesional conforme al Decreto 1083 de 2015 al no corresponder a modalidades de la Ley 2039 de 2020.`);
-            cert.tiempo_valido = { dias_totales: 0, meses_totales: 0, anios: 0, meses: 0, dias: 0, valido: true };
+            // Periodo completamente previo al corte -> Se clasifica como Experiencia Laboral
+            decisionComputo = 'LABORAL_PREVIA_AL_GRADO';
+            cert.clasificacion_experiencia = 'LABORAL';
+            cert.tipo_experiencia = 'LABORAL';
+            cert.es_laboral_previa = true;
+            cert.observaciones.push(`Periodo previo al título de pregrado / terminación de pénsum (${infoCorte.fechaCorteStr}). Clasificado como Experiencia Laboral.`);
+            cert.tiempo_valido = { ...calc };
           } else {
-            // Inició antes y terminó después -> Se excluye tramo previo y se computa desde fechaCorte
+            // Inició antes y terminó después -> Se divide en 2 tramos: Tramo 1 Laboral (previo), Tramo 2 Profesional / Relacionada (desde fechaCorte)
             decisionComputo = 'COMPUTABLE_PARCIAL_DESDE_CORTE';
             fechaInicioEfectiva = infoCorte.fechaCorte;
-            cert._startDate = fechaInicioEfectiva; // ajustar inicio para traslapes y sumas
-            const periodoExcluido = calculatePeriod(startDate, new Date(infoCorte.fechaCorte.getTime() - 86400000));
-            cert.observaciones.push(`Se excluyen ${periodoExcluido.meses_totales} meses previos al grado / terminación de materias (${infoCorte.fechaCorteStr}) según Decreto 1083 de 2015. Se computa a partir de ${infoCorte.fechaCorteStr}.`);
+            cert._startDate = fechaInicioEfectiva; // ajustar inicio para tramo profesional posterior
+            const fechaFinTramoPrevio = new Date(infoCorte.fechaCorte.getTime() - 86400000);
+            const periodoPrevioLaboral = calculatePeriod(startDate, fechaFinTramoPrevio);
+            
+            cert.se_divide_en_dos = true;
+            cert.tramo_previo = {
+              clasificacion: 'LABORAL',
+              tipo_experiencia: 'LABORAL',
+              fecha_inicio: formatDate(startDate),
+              fecha_fin: formatDate(fechaFinTramoPrevio),
+              tiempo: periodoPrevioLaboral,
+              observacion: `Experiencia laboral previa al título de pregrado / terminación de pénsum (${infoCorte.fechaCorteStr}).`
+            };
+            cert.tramo_posterior = {
+              clasificacion: esRelacionada ? 'RELACIONADA' : 'PROFESIONAL',
+              tipo_experiencia: esRelacionada ? 'RELACIONADA' : 'PROFESIONAL',
+              fecha_inicio: infoCorte.fechaCorteStr,
+              fecha_fin: formatDate(endDate),
+              observacion: esRelacionada ? 'Experiencia profesional relacionada con las funciones del cargo.' : 'Experiencia profesional no relacionada.'
+            };
+            cert.clasificacion_experiencia = esRelacionada ? 'RELACIONADA' : 'PROFESIONAL';
+            cert.observaciones.push(`Se divide en 2 tramos: ${periodoPrevioLaboral.meses_totales} meses como Experiencia Laboral previa al grado (${infoCorte.fechaCorteStr}) y el tramo posterior como Experiencia ${esRelacionada ? 'Relacionada' : 'Profesional'}.`);
+            sumaMesesNoRelacionados += periodoPrevioLaboral.meses_totales;
           }
         }
       }

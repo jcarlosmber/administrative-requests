@@ -57,10 +57,11 @@ REGLAS OBLIGATORIAS:
 16. Cada conclusión debe incluir la EVIDENCIA TEXTUAL del documento que la sustenta (citas textuales entre comillas).
 17. No reemplaces la revisión humana cuando la certificación sea ambigua, incompleta o contradictoria.
 18. Devuelve exclusivamente un objeto JSON válido, sin explicaciones ni texto fuera del bloque JSON.
-19. REGLA OBLIGATORIA DE DIVISIÓN DE MÚLTIPLES CARGOS EN UN MISMO CERTIFICADO:
+19. REGLA OBLIGATORIA DE DIVISIÓN DE MÚLTIPLES CARGOS Y MANUALES DE FUNCIONES EN UN MISMO CERTIFICADO:
     - Cuando un mismo documento o certificado laboral certifique que el aspirante desempeñó dos (2) o más cargos distintos o periodos sucesivos dentro de la misma entidad (por ejemplo: ascensos, traslados o cambios de denominación como: 1. Profesional Senior 2012-2016, 2. Profesional Experto 2016-2017, 3. Jefe de División 2017-actualidad), ESTÁ TERMINANTEMENTE PROHIBIDO agruparlos en un único registro o ignorar los cargos anteriores.
     - DEBES crear obligatoriamente una entrada INDEPENDIENTE en el arreglo "certificados" para CADA CARGO desempeñado (ej. CERT-1, CERT-2, CERT-3).
-    - Cada registro debe incluir su nombre exacto de cargo, sus fechas precisas de inicio y fin, el nombre del PDF de origen en "nombre_archivo", el arreglo "anexos" con ese nombre de archivo, y el cotejo funcional correspondiente.
+    - DIVISIÓN OBLIGATORIA POR CADA MANUAL DE FUNCIONES DIFERENTE: Si un mismo cargo fue desempeñado a lo largo del tiempo bajo diferentes Resoluciones o Manuales de Funciones sucesivos (por ejemplo: Resolución 6285 de 2002, Resolución 1247 de 2006, Resolución 1161 de 2009) o desempeñó encargos transitorios (ej. Director Técnico), DEBES crear un registro de cargo INDEPENDIENTE por cada manual de funciones o resolución diferente, delimitando sus fechas de inicio y fin al periodo de vigencia de cada resolución, transcribiendo las funciones específicas de esa resolución y cotejándolas individualmente.
+    - Cada registro debe incluir su nombre exacto de cargo con la especificación de la resolución aplicable, sus fechas precisas de inicio y fin, el nombre del PDF de origen en "nombre_archivo", el arreglo "anexos" con ese nombre de archivo, y el cotejo funcional correspondiente.
 20. REGLA OBLIGATORIA DE INTEGRACIÓN DE DOCUMENTOS COMPLEMENTARIOS (DOS ANEXOS EN EL MISMO CARGO):
     - Es habitual que el aspirante aporte certificaciones complementarias de la misma relación laboral o empresas fusionadas/sustituidas (por ejemplo: un certificado histórico de Codensa con funciones detalladas de un cargo, y un certificado consolidado posterior de Enel que acredita el periodo extendido completo de ese mismo cargo por sustitución patronal).
     - En estos casos, ambos documentos son COMPLEMENTARIOS para dicho cargo:

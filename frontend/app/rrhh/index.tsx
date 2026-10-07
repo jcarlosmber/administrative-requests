@@ -17,7 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import { supabase } from '../../lib/supabase';
 import { settingsService } from '../../lib/settingsService';
 
 const COLORS = {
@@ -69,6 +69,11 @@ export default function ModulosRRHHPagina() {
   const [devopsExecuting, setDevopsExecuting] = useState(false);
   const [devopsActionRunning, setDevopsActionRunning] = useState<string | null>(null);
   const [terminalCommand, setTerminalCommand] = useState('');
+  const [mostrarLoginDevops, setMostrarLoginDevops] = useState(false);
+  const [devopsEmail, setDevopsEmail] = useState('');
+  const [devopsPassword, setDevopsPassword] = useState('');
+  const [devopsAuthLoading, setDevopsAuthLoading] = useState(false);
+  const [devopsAuthError, setDevopsAuthError] = useState<string | null>(null);
   const [terminalLogs, setTerminalLogs] = useState<Array<{
     tipo: 'cmd' | 'stdout' | 'stderr' | 'info' | 'success' | 'error';
     texto: string;
@@ -76,7 +81,7 @@ export default function ModulosRRHHPagina() {
   }>>([
     {
       tipo: 'info',
-      texto: 'SASGE Terminal Engine conectado (servidor 10.54.80.209).\nTerminal lista para ejecutar operaciones autorizadas en root@10.54.80.209:~/backend',
+      texto: 'SASGE Terminal Engine conectado (servidor 10.54.80.209).\nTerminal lista para operaciones autorizadas en root@10.54.80.209:~/backend',
       timestamp: new Date().toLocaleTimeString('es-CO')
     }
   ]);
@@ -86,6 +91,39 @@ export default function ModulosRRHHPagina() {
       ...prev,
       { tipo, texto, timestamp: new Date().toLocaleTimeString('es-CO') }
     ]);
+  };
+
+  const handleLoginDevops = async () => {
+    if (!devopsEmail.trim() || !devopsPassword.trim()) {
+      setDevopsAuthError('Ingresa tu usuario/correo y contraseña.');
+      return;
+    }
+    try {
+      setDevopsAuthLoading(true);
+      setDevopsAuthError(null);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: devopsEmail.trim(),
+        password: devopsPassword.trim()
+      });
+      if (error) {
+        throw error;
+      }
+      const user = data.user;
+      const role = user?.role || 'usuario';
+      agregarLogTerminal('success', `✓ Autenticación exitosa como ${user?.email || devopsEmail}. Rol: ${role}.`);
+      if (role !== 'superadmin') {
+        agregarLogTerminal('error', '⚠ Advertencia: Tu cuenta no tiene rol de Super Administrador. Las operaciones de servidor requieren privilegios de superadmin.');
+      } else {
+        agregarLogTerminal('info', '✓ Privilegios de Super Administrador confirmados. Token de sesión renovado por 7 días.');
+      }
+      setMostrarLoginDevops(false);
+      setDevopsPassword('');
+    } catch (err: any) {
+      setDevopsAuthError(err.message || 'Error de credenciales.');
+      agregarLogTerminal('error', `✗ Error de autenticación: ${err.message || 'Credenciales no válidas.'}`);
+    } finally {
+      setDevopsAuthLoading(false);
+    }
   };
 
   const ejecutarOperacionDevops = async (action: 'pull' | 'build_front' | 'restart_backend' | 'status') => {
@@ -107,7 +145,12 @@ export default function ModulosRRHHPagina() {
       }
       agregarLogTerminal('success', `✓ ${res.message || 'Operación completada exitosamente.'}`);
     } catch (err: any) {
-      agregarLogTerminal('error', `✗ Error: ${err.message || 'Fallo de conexión o permisos insuficientes.'}`);
+      const msg = err.message || 'Fallo de conexión o permisos insuficientes.';
+      agregarLogTerminal('error', `✗ Error: ${msg}`);
+      if (msg.toLowerCase().includes('token') || msg.toLowerCase().includes('expirado') || msg.toLowerCase().includes('sesión') || msg.toLowerCase().includes('super administrador')) {
+        agregarLogTerminal('info', '🔑 Tu token JWT ha expirado o no estás autenticado. Haz clic en "Renovar Sesión" para ingresar tus credenciales.');
+        setMostrarLoginDevops(true);
+      }
     } finally {
       setDevopsExecuting(false);
       setDevopsActionRunning(null);
@@ -128,7 +171,12 @@ export default function ModulosRRHHPagina() {
       agregarLogTerminal('success', `✓ ${res.message || 'Comando finalizado.'}`);
       setTerminalCommand('');
     } catch (err: any) {
-      agregarLogTerminal('error', `✗ ${err.message || 'Error al ejecutar comando.'}`);
+      const msg = err.message || 'Error al ejecutar comando.';
+      agregarLogTerminal('error', `✗ ${msg}`);
+      if (msg.toLowerCase().includes('token') || msg.toLowerCase().includes('expirado') || msg.toLowerCase().includes('sesión') || msg.toLowerCase().includes('super administrador')) {
+        agregarLogTerminal('info', '🔑 Tu sesión de administrador ha caducado. Ingresa tus credenciales en el formulario de arriba.');
+        setMostrarLoginDevops(true);
+      }
     } finally {
       setDevopsExecuting(false);
       setDevopsActionRunning(null);
@@ -973,6 +1021,26 @@ export default function ModulosRRHHPagina() {
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setMostrarLoginDevops(!mostrarLoginDevops)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: mostrarLoginDevops ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                      borderColor: mostrarLoginDevops ? '#38BDF8' : 'rgba(255, 255, 255, 0.15)',
+                      borderWidth: 1,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Ionicons name="key-outline" size={12} color={mostrarLoginDevops ? '#38BDF8' : '#94A3B8'} />
+                    <Text style={{ color: mostrarLoginDevops ? '#38BDF8' : '#CBD5E1', fontSize: 10.5, fontWeight: '700' }}>
+                      {mostrarLoginDevops ? 'Ocultar Auth' : 'Renovar Sesión'}
+                    </Text>
+                  </TouchableOpacity>
+
                   <View
                     style={{
                       flexDirection: 'row',
@@ -1002,6 +1070,105 @@ export default function ModulosRRHHPagina() {
               </View>
 
               <ScrollView style={{ padding: 16 }} contentContainerStyle={{ gap: 16 }}>
+                {/* Formulario de Inicio de Sesión / Renovación de Token si está activo */}
+                {mostrarLoginDevops && (
+                  <View
+                    style={{
+                      backgroundColor: '#0F172A',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: 'rgba(56, 189, 248, 0.4)',
+                      padding: 14,
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="shield-checkmark" size={16} color="#38BDF8" />
+                        <Text style={{ color: '#F8FAFC', fontSize: 13, fontWeight: '800' }}>
+                          Autenticación de Super Administrador (10.54.80.209)
+                        </Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setMostrarLoginDevops(false)}>
+                        <Ionicons name="close-circle-outline" size={18} color="#94A3B8" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <Text style={{ color: '#94A3B8', fontSize: 11.5, lineHeight: 16 }}>
+                      Ingresa tus credenciales del sistema o Directorio Activo para renovar el token JWT y autorizar comandos de servidor:
+                    </Text>
+
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10 }}>
+                      <TextInput
+                        value={devopsEmail}
+                        onChangeText={setDevopsEmail}
+                        placeholder="Usuario o correo institucional"
+                        placeholderTextColor="#475569"
+                        autoCapitalize="none"
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#1E293B',
+                          color: '#FFFFFF',
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          fontSize: 12.5,
+                          borderWidth: 1,
+                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                        }}
+                      />
+                      <TextInput
+                        value={devopsPassword}
+                        onChangeText={setDevopsPassword}
+                        placeholder="Contraseña"
+                        placeholderTextColor="#475569"
+                        secureTextEntry={true}
+                        onSubmitEditing={handleLoginDevops}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#1E293B',
+                          color: '#FFFFFF',
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          fontSize: 12.5,
+                          borderWidth: 1,
+                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={handleLoginDevops}
+                        disabled={devopsAuthLoading}
+                        style={{
+                          backgroundColor: '#0284C7',
+                          borderRadius: 8,
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        {devopsAuthLoading ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Ionicons name="log-in-outline" size={15} color="#FFFFFF" />
+                            <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' }}>Autenticar</Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    {devopsAuthError && (
+                      <Text style={{ color: '#F87171', fontSize: 11.5 }}>
+                        ✗ {devopsAuthError}
+                      </Text>
+                    )}
+                  </View>
+                )}
+
                 {/* ====================================================
                     ACCIONES RÁPIDAS SOLICITADAS
                    ==================================================== */}

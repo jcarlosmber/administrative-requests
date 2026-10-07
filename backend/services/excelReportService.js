@@ -103,6 +103,82 @@ function formatearSintesisFunciones(cert, cargoEvaluado) {
 }
 
 /**
+ * Formatea el cotejo detallado para la nota/comentario flotante de la celda de observación
+ * Formato solicitado:
+ * COTEJO DETALLADO:
+ * Cert: "1.PROYECTAR RESPUESTAS A DERECHOS DE PETICIÓN..." ➔ Empleo: "5. Revisar, tramitar..." [PARCIAL]
+ * Cert: "2.PROYECTAR CONCEPTOS Y ACTOS..." ➔ Empleo: "1. Analizar, evaluar..." [DIRECTA]
+ */
+function formatearCotejoDetalladoComentario(cert, cargoEvaluado) {
+  const funcionesCoincidentes = cert.experiencia_relacionada?.funciones_coincidentes || [];
+  if (!Array.isArray(funcionesCoincidentes) || funcionesCoincidentes.length === 0) return '';
+
+  const listaFuncionesCargo = Array.isArray(cargoEvaluado?.funciones_cargo)
+    ? cargoEvaluado.funciones_cargo
+    : (Array.isArray(cargoEvaluado?.funciones_del_cargo) ? cargoEvaluado.funciones_del_cargo : []);
+
+  const listaFuncionesCert = Array.isArray(cert.funciones_certificadas)
+    ? cert.funciones_certificadas
+    : (Array.isArray(cert.obligaciones) ? cert.obligaciones : []);
+
+  const lineas = funcionesCoincidentes.map((f, fIdx) => {
+    let fCert = (f.funcion_certificada || f.evidencia_textual || f.funcion || '').trim();
+    let fCargo = (f.funcion_del_cargo || '').trim();
+
+    // 1. Resolver y formatear número de la obligación en el certificado
+    let oblNum = null;
+    const mCert = fCert.match(/^(?:obligaci[oó]n|funci[oó]n|obl\.?|func\.?|num\.?|n°|numeral)?\s*(\d+)\s*[:.\-]?\s*/i);
+    if (mCert) {
+      oblNum = parseInt(mCert[1], 10);
+      const resto = fCert.substring(mCert[0].length).trim();
+      if (resto) {
+        fCert = `${oblNum}.${resto}`;
+      }
+    } else if (listaFuncionesCert.length > 0) {
+      const idxEncontrado = listaFuncionesCert.findIndex(fc => {
+        const txt = typeof fc === 'string' ? fc : (fc.funcion || fc.descripcion || fc.obligacion || '');
+        return txt.toLowerCase().includes(fCert.toLowerCase()) || fCert.toLowerCase().includes(txt.toLowerCase());
+      });
+      if (idxEncontrado !== -1) oblNum = idxEncontrado + 1;
+    }
+    if (!oblNum) oblNum = fIdx + 1;
+
+    if (!/^\d+\.?\s*/.test(fCert)) {
+      fCert = `${oblNum}.${fCert}`;
+    }
+
+    // 2. Resolver y formatear número de la función del empleo
+    let funcNum = null;
+    const mFunc = fCargo.match(/^(?:funci[oó]n|func\.?|num\.?|n°|numeral)?\s*(\d+)\s*[:.\-]?\s*/i);
+    if (mFunc) {
+      funcNum = parseInt(mFunc[1], 10);
+      const restoCargo = fCargo.substring(mFunc[0].length).trim();
+      if (restoCargo) {
+        fCargo = `${funcNum}. ${restoCargo}`;
+      }
+    } else if (listaFuncionesCargo.length > 0) {
+      const idxEncontrado = listaFuncionesCargo.findIndex(fc => {
+        const txt = typeof fc === 'string' ? fc : (fc.descripcion || fc.funcion || '');
+        return txt.toLowerCase().includes(fCargo.toLowerCase()) || fCargo.toLowerCase().includes(txt.toLowerCase());
+      });
+      if (idxEncontrado !== -1) funcNum = idxEncontrado + 1;
+    }
+    if (!funcNum) funcNum = fIdx + 1;
+
+    if (!/^\d+\.?\s*/.test(fCargo)) {
+      fCargo = `${funcNum}. ${fCargo}`;
+    }
+
+    // 3. Coincidencia entre corchetes
+    const coincidencia = (f.coincidencia || 'DIRECTA').toUpperCase();
+
+    return `Cert: "${fCert}" ➔ Empleo: "${fCargo}" [${coincidencia}]`;
+  });
+
+  return `COTEJO DETALLADO:\n${lineas.join('\n')}`;
+}
+
+/**
  * Resuelve el texto completo del cargo incorporando el número del contrato si aplica
  */
 function resolverNombreCargoConContrato(cert) {
@@ -421,44 +497,50 @@ async function generarReporteExcelValidacion(data) {
     row.hidden = false;
   }
 
-  // Llenar certificados
+  // -------------------------------------------------------------------------
+  // Preparar filas de experiencia:
+  // - Experiencia anterior al título de pregrado -> "Laboral"
+  // - Experiencia posterior al título de pregrado -> "Profesional" o "Relacionada"
+  // - Si el certificado cruza la fecha de grado -> Se divide en 2 tramos
+  // -------------------------------------------------------------------------
+  // Resolver fecha de corte de pregrado
+  let fechaCorteGlobal = null;
+  const listaPregrados = formacion.filter(f => (f.tipo || '').toUpperCase() === 'PREGRADO');
+  for (const item of (listaPregrados.length > 0 ? listaPregrados : formacion)) {
+    const fPensum = parseFecha(item.fecha_terminacion_materias || item.fecha_terminacion_pensum);
+    const fGrado = parseFecha(item.fecha_grado || item.fecha_expedicion);
+    const fElegida = (item.certifica_terminacion_materias || item.certifica_terminacion_pensum) && fPensum ? fPensum : fGrado;
+    if (fElegida) {
+      if (!fechaCorteGlobal || fElegida < fechaCorteGlobal) {
+        fechaCorteGlobal = fElegida;
+      }
+    }
+  }
+
+  const filasExperiencia = [];
+
   for (let i = 0; i < certs.length; i++) {
-    const r = startExp + i;
     const cert = certs[i];
-    const row = ws.getRow(r);
-
-    row.getCell('A').value = cert.entidad || 'N/A';
-
-    // REGLA 3: Si es un contrato, dejar el número del contrato junto al cargo
     const cargoConContrato = resolverNombreCargoConContrato(cert);
-    row.getCell('B').value = cargoConContrato;
-
     const fIniOriginal = parseFecha(cert.fecha_inicio);
     const fFin = parseFecha(cert.fecha_fin) || (cert.vinculo_vigente ? (parseFecha(cert.fecha_expedicion) || new Date()) : null);
 
-    // Validación de experiencia previa al grado / terminación de materias (Dcto 1083/2015 y Ley 2039/2020)
     const expPrevia = cert.verificacion_experiencia_previa;
-    const esNoComputablePrevia = expPrevia && expPrevia.tipo_resultado === 'NO_COMPUTABLE_PREVIA_AL_GRADO';
-    const esParcialCorte = expPrevia && expPrevia.tipo_resultado === 'COMPUTABLE_PARCIAL_DESDE_CORTE';
-    const esLey2039 = expPrevia && expPrevia.tipo_resultado === 'COMPUTABLE_TOTAL_LEY_2039';
-
-    let fIni = fIniOriginal;
-    if (esParcialCorte && expPrevia.fecha_inicio_computable) {
-      fIni = parseFecha(expPrevia.fecha_inicio_computable);
+    let fechaCorteCert = fechaCorteGlobal;
+    if (expPrevia && expPrevia.fecha_inicio_computable) {
+      const fc = parseFecha(expPrevia.fecha_inicio_computable);
+      if (fc) fechaCorteCert = fc;
+    } else if (expPrevia && expPrevia.fecha_corte_profesional && expPrevia.fecha_corte_profesional !== 'NO APLICA') {
+      const fc = parseFecha(expPrevia.fecha_corte_profesional);
+      if (fc) fechaCorteCert = fc;
     }
-    row.getCell('C').value = fIni;
-    if (fIni instanceof Date) row.getCell('C').numFmt = 'yyyy-mm-dd';
 
-    row.getCell('D').value = fFin;
-    if (fFin instanceof Date) row.getCell('D').numFmt = 'yyyy-mm-dd';
-
-    const esRel = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA';
-
-    if (esNoComputablePrevia) {
-      row.getCell('E').value = 'No Computable';
-    } else {
-      row.getCell('E').value = esRel ? 'Relacionada' : 'Profesional';
-    }
+    const esLey2039 = expPrevia && (
+      expPrevia.tipo_resultado === 'COMPUTABLE_TOTAL_LEY_2039' || 
+      expPrevia.tipo_experiencia_previa_ley2039 === true ||
+      expPrevia.decision_computo === 'COMPUTABLE_TOTAL_LEY_2039'
+    );
+    const esRel = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA' || cert.experiencia_relacionada?.resultado === 'RELACIONADA';
 
     const tieneTraslapeTotal = Boolean(
       cert.es_traslape_total === true ||
@@ -467,75 +549,119 @@ async function generarReporteExcelValidacion(data) {
       (cert.tiempo_valido_meses === 0 && Number(cert.tiempo_certificado?.meses_totales || 0) > 0)
     );
 
-    // REGLA 4: Análisis sintético y conciso en observaciones de experiencia relacionada
-    // Ejemplo solicitado: Obl. 1 del cert. ➔ Func. 1, 3 y 4; Obl. 2 ➔ Func. 2 y 5; Obl. 3 ➔ Func. 6.
     const sintesisCotejo = formatearSintesisFunciones(cert, cargo);
+    const auditoriaDetallada = formatearCotejoDetalladoComentario(cert, cargo);
 
-    // Detalle extenso de cotejo (para nota/tooltip sin sobrecargar la celda)
-    const funcionesCoincidentes = cert.experiencia_relacionada?.funciones_coincidentes || [];
-    let auditoriaDetallada = '';
-    if (funcionesCoincidentes.length > 0) {
-      auditoriaDetallada = funcionesCoincidentes.map((f, fIdx) => {
-        const fCert = (f.funcion_certificada || f.funcion || '').trim();
-        const fCargo = (f.funcion_del_cargo || '').trim();
-        const rel = f.coincidencia ? ` [${f.coincidencia}]` : '';
-        return `${fIdx + 1}. Cert: "${fCert}" ➔ Empleo: "${fCargo}"${rel}`;
-      }).join('\n');
+    if (fIniOriginal && fFin && fechaCorteCert && !esLey2039) {
+      const tIni = fIniOriginal.getTime();
+      const tFin = fFin.getTime();
+      const tCorte = fechaCorteCert.getTime();
+
+      if (tIni < tCorte && tFin > tCorte) {
+        // DIVISIÓN EN 2 TRAMOS:
+        // Tramo 1: Experiencia Laboral (anterior al grado)
+        const fFinTramo1 = new Date(tCorte - 86400000);
+        filasExperiencia.push({
+          entidad: cert.entidad || 'N/A',
+          cargo: cargoConContrato,
+          fechaInicio: fIniOriginal,
+          fechaFin: fFinTramo1,
+          tipoExperiencia: 'Laboral',
+          esRel: false,
+          esLaboral: true,
+          tieneTraslapeTotal: false,
+          observacion: 'Experiencia laboral previa al título de pregrado / terminación de materias.',
+          observacionK: 'Laboral',
+          nota: null
+        });
+
+        // Tramo 2: Experiencia Posterior (Profesional o Relacionada según funciones)
+        filasExperiencia.push({
+          entidad: cert.entidad || 'N/A',
+          cargo: cargoConContrato,
+          fechaInicio: fechaCorteCert,
+          fechaFin: fFin,
+          tipoExperiencia: esRel ? 'Relacionada' : 'Profesional',
+          esRel: esRel,
+          esLaboral: false,
+          tieneTraslapeTotal: tieneTraslapeTotal,
+          observacion: tieneTraslapeTotal 
+            ? 'Traslape Total' 
+            : (esRel ? (sintesisCotejo || 'Experiencia laboral relacionada con las funciones del cargo.') : 'Experiencia profesional no relacionada.'),
+          observacionK: tieneTraslapeTotal ? 'Traslape Total' : null,
+          nota: (esRel && auditoriaDetallada) ? auditoriaDetallada : null
+        });
+        continue;
+      } else if (tFin <= tCorte) {
+        // Periodo completamente previo al corte -> Experiencia Laboral
+        filasExperiencia.push({
+          entidad: cert.entidad || 'N/A',
+          cargo: cargoConContrato,
+          fechaInicio: fIniOriginal,
+          fechaFin: fFin,
+          tipoExperiencia: 'Laboral',
+          esRel: false,
+          esLaboral: true,
+          tieneTraslapeTotal: false,
+          observacion: 'Experiencia laboral previa al título de pregrado / terminación de materias.',
+          observacionK: 'Laboral',
+          nota: null
+        });
+        continue;
+      }
     }
 
-    if (esNoComputablePrevia) {
-      row.getCell('F').value = `NO COMPUTABLE [Dcto 1083/2015]: Experiencia previa a la obtención del título profesional / terminación de materias. No reúne condiciones de Ley 2039 de 2020 ni Dcto 952 de 2021.`;
-      row.getCell('K').value = 'Traslape Total';
-      row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
+    // Periodo completamente posterior al corte (o modalidad formativa válida Ley 2039)
+    let prefijoLey = '';
+    if (esLey2039) {
+      prefijoLey = `[Ley 2039/2020: Modalidad formativa previa reconocida (${expPrevia?.tipo_experiencia_previa || 'Pasantía/Práctica'})] `;
+    }
+
+    filasExperiencia.push({
+      entidad: cert.entidad || 'N/A',
+      cargo: cargoConContrato,
+      fechaInicio: fIniOriginal,
+      fechaFin: fFin,
+      tipoExperiencia: esRel ? 'Relacionada' : 'Profesional',
+      esRel: esRel,
+      esLaboral: false,
+      tieneTraslapeTotal: tieneTraslapeTotal,
+      observacion: tieneTraslapeTotal 
+        ? 'Traslape Total' 
+        : (esRel ? (prefijoLey + (sintesisCotejo || 'Experiencia laboral relacionada con las funciones del cargo.')) : (prefijoLey + 'Experiencia profesional no relacionada.')),
+      observacionK: tieneTraslapeTotal ? 'Traslape Total' : null,
+      nota: (esRel && auditoriaDetallada) ? auditoriaDetallada : null
+    });
+  }
+
+  // Llenar filas de experiencia en la hoja Excel
+  for (let i = 0; i < filasExperiencia.length; i++) {
+    const r = startExp + i;
+    const fila = filasExperiencia[i];
+    const row = ws.getRow(r);
+
+    row.getCell('A').value = fila.entidad;
+    row.getCell('B').value = fila.cargo;
+
+    row.getCell('C').value = fila.fechaInicio;
+    if (fila.fechaInicio instanceof Date) row.getCell('C').numFmt = 'yyyy-mm-dd';
+
+    row.getCell('D').value = fila.fechaFin;
+    if (fila.fechaFin instanceof Date) row.getCell('D').numFmt = 'yyyy-mm-dd';
+
+    row.getCell('E').value = fila.tipoExperiencia;
+    row.getCell('F').value = fila.observacion;
+    row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
+
+    if (fila.observacionK) {
+      row.getCell('K').value = fila.observacionK;
       row.getCell('K').alignment = { wrapText: true, vertical: 'top' };
-    } else if (esRel) {
-      let prefijoNormativo = '';
-      if (esParcialCorte) {
-        prefijoNormativo = `[Dcto 1083/2015: Inició ${cert.fecha_inicio} previo al grado. Tramo computable desde ${expPrevia.fecha_inicio_computable}] `;
-      } else if (esLey2039) {
-        prefijoNormativo = `[Ley 2039/2020 y Dcto 952/2021: Modalidad previa reconocida (${expPrevia.tipo_experiencia_previa})] `;
-      }
-
-      if (tieneTraslapeTotal) {
-        row.getCell('F').value = 'Traslape Total';
-        if (auditoriaDetallada || prefijoNormativo) {
-          row.getCell('F').note = `TRASLAPE TOTAL: periodo simultáneo cubierto en su totalidad.\n${prefijoNormativo}\n${auditoriaDetallada}`;
-        }
-      } else {
-        let obsTexto = prefijoNormativo;
-        if (cert.traslapes && cert.traslapes.length > 0) {
-          const tParciales = cert.traslapes.filter(t => !(t.tipo || '').toUpperCase().includes('TOTAL'));
-          if (tParciales.length > 0) {
-            obsTexto += `[TRASLAPE PARCIAL: ${tParciales.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}] `;
-          }
-        }
-        obsTexto += (sintesisCotejo || 'Experiencia laboral relacionada con las funciones del cargo.');
-        row.getCell('F').value = obsTexto;
-
-        if (auditoriaDetallada) {
-          row.getCell('F').note = `COTEJO DETALLADO:\n${auditoriaDetallada}`;
-        }
-      }
-      row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
     } else {
-      let prefijoNormativo = '';
-      if (esParcialCorte) {
-        prefijoNormativo = `[Dcto 1083/2015: Tramo previo excluido. Computable desde ${expPrevia.fecha_inicio_computable}] `;
-      } else if (esLey2039) {
-        prefijoNormativo = `[Ley 2039/2020: Modalidad previa reconocida] `;
-      }
+      row.getCell('K').value = null;
+    }
 
-      if (tieneTraslapeTotal) {
-        row.getCell('K').value = 'Traslape Total';
-        row.getCell('F').value = prefijoNormativo + 'Experiencia profesional no relacionada.';
-      } else {
-        row.getCell('F').value = prefijoNormativo + 'Experiencia profesional no relacionada.';
-        if (cert.traslapes && cert.traslapes.length > 0) {
-          row.getCell('K').value = `Traslape parcial: ${cert.traslapes.map(t => `${t.tiempo_a_excluir_meses || 0} meses`).join(', ')}`;
-        }
-      }
-      row.getCell('F').alignment = { wrapText: true, vertical: 'top' };
-      row.getCell('K').alignment = { wrapText: true, vertical: 'top' };
+    if (fila.nota) {
+      row.getCell('F').note = fila.nota;
     }
 
     // Fórmulas oficiales DATEDIF
@@ -551,7 +677,7 @@ async function generarReporteExcelValidacion(data) {
   // REGLA 2: NO ES NECESARIO ESCONDER TODOS LOS TITULOS O FILAS DEJA TODO VISIBLE
   // Limpiar celdas en filas no utilizadas de experiencia, pero dejarlas VISIBLES
   const maxExpRows = 66;
-  const startEmpty = startExp + certs.length;
+  const startEmpty = startExp + filasExperiencia.length;
   for (let r = startEmpty; r <= maxExpRows; r++) {
     const row = ws.getRow(r);
     for (let c = 1; c <= 7; c++) {
@@ -776,5 +902,6 @@ async function generarReporteExcelValidacion(data) {
 module.exports = {
   generarReporteExcelValidacion,
   formatearSintesisFunciones,
+  formatearCotejoDetalladoComentario,
   resolverNombreCargoConContrato
 };
