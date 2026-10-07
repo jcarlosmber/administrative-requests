@@ -24,6 +24,26 @@ module.exports = function (pool) {
     return v;
   }
 
+  // Helper para limpiar documentos/cédulas (quitar puntos, comas, guiones, espacios)
+  function cleanDoc(val) {
+    if (val === null || val === undefined) return null;
+    let str = String(val).trim();
+    if (str.includes('.') && !isNaN(str) && Number(str) % 1 === 0) {
+      str = String(Math.floor(Number(str)));
+    }
+    str = str.replace(/[\.,\s-]/g, '').trim();
+    return str || null;
+  }
+
+  // Helper para limpiar montos monetarios o salarios
+  function cleanMoney(val) {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    let str = String(val).replace(/[\$,\s]/g, '').trim();
+    const parsed = parseFloat(str);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
   // Parseador de funciones
   function parseFunctions(funcionesText) {
     if (!funcionesText || typeof funcionesText !== 'string') return [];
@@ -224,38 +244,74 @@ module.exports = function (pool) {
     try {
       await ensureTables();
       if (!req.file) {
-        return res.status(400).json({ success: false, error: 'No se envió ningún archivo.' });
+        return res.status(400).json({ success: false, error: 'No se envió ningún archivo para procesar.' });
+      }
+
+      // 1. Comprobación de formato de archivo
+      const nombreOrig = req.file.originalname || '';
+      if (!nombreOrig.match(/\.(xlsx|xls)$/i)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Formato no compatible. Por favor sube un archivo de Microsoft Excel (.xlsx o .xls).'
+        });
       }
 
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(req.file.buffer);
+      try {
+        await workbook.xlsx.load(req.file.buffer);
+      } catch (errBuffer) {
+        return res.status(400).json({
+          success: false,
+          error: 'No se pudo leer el archivo Excel. Asegúrate de que no esté protegido con contraseña o dañado.'
+        });
+      }
 
       let sheet = workbook.getWorksheet('PLANTA SJD (2)') || 
                   workbook.getWorksheet('PLANTA SJD') || 
                   workbook.worksheets[0];
 
-      if (!sheet) {
-        return res.status(400).json({ success: false, error: 'La hoja de cálculo está vacía.' });
+      if (!sheet || sheet.rowCount < 2) {
+        return res.status(400).json({
+          success: false,
+          error: 'La hoja de cálculo está vacía o no contiene registros suficientes para procesar.'
+        });
       }
 
+      // 2. Localizar fila de encabezados
       let rowHeader = 4;
-      // Buscar la fila de encabezados
-      for (let r = 1; r <= 10; r++) {
+      let encabezadosTexto = '';
+      for (let r = 1; r <= 15; r++) {
         const row = sheet.getRow(r);
         let rowText = '';
         row.eachCell((c) => { rowText += ' ' + String(c.value || '').toUpperCase(); });
         if (rowText.includes('CEDULA') || rowText.includes('APELLIDOS') || rowText.includes('NOMENCLATURA') || rowText.includes('ID SIDEAP')) {
           rowHeader = r;
+          encabezadosTexto = rowText;
           break;
         }
       }
 
-      // Mapear encabezados dinámicamente si están presentes
+      // 3. Comprobación de confusión de archivo: ¿Es en realidad un archivo de Planta Perno?
+      const esPernoEnPlanta = (
+        encabezadosTexto.includes('NUMERO_IDENTIFICACION') ||
+        encabezadosTexto.includes('PRIMER_APELLIDO') ||
+        encabezadosTexto.includes('FONDO_SALUD') ||
+        encabezadosTexto.includes('TIPO_FUNCIONARIO')
+      ) && !encabezadosTexto.includes('ID_SIDEAP') && !encabezadosTexto.includes('NOMENCLATURA');
+
+      if (esPernoEnPlanta) {
+        return res.status(400).json({
+          success: false,
+          error: 'Atención: Has intentado subir el archivo de "Planta Perno / Nómina" en la sección de "Planta Oficial". Por favor selecciona el archivo correcto de Planta Oficial o súbelo en el botón de Planta Perno.'
+        });
+      }
+
+      // 4. Mapear encabezados dinámicamente
       const headerRow = sheet.getRow(rowHeader);
       const colMap = {};
       headerRow.eachCell((c, colNum) => {
         const txt = String(c.value || '').toUpperCase().trim();
-        if (txt === 'ID') colMap.id = colNum;
+        if (txt === 'ID' || txt === 'ID_PLAZA' || txt === 'ID PLAZA') colMap.id = colNum;
         else if (txt.includes('SIDEAP')) colMap.id_sideap = colNum;
         else if (txt.includes('PERNO')) colMap.id_perno = colNum;
         else if (txt === 'CEDULA' && !colMap.cedula_actual) colMap.cedula_actual = colNum;
@@ -278,31 +334,78 @@ module.exports = function (pool) {
         else if (txt.includes('ASIGNACIÓN BÁSICA') || txt.includes('ASIGNACION BASICA') || txt.includes('SUELDO BASICO')) colMap.asignacion = colNum;
       });
 
+      // 5. Comprobación de columnas obligatorias
+      if (!colMap.id) {
+        return res.status(400).json({
+          success: false,
+          error: 'No se encontró la columna requerida "ID" (identificador numérico de cada plaza) en la fila de encabezados.'
+        });
+      }
+
+      if (!colMap.cargo && !colMap.codigo) {
+        return res.status(400).json({
+          success: false,
+          error: 'No se encontró la columna de "CARGO / NOMENCLATURA" en el archivo.'
+        });
+      }
+
       let procesados = 0;
       let actualizados = 0;
+      let filasOmitidas = 0;
+      const advertencias = [];
+      const plazasVistas = new Set();
 
       for (let r = rowHeader + 1; r <= sheet.rowCount; r++) {
         const row = sheet.getRow(r);
-        const idPlaza = parseInt(getVal(row.getCell(colMap.id || 1)), 10);
-        if (!idPlaza) continue;
+        const idCellVal = getVal(row.getCell(colMap.id || 1));
+        
+        // Comprobar si la fila está completamente vacía
+        if (idCellVal === null || idCellVal === undefined || String(idCellVal).trim() === '') {
+          // Verificar si tiene algún otro contenido
+          let tieneContenido = false;
+          row.eachCell(() => { tieneContenido = true; });
+          if (tieneContenido) {
+            filasOmitidas++;
+            if (advertencias.length < 10) {
+              advertencias.push(`Fila ${r}: Omitida porque no contiene un ID de plaza.`);
+            }
+          }
+          continue;
+        }
+
+        const idPlaza = parseInt(String(idCellVal).trim(), 10);
+        if (isNaN(idPlaza) || idPlaza <= 0) {
+          filasOmitidas++;
+          if (advertencias.length < 10) {
+            advertencias.push(`Fila ${r}: Omitida porque el ID '${idCellVal}' no es un número entero válido.`);
+          }
+          continue;
+        }
+
+        if (plazasVistas.has(idPlaza)) {
+          if (advertencias.length < 10) {
+            advertencias.push(`Fila ${r}: El ID de plaza ${idPlaza} aparece duplicado en el archivo (se actualizará con este registro).`);
+          }
+        }
+        plazasVistas.add(idPlaza);
 
         const idSideap = parseInt(getVal(row.getCell(colMap.id_sideap || 2)), 10) || null;
         const idPerno = parseInt(getVal(row.getCell(colMap.id_perno || 3)), 10) || null;
         
-        let cedulaActual = String(getVal(row.getCell(colMap.cedula_actual || 4)) || '').trim();
+        let cedulaActual = cleanDoc(getVal(row.getCell(colMap.cedula_actual || 4)));
         let nombreActual = String(getVal(row.getCell(colMap.nombre_actual || 5)) || '').trim();
         const tipoVinculacion = String(getVal(row.getCell(colMap.tipo_vinculacion || 6)) || '').trim();
         
-        let situacionAdmin = String(getVal(row.getCell(colMap.situacion_admin || 13)) || '').trim();
+        let situacionAdmin = String(getVal(row.getCell(colMap.situacion_admin || 12)) || getVal(row.getCell(13)) || '').trim();
         if (situacionAdmin === '[object Object]') situacionAdmin = '';
 
-        let situacionTitular = String(getVal(row.getCell(colMap.situacion_titular || 14)) || '').trim();
+        let situacionTitular = String(getVal(row.getCell(colMap.situacion_titular || 13)) || getVal(row.getCell(14)) || '').trim();
         if (situacionTitular === '[object Object]') situacionTitular = '';
 
-        let titularCedula = String(getVal(row.getCell(colMap.titular_cedula || 15)) || '').trim();
-        let titularNombre = String(getVal(row.getCell(colMap.titular_nombre || 16)) || '').trim();
+        let titularCedula = cleanDoc(getVal(row.getCell(colMap.titular_cedula || 14)) || getVal(row.getCell(15)));
+        let titularNombre = String(getVal(row.getCell(colMap.titular_nombre || 15)) || getVal(row.getCell(16)) || '').trim();
 
-        let estadoCargo = String(getVal(row.getCell(colMap.estado_cargo || 25)) || '').trim().toUpperCase();
+        let estadoCargo = String(getVal(row.getCell(colMap.estado_cargo || 23)) || getVal(row.getCell(24)) || getVal(row.getCell(25)) || '').trim().toUpperCase();
         if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
           if (nombreActual.includes('VACANTE DEFINITIVA') || titularNombre.includes('VACANTE DEFINITIVA')) {
             estadoCargo = 'VACANTE DEFINITIVA';
@@ -343,16 +446,22 @@ module.exports = function (pool) {
         titularCedula = titularCedula ? titularCedula : null;
         encargoCedula = encargoCedula ? encargoCedula : null;
 
-        const nivel = String(getVal(row.getCell(colMap.nivel || 26)) || '').trim().toUpperCase();
-        const cargoNom = String(getVal(row.getCell(colMap.cargo || 27)) || '').trim().toUpperCase();
-        const codigo = String(getVal(row.getCell(colMap.codigo || 28)) || '').trim();
-        const grado = String(getVal(row.getCell(colMap.grado || 29)) || '').trim();
-        const depCargo = String(getVal(row.getCell(colMap.dep_cargo || 31)) || '').trim().toUpperCase();
-        const depFuncional = String(getVal(row.getCell(colMap.dep_funcional || 32)) || depCargo).trim().toUpperCase();
-        const proposito = String(getVal(row.getCell(colMap.proposito || 33)) || '').trim();
-        const funcionesRaw = String(getVal(row.getCell(colMap.funciones || 34)) || '').trim();
-        const requisitos = String(getVal(row.getCell(colMap.requisitos || 35)) || '').trim();
-        const asignacion = parseFloat(getVal(row.getCell(colMap.asignacion || 37))) || 0;
+        let nivel = String(getVal(row.getCell(colMap.nivel || 24)) || getVal(row.getCell(25)) || getVal(row.getCell(26)) || '').trim().toUpperCase();
+        if (nivel.includes('DIRECTIV')) nivel = 'DIRECTIVO';
+        else if (nivel.includes('ASESOR')) nivel = 'ASESOR';
+        else if (nivel.includes('PROFESIONAL')) nivel = 'PROFESIONAL';
+        else if (nivel.includes('TECNIC') || nivel.includes('TÉCNIC')) nivel = 'TECNICO';
+        else if (nivel.includes('ASISTENCIAL')) nivel = 'ASISTENCIAL';
+
+        const cargoNom = String(getVal(row.getCell(colMap.cargo || 25)) || getVal(row.getCell(26)) || getVal(row.getCell(27)) || '').trim().toUpperCase();
+        const codigo = String(getVal(row.getCell(colMap.codigo || 26)) || getVal(row.getCell(27)) || getVal(row.getCell(28)) || '').trim();
+        const grado = String(getVal(row.getCell(colMap.grado || 27)) || getVal(row.getCell(28)) || getVal(row.getCell(29)) || '').trim();
+        const depCargo = String(getVal(row.getCell(colMap.dep_cargo || 29)) || getVal(row.getCell(30)) || getVal(row.getCell(31)) || '').trim().toUpperCase();
+        const depFuncional = String(getVal(row.getCell(colMap.dep_funcional || 30)) || getVal(row.getCell(31)) || getVal(row.getCell(32)) || depCargo).trim().toUpperCase();
+        const proposito = String(getVal(row.getCell(colMap.proposito || 31)) || getVal(row.getCell(32)) || getVal(row.getCell(33)) || '').trim();
+        const funcionesRaw = String(getVal(row.getCell(colMap.funciones || 32)) || getVal(row.getCell(33)) || getVal(row.getCell(34)) || '').trim();
+        const requisitos = String(getVal(row.getCell(colMap.requisitos || 33)) || getVal(row.getCell(34)) || getVal(row.getCell(35)) || '').trim();
+        const asignacion = cleanMoney(getVal(row.getCell(colMap.asignacion || 35)) || getVal(row.getCell(36)) || getVal(row.getCell(37)));
 
         const funcionesArr = parseFunctions(funcionesRaw);
 
@@ -413,11 +522,18 @@ module.exports = function (pool) {
         VALUES ('PLANTA', $1, $2, $3)
       `, [req.file.originalname, procesados, actualizados]);
 
+      const detalleAdv = advertencias.length > 0 
+        ? ` (${advertencias.length} advertencia${advertencias.length > 1 ? 's' : ''})` 
+        : '';
+
       res.json({
         success: true,
-        mensaje: `Archivo de Planta procesado exitosamente. Se sincronizaron ${actualizados} plazas en el sistema.`,
+        mensaje: `Archivo de Planta procesado exitosamente. Se sincronizaron ${actualizados} plazas en el sistema.${detalleAdv}`,
         registros_procesados: procesados,
         registros_actualizados: actualizados,
+        filas_omitidas: filasOmitidas,
+        advertencias: advertencias.slice(0, 10),
+        total_advertencias: advertencias.length
       });
     } catch (error) {
       console.error('Error procesando archivo de planta:', error);
@@ -430,31 +546,67 @@ module.exports = function (pool) {
     try {
       await ensureTables();
       if (!req.file) {
-        return res.status(400).json({ success: false, error: 'No se envió ningún archivo.' });
+        return res.status(400).json({ success: false, error: 'No se envió ningún archivo para procesar.' });
+      }
+
+      // 1. Comprobación de formato de archivo
+      const nombreOrig = req.file.originalname || '';
+      if (!nombreOrig.match(/\.(xlsx|xls)$/i)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Formato no compatible. Por favor sube un archivo de Microsoft Excel (.xlsx o .xls).'
+        });
       }
 
       const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(req.file.buffer);
+      try {
+        await workbook.xlsx.load(req.file.buffer);
+      } catch (errBuffer) {
+        return res.status(400).json({
+          success: false,
+          error: 'No se pudo leer el archivo Excel. Asegúrate de que no esté dañado ni protegido.'
+        });
+      }
 
       let sheet = workbook.getWorksheet('PLANTA PERNO') || 
                   workbook.worksheets[0];
 
-      if (!sheet) {
-        return res.status(400).json({ success: false, error: 'La hoja de cálculo está vacía.' });
+      if (!sheet || sheet.rowCount < 2) {
+        return res.status(400).json({
+          success: false,
+          error: 'La hoja de cálculo está vacía o no contiene registros suficientes para procesar.'
+        });
       }
 
+      // 2. Buscar fila de encabezados
       let rowHeader = 9;
-      // Buscar la fila de encabezados si no es 9
+      let encabezadosTexto = '';
       for (let r = 1; r <= 15; r++) {
         const row = sheet.getRow(r);
         let rowText = '';
         row.eachCell((c) => { rowText += ' ' + String(c.value || '').toUpperCase(); });
         if (rowText.includes('NUMERO_IDENTIFICACION') || rowText.includes('PRIMER_APELLIDO') || rowText.includes('IDENTIFICACION')) {
           rowHeader = r;
+          encabezadosTexto = rowText;
           break;
         }
       }
 
+      // 3. Comprobación de confusión de archivo: ¿Es en realidad un archivo de Planta Oficial?
+      const esPlantaEnPerno = (
+        encabezadosTexto.includes('ID_SIDEAP') ||
+        encabezadosTexto.includes('NOMENCLATURA') ||
+        encabezadosTexto.includes('SITUACIÓN ADMINISTRATIVA')
+      ) && !encabezadosTexto.includes('NUMERO_IDENTIFICACION');
+
+      if (esPlantaEnPerno) {
+        return res.status(400).json({
+          success: false,
+          error: 'Atención: Has intentado subir el archivo de "Planta Oficial" en la sección de "Planta Perno / Nómina". Por favor sube el archivo correspondiente.'
+        });
+      }
+
+      // 4. Mapear encabezados dinámicamente
       const headerRow = sheet.getRow(rowHeader);
       const colMap = {};
       headerRow.eachCell((c, colNum) => {
@@ -476,12 +628,23 @@ module.exports = function (pool) {
         else if (txt.includes('DEVENGADO')) colMap.devengado = colNum;
       });
 
+      // 5. Comprobación de columna obligatoria de identificación
+      if (!colMap.cedula) {
+        return res.status(400).json({
+          success: false,
+          error: 'No se encontró la columna requerida de identificación ("NUMERO_IDENTIFICACION" o "CEDULA") en la fila de encabezados.'
+        });
+      }
+
       let procesados = 0;
       let actualizados = 0;
+      let noEmparejados = 0;
+      const advertencias = [];
 
       for (let r = rowHeader + 1; r <= sheet.rowCount; r++) {
         const row = sheet.getRow(r);
-        const cedula = String(getVal(row.getCell(colMap.cedula || 1)) || '').trim();
+        const cedulaRaw = getVal(row.getCell(colMap.cedula || 1));
+        const cedula = cleanDoc(cedulaRaw);
         if (!cedula) continue;
 
         const direccion = String(getVal(row.getCell(colMap.direccion || 7)) || '').trim();
@@ -494,7 +657,7 @@ module.exports = function (pool) {
         const tipoNomb = String(getVal(row.getCell(colMap.tipo_nomb || 34)) || '').trim();
         const actoNomb = String(getVal(row.getCell(colMap.acto_nomb || 35)) || '').trim();
         const numActo = String(getVal(row.getCell(colMap.num_acto || 37)) || '').trim();
-        const totalDevengado = parseFloat(getVal(row.getCell(colMap.devengado || 43))) || null;
+        const totalDevengado = cleanMoney(getVal(row.getCell(colMap.devengado || 43))) || null;
 
         // Actualizar la persona en la plaza vinculando por cédula (titular o encargo)
         const updateRes = await pool.query(`
@@ -521,6 +684,12 @@ module.exports = function (pool) {
         procesados++;
         if (updateRes.rowCount > 0) {
           actualizados += updateRes.rowCount;
+        } else {
+          noEmparejados++;
+          if (advertencias.length < 5) {
+            const nomFunc = `${String(getVal(row.getCell(colMap.ape1 || 2)) || '')} ${String(getVal(row.getCell(colMap.nombres || 4)) || '')}`.trim();
+            advertencias.push(`Cédula ${cedula}${nomFunc ? ' (' + nomFunc + ')' : ''}: No se encontró un cargo activo asociado en Planta Oficial.`);
+          }
         }
       }
 
@@ -529,11 +698,18 @@ module.exports = function (pool) {
         VALUES ('PLANTA_PERNO', $1, $2, $3)
       `, [req.file.originalname, procesados, actualizados]);
 
+      const avisoNoEmp = noEmparejados > 0 
+        ? ` (${noEmparejados} funcionarios de nómina no registran cargo en planta activa)` 
+        : '';
+
       res.json({
         success: true,
-        mensaje: `Archivo de Planta Perno procesado exitosamente. Se enriquecieron datos de ${actualizados} funcionarios en sus cargos.`,
+        mensaje: `Archivo de Planta Perno procesado exitosamente. Se enriquecieron datos de ${actualizados} funcionarios en sus cargos.${avisoNoEmp}`,
         registros_procesados: procesados,
         registros_actualizados: actualizados,
+        registros_sin_plaza: noEmparejados,
+        advertencias: advertencias.slice(0, 10),
+        total_advertencias: advertencias.length
       });
     } catch (error) {
       console.error('Error procesando archivo de planta perno:', error);
@@ -560,12 +736,13 @@ module.exports = function (pool) {
       ws.getCell('A2').value = 'Instrucciones: Encabezados en Fila 4. Registros a partir de la Fila 5. La columna A (ID) es el consecutivo único de la plaza.';
       ws.getCell('A2').font = { size: 10, italic: true, color: { argb: 'FF334155' } };
 
+      // Encabezados ajustados: una sola columna OPEC (sin OPEC DIST_6).
       const headersPlanta = [
         'ID', 'ID SIDEAP', 'ID PERNO', 'CEDULA', 'APELLIDOS Y NOMBRES',
         'TIPO DE VINCULACIÓN A LA ENTIDAD', 'TIPO DE VINCULACIÓN AL CARGO/ SIDEAP',
         'FECHA INGRESO A LA ENTIDAD', 'FECHA INGRESO AL DISTRITO', 'SEXO', 'EDAD',
-        '', 'SITUACIÓN ADMINISTRATIVA', 'SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO',
-        'CEDULA', 'TITULAR CARGO', 'ID-E', 'N', 'PV', 'PP OE', 'VT LM', 'VT LNR', 'OPEC', 'OPEC DIST_6',
+        'SITUACIÓN ADMINISTRATIVA', 'SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO',
+        'CEDULA', 'TITULAR CARGO', 'ID-E', 'N', 'PV', 'PP OE', 'VT LM', 'VT LNR', 'OPEC',
         'ESTADO DEL CARGO', 'NIVEL', 'NOMENCLATURA_ADMIN', 'CÓDIGO', 'GRADO', 'U',
         'DEPENDENCIA DEL CARGO', 'DEPENDENCIA FUNCIONAL', 'PROPOSITO', 'FUNCIONES', 'REQUISITOS',
         'Páginas Manual de Funciones', 'ASIGNACIÓN BÁSICA 2025'
@@ -578,13 +755,13 @@ module.exports = function (pool) {
       row4.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
       row4.height = 36;
 
-      // Filas de ejemplo real
+      // Filas de ejemplo real (ajustadas con una sola columna OPEC)
       const ejemplo1 = [
         1, 4998, 11, '36697863', 'ANA MARTA MIRANDA CORRALES',
         'LIBRE NOMBRAMIENTO Y REMOCIÓN', 'NOMBRAMIENTO ORDINARIO',
-        '2025-11-06', '2025-11-06', 'MUJER', 45, '',
+        '2025-11-06', '2025-11-06', 'MUJER', 45,
         'EN PROPIEDAD', 'EN PROPIEDAD', '36697863', 'ANA MARTA MIRANDA CORRALES',
-        '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '',
         'OCUPADO', 'ASESOR', 'JEFE DE OFICINA ASESORA', '115', '6', '115-6',
         'OFICINA ASESORA DE PLANEACIÓN', 'OFICINA ASESORA DE PLANEACIÓN',
         'Asesorar en el diseño de planes y estrategias de planeación.',
@@ -596,9 +773,9 @@ module.exports = function (pool) {
       const ejemplo2 = [
         2, 5005, 172, '', 'VACANTE DEFINITIVA',
         'CARRERA ADMINISTRATIVA', '',
-        '', '', '', '', '',
+        '', '', '', '',
         'VACANCIA', 'VACANTE DEFINITIVA', '', 'VACANTE DEFINITIVA',
-        '', '', '', '', '', '', '', '',
+        '', '', '', '', '', '', '',
         'VACANTE DEFINITIVA', 'PROFESIONAL', 'PROFESIONAL ESPECIALIZADO', '222', '24', '222-24',
         'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS', 'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS',
         'Sustanciar y proyectar conceptos jurídicos institucionales.',
@@ -612,9 +789,9 @@ module.exports = function (pool) {
 
       // Autoancho de columnas
       ws.columns.forEach((col, idx) => {
-        if (idx === 33 || idx === 34 || idx === 32) {
+        if (idx === 32 || idx === 33 || idx === 31) {
           col.width = 40;
-        } else if (idx === 4 || idx === 15 || idx === 30 || idx === 31) {
+        } else if (idx === 4 || idx === 14 || idx === 29 || idx === 30) {
           col.width = 30;
         } else {
           col.width = 18;

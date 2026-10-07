@@ -225,6 +225,10 @@ export const nominaService = {
     mensaje: string;
     registros_actualizados?: number;
     registros_procesados?: number;
+    filas_omitidas?: number;
+    advertencias?: string[];
+    total_advertencias?: number;
+    error?: string;
   }> {
     try {
       const formData = new FormData();
@@ -248,6 +252,9 @@ export const nominaService = {
       });
 
       const json = await res.json();
+      if (!res.ok && !json.mensaje) {
+        json.mensaje = json.error || `Error ${res.status} al procesar archivo`;
+      }
       return json;
     } catch (e: any) {
       return {
@@ -263,6 +270,10 @@ export const nominaService = {
     mensaje: string;
     registros_actualizados?: number;
     registros_procesados?: number;
+    registros_sin_plaza?: number;
+    advertencias?: string[];
+    total_advertencias?: number;
+    error?: string;
   }> {
     try {
       const formData = new FormData();
@@ -286,6 +297,9 @@ export const nominaService = {
       });
 
       const json = await res.json();
+      if (!res.ok && !json.mensaje) {
+        json.mensaje = json.error || `Error ${res.status} al procesar archivo`;
+      }
       return json;
     } catch (e: any) {
       return {

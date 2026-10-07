@@ -112,6 +112,7 @@ export default function NominaScreen() {
   const [infoModalTitulo, setInfoModalTitulo] = useState('');
   const [infoModalMensaje, setInfoModalMensaje] = useState('');
   const [infoModalTipo, setInfoModalTipo] = useState<'success' | 'info' | 'error'>('info');
+  const [infoModalAdvertencias, setInfoModalAdvertencias] = useState<string[]>([]);
 
   // Carga de Archivos
   const [cargandoArchivoPlanta, setCargandoArchivoPlanta] = useState(false);
@@ -120,10 +121,16 @@ export default function NominaScreen() {
   const [nombreArchivoPerno, setNombreArchivoPerno] = useState<string | null>(null);
   const [guiaArchivoActiva, setGuiaArchivoActiva] = useState<'planta' | 'perno' | 'reglas'>('planta');
 
-  const mostrarModal = (titulo: string, mensaje: string, tipo: 'success' | 'info' | 'error' = 'info') => {
+  const mostrarModal = (
+    titulo: string,
+    mensaje: string,
+    tipo: 'success' | 'info' | 'error' = 'info',
+    advertencias: string[] = []
+  ) => {
     setInfoModalTitulo(titulo);
     setInfoModalMensaje(mensaje);
     setInfoModalTipo(tipo);
+    setInfoModalAdvertencias(advertencias);
     setInfoModalVisible(true);
   };
 
@@ -477,10 +484,15 @@ export default function NominaScreen() {
       });
 
       if (resultado.success) {
-        mostrarModal('Archivo de Planta Procesado', resultado.mensaje || 'Se actualizaron las plazas correctamente.', 'success');
+        mostrarModal(
+          'Archivo de Planta Procesado',
+          resultado.mensaje || 'Se actualizaron las plazas correctamente.',
+          resultado.advertencias && resultado.advertencias.length > 0 ? 'info' : 'success',
+          resultado.advertencias || []
+        );
         cargarDatos();
       } else {
-        mostrarModal('Aviso de Carga', resultado.mensaje, 'info');
+        mostrarModal('Error de Validación', resultado.mensaje || (resultado as any).error || 'No se pudo procesar el archivo.', 'error');
       }
     } catch (e: any) {
       mostrarModal('Error al procesar', 'Ocurrió un error leyendo el archivo de planta: ' + e.message, 'error');
@@ -518,11 +530,12 @@ export default function NominaScreen() {
         mostrarModal(
           'Archivo Planta Perno Procesado',
           resultado.mensaje || 'Se enriquecieron los datos de nómina, EPS, pensión y nombramientos.',
-          'success'
+          resultado.advertencias && resultado.advertencias.length > 0 ? 'info' : 'success',
+          resultado.advertencias || []
         );
         cargarDatos();
       } else {
-        mostrarModal('Aviso de Carga', resultado.mensaje, 'info');
+        mostrarModal('Error de Validación', resultado.mensaje || (resultado as any).error || 'No se pudo procesar el archivo.', 'error');
       }
     } catch (e: any) {
       mostrarModal('Error al procesar', 'Ocurrió un error leyendo el archivo perno: ' + e.message, 'error');
@@ -2790,21 +2803,22 @@ export default function NominaScreen() {
                           { col: 'I (9)', header: 'FECHA INGRESO AL DISTRITO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de ingreso a la administración distrital.', ej: '2025-11-06' },
                           { col: 'J (10)', header: 'SEXO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Género del servidor (MUJER / HOMBRE).', ej: 'MUJER' },
                           { col: 'K (11)', header: 'EDAD', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Entero', desc: 'Edad en años.', ej: '45' },
-                          { col: 'M (13)', header: 'SITUACIÓN ADMINISTRATIVA', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación administrativa activa: ENCARGO, EN PROPIEDAD, VACANCIA.', ej: 'EN PROPIEDAD' },
-                          { col: 'N (14)', header: 'SITUACIÓN ADMINISTRATIVA TITULAR', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación del titular con derechos sobre la plaza.', ej: 'EN PROPIEDAD' },
-                          { col: 'O (15)', header: 'CEDULA (TITULAR)', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto/Número', desc: 'Cédula del titular si la plaza está ocupada o en encargo.', ej: '36697863' },
-                          { col: 'P (16)', header: 'TITULAR CARGO', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Nombre del servidor titular con derechos de carrera.', ej: 'ANA MARTA MIRANDA CORRALES' },
-                          { col: 'Y (25)', header: 'ESTADO DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Estado oficial: OCUPADO, VACANTE DEFINITIVA o VACANTE TEMPORAL.', ej: 'OCUPADO' },
-                          { col: 'Z (26)', header: 'NIVEL', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nivel jerárquico: DIRECTIVO, ASESOR, PROFESIONAL, TECNICO, ASISTENCIAL.', ej: 'ASESOR' },
-                          { col: 'AA (27)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta.', ej: 'JEFE DE OFICINA ASESORA' },
-                          { col: 'AB (28)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
-                          { col: 'AC (29)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
-                          { col: 'AE (31)', header: 'DEPENDENCIA DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Dependencia orgánica a la que pertenece la plaza.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
-                          { col: 'AF (32)', header: 'DEPENDENCIA FUNCIONAL', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Dependencia donde realmente presta labores.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
-                          { col: 'AG (33)', header: 'PROPOSITO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Propósito principal según manual de funciones.', ej: 'Asesorar en el diseño de planes y estrategias...' },
-                          { col: 'AH (34)', header: 'FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Funciones esenciales del empleo (se formatean en lista).', ej: '1. Formular proyectos... 2. Dirigir plan...' },
-                          { col: 'AI (35)', header: 'REQUISITOS', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Estudios académicos y experiencia laboral requerida.', ej: 'Título profesional en Administración. Posgrado.' },
-                          { col: 'AK (37)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208469.82' },
+                          { col: 'L (12)', header: 'SITUACIÓN ADMINISTRATIVA', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación administrativa activa: ENCARGO, EN PROPIEDAD, VACANCIA.', ej: 'EN PROPIEDAD' },
+                          { col: 'M (13)', header: 'SITUACIÓN ADMINISTRATIVA TITULAR', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación del titular con derechos sobre la plaza.', ej: 'EN PROPIEDAD' },
+                          { col: 'N (14)', header: 'CEDULA (TITULAR)', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto/Número', desc: 'Cédula del titular si la plaza está ocupada o en encargo.', ej: '36697863' },
+                          { col: 'O (15)', header: 'TITULAR CARGO', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Nombre del servidor titular con derechos de carrera.', ej: 'ANA MARTA MIRANDA CORRALES' },
+                          { col: 'V (22)', header: 'OPEC', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto/Número', desc: 'Código OPEC de la convocatoria de la Comisión Nacional del Servicio Civil (CNSC).', ej: '201940' },
+                          { col: 'W (23)', header: 'ESTADO DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Estado oficial: OCUPADO, VACANTE DEFINITIVA o VACANTE TEMPORAL.', ej: 'OCUPADO' },
+                          { col: 'X (24)', header: 'NIVEL', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nivel jerárquico: DIRECTIVO, ASESOR, PROFESIONAL, TECNICO, ASISTENCIAL.', ej: 'ASESOR' },
+                          { col: 'Y (25)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta.', ej: 'JEFE DE OFICINA ASESORA' },
+                          { col: 'Z (26)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
+                          { col: 'AA (27)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
+                          { col: 'AC (29)', header: 'DEPENDENCIA DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Dependencia orgánica a la que pertenece la plaza.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
+                          { col: 'AD (30)', header: 'DEPENDENCIA FUNCIONAL', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Dependencia donde realmente presta labores.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
+                          { col: 'AE (31)', header: 'PROPOSITO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Propósito principal según manual de funciones.', ej: 'Asesorar en el diseño de planes y estrategias...' },
+                          { col: 'AF (32)', header: 'FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Funciones esenciales del empleo (se formatean en lista).', ej: '1. Formular proyectos... 2. Dirigir plan...' },
+                          { col: 'AG (33)', header: 'REQUISITOS', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Estudios académicos y experiencia laboral requerida.', ej: 'Título profesional en Administración. Posgrado.' },
+                          { col: 'AI (35)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208469.82' },
                         ].map((row, idx) => (
                           <View
                             key={idx}
@@ -3778,9 +3792,36 @@ export default function NominaScreen() {
                 {infoModalTitulo}
               </Text>
 
-              <Text style={{ fontSize: 13, color: THEME.slate600, textAlign: 'center', lineHeight: 19, marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, color: THEME.slate600, textAlign: 'center', lineHeight: 19, marginBottom: infoModalAdvertencias.length > 0 ? 12 : 20 }}>
                 {infoModalMensaje}
               </Text>
+
+              {infoModalAdvertencias.length > 0 && (
+                <View
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#FFFBEB',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 16,
+                    borderWidth: 1,
+                    borderColor: '#FDE68A',
+                    maxHeight: 150,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309', marginBottom: 6 }}>
+                    Observaciones detectadas ({infoModalAdvertencias.length}):
+                  </Text>
+                  <ScrollView nestedScrollEnabled style={{ maxHeight: 110 }}>
+                    {infoModalAdvertencias.map((adv, idx) => (
+                      <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 11, color: '#D97706', marginRight: 4, lineHeight: 15 }}>•</Text>
+                        <Text style={{ fontSize: 11, color: '#92400E', flex: 1, lineHeight: 15 }}>{adv}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
               <Pressable
                 onPress={() => setInfoModalVisible(false)}
