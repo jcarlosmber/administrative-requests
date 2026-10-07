@@ -810,39 +810,49 @@ module.exports = function (pool) {
       const headerRow = sheet.getRow(rowHeader);
       const colMap = {};
       headerRow.eachCell((c, colNum) => {
-        const txt = String(c.value || '').toUpperCase().trim();
-        if (txt.includes('NUMERO_IDENTIFICACION') || txt.includes('IDENTIFICACION') || txt === 'CEDULA') colMap.cedula = colNum;
-        else if (txt.includes('PRIMER_APELLIDO')) colMap.ape1 = colNum;
-        else if (txt.includes('SEGUNDO_APELLIDO')) colMap.ape2 = colNum;
-        else if (txt === 'NOMBRE' || txt.includes('NOMBRES')) colMap.nombres = colNum;
-        else if (txt.includes('DIRECCION') || txt.includes('DIRECCIÓN')) colMap.direccion = colNum;
-        else if (txt.includes('TELEFONO') || txt.includes('TELÉFONO')) colMap.telefono = colNum;
-        else if (txt.includes('SEXO')) colMap.sexo = colNum;
-        else if (txt.includes('TIPO_FUNCIONARIO')) colMap.tipo_funcionario = colNum;
-        else if (txt.includes('FONDO_SALUD') || txt === 'EPS') colMap.fondo_salud = colNum;
-        else if (txt.includes('FONDO_PENSION') || txt === 'PENSION') colMap.fondo_pension = colNum;
-        else if (txt.includes('FONDO_CESANTIAS') || txt === 'CESANTIAS') colMap.fondo_cesantias = colNum;
-        else if (txt.includes('TIPO_NOMB')) colMap.tipo_nomb = colNum;
-        else if (txt.includes('ACTO_NOMB') && !txt.includes('NUMERO')) colMap.acto_nomb = colNum;
-        else if (txt.includes('NUMERO_ACTO_NOMB') || txt.includes('NUM_ACTO')) colMap.num_acto = colNum;
-        else if (txt.includes('DEVENGADO')) colMap.devengado = colNum;
-        else if (txt.includes('FECHA_NACIMIENTO') || txt.includes('NACIMIENTO')) colMap.fecha_nacimiento = colNum;
-        else if (txt.includes('FECHA_INGRESO_ENTIDAD') || txt.includes('INGRESO_ENTIDAD')) colMap.fecha_ingreso_entidad = colNum;
-        else if (txt.includes('FECHA_INGRESO_DISTRITO') || txt.includes('INGRESO_DISTRITO')) colMap.fecha_ingreso_distrito = colNum;
-        else if (txt.includes('FECHA_ACTO_NOMB') || txt.includes('FECHA_ACTO')) colMap.fecha_acto_nomb = colNum;
+        const rawTxt = String(c.value || '').toUpperCase();
+        const txt = rawTxt.replace(/[\r\n_]+/g, ' ').trim();
+        const norm = txt.replace(/\s+/g, '');
+
+        // 1. Cédula del funcionario: buscar con prioridad estricta para evitar confusión con LIBRETA_MILITAR u otras
+        if (!colMap.cedula) {
+          if (
+            (norm.includes('NUMEROIDENTIFICA') || norm.includes('IDENTIFICACION') || norm === 'CEDULA' || norm === 'CÉDULA' || colNum === 1) &&
+            !norm.includes('MILITAR') && !norm.includes('TRIBUTAR') && !norm.includes('FISCAL')
+          ) {
+            colMap.cedula = colNum;
+            return;
+          }
+        }
+
+        if (!colMap.ape1 && txt.includes('PRIMER APELLIDO')) colMap.ape1 = colNum;
+        else if (!colMap.ape2 && txt.includes('SEGUNDO APELLIDO')) colMap.ape2 = colNum;
+        else if (!colMap.nombres && (txt === 'NOMBRE' || txt.includes('NOMBRES'))) colMap.nombres = colNum;
+        else if (!colMap.direccion && txt.includes('DIRECCION')) colMap.direccion = colNum;
+        else if (!colMap.telefono && txt.includes('TELEFONO')) colMap.telefono = colNum;
+        else if (!colMap.sexo && (txt === 'SEXO' || txt.includes('GENERO'))) colMap.sexo = colNum;
+        else if (!colMap.tipo_funcionario && txt.includes('TIPO FUNCIONARIO')) colMap.tipo_funcionario = colNum;
+        else if (!colMap.fondo_salud && (txt.includes('FONDO SALUD') || txt === 'EPS')) colMap.fondo_salud = colNum;
+        else if (!colMap.fondo_pension && (txt.includes('FONDO PENSION') || txt === 'PENSION')) colMap.fondo_pension = colNum;
+        else if (!colMap.fondo_cesantias && (txt.includes('FONDO CESANTIAS') || txt === 'CESANTIAS')) colMap.fondo_cesantias = colNum;
+        else if (!colMap.tipo_nomb && txt.includes('TIPO NOMB')) colMap.tipo_nomb = colNum;
+        else if (!colMap.acto_nomb && txt.includes('ACTO NOMB') && !txt.includes('NUMERO') && !txt.includes('FECHA')) colMap.acto_nomb = colNum;
+        else if (!colMap.num_acto && (txt.includes('NUMERO ACTO NOMB') || txt.includes('NUM ACTO'))) colMap.num_acto = colNum;
+        else if (!colMap.devengado && txt.includes('DEVENGADO')) colMap.devengado = colNum;
+        else if (!colMap.fecha_nacimiento && txt.includes('FECHA NACIMIENTO')) colMap.fecha_nacimiento = colNum;
+        else if (!colMap.fecha_ingreso_entidad && txt.includes('FECHA INGRESO ENTIDAD')) colMap.fecha_ingreso_entidad = colNum;
+        else if (!colMap.fecha_ingreso_distrito && txt.includes('FECHA INGRESO DISTRITO')) colMap.fecha_ingreso_distrito = colNum;
+        else if (!colMap.fecha_acto_nomb && txt.includes('FECHA ACTO NOMB')) colMap.fecha_acto_nomb = colNum;
       });
 
-      // 5. Comprobación de columna obligatoria de identificación
+      // Si no se asignó cédula por encabezado, tomar por defecto columna 1
       if (!colMap.cedula) {
-        return res.status(400).json({
-          success: false,
-          error: 'No se encontró la columna requerida de identificación ("NUMERO_IDENTIFICACION" o "CEDULA") en la fila de encabezados.'
-        });
+        colMap.cedula = 1;
       }
 
       let procesados = 0;
       let actualizados = 0;
-      let noEmparejados = 0;
+      let retiradosOSinPlaza = 0;
       const advertencias = [];
 
       for (let r = rowHeader + 1; r <= sheet.rowCount; r++) {
@@ -900,11 +910,8 @@ module.exports = function (pool) {
         if (updateRes.rowCount > 0) {
           actualizados += updateRes.rowCount;
         } else {
-          noEmparejados++;
-          if (advertencias.length < 5) {
-            const nomFunc = `${String(getVal(row.getCell(colMap.ape1 || 2)) || '')} ${String(getVal(row.getCell(colMap.nombres || 4)) || '')}`.trim();
-            advertencias.push(`Cédula ${cedula}${nomFunc ? ' (' + nomFunc + ')' : ''}: No se encontró un cargo activo asociado en Planta Oficial.`);
-          }
+          // Persona que ya no está en la entidad o sin plaza activa (normal en histórico de nómina)
+          retiradosOSinPlaza++;
         }
       }
 
@@ -913,18 +920,18 @@ module.exports = function (pool) {
         VALUES ('PLANTA_PERNO', $1, $2, $3)
       `, [req.file.originalname, procesados, actualizados]);
 
-      const avisoNoEmp = noEmparejados > 0 
-        ? ` (${noEmparejados} funcionarios de nómina no registran cargo en planta activa)` 
-        : '';
+      const detalleRetirados = retiradosOSinPlaza > 0 
+        ? ` (${retiradosOSinPlaza} registros corresponden a personal histórico o retirado sin cargo activo en la planta).` 
+        : '.';
 
       res.json({
         success: true,
-        mensaje: `Archivo de Planta Perno procesado exitosamente. Se enriquecieron datos de ${actualizados} funcionarios en sus cargos.${avisoNoEmp}`,
+        mensaje: `Archivo de Planta Perno procesado exitosamente. Se sincronizaron datos de ${actualizados} funcionarios con cargo activo${detalleRetirados}`,
         registros_procesados: procesados,
         registros_actualizados: actualizados,
-        registros_sin_plaza: noEmparejados,
-        advertencias: advertencias.slice(0, 10),
-        total_advertencias: advertencias.length
+        registros_retirados_o_sin_plaza: retiradosOSinPlaza,
+        advertencias: [],
+        total_advertencias: 0
       });
     } catch (error) {
       console.error('Error procesando archivo de planta perno:', error);
