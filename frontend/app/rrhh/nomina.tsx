@@ -16,8 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
-import { nominaService, PlazaNomina, EstadisticasNomina } from '../../lib/nominaService';
+import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno } from '../../lib/nominaService';
 import mockPlazasData from '../../lib/plantaMockData.json';
+import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
@@ -79,11 +80,22 @@ export default function NominaScreen() {
   const isTablet = width >= 640;
 
   // Estados principales
-  const [tabActiva, setTabActiva] = useState<'plazas' | 'escaleras' | 'estructura' | 'archivos'>('plazas');
+  const [tabActiva, setTabActiva] = useState<'plazas' | 'escaleras' | 'perno' | 'estructura' | 'archivos'>('plazas');
   const [cargando, setCargando] = useState(true);
   const [plazas, setPlazas] = useState<PlazaNomina[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasNomina | null>(null);
   const [mostrarKpis, setMostrarKpis] = useState(true);
+
+  // Estados específicos para Tab Personal Integral / PERNO
+  const [personalPerno, setPersonalPerno] = useState<PersonaPerno[]>([]);
+  const [cargandoPerno, setCargandoPerno] = useState(false);
+  const [busquedaPerno, setBusquedaPerno] = useState('');
+  const [filtroEstadoPerno, setFiltroEstadoPerno] = useState<'TODOS' | 'ACTIVOS' | 'RETIRADOS'>('TODOS');
+  const [filtroPlazaPerno, setFiltroPlazaPerno] = useState<'TODOS' | 'CON_PLAZA' | 'SIN_PLAZA'>('TODOS');
+  const [paginaPerno, setPaginaPerno] = useState(1);
+  const filasPorPaginaPerno = 25;
+  const [pernoModal, setPernoModal] = useState<PersonaPerno | null>(null);
+  const [modalPernoTab, setModalPernoTab] = useState<'personal' | 'vinculacion' | 'seguridad' | 'planta' | 'escalera'>('personal');
 
   // Filtros Avanzados (con modales estilo /ingresos/nueva)
   const [busqueda, setBusqueda] = useState('');
@@ -143,10 +155,37 @@ export default function NominaScreen() {
     return s;
   };
 
+  const formatFecha = (val?: string | null) => {
+    if (!val) return 'No registrada';
+    const s = String(val).split('T')[0];
+    const parts = s.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return s;
+  };
+
+  const formatMoneda = (val?: number | string | null) => {
+    if (val === null || val === undefined || val === '') return '$0';
+    const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/[\$,\s]/g, ''));
+    if (isNaN(num)) return '$0';
+    return '$' + Math.round(num).toLocaleString('es-CO');
+  };
+
+  const calcEdad = (val?: string | null) => {
+    if (!val) return null;
+    const s = String(val).split('T')[0];
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return null;
+    const diff = Date.now() - d.getTime();
+    const ageDate = new Date(diff);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
   const cargarDatos = async () => {
     try {
       setCargando(true);
-      const [listado, stats] = await Promise.all([
+      const [listado, stats, pernoList] = await Promise.all([
         nominaService.getPlazas({
           busqueda,
           id_sieap: filtroSideap !== '' ? filtroSideap : undefined,
@@ -160,11 +199,18 @@ export default function NominaScreen() {
           solo_encargo: soloEncargo,
         }),
         nominaService.getEstadisticas(),
+        nominaService.getPersonalPerno(),
       ]);
       setPlazas(listado);
       setEstadisticas(stats);
+      if (Array.isArray(pernoList) && pernoList.length > 0) {
+        setPersonalPerno(pernoList);
+      } else {
+        setPersonalPerno((mockPernoData as unknown as PersonaPerno[]) || []);
+      }
     } catch (e: any) {
       mostrarModal('Error de Conexión', 'No fue posible cargar los datos de nómina: ' + e.message, 'error');
+      setPersonalPerno((mockPernoData as unknown as PersonaPerno[]) || []);
     } finally {
       setCargando(false);
     }
@@ -189,6 +235,134 @@ export default function NominaScreen() {
   const todasLasPlazas = useMemo(() => {
     return (mockPlazasData as unknown as PlazaNomina[]) || [];
   }, []);
+
+  // Lista base de PERNO consolidada
+  const todoElPerno = useMemo(() => {
+    return personalPerno.length > 0 ? personalPerno : (mockPernoData as unknown as PersonaPerno[]) || [];
+  }, [personalPerno]);
+
+  // Estadísticas consolidadas de PERNO (Activos vs Desvinculados/Retirados)
+  const estadisticasPerno = useMemo(() => {
+    const total = todoElPerno.length;
+    let activos = 0;
+    let retirados = 0;
+    let conPlaza = 0;
+    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+
+    todoElPerno.forEach((p) => {
+      const esRet = p.estado_funcionario === 'R' || !!p.fecha_retiro;
+      if (esRet) retirados++;
+      else activos++;
+
+      const tienePlaza =
+        p.plaza_id_plaza ||
+        listPlazas.some(
+          (pl) =>
+            String(pl.titular_cedula) === String(p.cedula) ||
+            String(pl.encargo_cedula) === String(p.cedula) ||
+            (p.posicion_planta && pl.id_perno === p.posicion_planta)
+        );
+      if (tienePlaza) conPlaza++;
+    });
+
+    return { total, activos, retirados, conPlaza };
+  }, [todoElPerno, plazas, todasLasPlazas]);
+
+  // Filtrado de Personal de PERNO
+  const pernoFiltrado = useMemo(() => {
+    let list = todoElPerno;
+    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+
+    if (busquedaPerno.trim()) {
+      const q = busquedaPerno.trim().toLowerCase();
+      list = list.filter((p) =>
+        (p.nombre_completo && p.nombre_completo.toLowerCase().includes(q)) ||
+        (p.cedula && p.cedula.toString().includes(q)) ||
+        (p.cargo && p.cargo.toLowerCase().includes(q)) ||
+        (p.dependencia && p.dependencia.toLowerCase().includes(q)) ||
+        (p.fondo_salud && p.fondo_salud.toLowerCase().includes(q)) ||
+        (p.fondo_pension && p.fondo_pension.toLowerCase().includes(q)) ||
+        (p.fondo_cesantias && p.fondo_cesantias.toLowerCase().includes(q)) ||
+        (p.plaza_cargo && p.plaza_cargo.toLowerCase().includes(q))
+      );
+    }
+
+    if (filtroEstadoPerno === 'ACTIVOS') {
+      list = list.filter((p) => p.estado_funcionario === 'A' && !p.fecha_retiro);
+    } else if (filtroEstadoPerno === 'RETIRADOS') {
+      list = list.filter((p) => p.estado_funcionario === 'R' || !!p.fecha_retiro);
+    }
+
+    if (filtroPlazaPerno === 'CON_PLAZA') {
+      list = list.filter((p) => {
+        if (p.plaza_id_plaza) return true;
+        return listPlazas.some(
+          (pl) =>
+            String(pl.titular_cedula) === String(p.cedula) ||
+            String(pl.encargo_cedula) === String(p.cedula) ||
+            (p.posicion_planta && pl.id_perno === p.posicion_planta)
+        );
+      });
+    } else if (filtroPlazaPerno === 'SIN_PLAZA') {
+      list = list.filter((p) => {
+        if (p.plaza_id_plaza) return false;
+        return !listPlazas.some(
+          (pl) =>
+            String(pl.titular_cedula) === String(p.cedula) ||
+            String(pl.encargo_cedula) === String(p.cedula) ||
+            (p.posicion_planta && pl.id_perno === p.posicion_planta)
+        );
+      });
+    }
+
+    return list;
+  }, [todoElPerno, busquedaPerno, filtroEstadoPerno, filtroPlazaPerno, plazas, todasLasPlazas]);
+
+  // Paginación de PERNO
+  const totalPaginasPerno = Math.max(1, Math.ceil(pernoFiltrado.length / filasPorPaginaPerno));
+  const pernoPaginado = useMemo(() => {
+    const inicio = (paginaPerno - 1) * filasPorPaginaPerno;
+    return pernoFiltrado.slice(inicio, inicio + filasPorPaginaPerno);
+  }, [pernoFiltrado, paginaPerno]);
+
+  // Enriquecimiento de la persona seleccionada en el Modal
+  const pernoModalEnriquecida = useMemo(() => {
+    if (!pernoModal) return null;
+    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const matchPlaza = listPlazas.find(
+      (pl) =>
+        String(pl.titular_cedula) === String(pernoModal.cedula) ||
+        String(pl.encargo_cedula) === String(pernoModal.cedula) ||
+        (pernoModal.posicion_planta && pl.id_perno === pernoModal.posicion_planta)
+    );
+
+    if (!matchPlaza) return pernoModal;
+
+    return {
+      ...pernoModal,
+      plaza_id_plaza: pernoModal.plaza_id_plaza || matchPlaza.id_plaza,
+      plaza_id_sideap: pernoModal.plaza_id_sideap || matchPlaza.id_sideap,
+      plaza_nivel: pernoModal.plaza_nivel || matchPlaza.nivel,
+      plaza_cargo: pernoModal.plaza_cargo || matchPlaza.cargo,
+      plaza_codigo: pernoModal.plaza_codigo || matchPlaza.codigo,
+      plaza_grado: pernoModal.plaza_grado || matchPlaza.grado,
+      plaza_dependencia_cargo: pernoModal.plaza_dependencia_cargo || matchPlaza.dependencia_cargo,
+      plaza_dependencia_funcional: pernoModal.plaza_dependencia_funcional || matchPlaza.dependencia_funcional,
+      plaza_proposito: pernoModal.plaza_proposito || matchPlaza.proposito,
+      plaza_funciones: pernoModal.plaza_funciones || matchPlaza.funciones,
+      plaza_requisitos: pernoModal.plaza_requisitos || matchPlaza.requisitos,
+      plaza_estado_cargo: pernoModal.plaza_estado_cargo || matchPlaza.estado_cargo,
+      plaza_situacion_titular: pernoModal.plaza_situacion_titular || matchPlaza.situacion_titular,
+      plaza_tipo_vinculacion: pernoModal.plaza_tipo_vinculacion || matchPlaza.tipo_vinculacion,
+      plaza_situacion_administrativa: pernoModal.plaza_situacion_administrativa || matchPlaza.situacion_administrativa,
+      plaza_encargo_cedula: pernoModal.plaza_encargo_cedula || matchPlaza.encargo_cedula,
+      plaza_encargo_nombre: pernoModal.plaza_encargo_nombre || matchPlaza.encargo_nombre,
+      plaza_es_encargo: pernoModal.plaza_es_encargo !== undefined ? pernoModal.plaza_es_encargo : matchPlaza.es_encargo,
+      plaza_opec: pernoModal.plaza_opec || matchPlaza.opec,
+      plaza_id_escalera: pernoModal.plaza_id_escalera || matchPlaza.id_escalera,
+      plaza_peldano_escalera: pernoModal.plaza_peldano_escalera || matchPlaza.peldano_escalera,
+    };
+  }, [pernoModal, plazas, todasLasPlazas]);
 
   // 1. Lista de Cargos (con conteo)
   const listaCargos = useMemo(() => {
@@ -1541,6 +1715,70 @@ export default function NominaScreen() {
                 >
                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
                     {todasLasEscaleras.length}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
+            {/* Pestaña: Personal Integral / PERNO (Activos y Desvinculados) */}
+            <Pressable
+              onPress={() => setTabActiva('perno')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 11,
+                paddingHorizontal: 16,
+                borderBottomWidth: 2,
+                borderBottomColor: tabActiva === 'perno' ? THEME.marca600 : 'transparent',
+                marginBottom: -1,
+              }}
+            >
+              <Ionicons
+                name="people"
+                size={16}
+                color={tabActiva === 'perno' ? THEME.marca700 : THEME.slate400}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '500',
+                  color: tabActiva === 'perno' ? THEME.marca700 : THEME.slate500,
+                }}
+              >
+                Personal Integral (PERNO)
+              </Text>
+              <View
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: tabActiva === 'perno' ? THEME.marca100 : THEME.slate100,
+                  borderRadius: 9999,
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: tabActiva === 'perno' ? THEME.marca800 : THEME.slate600,
+                  }}
+                >
+                  {estadisticasPerno.total}
+                </Text>
+              </View>
+              {estadisticasPerno.retirados > 0 && (
+                <View
+                  style={{
+                    marginLeft: 6,
+                    backgroundColor: '#FEE2E2',
+                    borderRadius: 9999,
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>
+                    {estadisticasPerno.retirados} desv.
                   </Text>
                 </View>
               )}
@@ -3575,6 +3813,626 @@ export default function NominaScreen() {
               </View>
             </View>
           )}
+
+          {/* ============================================================== */}
+          {/* PESTAÑA 4: PERSONAL INTEGRAL / PERNO (Activos y Desvinculados) */}
+          {/* ============================================================== */}
+          {tabActiva === 'perno' && (
+            <View style={{ gap: 20 }}>
+              {/* Tarjetas KPI de PERNO */}
+              <View
+                style={{
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  gap: 12,
+                }}
+              >
+                {/* KPI 1: Total */}
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
+                      Total Servidores PERNO
+                    </Text>
+                    <Ionicons name="people" size={20} color={THEME.marca600} />
+                  </View>
+                  <Text style={{ fontSize: 28, fontWeight: '700', color: THEME.marca900, marginTop: 8 }}>
+                    {estadisticasPerno.total}
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 4 }}>
+                    Histórico consolidado nómina
+                  </Text>
+                </View>
+
+                {/* KPI 2: Activos */}
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: 'rgba(5, 150, 105, 0.3)',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#047857', textTransform: 'uppercase' }}>
+                      Activos en Servicio
+                    </Text>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' }} />
+                  </View>
+                  <Text style={{ fontSize: 28, fontWeight: '700', color: '#065F46', marginTop: 8 }}>
+                    {estadisticasPerno.activos}
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 4 }}>
+                    {((estadisticasPerno.activos / (estadisticasPerno.total || 1)) * 100).toFixed(1)}% de la base total
+                  </Text>
+                </View>
+
+                {/* KPI 3: Desvinculados / Retirados */}
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: 'rgba(225, 29, 72, 0.3)',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#BE123C', textTransform: 'uppercase' }}>
+                      Desvinculados / Retirados
+                    </Text>
+                    <Ionicons name="calendar-outline" size={18} color="#E11D48" />
+                  </View>
+                  <Text style={{ fontSize: 28, fontWeight: '700', color: '#9F1239', marginTop: 8 }}>
+                    {estadisticasPerno.retirados}
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: '#BE123C', marginTop: 4 }}>
+                    Con fecha de desvinculación oficial
+                  </Text>
+                </View>
+
+                {/* KPI 4: Con Plaza en Planta */}
+                <View
+                  style={{
+                    flex: 1,
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
+                    padding: 16,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate500, textTransform: 'uppercase' }}>
+                      Con Plaza Oficial
+                    </Text>
+                    <Ionicons name="briefcase-outline" size={18} color={THEME.marca600} />
+                  </View>
+                  <Text style={{ fontSize: 28, fontWeight: '700', color: THEME.marca800, marginTop: 8 }}>
+                    {estadisticasPerno.conPlaza}
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 4 }}>
+                    Titulares o encargados en planta
+                  </Text>
+                </View>
+              </View>
+
+              {/* Panel de Búsqueda y Filtros */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 12,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 3,
+                  gap: 14,
+                }}
+              >
+                {/* Input de Búsqueda */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: THEME.slate50,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: Platform.OS === 'web' ? 8 : 4,
+                  }}
+                >
+                  <Ionicons name="search" size={18} color={THEME.slate400} style={{ marginRight: 8 }} />
+                  <TextInput
+                    value={busquedaPerno}
+                    onChangeText={(t) => {
+                      setBusquedaPerno(t);
+                      setPaginaPerno(1);
+                    }}
+                    placeholder="Buscar por cédula, nombres, apellidos, cargo, fondo de salud/pensión o dependencia..."
+                    placeholderTextColor={THEME.slate400}
+                    style={{
+                      flex: 1,
+                      fontSize: 13.5,
+                      color: THEME.slate800,
+                      outlineWidth: 0,
+                    }}
+                  />
+                  {busquedaPerno !== '' && (
+                    <Pressable
+                      onPress={() => {
+                        setBusquedaPerno('');
+                        setPaginaPerno(1);
+                      }}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="close-circle" size={18} color={THEME.slate400} />
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Filtros de Pestaña: Estado y Cruce de Planta */}
+                <View
+                  style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    justifyContent: 'space-between',
+                    alignItems: isDesktop ? 'center' : 'stretch',
+                    gap: 12,
+                  }}
+                >
+                  {/* Selector Estado */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600, marginRight: 4 }}>
+                      Estado:
+                    </Text>
+                    {[
+                      { id: 'TODOS', label: `Todos (${estadisticasPerno.total})` },
+                      { id: 'ACTIVOS', label: `Activos (${estadisticasPerno.activos})` },
+                      { id: 'RETIRADOS', label: `Desvinculados / Retirados (${estadisticasPerno.retirados})` },
+                    ].map((opt) => {
+                      const sel = filtroEstadoPerno === opt.id;
+                      return (
+                        <Pressable
+                          key={opt.id}
+                          onPress={() => {
+                            setFiltroEstadoPerno(opt.id as any);
+                            setPaginaPerno(1);
+                          }}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 12,
+                            borderRadius: 6,
+                            backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                            borderWidth: 1,
+                            borderColor: sel ? THEME.marca800 : THEME.slate200,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: sel ? '600' : '500',
+                              color: sel ? THEME.white : THEME.slate700,
+                            }}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {/* Selector Plaza */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600, marginRight: 4 }}>
+                      Planta:
+                    </Text>
+                    {[
+                      { id: 'TODOS', label: 'Todas las personas' },
+                      { id: 'CON_PLAZA', label: `Con Plaza (${estadisticasPerno.conPlaza})` },
+                      { id: 'SIN_PLAZA', label: `Sin Plaza (${estadisticasPerno.total - estadisticasPerno.conPlaza})` },
+                    ].map((opt) => {
+                      const sel = filtroPlazaPerno === opt.id;
+                      return (
+                        <Pressable
+                          key={opt.id}
+                          onPress={() => {
+                            setFiltroPlazaPerno(opt.id as any);
+                            setPaginaPerno(1);
+                          }}
+                          style={{
+                            paddingVertical: 6,
+                            paddingHorizontal: 12,
+                            borderRadius: 6,
+                            backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                            borderWidth: 1,
+                            borderColor: sel ? THEME.marca800 : THEME.slate200,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: sel ? '600' : '500',
+                              color: sel ? THEME.white : THEME.slate700,
+                            }}
+                          >
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </View>
+
+              {/* Mensaje de conteo de resultados */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, color: THEME.slate600, fontWeight: '500' }}>
+                  Mostrando{' '}
+                  <Text style={{ fontWeight: '700', color: THEME.slate800 }}>
+                    {pernoPaginado.length}
+                  </Text>{' '}
+                  de{' '}
+                  <Text style={{ fontWeight: '700', color: THEME.slate800 }}>
+                    {pernoFiltrado.length}
+                  </Text>{' '}
+                  servidores encontrados (Página {paginaPerno} de {totalPaginasPerno})
+                </Text>
+              </View>
+
+              {/* TABLA PRINCIPAL DE PERNO */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  overflow: 'hidden',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 4,
+                }}
+              >
+                <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                  <View style={{ minWidth: 1100 }}>
+                    {/* Encabezado de la Tabla */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        backgroundColor: THEME.marca900,
+                        paddingVertical: 12,
+                        paddingHorizontal: 16,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ width: 130, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Identificación
+                      </Text>
+                      <Text style={{ width: 230, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Servidor(a) / Nombre
+                      </Text>
+                      <Text style={{ width: 170, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Estado & Retiro
+                      </Text>
+                      <Text style={{ width: 210, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Cargo & Grado (PERNO)
+                      </Text>
+                      <Text style={{ width: 210, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Dependencia
+                      </Text>
+                      <Text style={{ width: 150, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Cruce Planta
+                      </Text>
+                      <Text style={{ width: 120, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>
+                        Devengado ($)
+                      </Text>
+                      <Text style={{ width: 130, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>
+                        Expediente
+                      </Text>
+                    </View>
+
+                    {/* Filas de la Tabla */}
+                    {pernoPaginado.length === 0 ? (
+                      <View style={{ padding: 40, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="search-outline" size={40} color={THEME.slate300} />
+                        <Text style={{ fontSize: 15, fontWeight: '600', color: THEME.slate600, marginTop: 10 }}>
+                          No se encontraron funcionarios con los filtros seleccionados
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate400, marginTop: 4 }}>
+                          Prueba ajustando los términos de búsqueda o el filtro de estado
+                        </Text>
+                      </View>
+                    ) : (
+                      pernoPaginado.map((item, idx) => {
+                        const esRetirado = item.estado_funcionario === 'R' || !!item.fecha_retiro;
+                        const matchPlaza =
+                          item.plaza_id_plaza ||
+                          todasLasPlazas.find(
+                            (p) =>
+                              String(p.titular_cedula) === String(item.cedula) ||
+                              String(p.encargo_cedula) === String(item.cedula)
+                          )?.id_plaza;
+
+                        return (
+                          <View
+                            key={`${item.cedula}-${idx}`}
+                            style={{
+                              flexDirection: 'row',
+                              paddingVertical: 12,
+                              paddingHorizontal: 16,
+                              alignItems: 'center',
+                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                              borderBottomWidth: 1,
+                              borderBottomColor: THEME.slate100,
+                            }}
+                          >
+                            {/* Cédula */}
+                            <View style={{ width: 130 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca800 }}>
+                                {item.cedula}
+                              </Text>
+                              {item.posicion_planta ? (
+                                <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 1 }}>
+                                  Pos. #{item.posicion_planta}
+                                </Text>
+                              ) : null}
+                            </View>
+
+                            {/* Nombre completo */}
+                            <View style={{ width: 230, paddingRight: 10 }}>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800 }}>
+                                {item.nombre_completo || `${item.nombres} ${item.primer_apellido}`}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
+                                {item.tipo_funcionario || 'EMPLEADO DE PLANTA'}
+                              </Text>
+                            </View>
+
+                            {/* Estado y Fecha Retiro */}
+                            <View style={{ width: 170, paddingRight: 10 }}>
+                              {esRetirado ? (
+                                <View>
+                                  <View
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      alignSelf: 'flex-start',
+                                      backgroundColor: '#FEE2E2',
+                                      borderColor: '#FCA5A5',
+                                      borderWidth: 1,
+                                      borderRadius: 6,
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 2,
+                                    }}
+                                  >
+                                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#DC2626', marginRight: 5 }} />
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#991B1B' }}>
+                                      DESVINCULADO
+                                    </Text>
+                                  </View>
+                                  {item.fecha_retiro ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+                                      <Ionicons name="calendar-outline" size={11} color="#B91C1C" style={{ marginRight: 3 }} />
+                                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#B91C1C' }}>
+                                        {formatFecha(item.fecha_retiro)}
+                                      </Text>
+                                    </View>
+                                  ) : null}
+                                </View>
+                              ) : (
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    alignSelf: 'flex-start',
+                                    backgroundColor: THEME.emeraldBg,
+                                    borderColor: THEME.emeraldRing,
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
+                                  }}
+                                >
+                                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981', marginRight: 5 }} />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.emeraldText }}>
+                                    ACTIVO
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* Cargo y Grado PERNO */}
+                            <View style={{ width: 210, paddingRight: 10 }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }} numberOfLines={2}>
+                                {item.cargo || 'Sin cargo'}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
+                                Código: {item.cargo_cod || 'N/A'} • Grado: {item.grado || 'N/A'}
+                              </Text>
+                            </View>
+
+                            {/* Dependencia */}
+                            <View style={{ width: 210, paddingRight: 10 }}>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate700 }} numberOfLines={2}>
+                                {item.dependencia || 'Sin dependencia'}
+                              </Text>
+                            </View>
+
+                            {/* Cruce Planta */}
+                            <View style={{ width: 150, paddingRight: 10 }}>
+                              {matchPlaza ? (
+                                <View
+                                  style={{
+                                    alignSelf: 'flex-start',
+                                    backgroundColor: '#EFF6FF',
+                                    borderColor: '#BFDBFE',
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 3,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#1D4ED8' }}>
+                                    Plaza #{matchPlaza}
+                                  </Text>
+                                  {item.plaza_es_encargo ? (
+                                    <Text style={{ fontSize: 10, fontWeight: '600', color: '#D97706' }}>
+                                      (En Encargo)
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              ) : (
+                                <View
+                                  style={{
+                                    alignSelf: 'flex-start',
+                                    backgroundColor: THEME.slate100,
+                                    borderRadius: 6,
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                                    Sin plaza activa
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* Total Devengado */}
+                            <View style={{ width: 120, paddingRight: 12, alignItems: 'flex-end' }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca800 }}>
+                                {formatMoneda(item.total_devengado || item.asignacion_basica)}
+                              </Text>
+                              {item.asignacion_basica ? (
+                                <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 1 }}>
+                                  Básico: {formatMoneda(item.asignacion_basica)}
+                                </Text>
+                              ) : null}
+                            </View>
+
+                            {/* Botón Ver Expediente */}
+                            <View style={{ width: 130, alignItems: 'center' }}>
+                              <Pressable
+                                onPress={() => {
+                                  setPernoModal(item);
+                                  setModalPernoTab('personal');
+                                }}
+                                style={({ pressed }) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  backgroundColor: pressed ? THEME.marca800 : THEME.marca700,
+                                  paddingVertical: 6,
+                                  paddingHorizontal: 10,
+                                  borderRadius: 6,
+                                  gap: 5,
+                                })}
+                              >
+                                <Ionicons name="folder-open-outline" size={13} color={THEME.white} />
+                                <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '600' }}>
+                                  Expediente
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        );
+                      })
+                    )}
+                  </View>
+                </ScrollView>
+
+                {/* Barra de Paginación */}
+                {totalPaginasPerno > 1 && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderTopWidth: 1,
+                      borderTopColor: THEME.slate200,
+                      backgroundColor: THEME.slate50,
+                    }}
+                  >
+                    <Pressable
+                      disabled={paginaPerno === 1}
+                      onPress={() => setPaginaPerno((prev) => Math.max(1, prev - 1))}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        borderRadius: 6,
+                        backgroundColor: paginaPerno === 1 ? THEME.slate100 : THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        opacity: paginaPerno === 1 ? 0.5 : 1,
+                      }}
+                    >
+                      <Ionicons name="chevron-back" size={14} color={THEME.slate700} style={{ marginRight: 4 }} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700 }}>
+                        Anterior
+                      </Text>
+                    </Pressable>
+
+                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate700 }}>
+                      Página {paginaPerno} de {totalPaginasPerno}
+                    </Text>
+
+                    <Pressable
+                      disabled={paginaPerno >= totalPaginasPerno}
+                      onPress={() => setPaginaPerno((prev) => Math.min(totalPaginasPerno, prev + 1))}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        borderRadius: 6,
+                        backgroundColor: paginaPerno >= totalPaginasPerno ? THEME.slate100 : THEME.white,
+                        borderWidth: 1,
+                        borderColor: THEME.slate300,
+                        opacity: paginaPerno >= totalPaginasPerno ? 0.5 : 1,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700, marginRight: 4 }}>
+                        Siguiente
+                      </Text>
+                      <Ionicons name="chevron-forward" size={14} color={THEME.slate700} />
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         {/* ============================================================== */}
@@ -5292,6 +6150,897 @@ export default function NominaScreen() {
                   }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate700 }}>Cerrar Ficha</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* ============================================================== */}
+        {/* MODAL DE EXPEDIENTE INTEGRAL DE PERSONAL PERNO                 */}
+        {/* ============================================================== */}
+        <Modal
+          visible={!!pernoModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setPernoModal(null)}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 16,
+            }}
+          >
+            <View
+              style={{
+                width: '100%',
+                maxWidth: 1040,
+                maxHeight: '92%',
+                backgroundColor: THEME.white,
+                borderRadius: 14,
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.18,
+                shadowRadius: 24,
+              }}
+            >
+              {/* Cabecera del Modal */}
+              <View
+                style={{
+                  backgroundColor: THEME.marca900,
+                  paddingHorizontal: 20,
+                  paddingVertical: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text
+                      style={{
+                        color: 'rgba(214, 228, 244, 0.75)',
+                        fontSize: 11,
+                        fontWeight: '700',
+                        textTransform: 'uppercase',
+                        letterSpacing: 1,
+                      }}
+                    >
+                      Expediente Integral de Personal • PERNO
+                    </Text>
+
+                    {/* Badge Estado */}
+                    {(pernoModalEnriquecida?.estado_funcionario === 'R' || pernoModalEnriquecida?.fecha_retiro) ? (
+                      <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
+                        <Text style={{ color: THEME.white, fontSize: 10.5, fontWeight: '700' }}>
+                          DESVINCULADO / RETIRADO
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={{ backgroundColor: '#10B981', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
+                        <Text style={{ color: THEME.white, fontSize: 10.5, fontWeight: '700' }}>
+                          ACTIVO EN SERVICIO
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Badge Plaza Planta */}
+                    {pernoModalEnriquecida?.plaza_id_plaza ? (
+                      <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', paddingHorizontal: 7, paddingVertical: 1.5, borderRadius: 4 }}>
+                        <Text style={{ color: THEME.white, fontSize: 10.5, fontWeight: '700' }}>
+                          Plaza Oficial #{pernoModalEnriquecida.plaza_id_plaza}
+                          {pernoModalEnriquecida.plaza_es_encargo ? ' (Encargo)' : ''}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <Text style={{ color: THEME.white, fontSize: 18, fontWeight: '700', marginTop: 4 }}>
+                    {pernoModalEnriquecida?.nombre_completo || `${pernoModalEnriquecida?.nombres} ${pernoModalEnriquecida?.primer_apellido}`}
+                  </Text>
+                  <Text style={{ color: 'rgba(214, 228, 244, 0.85)', fontSize: 12, marginTop: 1 }}>
+                    C.C. {pernoModalEnriquecida?.cedula} • {pernoModalEnriquecida?.cargo || 'Sin cargo'} • {pernoModalEnriquecida?.dependencia || 'Sin dependencia'}
+                  </Text>
+                </View>
+
+                <Pressable
+                  onPress={() => setPernoModal(null)}
+                  style={({ pressed }) => ({
+                    padding: 6,
+                    borderRadius: 6,
+                    backgroundColor: pressed ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                  })}
+                >
+                  <Ionicons name="close" size={20} color={THEME.white} />
+                </Pressable>
+              </View>
+
+              {/* Barra de Tabs del Modal con Scroll Horizontal */}
+              <View
+                style={{
+                  borderBottomWidth: 1,
+                  borderBottomColor: THEME.slate200,
+                  backgroundColor: THEME.slate50,
+                }}
+              >
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 16,
+                    gap: 6,
+                  }}
+                >
+                  {/* Tab 1: Datos Personales */}
+                  <Pressable
+                    onPress={() => setModalPernoTab('personal')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalPernoTab === 'personal' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="person-outline"
+                      size={16}
+                      color={modalPernoTab === 'personal' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalPernoTab === 'personal' ? '700' : '500',
+                        color: modalPernoTab === 'personal' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Datos Personales
+                    </Text>
+                  </Pressable>
+
+                  {/* Tab 2: Vinculación, Nombramiento & Retiro */}
+                  <Pressable
+                    onPress={() => setModalPernoTab('vinculacion')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalPernoTab === 'vinculacion' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={modalPernoTab === 'vinculacion' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalPernoTab === 'vinculacion' ? '700' : '500',
+                        color: modalPernoTab === 'vinculacion' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Vinculación & Retiro
+                    </Text>
+                    {(pernoModalEnriquecida?.fecha_retiro || pernoModalEnriquecida?.estado_funcionario === 'R') && (
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#DC2626' }}>Desvinculado</Text>
+                      </View>
+                    )}
+                  </Pressable>
+
+                  {/* Tab 3: Seguridad Social & Devengos */}
+                  <Pressable
+                    onPress={() => setModalPernoTab('seguridad')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalPernoTab === 'seguridad' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={16}
+                      color={modalPernoTab === 'seguridad' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalPernoTab === 'seguridad' ? '700' : '500',
+                        color: modalPernoTab === 'seguridad' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Seg. Social & Nómina
+                    </Text>
+                  </Pressable>
+
+                  {/* Tab 4: Cruce Planta Oficial */}
+                  <Pressable
+                    onPress={() => setModalPernoTab('planta')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalPernoTab === 'planta' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="business-outline"
+                      size={16}
+                      color={modalPernoTab === 'planta' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalPernoTab === 'planta' ? '700' : '500',
+                        color: modalPernoTab === 'planta' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Planta Oficial & Cargo
+                    </Text>
+                    {pernoModalEnriquecida?.plaza_id_plaza ? (
+                      <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#1D4ED8' }}>Plaza #{pernoModalEnriquecida.plaza_id_plaza}</Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+
+                  {/* Tab 5: Escalera de Encargos */}
+                  <Pressable
+                    onPress={() => setModalPernoTab('escalera')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalPernoTab === 'escalera' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="git-network-outline"
+                      size={16}
+                      color={modalPernoTab === 'escalera' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalPernoTab === 'escalera' ? '700' : '500',
+                        color: modalPernoTab === 'escalera' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Escalera de Encargos
+                    </Text>
+                    {pernoModalEnriquecida?.plaza_id_escalera ? (
+                      <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#B45309' }}>Escalera #{pernoModalEnriquecida.plaza_id_escalera}</Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                </ScrollView>
+              </View>
+
+              {/* Cuerpo del Modal con Scroll Vertical */}
+              <ScrollView style={{ padding: 20 }}>
+                {pernoModalEnriquecida && (
+                  <View style={{ gap: 16, paddingBottom: 20 }}>
+
+                    {/* ======================================================== */}
+                    {/* TAB 1: DATOS PERSONALES & SOCIODEMOGRÁFICOS              */}
+                    {/* ======================================================== */}
+                    {modalPernoTab === 'personal' && (
+                      <View style={{ gap: 16 }}>
+                        <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                            Identificación y Datos de Contacto
+                          </Text>
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, flexWrap: 'wrap' }}>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Cédula de Ciudadanía</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.cedula}</Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Primer Apellido</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.primer_apellido || 'N/A'}</Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Segundo Apellido</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.segundo_apellido || 'N/A'}</Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Nombres</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.nombres || 'N/A'}</Text>
+                            </View>
+                          </View>
+
+                          <View style={{ height: 1, backgroundColor: THEME.slate200, marginVertical: 12 }} />
+
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, flexWrap: 'wrap' }}>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Dirección de Residencia</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.direccion || 'No registrada'}</Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Teléfono de Contacto</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.telefono || 'No registrado'}</Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Sede Física</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.sede ? `${pernoModalEnriquecida.sede} (${pernoModalEnriquecida.sede_cod || 'Sede'})` : 'Sin Definir'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                            Datos Sociodemográficos y Militares
+                          </Text>
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, flexWrap: 'wrap' }}>
+                            <View style={{ flex: 1, minWidth: 180 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Fecha de Nacimiento</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {formatFecha(pernoModalEnriquecida.fecha_nacimiento)}
+                                {calcEdad(pernoModalEnriquecida.fecha_nacimiento) ? ` (${calcEdad(pernoModalEnriquecida.fecha_nacimiento)} años)` : ''}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 140 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Sexo / Género</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.sexo === 'F' ? 'Femenino' : pernoModalEnriquecida.sexo === 'M' ? 'Masculino' : pernoModalEnriquecida.sexo || 'N/A'}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 140 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Grupo Sanguíneo y RH</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.marca700, marginTop: 2 }}>
+                                {pernoModalEnriquecida.tipo_sangre ? `${pernoModalEnriquecida.tipo_sangre}${pernoModalEnriquecida.rh === 'P' ? '+' : pernoModalEnriquecida.rh === 'N' ? '-' : pernoModalEnriquecida.rh || ''}` : 'No registrado'}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 180 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Libreta Militar</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.libreta_militar ? `${pernoModalEnriquecida.libreta_militar} (Clase: ${pernoModalEnriquecida.clase_libreta || 'N/A'}, Dist: ${pernoModalEnriquecida.distrito_militar || 'N/A'})` : 'No aplica / No registra'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* ======================================================== */}
+                    {/* TAB 2: VINCULACIÓN, NOMBRAMIENTO & FECHA DE RETIRO       */}
+                    {/* ======================================================== */}
+                    {modalPernoTab === 'vinculacion' && (
+                      <View style={{ gap: 16 }}>
+                        {/* Alerta de Desvinculación Destacada */}
+                        {(pernoModalEnriquecida.fecha_retiro || pernoModalEnriquecida.estado_funcionario === 'R') ? (
+                          <View
+                            style={{
+                              backgroundColor: '#FEF2F2',
+                              borderColor: '#F87171',
+                              borderWidth: 1.5,
+                              borderRadius: 10,
+                              padding: 16,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 14,
+                            }}
+                          >
+                            <View style={{ backgroundColor: '#FEE2E2', padding: 10, borderRadius: 8 }}>
+                              <Ionicons name="alert-circle" size={28} color="#DC2626" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#991B1B' }}>
+                                SERVIDOR DESVINCULADO / RETIRADO DE LA ENTIDAD
+                              </Text>
+                              <Text style={{ fontSize: 13, color: '#B91C1C', marginTop: 2 }}>
+                                Fecha oficial de desvinculación / retiro de nómina:{' '}
+                                <Text style={{ fontWeight: '700' }}>
+                                  {formatFecha(pernoModalEnriquecida.fecha_retiro)}
+                                </Text>
+                              </Text>
+                              <Text style={{ fontSize: 11.5, color: '#7F1D1D', marginTop: 2 }}>
+                                El funcionario ya no se encuentra en servicio activo dentro de la Secretaría Jurídica Distrital.
+                              </Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              backgroundColor: THEME.emeraldBg,
+                              borderColor: THEME.emeraldRing,
+                              borderWidth: 1,
+                              borderRadius: 10,
+                              padding: 14,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 12,
+                            }}
+                          >
+                            <Ionicons name="checkmark-circle" size={24} color="#059669" />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.emeraldText }}>
+                                FUNCIONARIO ACTIVO EN LA ENTIDAD
+                              </Text>
+                              <Text style={{ fontSize: 12, color: '#065F46', marginTop: 1 }}>
+                                El servidor cuenta con vinculación vigente en la nómina de la Secretaría Jurídica Distrital.
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                        {/* Fechas de Ingreso Histórico */}
+                        <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                            Fechas de Ingreso y Antigüedad
+                          </Text>
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Ingreso a la Entidad (SJD)</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.marca800, marginTop: 2 }}>
+                                {formatFecha(pernoModalEnriquecida.fecha_ingreso_entidad)}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Ingreso al Distrito Capital</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {formatFecha(pernoModalEnriquecida.fecha_ingreso_distrito)}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Ingreso a la Nación</Text>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {formatFecha(pernoModalEnriquecida.fecha_ingreso_nacion)}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Actos Administrativos de Nombramiento */}
+                        <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                            Acto Administrativo de Nombramiento
+                          </Text>
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, flexWrap: 'wrap' }}>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Tipo de Nombramiento</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.tipo_nombramiento || 'No especificado'}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 200 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Acto de Nombramiento</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.acto_nombramiento || 'Nombramiento'}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 150 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Número de Acto</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.marca700, marginTop: 2 }}>
+                                #{pernoModalEnriquecida.numero_acto_nombramiento || 'S/N'}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 170 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Fecha del Acto</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                {formatFecha(pernoModalEnriquecida.fecha_acto_nombramiento)}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, minWidth: 170 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Fecha Efectiva Nombramiento</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                                {formatFecha(pernoModalEnriquecida.fecha_efectiva_nombramiento)}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Actos Administrativos de Encargo (si existen) */}
+                        {(pernoModalEnriquecida.numero_acto_encargo || pernoModalEnriquecida.fecha_acto_encargo || pernoModalEnriquecida.fecha_efectiva_encargo) ? (
+                          <View style={{ backgroundColor: '#FFFBEB', borderRadius: 10, padding: 16, borderWidth: 1, borderColor: '#FDE68A' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#92400E', marginBottom: 12 }}>
+                              Acto Administrativo de Encargo
+                            </Text>
+                            <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '600', textTransform: 'uppercase' }}>Número Acto Encargo</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#78350F', marginTop: 2 }}>
+                                  #{pernoModalEnriquecida.numero_acto_encargo || 'S/N'}
+                                </Text>
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '600', textTransform: 'uppercase' }}>Fecha del Acto</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600', color: '#78350F', marginTop: 2 }}>
+                                  {formatFecha(pernoModalEnriquecida.fecha_acto_encargo)}
+                                </Text>
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 11, color: '#B45309', fontWeight: '600', textTransform: 'uppercase' }}>Fecha Efectiva Encargo</Text>
+                                <Text style={{ fontSize: 14, fontWeight: '600', color: '#78350F', marginTop: 2 }}>
+                                  {formatFecha(pernoModalEnriquecida.fecha_efectiva_encargo)}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                    )}
+
+                    {/* ======================================================== */}
+                    {/* TAB 3: SEGURIDAD SOCIAL & DEVENGOS                       */}
+                    {/* ======================================================== */}
+                    {modalPernoTab === 'seguridad' && (
+                      <View style={{ gap: 16 }}>
+                        <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                            Afiliaciones a Seguridad Social y Fondos
+                          </Text>
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Fondo de Salud (EPS)</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.fondo_salud || 'No registrada'}
+                              </Text>
+                              {pernoModalEnriquecida.codigo_eps ? (
+                                <Text style={{ fontSize: 11, color: THEME.slate400, marginTop: 2 }}>Código EPS: {pernoModalEnriquecida.codigo_eps}</Text>
+                              ) : null}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Fondo de Pensiones</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.fondo_pension || 'No registrado'}
+                              </Text>
+                              {pernoModalEnriquecida.codigo_fondo_pensiones ? (
+                                <Text style={{ fontSize: 11, color: THEME.slate400, marginTop: 2 }}>Código Fondo: {pernoModalEnriquecida.codigo_fondo_pensiones}</Text>
+                              ) : null}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Fondo de Cesantías</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>
+                                {pernoModalEnriquecida.fondo_cesantias || 'No registrado'}
+                              </Text>
+                              {pernoModalEnriquecida.codigo_fondo_cesantias ? (
+                                <Text style={{ fontSize: 11, color: THEME.slate400, marginTop: 2 }}>Código Cesantías: {pernoModalEnriquecida.codigo_fondo_cesantias}</Text>
+                              ) : null}
+                            </View>
+                          </View>
+                        </View>
+
+                        <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                            Asignación Salarial y Devengos Registrados
+                          </Text>
+                          <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+                            <View style={{ flex: 1, backgroundColor: THEME.white, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Asignación Básica Mensual</Text>
+                              <Text style={{ fontSize: 20, fontWeight: '700', color: THEME.marca800, marginTop: 4 }}>
+                                {formatMoneda(pernoModalEnriquecida.asignacion_basica)}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, backgroundColor: THEME.white, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Total Devengados Mensual</Text>
+                              <Text style={{ fontSize: 20, fontWeight: '700', color: '#047857', marginTop: 4 }}>
+                                {formatMoneda(pernoModalEnriquecida.total_devengado || pernoModalEnriquecida.asignacion_basica)}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, backgroundColor: THEME.white, padding: 14, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Posición en Nómina PERNO</Text>
+                              <Text style={{ fontSize: 20, fontWeight: '700', color: THEME.slate800, marginTop: 4 }}>
+                                {pernoModalEnriquecida.posicion_planta ? `Pos. #${pernoModalEnriquecida.posicion_planta}` : 'Sin posición'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* ======================================================== */}
+                    {/* TAB 4: PLANTA OFICIAL, CARGO & MANUAL DE FUNCIONES       */}
+                    {/* ======================================================== */}
+                    {modalPernoTab === 'planta' && (
+                      <View style={{ gap: 16 }}>
+                        {pernoModalEnriquecida.plaza_id_plaza ? (
+                          <View style={{ gap: 16 }}>
+                            {/* Tarjeta de Plaza */}
+                            <View style={{ backgroundColor: '#EFF6FF', borderRadius: 10, padding: 16, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E40AF' }}>
+                                  Plaza Oficial #{pernoModalEnriquecida.plaza_id_plaza} de la Secretaría Jurídica Distrital
+                                </Text>
+                                {pernoModalEnriquecida.plaza_id_sideap ? (
+                                  <View style={{ backgroundColor: THEME.white, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#93C5FD' }}>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>
+                                      SIDEAP: #{pernoModalEnriquecida.plaza_id_sideap}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+
+                              <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16, marginTop: 8 }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Cargo en Planta</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E3A8A', marginTop: 2 }}>{pernoModalEnriquecida.plaza_cargo || pernoModalEnriquecida.cargo}</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Nivel Jerárquico</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E3A8A', marginTop: 2 }}>{pernoModalEnriquecida.plaza_nivel || 'N/A'}</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Código - Grado</Text>
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E3A8A', marginTop: 2 }}>
+                                    {pernoModalEnriquecida.plaza_codigo || pernoModalEnriquecida.cargo_cod} - {pernoModalEnriquecida.plaza_grado || pernoModalEnriquecida.grado}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <View style={{ height: 1, backgroundColor: '#DBEAFE', marginVertical: 10 }} />
+
+                              <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Dependencia Oficial del Cargo</Text>
+                                  <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#1E3A8A', marginTop: 2 }}>{pernoModalEnriquecida.plaza_dependencia_cargo || pernoModalEnriquecida.dependencia}</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Dependencia Funcional Asignada</Text>
+                                  <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#1E3A8A', marginTop: 2 }}>{pernoModalEnriquecida.plaza_dependencia_funcional || pernoModalEnriquecida.plaza_dependencia_cargo || pernoModalEnriquecida.dependencia}</Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            {/* Propósito del Empleo */}
+                            {pernoModalEnriquecida.plaza_proposito ? (
+                              <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 6 }}>
+                                  Propósito Principal del Empleo
+                                </Text>
+                                <Text style={{ fontSize: 13, color: THEME.slate700, lineHeight: 19 }}>
+                                  {pernoModalEnriquecida.plaza_proposito}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {/* Requisitos y Perfil */}
+                            {pernoModalEnriquecida.plaza_requisitos ? (
+                              <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 6 }}>
+                                  Requisitos Mínimos y Competencias
+                                </Text>
+                                <Text style={{ fontSize: 13, color: THEME.slate700, lineHeight: 19 }}>
+                                  {pernoModalEnriquecida.plaza_requisitos}
+                                </Text>
+                              </View>
+                            ) : null}
+
+                            {/* Manual de Funciones Esenciales */}
+                            {pernoModalEnriquecida.plaza_funciones ? (
+                              <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
+                                  Manual de Funciones Esenciales del Cargo
+                                </Text>
+                                <View style={{ gap: 8 }}>
+                                  {(Array.isArray(pernoModalEnriquecida.plaza_funciones)
+                                    ? pernoModalEnriquecida.plaza_funciones
+                                    : [String(pernoModalEnriquecida.plaza_funciones)]
+                                  ).map((fn, fIdx) => (
+                                    <View
+                                      key={fIdx}
+                                      style={{
+                                        flexDirection: 'row',
+                                        backgroundColor: THEME.white,
+                                        padding: 10,
+                                        borderRadius: 8,
+                                        borderWidth: 1,
+                                        borderColor: THEME.slate200,
+                                        gap: 10,
+                                        alignItems: 'flex-start',
+                                      }}
+                                    >
+                                      <View
+                                        style={{
+                                          width: 24,
+                                          height: 24,
+                                          borderRadius: 12,
+                                          backgroundColor: THEME.marca100,
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>
+                                          {fIdx + 1}
+                                        </Text>
+                                      </View>
+                                      <Text style={{ flex: 1, fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                                        {String(fn).trim()}
+                                      </Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                            ) : null}
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              backgroundColor: THEME.slate50,
+                              borderRadius: 10,
+                              padding: 24,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Ionicons name="folder-open-outline" size={42} color={THEME.slate300} />
+                            <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate700, marginTop: 12 }}>
+                              Sin Plaza Activa Asignada en Planta Vigente
+                            </Text>
+                            <Text style={{ fontSize: 13, color: THEME.slate500, textAlign: 'center', marginTop: 4, maxWidth: 520, lineHeight: 19 }}>
+                              Este servidor es un exfuncionario retirado / desvinculado o su plaza actual no registra ocupación activa en la planta oficial vigente.
+                            </Text>
+                            <View style={{ marginTop: 16, backgroundColor: THEME.white, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 480 }}>
+                              <Text style={{ fontSize: 12, color: THEME.slate500, fontWeight: '600', textTransform: 'uppercase' }}>Último Cargo Registrado en Nómina PERNO:</Text>
+                              <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 2 }}>{pernoModalEnriquecida.cargo || 'Sin cargo'}</Text>
+                              <Text style={{ fontSize: 12, color: THEME.slate600, marginTop: 1 }}>{pernoModalEnriquecida.dependencia || 'Sin dependencia'}</Text>
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* ======================================================== */}
+                    {/* TAB 5: ESCALERA DE ENCARGOS                             */}
+                    {/* ======================================================== */}
+                    {modalPernoTab === 'escalera' && (
+                      <View style={{ gap: 16 }}>
+                        {pernoModalEnriquecida.plaza_id_escalera ? (
+                          <View style={{ gap: 14 }}>
+                            <View style={{ backgroundColor: '#FEF3C7', padding: 16, borderRadius: 10, borderWidth: 1, borderColor: '#FDE68A' }}>
+                              <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400E' }}>
+                                Escalera de Encargo Asignada: #{pernoModalEnriquecida.plaza_id_escalera}
+                              </Text>
+                              <Text style={{ fontSize: 12.5, color: '#B45309', marginTop: 3 }}>
+                                Peldaño que ocupa el cargo / servidor: <Text style={{ fontWeight: '700' }}>Peldaño #{pernoModalEnriquecida.plaza_peldano_escalera || 1}</Text>
+                              </Text>
+                            </View>
+
+                            {/* Cadena completa de peldaños si está disponible en todasLasEscaleras */}
+                            {(() => {
+                              const esc = todasLasEscaleras.find((e) => e.id_escalera === pernoModalEnriquecida.plaza_id_escalera);
+                              if (!esc || !esc.peldanos || esc.peldanos.length === 0) {
+                                return (
+                                  <View style={{ padding: 16, backgroundColor: THEME.slate50, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                                    <Text style={{ fontSize: 12.5, color: THEME.slate600 }}>
+                                      Este empleo pertenece a la cadena de escaleras identificada como #{pernoModalEnriquecida.plaza_id_escalera}.
+                                    </Text>
+                                  </View>
+                                );
+                              }
+
+                              return (
+                                <View style={{ backgroundColor: THEME.white, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, padding: 16, gap: 10 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900 }}>
+                                    Cadena Sucesoria Completa ({esc.peldanos.length} peldaños):
+                                  </Text>
+                                  {esc.peldanos.map((pel, pIdx) => {
+                                    const esEsteServidor = String(pel.id_plaza) === String(pernoModalEnriquecida.plaza_id_plaza);
+                                    return (
+                                      <View
+                                        key={pIdx}
+                                        style={{
+                                          flexDirection: 'row',
+                                          alignItems: 'center',
+                                          padding: 12,
+                                          borderRadius: 8,
+                                          backgroundColor: esEsteServidor ? '#EFF6FF' : THEME.slate50,
+                                          borderColor: esEsteServidor ? '#3B82F6' : THEME.slate200,
+                                          borderWidth: esEsteServidor ? 2 : 1,
+                                          gap: 12,
+                                        }}
+                                      >
+                                        <View
+                                          style={{
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: 16,
+                                            backgroundColor: esEsteServidor ? '#2563EB' : THEME.slate200,
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                          }}
+                                        >
+                                          <Text style={{ fontSize: 13, fontWeight: '700', color: esEsteServidor ? THEME.white : THEME.slate700 }}>
+                                            {pel.peldano_escalera || pIdx + 1}
+                                          </Text>
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>
+                                            Plaza #{pel.id_plaza}: {pel.cargo} (Grado {pel.grado})
+                                          </Text>
+                                          <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 1 }}>
+                                            Titular: {pel.titular_nombre || 'Vacante'} • Encargado: {pel.encargo_nombre || 'N/A'}
+                                          </Text>
+                                        </View>
+                                        {esEsteServidor && (
+                                          <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>Este Servidor</Text>
+                                          </View>
+                                        )}
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+                              );
+                            })()}
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              backgroundColor: THEME.slate50,
+                              borderRadius: 10,
+                              padding: 24,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Ionicons name="git-network-outline" size={38} color={THEME.slate300} />
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.slate700, marginTop: 10 }}>
+                              No pertenece a una Escalera de Encargos
+                            </Text>
+                            <Text style={{ fontSize: 12, color: THEME.slate500, textAlign: 'center', marginTop: 4 }}>
+                              Este servidor o su plaza asociada no forman parte de una cadena de encargos sucesorios.
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* Botón de cierre en el pie */}
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderTopColor: THEME.slate200,
+                  paddingHorizontal: 20,
+                  paddingVertical: 12,
+                  backgroundColor: THEME.slate50,
+                  alignItems: 'flex-end',
+                }}
+              >
+                <Pressable
+                  onPress={() => setPernoModal(null)}
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderWidth: 1,
+                    borderColor: THEME.slate300,
+                    paddingHorizontal: 16,
+                    paddingVertical: 7,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate700 }}>Cerrar Expediente</Text>
                 </Pressable>
               </View>
             </View>

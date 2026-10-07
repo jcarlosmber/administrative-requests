@@ -330,6 +330,55 @@ module.exports = function (pool) {
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS public.personal_perno_sjd (
+            cedula TEXT PRIMARY KEY,
+            primer_apellido TEXT,
+            segundo_apellido TEXT,
+            nombres TEXT,
+            nombre_completo TEXT,
+            estado_funcionario TEXT DEFAULT 'A',
+            estado_descripcion TEXT,
+            fecha_nacimiento DATE,
+            direccion TEXT,
+            telefono TEXT,
+            sexo TEXT,
+            libreta_militar TEXT,
+            clase_libreta TEXT,
+            distrito_militar TEXT,
+            tipo_sangre TEXT,
+            rh TEXT,
+            tipo_funcionario TEXT,
+            fecha_ingreso_entidad DATE,
+            fecha_ingreso_distrito DATE,
+            fecha_ingreso_nacion DATE,
+            codigo_eps TEXT,
+            fondo_salud TEXT,
+            codigo_fondo_pensiones TEXT,
+            fondo_pension TEXT,
+            codigo_fondo_cesantias TEXT,
+            fondo_cesantias TEXT,
+            dependencia_cod TEXT,
+            dependencia TEXT,
+            cargo_cod TEXT,
+            grado TEXT,
+            asignacion_basica NUMERIC(14, 2),
+            cargo TEXT,
+            posicion_planta INT,
+            sede_cod TEXT,
+            sede TEXT,
+            tipo_nombramiento TEXT,
+            acto_nombramiento TEXT,
+            fecha_efectiva_nombramiento DATE,
+            numero_acto_nombramiento TEXT,
+            fecha_acto_nombramiento DATE,
+            fecha_efectiva_encargo DATE,
+            numero_acto_encargo TEXT,
+            fecha_acto_encargo DATE,
+            fecha_retiro DATE,
+            total_devengado NUMERIC(14, 2),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
         -- Corregir mojibake en registros existentes de la tabla
         UPDATE public.planta_personal_sjd SET
           dependencia_cargo = REPLACE(REPLACE(REPLACE(dependencia_cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
@@ -509,6 +558,166 @@ module.exports = function (pool) {
     } catch (e) {
       console.error('Error al obtener escalera:', e);
       res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 2.3 Obtener listado de personal integral (PLANTA PERNO - Activos y Desvinculados con cruce a Planta)
+  router.get('/perno', async (req, res) => {
+    try {
+      await ensureTables();
+      const { busqueda, estado, solo_plaza } = req.query;
+
+      // Verificar si la tabla de personal_perno_sjd está poblada
+      const checkCount = await pool.query('SELECT COUNT(*) FROM public.personal_perno_sjd');
+      const count = parseInt(checkCount.rows[0].count, 10);
+
+      if (count === 0) {
+        // Intentar poblar desde el archivo JSON precargado o Excel
+        const mockPernoPath = path.resolve(__dirname, '../../frontend/lib/pernoMockData.json');
+        if (fs.existsSync(mockPernoPath)) {
+          const rawPerno = JSON.parse(fs.readFileSync(mockPernoPath, 'utf8'));
+          for (const item of rawPerno) {
+            try {
+              await pool.query(`
+                INSERT INTO public.personal_perno_sjd (
+                  cedula, primer_apellido, segundo_apellido, nombres, nombre_completo,
+                  estado_funcionario, estado_descripcion, fecha_nacimiento, direccion,
+                  telefono, sexo, libreta_militar, clase_libreta, distrito_militar,
+                  tipo_sangre, rh, tipo_funcionario, fecha_ingreso_entidad, fecha_ingreso_distrito,
+                  fecha_ingreso_nacion, codigo_eps, fondo_salud, codigo_fondo_pensiones,
+                  fondo_pension, codigo_fondo_cesantias, fondo_cesantias, dependencia_cod,
+                  dependencia, cargo_cod, grado, asignacion_basica, cargo, posicion_planta,
+                  sede_cod, sede, tipo_nombramiento, acto_nombramiento, fecha_efectiva_nombramiento,
+                  numero_acto_nombramiento, fecha_acto_nombramiento, fecha_efectiva_encargo,
+                  numero_acto_encargo, fecha_acto_encargo, fecha_retiro, total_devengado, updated_at
+                ) VALUES (
+                  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+                  $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36,
+                  $37, $38, $39, $40, $41, $42, $43, $44, $45, NOW()
+                ) ON CONFLICT (cedula) DO NOTHING
+              `, [
+                item.cedula, item.primer_apellido, item.segundo_apellido, item.nombres, item.nombre_completo,
+                item.estado_funcionario || 'A', item.estado_descripcion, item.fecha_nacimiento || null, item.direccion,
+                item.telefono, item.sexo, item.libreta_militar, item.clase_libreta, item.distrito_militar,
+                item.tipo_sangre, item.rh, item.tipo_funcionario, item.fecha_ingreso_entidad || null, item.fecha_ingreso_distrito || null,
+                item.fecha_ingreso_nacion || null, item.codigo_eps, item.fondo_salud, item.codigo_fondo_pensiones,
+                item.fondo_pension, item.codigo_fondo_cesantias, item.fondo_cesantias, item.dependencia_cod,
+                item.dependencia, item.cargo_cod, item.grado, item.asignacion_basica || 0, item.cargo, item.posicion_planta,
+                item.sede_cod, item.sede, item.tipo_nombramiento, item.acto_nombramiento, item.fecha_efectiva_nombramiento || null,
+                item.numero_acto_nombramiento, item.fecha_acto_nombramiento || null, item.fecha_efectiva_encargo || null,
+                item.numero_acto_encargo, item.fecha_acto_encargo || null, item.fecha_retiro || null, item.total_devengado || null
+              ]);
+            } catch (errIns) {
+              // Continuar con los demás
+            }
+          }
+        }
+      }
+
+      let query = `
+        SELECT 
+          per.*,
+          pl.id_plaza AS plaza_id_plaza,
+          pl.id_sideap AS plaza_id_sideap,
+          pl.nivel AS plaza_nivel,
+          pl.cargo AS plaza_cargo,
+          pl.codigo AS plaza_codigo,
+          pl.grado AS plaza_grado,
+          pl.dependencia_cargo AS plaza_dependencia_cargo,
+          pl.dependencia_funcional AS plaza_dependencia_funcional,
+          pl.proposito AS plaza_proposito,
+          pl.funciones AS plaza_funciones,
+          pl.requisitos AS plaza_requisitos,
+          pl.estado_cargo AS plaza_estado_cargo,
+          pl.situacion_titular AS plaza_situacion_titular,
+          pl.tipo_vinculacion AS plaza_tipo_vinculacion,
+          pl.situacion_administrativa AS plaza_situacion_administrativa,
+          pl.encargo_cedula AS plaza_encargo_cedula,
+          pl.encargo_nombre AS plaza_encargo_nombre,
+          pl.es_encargo AS plaza_es_encargo,
+          pl.opec AS plaza_opec,
+          pl.id_escalera AS plaza_id_escalera,
+          pl.peldano_escalera AS plaza_peldano_escalera
+        FROM public.personal_perno_sjd per
+        LEFT JOIN public.planta_personal_sjd pl 
+          ON (per.cedula = pl.titular_cedula OR per.cedula = pl.encargo_cedula)
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (busqueda && busqueda.trim()) {
+        params.push(`%${busqueda.trim()}%`);
+        const idx = params.length;
+        query += ` AND (
+          per.nombre_completo ILIKE $${idx} OR 
+          per.cedula ILIKE $${idx} OR 
+          per.cargo ILIKE $${idx} OR 
+          per.dependencia ILIKE $${idx} OR
+          per.fondo_salud ILIKE $${idx} OR
+          per.fondo_pension ILIKE $${idx}
+        )`;
+      }
+
+      if (estado === 'ACTIVO' || estado === 'A') {
+        query += ` AND per.estado_funcionario = 'A' AND per.fecha_retiro IS NULL`;
+      } else if (estado === 'RETIRADO' || estado === 'DESVINCULADO' || estado === 'R') {
+        query += ` AND (per.estado_funcionario = 'R' OR per.fecha_retiro IS NOT NULL)`;
+      }
+
+      if (solo_plaza === 'true') {
+        query += ` AND pl.id_plaza IS NOT NULL`;
+      }
+
+      query += ` ORDER BY CASE WHEN per.estado_funcionario = 'A' AND per.fecha_retiro IS NULL THEN 0 ELSE 1 END, per.primer_apellido ASC, per.nombres ASC`;
+
+      const result = await pool.query(query, params);
+      return res.json({ success: true, total: result.rows.length, personal: result.rows });
+    } catch (e) {
+      console.warn('Error en consulta de base de datos para /perno, usando fallback:', e.message);
+      // Fallback a pernoMockData.json
+      try {
+        const mockPernoPath = path.resolve(__dirname, '../../frontend/lib/pernoMockData.json');
+        const mockPlazaPath = path.resolve(__dirname, '../../frontend/lib/plantaMockData.json');
+        if (fs.existsSync(mockPernoPath)) {
+          const listPerno = JSON.parse(fs.readFileSync(mockPernoPath, 'utf8'));
+          let listPlazas = [];
+          if (fs.existsSync(mockPlazaPath)) {
+            listPlazas = JSON.parse(fs.readFileSync(mockPlazaPath, 'utf8'));
+          }
+          const enriched = listPerno.map(per => {
+            const match = listPlazas.find(pl => String(pl.titular_cedula) === String(per.cedula) || String(pl.encargo_cedula) === String(per.cedula));
+            if (!match) return per;
+            return {
+              ...per,
+              plaza_id_plaza: match.id_plaza,
+              plaza_id_sideap: match.id_sideap,
+              plaza_nivel: match.nivel,
+              plaza_cargo: match.cargo,
+              plaza_codigo: match.codigo,
+              plaza_grado: match.grado,
+              plaza_dependencia_cargo: match.dependencia_cargo,
+              plaza_dependencia_funcional: match.dependencia_funcional,
+              plaza_proposito: match.proposito,
+              plaza_funciones: match.funciones,
+              plaza_requisitos: match.requisitos,
+              plaza_estado_cargo: match.estado_cargo,
+              plaza_situacion_titular: match.situacion_titular,
+              plaza_tipo_vinculacion: match.tipo_vinculacion,
+              plaza_situacion_administrativa: match.situacion_administrativa,
+              plaza_encargo_cedula: match.encargo_cedula,
+              plaza_encargo_nombre: match.encargo_nombre,
+              plaza_es_encargo: match.es_encargo,
+              plaza_opec: match.opec,
+              plaza_id_escalera: match.id_escalera,
+              plaza_peldano_escalera: match.peldano_escalera
+            };
+          });
+          return res.json({ success: true, total: enriched.length, personal: enriched });
+        }
+      } catch (errFallback) {
+        console.error('Error en fallback de perno:', errFallback);
+      }
+      return res.status(500).json({ success: false, error: e.message });
     }
   });
 

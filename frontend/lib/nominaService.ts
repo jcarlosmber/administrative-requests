@@ -1,5 +1,76 @@
 import { API_URL } from './supabase';
 import mockPlazasData from './plantaMockData.json';
+import mockPernoData from './pernoMockData.json';
+
+export interface PersonaPerno {
+  cedula: string;
+  primer_apellido: string;
+  segundo_apellido?: string;
+  nombres: string;
+  nombre_completo: string;
+  estado_funcionario: 'A' | 'R' | string;
+  estado_descripcion?: string;
+  fecha_nacimiento?: string | null;
+  direccion?: string;
+  telefono?: string;
+  sexo?: string;
+  libreta_militar?: string;
+  clase_libreta?: string;
+  distrito_militar?: string;
+  tipo_sangre?: string;
+  rh?: string;
+  tipo_funcionario?: string;
+  fecha_ingreso_entidad?: string | null;
+  fecha_ingreso_distrito?: string | null;
+  fecha_ingreso_nacion?: string | null;
+  codigo_eps?: string;
+  fondo_salud?: string;
+  codigo_fondo_pensiones?: string;
+  fondo_pension?: string;
+  codigo_fondo_cesantias?: string;
+  fondo_cesantias?: string;
+  dependencia_cod?: string;
+  dependencia?: string;
+  cargo_cod?: string;
+  grado?: string;
+  asignacion_basica?: number;
+  cargo?: string;
+  posicion_planta?: number | null;
+  sede_cod?: string;
+  sede?: string;
+  tipo_nombramiento?: string;
+  acto_nombramiento?: string;
+  fecha_efectiva_nombramiento?: string | null;
+  numero_acto_nombramiento?: string;
+  fecha_acto_nombramiento?: string | null;
+  fecha_efectiva_encargo?: string | null;
+  numero_acto_encargo?: string;
+  fecha_acto_encargo?: string | null;
+  fecha_retiro?: string | null;
+  total_devengado?: number | null;
+  // Campos vinculados a la Planta Oficial
+  plaza_id_plaza?: number | null;
+  plaza_id_sideap?: number | null;
+  plaza_nivel?: string;
+  plaza_cargo?: string;
+  plaza_codigo?: string;
+  plaza_grado?: string;
+  plaza_dependencia_cargo?: string;
+  plaza_dependencia_funcional?: string;
+  plaza_proposito?: string;
+  plaza_funciones?: string[] | string;
+  plaza_requisitos?: string;
+  plaza_estado_cargo?: string;
+  plaza_situacion_titular?: string;
+  plaza_tipo_vinculacion?: string;
+  plaza_situacion_administrativa?: string;
+  plaza_encargo_cedula?: string;
+  plaza_encargo_nombre?: string;
+  plaza_es_encargo?: boolean;
+  plaza_opec?: string;
+  plaza_id_escalera?: string | null;
+  plaza_peldano_escalera?: number | null;
+}
 
 export interface PlazaNomina {
   id_plaza: number;
@@ -358,4 +429,101 @@ export const nominaService = {
       return [];
     }
   },
+
+  // Obtener listado de personal integral (PLANTA PERNO - Activos y Desvinculados)
+  async getPersonalPerno(filtros?: {
+    busqueda?: string;
+    estado?: string;
+    solo_plaza?: boolean;
+  }): Promise<PersonaPerno[]> {
+    try {
+      const searchParams = new URLSearchParams();
+      if (filtros?.busqueda) searchParams.append('busqueda', filtros.busqueda);
+      if (filtros?.estado && filtros.estado !== 'TODOS') searchParams.append('estado', filtros.estado);
+      if (filtros?.solo_plaza) searchParams.append('solo_plaza', 'true');
+
+      const url = `${API_URL}/api/nomina/perno?${searchParams.toString()}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.personal) && data.personal.length > 0) {
+          return data.personal;
+        }
+      }
+    } catch {
+      // Fallback local enriquecido
+    }
+
+    // Cruce local entre mockPernoData y mockPlazasData
+    const listPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
+    const listPlazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+
+    let result = listPerno.map((per) => {
+      const match = listPlazas.find(
+        (pl) =>
+          String(pl.titular_cedula) === String(per.cedula) ||
+          String(pl.encargo_cedula) === String(per.cedula)
+      );
+      if (!match) return per;
+
+      return {
+        ...per,
+        plaza_id_plaza: match.id_plaza,
+        plaza_id_sideap: match.id_sideap,
+        plaza_nivel: match.nivel,
+        plaza_cargo: match.cargo,
+        plaza_codigo: match.codigo,
+        plaza_grado: match.grado,
+        plaza_dependencia_cargo: match.dependencia_cargo,
+        plaza_dependencia_funcional: match.dependencia_funcional,
+        plaza_proposito: match.proposito,
+        plaza_funciones: match.funciones,
+        plaza_requisitos: match.requisitos,
+        plaza_estado_cargo: match.estado_cargo,
+        plaza_situacion_titular: match.situacion_titular,
+        plaza_tipo_vinculacion: match.tipo_vinculacion,
+        plaza_situacion_administrativa: match.situacion_administrativa,
+        plaza_encargo_cedula: match.encargo_cedula,
+        plaza_encargo_nombre: match.encargo_nombre,
+        plaza_es_encargo: match.es_encargo,
+        plaza_opec: match.opec,
+        plaza_id_escalera: match.id_escalera,
+        plaza_peldano_escalera: match.peldano_escalera,
+      };
+    });
+
+    if (filtros?.busqueda && filtros.busqueda.trim()) {
+      const q = filtros.busqueda.trim().toLowerCase();
+      result = result.filter(
+        (p) =>
+          (p.nombre_completo && p.nombre_completo.toLowerCase().includes(q)) ||
+          (p.cedula && p.cedula.toString().includes(q)) ||
+          (p.cargo && p.cargo.toLowerCase().includes(q)) ||
+          (p.dependencia && p.dependencia.toLowerCase().includes(q)) ||
+          (p.fondo_salud && p.fondo_salud.toLowerCase().includes(q)) ||
+          (p.fondo_pension && p.fondo_pension.toLowerCase().includes(q)) ||
+          (p.plaza_cargo && p.plaza_cargo.toLowerCase().includes(q))
+      );
+    }
+
+    if (filtros?.estado && filtros.estado !== 'TODOS') {
+      if (filtros.estado === 'ACTIVO' || filtros.estado === 'A') {
+        result = result.filter((p) => p.estado_funcionario === 'A' && !p.fecha_retiro);
+      } else if (filtros.estado === 'RETIRADO' || filtros.estado === 'DESVINCULADO' || filtros.estado === 'R') {
+        result = result.filter((p) => p.estado_funcionario === 'R' || !!p.fecha_retiro);
+      }
+    }
+
+    if (filtros?.solo_plaza) {
+      result = result.filter((p) => p.plaza_id_plaza !== null && p.plaza_id_plaza !== undefined);
+    }
+
+    return result;
+  },
 };
+
