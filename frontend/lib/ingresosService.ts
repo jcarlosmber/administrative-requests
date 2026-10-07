@@ -687,8 +687,33 @@ export const ingresosService = {
     return { success: res.ok, mensaje: json?.mensaje || 'Certificado procesado' };
   },
 
-  getExcelDownloadUrl(id: string): string {
-    return `${API_URL}/api/ingresos/validaciones/${id}/excel`;
+  getExcelDownloadUrl(id: string, configDirector?: { genero?: string; esEncargado?: boolean; nombre?: string }): string {
+    const params = new URLSearchParams();
+    if (configDirector) {
+      if (configDirector.genero) params.append('genero', configDirector.genero);
+      if (configDirector.esEncargado !== undefined) params.append('es_encargado', String(configDirector.esEncargado));
+      if (configDirector.nombre) params.append('nombre', configDirector.nombre);
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return `${API_URL}/api/ingresos/validaciones/${id}/excel${query}`;
+  },
+
+  obtenerConfigDirector(): { genero: string; esEncargado: boolean; nombre: string } {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const item = window.localStorage.getItem('@sjd_config_director_ft318');
+        if (item) return JSON.parse(item);
+      }
+    } catch (_) {}
+    return { genero: 'MASCULINO', esEncargado: true, nombre: '' };
+  },
+
+  guardarConfigDirector(cfg: { genero: string; esEncargado: boolean; nombre: string }): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('@sjd_config_director_ft318', JSON.stringify(cfg));
+      }
+    } catch (_) {}
   },
 
   obtenerUrlArchivo(validacionId: string | undefined, nombreArchivo: string): string {

@@ -1842,17 +1842,19 @@ module.exports = function(pool) {
   router.get('/validaciones/:id/excel', async (req, res) => {
     try {
       const { id } = req.params;
+      const { genero, genero_director, es_encargado, nombre, nombre_director } = req.query;
 
       // Obtener data completa con candidatos, formación y documentos no aplicables
       const valQuery = `
         SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento,
                c.email as candidato_email, c.telefono as candidato_telefono,
                COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
-               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto
+               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto,
+               COALESCE(p.funciones, ic.funciones_cargo, '[]'::jsonb) as funciones_cargo_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
         LEFT JOIN LATERAL (
-          SELECT p.dependencia_cargo, p.requisitos
+          SELECT p.dependencia_cargo, p.requisitos, p.funciones
           FROM planta_personal_sjd p
           WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
              OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
@@ -1866,7 +1868,7 @@ module.exports = function(pool) {
           LIMIT 1
         ) p ON true
         LEFT JOIN LATERAL (
-          SELECT ic.dependencia, ic.requisitos_formacion
+          SELECT ic.dependencia, ic.requisitos_formacion, ic.funciones_cargo
           FROM ingreso_cargos ic
           WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
              OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
@@ -1883,7 +1885,20 @@ module.exports = function(pool) {
       const certsRes = await pool.query(certsQuery, [id]);
 
       const val = valRes.rows[0];
+
+      let funcionesCargo = [];
+      if (Array.isArray(val.funciones_cargo_resuelto)) {
+        funcionesCargo = val.funciones_cargo_resuelto;
+      } else if (typeof val.funciones_cargo_resuelto === 'string') {
+        try { funcionesCargo = JSON.parse(val.funciones_cargo_resuelto); } catch (_) {}
+      }
+
       const payloadData = {
+        config_director: {
+          genero: (genero || genero_director || 'MASCULINO').toUpperCase(),
+          es_encargado: es_encargado !== undefined ? (String(es_encargado) === 'true' || es_encargado === true || es_encargado === '1') : true,
+          nombre: nombre || nombre_director || ''
+        },
         candidato: {
           nombre: val.candidato_nombre,
           documento: val.candidato_documento,
@@ -1900,7 +1915,8 @@ module.exports = function(pool) {
           grado: val.cargo_grado,
           dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
           requisito_experiencia_meses: Number(val.requisito_minimo_meses),
-          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || ''
+          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || '',
+          funciones_cargo: funcionesCargo
         },
         consolidado: {
           requisito_minimo_meses: Number(val.requisito_minimo_meses),
@@ -1917,6 +1933,8 @@ module.exports = function(pool) {
           id_certificado: r.id_certificado,
           entidad: r.entidad,
           cargo_certificado: r.cargo_certificado,
+          numero_contrato_o_acto: r.numero_contrato_o_acto || (r.documento_json?.numero_contrato_o_acto) || null,
+          tipo_vinculo: r.tipo_vinculo,
           fecha_inicio: r.fecha_inicio,
           fecha_fin: r.fecha_fin,
           vinculo_vigente: r.vinculo_vigente,

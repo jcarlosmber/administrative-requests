@@ -31,6 +31,33 @@ export default function IngresosDashboardScreen() {
   const [itemAEliminar, setItemAEliminar] = useState<{ id: string; nombre: string } | null>(null);
   const [eliminando, setEliminando] = useState(false);
 
+  // Configuración de Director(a) para Formato FT-318
+  const [modalDirectorVisible, setModalDirectorVisible] = useState(false);
+  const [configDirector, setConfigDirector] = useState<{ genero: string; esEncargado: boolean; nombre: string }>({
+    genero: 'MASCULINO',
+    esEncargado: true,
+    nombre: ''
+  });
+
+  useEffect(() => {
+    const cfg = ingresosService.obtenerConfigDirector();
+    if (cfg) {
+      setConfigDirector(cfg);
+    }
+  }, []);
+
+  const guardarConfiguracionDirector = () => {
+    ingresosService.guardarConfigDirector(configDirector);
+    setModalDirectorVisible(false);
+    const tit = configDirector.genero === 'FEMENINO' ? 'LA SUSCRITA DIRECTORA' : 'EL SUSCRITO DIRECTOR';
+    const pie = configDirector.genero === 'FEMENINO' ? 'DIRECTORA' : 'DIRECTOR';
+    const enc = configDirector.esEncargado ? ' (E)' : '';
+    mostrarMensaje(
+      'Configuración Actualizada',
+      `Formato FT-318 configurado exitosamente:\n\n• Encabezado: "${tit} DE GESTIÓN CORPORATIVA${enc}"\n• Pie de Firma: "${pie} DE GESTION CORPORATIVA${enc}"`
+    );
+  };
+
   const mostrarMensaje = (titulo: string, mensaje: string) => {
     setModalTitle(titulo);
     setModalMessage(mensaje);
@@ -252,6 +279,25 @@ export default function IngresosDashboardScreen() {
           >
             <Ionicons name="briefcase-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
             <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '600' }}>Cargos Oficiales</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setModalDirectorVisible(true)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.12)',
+              paddingHorizontal: 13,
+              paddingVertical: 9,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.25)',
+            }}
+          >
+            <Ionicons name="person-circle-outline" size={16} color="#FDE047" style={{ marginRight: 6 }} />
+            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+              Director(a) FT-318: {configDirector.genero === 'FEMENINO' ? 'Directora' : 'Director'}{configDirector.esEncargado ? ' (E)' : ''}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -906,6 +952,252 @@ export default function IngresosDashboardScreen() {
                 )}
                 <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
                   {eliminando ? 'Eliminando...' : 'Sí, Eliminar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ============================================================== */}
+      {/* MODAL CONFIGURACIÓN DIRECTOR(A) FORMATO 2311300-FT-318         */}
+      {/* ============================================================== */}
+      <Modal
+        visible={modalDirectorVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalDirectorVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              padding: 24,
+              width: '100%',
+              maxWidth: 520,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              shadowColor: '#000',
+              shadowOpacity: 0.2,
+              shadowRadius: 10,
+              elevation: 8
+            }}
+          >
+            {/* Header del Modal */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#BFDBFE' }}>
+                  <Ionicons name="shield-checkmark" size={24} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
+                    Configuración Director(a) FT-318
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#64748B' }}>
+                    Personalización oficial del certificado de posesión
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setModalDirectorVisible(false)}
+                style={{ padding: 6, borderRadius: 8, backgroundColor: '#F1F5F9' }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 13, color: '#475569', marginBottom: 16, lineHeight: 18 }}>
+              Configure cómo debe expedirse el formato institucional 2311300-FT-318 según la persona que suscribe y la naturaleza de su nombramiento:
+            </Text>
+
+            {/* 1. Selector de Género / Tratamiento */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#1E293B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                1. Género / Tratamiento del Director(a)
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => setConfigDirector(prev => ({ ...prev, genero: 'MASCULINO' }))}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: configDirector.genero === 'MASCULINO' ? '#1D4ED8' : '#E2E8F0',
+                    backgroundColor: configDirector.genero === 'MASCULINO' ? '#EFF6FF' : '#F8FAFC',
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="male" size={18} color={configDirector.genero === 'MASCULINO' ? '#1D4ED8' : '#64748B'} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: configDirector.genero === 'MASCULINO' ? '#1D4ED8' : '#334155' }}>
+                    Hombre (Director)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setConfigDirector(prev => ({ ...prev, genero: 'FEMENINO' }))}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: configDirector.genero === 'FEMENINO' ? '#1D4ED8' : '#E2E8F0',
+                    backgroundColor: configDirector.genero === 'FEMENINO' ? '#EFF6FF' : '#F8FAFC',
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="female" size={18} color={configDirector.genero === 'FEMENINO' ? '#1D4ED8' : '#64748B'} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: configDirector.genero === 'FEMENINO' ? '#1D4ED8' : '#334155' }}>
+                    Mujer (Directora)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 2. Selector de Condición: Encargado o Titular */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#1E293B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                2. Condición del Nombramiento
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => setConfigDirector(prev => ({ ...prev, esEncargado: true }))}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: configDirector.esEncargado ? '#0284C7' : '#E2E8F0',
+                    backgroundColor: configDirector.esEncargado ? '#F0F9FF' : '#F8FAFC',
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="briefcase" size={16} color={configDirector.esEncargado ? '#0284C7' : '#64748B'} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: configDirector.esEncargado ? '#0284C7' : '#334155' }}>
+                    Encargado(a) - (E)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setConfigDirector(prev => ({ ...prev, esEncargado: false }))}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: !configDirector.esEncargado ? '#0284C7' : '#E2E8F0',
+                    backgroundColor: !configDirector.esEncargado ? '#F0F9FF' : '#F8FAFC',
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="ribbon" size={16} color={!configDirector.esEncargado ? '#0284C7' : '#64748B'} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: !configDirector.esEncargado ? '#0284C7' : '#334155' }}>
+                    Titular (Sin (E))
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 3. Nombre del Director(a) (Opcional) */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#1E293B', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                3. Nombre del Director(a) (Opcional)
+              </Text>
+              <TextInput
+                value={configDirector.nombre}
+                onChangeText={(text) => setConfigDirector(prev => ({ ...prev, nombre: text }))}
+                placeholder="Ej. MARÍA CONSTANZA GARCÍA / JUAN CARLOS LÓPEZ"
+                placeholderTextColor="#94A3B8"
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  fontSize: 13,
+                  color: '#0F172A'
+                }}
+              />
+            </View>
+
+            {/* Vista Previa en Vivo */}
+            <View style={{ backgroundColor: '#F1F5F9', borderRadius: 10, padding: 12, marginBottom: 18, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569', textTransform: 'uppercase', marginBottom: 4 }}>
+                Vista Previa en el Excel Oficial FT-318:
+              </Text>
+              <View style={{ marginTop: 4 }}>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>Encabezado (Fila 2):</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginTop: 1 }}>
+                  {configDirector.genero === 'FEMENINO' ? 'LA SUSCRITA DIRECTORA' : 'EL SUSCRITO DIRECTOR'} DE GESTIÓN CORPORATIVA{configDirector.esEncargado ? ' (E)' : ''}
+                </Text>
+              </View>
+              <View style={{ marginTop: 6 }}>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>Pie de Firma (Fila 71):</Text>
+                {configDirector.nombre ? (
+                  <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#334155', fontStyle: 'italic' }}>
+                    {configDirector.nombre.toUpperCase()}
+                  </Text>
+                ) : null}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginTop: 1 }}>
+                  {configDirector.genero === 'FEMENINO' ? 'DIRECTORA' : 'DIRECTOR'} DE GESTION CORPORATIVA{configDirector.esEncargado ? ' (E)' : ''}
+                </Text>
+              </View>
+            </View>
+
+            {/* Botones de Acción */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => setModalDirectorVisible(false)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F5F9'
+                }}
+              >
+                <Text style={{ color: '#475569', fontSize: 13, fontWeight: '700' }}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={guardarConfiguracionDirector}
+                style={{
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  backgroundColor: '#1D4ED8',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6
+                }}
+              >
+                <Ionicons name="save-outline" size={16} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
+                  Guardar Configuración
                 </Text>
               </TouchableOpacity>
             </View>
