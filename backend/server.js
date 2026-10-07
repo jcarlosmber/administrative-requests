@@ -910,7 +910,11 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
         'git branch -a',
         'node -v',
         'npm run seed:teletrabajo',
-        'node migracion_resoluciones_409_366.js'
+        'node migracion_resoluciones_409_366.js',
+        'node ajustar_idu.js',
+        'node backend/ajustar_idu.js',
+        'npm run ajustar:idu',
+        'node scratch/actualizar_cargos_idu_sistema.js'
       ];
       if (!ALLOWED.includes(cmd)) {
         return res.status(400).json({
