@@ -210,21 +210,37 @@ export const nominaService = {
     };
   },
 
+  // URLs para descarga de plantillas oficiales
+  getPlantillaPlantaUrl(): string {
+    return `${API_URL}/api/nomina/plantilla/planta`;
+  },
+
+  getPlantillaPernoUrl(): string {
+    return `${API_URL}/api/nomina/plantilla/perno`;
+  },
+
   // Subir Archivo 1: Planta de Personal (Imagen 1)
-  async uploadPlanta(file: { uri: string; name: string; type?: string }): Promise<{
+  async uploadPlanta(file: { uri: string; name: string; type?: string; file?: any }): Promise<{
     success: boolean;
     mensaje: string;
     registros_actualizados?: number;
+    registros_procesados?: number;
   }> {
     try {
       const formData = new FormData();
-      // En Web y React Native
-      // @ts-ignore
-      formData.append('archivo', {
-        uri: file.uri,
-        name: file.name,
-        type: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
+      if (file.file) {
+        formData.append('archivo', file.file);
+      } else if (file.uri && (file.uri.startsWith('blob:') || file.uri.startsWith('data:'))) {
+        const blob = await fetch(file.uri).then((r) => r.blob());
+        formData.append('archivo', blob, file.name);
+      } else {
+        // @ts-ignore
+        formData.append('archivo', {
+          uri: file.uri,
+          name: file.name,
+          type: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+      }
 
       const res = await fetch(`${API_URL}/api/nomina/upload-planta`, {
         method: 'POST',
@@ -242,19 +258,27 @@ export const nominaService = {
   },
 
   // Subir Archivo 2: Planta Perno / Nómina (Imagen 2)
-  async uploadPerno(file: { uri: string; name: string; type?: string }): Promise<{
+  async uploadPerno(file: { uri: string; name: string; type?: string; file?: any }): Promise<{
     success: boolean;
     mensaje: string;
     registros_actualizados?: number;
+    registros_procesados?: number;
   }> {
     try {
       const formData = new FormData();
-      // @ts-ignore
-      formData.append('archivo', {
-        uri: file.uri,
-        name: file.name,
-        type: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
+      if (file.file) {
+        formData.append('archivo', file.file);
+      } else if (file.uri && (file.uri.startsWith('blob:') || file.uri.startsWith('data:'))) {
+        const blob = await fetch(file.uri).then((r) => r.blob());
+        formData.append('archivo', blob, file.name);
+      } else {
+        // @ts-ignore
+        formData.append('archivo', {
+          uri: file.uri,
+          name: file.name,
+          type: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+      }
 
       const res = await fetch(`${API_URL}/api/nomina/upload-perno`, {
         method: 'POST',

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -117,6 +118,7 @@ export default function NominaScreen() {
   const [cargandoArchivoPerno, setCargandoArchivoPerno] = useState(false);
   const [nombreArchivoPlanta, setNombreArchivoPlanta] = useState<string | null>(null);
   const [nombreArchivoPerno, setNombreArchivoPerno] = useState<string | null>(null);
+  const [guiaArchivoActiva, setGuiaArchivoActiva] = useState<'planta' | 'perno' | 'reglas'>('planta');
 
   const mostrarModal = (titulo: string, mensaje: string, tipo: 'success' | 'info' | 'error' = 'info') => {
     setInfoModalTitulo(titulo);
@@ -471,6 +473,7 @@ export default function NominaScreen() {
         uri: file.uri,
         name: file.name,
         type: file.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        file: (file as any).file,
       });
 
       if (resultado.success) {
@@ -508,6 +511,7 @@ export default function NominaScreen() {
         uri: file.uri,
         name: file.name,
         type: file.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        file: (file as any).file,
       });
 
       if (resultado.success) {
@@ -524,6 +528,33 @@ export default function NominaScreen() {
       mostrarModal('Error al procesar', 'Ocurrió un error leyendo el archivo perno: ' + e.message, 'error');
     } finally {
       setCargandoArchivoPerno(false);
+    }
+  };
+
+  // Descargas de plantillas oficiales
+  const handleDescargarPlantillaPlanta = async () => {
+    try {
+      const url = nominaService.getPlantillaPlantaUrl();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.open(url, '_blank');
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (e: any) {
+      mostrarModal('Descarga de Plantilla', 'No fue posible abrir la descarga: ' + e.message, 'error');
+    }
+  };
+
+  const handleDescargarPlantillaPerno = async () => {
+    try {
+      const url = nominaService.getPlantillaPernoUrl();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.open(url, '_blank');
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (e: any) {
+      mostrarModal('Descarga de Plantilla', 'No fue posible abrir la descarga: ' + e.message, 'error');
     }
   };
 
@@ -2279,10 +2310,11 @@ export default function NominaScreen() {
           )}
 
           {/* ============================================================== */}
-          {/* PESTAÑA: CARGA DE ARCHIVOS                                     */}
+          {/* PESTAÑA: CARGA DE ARCHIVOS Y GUÍA DE ESTRUCTURA                */}
           {/* ============================================================== */}
           {tabActiva === 'archivos' && (
-            <View style={{ width: '100%' }}>
+            <View style={{ width: '100%', gap: 20 }}>
+              {/* Tarjeta Informativa de Arquitectura */}
               <View
                 style={{
                   backgroundColor: THEME.white,
@@ -2293,13 +2325,50 @@ export default function NominaScreen() {
                   width: '100%',
                 }}
               >
-                <Text style={{ fontSize: 17, fontWeight: '600', color: THEME.slate900 }}>
-                  Alimentación de Nómina y Actualización de Planta
-                </Text>
-                <Text style={{ fontSize: 13, color: THEME.slate500, marginTop: 4 }}>
-                  Carga los archivos oficiales en Excel para actualizar los cargos de planta o alimentar la seguridad social y nómina perno.
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: THEME.marca100,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="layers" size={20} color={THEME.marca700} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: THEME.slate900 }}>
+                      Actualización Oficial de Nómina y Planta de Personal
+                    </Text>
+                    <Text style={{ fontSize: 13, color: THEME.slate500, marginTop: 2 }}>
+                      Guía estructural, orden de columnas y alimentador para la Secretaría Jurídica Distrital.
+                    </Text>
+                  </View>
+                </View>
 
+                <View
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 16,
+                    marginTop: 12,
+                  }}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginBottom: 6 }}>
+                    ¿Cómo interactúan los dos archivos oficiales?
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: THEME.slate600, lineHeight: 19 }}>
+                    <Text style={{ fontWeight: '700', color: THEME.marca800 }}>1. Archivo de Planta Oficial:</Text> Estructura las 170 plazas de la entidad (códigos, grados, nivel jerárquico, dependencia orgánica, asignación básica mensual y quién ocupa o si está en vacancia).
+                    {'\n'}
+                    <Text style={{ fontWeight: '700', color: THEME.emeraldText }}>2. Archivo Planta Perno:</Text> Enriquece la información humana de los servidores (seguridad social: EPS, Pensión, Cesantías, número y fecha del acto de nombramiento o encargo y total devengado mensual), vinculándolos automáticamente por su <Text style={{ fontWeight: '700' }}>Cédula de Ciudadanía</Text>.
+                  </Text>
+                </View>
+
+                {/* Tarjetas de Carga Rápida */}
                 <View
                   style={{
                     flexDirection: isTablet ? 'row' : 'column',
@@ -2317,83 +2386,113 @@ export default function NominaScreen() {
                       borderWidth: 1,
                       borderColor: THEME.slate200,
                       padding: 20,
+                      justifyContent: 'space-between',
                     }}
                   >
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: 12,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="document-text" size={20} color={THEME.marca700} />
-                        <Text style={{ fontSize: 15, fontWeight: '600', color: THEME.slate900 }}>
-                          1. Archivo de Planta Oficial
-                        </Text>
-                      </View>
+                    <View>
                       <View
                         style={{
-                          backgroundColor: THEME.skyBg,
-                          borderColor: THEME.skyRing,
-                          borderWidth: 1,
-                          paddingHorizontal: 8,
-                          paddingVertical: 2,
-                          borderRadius: 9999,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: 8,
                         }}
                       >
-                        <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.skyText }}>Estructura Base</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="document-text" size={20} color={THEME.marca700} />
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900 }}>
+                            1. Archivo de Planta Oficial
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: THEME.skyBg,
+                            borderColor: THEME.skyRing,
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 9999,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.skyText }}>Estructura Base</Text>
+                        </View>
+                      </View>
+
+                      <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 12 }}>
+                        Hoja requerida: <Text style={{ fontWeight: '700' }}>PLANTA SJD (2)</Text> o <Text style={{ fontWeight: '700' }}>PLANTA SJD</Text>. Encabezados en <Text style={{ fontWeight: '700' }}>Fila 4</Text>, datos desde <Text style={{ fontWeight: '700' }}>Fila 5</Text>.
+                      </Text>
+
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          borderStyle: 'dashed',
+                          borderRadius: 10,
+                          padding: 16,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: 16,
+                        }}
+                      >
+                        <Ionicons name="cloud-upload-outline" size={28} color={THEME.slate400} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 6, textAlign: 'center' }}>
+                          {nombreArchivoPlanta || 'Seleccionar archivo Excel (.xlsx)'}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2, textAlign: 'center' }}>
+                          Columnas clave: ID, SIDEAP, Cédula, Nivel, Cargo, Grado, Básico
+                        </Text>
                       </View>
                     </View>
 
-                    <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 16 }}>
-                      Contiene el censo de cargos, plazas, ID SIDEAP, dependencias, asignación básica mensual y personas encargadas o titulares.
-                    </Text>
+                    <View style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={handleSeleccionarArchivoPlanta}
+                        disabled={cargandoArchivoPlanta}
+                        style={({ pressed }) => ({
+                          backgroundColor: THEME.marca700,
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: pressed || cargandoArchivoPlanta ? 0.8 : 1,
+                        })}
+                      >
+                        {cargandoArchivoPlanta ? (
+                          <ActivityIndicator size="small" color={THEME.white} />
+                        ) : (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="arrow-up-circle-outline" size={16} color={THEME.white} />
+                            <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '600' }}>
+                              Cargar Archivo de Planta
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
 
-                    <View
-                      style={{
-                        backgroundColor: THEME.white,
-                        borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        borderStyle: 'dashed',
-                        borderRadius: 10,
-                        padding: 20,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 16,
-                      }}
-                    >
-                      <Ionicons name="cloud-upload-outline" size={32} color={THEME.slate400} />
-                      <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate700, marginTop: 8 }}>
-                        {nombreArchivoPlanta || 'Formato Excel (.xlsx, .xls)'}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate400, marginTop: 2 }}>
-                        Estructura: Nivel, Cargo, ID SIDEAP, Básico, Titular, Encargo
-                      </Text>
+                      <Pressable
+                        onPress={handleDescargarPlantillaPlanta}
+                        style={({ pressed }) => ({
+                          backgroundColor: THEME.white,
+                          borderWidth: 1,
+                          borderColor: THEME.marca600,
+                          paddingVertical: 8,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: pressed ? 0.8 : 1,
+                        })}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="download-outline" size={16} color={THEME.marca700} />
+                          <Text style={{ color: THEME.marca700, fontSize: 12.5, fontWeight: '600' }}>
+                            Descargar Plantilla Oficial (.xlsx)
+                          </Text>
+                        </View>
+                      </Pressable>
                     </View>
-
-                    <Pressable
-                      onPress={handleSeleccionarArchivoPlanta}
-                      disabled={cargandoArchivoPlanta}
-                      style={({ pressed }) => ({
-                        backgroundColor: THEME.marca700,
-                        paddingVertical: 10,
-                        paddingHorizontal: 16,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: pressed || cargandoArchivoPlanta ? 0.8 : 1,
-                      })}
-                    >
-                      {cargandoArchivoPlanta ? (
-                        <ActivityIndicator size="small" color={THEME.white} />
-                      ) : (
-                        <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '600' }}>
-                          Seleccionar y Cargar Archivo de Planta
-                        </Text>
-                      )}
-                    </Pressable>
                   </View>
 
                   {/* ARCHIVO 2: PLANTA PERNO */}
@@ -2405,87 +2504,570 @@ export default function NominaScreen() {
                       borderWidth: 1,
                       borderColor: THEME.slate200,
                       padding: 20,
+                      justifyContent: 'space-between',
                     }}
                   >
+                    <View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="people-circle" size={22} color={THEME.emeraldText} />
+                          <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900 }}>
+                            2. Archivo Planta Perno
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: THEME.emeraldBg,
+                            borderColor: THEME.emeraldRing,
+                            borderWidth: 1,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: 9999,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.emeraldText }}>
+                            Nómina y Afiliaciones
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 12 }}>
+                        Hoja requerida: <Text style={{ fontWeight: '700' }}>PLANTA PERNO</Text>. Encabezados en <Text style={{ fontWeight: '700' }}>Fila 9</Text>, datos desde <Text style={{ fontWeight: '700' }}>Fila 10</Text>.
+                      </Text>
+
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          borderStyle: 'dashed',
+                          borderRadius: 10,
+                          padding: 16,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: 16,
+                        }}
+                      >
+                        <Ionicons name="shield-checkmark-outline" size={28} color={THEME.slate400} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 6, textAlign: 'center' }}>
+                          {nombreArchivoPerno || 'Seleccionar archivo Perno (.xlsx)'}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2, textAlign: 'center' }}>
+                          Columnas clave: Cédula, EPS, Pensión, Cesantías, Acto Nombramiento
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={handleSeleccionarArchivoPerno}
+                        disabled={cargandoArchivoPerno}
+                        style={({ pressed }) => ({
+                          backgroundColor: THEME.marca700,
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: pressed || cargandoArchivoPerno ? 0.8 : 1,
+                        })}
+                      >
+                        {cargandoArchivoPerno ? (
+                          <ActivityIndicator size="small" color={THEME.white} />
+                        ) : (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="arrow-up-circle-outline" size={16} color={THEME.white} />
+                            <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '600' }}>
+                              Cargar Archivo Planta Perno
+                            </Text>
+                          </View>
+                        )}
+                      </Pressable>
+
+                      <Pressable
+                        onPress={handleDescargarPlantillaPerno}
+                        style={({ pressed }) => ({
+                          backgroundColor: THEME.white,
+                          borderWidth: 1,
+                          borderColor: THEME.emeraldText,
+                          paddingVertical: 8,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: pressed ? 0.8 : 1,
+                        })}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="download-outline" size={16} color={THEME.emeraldText} />
+                          <Text style={{ color: THEME.emeraldText, fontSize: 12.5, fontWeight: '600' }}>
+                            Descargar Plantilla Oficial (.xlsx)
+                          </Text>
+                        </View>
+                      </Pressable>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Guía Detallada de Columnas y Estructura */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 24,
+                  width: '100%',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: THEME.slate900 }}>
+                      Especificación de Columnas y Formato Requerido
+                    </Text>
+                    <Text style={{ fontSize: 12.5, color: THEME.slate500, marginTop: 2 }}>
+                      Consulta la posición, el nombre de columna en Excel, el tipo de dato y ejemplos reales.
+                    </Text>
+                  </View>
+
+                  {/* Selector de Pestañas de Guía */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      backgroundColor: THEME.slate100,
+                      padding: 4,
+                      borderRadius: 8,
+                      gap: 4,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => setGuiaArchivoActiva('planta')}
+                      style={{
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        borderRadius: 6,
+                        backgroundColor: guiaArchivoActiva === 'planta' ? THEME.white : 'transparent',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: guiaArchivoActiva === 'planta' ? 1 : 0 },
+                        shadowOpacity: guiaArchivoActiva === 'planta' ? 0.08 : 0,
+                        shadowRadius: 2,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color: guiaArchivoActiva === 'planta' ? THEME.marca800 : THEME.slate600,
+                        }}
+                      >
+                        1. Estructura Planta Oficial
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => setGuiaArchivoActiva('perno')}
+                      style={{
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        borderRadius: 6,
+                        backgroundColor: guiaArchivoActiva === 'perno' ? THEME.white : 'transparent',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: guiaArchivoActiva === 'perno' ? 1 : 0 },
+                        shadowOpacity: guiaArchivoActiva === 'perno' ? 0.08 : 0,
+                        shadowRadius: 2,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color: guiaArchivoActiva === 'perno' ? THEME.emeraldText : THEME.slate600,
+                        }}
+                      >
+                        2. Estructura Planta Perno
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => setGuiaArchivoActiva('reglas')}
+                      style={{
+                        paddingVertical: 6,
+                        paddingHorizontal: 12,
+                        borderRadius: 6,
+                        backgroundColor: guiaArchivoActiva === 'reglas' ? THEME.white : 'transparent',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: guiaArchivoActiva === 'reglas' ? 1 : 0 },
+                        shadowOpacity: guiaArchivoActiva === 'reglas' ? 0.08 : 0,
+                        shadowRadius: 2,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '600',
+                          color: guiaArchivoActiva === 'reglas' ? THEME.slate900 : THEME.slate600,
+                        }}
+                      >
+                        Reglas y Recomendaciones
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* CONTENIDO 1: TABLA GUÍA PLANTA OFICIAL */}
+                {guiaArchivoActiva === 'planta' && (
+                  <View style={{ marginTop: 20 }}>
                     <View
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        marginBottom: 12,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="people-circle" size={22} color={THEME.emeraldText} />
-                        <Text style={{ fontSize: 15, fontWeight: '600', color: THEME.slate900 }}>
-                          2. Archivo Planta Perno
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          backgroundColor: THEME.emeraldBg,
-                          borderColor: THEME.emeraldRing,
-                          borderWidth: 1,
-                          paddingHorizontal: 8,
-                          paddingVertical: 2,
-                          borderRadius: 9999,
-                        }}
-                      >
-                        <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.emeraldText }}>
-                          Nómina y Novedades
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 16 }}>
-                      Contiene la información detallada del personal: EPS, Fondos de Pensiones, Cesantías, acto de nombramiento y datos de contacto.
-                    </Text>
-
-                    <View
-                      style={{
-                        backgroundColor: THEME.white,
+                        backgroundColor: THEME.skyBg,
+                        borderColor: THEME.skyRing,
                         borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        borderStyle: 'dashed',
-                        borderRadius: 10,
-                        padding: 20,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        borderRadius: 8,
+                        padding: 12,
                         marginBottom: 16,
                       }}
                     >
-                      <Ionicons name="shield-checkmark-outline" size={32} color={THEME.slate400} />
-                      <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate700, marginTop: 8 }}>
-                        {nombreArchivoPerno || 'Formato Perno (.xlsx, .xls)'}
+                      <Text style={{ fontSize: 12.5, color: THEME.skyText, flex: 1, lineHeight: 18 }}>
+                        <Text style={{ fontWeight: '700' }}>Hoja de Excel:</Text> Debe llamarse <Text style={{ fontWeight: '700' }}>PLANTA SJD (2)</Text> o <Text style={{ fontWeight: '700' }}>PLANTA SJD</Text>.{'\n'}
+                        <Text style={{ fontWeight: '700' }}>Encabezados:</Text> Fila 4 | <Text style={{ fontWeight: '700' }}>Registros:</Text> A partir de la fila 5. Cada fila representa una de las plazas de la entidad.
                       </Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate400, marginTop: 2 }}>
-                        Estructura: EPS, Pensión, Cesantías, Novedades
-                      </Text>
+                      <Pressable
+                        onPress={handleDescargarPlantillaPlanta}
+                        style={{
+                          backgroundColor: THEME.marca700,
+                          paddingVertical: 6,
+                          paddingHorizontal: 12,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '600' }}>
+                          Descargar .xlsx
+                        </Text>
+                      </Pressable>
                     </View>
 
-                    <Pressable
-                      onPress={handleSeleccionarArchivoPerno}
-                      disabled={cargandoArchivoPerno}
-                      style={({ pressed }) => ({
-                        backgroundColor: THEME.marca700,
-                        paddingVertical: 10,
-                        paddingHorizontal: 16,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        opacity: pressed || cargandoArchivoPerno ? 0.8 : 1,
-                      })}
-                    >
-                      {cargandoArchivoPerno ? (
-                        <ActivityIndicator size="small" color={THEME.white} />
-                      ) : (
-                        <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '600' }}>
-                          Seleccionar y Cargar Archivo Perno
-                        </Text>
-                      )}
-                    </Pressable>
+                    <ScrollView horizontal={true} showsHorizontalScrollIndicator={true}>
+                      <View style={{ minWidth: 920 }}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            backgroundColor: THEME.slate100,
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                          }}
+                        >
+                          <Text style={{ width: 80, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Col. Excel</Text>
+                          <Text style={{ width: 180, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Encabezado Oficial</Text>
+                          <Text style={{ width: 100, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Estado</Text>
+                          <Text style={{ width: 110, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Tipo de Dato</Text>
+                          <Text style={{ width: 260, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Descripción / Uso en el Sistema</Text>
+                          <Text style={{ width: 190, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Ejemplo Real</Text>
+                        </View>
+
+                        {[
+                          { col: 'A (1)', header: 'ID', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Entero', desc: 'Número consecutivo único de la plaza (1 a 170). Llave primaria.', ej: '1' },
+                          { col: 'B (2)', header: 'ID SIDEAP', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Entero', desc: 'Identificador asignado a la plaza en el SIDEAP distrital.', ej: '4998' },
+                          { col: 'C (3)', header: 'ID PERNO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Entero', desc: 'Identificador del cargo en el sistema de nómina PERNO.', ej: '11' },
+                          { col: 'D (4)', header: 'CEDULA', req: 'Obligatorio*', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto/Número', desc: 'Cédula de quien desempeña el puesto actualmente (titular o encargo).', ej: '36697863' },
+                          { col: 'E (5)', header: 'APELLIDOS Y NOMBRES', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nombre del servidor o "VACANTE DEFINITIVA" / "VACANTE TEMPORAL".', ej: 'ANA MARTA MIRANDA CORRALES' },
+                          { col: 'F (6)', header: 'TIPO DE VINCULACIÓN A LA ENTIDAD', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'LIBRE NOMBRAMIENTO Y REMOCIÓN, CARRERA ADMINISTRATIVA, etc.', ej: 'LIBRE NOMBRAMIENTO Y REMOCIÓN' },
+                          { col: 'G (7)', header: 'TIPO DE VINCULACIÓN AL CARGO/ SIDEAP', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Modo de vinculación al empleo específico.', ej: 'NOMBRAMIENTO ORDINARIO' },
+                          { col: 'H (8)', header: 'FECHA INGRESO A LA ENTIDAD', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de ingreso institucional a la Secretaría Jurídica (AAAA-MM-DD).', ej: '2025-11-06' },
+                          { col: 'I (9)', header: 'FECHA INGRESO AL DISTRITO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de ingreso a la administración distrital.', ej: '2025-11-06' },
+                          { col: 'J (10)', header: 'SEXO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Género del servidor (MUJER / HOMBRE).', ej: 'MUJER' },
+                          { col: 'K (11)', header: 'EDAD', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Entero', desc: 'Edad en años.', ej: '45' },
+                          { col: 'M (13)', header: 'SITUACIÓN ADMINISTRATIVA', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación administrativa activa: ENCARGO, EN PROPIEDAD, VACANCIA.', ej: 'EN PROPIEDAD' },
+                          { col: 'N (14)', header: 'SITUACIÓN ADMINISTRATIVA TITULAR', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación del titular con derechos sobre la plaza.', ej: 'EN PROPIEDAD' },
+                          { col: 'O (15)', header: 'CEDULA (TITULAR)', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto/Número', desc: 'Cédula del titular si la plaza está ocupada o en encargo.', ej: '36697863' },
+                          { col: 'P (16)', header: 'TITULAR CARGO', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Nombre del servidor titular con derechos de carrera.', ej: 'ANA MARTA MIRANDA CORRALES' },
+                          { col: 'Y (25)', header: 'ESTADO DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Estado oficial: OCUPADO, VACANTE DEFINITIVA o VACANTE TEMPORAL.', ej: 'OCUPADO' },
+                          { col: 'Z (26)', header: 'NIVEL', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nivel jerárquico: DIRECTIVO, ASESOR, PROFESIONAL, TECNICO, ASISTENCIAL.', ej: 'ASESOR' },
+                          { col: 'AA (27)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta.', ej: 'JEFE DE OFICINA ASESORA' },
+                          { col: 'AB (28)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
+                          { col: 'AC (29)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
+                          { col: 'AE (31)', header: 'DEPENDENCIA DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Dependencia orgánica a la que pertenece la plaza.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
+                          { col: 'AF (32)', header: 'DEPENDENCIA FUNCIONAL', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Dependencia donde realmente presta labores.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
+                          { col: 'AG (33)', header: 'PROPOSITO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Propósito principal según manual de funciones.', ej: 'Asesorar en el diseño de planes y estrategias...' },
+                          { col: 'AH (34)', header: 'FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Funciones esenciales del empleo (se formatean en lista).', ej: '1. Formular proyectos... 2. Dirigir plan...' },
+                          { col: 'AI (35)', header: 'REQUISITOS', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Estudios académicos y experiencia laboral requerida.', ej: 'Título profesional en Administración. Posgrado.' },
+                          { col: 'AK (37)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208469.82' },
+                        ].map((row, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingVertical: 9,
+                              paddingHorizontal: 12,
+                              borderBottomWidth: 1,
+                              borderBottomColor: THEME.slate200,
+                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                            }}
+                          >
+                            <Text style={{ width: 80, fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>{row.col}</Text>
+                            <Text style={{ width: 180, fontSize: 12, fontWeight: '600', color: THEME.marca800 }}>{row.header}</Text>
+                            <View style={{ width: 100 }}>
+                              <View
+                                style={{
+                                  backgroundColor: row.reqBg,
+                                  alignSelf: 'flex-start',
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 2,
+                                  borderRadius: 4,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '600', color: row.reqColor }}>{row.req}</Text>
+                              </View>
+                            </View>
+                            <Text style={{ width: 110, fontSize: 11.5, color: THEME.slate600 }}>{row.tipo}</Text>
+                            <Text style={{ width: 260, fontSize: 11.5, color: THEME.slate700, paddingRight: 8 }}>{row.desc}</Text>
+                            <Text style={{ width: 190, fontSize: 11, color: THEME.slate500, fontStyle: 'italic' }}>{row.ej}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
                   </View>
-                </View>
+                )}
+
+                {/* CONTENIDO 2: TABLA GUÍA PLANTA PERNO */}
+                {guiaArchivoActiva === 'perno' && (
+                  <View style={{ marginTop: 20 }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: THEME.emeraldBg,
+                        borderColor: THEME.emeraldRing,
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12.5, color: THEME.emeraldText, flex: 1, lineHeight: 18 }}>
+                        <Text style={{ fontWeight: '700' }}>Hoja de Excel:</Text> Debe llamarse <Text style={{ fontWeight: '700' }}>PLANTA PERNO</Text>.{'\n'}
+                        <Text style={{ fontWeight: '700' }}>Encabezados:</Text> Fila 9 | <Text style={{ fontWeight: '700' }}>Registros:</Text> A partir de la fila 10. Cruza con la plaza mediante la columna <Text style={{ fontWeight: '700' }}>NUMERO_IDENTIFICACION</Text>.
+                      </Text>
+                      <Pressable
+                        onPress={handleDescargarPlantillaPerno}
+                        style={{
+                          backgroundColor: THEME.emeraldText,
+                          paddingVertical: 6,
+                          paddingHorizontal: 12,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '600' }}>
+                          Descargar .xlsx
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <ScrollView horizontal={true} showsHorizontalScrollIndicator={true}>
+                      <View style={{ minWidth: 920 }}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            backgroundColor: THEME.slate100,
+                            paddingVertical: 10,
+                            paddingHorizontal: 12,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                          }}
+                        >
+                          <Text style={{ width: 80, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Col. Excel</Text>
+                          <Text style={{ width: 190, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Encabezado Oficial</Text>
+                          <Text style={{ width: 100, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Estado</Text>
+                          <Text style={{ width: 110, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Tipo de Dato</Text>
+                          <Text style={{ width: 250, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Descripción / Cruce en Planta</Text>
+                          <Text style={{ width: 190, fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>Ejemplo Real</Text>
+                        </View>
+
+                        {[
+                          { col: 'A (1)', header: 'NUMERO_IDENTIFICACION', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto/Número', desc: 'Cédula de ciudadanía. Llave indispensable para vincular los datos a la plaza.', ej: '52171949' },
+                          { col: 'B (2)', header: 'PRIMER_APELLIDO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Primer apellido del servidor público.', ej: 'MARTINEZ' },
+                          { col: 'C (3)', header: 'SEGUNDO_APELLIDO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Segundo apellido del servidor público.', ej: 'ORTIZ' },
+                          { col: 'D (4)', header: 'NOMBRE', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Nombres del servidor público.', ej: 'GLORIA INES' },
+                          { col: 'E (5)', header: 'ESTADO_FUNCIONARIO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Estado en el software PERNO (ej. "A" para activo).', ej: 'A' },
+                          { col: 'F (6)', header: 'FECHA_NACIMIENTO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de nacimiento del funcionario (AAAA-MM-DD).', ej: '1973-04-22' },
+                          { col: 'G (7)', header: 'DIRECCION', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Dirección residencial del funcionario.', ej: 'CARRERA 98 A 22 K 00' },
+                          { col: 'H (8)', header: 'TELEFONO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Teléfono de contacto o celular.', ej: '4754435' },
+                          { col: 'I (9)', header: 'SEXO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Género biológico (F / M).', ej: 'F' },
+                          { col: 'M (13)', header: 'TIPO_SANGRE', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Grupo sanguíneo (O, A, B, AB).', ej: 'O' },
+                          { col: 'N (14)', header: 'RH', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Factor RH (P = Positivo, N = Negativo).', ej: 'P' },
+                          { col: 'O (15)', header: 'TIPO_FUNCIONARIO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'EMPLEADO DE PLANTA, TRABAJADOR OFICIAL, etc.', ej: 'EMPLEADO DE PLANTA' },
+                          { col: 'P (16)', header: 'FECHA_INGRESO_ENTIDAD', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de vinculación oficial.', ej: '2021-07-12' },
+                          { col: 'T (20)', header: 'FONDO_SALUD', req: 'Obligatorio*', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nombre de la Entidad Promotora de Salud (EPS).', ej: 'SALUD TOTAL S.A. E.P.S.' },
+                          { col: 'V (22)', header: 'FONDO_PENSION', req: 'Obligatorio*', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Administradora del Fondo de Pensiones (AFP).', ej: 'COLPENSIONES' },
+                          { col: 'X (24)', header: 'FONDO_CESANTIAS', req: 'Obligatorio*', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Administradora del Fondo de Cesantías.', ej: 'FONDO NACIONAL DEL AHORRO' },
+                          { col: 'Y (25)', header: 'DEPENDENCIA', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Código numérico de dependencia PERNO.', ej: '2310300' },
+                          { col: 'Z (26)', header: 'DESC_DEPENDENCIA', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Descripción textual del área en nómina.', ej: 'OFICINA DE CONTROL INTERNO' },
+                          { col: 'AH (34)', header: 'TIPO_NOMB', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'CARRERA ADMINISTRATIVA, ENCARGO, LIBRE NOMBRAMIENTO.', ej: 'CARRERA ADMINISTRATIVA' },
+                          { col: 'AI (35)', header: 'ACTO_NOMB', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Tipo de acto (Resolución, Decreto, Acta).', ej: 'Nombramiento' },
+                          { col: 'AJ (36)', header: 'FECHA_EFECTIVA_NOMB', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de efectos fiscales de la posesión.', ej: '2021-07-12' },
+                          { col: 'AK (37)', header: 'NUMERO_ACTO_NOMB', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Número del acto administrativo que confirió el cargo.', ej: '107' },
+                          { col: 'AL (38)', header: 'FECHA_ACTO_NOMB', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de emisión del acto administrativo.', ej: '2021-07-04' },
+                          { col: 'AM (39)', header: 'FECHA_EFECTIVA_ENC', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Fecha', desc: 'Fecha de efectividad si está en situación de encargo.', ej: '2026-01-21' },
+                          { col: 'AN (40)', header: 'NUMERO_ACTO_ENC', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Número del acto administrativo de encargo.', ej: '16' },
+                          { col: 'AQ (43)', header: 'TOTAL DEVENGADOS MENSUAL', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Moneda (Num)', desc: 'Total monetario devengado en la nómina liquidada.', ej: '4938935.00' },
+                        ].map((row, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingVertical: 9,
+                              paddingHorizontal: 12,
+                              borderBottomWidth: 1,
+                              borderBottomColor: THEME.slate200,
+                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                            }}
+                          >
+                            <Text style={{ width: 80, fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>{row.col}</Text>
+                            <Text style={{ width: 190, fontSize: 12, fontWeight: '600', color: THEME.emeraldText }}>{row.header}</Text>
+                            <View style={{ width: 100 }}>
+                              <View
+                                style={{
+                                  backgroundColor: row.reqBg,
+                                  alignSelf: 'flex-start',
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 2,
+                                  borderRadius: 4,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '600', color: row.reqColor }}>{row.req}</Text>
+                              </View>
+                            </View>
+                            <Text style={{ width: 110, fontSize: 11.5, color: THEME.slate600 }}>{row.tipo}</Text>
+                            <Text style={{ width: 250, fontSize: 11.5, color: THEME.slate700, paddingRight: 8 }}>{row.desc}</Text>
+                            <Text style={{ width: 190, fontSize: 11, color: THEME.slate500, fontStyle: 'italic' }}>{row.ej}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
+                )}
+
+                {/* CONTENIDO 3: REGLAS Y RECOMENDACIONES */}
+                {guiaArchivoActiva === 'reglas' && (
+                  <View style={{ marginTop: 20, gap: 14 }}>
+                    <View
+                      style={{
+                        backgroundColor: THEME.amberBg,
+                        borderColor: THEME.amberRing,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        padding: 16,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <Ionicons name="alert-circle" size={20} color={THEME.amberText} />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.amberText }}>
+                          Reglas Críticas para Evitar Fallos en la Carga
+                        </Text>
+                      </View>
+
+                      <View style={{ gap: 8, marginTop: 4 }}>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                          • <Text style={{ fontWeight: '700' }}>Sin Celdas Combinadas en los Registros:</Text> Asegúrate de que las filas de datos (a partir de la fila 5 en Planta y 10 en Perno) no tengan celdas combinadas vertical u horizontalmente.
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                          • <Text style={{ fontWeight: '700' }}>Cédulas Limpias:</Text> Los números de documento no deben contener comas, puntos ni espacios (ej: <Text style={{ fontWeight: '700' }}>52171949</Text> en lugar de 52.171.949).
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                          • <Text style={{ fontWeight: '700' }}>Valores de Estado del Cargo:</Text> Deben ser exactamente <Text style={{ fontWeight: '700' }}>OCUPADO</Text>, <Text style={{ fontWeight: '700' }}>VACANTE DEFINITIVA</Text> o <Text style={{ fontWeight: '700' }}>VACANTE TEMPORAL</Text>.
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                          • <Text style={{ fontWeight: '700' }}>Niveles Jerárquicos:</Text> Únicamente los niveles reglamentarios: <Text style={{ fontWeight: '700' }}>DIRECTIVO, ASESOR, PROFESIONAL, TECNICO, ASISTENCIAL</Text>.
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                          • <Text style={{ fontWeight: '700' }}>Asignación Salarial:</Text> Ingresar valores numéricos limpios sin signos de pesos ni separadores de miles de texto (ej: <Text style={{ fontWeight: '700' }}>10208469.82</Text>).
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 18 }}>
+                          • <Text style={{ fontWeight: '700' }}>Orden de Carga Recomendado:</Text> Carga siempre en primer lugar el <Text style={{ fontWeight: '700' }}>Archivo de Planta Oficial</Text> para crear/actualizar la estructura de las plazas. Luego carga el <Text style={{ fontWeight: '700' }}>Archivo Planta Perno</Text> para inyectar la seguridad social y nómina sobre las personas vinculadas.
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        borderColor: THEME.slate200,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        padding: 16,
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800, marginBottom: 6 }}>
+                        ¿Necesitas una plantilla lista para usar?
+                      </Text>
+                      <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 12 }}>
+                        Descarga los archivos oficiales directamente con las columnas formateadas, fórmulas y registros institucionales de ejemplo:
+                      </Text>
+                      <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 10 }}>
+                        <Pressable
+                          onPress={handleDescargarPlantillaPlanta}
+                          style={{
+                            flex: 1,
+                            backgroundColor: THEME.white,
+                            borderWidth: 1,
+                            borderColor: THEME.marca600,
+                            paddingVertical: 10,
+                            paddingHorizontal: 14,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          <Ionicons name="document-text-outline" size={18} color={THEME.marca700} />
+                          <Text style={{ color: THEME.marca700, fontSize: 12.5, fontWeight: '600' }}>
+                            Plantilla Planta Oficial (.xlsx)
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={handleDescargarPlantillaPerno}
+                          style={{
+                            flex: 1,
+                            backgroundColor: THEME.white,
+                            borderWidth: 1,
+                            borderColor: THEME.emeraldText,
+                            paddingVertical: 10,
+                            paddingHorizontal: 14,
+                            borderRadius: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          <Ionicons name="people-outline" size={18} color={THEME.emeraldText} />
+                          <Text style={{ color: THEME.emeraldText, fontSize: 12.5, fontWeight: '600' }}>
+                            Plantilla Planta Perno (.xlsx)
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
           )}
