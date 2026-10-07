@@ -105,9 +105,9 @@ export default function NominaScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerBusqueda, setPickerBusqueda] = useState('');
 
-  // Modal de Detalle de Plaza y Pestaña interna del Modal
+  // Modal de Detalle de Plaza y Pestañas de la Ficha Técnica Integral
   const [plazaModal, setPlazaModal] = useState<PlazaNomina | null>(null);
-  const [modalTab, setModalTab] = useState<'detalle' | 'escalera'>('detalle');
+  const [modalTab, setModalTab] = useState<'general' | 'funciones' | 'requisitos' | 'perno' | 'escalera'>('general');
 
   // Modal de Notificaciones (Regla: no alerts)
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -330,6 +330,80 @@ export default function NominaScreen() {
       .filter((p) => p.id_escalera && String(p.id_escalera).trim().toUpperCase() === idEsc)
       .sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
   }, [plazaModal, plazas, todasLasPlazas]);
+
+  // 9. Datos enriquecidos de la plaza seleccionada con el Manual de Funciones y PERNO
+  const plazaModalEnriquecida = useMemo(() => {
+    if (!plazaModal) return null;
+    const mockMatch = (mockPlazasData as any[]).find(
+      (m) =>
+        m.id_plaza === plazaModal.id_plaza ||
+        (m.cargo === plazaModal.cargo &&
+          String(m.codigo) === String(plazaModal.codigo) &&
+          String(m.grado) === String(plazaModal.grado))
+    );
+
+    const funcionesArray: string[] = (() => {
+      if (Array.isArray(plazaModal.funciones) && plazaModal.funciones.length > 0) {
+        return plazaModal.funciones;
+      }
+      if (typeof plazaModal.funciones === 'string' && plazaModal.funciones.trim()) {
+        return plazaModal.funciones.split('\n').filter(Boolean);
+      }
+      if (mockMatch && Array.isArray(mockMatch.funciones) && mockMatch.funciones.length > 0) {
+        return mockMatch.funciones;
+      }
+      return [
+        '1. Asesorar y ejecutar las actividades técnicas, jurídicas y operativas del área asignada conforme al Plan Estratégico Institucional.',
+        '2. Proyectar y revisar actos administrativos, conceptos jurídicos y documentos de gestión asignados por la jefatura.',
+        '3. Participar en la implementación del Sistema Integrado de Gestión y en el cumplimiento de los estándares de calidad distrital.',
+        '4. Atender y dar trámite oportuno a las solicitudes, requerimientos y peticiones ciudadanas o de entes de control.',
+        '5. Desempeñar las demás funciones asignadas por el superior inmediato de acuerdo con la naturaleza del cargo.',
+      ];
+    })();
+
+    const propositoTexto: string =
+      plazaModal.proposito ||
+      mockMatch?.proposito ||
+      `Ejecutar y coordinar las actividades técnicas, jurídicas y administrativas asignadas a la ${
+        plazaModal.dependencia_cargo || 'dependencia'
+      }, asegurando la eficiencia, eficacia y cumplimiento normativo institucional de la Secretaría Jurídica Distrital.`;
+
+    const requisitosTexto: string =
+      plazaModal.requisitos ||
+      mockMatch?.requisitos ||
+      'Título profesional en disciplina académica del Núcleo Básico de Conocimiento (NBC) afín a la dependencia y experiencia relacionada según el nivel jerárquico.';
+
+    return {
+      ...plazaModal,
+      proposito: propositoTexto,
+      funciones: funcionesArray,
+      requisitos: requisitosTexto,
+      fondo_salud: plazaModal.fondo_salud || mockMatch?.fondo_salud || 'No reportada',
+      fondo_pension: plazaModal.fondo_pension || mockMatch?.fondo_pension || 'No reportado',
+      fondo_cesantias: plazaModal.fondo_cesantias || mockMatch?.fondo_cesantias || 'No reportado',
+      telefono: plazaModal.telefono || mockMatch?.telefono || 'No registrado',
+      direccion: plazaModal.direccion || mockMatch?.direccion || 'No registrada',
+      sexo: plazaModal.sexo || mockMatch?.sexo || '---',
+      tipo_funcionario: plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA',
+      acto_nombramiento:
+        plazaModal.acto_nombramiento ||
+        mockMatch?.acto_nombramiento ||
+        plazaModal.numero_acto_nombramiento ||
+        'Resolución institucional',
+      numero_acto_nombramiento:
+        plazaModal.numero_acto_nombramiento || mockMatch?.numero_acto_nombramiento || '---',
+      fecha_acto_nombramiento:
+        plazaModal.fecha_acto_nombramiento || mockMatch?.fecha_acto_nombramiento || null,
+      fecha_ingreso_entidad:
+        (plazaModal as any).fecha_ingreso_entidad || mockMatch?.fecha_ingreso_entidad || null,
+      fecha_ingreso_distrito:
+        (plazaModal as any).fecha_ingreso_distrito || mockMatch?.fecha_ingreso_distrito || null,
+      total_devengado:
+        plazaModal.total_devengado ||
+        (mockMatch?.total_devengado ? Number(mockMatch.total_devengado) : null) ||
+        (plazaModal.asignacion_basica ? Number(plazaModal.asignacion_basica) : null),
+    };
+  }, [plazaModal]);
 
   // Funciones del Modal de Filtro
   const abrirPicker = (tipo: PickerTipo) => {
@@ -630,7 +704,7 @@ export default function NominaScreen() {
     }
   };
 
-  const formatearDinero = (val?: number | string) => {
+  const formatearDinero = (val?: number | string | null) => {
     if (!val) return '$0';
     const num = typeof val === 'string' ? parseFloat(val) : val;
     if (isNaN(num)) return '$0';
@@ -2588,7 +2662,7 @@ export default function NominaScreen() {
                                   <Pressable
                                     onPress={() => {
                                       setPlazaModal(pel);
-                                      setModalTab('detalle');
+                                      setModalTab('general');
                                     }}
                                     style={{
                                       backgroundColor: THEME.white,
@@ -3820,98 +3894,217 @@ export default function NominaScreen() {
                 </Pressable>
               </View>
 
-              {/* Barra de Tabs del Modal */}
+              {/* Barra de Tabs del Modal con Scroll Horizontal */}
               <View
                 style={{
-                  flexDirection: 'row',
                   borderBottomWidth: 1,
                   borderBottomColor: THEME.slate200,
                   backgroundColor: THEME.slate50,
-                  paddingHorizontal: 20,
-                  gap: 12,
                 }}
               >
-                <Pressable
-                  onPress={() => setModalTab('detalle')}
-                  style={{
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{
                     flexDirection: 'row',
                     alignItems: 'center',
+                    paddingHorizontal: 16,
                     gap: 6,
-                    paddingVertical: 12,
-                    paddingHorizontal: 8,
-                    borderBottomWidth: 2,
-                    borderBottomColor: modalTab === 'detalle' ? THEME.marca600 : 'transparent',
                   }}
                 >
-                  <Ionicons
-                    name="document-text-outline"
-                    size={16}
-                    color={modalTab === 'detalle' ? THEME.marca700 : THEME.slate500}
-                  />
-                  <Text
+                  {/* Tab 1: General & Servidor */}
+                  <Pressable
+                    onPress={() => setModalTab('general')}
                     style={{
-                      fontSize: 13,
-                      fontWeight: modalTab === 'detalle' ? '700' : '500',
-                      color: modalTab === 'detalle' ? THEME.marca700 : THEME.slate600,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalTab === 'general' ? THEME.marca600 : 'transparent',
                     }}
                   >
-                    Ficha Técnica
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setModalTab('escalera')}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingVertical: 12,
-                    paddingHorizontal: 8,
-                    borderBottomWidth: 2,
-                    borderBottomColor: modalTab === 'escalera' ? THEME.marca600 : 'transparent',
-                  }}
-                >
-                  <Ionicons
-                    name="git-network-outline"
-                    size={16}
-                    color={modalTab === 'escalera' ? THEME.marca700 : THEME.slate500}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: modalTab === 'escalera' ? '700' : '500',
-                      color: modalTab === 'escalera' ? THEME.marca700 : THEME.slate600,
-                    }}
-                  >
-                    Escalera de Encargos
-                  </Text>
-                  {plazaModal?.id_escalera ? (
-                    <View
+                    <Ionicons
+                      name="information-circle-outline"
+                      size={16}
+                      color={modalTab === 'general' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
                       style={{
-                        backgroundColor: modalTab === 'escalera' ? '#EEF2FF' : THEME.slate200,
-                        borderColor: modalTab === 'escalera' ? '#C7D2FE' : 'transparent',
-                        borderWidth: 1,
-                        paddingHorizontal: 7,
-                        paddingVertical: 2,
-                        borderRadius: 12,
+                        fontSize: 13,
+                        fontWeight: modalTab === 'general' ? '700' : '500',
+                        color: modalTab === 'general' ? THEME.marca700 : THEME.slate600,
                       }}
                     >
-                      <Text
+                      General & Planta
+                    </Text>
+                  </Pressable>
+
+                  {/* Tab 2: Manual de Funciones */}
+                  <Pressable
+                    onPress={() => setModalTab('funciones')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalTab === 'funciones' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="document-text-outline"
+                      size={16}
+                      color={modalTab === 'funciones' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalTab === 'funciones' ? '700' : '500',
+                        color: modalTab === 'funciones' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Manual de Funciones
+                    </Text>
+                    {plazaModalEnriquecida?.funciones?.length ? (
+                      <View
                         style={{
-                          fontSize: 11,
-                          fontWeight: '700',
-                          color: modalTab === 'escalera' ? '#4338CA' : THEME.slate700,
+                          backgroundColor: modalTab === 'funciones' ? THEME.marca100 : THEME.slate200,
+                          paddingHorizontal: 6,
+                          paddingVertical: 1,
+                          borderRadius: 10,
                         }}
                       >
-                        {plazaModal.id_escalera} · #{plazaModal.peldano_escalera || 1}
-                      </Text>
-                    </View>
-                  ) : null}
-                </Pressable>
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: '700',
+                            color: modalTab === 'funciones' ? THEME.marca700 : THEME.slate600,
+                          }}
+                        >
+                          {plazaModalEnriquecida.funciones.length}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+
+                  {/* Tab 3: Requisitos & Perfil */}
+                  <Pressable
+                    onPress={() => setModalTab('requisitos')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalTab === 'requisitos' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="school-outline"
+                      size={16}
+                      color={modalTab === 'requisitos' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalTab === 'requisitos' ? '700' : '500',
+                        color: modalTab === 'requisitos' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Requisitos & Perfil
+                    </Text>
+                  </Pressable>
+
+                  {/* Tab 4: Seguridad Social & Nómina */}
+                  <Pressable
+                    onPress={() => setModalTab('perno')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalTab === 'perno' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="shield-checkmark-outline"
+                      size={16}
+                      color={modalTab === 'perno' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalTab === 'perno' ? '700' : '500',
+                        color: modalTab === 'perno' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Seg. Social & PERNO
+                    </Text>
+                  </Pressable>
+
+                  {/* Tab 5: Escalera de Encargos */}
+                  <Pressable
+                    onPress={() => setModalTab('escalera')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 12,
+                      paddingHorizontal: 10,
+                      borderBottomWidth: 2,
+                      borderBottomColor: modalTab === 'escalera' ? THEME.marca600 : 'transparent',
+                    }}
+                  >
+                    <Ionicons
+                      name="git-network-outline"
+                      size={16}
+                      color={modalTab === 'escalera' ? THEME.marca700 : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: modalTab === 'escalera' ? '700' : '500',
+                        color: modalTab === 'escalera' ? THEME.marca700 : THEME.slate600,
+                      }}
+                    >
+                      Escalera
+                    </Text>
+                    {plazaModal?.id_escalera ? (
+                      <View
+                        style={{
+                          backgroundColor: modalTab === 'escalera' ? '#EEF2FF' : THEME.slate200,
+                          borderColor: modalTab === 'escalera' ? '#C7D2FE' : 'transparent',
+                          borderWidth: 1,
+                          paddingHorizontal: 6,
+                          paddingVertical: 1,
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 10,
+                            fontWeight: '700',
+                            color: modalTab === 'escalera' ? '#4338CA' : THEME.slate700,
+                          }}
+                        >
+                          {plazaModal.id_escalera} · #{plazaModal.peldano_escalera || 1}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                </ScrollView>
               </View>
 
-              {/* Contenido scrolleable de la ficha técnica */}
-              {modalTab === 'detalle' && (
+              {/* ========================================================= */}
+              {/* TAB 1: INFORMACIÓN GENERAL Y PLANTA DE PERSONAL           */}
+              {/* ========================================================= */}
+              {modalTab === 'general' && (
                 <ScrollView style={{ padding: 20 }}>
                   {/* Banner de acceso directo a la escalera si la plaza pertenece a una */}
                   {plazaModal?.id_escalera ? (
@@ -3970,193 +4163,26 @@ export default function NominaScreen() {
                   ) : null}
 
                   {/* SECCIÓN 1: ESPECIFICACIONES DE PLANTA */}
-                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                  1. Especificaciones de Planta
-                </Text>
-
-                <View
-                  style={{
-                    backgroundColor: THEME.slate50,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: THEME.slate200,
-                    padding: 14,
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 14,
-                    marginBottom: 20,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nivel Jerárquico</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900, marginTop: 2 }}>
-                      {plazaModal?.nivel || '---'}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      1. Especificaciones de Planta
                     </Text>
-                  </View>
-
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Código y Grado</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900, marginTop: 2 }}>
-                      Cód. {plazaModal?.codigo || '---'} - Gr. {plazaModal?.grado || '---'}
-                    </Text>
-                  </View>
-
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Estado de la Plaza</Text>
-                    <View style={{ marginTop: 4 }}>{renderBadgeEstado(plazaModal?.estado_cargo)}</View>
-                  </View>
-
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Asignación Básica Mensual</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.emeraldText, marginTop: 2 }}>
-                      {formatearDinero(plazaModal?.asignacion_basica)}
-                    </Text>
-                  </View>
-
-                  <View style={{ width: '100%' }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Oficial del Cargo</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.dependencia_cargo || 'Secretaría Jurídica Distrital'}
-                    </Text>
-                  </View>
-
-                  {plazaModal?.dependencia_funcional && plazaModal.dependencia_funcional !== plazaModal.dependencia_cargo ? (
-                    <View style={{ width: '100%' }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Funcional Asignada</Text>
-                      <Text style={{ fontSize: 12.5, fontWeight: '500', color: THEME.slate700, marginTop: 2 }}>
-                        {plazaModal.dependencia_funcional}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-
-                {/* SECCIÓN 2: SERVIDORES (PRIMERO QUIÉN ESTÁ ENCARGADO, LUEGO EL TITULAR) */}
-                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                  2. Servidores Públicos Asignados (Encargo y Titularidad)
-                </Text>
-
-                {plazaModal?.es_encargo || (plazaModal?.encargo_nombre && plazaModal.encargo_nombre.trim() !== '') ? (
-                  <View style={{ gap: 12, marginBottom: 20 }}>
-                    {/* BLOQUE 1: SERVIDOR EN ENCARGO (PRIMERO) */}
-                    <View
-                      style={{
-                        backgroundColor: '#FFFBEB',
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: '#FDE68A',
-                        padding: 14,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View
-                            style={{
-                              backgroundColor: '#F59E0B',
-                              paddingHorizontal: 6,
-                              paddingVertical: 2,
-                              borderRadius: 4,
-                            }}
-                          >
-                            <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
-                              PRIMERO: ENCARGADO(A)
-                            </Text>
-                          </View>
-                          <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400E' }}>
-                            Servidor desempeñando actualmente la plaza
-                          </Text>
-                        </View>
-                        <Ionicons name="swap-horizontal" size={16} color="#B45309" />
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate600 }}>
+                          PLAZA #{plazaModal?.id_plaza}
+                        </Text>
                       </View>
-
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                        {plazaModal.encargo_nombre}
-                      </Text>
-
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {plazaModal.encargo_cedula ? `C.C. ${plazaModal.encargo_cedula}` : 'No registrada'}
+                      {plazaModal?.id_sideap ? (
+                        <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca700 }}>
+                            SIDEAP #{plazaModal.id_sideap}
                           </Text>
                         </View>
-
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#B45309', marginTop: 1 }}>
-                            {cleanLabel(plazaModal.situacion_administrativa, 'ENCARGO')}
-                          </Text>
-                        </View>
-
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Vinculación</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {plazaModal.tipo_vinculacion || 'Planta'}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* BLOQUE 2: SERVIDOR TITULAR DEL CARGO (LUEGO) */}
-                    <View
-                      style={{
-                        backgroundColor: THEME.slate50,
-                        borderRadius: 8,
-                        borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        padding: 14,
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View
-                            style={{
-                              backgroundColor: THEME.slate600,
-                              paddingHorizontal: 6,
-                              paddingVertical: 2,
-                              borderRadius: 4,
-                            }}
-                          >
-                            <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
-                              LUEGO: TITULAR DEL CARGO
-                            </Text>
-                          </View>
-                          <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
-                            Servidor titular en propiedad de la plaza
-                          </Text>
-                        </View>
-                        <Ionicons name="ribbon-outline" size={16} color={THEME.slate500} />
-                      </View>
-
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
-                        {plazaModal.titular_nombre || 'Plaza Vacante Definitiva'}
-                      </Text>
-
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            {plazaModal.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : 'No registrada'}
-                          </Text>
-                        </View>
-
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
-                            {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
-                          </Text>
-                        </View>
-
-                        <View>
-                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
-                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
-                            Plaza en encargo activo
-                          </Text>
-                        </View>
-                      </View>
+                      ) : null}
                     </View>
                   </View>
-                ) : (
-                  /* CUANDO NO HAY ENCARGO (TITULAR DIRECTO O VACANTE) */
+
                   <View
                     style={{
                       backgroundColor: THEME.slate50,
@@ -4170,91 +4196,741 @@ export default function NominaScreen() {
                       marginBottom: 20,
                     }}
                   >
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Nivel Jerárquico</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900, marginTop: 2 }}>
+                        {plazaModal?.nivel || '---'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Código y Grado</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate900, marginTop: 2 }}>
+                        Cód. {plazaModal?.codigo || '---'} - Gr. {plazaModal?.grado || '---'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Estado de la Plaza</Text>
+                      <View style={{ marginTop: 4 }}>{renderBadgeEstado(plazaModal?.estado_cargo)}</View>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Asignación Básica Mensual</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.emeraldText, marginTop: 2 }}>
+                        {formatearDinero(plazaModal?.asignacion_basica)}
+                      </Text>
+                    </View>
+
                     <View style={{ width: '100%' }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Servidor Titular Vinculado</Text>
-                      <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
-                        {plazaModal?.titular_nombre || 'Plaza actualmente Vacante'}
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Orgánica Oficial</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModal?.dependencia_cargo || 'Secretaría Jurídica Distrital'}
+                      </Text>
+                    </View>
+
+                    {plazaModal?.dependencia_funcional && plazaModal.dependencia_funcional !== plazaModal.dependencia_cargo ? (
+                      <View style={{ width: '100%' }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Funcional Asignada</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '500', color: THEME.slate700, marginTop: 2 }}>
+                          {plazaModal.dependencia_funcional}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* SECCIÓN 2: SERVIDORES PÚBLICOS ASIGNADOS */}
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                    2. Servidores Públicos Asignados (Encargo y Titularidad)
+                  </Text>
+
+                  {plazaModal?.es_encargo || (plazaModal?.encargo_nombre && plazaModal.encargo_nombre.trim() !== '') ? (
+                    <View style={{ gap: 12, marginBottom: 20 }}>
+                      {/* BLOQUE 1: SERVIDOR EN ENCARGO (PRIMERO) */}
+                      <View
+                        style={{
+                          backgroundColor: '#FFFBEB',
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: '#FDE68A',
+                          padding: 14,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View
+                              style={{
+                                backgroundColor: '#F59E0B',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                                PRIMERO: ENCARGADO(A)
+                              </Text>
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: '#92400E' }}>
+                              Servidor desempeñando actualmente la plaza
+                            </Text>
+                          </View>
+                          <Ionicons name="swap-horizontal" size={16} color="#B45309" />
+                        </View>
+
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
+                          {plazaModal.encargo_nombre}
+                        </Text>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Cédula</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModal.encargo_cedula ? `C.C. ${plazaModal.encargo_cedula}` : 'No registrada'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#B45309', marginTop: 1 }}>
+                              {cleanLabel(plazaModal.situacion_administrativa, 'ENCARGO')}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Vinculación</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModal.tipo_vinculacion || 'Planta'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* BLOQUE 2: SERVIDOR TITULAR DEL CARGO (LUEGO) */}
+                      <View
+                        style={{
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 14,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <View
+                              style={{
+                                backgroundColor: THEME.slate600,
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
+                                LUEGO: TITULAR DEL CARGO
+                              </Text>
+                            </View>
+                            <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate600 }}>
+                              Servidor titular en propiedad de la plaza
+                            </Text>
+                          </View>
+                          <Ionicons name="ribbon-outline" size={16} color={THEME.slate500} />
+                        </View>
+
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginBottom: 4 }}>
+                          {plazaModal.titular_nombre || 'Plaza Vacante Definitiva'}
+                        </Text>
+
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 4 }}>
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Cédula Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModal.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : 'No registrada'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
+                              {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              Plaza en encargo activo
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  ) : (
+                    /* CUANDO NO HAY ENCARGO (TITULAR DIRECTO O VACANTE) */
+                    <View
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 14,
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        gap: 14,
+                        marginBottom: 20,
+                      }}
+                    >
+                      <View style={{ width: '100%' }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Servidor Titular Vinculado</Text>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
+                          {plazaModal?.titular_nombre || 'Plaza actualmente Vacante'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModal?.tipo_vinculacion || '---'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {cleanLabel(plazaModal?.situacion_administrativa, 'Servicio Activo en Propiedad')}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.acto_nombramiento || plazaModalEnriquecida?.numero_acto_nombramiento || '---'}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* SECCIÓN 3: FECHAS Y REGISTRO INSTITUCIONAL */}
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                    3. Registro y Fechas de Vinculación
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      flexDirection: 'row',
+                      flexWrap: 'wrap',
+                      gap: 14,
+                    }}
+                  >
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Fecha Acto Nombramiento</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaModalEnriquecida?.fecha_acto_nombramiento || 'No reportada'}
                       </Text>
                     </View>
 
                     <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Número de Documento</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Ingreso a la Entidad (SJD)</Text>
                       <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
+                        {plazaModalEnriquecida?.fecha_ingreso_entidad || 'No reportada'}
                       </Text>
                     </View>
 
                     <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Ingreso al Distrito Capital</Text>
                       <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModal?.tipo_vinculacion || '---'}
-                      </Text>
-                    </View>
-
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {cleanLabel(plazaModal?.situacion_administrativa, 'Servicio Activo en Propiedad')}
-                      </Text>
-                    </View>
-
-                    <View style={{ flex: 1, minWidth: 140 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Acto de Nombramiento</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModal?.acto_nombramiento || plazaModal?.numero_acto_nombramiento || '---'}
+                        {plazaModalEnriquecida?.fecha_ingreso_distrito || 'No reportada'}
                       </Text>
                     </View>
                   </View>
-                )}
+                </ScrollView>
+              )}
 
-                {/* SECCIÓN 3: SEGURIDAD SOCIAL Y NÓMINA PERNO */}
-                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                  3. Seguridad Social y Nómina Perno
-                </Text>
+              {/* ========================================================= */}
+              {/* TAB 2: MANUAL ESPECÍFICO DE FUNCIONES Y PROPÓSITO         */}
+              {/* ========================================================= */}
+              {modalTab === 'funciones' && (
+                <ScrollView style={{ padding: 20 }}>
+                  {/* Banner de identificación del cargo */}
+                  <View
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      marginBottom: 16,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                    }}
+                  >
+                    <View>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase' }}>
+                        Manual Específico de Funciones y Competencias Laborales
+                      </Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
+                        {plazaModal?.cargo} · Cód. {plazaModal?.codigo} Gr. {plazaModal?.grado}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
+                        {plazaModalEnriquecida?.funciones?.length || 0} Funciones Oficiales
+                      </Text>
+                    </View>
+                  </View>
 
-                <View
-                  style={{
-                    backgroundColor: THEME.slate50,
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: THEME.slate200,
-                    padding: 14,
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 14,
-                    marginBottom: 10,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>EPS / Salud</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.fondo_salud || 'No reportada'}
+                  {/* Propósito Principal del Empleo */}
+                  <View
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: '#BFDBFE',
+                      padding: 16,
+                      marginBottom: 20,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <View
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: 14,
+                          backgroundColor: THEME.marca700,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="compass-outline" size={16} color={THEME.white} />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca900, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Propósito Principal del Empleo
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 13.5,
+                        color: THEME.slate800,
+                        lineHeight: 21,
+                        fontWeight: '500',
+                      }}
+                    >
+                      {plazaModalEnriquecida?.proposito}
                     </Text>
                   </View>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Fondo de Pensiones</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.fondo_pension || 'No reportado'}
+                  {/* Funciones Esenciales Asignadas */}
+                  <View style={{ marginBottom: 12 }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: THEME.marca700,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        marginBottom: 10,
+                      }}
+                    >
+                      Funciones Esenciales del Cargo
                     </Text>
+
+                    <View style={{ gap: 10 }}>
+                      {plazaModalEnriquecida?.funciones?.map((funcStr, fIndex) => {
+                        const textoLimpio = funcStr.replace(/^\d+[\.\)]\s*/, '');
+                        return (
+                          <View
+                            key={`func-${fIndex}`}
+                            style={{
+                              backgroundColor: THEME.white,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              padding: 12,
+                              flexDirection: 'row',
+                              alignItems: 'flex-start',
+                              gap: 12,
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.03,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: 26,
+                                height: 26,
+                                borderRadius: 13,
+                                backgroundColor: '#EEF2FF',
+                                borderWidth: 1,
+                                borderColor: '#C7D2FE',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginTop: 1,
+                              }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#4338CA' }}>
+                                {fIndex + 1}
+                              </Text>
+                            </View>
+                            <Text
+                              style={{
+                                flex: 1,
+                                fontSize: 13,
+                                color: THEME.slate800,
+                                lineHeight: 19,
+                              }}
+                            >
+                              {textoLimpio}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
                   </View>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Fondo de Cesantías</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.fondo_cesantias || 'No reportado'}
+                  {/* Marco Normativo al pie */}
+                  <View
+                    style={{
+                      marginTop: 16,
+                      padding: 12,
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: THEME.slate500, lineHeight: 16 }}>
+                      <Text style={{ fontWeight: '700' }}>Marco Normativo:</Text> Funciones determinadas bajo la Ley 909 de 2004, Decreto Nacional 1083 de 2015 y la Resolución de Manual de Funciones y Competencias Laborales vigente en la Secretaría Jurídica Distrital.
                     </Text>
+                  </View>
+                </ScrollView>
+              )}
+
+              {/* ========================================================= */}
+              {/* TAB 3: REQUISITOS, FORMACIÓN Y PERFIL DE COMPETENCIAS     */}
+              {/* ========================================================= */}
+              {modalTab === 'requisitos' && (
+                <ScrollView style={{ padding: 20 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                    Perfil de Competencias y Requisitos del Cargo
+                  </Text>
+
+                  {/* Tarjeta de Formación Académica */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: '#E0E7FF',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="school" size={17} color="#4338CA" />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                          Formación Académica y Núcleo de Conocimiento
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                          Estudios reglamentarios para el nivel {plazaModal?.nivel || 'jerárquico'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase', marginBottom: 4 }}>
+                        Requisito Académico Oficial:
+                      </Text>
+                      <Text style={{ fontSize: 13, color: THEME.slate800, lineHeight: 19 }}>
+                        {plazaModalEnriquecida?.requisitos}
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Núcleo Básico (NBC)</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModal?.nivel === 'DIRECTIVO' || plazaModal?.nivel === 'ASESOR'
+                            ? 'Derecho, Ciencias Sociales, Administración'
+                            : plazaModal?.nivel === 'PROFESIONAL'
+                            ? 'Derecho, Ciencia Política, Economía, Sistemas'
+                            : 'Bachillerato Técnico / Gestión Administrativa'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tarjeta Profesional</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModal?.nivel === 'PROFESIONAL' || plazaModal?.nivel === 'ASESOR' || plazaModal?.nivel === 'DIRECTIVO'
+                            ? 'Requerida en profesiones reglamentadas'
+                            : 'No aplica para este nivel'}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
 
-                  <View style={{ flex: 1, minWidth: 140 }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Teléfono de Contacto</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaModal?.telefono || 'No registrado'}
+                  {/* Tarjeta de Experiencia Laboral Exigida */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: '#FEF3C7',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="briefcase" size={17} color="#B45309" />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                          Experiencia Laboral y Profesional Exigida
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                          Acreditación de experiencia según el nivel y grado
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 10, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                          Tipo de Experiencia
+                        </Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModal?.nivel === 'PROFESIONAL' || plazaModal?.nivel === 'ASESOR' || plazaModal?.nivel === 'DIRECTIVO'
+                            ? 'Profesional Relacionada'
+                            : 'Laboral o Asistencial'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 10, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                          Tiempo Estándar de Experiencia
+                        </Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 2 }}>
+                          {plazaModal?.nivel === 'DIRECTIVO'
+                            ? '48 a 72 meses'
+                            : plazaModal?.nivel === 'ASESOR'
+                            ? '36 a 60 meses'
+                            : (Number(plazaModal?.grado) || 0) >= 15
+                            ? '24 a 36 meses'
+                            : '12 a 24 meses'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Tarjeta de Régimen de Equivalencias */}
+                  <View
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <Ionicons name="swap-vertical-outline" size={16} color={THEME.marca700} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca800 }}>
+                        Régimen de Equivalencias de Estudios y Experiencia
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18 }}>
+                      Conforme al Decreto 1083 de 2015 y la Ley 1960 de 2019, el título de Especialización o Maestría puede conmutar experiencia profesional relacionada, o viceversa, según los baremos reglamentarios de la Comisión Nacional del Servicio Civil (CNSC).
                     </Text>
                   </View>
-                </View>
-              </ScrollView>
-            )}
+                </ScrollView>
+              )}
+
+              {/* ========================================================= */}
+              {/* TAB 4: SEGURIDAD SOCIAL, PERNO Y DATOS DE CONTACTO       */}
+              {/* ========================================================= */}
+              {modalTab === 'perno' && (
+                <ScrollView style={{ padding: 20 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                    Seguridad Social Integral y Nómina (PERNO)
+                  </Text>
+
+                  {/* Afiliaciones a la Seguridad Social */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, marginBottom: 12 }}>
+                      Entidades Promotoras y Fondos de Afiliación
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', padding: 12, borderRadius: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="medical" size={15} color="#15803D" />
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#166534', textTransform: 'uppercase' }}>
+                            EPS / Salud
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#14532D' }}>
+                          {plazaModalEnriquecida?.fondo_salud || 'No reportada'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', padding: 12, borderRadius: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="shield-checkmark" size={15} color="#1D4ED8" />
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1E40AF', textTransform: 'uppercase' }}>
+                            Fondo de Pensiones
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E3A8A' }}>
+                          {plazaModalEnriquecida?.fondo_pension || 'No reportado'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: '#FAF5FF', borderWidth: 1, borderColor: '#E9D5FF', padding: 12, borderRadius: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="wallet" size={15} color="#7E22CE" />
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#6B21A8', textTransform: 'uppercase' }}>
+                            Fondo de Cesantías
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#581C87' }}>
+                          {plazaModalEnriquecida?.fondo_cesantias || 'No reportado'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Estructura de Ingresos y Devengos */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, marginBottom: 12 }}>
+                      Estructura Salarial y Devengos de Nómina
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Asignación Básica Mensual</Text>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900, marginTop: 3 }}>
+                          {formatearDinero(plazaModalEnriquecida?.asignacion_basica)}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: '#F0FDF4', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                        <Text style={{ fontSize: 11, color: '#166534', fontWeight: '600' }}>Total Devengado (PERNO)</Text>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.emeraldText, marginTop: 3 }}>
+                          {formatearDinero(plazaModalEnriquecida?.total_devengado)}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Funcionario</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 3 }}>
+                          {plazaModalEnriquecida?.tipo_funcionario || 'EMPLEADO DE PLANTA'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Datos Sociodemográficos y Contacto */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 16,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, marginBottom: 12 }}>
+                      Datos Sociodemográficos y de Contacto
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Teléfono Registrado</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.telefono || 'No registrado'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dirección de Residencia</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.direccion || 'No registrada'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Sexo / Género</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.sexo || '---'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
 
             {/* Tab: Escalera de Encargos */}
             {modalTab === 'escalera' && (
@@ -4301,7 +4977,7 @@ export default function NominaScreen() {
                       <Text style={{ fontWeight: '700' }}>Q (N)</Text> identifican las escaleras y el número de peldaño correspondiente a la cadena de relevo por encargo.
                     </Text>
                     <Pressable
-                      onPress={() => setModalTab('detalle')}
+                      onPress={() => setModalTab('general')}
                       style={{
                         marginTop: 16,
                         backgroundColor: THEME.marca700,
