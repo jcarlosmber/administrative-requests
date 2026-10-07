@@ -1026,7 +1026,7 @@ export default function TeletrabajoScreen() {
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1 }}>
         {/* ================================================================= */}
-        {/* CABECERA INSTITUCIONAL (bg-marca-900 estilo supervision)         */}
+        {/* CABECERA INSTITUCIONAL (bg-marca-900 idéntica a Nómina)           */}
         {/* ================================================================= */}
         <View
           style={{
@@ -1035,13 +1035,12 @@ export default function TeletrabajoScreen() {
             borderBottomColor: 'rgba(255, 255, 255, 0.1)',
             paddingHorizontal: isDesktop ? 32 : 16,
             paddingVertical: 14,
+            width: '100%',
           }}
         >
           <View
             style={{
-              maxWidth: 1440,
               width: '100%',
-              marginHorizontal: 'auto',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'space-between',

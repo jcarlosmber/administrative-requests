@@ -79,7 +79,7 @@ export default function NominaScreen() {
   const isTablet = width >= 640;
 
   // Estados principales
-  const [tabActiva, setTabActiva] = useState<'plazas' | 'estructura' | 'archivos'>('plazas');
+  const [tabActiva, setTabActiva] = useState<'plazas' | 'escaleras' | 'estructura' | 'archivos'>('plazas');
   const [cargando, setCargando] = useState(true);
   const [plazas, setPlazas] = useState<PlazaNomina[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasNomina | null>(null);
@@ -93,6 +93,7 @@ export default function NominaScreen() {
   const [filtroSituacion, setFiltroSituacion] = useState('');
   const [filtroSideap, setFiltroSideap] = useState('');
   const [filtroPerno, setFiltroPerno] = useState('');
+  const [filtroEscalera, setFiltroEscalera] = useState('');
 
   const [nivelSeleccionado, setNivelSeleccionado] = useState('TODOS');
   const [estadoSeleccionado, setEstadoSeleccionado] = useState('TODOS');
@@ -104,8 +105,9 @@ export default function NominaScreen() {
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerBusqueda, setPickerBusqueda] = useState('');
 
-  // Modal de Detalle de Plaza
+  // Modal de Detalle de Plaza y Pestaña interna del Modal
   const [plazaModal, setPlazaModal] = useState<PlazaNomina | null>(null);
+  const [modalTab, setModalTab] = useState<'detalle' | 'escalera'>('detalle');
 
   // Modal de Notificaciones (Regla: no alerts)
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -132,6 +134,13 @@ export default function NominaScreen() {
     setInfoModalTipo(tipo);
     setInfoModalAdvertencias(advertencias);
     setInfoModalVisible(true);
+  };
+
+  const cleanLabel = (val?: string | null, fallback = '') => {
+    if (!val) return fallback;
+    const s = String(val).trim();
+    if (!s || s.toLowerCase().includes('[object')) return fallback;
+    return s;
   };
 
   const cargarDatos = async () => {
@@ -289,6 +298,38 @@ export default function NominaScreen() {
       }))
       .sort((a, b) => Number(a.valor) - Number(b.valor));
   }, [todasLasPlazas]);
+
+  // 7. Lista agrupada de todas las escaleras de encargo
+  const todasLasEscaleras = useMemo(() => {
+    const fuente = plazas.length > 0 ? plazas : todasLasPlazas;
+    const map = new Map<string, PlazaNomina[]>();
+    fuente.forEach((p) => {
+      if (p.id_escalera && String(p.id_escalera).trim()) {
+        const key = String(p.id_escalera).trim().toUpperCase();
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(p);
+      }
+    });
+
+    const lista: { id_escalera: string; peldanos: PlazaNomina[] }[] = [];
+    map.forEach((peldanos, id_escalera) => {
+      peldanos.sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+      lista.push({ id_escalera, peldanos });
+    });
+
+    lista.sort((a, b) => a.id_escalera.localeCompare(b.id_escalera, undefined, { numeric: true }));
+    return lista;
+  }, [plazas, todasLasPlazas]);
+
+  // 8. Peldaños de la escalera para el modal de detalle
+  const peldanosEscaleraModal = useMemo(() => {
+    if (!plazaModal?.id_escalera) return [];
+    const idEsc = String(plazaModal.id_escalera).trim().toUpperCase();
+    const fuente = plazas.length > 0 ? plazas : todasLasPlazas;
+    return fuente
+      .filter((p) => p.id_escalera && String(p.id_escalera).trim().toUpperCase() === idEsc)
+      .sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+  }, [plazaModal, plazas, todasLasPlazas]);
 
   // Funciones del Modal de Filtro
   const abrirPicker = (tipo: PickerTipo) => {
@@ -833,7 +874,7 @@ export default function NominaScreen() {
             </Text>
             <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
               {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}
-              {p.situacion_titular || p.tipo_vinculacion || 'En Propiedad'}
+              {cleanLabel(p.situacion_titular, p.tipo_vinculacion || 'En Propiedad')}
             </Text>
           </View>
         );
@@ -866,13 +907,33 @@ export default function NominaScreen() {
                     ENCARGADO(A)
                   </Text>
                 </View>
+                {p.id_escalera ? (
+                  <Pressable
+                    onPress={() => {
+                      setPlazaModal(p);
+                      setModalTab('escalera');
+                    }}
+                    style={{
+                      backgroundColor: '#EEF2FF',
+                      borderColor: '#C7D2FE',
+                      borderWidth: 1,
+                      paddingHorizontal: 5,
+                      paddingVertical: 1,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Text style={{ color: '#4338CA', fontSize: 9, fontWeight: '800' }}>
+                      🪜 {p.id_escalera} #{p.peldano_escalera || 1}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, flexShrink: 1 }}>
                   {p.encargo_nombre}
                 </Text>
               </View>
               {p.encargo_cedula ? (
                 <Text style={{ fontSize: 10, color: THEME.slate500 }}>
-                  C.C. {p.encargo_cedula} • {p.situacion_administrativa || 'Encargo'}
+                  C.C. {p.encargo_cedula} • {cleanLabel(p.situacion_administrativa, 'Encargo')}
                 </Text>
               ) : null}
             </View>
@@ -1372,7 +1433,46 @@ export default function NominaScreen() {
               </View>
             </Pressable>
 
-            {/* Pestaña 2: Estructura por Niveles */}
+            {/* Pestaña 2: Escaleras de Encargos */}
+            <Pressable
+              onPress={() => setTabActiva('escaleras')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 11,
+                paddingHorizontal: 16,
+                borderBottomWidth: 2,
+                borderBottomColor: tabActiva === 'escaleras' ? THEME.marca600 : 'transparent',
+                marginBottom: -1,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '500',
+                  color: tabActiva === 'escaleras' ? THEME.marca700 : THEME.slate500,
+                }}
+              >
+                Escaleras de Encargos
+              </Text>
+              {todasLasEscaleras.length > 0 && (
+                <View
+                  style={{
+                    marginLeft: 8,
+                    backgroundColor: '#FEF3C7',
+                    borderRadius: 9999,
+                    paddingHorizontal: 7,
+                    paddingVertical: 2,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
+                    {todasLasEscaleras.length}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+
+            {/* Pestaña 3: Estructura por Niveles */}
             <Pressable
               onPress={() => setTabActiva('estructura')}
               style={{
@@ -2145,7 +2245,7 @@ export default function NominaScreen() {
                                 </Text>
                               </View>
                               <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
-                                C.C. {p.encargo_cedula || '---'} • {p.situacion_administrativa || 'Encargo'}
+                                C.C. {p.encargo_cedula || '---'} • {cleanLabel(p.situacion_administrativa, 'Encargo')}
                               </Text>
 
                               {/* Titular */}
@@ -2156,7 +2256,7 @@ export default function NominaScreen() {
                                 </Text>
                                 {p.situacion_titular ? (
                                   <Text style={{ fontSize: 9.5, color: THEME.slate400, fontStyle: 'italic' }}>
-                                    ({p.situacion_titular})
+                                    ({cleanLabel(p.situacion_titular, '')})
                                   </Text>
                                 ) : null}
                               </View>
@@ -2172,7 +2272,7 @@ export default function NominaScreen() {
                                 </Text>
                               </View>
                               <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
-                                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}{p.situacion_administrativa || 'En propiedad'}
+                                {p.titular_cedula ? `C.C. ${p.titular_cedula} • ` : ''}{cleanLabel(p.situacion_administrativa, 'En propiedad')}
                               </Text>
                             </View>
                           )}
@@ -2228,6 +2328,322 @@ export default function NominaScreen() {
                       </Pressable>
                     );
                   })}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ============================================================== */}
+          {/* PESTAÑA: ESCALERAS DE ENCARGOS                                 */}
+          {/* ============================================================== */}
+          {tabActiva === 'escaleras' && (
+            <View style={{ width: '100%' }}>
+              {/* Tarjeta Informativa de Escaleras */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 20,
+                  marginBottom: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 3,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 260 }}>
+                    <View
+                      style={{
+                        backgroundColor: '#4338CA',
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="git-branch" size={24} color="#FFFFFF" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: THEME.slate900 }}>
+                        Escaleras de Encargos Oficiales (SJD)
+                      </Text>
+                      <Text style={{ fontSize: 12.5, color: THEME.slate500, marginTop: 2 }}>
+                        Monitoreo de provisión sucesiva mediante columnas P (ID-E) y Q (N - Peldaño)
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View
+                      style={{
+                        backgroundColor: '#EEF2FF',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#C7D2FE',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#4338CA', textTransform: 'uppercase' }}>
+                        Escaleras Activas
+                      </Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#312E81', marginTop: 2 }}>
+                        {todasLasEscaleras.length}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        backgroundColor: '#FEF3C7',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#F59E0B',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#B45309', textTransform: 'uppercase' }}>
+                        Plazas Encadenadas
+                      </Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#78350F', marginTop: 2 }}>
+                        {todasLasEscaleras.reduce((acc, e) => acc + e.peldanos.length, 0)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 12,
+                    marginTop: 14,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18 }}>
+                    <Text style={{ fontWeight: '700', color: THEME.slate800 }}>Normativa Carrera Administrativa:</Text> Cuando un titular se traslada temporalmente a un cargo superior por encargo, libera su plaza propia, permitiendo que otro servidor de carrera ascienda temporalmente a ella (Peldaño 1 = plaza donde se originó el primer encargo, Peldaño 2 = segundo encargo en la cadena, etc.).
+                  </Text>
+                </View>
+              </View>
+
+              {/* Listado de Escaleras */}
+              {todasLasEscaleras.length === 0 ? (
+                <View
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 36,
+                    alignItems: 'center',
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 54,
+                      height: 54,
+                      borderRadius: 27,
+                      backgroundColor: THEME.slate100,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Ionicons name="git-branch-outline" size={28} color={THEME.slate400} />
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: THEME.slate700 }}>
+                    No se han registrado escaleras de encargo
+                  </Text>
+                  <Text style={{ fontSize: 12.5, color: THEME.slate500, textAlign: 'center', marginTop: 6, maxWidth: 480, lineHeight: 18 }}>
+                    Para visualizar las cadenas de encargo, carga el archivo de Planta Oficial con los identificadores correspondientes en la <Text style={{ fontWeight: '700' }}>Columna P (ID-E)</Text> y número de peldaño en la <Text style={{ fontWeight: '700' }}>Columna Q (N)</Text>.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ gap: 16 }}>
+                  {todasLasEscaleras.map((esc) => (
+                    <View
+                      key={esc.id_escalera}
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 18,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 3,
+                      }}
+                    >
+                      {/* Cabecera de la Escalera */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: 14,
+                          borderBottomWidth: 1,
+                          borderBottomColor: THEME.slate100,
+                          paddingBottom: 10,
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View
+                            style={{
+                              backgroundColor: '#EEF2FF',
+                              borderColor: '#C7D2FE',
+                              borderWidth: 1,
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#4338CA' }}>
+                              🪜 ESCALERA ID-E: {esc.id_escalera}
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 12, color: THEME.slate500 }}>
+                            {esc.peldanos.length} peldaño{esc.peldanos.length !== 1 ? 's' : ''} en la cadena
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Timeline secuencial de peldaños */}
+                      <View style={{ gap: 0, paddingLeft: 6 }}>
+                        {esc.peldanos.map((pel, idx) => {
+                          const esUltimo = idx === esc.peldanos.length - 1;
+                          return (
+                            <View key={pel.id_plaza} style={{ flexDirection: 'row', gap: 12 }}>
+                              {/* Línea conectora y círculo */}
+                              <View style={{ alignItems: 'center', width: 32 }}>
+                                <View
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 14,
+                                    backgroundColor: idx === 0 ? '#10B981' : '#64748B',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 2,
+                                  }}
+                                >
+                                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '800' }}>
+                                    {pel.peldano_escalera || idx + 1}
+                                  </Text>
+                                </View>
+                                {!esUltimo && (
+                                  <View
+                                    style={{
+                                      width: 2,
+                                      flex: 1,
+                                      minHeight: 20,
+                                      backgroundColor: '#CBD5E1',
+                                      marginVertical: 4,
+                                    }}
+                                  />
+                                )}
+                              </View>
+
+                              {/* Tarjeta de información del peldaño */}
+                              <View
+                                style={{
+                                  flex: 1,
+                                  backgroundColor: idx === 0 ? '#F0FDF4' : '#F8FAFC',
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: idx === 0 ? '#BBF7D0' : THEME.slate200,
+                                  padding: 12,
+                                  marginBottom: 12,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, flexWrap: 'wrap', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <View
+                                      style={{
+                                        backgroundColor: idx === 0 ? '#D1FAE5' : '#E2E8F0',
+                                        paddingHorizontal: 6,
+                                        paddingVertical: 1,
+                                        borderRadius: 4,
+                                      }}
+                                    >
+                                      <Text style={{ color: idx === 0 ? '#047857' : '#475569', fontSize: 9.5, fontWeight: '800' }}>
+                                        {idx === 0 ? 'PELDAÑO #1 (RAÍZ)' : `PELDAÑO #${pel.peldano_escalera || idx + 1}`}
+                                      </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>
+                                      Plaza #{pel.id_plaza} {pel.id_sideap ? `• SIEAP #${pel.id_sideap}` : ''}
+                                    </Text>
+                                  </View>
+
+                                  <Pressable
+                                    onPress={() => {
+                                      setPlazaModal(pel);
+                                      setModalTab('detalle');
+                                    }}
+                                    style={{
+                                      backgroundColor: THEME.white,
+                                      borderColor: THEME.slate300,
+                                      borderWidth: 1,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 5,
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.slate700 }}>
+                                      Ver Ficha →
+                                    </Text>
+                                  </Pressable>
+                                </View>
+
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                                  {pel.cargo} (Cód. {pel.codigo || '---'} Gr. {pel.grado || '---'})
+                                </Text>
+                                <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1, marginBottom: 6 }}>
+                                  {pel.dependencia_cargo}
+                                </Text>
+
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, backgroundColor: THEME.white, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: THEME.slate100 }}>
+                                  <View style={{ flex: 1, minWidth: 150 }}>
+                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                                      Titular de la Plaza:
+                                    </Text>
+                                    <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                                      {pel.titular_nombre || 'Vacante'}
+                                    </Text>
+                                    <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                                      {pel.titular_cedula ? `C.C. ${pel.titular_cedula} • ` : ''}{cleanLabel(pel.situacion_titular, 'En Propiedad')}
+                                    </Text>
+                                  </View>
+
+                                  <View style={{ flex: 1, minWidth: 150 }}>
+                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#B45309', textTransform: 'uppercase' }}>
+                                      Servidor en Encargo:
+                                    </Text>
+                                    <Text numberOfLines={1} style={{ fontSize: 11.5, fontWeight: '700', color: '#92400E', marginTop: 1 }}>
+                                      {pel.encargo_nombre || 'Sin servidor en encargo'}
+                                    </Text>
+                                    <Text style={{ fontSize: 10, color: '#B45309' }}>
+                                      {pel.encargo_cedula ? `C.C. ${pel.encargo_cedula} • ` : ''}{cleanLabel(pel.situacion_administrativa, 'Encargo')}
+                                    </Text>
+                                  </View>
+                                </View>
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))}
                 </View>
               )}
             </View>
@@ -3404,9 +3820,156 @@ export default function NominaScreen() {
                 </Pressable>
               </View>
 
-              {/* Contenido scrolleable de la ficha */}
-              <ScrollView style={{ padding: 20 }}>
-                {/* SECCIÓN 1: ESPECIFICACIONES DE PLANTA */}
+              {/* Barra de Tabs del Modal */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  borderBottomWidth: 1,
+                  borderBottomColor: THEME.slate200,
+                  backgroundColor: THEME.slate50,
+                  paddingHorizontal: 20,
+                  gap: 12,
+                }}
+              >
+                <Pressable
+                  onPress={() => setModalTab('detalle')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 8,
+                    borderBottomWidth: 2,
+                    borderBottomColor: modalTab === 'detalle' ? THEME.marca600 : 'transparent',
+                  }}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={16}
+                    color={modalTab === 'detalle' ? THEME.marca700 : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: modalTab === 'detalle' ? '700' : '500',
+                      color: modalTab === 'detalle' ? THEME.marca700 : THEME.slate600,
+                    }}
+                  >
+                    Ficha Técnica
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setModalTab('escalera')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 12,
+                    paddingHorizontal: 8,
+                    borderBottomWidth: 2,
+                    borderBottomColor: modalTab === 'escalera' ? THEME.marca600 : 'transparent',
+                  }}
+                >
+                  <Ionicons
+                    name="git-network-outline"
+                    size={16}
+                    color={modalTab === 'escalera' ? THEME.marca700 : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: modalTab === 'escalera' ? '700' : '500',
+                      color: modalTab === 'escalera' ? THEME.marca700 : THEME.slate600,
+                    }}
+                  >
+                    Escalera de Encargos
+                  </Text>
+                  {plazaModal?.id_escalera ? (
+                    <View
+                      style={{
+                        backgroundColor: modalTab === 'escalera' ? '#EEF2FF' : THEME.slate200,
+                        borderColor: modalTab === 'escalera' ? '#C7D2FE' : 'transparent',
+                        borderWidth: 1,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                        borderRadius: 12,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '700',
+                          color: modalTab === 'escalera' ? '#4338CA' : THEME.slate700,
+                        }}
+                      >
+                        {plazaModal.id_escalera} · #{plazaModal.peldano_escalera || 1}
+                      </Text>
+                    </View>
+                  ) : null}
+                </Pressable>
+              </View>
+
+              {/* Contenido scrolleable de la ficha técnica */}
+              {modalTab === 'detalle' && (
+                <ScrollView style={{ padding: 20 }}>
+                  {/* Banner de acceso directo a la escalera si la plaza pertenece a una */}
+                  {plazaModal?.id_escalera ? (
+                    <Pressable
+                      onPress={() => setModalTab('escalera')}
+                      style={({ pressed }) => ({
+                        backgroundColor: pressed ? '#EEF2FF' : '#F5F3FF',
+                        borderColor: '#C7D2FE',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 18,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      })}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 8 }}>
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: '#4338CA',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons name="git-network-outline" size={18} color={THEME.white} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#312E81' }}>
+                              Esta plaza forma parte de la Escalera {plazaModal.id_escalera}
+                            </Text>
+                            <View
+                              style={{
+                                backgroundColor: '#E0E7FF',
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#4338CA' }}>
+                                Peldaño #{plazaModal.peldano_escalera || 1}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                            Cadena de sucesión de {peldanosEscaleraModal.length} peldaño(s) · Toca para ver la escalera completa
+                          </Text>
+                        </View>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color="#4338CA" />
+                    </Pressable>
+                  ) : null}
+
+                  {/* SECCIÓN 1: ESPECIFICACIONES DE PLANTA */}
                 <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
                   1. Especificaciones de Planta
                 </Text>
@@ -3520,7 +4083,7 @@ export default function NominaScreen() {
                         <View>
                           <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
                           <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#B45309', marginTop: 1 }}>
-                            {plazaModal.situacion_administrativa || 'ENCARGO'}
+                            {cleanLabel(plazaModal.situacion_administrativa, 'ENCARGO')}
                           </Text>
                         </View>
 
@@ -3579,7 +4142,7 @@ export default function NominaScreen() {
                         <View>
                           <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
                           <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
-                            {plazaModal.situacion_titular || 'En comisión o encargo en otro empleo'}
+                            {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
                           </Text>
                         </View>
 
@@ -3631,7 +4194,7 @@ export default function NominaScreen() {
                     <View style={{ flex: 1, minWidth: 140 }}>
                       <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación Administrativa</Text>
                       <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                        {plazaModal?.situacion_administrativa || 'Servicio Activo en Propiedad'}
+                        {cleanLabel(plazaModal?.situacion_administrativa, 'Servicio Activo en Propiedad')}
                       </Text>
                     </View>
 
@@ -3691,6 +4254,344 @@ export default function NominaScreen() {
                   </View>
                 </View>
               </ScrollView>
+            )}
+
+            {/* Tab: Escalera de Encargos */}
+            {modalTab === 'escalera' && (
+              <ScrollView style={{ padding: 20 }}>
+                {!plazaModal?.id_escalera ? (
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      borderRadius: 10,
+                      padding: 24,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 26,
+                        backgroundColor: THEME.slate200,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 12,
+                      }}
+                    >
+                      <Ionicons name="git-network-outline" size={26} color={THEME.slate500} />
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: THEME.slate800, textAlign: 'center' }}>
+                      Esta plaza no registra Escalera de Encargos
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12.5,
+                        color: THEME.slate500,
+                        textAlign: 'center',
+                        marginTop: 6,
+                        lineHeight: 18,
+                        maxWidth: 500,
+                      }}
+                    >
+                      En la plantilla oficial de Planta, las columnas <Text style={{ fontWeight: '700' }}>P (ID-E)</Text> y{' '}
+                      <Text style={{ fontWeight: '700' }}>Q (N)</Text> identifican las escaleras y el número de peldaño correspondiente a la cadena de relevo por encargo.
+                    </Text>
+                    <Pressable
+                      onPress={() => setModalTab('detalle')}
+                      style={{
+                        marginTop: 16,
+                        backgroundColor: THEME.marca700,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 6,
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.white }}>
+                        Volver a la Ficha Técnica
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View>
+                    {/* Cabecera explicativa de la escalera */}
+                    <View
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 16,
+                        marginBottom: 20,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View
+                            style={{
+                              width: 42,
+                              height: 42,
+                              borderRadius: 8,
+                              backgroundColor: '#4338CA',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Ionicons name="git-network" size={22} color={THEME.white} />
+                          </View>
+                          <View>
+                            <Text style={{ fontSize: 16, fontWeight: '700', color: THEME.slate900 }}>
+                              Escalera de Encargo: {plazaModal.id_escalera}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: THEME.slate500, marginTop: 1 }}>
+                              Cadena de sucesión y ascenso en encargo temporal
+                            </Text>
+                          </View>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: '#EEF2FF',
+                            borderColor: '#C7D2FE',
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>
+                            {peldanosEscaleraModal.length} Peldaño(s) en total
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: THEME.slate600,
+                          lineHeight: 18,
+                          marginTop: 12,
+                          borderTopWidth: 1,
+                          borderTopColor: THEME.slate200,
+                          paddingTop: 10,
+                        }}
+                      >
+                        <Text style={{ fontWeight: '700', color: THEME.slate700 }}>¿Cómo funciona?</Text> El <Text style={{ fontWeight: '700', color: '#4338CA' }}>Peldaño 1</Text> es el cargo inicial objeto de la provisión raíz (ej. ascenso a cargo superior). Al ascender dicho funcionario, su cargo titular queda disponible para el <Text style={{ fontWeight: '700', color: '#4338CA' }}>Peldaño 2</Text>, y así sucesivamente en cascada.
+                      </Text>
+                    </View>
+
+                    {/* Línea de tiempo de los peldaños */}
+                    <View style={{ position: 'relative' }}>
+                      {peldanosEscaleraModal.map((pel, idx) => {
+                        const esPlazaActual = pel.id_plaza === plazaModal.id_plaza;
+                        const esUltimo = idx === peldanosEscaleraModal.length - 1;
+                        const numPeldano = pel.peldano_escalera || idx + 1;
+
+                        return (
+                          <View key={`modal-pel-${pel.id_plaza}-${idx}`} style={{ flexDirection: 'row', marginBottom: esUltimo ? 0 : 20 }}>
+                            {/* Columna Izquierda: Indicador y línea conectora */}
+                            <View style={{ alignItems: 'center', width: 44, marginRight: 12 }}>
+                              <View
+                                style={{
+                                  width: 38,
+                                  height: 38,
+                                  borderRadius: 19,
+                                  backgroundColor: esPlazaActual ? '#4338CA' : THEME.slate100,
+                                  borderWidth: 2,
+                                  borderColor: esPlazaActual ? '#312E81' : THEME.slate300,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  zIndex: 2,
+                                  shadowColor: esPlazaActual ? '#4338CA' : '#000',
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: esPlazaActual ? 0.3 : 0.05,
+                                  shadowRadius: 3,
+                                  elevation: esPlazaActual ? 3 : 1,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: '800',
+                                    color: esPlazaActual ? THEME.white : THEME.slate700,
+                                  }}
+                                >
+                                  #{numPeldano}
+                                </Text>
+                              </View>
+                              {!esUltimo && (
+                                <View
+                                  style={{
+                                    width: 2,
+                                    flex: 1,
+                                    backgroundColor: THEME.slate300,
+                                    marginTop: 4,
+                                    marginBottom: -16,
+                                  }}
+                                />
+                              )}
+                            </View>
+
+                            {/* Columna Derecha: Tarjeta del Peldaño */}
+                            <View
+                              style={{
+                                flex: 1,
+                                backgroundColor: esPlazaActual ? '#F0F9FF' : THEME.white,
+                                borderRadius: 8,
+                                borderWidth: 1.5,
+                                borderColor: esPlazaActual ? THEME.marca600 : THEME.slate200,
+                                padding: 14,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.05,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              }}
+                            >
+                              {/* Header del Peldaño */}
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'flex-start',
+                                  flexWrap: 'wrap',
+                                  gap: 6,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: esPlazaActual ? '#BAE6FD' : THEME.slate100,
+                                  paddingBottom: 8,
+                                  marginBottom: 10,
+                                }}
+                              >
+                                <View style={{ flex: 1, minWidth: 180 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                                      {pel.cargo}
+                                    </Text>
+                                    {esPlazaActual && (
+                                      <View
+                                        style={{
+                                          backgroundColor: THEME.marca700,
+                                          paddingHorizontal: 6,
+                                          paddingVertical: 1,
+                                          borderRadius: 4,
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.white }}>
+                                          PLAZA ACTUAL
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                  <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                                    Plaza #{pel.id_plaza} · Cód. {pel.codigo || '---'} Grado {pel.grado || '---'} · {pel.nivel || '---'}
+                                  </Text>
+                                </View>
+
+                                {!esPlazaActual && (
+                                  <Pressable
+                                    onPress={() => setPlazaModal(pel)}
+                                    style={({ pressed }) => ({
+                                      backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                                      paddingHorizontal: 10,
+                                      paddingVertical: 5,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: THEME.slate300,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                    })}
+                                  >
+                                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate700 }}>
+                                      Ver esta plaza
+                                    </Text>
+                                    <Ionicons name="arrow-forward" size={12} color={THEME.slate700} />
+                                  </Pressable>
+                                )}
+                              </View>
+
+                              {/* Dependencia */}
+                              <View style={{ marginBottom: 10 }}>
+                                <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia:</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                  {pel.dependencia_cargo || 'Sin dependencia asignada'}
+                                </Text>
+                              </View>
+
+                              {/* Comparativa: Quien está en encargo vs Quien es el titular */}
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                                {/* Encargado (Primero) */}
+                                <View
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 180,
+                                    backgroundColor: '#FEF3C7',
+                                    borderColor: '#FDE68A',
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    padding: 10,
+                                  }}
+                                >
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                                    <Ionicons name="swap-horizontal" size={13} color="#92400E" />
+                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#92400E', textTransform: 'uppercase' }}>
+                                      Servidor en Encargo
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900 }}>
+                                    {pel.encargo_nombre || 'Sin servidor en encargo'}
+                                  </Text>
+                                  {pel.encargo_cedula ? (
+                                    <Text style={{ fontSize: 11, color: THEME.slate700, marginTop: 2 }}>
+                                      C.C. {pel.encargo_cedula}
+                                    </Text>
+                                  ) : null}
+                                </View>
+
+                                {/* Titular (Luego) */}
+                                <View
+                                  style={{
+                                    flex: 1,
+                                    minWidth: 180,
+                                    backgroundColor: THEME.slate100,
+                                    borderColor: THEME.slate200,
+                                    borderWidth: 1,
+                                    borderRadius: 6,
+                                    padding: 10,
+                                  }}
+                                >
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                                    <Ionicons name="ribbon-outline" size={13} color={THEME.slate600} />
+                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textTransform: 'uppercase' }}>
+                                      Titular de la Plaza
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900 }}>
+                                    {pel.titular_nombre || 'Vacante Definitiva'}
+                                  </Text>
+                                  {pel.titular_cedula ? (
+                                    <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
+                                      C.C. {pel.titular_cedula}
+                                    </Text>
+                                  ) : null}
+                                  {pel.situacion_titular ? (
+                                    <Text style={{ fontSize: 10.5, color: THEME.marca700, fontWeight: '600', marginTop: 2 }}>
+                                      {pel.situacion_titular}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            )}
 
               {/* Botón de cierre en el pie */}
               <View

@@ -123,6 +123,10 @@ export default function RootLayout() {
           name="rrhh/desvinculaciones" 
           options={{ headerShown: false }} 
         />
+        <Stack.Screen 
+          name="rrhh/vinculaciones-desvinculaciones" 
+          options={{ headerShown: false }} 
+        />
       </Stack>
       <StatusBar style="auto" />
 

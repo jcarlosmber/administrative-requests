@@ -8,14 +8,18 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
+  Pressable,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { ingresosService } from '../../lib/ingresosService';
 
 export default function IngresosDashboardScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 992;
   const [loading, setLoading] = useState(true);
   const [validaciones, setValidaciones] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -197,143 +201,139 @@ export default function IngresosDashboardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-      {/* Header Institucional */}
+      <StatusBar style="light" />
+      {/* ============================================================== */}
+      {/* CABECERA INSTITUCIONAL ÚNICA (AZUL MARCA-900, IDÉNTICA A NÓMINA) */}
+      {/* ============================================================== */}
       <View
         style={{
           backgroundColor: '#0D2A48',
-          paddingTop: Platform.OS === 'ios' ? 50 : 20,
-          paddingBottom: 22,
-          paddingHorizontal: 24,
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 16,
+          paddingHorizontal: isDesktop ? 32 : 16,
+          paddingVertical: 14,
+          width: '100%',
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 12,
-              backgroundColor: '#174A7E',
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-            }}
-          >
-            <Ionicons name="shield-checkmark" size={24} color="#FFFFFF" />
-          </View>
-          <View>
-            <Text
-              style={{
-                color: 'rgba(214, 228, 244, 0.75)',
-                fontSize: 10.5,
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: 1.1,
-              }}
+        <View
+          style={{
+            width: '100%',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          {/* Lado izquierdo: Regresar + Título con subtítulo */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Pressable
+              onPress={() => router.replace('/rrhh')}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 6,
+                backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+              })}
             >
-              Secretaría Jurídica Distrital • Talento Humano
-            </Text>
-            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '800', marginTop: 1 }}>
-              Validación Técnica de Ingresos
-            </Text>
+              <Ionicons name="arrow-back" size={16} color="#D6E4F4" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '500' }}>
+                Volver al Portal
+              </Text>
+            </Pressable>
+
+            <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+
+            <View>
+              <Text
+                style={{
+                  color: 'rgba(214, 228, 244, 0.65)',
+                  fontSize: 10,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 1.2,
+                }}
+              >
+                Secretaría Jurídica Distrital • Talento Humano
+              </Text>
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 18,
+                  fontWeight: '600',
+                  letterSpacing: 0.2,
+                  marginTop: 1,
+                }}
+              >
+                Validación Técnica de Ingresos
+              </Text>
+            </View>
           </View>
-        </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <TouchableOpacity
-            onPress={() => router.push('/rrhh')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              paddingHorizontal: 13,
-              paddingVertical: 9,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.18)',
-            }}
-          >
-            <Ionicons name="grid-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '700' }}>Módulos RRHH</Text>
-          </TouchableOpacity>
+          {/* Lado derecho: Acciones rápidas (Cargos, Director y Nueva Validación) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Pressable
+              onPress={() => router.push('/ingresos/cargos')}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: pressed ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+              })}
+            >
+              <Ionicons name="briefcase-outline" size={15} color="#D6E4F4" />
+              <Text style={{ color: '#D6E4F4', fontSize: 12, fontWeight: '500' }}>
+                Manual de Cargos
+              </Text>
+            </Pressable>
 
-          <TouchableOpacity
-            onPress={() => router.push('/ingresos/cargos')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              paddingHorizontal: 13,
-              paddingVertical: 9,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.18)',
-            }}
-          >
-            <Ionicons name="briefcase-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '600' }}>Cargos Oficiales</Text>
-          </TouchableOpacity>
+            <Pressable
+              onPress={() => setModalDirectorVisible(true)}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: 'rgba(253, 224, 71, 0.35)',
+                backgroundColor: pressed ? 'rgba(253, 224, 71, 0.15)' : 'rgba(253, 224, 71, 0.08)',
+              })}
+            >
+              <Ionicons name="person-circle-outline" size={15} color="#FDE047" />
+              <Text style={{ color: '#FDE047', fontSize: 12, fontWeight: '600' }}>
+                Director(a) FT-318: {configDirector.genero === 'FEMENINO' ? 'Directora' : 'Director'}{configDirector.esEncargado ? ' (E)' : ''}
+              </Text>
+            </Pressable>
 
-          <TouchableOpacity
-            onPress={() => setModalDirectorVisible(true)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              paddingHorizontal: 13,
-              paddingVertical: 9,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.25)',
-            }}
-          >
-            <Ionicons name="person-circle-outline" size={16} color="#FDE047" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-              Director(a) FT-318: {configDirector.genero === 'FEMENINO' ? 'Directora' : 'Director'}{configDirector.esEncargado ? ' (E)' : ''}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/dashboard')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              paddingHorizontal: 13,
-              paddingVertical: 9,
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.18)',
-            }}
-          >
-            <Ionicons name="home-outline" size={16} color="#D6E4F4" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#D6E4F4', fontSize: 13, fontWeight: '600' }}>Ir a Solicitudes</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/ingresos/nueva')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#174A7E',
-              paddingHorizontal: 16,
-              paddingVertical: 9,
-              borderRadius: 8,
-              shadowColor: '#000',
-              shadowOpacity: 0.15,
-              shadowRadius: 4,
-            }}
-          >
-            <Ionicons name="add-circle" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '800' }}>Nueva Validación</Text>
-          </TouchableOpacity>
+            <Pressable
+              onPress={() => router.push('/ingresos/nueva')}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: 8,
+                backgroundColor: '#1F5A96',
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <Ionicons name="add-circle" size={16} color="#FFFFFF" />
+              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>
+                Nueva Validación IA
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 

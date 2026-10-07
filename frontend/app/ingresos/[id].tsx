@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   Modal,
   Platform,
-  Linking
+  Linking,
+  Pressable
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -1510,36 +1511,60 @@ export default function DetalleValidacionScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-      {/* Header */}
+      {/* Header Institucional Único */}
       <View
         style={{
-          backgroundColor: '#0F172A',
-          paddingTop: Platform.OS === 'ios' ? 50 : 20,
-          paddingBottom: 20,
+          backgroundColor: '#0D2A48',
+          borderBottomWidth: 1,
+          borderBottomColor: 'rgba(255, 255, 255, 0.1)',
           paddingHorizontal: 24,
+          paddingVertical: 14,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottomWidth: 1,
-          borderBottomColor: '#1E293B',
           flexWrap: 'wrap',
-          gap: 12
+          gap: 12,
+          width: '100%',
         }}
       >
-        <TouchableOpacity
-          onPress={() => router.replace('/ingresos')}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-        >
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          <View>
-            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>
-              Dictamen de Validación de Ingreso
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Pressable
+            onPress={() => router.replace('/ingresos')}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 6,
+              backgroundColor: pressed ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.08)',
+            })}
+          >
+            <Ionicons name="arrow-back" size={16} color="#D6E4F4" />
+            <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '500' }}>
+              Volver a Ingresos
             </Text>
-            <Text style={{ color: '#94A3B8', fontSize: 12 }}>
-              Expediente: {candidato.nombre} • Cédula: {candidato.documento}
+          </Pressable>
+
+          <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+
+          <View>
+            <Text
+              style={{
+                color: 'rgba(214, 228, 244, 0.65)',
+                fontSize: 10,
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: 1.2,
+              }}
+            >
+              Secretaría Jurídica Distrital • Talento Humano
+            </Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600', letterSpacing: 0.2, marginTop: 1 }}>
+              Dictamen de Validación: {candidato.nombre} (C.C. {candidato.documento})
             </Text>
           </View>
-        </TouchableOpacity>
+        </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {hayCambios && (

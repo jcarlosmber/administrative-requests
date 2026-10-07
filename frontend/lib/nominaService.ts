@@ -24,6 +24,10 @@ export interface PlazaNomina {
   es_encargo?: boolean;
   tipo_vinculacion?: string;
   situacion_administrativa?: string;
+  opec?: string;
+  // Campos de Escalera de Encargo (Columnas P y Q: ID-E y N)
+  id_escalera?: string | null;
+  peldano_escalera?: number | null;
   // Campos complementarios de Planta Perno
   tipo_funcionario?: string;
   fecha_nacimiento?: string;
@@ -38,6 +42,12 @@ export interface PlazaNomina {
   numero_acto_nombramiento?: string;
   fecha_acto_nombramiento?: string;
   total_devengado?: number;
+}
+
+export interface EscaleraEncargo {
+  id_escalera: string;
+  total_peldanos: number;
+  peldanos: PlazaNomina[];
 }
 
 export interface EstadisticasNomina {
@@ -316,6 +326,36 @@ export const nominaService = {
       return await res.json();
     } catch (e: any) {
       return { success: false, mensaje: e.message };
+    }
+  },
+
+  // Obtener todas las escaleras de encargo
+  async getEscaleras(): Promise<EscaleraEncargo[]> {
+    try {
+      const res = await fetch(`${API_URL}/api/nomina/escaleras`);
+      const data = await res.json();
+      if (data.success && data.escaleras) {
+        return data.escaleras;
+      }
+      return [];
+    } catch (e) {
+      console.warn('Error al cargar escaleras:', e);
+      return [];
+    }
+  },
+
+  // Obtener detalle de una escalera de encargo específica
+  async getEscaleraDetalle(idEscalera: string): Promise<PlazaNomina[]> {
+    try {
+      const res = await fetch(`${API_URL}/api/nomina/escaleras/${encodeURIComponent(idEscalera)}`);
+      const data = await res.json();
+      if (data.success && data.peldanos) {
+        return data.peldanos;
+      }
+      return [];
+    } catch (e) {
+      console.warn('Error al cargar detalle de escalera:', e);
+      return [];
     }
   },
 };

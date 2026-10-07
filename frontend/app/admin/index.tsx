@@ -339,7 +339,7 @@ export default function AdminDashboardScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.bannerTitle}>Gestión de Talento Humano (RRHH)</Text>
                   <Text style={styles.bannerText}>
-                    Validación Técnica de Ingresos (IA), Teletrabajo y Desvinculaciones.
+                    Validación Técnica de Ingresos (IA), Teletrabajo, Nómina, Vinculaciones y Desvinculaciones.
                   </Text>
                 </View>
                 <Ionicons name="arrow-forward-circle" size={32} color="#FFFFFF" opacity={0.9} />

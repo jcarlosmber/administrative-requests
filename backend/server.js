@@ -4063,6 +4063,10 @@ app.use('/api/teletrabajo', teletrabajoRoutes);
 const nominaRoutes = require('./routes/nominaRoutes')(pool);
 app.use('/api/nomina', nominaRoutes);
 
+// Módulo 5: Integración SECOP II - Contratos Electrónicos y Verificación Contractual
+const secopRoutes = require('./routes/secopRoutes')(pool);
+app.use('/api/secop', secopRoutes);
+
 // Fallback 404 para cualquier ruta /api para garantizar respuesta JSON y nunca HTML
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.originalUrl}` });
