@@ -181,7 +181,8 @@ async function aplicarTramosIDUAValidacion(pool, validacionId) {
       cargo_certificado: r.cargo_certificado
     }));
 
-    const consolidadoRecalculado = tc.recalcularTiempos(certsParaRecalculo, reqMeses);
+    const auditResult = tc.auditCertificatesAndCalculateTotals(certsParaRecalculo, reqMeses);
+    const consolidadoRecalculado = auditResult.consolidado;
 
     // 4. Actualizar la validación con los nuevos consolidados
     await client.query(`
