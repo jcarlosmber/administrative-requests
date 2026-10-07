@@ -1,0 +1,691 @@
+{
+  "candidato": {
+    "nombre": "Gustavo Adolfo Sánchez Monroy",
+    "documento": "79906841",
+    "email": null,
+    "telefono": null
+  },
+  "cargo_evaluado": {
+    "nombre": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "dependencia": "DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS",
+    "requisito_experiencia_meses": 54,
+    "requisitos_formacion": "Título profesional en Derecho y afines. Título de posgrado en áreas relacionadas con las funciones del cargo. Tarjeta profesional.",
+    "funciones_cargo": [
+      "1. Analizar, evaluar y proyectar los conceptos de mediana complejidad, que le sean asignados, entre ellos, los que definen disparidad de criterios al interior de un sector de la administración Distrital, para garantizar la línea jurídica en el Distrito Capital.",
+      "2. Revisar, analizar y proyectar respuestas a las solicitudes de comentarios a proyectos de Acuerdo, de ley y de actos legislativos de mediana y baja complejidad, de acuerdo a la normatividad y la jurisprudencia vigente.",
+      "3. Elaborar anteproyectos de ley, de actos legislativos, acuerdos, decretos, resoluciones y demás actos administrativos concernientes a las actividades propias de la Secretaría Jurídica Distrital, de manera oportuna.",
+      "4. Revisar, ajustar y tramitar los proyectos de actos administrativos y demás documentos que deban expedir el/la Alcalde/sa Mayor y/o el Secretario/a Jurídico Distrital, de mediana complejidad que le sean asignados, atendiendo los parámetros señalados en la Política de Gerencia Jurídica.",
+      "5. Revisar, tramitar, consolidar y proyectar respuesta a las proposiciones, solicitudes y derechos de petición relacionados con el ejercicio del control político, para garantizar la legalidad y constitucionalidad de las mismas.",
+      "6. Participar en las mesas de trabajo y reuniones que le sean asignadas, presentar los informes correspondientes y proponer acciones, en caso que se requieran, para la solución de los temas jurídicos que se presenten.",
+      "7. Desempeñar las demás funciones que le asigne el superior inmediato de acuerdo a la naturaleza del cargo."
+    ],
+    "id_sideap": null,
+    "id_perno": null,
+    "id_plaza": null
+  },
+  "formacion_academica": [],
+  "certificados": [
+    {
+      "id_certificado": "CERT-1",
+      "nombre_archivo": "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf",
+      "anexos": [
+        "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf"
+      ],
+      "entidad": "Instituto de Desarrollo Urbano - IDU",
+      "nit_entidad": "NO CONSTA",
+      "ciudad_expedicion": "Bogotá, D.C.",
+      "fecha_expedicion": "2022-11-04",
+      "firmante": "Juan Sebastian Jimenez Leal",
+      "cargo_firmante": "Subdirector Técnico de Recursos Humanos",
+      "tipo_vinculo": "Provisionalidad",
+      "cargo_certificado": "PROFESIONAL UNIVERSITARIO CÓDIGO 340 GRADO 03",
+      "codigo_cargo": "340",
+      "grado_cargo": "03",
+      "dependencia": "SUBDIRECCIÓN TÉCNICA PROCESOS JUDICIALES",
+      "numero_contrato_o_acto": "Resolución N° 13205 del 04 de diciembre de 2003 / Acta N° 159",
+      "fecha_inicio": "2003-12-10",
+      "fecha_fin": "2006-01-16",
+      "vinculo_vigente": false,
+      "cumple_excepcion_ley_2039": false,
+      "modalidad_ley_2039": "NINGUNA",
+      "justificacion_ley_2039": "No aplica, el cargo es posterior al grado.",
+      "funciones_certificadas": [
+        {
+          "funcion": "Estudiar y proyectar conceptos jurídicos en aplicación de las disposiciones legales, con el fin de asesorar la toma de decisiones en las diferentes dependencias del Instituto.",
+          "evidencia_textual": "1. Estudiar y proyectar conceptos jurídicos en aplicación de las disposiciones legales, con el fin de asesorar la toma de decisiones en las diferentes dependencias del Instituto."
+        },
+        {
+          "funcion": "Participar en los comités de conciliación con el fin de presentar los informes que el mismo requiera.",
+          "evidencia_textual": "2. Participar en los comités de conciliación con el fin de presentar los informes que el mismo requiera."
+        },
+        {
+          "funcion": "Intervenir en los procesos judiciales, para defender los intereses de la entidad, de acuerdo con el reparto que determine el Subdirector Técnico.",
+          "evidencia_textual": "3. Intervenir en los procesos judiciales, para defender los intereses de la entidad, de acuerdo con el reparto que determine el Subdirector Técnico."
+        },
+        {
+          "funcion": "Intervenir como apoderado judicial en asuntos administrativos que se adelanten ante cualquier autoridad, así como intervenir en los incidentes o instancias que se generen en ejercicio de la jurisdicción coactiva.",
+          "evidencia_textual": "4. Intervenir como apoderado judicial en asuntos administrativos que se adelanten ante cualquier autoridad, así como intervenir en los incidentes o instancias que se generen en ejercicio de la jurisdicción coactiva."
+        },
+        {
+          "funcion": "Vigilar los procesos judiciales asignados, interviniendo en cada una de las etapas procesales, procurando minimizar los efectos de una condena.",
+          "evidencia_textual": "5. Vigilar los procesos judiciales asignados, interviniendo en cada una de las etapas procesales, procurando minimizar los efectos de una condena."
+        },
+        {
+          "funcion": "Elaborar la solicitud de disponibilidades, reservas y órdenes de pago, necesarios para pagar condenas o gastos judiciales.",
+          "evidencia_textual": "6. Elaborar la solicitud de disponibilidades, reservas y órdenes de pago, necesarios para pagar condenas o gastos judiciales."
+        },
+        {
+          "funcion": "Realizar la administración del banco de legislación y jurisprudencia.",
+          "evidencia_textual": "7. Realizar la administración del banco de legislación y jurisprudencia."
+        },
+        {
+          "funcion": "Ejecutar planes, programas y proyectos que deba desarrollar la dependencia, de acuerdo con las políticas de la Dirección Técnica y/o Subdirección Técnica.",
+          "evidencia_textual": "8. Ejecutar planes, programas y proyectos que deba desarrollar la dependencia, de acuerdo con las políticas de la Dirección Técnica y/o Subdirección Técnica."
+        },
+        {
+          "funcion": "Investigar y ejecutar las actividades necesarias para el desarrollo de herramientas enfocadas al manejo y control de información de los proyectos a cargo del área.",
+          "evidencia_textual": "9. Investigar y ejecutar las actividades necesarias para el desarrollo de herramientas enfocadas al manejo y control de información de los proyectos a cargo del área."
+        },
+        {
+          "funcion": "Acopiar, organizar y mantener actualizada la información y normatividad necesaria, que permita medir la gestión de los procesos ejecutados en la dependencia para adoptar las acciones preventivas y correctivas.",
+          "evidencia_textual": "10. Acopiar, organizar y mantener actualizada la información y normatividad necesaria, que permita medir la gestión de los procesos ejecutados en la dependencia para adoptar las acciones preventivas y correctivas."
+        },
+        {
+          "funcion": "Ejecutar los procedimientos presupuestales para el pago de las obligaciones propias de la dependencia.",
+          "evidencia_textual": "11. Ejecutar los procedimientos presupuestales para el pago de las obligaciones propias de la dependencia."
+        },
+        {
+          "funcion": "Rendir los informes periódicos con objeto de contar con una herramienta básica en la toma de decisiones acerca de los proyectos a cargo del área.",
+          "evidencia_textual": "12. Rendir los informes periódicos con objeto de contar con una herramienta básica en la toma de decisiones acerca de los proyectos a cargo del área."
+        },
+        {
+          "funcion": "Informar a su jefe inmediato sobre los problemas que se generen en la ejecución de los proyectos, con el fin de buscar soluciones a los mismos.",
+          "evidencia_textual": "13. Informar a su jefe inmediato sobre los problemas que se generen en la ejecución de los proyectos, con el fin de buscar soluciones a los mismos."
+        },
+        {
+          "funcion": "Ejecutar y analizar los programas integrales y detalladas de los proyectos, asignándoles los recursos humanos, financieros y de tiempo necesarios para el desarrollo de los mismos.",
+          "evidencia_textual": "14. Ejecutar y analizar los programas integrales y detalladas de los proyectos, asignándoles los recursos humanos, financieros y de tiempo necesarios para el desarrollo de los mismos."
+        },
+        {
+          "funcion": "Brindar apoyo profesional en forma eficiente y oportuna, para atender los requerimientos internos o externos y elaborar los actos administrativos que requiera el jefe inmediato.",
+          "evidencia_textual": "15. Brindar apoyo profesional en forma eficiente y oportuna, para atender los requerimientos internos o externos y elaborar los actos administrativos que requiera el jefe inmediato."
+        },
+        {
+          "funcion": "Realizar el control y seguimiento del flujo de la información manejada por el área, hacia otras dependencias del Instituto y/o entidades externas.",
+          "evidencia_textual": "16. Realizar el control y seguimiento del flujo de la información manejada por el área, hacia otras dependencias del Instituto y/o entidades externas."
+        },
+        {
+          "funcion": "Atender en forma eficiente y oportuna al cliente tanto interno como externo del Instituto.",
+          "evidencia_textual": "17. Atender en forma eficiente y oportuna al cliente tanto interno como externo del Instituto."
+        },
+        {
+          "funcion": "Colaborar con la Subdirección Técnica de Desarrollo de la Organización, el mejoramiento de los procesos y procedimientos de la dependencia.",
+          "evidencia_textual": "18. Colaborar con la Subdirección Técnica de Desarrollo de la Organización, el mejoramiento de los procesos y procedimientos de la dependencia."
+        },
+        {
+          "funcion": "Cumplir y hacer cumplir las normas de salud ocupacional establecidas por la ley y las que designe el Instituto.",
+          "evidencia_textual": "19. Cumplir y hacer cumplir las normas de salud ocupacional establecidas por la ley y las que designe el Instituto."
+        },
+        {
+          "funcion": "Cumplir y hacer cumplir los manuales de procesos, distribuciones adoptadas por la Dirección General.",
+          "evidencia_textual": "20. Cumplir y hacer cumplir los manuales de procesos, distribuciones adoptadas por la Dirección General."
+        },
+        {
+          "funcion": "Hacer entrega formal al superior inmediato de un informe de gestión al momento de producirse el retiro del servicio, así como la documentación, equipos e inventarios existentes bajo su responsabilidad.",
+          "evidencia_textual": "21. Hacer entrega formal al superior inmediato de un informe de gestión al momento de producirse el retiro del servicio, así como la documentación, equipos e inventarios existentes bajo su responsabilidad."
+        },
+        {
+          "funcion": "Hacer reconocimiento a favor del Instituto, por concepto de Derechos de Autor sobre todas aquellas obras, programas, desarrollos científicos y tecnológicos, que en virtud de las actividades propias del cargo se logren o consoliden.",
+          "evidencia_textual": "22. Hacer reconocimiento a favor del Instituto, por concepto de Derechos de Autor sobre todas aquellas obras, programas, desarrollos científicos y tecnológicos, que en virtud de las actividades propias del cargo se logren o consoliden."
+        },
+        {
+          "funcion": "Las demás funciones que le sean asignadas de acuerdo con la naturaleza del cargo.",
+          "evidencia_textual": "23. Las demás funciones que le sean asignadas de acuerdo con la naturaleza del cargo."
+        }
+      ],
+      "clasificacion_experiencia": "RELACIONADA",
+      "experiencia_relacionada": {
+        "resultado": "RELACIONADA",
+        "nivel_confianza": "ALTO",
+        "funciones_coincidentes": [
+          {
+            "funcion_certificada": "Estudiar y proyectar conceptos jurídicos en aplicación de las disposiciones legales, con el fin de asesorar la toma de decisiones en las diferentes dependencias del Instituto.",
+            "funcion_del_cargo": "Analizar, evaluar y proyectar los conceptos de mediana complejidad, que le sean asignados...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Ambas funciones implican la proyección de conceptos jurídicos para asesorar la toma de decisiones.",
+            "evidencia_textual": "Estudiar y proyectar conceptos jurídicos en aplicación de las disposiciones legales"
+          },
+          {
+            "funcion_certificada": "Brindar apoyo profesional en forma eficiente y oportuna, para atender los requerimientos internos o externos y elaborar los actos administrativos que requiera el jefe inmediato.",
+            "funcion_del_cargo": "Elaborar anteproyectos de ley, de actos legislativos, acuerdos, decretos, resoluciones y demás actos administrativos...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Corresponde a la elaboración de actos administrativos propios de la gestión jurídica.",
+            "evidencia_textual": "elaborar los actos administrativos que requiera el jefe inmediato"
+          }
+        ],
+        "funciones_no_coincidentes": [
+          "Participar en los comités de conciliación con el fin de presentar los informes que el mismo requiera.",
+          "Intervenir en los procesos judiciales, para defender los intereses de la entidad, de acuerdo con el reparto que determine el Subdirector Técnico.",
+          "Intervenir como apoderado judicial en asuntos administrativos que se adelanten ante cualquier autoridad, así como intervenir en los incidentes o instancias que se generen en ejercicio de la jurisdicción coactiva.",
+          "Vigilar los procesos judiciales asignados, interviniendo en cada una de las etapas procesales, procurando minimizar los efectos de una condena.",
+          "Elaborar la solicitud de disponibilidades, reservas y órdenes de pago, necesarios para pagar condenas o gastos judiciales.",
+          "Realizar la administración del banco de legislación y jurisprudencia.",
+          "Ejecutar planes, programas y proyectos que deba desarrollar la dependencia, de acuerdo con las políticas de la Dirección Técnica y/o Subdirección Técnica.",
+          "Investigar y ejecutar las actividades necesarias para el desarrollo de herramientas enfocadas al manejo y control de información de los proyectos a cargo del área.",
+          "Acopiar, organizar y mantener actualizada la información y normatividad necesaria, que permita medir la gestión de los procesos ejecutados en la dependencia para adoptar las acciones preventivas y correctivas.",
+          "Ejecutar los procedimientos presupuestales para el pago de las obligaciones propias de la dependencia.",
+          "Rendir los informes periódicos con objeto de contar con una herramienta básica en la toma de decisiones acerca de los proyectos a cargo del área.",
+          "Informar a su jefe inmediato sobre los problemas que se generen en la ejecución de los proyectos, con el fin de buscar soluciones a los mismos.",
+          "Ejecutar y analizar los programas integrales y detalladas de los proyectos, asignándoles los recursos humanos, financieros y de tiempo necesarios para el desarrollo de los mismos.",
+          "Realizar el control y seguimiento del flujo de la información manejada por el área, hacia otras dependencias del Instituto y/o entidades externas.",
+          "Atender en forma eficiente y oportuna al cliente tanto interno como externo del Instituto.",
+          "Colaborar con la Subdirección Técnica de Desarrollo de la Organización, el mejoramiento de los procesos y procedimientos de la dependencia.",
+          "Cumplir y hacer cumplir las normas de salud ocupacional establecidas por la ley y las que designe el Instituto.",
+          "Cumplir y hacer cumplir los manuales de procesos, distribuciones adoptadas por la Dirección General.",
+          "Hacer entrega formal al superior inmediato de un informe de gestión al momento de producirse el retiro del servicio, así como la documentación, equipos e inventarios existentes bajo su responsabilidad.",
+          "Hacer reconocimiento a favor del Instituto, por concepto de Derechos de Autor sobre todas aquellas obras, programas, desarrollos científicos y tecnológicos, que en virtud de las actividades propias del cargo se logren o consoliden.",
+          "Las demás funciones que le sean asignadas de acuerdo con la naturaleza del cargo."
+        ]
+      },
+      "verificacion_formal": {
+        "corresponde_aspirante": true,
+        "aspirante_nombre_doc": "GUSTAVO ADOLFO SÁNCHEZ MONROY",
+        "entidad_identificable": true,
+        "entidad_nombre": "Instituto de Desarrollo Urbano - IDU",
+        "suscriptor_identificable": true,
+        "suscriptor_nombre_cargo_calidad": "Juan Sebastian Jimenez Leal, Subdirector Técnico de Recursos Humanos",
+        "cuenta_con_firma": true,
+        "tipo_firma": "Firma mecánica",
+        "fecha_expedicion_identificable": true,
+        "fecha_expedicion": "2022-11-04",
+        "documento_legible_integro": true,
+        "detalle_legibilidad": "Documento completo, legible y estructurado.",
+        "mecanismos_contacto_verificacion": true,
+        "mecanismos_contacto_cuales": "Calle 22 No. 6 - 27, Tel: 3386660, www.idu.gov.co, Línea: 195"
+      },
+      "documento": {
+        "firma_visible": true,
+        "fecha_visible": true,
+        "entidad_identificable": true,
+        "documento_legible": true,
+        "estado": "COMPLETO"
+      },
+      "observaciones": [
+        "El certificado detalla múltiples situaciones administrativas y cargos sucesivos en la misma entidad. Este registro corresponde al primer cargo desempeñado (Profesional Universitario Código 340 Grado 03)."
+      ],
+      "tiempo_certificado": {
+        "anios": 2,
+        "meses": 1,
+        "dias": 6,
+        "meses_totales_aproximados": 25.2,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "verificacion_experiencia_previa": {
+        "es_previa_al_grado": false,
+        "fecha_corte_profesional": "NO APLICA",
+        "origen_corte": "NO CONSTA",
+        "terminacion_pensum_verificada": false,
+        "terminacion_pensum_detalle": "No consta fecha de corte profesional",
+        "relacion_profesion_verificada": true,
+        "relacion_profesion_detalle": "Las funciones certificadas corresponden y guardan relación con la disciplina del cargo.",
+        "tipo_experiencia_previa_ley2039": false,
+        "modalidad_ley2039": "NINGUNA_EXPERIENCIA_REGULAR",
+        "tipo_experiencia_previa_detalle": "Experiencia posterior a la fecha de grado/pénsum.",
+        "decision_computo": "POSTERIOR_AL_GRADO",
+        "fecha_inicio_computable": "2003-12-10"
+      },
+      "tiempo_valido": {
+        "anios": 2,
+        "meses": 1,
+        "dias": 6,
+        "meses_totales_aproximados": 25.2,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "traslapes": []
+    },
+    {
+      "id_certificado": "CERT-2",
+      "nombre_archivo": "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf",
+      "anexos": [
+        "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf"
+      ],
+      "entidad": "Instituto de Desarrollo Urbano - IDU",
+      "nit_entidad": "NO CONSTA",
+      "ciudad_expedicion": "Bogotá, D.C.",
+      "fecha_expedicion": "2022-11-04",
+      "firmante": "Juan Sebastian Jimenez Leal",
+      "cargo_firmante": "Subdirector Técnico de Recursos Humanos",
+      "tipo_vinculo": "Provisionalidad",
+      "cargo_certificado": "PROFESIONAL ESPECIALIZADO CÓDIGO 222 GRADO 05",
+      "codigo_cargo": "222",
+      "grado_cargo": "05",
+      "dependencia": "SUBDIRECCIÓN TÉCNICA PROCESOS JUDICIALES",
+      "numero_contrato_o_acto": "Resolución N° 0178 del 17 de enero de 2006 / Acta N° 028",
+      "fecha_inicio": "2006-01-17",
+      "fecha_fin": "2010-03-02",
+      "vinculo_vigente": false,
+      "cumple_excepcion_ley_2039": false,
+      "modalidad_ley_2039": "NINGUNA",
+      "justificacion_ley_2039": "No aplica, el cargo es posterior al grado.",
+      "funciones_certificadas": [
+        {
+          "funcion": "Estudiar y proyectar conceptos jurídicos sobre la aplicación e interpretación de las disposiciones legales, con el propósito de asesorar la toma de decisiones en las diferentes dependencias del Instituto.",
+          "evidencia_textual": "1. Estudiar y proyectar conceptos jurídicos sobre la aplicación e interpretación de las disposiciones legales, con el propósito de asesorar la toma de decisiones en las diferentes dependencias del Instituto."
+        },
+        {
+          "funcion": "Proyectar información de la gestión desarrollada por la dependencia, requerida por la Dirección General y por las demás dependencias del Instituto, los organismos de control o entidades externas.",
+          "evidencia_textual": "13. Proyectar información de la gestión desarrollada por la dependencia..."
+        },
+        {
+          "funcion": "Emitir conceptos y dar soporte especializado a los demás funcionarios del área y/o Instituto en las actividades necesarias para la recopilación, procesamiento, análisis y sistematización de la información relacionada con el avance de los proyectos en sus diferentes fases.",
+          "evidencia_textual": "14. Emitir conceptos y dar soporte especializado a los demás funcionarios del área..."
+        },
+        {
+          "funcion": "Colaborar con el jefe inmediato en la preparación y revisión de los actos administrativos que regulan las diferentes actividades del Instituto y cuya elaboración esté a cargo de la dependencia.",
+          "evidencia_textual": "16. Colaborar con el jefe inmediato en la preparación y revisión de los actos administrativos que regulan las diferentes actividades del Instituto..."
+        }
+      ],
+      "clasificacion_experiencia": "RELACIONADA",
+      "experiencia_relacionada": {
+        "resultado": "RELACIONADA",
+        "nivel_confianza": "ALTO",
+        "funciones_coincidentes": [
+          {
+            "funcion_certificada": "Estudiar y proyectar conceptos jurídicos sobre la aplicación e interpretación de las disposiciones legales, con el propósito de asesorar la toma de decisiones en las diferentes dependencias del Instituto.",
+            "funcion_del_cargo": "Analizar, evaluar y proyectar los conceptos de mediana complejidad, que le sean asignados...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Coincide plenamente con la proyección de conceptos jurídicos y asesoría.",
+            "evidencia_textual": "Estudiar y proyectar conceptos jurídicos sobre la aplicación e interpretación de las disposiciones legales"
+          },
+          {
+            "funcion_certificada": "Colaborar con el jefe inmediato en la preparación y revisión de los actos administrativos que regulan las diferentes actividades del Instituto y cuya elaboración esté a cargo de la dependencia.",
+            "funcion_del_cargo": "Elaborar anteproyectos de ley, de actos legislativos, acuerdos, decretos, resoluciones y demás actos administrativos...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Implica la preparación y revisión de actos administrativos.",
+            "evidencia_textual": "preparación y revisión de los actos administrativos que regulan las diferentes actividades"
+          }
+        ],
+        "funciones_no_coincidentes": [
+          "Participar en el diseño y mantenimiento de las bases de datos que administran el seguimiento de los procesos a cargo de la dependencia.",
+          "Participar en los comités de conciliación con el fin de presentar los informes que el mismo requiera.",
+          "Intervenir en los procesos judiciales, para defender los intereses de la entidad, de acuerdo con el reparto que determine el Subdirector Técnico.",
+          "Intervenir como apoderado judicial en tribunales de arbitramento, conciliaciones prejudiciales, procesos de acción de tutela, acciones de cumplimiento, en cuyo trámite haya sido citada la entidad.",
+          "Intervenir como apoderado judicial en los procesos que se adelanten en la jurisdicciones ordinarias y contencioso administrativa.",
+          "Vigilar los procesos judiciales asignados, interviniendo en cada una de las etapas procesales, procurando minimizar los efectos de una condena.",
+          "Participar en la administración del banco de legislación y jurisprudencia.",
+          "Participar en la definición de los planes, programas y proyectos qué deba desarrollar, ejecutar y evaluar la dependencia de acuerdo con las políticas de la Dirección Técnica y/o Subdirector Técnico.",
+          "Participar en reuniones, juntas, comités internos o externos y asistir a todos aquellos eventos por delegación del Director Técnico y/o Subdirector Técnico.",
+          "Apoyar las acciones requeridas para llevar a cabo los planes, programas y proyectos de la dependencia, y efectuar el seguimiento, ajustes y modificaciones necesarias.",
+          "Participar en la programación, seguimiento, retroalimentación y estrategias preventivas y correctivas de los proyectos a cargo de la dependencia...",
+          "Proyectar información de la gestión desarrollada por la dependencia, requerida por la Dirección General...",
+          "Emitir conceptos y dar soporte especializado a los demás funcionarios del área...",
+          "Realizar el control, actualización de normas y seguimiento de las actividades propias del cargo y del personal asignado, cuando sea el caso.",
+          "Colaborar con la Subdirección Técnica de Desarrollo de la Organización, en el mejoramiento de los procesos y procedimientos de la dependencia.",
+          "Cumplir y hacer cumplir los manuales de procesos, procedimientos y funciones adoptadas por la Dirección General.",
+          "Cumplir y hacer cumplir las normas de Salud Ocupacional establecidas por la ley y las que designe el Instituto.",
+          "Controlar de manera integral los contratos y órdenes de prestación de servicios en los cuales sea el interventor directo.",
+          "Atender en forma eficiente y oportuna al cliente tanto interno como externo del Instituto.",
+          "Las demás funciones que le sean asignadas de acuerdo con la naturaleza del cargo."
+        ]
+      },
+      "verificacion_formal": {
+        "corresponde_aspirante": true,
+        "aspirante_nombre_doc": "GUSTAVO ADOLFO SÁNCHEZ MONROY",
+        "entidad_identificable": true,
+        "entidad_nombre": "Instituto de Desarrollo Urbano - IDU",
+        "suscriptor_identificable": true,
+        "suscriptor_nombre_cargo_calidad": "Juan Sebastian Jimenez Leal, Subdirector Técnico de Recursos Humanos",
+        "cuenta_con_firma": true,
+        "tipo_firma": "Firma mecánica",
+        "fecha_expedicion_identificable": true,
+        "fecha_expedicion": "2022-11-04",
+        "documento_legible_integro": true,
+        "detalle_legibilidad": "Documento legible e íntegro.",
+        "mecanismos_contacto_verificacion": true,
+        "mecanismos_contacto_cuales": "Calle 22 No. 6 - 27, Tel: 3386660, www.idu.gov.co"
+      },
+      "documento": {
+        "firma_visible": true,
+        "fecha_visible": true,
+        "entidad_identificable": true,
+        "documento_legible": true,
+        "estado": "COMPLETO"
+      },
+      "observaciones": [
+        "Segundo cargo desempeñado en la entidad bajo la modalidad de provisionalidad (Profesional Especializado Código 222 Grado 05)."
+      ],
+      "tiempo_certificado": {
+        "anios": 4,
+        "meses": 1,
+        "dias": 13,
+        "meses_totales_aproximados": 49.43,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "verificacion_experiencia_previa": {
+        "es_previa_al_grado": false,
+        "fecha_corte_profesional": "NO APLICA",
+        "origen_corte": "NO CONSTA",
+        "terminacion_pensum_verificada": false,
+        "terminacion_pensum_detalle": "No consta fecha de corte profesional",
+        "relacion_profesion_verificada": true,
+        "relacion_profesion_detalle": "Las funciones certificadas corresponden y guardan relación con la disciplina del cargo.",
+        "tipo_experiencia_previa_ley2039": false,
+        "modalidad_ley2039": "NINGUNA_EXPERIENCIA_REGULAR",
+        "tipo_experiencia_previa_detalle": "Experiencia posterior a la fecha de grado/pénsum.",
+        "decision_computo": "POSTERIOR_AL_GRADO",
+        "fecha_inicio_computable": "2006-01-17"
+      },
+      "tiempo_valido": {
+        "anios": 4,
+        "meses": 1,
+        "dias": 13,
+        "meses_totales_aproximados": 49.43,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "traslapes": []
+    },
+    {
+      "id_certificado": "CERT-3",
+      "nombre_archivo": "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf",
+      "anexos": [
+        "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf"
+      ],
+      "entidad": "Instituto de Desarrollo Urbano - IDU",
+      "nit_entidad": "NO CONSTA",
+      "ciudad_expedicion": "Bogotá, D.C.",
+      "fecha_expedicion": "2022-11-04",
+      "firmante": "Juan Sebastian Jimenez Leal",
+      "cargo_firmante": "Subdirector Técnico de Recursos Humanos",
+      "tipo_vinculo": "Periodo de prueba / Carrera administrativa",
+      "cargo_certificado": "PROFESIONAL ESPECIALIZADO CÓDIGO 222 GRADO 05",
+      "codigo_cargo": "222",
+      "grado_cargo": "05",
+      "dependencia": "DIRECCIÓN TÉCNICA DE GESTIÓN JUDICIAL DE LA SUBDIRECCIÓN GENERAL JURÍDICA",
+      "numero_contrato_o_acto": "Resolución N° 0414 del 18 de febrero de 2010 / Acta N° 030",
+      "fecha_inicio": "2010-03-03",
+      "fecha_fin": "2012-06-14",
+      "vinculo_vigente": false,
+      "cumple_excepcion_ley_2039": false,
+      "modalidad_ley_2039": "NINGUNA",
+      "justificacion_ley_2039": "No aplica, el cargo es posterior al grado.",
+      "funciones_certificadas": [
+        {
+          "funcion": "Asesorar y proyectar conceptos sobre la aplicación de disposiciones legales, para apoyar la toma de decisiones en las diferentes áreas de la entidad.",
+          "evidencia_textual": "11. Asesorar y proyectar conceptos sobre la aplicación de disposiciones legales, para apoyar la toma de decisiones en las diferentes áreas de la entidad."
+        },
+        {
+          "funcion": "Proyectar la respuesta a los derechos de petición y demás correspondencia que se le asigne, en forma oportuna y veraz.",
+          "evidencia_textual": "14. Proyectar la respuesta a los derechos de petición y demás correspondencia que se le asigne, en forma oportuna y veraz."
+        },
+        {
+          "funcion": "Proyectar los actos administrativos que se requieran, en cada uno de los procesos asignados hasta el agotamiento de la vía gubernativa.",
+          "evidencia_textual": "7. Proyectar los actos administrativos que se requieran, en cada uno de los procesos asignados hasta el agotamiento de la vía gubernativa."
+        }
+      ],
+      "clasificacion_experiencia": "RELACIONADA",
+      "experiencia_relacionada": {
+        "resultado": "RELACIONADA",
+        "nivel_confianza": "ALTO",
+        "funciones_coincidentes": [
+          {
+            "funcion_certificada": "Asesorar y proyectar conceptos sobre la aplicación de disposiciones legales, para apoyar la toma de decisiones en las diferentes áreas de la entidad.",
+            "funcion_del_cargo": "Analizar, evaluar y proyectar los conceptos de mediana complejidad, que le sean asignados...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Coincide directamente con la proyección de conceptos legales para la toma de decisiones.",
+            "evidencia_textual": "Asesorar y proyectar conceptos sobre la aplicación de disposiciones legales"
+          },
+          {
+            "funcion_certificada": "Proyectar los actos administrativos que se requieran, en cada uno de los procesos asignados hasta el agotamiento de la vía gubernativa.",
+            "funcion_del_cargo": "Elaborar anteproyectos de ley, de actos legislativos, acuerdos, decretos, resoluciones y demás actos administrativos...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Corresponde a la proyección de actos administrativos.",
+            "evidencia_textual": "Proyectar los actos administrativos que se requieran"
+          }
+        ],
+        "funciones_no_coincidentes": [
+          "Intervenir como apoderado en los procesos judiciales asignados, en defensa de los intereses de la entidad ya sea como demandante, demandado o tercero interviniente.",
+          "Intervenir como apoderado judicial en Tribunales de Arbitramento, conciliaciones prejudiciales y demás mecanismos alternativos de solución de conflictos...",
+          "Proyectar e intervenir como apoderado si es del caso, en las acciones constitucionales (tutelas, acciones populares, de grupo)...",
+          "Intervenir como apoderado judicial en asuntos administrativos que se adelanten ante cualquier autoridad especial ya sea judicial o administrativa.",
+          "Intervenir en los incidentes o instancias que se generen en desarrollo de los procesos que cursan en jurisdicción coactiva.",
+          "Interponer recursos ordinarios o extraordinarios ante las altas cortes, cuando el caso lo requiera.",
+          "Proyectar informes y participar activamente en los comités, donde se vean involucrados aspectos jurídicos de los procesos.",
+          "Vigilar periódicamente los procesos asignados, interviniendo en cada una de las etapas, procurando minimizar los efectos de una condena contra la entidad.",
+          "Rendir informes periódicos, sobre el estado de cada uno de los procesos que se le asignen.",
+          "Dar trámite a los procedimientos presupuestales, para el pago de las obligaciones propias de cada proceso. (Costas, condenas, honorarios).",
+          "Rendir informes sobre los procesos que le han sido asignados por solicitud de la Dirección General...",
+          "Realizar en equipo estudios, diagnósticos e investigaciones que sean requeridos para llevar a cabo los procesos a cargo del área.",
+          "Colaborar con el Jefe Inmediato en el diseño de estrategias, para la actuación en los procesos judiciales..."
+        ]
+      },
+      "verificacion_formal": {
+        "corresponde_aspirante": true,
+        "aspirante_nombre_doc": "GUSTAVO ADOLFO SÁNCHEZ MONROY",
+        "entidad_identificable": true,
+        "entidad_nombre": "Instituto de Desarrollo Urbano - IDU",
+        "suscriptor_identificable": true,
+        "suscriptor_nombre_cargo_calidad": "Juan Sebastian Jimenez Leal, Subdirector Técnico de Recursos Humanos",
+        "cuenta_con_firma": true,
+        "tipo_firma": "Firma mecánica",
+        "fecha_expedicion_identificable": true,
+        "fecha_expedicion": "2022-11-04",
+        "documento_legible_integro": true,
+        "detalle_legibilidad": "Documento legible e íntegro.",
+        "mecanismos_contacto_verificacion": true,
+        "mecanismos_contacto_cuales": "Calle 22 No. 6 - 27, Tel: 3386660, www.idu.gov.co"
+      },
+      "documento": {
+        "firma_visible": true,
+        "fecha_visible": true,
+        "entidad_identificable": true,
+        "documento_legible": true,
+        "estado": "COMPLETO"
+      },
+      "observaciones": [
+        "Tercer cargo desempeñado en la entidad, en periodo de prueba y posterior inscripción en carrera administrativa (Profesional Especializado Código 222 Grado 05)."
+      ],
+      "tiempo_certificado": {
+        "anios": 2,
+        "meses": 3,
+        "dias": 11,
+        "meses_totales_aproximados": 27.37,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "verificacion_experiencia_previa": {
+        "es_previa_al_grado": false,
+        "fecha_corte_profesional": "NO APLICA",
+        "origen_corte": "NO CONSTA",
+        "terminacion_pensum_verificada": false,
+        "terminacion_pensum_detalle": "No consta fecha de corte profesional",
+        "relacion_profesion_verificada": true,
+        "relacion_profesion_detalle": "Las funciones certificadas corresponden y guardan relación con la disciplina del cargo.",
+        "tipo_experiencia_previa_ley2039": false,
+        "modalidad_ley2039": "NINGUNA_EXPERIENCIA_REGULAR",
+        "tipo_experiencia_previa_detalle": "Experiencia posterior a la fecha de grado/pénsum.",
+        "decision_computo": "POSTERIOR_AL_GRADO",
+        "fecha_inicio_computable": "2010-03-03"
+      },
+      "tiempo_valido": {
+        "anios": 2,
+        "meses": 3,
+        "dias": 11,
+        "meses_totales_aproximados": 27.37,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "traslapes": [
+        {
+          "otro_certificado_id": "CERT-4",
+          "entidad_coincidente": "Instituto de Desarrollo Urbano - IDU",
+          "fecha_inicio_traslape": "2012-02-21",
+          "fecha_fin_traslape": "2012-04-15",
+          "tipo": "TRASLAPE_PARCIAL",
+          "tiempo_a_excluir_meses": 1.83,
+          "explicacion": "Se superpone con CERT-4 (Instituto de Desarrollo Urbano - IDU) entre 2012-02-21 y 2012-04-15 (1.83 meses)."
+        }
+      ]
+    },
+    {
+      "id_certificado": "CERT-4",
+      "nombre_archivo": "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf",
+      "anexos": [
+        "CERTIFICACION_LABORAL_IDU_GUSTAVO_SANCHEZ.pdf"
+      ],
+      "entidad": "Instituto de Desarrollo Urbano - IDU",
+      "nit_entidad": "NO CONSTA",
+      "ciudad_expedicion": "Bogotá, D.C.",
+      "fecha_expedicion": "2022-11-04",
+      "firmante": "Juan Sebastian Jimenez Leal",
+      "cargo_firmante": "Subdirector Técnico de Recursos Humanos",
+      "tipo_vinculo": "Encargo",
+      "cargo_certificado": "DIRECTOR TÉCNICO CÓDIGO 009 GRADO 05",
+      "codigo_cargo": "009",
+      "grado_cargo": "05",
+      "dependencia": "DIRECCIÓN TÉCNICA DE GESTIÓN JUDICIAL DE LA SUBDIRECCIÓN GENERAL JURÍDICA",
+      "numero_contrato_o_acto": "Resolución N° 0472 del 20 de febrero de 2012 / Acta N° 031",
+      "fecha_inicio": "2012-02-21",
+      "fecha_fin": "2012-04-15",
+      "vinculo_vigente": false,
+      "cumple_excepcion_ley_2039": false,
+      "modalidad_ley_2039": "NINGUNA",
+      "justificacion_ley_2039": "No aplica, el cargo es posterior al grado.",
+      "funciones_certificadas": [
+        {
+          "funcion": "Dirigir, orientar, coordinar y controlar la gestión para la defensa judicial y extrajudicial de los intereses de la entidad...",
+          "evidencia_textual": "1. Dirigir, orientar, coordinar y controlar la gestión para la defensa judicial y extrajudicial de los intereses de la entidad..."
+        },
+        {
+          "funcion": "Dirigir, coordinar y supervisar la preparación de los actos administrativos necesarios para el debido cumplimiento de los asuntos a su cargo",
+          "evidencia_textual": "14. Dirigir, coordinar y supervisar la preparación de los actos administrativos necesarios para el debido cumplimiento de los asuntos a su cargo"
+        },
+        {
+          "funcion": "Preparar y documentar las respuestas a las peticiones que formulen o presenten los ciudadanos en los asuntos de su competencia y coordinar su consolidación según les sean asignadas.",
+          "evidencia_textual": "23. Preparar y documentar las respuestas a las peticiones que formulen o presenten los ciudadanos..."
+        }
+      ],
+      "clasificacion_experiencia": "RELACIONADA",
+      "experiencia_relacionada": {
+        "resultado": "RELACIONADA",
+        "nivel_confianza": "ALTO",
+        "funciones_coincidentes": [
+          {
+            "funcion_certificada": "Dirigir, coordinar y supervisar la preparación de los actos administrativos necesarios para el debido cumplimiento de los asuntos a su cargo",
+            "funcion_del_cargo": "Elaborar anteproyectos de ley, de actos legislativos, acuerdos, decretos, resoluciones y demás actos administrativos...",
+            "coincidencia": "DIRECTA",
+            "justificacion": "Implica la supervisión y preparación de actos administrativos.",
+            "evidencia_textual": "preparación de los actos administrativos necesarios"
+          }
+        ],
+        "funciones_no_coincidentes": [
+          "Dirigir, orientar, coordinar y controlar la gestión para la defensa judicial y extrajudicial de los intereses de la entidad...",
+          "Realizar el seguimiento y evaluación permanente de las actuaciones de los apoderados de los procesos judiciales...",
+          "Preparar los documentos y presentar las recomendaciones jurídicos sobre la instauración de acciones judiciales...",
+          "Dirigir, coordinar y controlar el desarrollo de las gestiones necesarias para adelantar las acciones de lesividad o repetición...",
+          "Supervisar y controlar el desarrollo de los procesos en los casos en que proceda el llamamiento en garantía.",
+          "Dirigir, orientar y coordinar las labores de los apoderados designados por la Entidad...",
+          "Prevenir el riesgo antijurídico mediante la información oportuna a todas las dependencias...",
+          "Coordinar, orientar y responder por la recopilación de pruebas solicitadas...",
+          "Dirigir, coordinar y adelantar los cobros de cobro coactivo...",
+          "Coordinar y controlar la representación de la entidad en las audiencias de conciliación...",
+          "Coordinar la realización del Comité de Conciliación y Defensa Judicial...",
+          "Coordinar, controlar y adelantar los tramites que sean necesarios para el cumplimiento y pago de sentencias...",
+          "Dirigir, controlar y mantener actualizado el inventario de los procesos judiciales...",
+          "Coordinar, revisar y controlar la preparación y presentación de la información sobre los procesos...",
+          "Adelantar la supervisión, seguimiento, control y evaluación de la gestión administrativa, financiera, legal y técnica...",
+          "Orientar, dirigir y coordinar la realización de los análisis de riesgos y los estudios previos...",
+          "Coordinar el cumplimiento de las obligaciones contractuales...",
+          "Adoptar las decisiones pertinentes para la solución de los problemas que se presenten durante la ejecución...",
+          "Supervisar y controlar de manera integral los contratos en los cuales sea el interventor o coordinador...",
+          "Organizar, dirigir y supervisar las labores del personal a cargo...",
+          "Controlar las metas físicas proyectadas por el área...",
+          "Preparar y documentar las respuestas a las peticiones que formulen o presenten los ciudadanos...",
+          "Actualizar y administrar el sistema de información integral de la entidad...",
+          "Garantizar la debida clasificación, organización y configuración de los archivos de gestión...",
+          "Establecer indicadores de gestión y demás factores de medición...",
+          "Informar al superior inmediato acerca del avance, conclusiones y recomendaciones...",
+          "Las demás funciones que le asigne la autoridad competente..."
+        ]
+      },
+      "verificacion_formal": {
+        "corresponde_aspirante": true,
+        "aspirante_nombre_doc": "GUSTAVO ADOLFO SÁNCHEZ MONROY",
+        "entidad_identificable": true,
+        "entidad_nombre": "Instituto de Desarrollo Urbano - IDU",
+        "suscriptor_identificable": true,
+        "suscriptor_nombre_cargo_calidad": "Juan Sebastian Jimenez Leal, Subdirector Técnico de Recursos Humanos",
+        "cuenta_con_firma": true,
+        "tipo_firma": "Firma mecánica",
+        "fecha_expedicion_identificable": true,
+        "fecha_expedicion": "2022-11-04",
+        "documento_legible_integro": true,
+        "detalle_legibilidad": "Documento legible e íntegro.",
+        "mecanismos_contacto_verificacion": true,
+        "mecanismos_contacto_cuales": "Calle 22 No. 6 - 27, Tel: 3386660, www.idu.gov.co"
+      },
+      "documento": {
+        "firma_visible": true,
+        "fecha_visible": true,
+        "entidad_identificable": true,
+        "documento_legible": true,
+        "estado": "COMPLETO"
+      },
+      "observaciones": [
+        "Cuarto cargo desempeñado en la entidad bajo la modalidad de encargo (Director Técnico Código 009 Grado 05)."
+      ],
+      "tiempo_certificado": {
+        "anios": 0,
+        "meses": 1,
+        "dias": 25,
+        "meses_totales_aproximados": 1.83,
+        "metodo_calculo": "DIAS_EXACTOS_DIVIDIDO_30"
+      },
+      "verificacion_experiencia_previa": {
+        "es_previa_al_grado": false,
+        "fecha_corte_profesional": "NO APLICA",
+        "origen_corte": "NO CONSTA",
+        "terminacion_pensum_verificada": false,
+        "terminacion_pensum_detalle": "No consta fecha de corte profesional",
+        "relacion_profesion_verificada": true,
+        "relacion_profesion_detalle": "Las funciones certificadas corresponden y guardan relación con la disciplina del cargo.",
+        "tipo_experiencia_previa_ley2039": false,
+        "modalidad_ley2039": "NINGUNA_EXPERIENCIA_REGULAR",
+        "tipo_experiencia_previa_detalle": "Experiencia posterior a la fecha de grado/pénsum.",
+        "decision_computo": "POSTERIOR_AL_GRADO",
+        "fecha_inicio_computable": "2012-02-21"
+      },
+      "tiempo_valido": {
+        "dias_totales": 0,
+        "meses_totales": 0,
+        "anios": 0,
+        "meses": 0,
+        "dias": 0,
+        "valido": true
+      },
+      "traslapes": [
+        {
+          "otro_certificado_id": "CERT-3",
+          "entidad_coincidente": "Instituto de Desarrollo Urbano - IDU",
+          "fecha_inicio_traslape": "2012-02-21",
+          "fecha_fin_traslape": "2012-04-15",
+          "tipo": "TRASLAPE_TOTAL",
+          "tiempo_a_excluir_meses": 1.83,
+          "explicacion": "Traslape total con CERT-3 (Instituto de Desarrollo Urbano - IDU): su periodo completo queda cubierto entre 2012-02-21 y 2012-04-15."
+        }
+      ],
+      "es_traslape_total": true
+    }
+  ],
+  "documentos_no_aplican": [],
+  "consolidado": {
+    "experiencia_relacionada_meses": 102,
+    "experiencia_no_relacionada_meses": 0,
+    "tiempo_excluido_por_traslapes_meses": 1.83,
+    "requisito_minimo_meses": 54,
+    "diferencia_meses": 48,
+    "resultado_final": "CUMPLE",
+    "justificacion": "Acredita 102 meses de experiencia profesional relacionada neta (superando los 54 meses exigidos por una diferencia de +48 meses). Se excluyeron 1.83 meses por traslapes.",
+    "faltantes": [],
+    "requiere_revision_humana": false
+  }
+}
