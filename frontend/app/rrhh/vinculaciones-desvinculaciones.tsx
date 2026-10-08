@@ -87,6 +87,98 @@ const THEME = {
 // ============================================================================
 
 export type TipoProceso = 'DESVINCULACION' | 'VINCULACION';
+// ============================================================================
+// CONFIGURACIÓN Y DIFERENCIACIÓN DE MODALIDADES DE VINCULACIÓN
+// ============================================================================
+export interface InfoModalidadConfig {
+  titulo: string;
+  subtitulo: string;
+  badgeTexto: string;
+  icono: any;
+  colorTexto: string;
+  colorBg: string;
+  colorBorde: string;
+  marcoLegal: string;
+  descripcionFases: string;
+  requisitoPrincipal: string;
+  diferenciaClave: string;
+}
+
+export function obtenerInfoModalidad(m: ModalidadPersonal): InfoModalidadConfig {
+  switch (m) {
+    case 'CARRERA_ADMINISTRATIVA':
+      return {
+        titulo: 'Carrera Administrativa',
+        subtitulo: 'Concurso de Méritos CNSC / Período de Prueba (6 Meses)',
+        badgeTexto: 'CARRERA ADMINISTRATIVA',
+        icono: 'ribbon-outline',
+        colorTexto: '#1e40af', // Blue 800
+        colorBg: '#eff6ff',   // Blue 50
+        colorBorde: '#93c5fd', // Blue 300
+        marcoLegal: 'Ley 909 de 2004, Art. 31 • Decreto 1083 de 2015, Art. 2.2.6.1 • Circular CNSC 011 de 2021',
+        descripcionFases: 'Provisión definitiva obligatoria por mérito. Requiere Banco de Elegibles SIMO 4.0, autorización de Comisión de Personal, aviso a encargados, nombramiento en período de prueba por 6 meses y reporte ante la CNSC.',
+        requisitoPrincipal: 'Posición meritoria en Lista de Elegibles en firme (SIMO 4.0) y autorización CNSC.',
+        diferenciaClave: 'Adquiere estabilidad y derechos de carrera administrativa tras superar satisfactoriamente la evaluación del período de prueba (6 meses).',
+      };
+    case 'LIBRE_NOMBRAMIENTO':
+      return {
+        titulo: 'Libre Nombramiento y Remoción',
+        subtitulo: 'Empleos de Dirección, Conducción y Confianza',
+        badgeTexto: 'LIBRE NOMBRAMIENTO',
+        icono: 'shield-outline',
+        colorTexto: '#6b21a8', // Purple 800
+        colorBg: '#faf5ff',   // Purple 50
+        colorBorde: '#d8b4fe', // Purple 300
+        marcoLegal: 'Ley 909 de 2004, Art. 5 • Acuerdo Distrital 782 de 2020 • Ley 2424 de 2024 (Paridad 50% Mujeres)',
+        descripcionFases: 'Designación discrecional del nominador. Requiere validación técnica FT-318 IA, prueba de competencias gerenciales SEVCOM DASCD, publicación por 5 días en página web institucional y posesión con declaración Ley 2013.',
+        requisitoPrincipal: 'Aprobación prueba SEVCOM DASCD, cumplimiento FT-318, 5 días de publicación en web y verificación cuota 50% mujeres.',
+        diferenciaClave: 'Remoción discrecional por la autoridad nominadora sin necesidad de motivación de acto.',
+      };
+    case 'PROVISIONALIDAD':
+      return {
+        titulo: 'Nombramiento Provisional',
+        subtitulo: 'Provisión Transitoria de Vacante de Carrera',
+        badgeTexto: 'PROVISIONALIDAD',
+        icono: 'hourglass-outline',
+        colorTexto: '#b45309', // Amber 800
+        colorBg: '#fffbeb',   // Amber 50
+        colorBorde: '#fde68a', // Amber 300
+        marcoLegal: 'Ley 909 de 2004, Art. 25 • Ley 1960 de 2019, Art. 1 • Circular Conjunta CNSC 003 de 2020',
+        descripcionFases: 'Carácter estrictamente temporal. Requiere certificar ausencia de elegibles en SIMO, agotar y declarar desierto el encargo preferente a servidores con derechos de carrera, validación FT-318 y nombramiento motivado.',
+        requisitoPrincipal: 'Certificación de no elegibles en SIMO y acta de encargo preferencial interno declarado desierto.',
+        diferenciaClave: 'Estabilidad laboral relativa transitoria; el nombramiento cesa automáticamente cuando la CNSC provea la vacante por concurso o por calificación insatisfactoria.',
+      };
+    case 'PRACTICANTE_JUDICANTE':
+      return {
+        titulo: 'Pasante / Judicante / Prácticas',
+        subtitulo: 'Formación Académica en Derecho y Áreas Afines (Ley 2043/2020)',
+        badgeTexto: 'PASANTE / JUDICANTE',
+        icono: 'school-outline',
+        colorTexto: '#0e7490', // Cyan 800
+        colorBg: '#ecfeff',   // Cyan 50
+        colorBorde: '#a5f3fc', // Cyan 300
+        marcoLegal: 'Ley 2043 de 2020 • Ley 552 de 1999 • Res. 3546 de 2018 MinTrabajo • Decreto 055 de 2015',
+        descripcionFases: 'Modalidad pedagógica formativa. Requiere disponibilidad presupuestal (CDP), convenio con facultad de derecho/universidad, afiliación patronal a ARL, expedición de CRP en Bogdata y certificación para titulación.',
+        requisitoPrincipal: 'Carta de presentación de la universidad, CDP de auxilio/ARL y tutor institucional asignado.',
+        diferenciaClave: 'No genera relación laboral ni empleo público; es una vinculación formativa válida como experiencia profesional computable.',
+      };
+    default:
+      return {
+        titulo: 'Carrera Administrativa',
+        subtitulo: 'Concurso de Méritos CNSC / Período de Prueba (6 Meses)',
+        badgeTexto: 'CARRERA ADMINISTRATIVA',
+        icono: 'ribbon-outline',
+        colorTexto: '#1e40af',
+        colorBg: '#eff6ff',
+        colorBorde: '#93c5fd',
+        marcoLegal: 'Ley 909 de 2004, Art. 31 • Decreto 1083 de 2015',
+        descripcionFases: 'Provisión definitiva de empleos de carrera administrativa.',
+        requisitoPrincipal: 'Posición meritoria en Lista de Elegibles en firme (SIMO 4.0).',
+        diferenciaClave: 'Adquiere estabilidad y derechos de carrera tras superar período de prueba.',
+      };
+  }
+}
+
 export type ModalidadPersonal =
   | 'CARRERA_ADMINISTRATIVA'
   | 'LIBRE_NOMBRAMIENTO'
@@ -149,6 +241,8 @@ export interface CasoFlujoFuncionario {
   estadoValidacionIA?: 'CUMPLE' | 'NO_CUMPLE' | 'REQUIERE_REVISION';
   resultadoSecop?: {
     totalActivos: number;
+    totalActivosVigentes?: number;
+    totalActivosFinalizados?: number;
     tieneAlerta: boolean;
     fechaConsulta: string;
     fechaHoraConsulta?: string;
@@ -157,6 +251,9 @@ export interface CasoFlujoFuncionario {
     entidadesActivas?: string[];
     valorTotalActivo?: number;
     contratosActivos?: ContratoSecop[];
+    contratosActivosFinalizados?: ContratoSecop[];
+    entidadesFinalizadas?: string[];
+    valorTotalActivoFinalizado?: number;
     todosContratos?: ContratoSecop[];
     resumenNormativo?: ResumenNormativoSecop;
     resumenFinanciero?: ResumenFinancieroSecop;
@@ -1605,6 +1702,166 @@ const CASOS_BASE: CasoFlujoFuncionario[] = [
     etapa_activa_id: 'd_serv_3',
     observaciones: 'Pensión concedida por Colpensiones. En trámite entrega de puesto.',
   },
+  {
+    id: 'TR-2026-005',
+    tipo_proceso: 'VINCULACION',
+    modalidad: 'CARRERA_ADMINISTRATIVA',
+    id_plaza: 14,
+    servidor_nombre: 'DIEGO ALEJANDRO QUINTERO ROJAS',
+    servidor_cedula: '1014234567',
+    cargo: 'PROFESIONAL UNIVERSITARIO',
+    codigo: '219',
+    grado: '11',
+    dependencia: 'DIRECCIÓN DISTRITAL DE GESTIÓN JUDICIAL',
+    fecha_inicio_tramite: '2026-03-28',
+    fecha_efectiva: '2026-04-15',
+    etapas: generarEtapasParaCaso('VINCULACION', 'CARRERA_ADMINISTRATIVA'),
+    etapa_activa_id: 'v_carr_4',
+    observaciones: 'Elegible meritorio No. 1 en Lista SIMO 4.0 Convocatoria Distrito 2025. Período de prueba proyectado por 6 meses.',
+    resultadoSecop: {
+      totalActivos: 3,
+      totalHistoricos: 2,
+      tieneAlerta: true,
+      fechaConsulta: '07/10/2026',
+      fechaHoraConsulta: '07/10/2026, 08:35:12 p.m.',
+      dictamen: '¡ATENCIÓN! La persona registra 3 contrato(s) activo(s) o en ejecución en el Estado colombiano (Entidades: UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA, SECRETARIA JURIDICA DISTRITAL). De conformidad con el artículo 128 de la Constitución Política y las leyes 80 de 1993 y 1952 de 2019, un servidor público no puede desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público, salvo excepciones legales expresas.',
+      entidadesActivas: ['UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA', 'SECRETARIA JURIDICA DISTRITAL'],
+      valorTotalActivo: 147500000,
+      contratosActivos: [
+        {
+          id: 'CO1.PCONT.4829101',
+          idContrato: 'CO1.PCONT.4829101',
+          referencia: 'CTO-PREST-2026-089',
+          numeroContrato: 'CTO-PREST-2026-089',
+          procesoCompra: 'CD-UAEMC-2026-042',
+          entidad: 'UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA',
+          nitEntidad: '900482910-1',
+          ordenEntidad: 'Nacional Centralizado',
+          departamento: 'Bogotá D.C.',
+          ciudad: 'Bogotá',
+          proveedor: 'DIEGO ALEJANDRO QUINTERO ROJAS',
+          documentoProveedor: '1014234567',
+          tipoDocumento: 'Cédula de Ciudadanía',
+          tipoContrato: 'Prestación de Servicios Profesionales',
+          modalidad: 'Contratación Directa',
+          objeto: 'Prestación de servicios profesionales de asesoría jurídica especializada en formulación de actos administrativos y conceptos sobre control migratorio.',
+          estado: 'En Ejecución',
+          esActivo: true,
+          fechaFirma: '2026-01-15',
+          fechaInicio: '2026-01-16',
+          fechaFin: '2026-11-30',
+          diasRestantes: 54,
+          plazoEjecucion: '10 meses y 15 días',
+          duracion: '319 días',
+          valorTotal: 58500000,
+          valorPagado: 32500000,
+          valorPendiente: 26000000,
+          porcentajeEjecucion: 56,
+          urlSecop: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4829101',
+          urlProceso: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4829101',
+          supervisor: 'Subdirector de Gestión Jurídica / UAEMC',
+          ordenadorGasto: 'Director General / UAEMC',
+        },
+        {
+          id: 'CO1.PCONT.4871220',
+          idContrato: 'CO1.PCONT.4871220',
+          referencia: 'SJD-CPS-2026-114',
+          numeroContrato: 'SJD-CPS-2026-114',
+          procesoCompra: 'CD-SJD-2026-088',
+          entidad: 'SECRETARIA JURIDICA DISTRITAL',
+          nitEntidad: '899999061-9',
+          ordenEntidad: 'Distrital',
+          departamento: 'Bogotá D.C.',
+          ciudad: 'Bogotá',
+          proveedor: 'DIEGO ALEJANDRO QUINTERO ROJAS',
+          documentoProveedor: '1014234567',
+          tipoDocumento: 'Cédula de Ciudadanía',
+          tipoContrato: 'Prestación de Servicios de Apoyo a la Gestión',
+          modalidad: 'Contratación Directa',
+          objeto: 'Servicios profesionales de apoyo jurídico para la sustanciación de acciones de tutela y defensas en litigio contencioso administrativo.',
+          estado: 'En Ejecución',
+          esActivo: true,
+          fechaFirma: '2026-02-01',
+          fechaInicio: '2026-02-02',
+          fechaFin: '2026-12-15',
+          diasRestantes: 69,
+          plazoEjecucion: '10 meses y 13 días',
+          duracion: '317 días',
+          valorTotal: 49000000,
+          valorPagado: 24500000,
+          valorPendiente: 24500000,
+          porcentajeEjecucion: 50,
+          urlSecop: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4871220',
+          urlProceso: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4871220',
+          supervisor: 'Director Distrital de Doctrina y Asuntos Normativos',
+          ordenadorGasto: 'Secretario Jurídico Distrital',
+        },
+        {
+          id: 'CO1.PCONT.4910332',
+          idContrato: 'CO1.PCONT.4910332',
+          referencia: 'CTO-ASJ-2026-015',
+          numeroContrato: 'CTO-ASJ-2026-015',
+          procesoCompra: 'CD-UAEMC-2026-095',
+          entidad: 'UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA',
+          nitEntidad: '900482910-1',
+          ordenEntidad: 'Nacional Centralizado',
+          departamento: 'Bogotá D.C.',
+          ciudad: 'Bogotá',
+          proveedor: 'DIEGO ALEJANDRO QUINTERO ROJAS',
+          documentoProveedor: '1014234567',
+          tipoDocumento: 'Cédula de Ciudadanía',
+          tipoContrato: 'Prestación de Servicios Profesionales',
+          modalidad: 'Contratación Directa',
+          objeto: 'Acompañamiento especializado en la estructuración de respuestas a requerimientos judiciales y procesos sancionatorios migratorios.',
+          estado: 'En Ejecución',
+          esActivo: true,
+          fechaFirma: '2026-03-01',
+          fechaInicio: '2026-03-02',
+          fechaFin: '2026-10-31',
+          diasRestantes: 24,
+          plazoEjecucion: '8 meses',
+          duracion: '244 días',
+          valorTotal: 40000000,
+          valorPagado: 25000000,
+          valorPendiente: 15000000,
+          porcentajeEjecucion: 63,
+          urlSecop: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4910332',
+          urlProceso: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4910332',
+          supervisor: 'Jefe Oficina Asesora Jurídica / UAEMC',
+          ordenadorGasto: 'Director General / UAEMC',
+        }
+      ]
+    },
+  },
+  {
+    id: 'TR-2026-006',
+    tipo_proceso: 'VINCULACION',
+    modalidad: 'PROVISIONALIDAD',
+    id_plaza: 29,
+    servidor_nombre: 'LILIANA PATRICIA VARGAS MEJÍA',
+    servidor_cedula: '53094812',
+    cargo: 'PROFESIONAL ESPECIALIZADO',
+    codigo: '222',
+    grado: '22',
+    dependencia: 'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS',
+    fecha_inicio_tramite: '2026-04-01',
+    fecha_efectiva: '2026-04-20',
+    etapas: generarEtapasParaCaso('VINCULACION', 'PROVISIONALIDAD'),
+    etapa_activa_id: 'vp3_1',
+    observaciones: 'Vacancia de empleo de carrera. Agotado trámite de encargo preferente declarado desierto por Circular Interna No. 004/2026. Requiere verificación técnica FT-318 IA.',
+    resultadoSecop: {
+      totalActivos: 0,
+      totalHistoricos: 3,
+      tieneAlerta: false,
+      fechaConsulta: '07/10/2026',
+      fechaHoraConsulta: '07/10/2026, 08:40:00 p.m.',
+      dictamen: 'Registro verificado: Se encontraron 3 contratos históricos en SECOP II, todos cerrados y liquidados con paz y salvo. No se evidencian contratos en ejecución actualmente. Apto preventivamente.',
+      entidadesActivas: [],
+      valorTotalActivo: 0,
+      contratosActivos: [],
+      todosContratos: [],
+    },
+  },
 ];
 
 const CAUSALES_RETIRO = [
@@ -1648,6 +1905,8 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
 
   // Modal para registrar nuevo trámite
   const [modalRegistroVisible, setModalRegistroVisible] = useState(false);
+  const [modalGuiaModalidadesVisible, setModalGuiaModalidadesVisible] = useState(false);
+  const [tabGuiaModalidad, setTabGuiaModalidad] = useState<ModalidadPersonal>('CARRERA_ADMINISTRATIVA');
   const [nuevoTipoProceso, setNuevoTipoProceso] = useState<TipoProceso>('VINCULACION');
   const [nuevaModalidad, setNuevaModalidad] = useState<ModalidadPersonal>('LIBRE_NOMBRAMIENTO');
   const [plazaSeleccionadaId, setPlazaSeleccionadaId] = useState<number | null>(null);
@@ -1934,8 +2193,8 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     cedula: string;
     casoId?: string;
   } | null>(null);
-  const [secopFiltroTab, setSecopFiltroTab] = useState<'activos' | 'historicos' | 'todos'>('activos');
-  const [secopModalFiltroTab, setSecopModalFiltroTab] = useState<'activos' | 'historicos' | 'todos'>('activos');
+  const [secopFiltroTab, setSecopFiltroTab] = useState<'activos' | 'finalizados' | 'historicos' | 'todos'>('activos');
+  const [secopModalFiltroTab, setSecopModalFiltroTab] = useState<'activos' | 'finalizados' | 'historicos' | 'todos'>('activos');
   const [copiadoSecop, setCopiadoSecop] = useState(false);
 
   const abrirUrlSecop = (url?: string | null, referencia?: string) => {
@@ -1970,7 +2229,8 @@ RESULTADO PREVENTIVO:
 ${res.dictamen}
 
 INDICADORES CONTRACTUALES:
-- Contratos Activos / En Ejecución: ${res.totalActivos}
+- Contratos Activos Vigentes: ${res.totalActivosVigentes ?? res.totalActivos}
+- Contratos Activos pero Finalizados (Plazo Vencido): ${res.totalActivosFinalizados ?? 0}
 - Contratos Históricos Finalizados: ${res.totalHistoricos}
 - Total Contratado Activo: $${(res.resumenFinanciero?.valorTotalActivo ?? res.valorTotalActivo ?? 0).toLocaleString('es-CO')}
 - Saldo Pendiente de Ejecución: $${(res.resumenFinanciero?.valorPendienteActivo ?? 0).toLocaleString('es-CO')}
@@ -2038,6 +2298,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 etapas: etapasActualizadas,
                 resultadoSecop: {
                   totalActivos: res.totalActivos,
+                  totalActivosVigentes: res.totalActivosVigentes ?? res.totalActivos,
+                  totalActivosFinalizados: res.totalActivosFinalizados ?? 0,
                   totalHistoricos: res.totalHistoricos,
                   tieneAlerta: res.tieneContratosActivos,
                   fechaConsulta: ahora.toLocaleDateString('es-CO'),
@@ -3964,79 +4226,131 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   ) : null}
                 </View>
 
-                {/* Filtro Modalidad específico según pestaña */}
-                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 12, color: THEME.slate500, marginRight: 2 }}>
-                    Modalidad:
+                {/* Filtro Modalidad y Diferenciación de Regímenes */}
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700 }}>
+                    Régimen:
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                       {(tabActiva === 'ingresos'
                         ? ([
-                            'TODAS',
-                            'LIBRE_NOMBRAMIENTO',
-                            'CARRERA_ADMINISTRATIVA',
-                            'PROVISIONALIDAD',
-                            'PRACTICANTE_JUDICANTE',
+                            { key: 'TODAS', label: 'Todos los Ingresos', icon: 'layers-outline' },
+                            { key: 'CARRERA_ADMINISTRATIVA', label: 'Carrera (CNSC)', icon: 'ribbon-outline' },
+                            { key: 'LIBRE_NOMBRAMIENTO', label: 'Libre Nombramiento', icon: 'shield-outline' },
+                            { key: 'PROVISIONALIDAD', label: 'Provisionalidad', icon: 'hourglass-outline' },
+                            { key: 'PRACTICANTE_JUDICANTE', label: 'Pasante / Judicante', icon: 'school-outline' },
                           ] as const)
                         : ([
-                            'TODAS',
-                            'LIBRE_NOMBRAMIENTO',
-                            'CARRERA_ADMINISTRATIVA',
-                            'PROVISIONALIDAD',
+                            { key: 'TODAS', label: 'Todos los Retiros', icon: 'layers-outline' },
+                            { key: 'CARRERA_ADMINISTRATIVA', label: 'Carrera', icon: 'ribbon-outline' },
+                            { key: 'LIBRE_NOMBRAMIENTO', label: 'Libre Nombramiento', icon: 'shield-outline' },
+                            { key: 'PROVISIONALIDAD', label: 'Provisionalidad', icon: 'hourglass-outline' },
                           ] as const)
-                      ).map((m) => {
+                      ).map((item) => {
                         const sel =
                           tabActiva === 'ingresos'
-                            ? filtroModalidadIngreso === m
-                            : filtroModalidadDesvinculacion === m;
+                            ? filtroModalidadIngreso === item.key
+                            : filtroModalidadDesvinculacion === item.key;
+
+                        const count = casos.filter((c) => {
+                          const coincideTipo =
+                            tabActiva === 'ingresos'
+                              ? c.tipo_proceso === 'VINCULACION'
+                              : c.tipo_proceso === 'DESVINCULACION';
+                          if (!coincideTipo) return false;
+                          if (item.key === 'TODAS') return true;
+                          return c.modalidad === item.key;
+                        }).length;
+
                         return (
                           <Pressable
-                            key={m}
+                            key={item.key}
                             onPress={() => {
                               if (tabActiva === 'ingresos') {
-                                setFiltroModalidadIngreso(m);
+                                setFiltroModalidadIngreso(item.key as any);
                               } else {
-                                setFiltroModalidadDesvinculacion(m);
+                                setFiltroModalidadDesvinculacion(item.key as any);
                               }
                             }}
                             style={{
-                              paddingHorizontal: 9,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 5,
+                              paddingHorizontal: 10,
                               paddingVertical: 6,
                               borderRadius: 6,
                               backgroundColor: sel
                                 ? tabActiva === 'ingresos'
-                                  ? THEME.emerald700
-                                  : THEME.rose700
+                                  ? THEME.emerald800
+                                  : THEME.rose800
                                 : THEME.white,
                               borderWidth: 1,
                               borderColor: sel
                                 ? tabActiva === 'ingresos'
-                                  ? THEME.emerald700
-                                  : THEME.rose700
+                                  ? THEME.emerald800
+                                  : THEME.rose800
                                 : THEME.slate200,
                             }}
                           >
+                            <Ionicons
+                              name={item.icon as any}
+                              size={13}
+                              color={sel ? THEME.white : THEME.slate600}
+                            />
                             <Text
                               style={{
-                                fontSize: 11,
-                                fontWeight: '600',
-                                color: sel ? THEME.white : THEME.slate600,
+                                fontSize: 11.5,
+                                fontWeight: sel ? '700' : '600',
+                                color: sel ? THEME.white : THEME.slate700,
                               }}
                             >
-                              {m === 'TODAS'
-                                ? 'Todas'
-                                : m === 'LIBRE_NOMBRAMIENTO'
-                                ? 'Libre Nombramiento'
-                                : m === 'CARRERA_ADMINISTRATIVA'
-                                ? 'Carrera'
-                                : m === 'PROVISIONALIDAD'
-                                ? 'Provisional'
-                                : 'Judicante'}
+                              {item.label}
                             </Text>
+                            <View
+                              style={{
+                                paddingHorizontal: 5,
+                                paddingVertical: 1,
+                                borderRadius: 999,
+                                backgroundColor: sel ? 'rgba(255,255,255,0.25)' : THEME.slate100,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: '800',
+                                  color: sel ? THEME.white : THEME.slate600,
+                                }}
+                              >
+                                {count}
+                              </Text>
+                            </View>
                           </Pressable>
                         );
                       })}
+
+                      {/* Botón para abrir Guía Comparativa de Regímenes */}
+                      {tabActiva === 'ingresos' && (
+                        <Pressable
+                          onPress={() => setModalGuiaModalidadesVisible(true)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 5,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            backgroundColor: THEME.marca50,
+                            borderWidth: 1,
+                            borderColor: THEME.marca600,
+                          }}
+                        >
+                          <Ionicons name="book-outline" size={13} color={THEME.marca700} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
+                            📘 Guía de Fases & Regímenes
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
                   </ScrollView>
                 </View>
@@ -4113,7 +4427,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             alignItems: 'center',
                           }}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                             <View
                               style={{
                                 paddingHorizontal: 7,
@@ -4127,15 +4441,47 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               <Text
                                 style={{
                                   color: esVinculacion ? THEME.emeraldText : THEME.roseText,
-                                  fontSize: 10,
+                                  fontSize: 9.5,
                                   fontWeight: '700',
                                 }}
                               >
                                 {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'}
                               </Text>
                             </View>
+
+                            {/* Badge Específico de Modalidad */}
+                            {(() => {
+                              const infoM = obtenerInfoModalidad(c.modalidad);
+                              return (
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 1.5,
+                                    borderRadius: 4,
+                                    backgroundColor: infoM.colorBg,
+                                    borderWidth: 1,
+                                    borderColor: infoM.colorBorde,
+                                  }}
+                                >
+                                  <Ionicons name={infoM.icono} size={10} color={infoM.colorTexto} />
+                                  <Text
+                                    style={{
+                                      color: infoM.colorTexto,
+                                      fontSize: 9.5,
+                                      fontWeight: '800',
+                                    }}
+                                  >
+                                    {infoM.badgeTexto}
+                                  </Text>
+                                </View>
+                              );
+                            })()}
+
                             <Text
-                              style={{ color: THEME.slate400, fontSize: 11, fontWeight: '600' }}
+                              style={{ color: THEME.slate400, fontSize: 10.5, fontWeight: '600' }}
                             >
                               {c.id}
                             </Text>
@@ -4306,6 +4652,64 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             Cédula: {casoActivo.servidor_cedula} • {casoActivo.cargo} •{' '}
                             {casoActivo.dependencia}
                           </Text>
+
+                          {/* BANNER INFORMATIVO DEL RÉGIMEN Y SUS FASES */}
+                          {(() => {
+                            const infoModActivo = obtenerInfoModalidad(casoActivo.modalidad);
+                            return (
+                              <View
+                                style={{
+                                  marginTop: 8,
+                                  backgroundColor: infoModActivo.colorBg,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: infoModActivo.colorBorde,
+                                  padding: 10,
+                                  gap: 5,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Ionicons name={infoModActivo.icono} size={16} color={infoModActivo.colorTexto} />
+                                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
+                                      Régimen: {infoModActivo.titulo} ({casoActivo.etapas.length} Fases Específicas)
+                                    </Text>
+                                  </View>
+
+                                  <Pressable
+                                    onPress={() => {
+                                      setTabGuiaModalidad(casoActivo.modalidad);
+                                      setModalGuiaModalidadesVisible(true);
+                                    }}
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 4,
+                                      backgroundColor: THEME.white,
+                                      borderWidth: 1,
+                                      borderColor: infoModActivo.colorBorde,
+                                    }}
+                                  >
+                                    <Ionicons name="information-circle-outline" size={13} color={infoModActivo.colorTexto} />
+                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: infoModActivo.colorTexto }}>
+                                      Ver Guía & Diferencias
+                                    </Text>
+                                  </Pressable>
+                                </View>
+
+                                <Text style={{ fontSize: 11, color: THEME.slate700, lineHeight: 15 }}>
+                                  {infoModActivo.descripcionFases}
+                                </Text>
+
+                                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                                  ⚖️ {infoModActivo.marcoLegal}
+                                </Text>
+                              </View>
+                            );
+                          })()}
                         </View>
 
                         {/* Botones de acción del caso */}

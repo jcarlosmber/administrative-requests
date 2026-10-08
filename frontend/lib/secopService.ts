@@ -23,6 +23,8 @@ export interface ContratoSecop {
   objeto: string;
   estado: string;
   esActivo: boolean;
+  esActivoFinalizado?: boolean;
+  esHistorico?: boolean;
   fechaFirma: string | null;
   fechaInicio: string | null;
   fechaFin: string | null;
@@ -56,6 +58,7 @@ export interface ResumenFinancieroSecop {
   valorTotalActivo: number;
   valorPagadoActivo: number;
   valorPendienteActivo: number;
+  valorTotalActivoFinalizado?: number;
   valorTotalHistorico: number;
   porcentajeTotalPagado: number;
 }
@@ -67,13 +70,19 @@ export interface ResultadoConsultaSecop {
   fechaConsulta?: string;
   totalContratos: number;
   totalActivos: number;
+  totalActivosVigentes?: number;
+  totalActivosFinalizados?: number;
   totalHistoricos: number;
   tieneContratosActivos: boolean;
-  nivelRiesgo: 'ALERTA_CONTRATO_ACTIVO' | 'SIN_RIESGO';
+  tieneContratosActivosFinalizados?: boolean;
+  nivelRiesgo: 'ALERTA_CONTRATO_ACTIVO' | 'PREVENCION_FINALIZADO' | 'SIN_RIESGO';
   dictamen: string;
   entidadesActivas: string[];
+  entidadesFinalizadas?: string[];
   valorTotalActivo: number;
+  valorTotalActivoFinalizado?: number;
   contratosActivos: ContratoSecop[];
+  contratosActivosFinalizados?: ContratoSecop[];
   contratosHistoricos: ContratoSecop[];
   todosContratos: ContratoSecop[];
   resumenNormativo?: ResumenNormativoSecop;
@@ -101,13 +110,19 @@ const ESTADOS_ACTIVOS = [
 function analizarContratosRaw(contratos: any[] = []): {
   totalContratos: number;
   totalActivos: number;
+  totalActivosVigentes: number;
+  totalActivosFinalizados: number;
   totalHistoricos: number;
   tieneContratosActivos: boolean;
-  nivelRiesgo: 'ALERTA_CONTRATO_ACTIVO' | 'SIN_RIESGO';
+  tieneContratosActivosFinalizados: boolean;
+  nivelRiesgo: 'ALERTA_CONTRATO_ACTIVO' | 'PREVENCION_FINALIZADO' | 'SIN_RIESGO';
   dictamen: string;
   entidadesActivas: string[];
+  entidadesFinalizadas: string[];
   valorTotalActivo: number;
+  valorTotalActivoFinalizado: number;
   contratosActivos: ContratoSecop[];
+  contratosActivosFinalizados: ContratoSecop[];
   contratosHistoricos: ContratoSecop[];
   todosContratos: ContratoSecop[];
   resumenNormativo: ResumenNormativoSecop;
@@ -115,28 +130,48 @@ function analizarContratosRaw(contratos: any[] = []): {
 } {
   const hoy = new Date();
   const activos: ContratoSecop[] = [];
+  const activosFinalizados: ContratoSecop[] = [];
   const historicos: ContratoSecop[] = [];
 
   for (const c of contratos) {
     const estadoNorm = (c.estado_contrato || '').trim().toLowerCase();
 
-    let vigentePorFecha = false;
     let diasRestantes: number | null = null;
+    let haVencidoPorFecha = false;
+    let fechaFinObj: Date | null = null;
+
     if (c.fecha_de_fin_del_contrato) {
       try {
-        const fechaFin = new Date(c.fecha_de_fin_del_contrato);
-        if (!isNaN(fechaFin.getTime())) {
-          diasRestantes = Math.ceil((fechaFin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-          if (fechaFin >= hoy) {
-            vigentePorFecha = true;
+        fechaFinObj = new Date(c.fecha_de_fin_del_contrato);
+        if (!isNaN(fechaFinObj.getTime())) {
+          diasRestantes = Math.ceil((fechaFinObj.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+          if (fechaFinObj < hoy) {
+            haVencidoPorFecha = true;
           }
         }
       } catch (e) {}
     }
 
+    const esCerradoDefinitivo = estadoNorm === 'cerrado' || estadoNorm === 'terminado' || estadoNorm === 'cancelado' || estadoNorm === 'liquidado';
     const esActivoPorEstado = ESTADOS_ACTIVOS.includes(estadoNorm);
-    const esCerradoDefinitivo = estadoNorm === 'cerrado' || estadoNorm === 'terminado' || estadoNorm === 'cancelado';
-    const esActivo = (esActivoPorEstado || vigentePorFecha) && !esCerradoDefinitivo;
+
+    // Clasificación:
+    // 1. Histórico: cerrado formalmente por la entidad
+    // 2. Activo pero Finalizado: figura como activo/modificado en SECOP pero fecha fin ya terminó
+    // 3. Activo Vigente: activo y fecha fin futura o sin vencer
+    let esActivo = false;
+    let esActivoFinalizado = false;
+    let esHistorico = false;
+
+    if (esCerradoDefinitivo) {
+      esHistorico = true;
+    } else if (haVencidoPorFecha) {
+      esActivoFinalizado = true;
+    } else if (esActivoPorEstado || (fechaFinObj && fechaFinObj >= hoy)) {
+      esActivo = true;
+    } else {
+      esHistorico = true;
+    }
 
     const valorTotal = parseFloat(c.valor_del_contrato || 0);
     const valorPagado = parseFloat(c.valor_pagado || 0);
@@ -168,6 +203,8 @@ function analizarContratosRaw(contratos: any[] = []): {
       objeto: c.objeto_del_contrato || c.descripcion_del_proceso || 'Sin objeto registrado',
       estado: c.estado_contrato || 'Desconocido',
       esActivo,
+      esActivoFinalizado,
+      esHistorico,
       fechaFirma: c.fecha_de_firma ? c.fecha_de_firma.split('T')[0] : null,
       fechaInicio: c.fecha_de_inicio_del_contrato ? c.fecha_de_inicio_del_contrato.split('T')[0] : null,
       fechaFin: c.fecha_de_fin_del_contrato ? c.fecha_de_fin_del_contrato.split('T')[0] : null,
@@ -187,25 +224,33 @@ function analizarContratosRaw(contratos: any[] = []): {
 
     if (esActivo) {
       activos.push(contratoItem);
+    } else if (esActivoFinalizado) {
+      activosFinalizados.push(contratoItem);
     } else {
       historicos.push(contratoItem);
     }
   }
 
   const tieneContratosActivos = activos.length > 0;
+  const tieneContratosActivosFinalizados = activosFinalizados.length > 0;
   const entidadesActivas = Array.from(new Set(activos.map(a => a.entidad)));
+  const entidadesFinalizadas = Array.from(new Set(activosFinalizados.map(a => a.entidad)));
   const valorTotalActivo = activos.reduce((sum, a) => sum + (a.valorTotal || 0), 0);
   const valorPagadoActivo = activos.reduce((sum, a) => sum + (a.valorPagado || 0), 0);
   const valorPendienteActivo = activos.reduce((sum, a) => sum + (a.valorPendiente || 0), 0);
+  const valorTotalActivoFinalizado = activosFinalizados.reduce((sum, a) => sum + (a.valorTotal || 0), 0);
   const valorTotalHistorico = historicos.reduce((sum, h) => sum + (h.valorTotal || 0), 0);
   const porcentajeTotalPagado = valorTotalActivo > 0 ? Math.round((valorPagadoActivo / valorTotalActivo) * 100) : 0;
 
-  let nivelRiesgo: 'ALERTA_CONTRATO_ACTIVO' | 'SIN_RIESGO' = 'SIN_RIESGO';
+  let nivelRiesgo: 'ALERTA_CONTRATO_ACTIVO' | 'PREVENCION_FINALIZADO' | 'SIN_RIESGO' = 'SIN_RIESGO';
   let dictamen = 'No se registran contratos activos en SECOP II. Sin alerta de inhabilidad contractual preliminar.';
 
   if (tieneContratosActivos) {
     nivelRiesgo = 'ALERTA_CONTRATO_ACTIVO';
-    dictamen = `¡ATENCIÓN! La persona registra ${activos.length} contrato(s) activo(s) o en ejecución en el Estado colombiano (Entidades: ${entidadesActivas.join(', ')}). De conformidad con el artículo 128 de la Constitución Política y las leyes 80 de 1993 y 1952 de 2019, un servidor público no puede desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público, salvo excepciones legales expresas. Verifique la cesión, suspensión o acta de terminación antes de formalizar la posesión.`;
+    dictamen = `¡ATENCIÓN! La persona registra ${activos.length} contrato(s) activo(s) en ejecución vigente en el Estado colombiano (Entidades: ${entidadesActivas.join(', ')}). De conformidad con el artículo 128 de la Constitución Política y las leyes 80 de 1993 y 1952 de 2019, un servidor público no puede desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público. Verifique la cesión, suspensión o acta de terminación antes de formalizar la posesión.`;
+  } else if (tieneContratosActivosFinalizados) {
+    nivelRiesgo = 'PREVENCION_FINALIZADO';
+    dictamen = `PREVENCIÓN CONTRACTUAL: La persona registra ${activosFinalizados.length} contrato(s) con estado activo/modificado en SECOP II, pero cuya fecha de finalización ya culminó (Entidades: ${entidadesFinalizadas.join(', ')}). No se evidencia ejecución activa simultánea en tiempo real. Sin embargo, al no figurar cerrado o liquidado formalmente en la plataforma, se sugiere requerir paz y salvo, acta de terminación o constancia de cumplimiento a satisfacción.`;
   } else if (historicos.length > 0) {
     dictamen = `Registro verificado: Se encontraron ${historicos.length} contrato(s) históricos en SECOP II, todos cerrados o terminados formalmente. No se evidencian contratos en ejecución actualmente.`;
   }
@@ -228,9 +273,13 @@ function analizarContratosRaw(contratos: any[] = []): {
     ],
     orientacionTalentoHumano: tieneContratosActivos
       ? 'ACCIÓN PREVENTIVA OBLIGATORIA: Previo a formalizar la posesión, la Subdirección de Talento Humano debe requerir al aspirante la acreditación formal de la cesión, suspensión o acta de terminación bilateral y liquidación con paz y salvo suscrita con la entidad contratante.'
+      : tieneContratosActivosFinalizados
+      ? 'VERIFICACIÓN PREVENTIVA DE CIERRE: Los contratos registran fecha de fin cumplida pero no figuran cerrados o liquidados en SECOP II. Solicite paz y salvo, constancia de cumplimiento a satisfacción o acta de liquidación para anexar a la carpeta del aspirante.'
       : 'CONCEPTO FAVORABLE: No se registran contratos en ejecución en SECOP II. Continúe con la verificación ordinaria de antecedentes y requisitos.',
     accionRequerida: tieneContratosActivos
       ? 'Exigir Acta de Terminación Bilateral / Liquidación o Suspensión Formal aprobada por la entidad pública antes del acto de posesión.'
+      : tieneContratosActivosFinalizados
+      ? 'Solicitar constancia de cumplimiento a satisfacción, paz y salvo o acta de liquidación suscrita con la entidad estatal.'
       : 'Apto para posesión en materia de contratación estatal preliminar.'
   };
 
@@ -238,6 +287,7 @@ function analizarContratosRaw(contratos: any[] = []): {
     valorTotalActivo,
     valorPagadoActivo,
     valorPendienteActivo,
+    valorTotalActivoFinalizado,
     valorTotalHistorico,
     porcentajeTotalPagado
   };
@@ -245,15 +295,21 @@ function analizarContratosRaw(contratos: any[] = []): {
   return {
     totalContratos: contratos.length,
     totalActivos: activos.length,
+    totalActivosVigentes: activos.length,
+    totalActivosFinalizados: activosFinalizados.length,
     totalHistoricos: historicos.length,
     tieneContratosActivos,
+    tieneContratosActivosFinalizados,
     nivelRiesgo,
     dictamen,
     entidadesActivas,
+    entidadesFinalizadas,
     valorTotalActivo,
+    valorTotalActivoFinalizado,
     contratosActivos: activos,
+    contratosActivosFinalizados: activosFinalizados,
     contratosHistoricos: historicos,
-    todosContratos: [...activos, ...historicos],
+    todosContratos: [...activos, ...activosFinalizados, ...historicos],
     resumenNormativo,
     resumenFinanciero
   };
