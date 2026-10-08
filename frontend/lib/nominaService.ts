@@ -70,6 +70,8 @@ export interface PersonaPerno {
   plaza_opec?: string;
   plaza_id_escalera?: string | null;
   plaza_peldano_escalera?: number | null;
+  plaza_resolucion_manual?: string;
+  plaza_manual_funciones?: string;
 }
 
 export interface PlazaNomina {
@@ -96,9 +98,17 @@ export interface PlazaNomina {
   tipo_vinculacion?: string;
   situacion_administrativa?: string;
   opec?: string;
-  // Campos de Escalera de Encargo (Columnas P y Q: ID-E y N)
+  // Campos de Escalera de Encargo (Columnas Q y R: ID-E y N)
   id_escalera?: string | null;
   peldano_escalera?: number | null;
+  // Resoluciones y Manual de Funciones (Columnas AJ, AF y AH)
+  resolucion_manual?: string;
+  manual_funciones?: string;
+  // Situaciones administrativas específicas (Columnas S a V)
+  pv?: string | null;
+  pp_oe?: string | null;
+  vt_lm?: string | null;
+  vt_lnr?: string | null;
   // Campos complementarios de Planta Perno
   tipo_funcionario?: string;
   fecha_nacimiento?: string;
@@ -167,7 +177,19 @@ export const nominaService = {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.plazas) && data.plazas.length > 0) {
-          return data.plazas;
+          return data.plazas.map((p: PlazaNomina) => {
+            const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
+            return {
+              ...p,
+              id_escalera: p.id_escalera || m?.id_escalera || null,
+              peldano_escalera: p.peldano_escalera || m?.peldano_escalera || null,
+              encargo_cedula: p.encargo_cedula || m?.encargo_cedula || null,
+              encargo_nombre: p.encargo_nombre || m?.encargo_nombre || null,
+              es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
+              opec: p.opec || m?.opec || null,
+              situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+            };
+          });
         }
       }
     } catch {
@@ -291,6 +313,92 @@ export const nominaService = {
     };
   },
 
+  // Obtener listado de todas las escaleras de encargo agrupadas
+  async getEscaleras(busqueda?: string): Promise<EscaleraEncargo[]> {
+    try {
+      const searchParams = new URLSearchParams();
+      if (busqueda) searchParams.append('busqueda', busqueda);
+      const url = `${API_URL}/api/nomina/escaleras?${searchParams.toString()}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.escaleras) && data.escaleras.length > 0) {
+          return data.escaleras;
+        }
+      }
+    } catch {}
+
+    const todas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    const map = new Map<string, PlazaNomina[]>();
+    todas.forEach((p) => {
+      if (p.id_escalera && String(p.id_escalera).trim()) {
+        const key = String(p.id_escalera).trim().toUpperCase();
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(p);
+      }
+    });
+
+    let lista: EscaleraEncargo[] = [];
+    map.forEach((peldanos, id_escalera) => {
+      peldanos.sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+      lista.push({ id_escalera, total_peldanos: peldanos.length, peldanos });
+    });
+
+    lista.sort((a, b) => a.id_escalera.localeCompare(b.id_escalera, undefined, { numeric: true }));
+
+    if (busqueda && busqueda.trim()) {
+      const q = busqueda.trim().toLowerCase();
+      lista = lista.filter(
+        (e) =>
+          e.id_escalera.toLowerCase().includes(q) ||
+          e.peldanos.some(
+            (p) =>
+              (p.cargo && p.cargo.toLowerCase().includes(q)) ||
+              (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
+              (p.encargo_nombre && p.encargo_nombre.toLowerCase().includes(q)) ||
+              (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q)) ||
+              (p.id_plaza && p.id_plaza.toString().includes(q))
+          )
+      );
+    }
+
+    return lista;
+  },
+
+  // Obtener detalle de una escalera por ID
+  async getEscaleraDetalle(idEscalera: string): Promise<EscaleraEncargo | null> {
+    try {
+      const id = idEscalera.trim().toUpperCase();
+      const url = `${API_URL}/api/nomina/escaleras/${id}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.peldanos) {
+          return {
+            id_escalera: data.id_escalera,
+            total_peldanos: data.total_peldanos || data.peldanos.length,
+            peldanos: data.peldanos,
+          };
+        }
+      }
+    } catch {}
+
+    const todas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    const id = idEscalera.trim().toUpperCase();
+    const peldanos = todas
+      .filter((p) => p.id_escalera && String(p.id_escalera).trim().toUpperCase() === id)
+      .sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+
+    if (peldanos.length === 0) return null;
+    return { id_escalera: id, total_peldanos: peldanos.length, peldanos };
+  },
+
   // URLs para descarga de plantillas oficiales
   getPlantillaPlantaUrl(): string {
     return `${API_URL}/api/nomina/plantilla/planta`;
@@ -397,36 +505,6 @@ export const nominaService = {
       return await res.json();
     } catch (e: any) {
       return { success: false, mensaje: e.message };
-    }
-  },
-
-  // Obtener todas las escaleras de encargo
-  async getEscaleras(): Promise<EscaleraEncargo[]> {
-    try {
-      const res = await fetch(`${API_URL}/api/nomina/escaleras`);
-      const data = await res.json();
-      if (data.success && data.escaleras) {
-        return data.escaleras;
-      }
-      return [];
-    } catch (e) {
-      console.warn('Error al cargar escaleras:', e);
-      return [];
-    }
-  },
-
-  // Obtener detalle de una escalera de encargo específica
-  async getEscaleraDetalle(idEscalera: string): Promise<PlazaNomina[]> {
-    try {
-      const res = await fetch(`${API_URL}/api/nomina/escaleras/${encodeURIComponent(idEscalera)}`);
-      const data = await res.json();
-      if (data.success && data.peldanos) {
-        return data.peldanos;
-      }
-      return [];
-    } catch (e) {
-      console.warn('Error al cargar detalle de escalera:', e);
-      return [];
     }
   },
 

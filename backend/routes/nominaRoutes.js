@@ -536,11 +536,46 @@ module.exports = function (pool) {
         GROUP BY id_escalera
         ORDER BY id_escalera ASC
       `);
-      res.json({ success: true, total: result.rows.length, escaleras: result.rows });
+
+      if (result.rows.length > 0) {
+        return res.json({ success: true, total: result.rows.length, escaleras: result.rows });
+      }
     } catch (e) {
-      console.error('Error al obtener escaleras de encargo:', e);
-      res.status(500).json({ success: false, error: e.message });
+      console.warn('Advertencia en consulta de base de datos para /escaleras, usando fallback:', e.message);
     }
+
+    // Fallback a plantaMockData.json
+    try {
+      const mockPlazasPath = path.resolve(__dirname, '../../frontend/lib/plantaMockData.json');
+      if (fs.existsSync(mockPlazasPath)) {
+        const plazas = JSON.parse(fs.readFileSync(mockPlazasPath, 'utf8'));
+        const map = new Map();
+        plazas.forEach((p) => {
+          if (p.id_escalera && String(p.id_escalera).trim()) {
+            const k = String(p.id_escalera).trim().toUpperCase();
+            if (!map.has(k)) map.set(k, []);
+            map.get(k).push(p);
+          }
+        });
+
+        const escalerasList = [];
+        map.forEach((peldanos, id_escalera) => {
+          peldanos.sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+          escalerasList.push({
+            id_escalera,
+            total_peldanos: peldanos.length,
+            peldanos,
+          });
+        });
+
+        escalerasList.sort((a, b) => a.id_escalera.localeCompare(b.id_escalera, undefined, { numeric: true }));
+        return res.json({ success: true, total: escalerasList.length, escaleras: escalerasList });
+      }
+    } catch (errMock) {
+      console.error('Error en fallback de escaleras:', errMock);
+    }
+
+    res.json({ success: true, total: 0, escaleras: [] });
   });
 
   // 2.2 Obtener detalle de una escalera de encargo específica
@@ -551,14 +586,32 @@ module.exports = function (pool) {
       const result = await pool.query(`
         SELECT *
         FROM public.planta_personal_sjd
-        WHERE id_escalera = $1
+        WHERE UPPER(TRIM(id_escalera)) = UPPER(TRIM($1))
         ORDER BY COALESCE(peldano_escalera, 999) ASC, id_plaza ASC
       `, [id]);
-      res.json({ success: true, id_escalera: id, total: result.rows.length, peldanos: result.rows });
+
+      if (result.rows.length > 0) {
+        return res.json({ success: true, id_escalera: id, total: result.rows.length, peldanos: result.rows });
+      }
     } catch (e) {
-      console.error('Error al obtener escalera:', e);
-      res.status(500).json({ success: false, error: e.message });
+      console.warn('Advertencia en consulta de base de datos para /escaleras/:id:', e.message);
     }
+
+    try {
+      const mockPlazasPath = path.resolve(__dirname, '../../frontend/lib/plantaMockData.json');
+      if (fs.existsSync(mockPlazasPath)) {
+        const plazas = JSON.parse(fs.readFileSync(mockPlazasPath, 'utf8'));
+        const idTarget = String(req.params.id).trim().toUpperCase();
+        const peldanos = plazas
+          .filter((p) => p.id_escalera && String(p.id_escalera).trim().toUpperCase() === idTarget)
+          .sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+        return res.json({ success: true, id_escalera: req.params.id, total: peldanos.length, peldanos });
+      }
+    } catch (errMock) {
+      console.error('Error en fallback de detalle escalera:', errMock);
+    }
+
+    res.json({ success: true, id_escalera: req.params.id, total: 0, peldanos: [] });
   });
 
   // 2.3 Obtener listado de personal integral (PLANTA PERNO - Activos y Desvinculados con cruce a Planta)
@@ -1648,6 +1701,16 @@ module.exports = function (pool) {
           const tipoVinculacion = String(getVal(row.getCell(6)) || '').trim();
           const situacionAdmin = String(getVal(row.getCell(13)) || getVal(row.getCell(14)) || '').trim();
           
+          const situacionTitular = String(getVal(row.getCell(14)) || '').trim();
+
+          // Encargo y Escalera (Cols 15, 16, 17, 18)
+          const encargoCedula = String(getVal(row.getCell(15)) || '').trim() || null;
+          const encargoNombre = cleanText(getVal(row.getCell(16))) || null;
+          const idE = cleanText(getVal(row.getCell(17))) || null;
+          const idEscalera = idE ? idE.toUpperCase() : null;
+          const peldanoEscalera = parseInt(getVal(row.getCell(18)), 10) || null;
+          const opec = cleanText(getVal(row.getCell(23))) || null;
+
           let estadoCargo = String(getVal(row.getCell(25)) || '').trim().toUpperCase();
           if (!estadoCargo || estadoCargo.includes('IF(')) {
             if (titularNombre.includes('VACANTE DEFINITIVA')) {
@@ -1672,13 +1735,20 @@ module.exports = function (pool) {
           const requisitos = String(getVal(row.getCell(35)) || '').trim();
           const asignacion = parseFloat(getVal(row.getCell(37))) || 0;
 
+          const esEncargo = Boolean(idEscalera || encargoCedula || (encargoNombre && !encargoNombre.includes('VACANTE')) || situacionAdmin.includes('ENCARGO'));
+
           await pool.query(`
             INSERT INTO public.planta_personal_sjd (
               id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
               dependencia_cargo, dependencia_funcional, proposito, funciones,
               requisitos, asignacion_basica, estado_cargo, titular_cedula,
-              titular_nombre, tipo_vinculacion, situacion_administrativa, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
+              titular_nombre, tipo_vinculacion, situacion_administrativa,
+              situacion_titular, encargo_cedula, encargo_nombre, es_encargo,
+              opec, id_escalera, peldano_escalera, updated_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+              $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW()
+            )
             ON CONFLICT (id_plaza) DO UPDATE SET
               nivel = EXCLUDED.nivel,
               cargo = EXCLUDED.cargo,
@@ -1695,12 +1765,21 @@ module.exports = function (pool) {
               titular_nombre = EXCLUDED.titular_nombre,
               tipo_vinculacion = EXCLUDED.tipo_vinculacion,
               situacion_administrativa = EXCLUDED.situacion_administrativa,
+              situacion_titular = EXCLUDED.situacion_titular,
+              encargo_cedula = EXCLUDED.encargo_cedula,
+              encargo_nombre = EXCLUDED.encargo_nombre,
+              es_encargo = EXCLUDED.es_encargo,
+              opec = EXCLUDED.opec,
+              id_escalera = EXCLUDED.id_escalera,
+              peldano_escalera = EXCLUDED.peldano_escalera,
               updated_at = NOW();
           `, [
             idPlaza, parseInt(getVal(row.getCell(2)), 10) || null, parseInt(getVal(row.getCell(3)), 10) || null,
             nivel, cargoNom, codigo, grado, depCargo, depFuncional, proposito,
             JSON.stringify(parseFunctions(funcionesRaw)), requisitos, asignacion,
-            estadoCargo, titularCedula, titularNombre, tipoVinculacion, situacionAdmin
+            estadoCargo, titularCedula, titularNombre, tipoVinculacion, situacionAdmin,
+            situacionTitular, encargoCedula, encargoNombre, esEncargo,
+            opec, idEscalera, peldanoEscalera
           ]);
           countPlanta++;
         }
@@ -1746,6 +1825,108 @@ module.exports = function (pool) {
     } catch (error) {
       console.error('Error sincronizando archivo local:', error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // =========================================================================
+  // ENDPOINT: LISTADO Y DETALLE DE ESCALERAS DE ENCARGO (CNSC / SJD)
+  // =========================================================================
+  router.get('/escaleras', async (req, res) => {
+    try {
+      await ensureTables();
+      const q = req.query.busqueda ? req.query.busqueda.trim().toLowerCase() : null;
+      let rows = [];
+      try {
+        const result = await pool.query(`
+          SELECT * FROM public.planta_personal_sjd
+          WHERE id_escalera IS NOT NULL AND TRIM(id_escalera) != ''
+          ORDER BY id_escalera ASC, peldano_escalera ASC NULLS LAST, id_plaza ASC
+        `);
+        rows = result.rows || [];
+      } catch (err) {
+        console.warn('Error consultando tabla para escaleras:', err.message);
+      }
+
+      if (rows.length === 0) {
+        try {
+          const mockPath = path.resolve(__dirname, '../../frontend/lib/plantaMockData.json');
+          if (fs.existsSync(mockPath)) {
+            const mock = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+            rows = mock.filter(p => p.id_escalera);
+          }
+        } catch (e) {}
+      }
+
+      const map = new Map();
+      rows.forEach(p => {
+        const idEsc = String(p.id_escalera).trim().toUpperCase();
+        if (!map.has(idEsc)) map.set(idEsc, []);
+        map.get(idEsc).push(p);
+      });
+
+      let escaleras = [];
+      map.forEach((peldanos, idEsc) => {
+        peldanos.sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+        escaleras.push({
+          id_escalera: idEsc,
+          total_peldanos: peldanos.length,
+          peldanos
+        });
+      });
+
+      escaleras.sort((a, b) => a.id_escalera.localeCompare(b.id_escalera, undefined, { numeric: true }));
+
+      if (q) {
+        escaleras = escaleras.filter(e =>
+          e.id_escalera.toLowerCase().includes(q) ||
+          e.peldanos.some(p =>
+            (p.cargo && p.cargo.toLowerCase().includes(q)) ||
+            (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
+            (p.encargo_nombre && p.encargo_nombre.toLowerCase().includes(q)) ||
+            (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q))
+          )
+        );
+      }
+
+      res.json({ success: true, escaleras, total: escaleras.length });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.get('/escaleras/:id', async (req, res) => {
+    try {
+      const idEsc = req.params.id.trim().toUpperCase();
+      let peldanos = [];
+      try {
+        const result = await pool.query(`
+          SELECT * FROM public.planta_personal_sjd
+          WHERE UPPER(TRIM(id_escalera)) = $1
+          ORDER BY peldano_escalera ASC NULLS LAST, id_plaza ASC
+        `, [idEsc]);
+        peldanos = result.rows || [];
+      } catch (err) {}
+
+      if (peldanos.length === 0) {
+        try {
+          const mockPath = path.resolve(__dirname, '../../frontend/lib/plantaMockData.json');
+          if (fs.existsSync(mockPath)) {
+            const mock = JSON.parse(fs.readFileSync(mockPath, 'utf8'));
+            peldanos = mock.filter(p => p.id_escalera && String(p.id_escalera).trim().toUpperCase() === idEsc);
+          }
+        } catch (e) {}
+      }
+
+      peldanos.sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
+
+      res.json({
+        success: true,
+        id_escalera: idEsc,
+        total_peldanos: peldanos.length,
+        peldanos
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
     }
   });
 

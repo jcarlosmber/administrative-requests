@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import mockPlazasData from '../../lib/plantaMockData.json';
+import { nominaService, PlazaNomina, PersonaPerno } from '../../lib/nominaService';
 import { secopService, ContratoSecop, ResultadoConsultaSecop } from '../../lib/secopService';
 import { ingresosService } from '../../lib/ingresosService';
 
@@ -755,6 +756,124 @@ export default function VinculacionesDesvinculacionesScreen() {
   const [dependenciaInput, setDependenciaInput] = useState('');
   const [causalInput, setCausalInput] = useState(CAUSALES_RETIRO[0]);
 
+  // Estados de Búsqueda de Nómina Integrada en el Modal
+  const [modalModoEntrada, setModalModoEntrada] = useState<'NOMINA' | 'MANUAL'>('NOMINA');
+  const [nominaTipoBusqueda, setNominaTipoBusqueda] = useState<'SERVIDORES' | 'PLAZAS'>('PLAZAS');
+  const [nominaQuery, setNominaQuery] = useState('');
+  const [nominaCargando, setNominaCargando] = useState(false);
+  const [nominaResultadosServidores, setNominaResultadosServidores] = useState<PersonaPerno[]>([]);
+  const [nominaResultadosPlazas, setNominaResultadosPlazas] = useState<PlazaNomina[]>([]);
+  const [nominaItemSeleccionado, setNominaItemSeleccionado] = useState<{
+    tipo: 'SERVIDOR' | 'PLAZA';
+    titulo: string;
+    detalle: string;
+    id?: number | string;
+  } | null>(null);
+
+  // Función para ejecutar búsqueda reactiva en nómina
+  const ejecutarBusquedaNomina = async (
+    queryText: string,
+    tipo: 'SERVIDORES' | 'PLAZAS' = nominaTipoBusqueda
+  ) => {
+    const q = queryText.trim();
+    setNominaCargando(true);
+    try {
+      if (tipo === 'SERVIDORES') {
+        const personas = await nominaService.getPersonalPerno({ busqueda: q });
+        setNominaResultadosServidores(personas.slice(0, 8));
+      } else {
+        const plazas = await nominaService.getPlazas({ busqueda: q });
+        setNominaResultadosPlazas(plazas.slice(0, 8));
+      }
+    } catch (e: any) {
+      console.warn('Error al buscar en nómina:', e.message);
+    } finally {
+      setNominaCargando(false);
+    }
+  };
+
+  // Autocompletar formulario al seleccionar servidor de nómina
+  const seleccionarServidorNomina = (p: PersonaPerno) => {
+    const nombreCompleto =
+      p.nombre_completo ||
+      `${p.nombres || ''} ${p.primer_apellido || ''} ${p.segundo_apellido || ''}`.trim();
+    setNombreInput(nombreCompleto);
+    setCedulaInput(String(p.cedula || ''));
+    setCargoInput(p.cargo || p.plaza_cargo || 'PROFESIONAL ESPECIALIZADO');
+    setDependenciaInput(p.dependencia || p.plaza_dependencia_cargo || 'SECRETARÍA JURÍDICA DISTRITAL');
+
+    if (p.plaza_id_plaza) {
+      setPlazaSeleccionadaId(p.plaza_id_plaza);
+    }
+
+    // Deducción de modalidad
+    const nomb = (p.tipo_nombramiento || p.plaza_tipo_vinculacion || '').toUpperCase();
+    if (nomb.includes('CARRERA')) {
+      setNuevaModalidad('CARRERA_ADMINISTRATIVA');
+    } else if (nomb.includes('PROVISIONAL')) {
+      setNuevaModalidad('PROVISIONALIDAD');
+    } else if (nomb.includes('LIBRE') || nomb.includes('REMOCION')) {
+      setNuevaModalidad('LIBRE_NOMBRAMIENTO');
+    }
+
+    setNominaItemSeleccionado({
+      tipo: 'SERVIDOR',
+      titulo: nombreCompleto,
+      detalle: `C.C. ${p.cedula} • ${p.cargo || p.plaza_cargo || 'Sin cargo'} • ${p.dependencia || 'Entidad'}`,
+      id: p.cedula,
+    });
+  };
+
+  // Autocompletar formulario al seleccionar plaza de nómina
+  const seleccionarPlazaNomina = (pl: PlazaNomina) => {
+    setPlazaSeleccionadaId(pl.id_plaza);
+    setCargoInput(
+      `${pl.cargo}${pl.codigo && pl.grado ? ` (Cód: ${pl.codigo} Gr: ${pl.grado})` : ''}`
+    );
+    setDependenciaInput(pl.dependencia_cargo || 'SECRETARÍA JURÍDICA DISTRITAL');
+
+    // Si la plaza tiene titular y el trámite es de desvinculación, se completa el servidor
+    if (nuevoTipoProceso === 'DESVINCULACION' && pl.titular_nombre) {
+      setNombreInput(pl.titular_nombre);
+      setCedulaInput(String(pl.titular_cedula || ''));
+    }
+
+    // Modalidad sugerida
+    const vinc = (pl.tipo_vinculacion || '').toUpperCase();
+    if (vinc.includes('CARRERA')) {
+      setNuevaModalidad('CARRERA_ADMINISTRATIVA');
+    } else if (vinc.includes('PROVISIONAL')) {
+      setNuevaModalidad('PROVISIONALIDAD');
+    } else if (vinc.includes('LIBRE')) {
+      setNuevaModalidad('LIBRE_NOMBRAMIENTO');
+    }
+
+    setNominaItemSeleccionado({
+      tipo: 'PLAZA',
+      titulo: `Plaza #${pl.id_plaza} - ${pl.cargo}`,
+      detalle: `${pl.estado_cargo} • Cód: ${pl.codigo || 'N/A'} Gr: ${pl.grado || 'N/A'} • ${pl.dependencia_cargo}`,
+      id: pl.id_plaza,
+    });
+  };
+
+  const limpiarSeleccionNomina = () => {
+    setNominaItemSeleccionado(null);
+    setPlazaSeleccionadaId(null);
+  };
+
+  const resetFormularioRegistro = () => {
+    setNombreInput('');
+    setCedulaInput('');
+    setCargoInput('');
+    setDependenciaInput('');
+    setPlazaSeleccionadaId(null);
+    setNominaItemSeleccionado(null);
+    setNominaQuery('');
+    setNominaResultadosServidores([]);
+    setNominaResultadosPlazas([]);
+    setModalModoEntrada('NOMINA');
+  };
+
   // Modal informativo estándar (Regla: Modals en vez de alerts)
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [infoModalTitulo, setInfoModalTitulo] = useState('');
@@ -968,10 +1087,7 @@ export default function VinculacionesDesvinculacionesScreen() {
     setCasos([nuevoCaso, ...casos]);
     setCasoSeleccionadoId(nuevoId);
     setModalRegistroVisible(false);
-    setNombreInput('');
-    setCedulaInput('');
-    setCargoInput('');
-    setDependenciaInput('');
+    resetFormularioRegistro();
 
     mostrarModal(
       'Trámite Creado',
@@ -3016,135 +3132,819 @@ export default function VinculacionesDesvinculacionesScreen() {
           <View
             style={{
               backgroundColor: THEME.white,
-              borderRadius: 14,
+              borderRadius: 16,
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 540,
+              maxWidth: 680,
+              maxHeight: '90%',
               padding: 20,
-              gap: 14,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 16,
+              elevation: 8,
             }}
           >
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 16, paddingBottom: 10 }}
             >
-              <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '700' }}>
-                Registrar Nuevo Trámite de Personal
-              </Text>
-              <Pressable onPress={() => setModalRegistroVisible(false)}>
-                <Ionicons name="close" size={22} color={THEME.slate500} />
-              </Pressable>
-            </View>
-
-            {/* Tipo */}
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {(['VINCULACION', 'DESVINCULACION'] as const).map((t) => (
+              {/* Cabecera del Modal */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  borderBottomWidth: 1,
+                  borderBottomColor: THEME.slate100,
+                  paddingBottom: 12,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      backgroundColor: THEME.marca50,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="person-add-outline" size={20} color={THEME.marca600} />
+                  </View>
+                  <View>
+                    <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '700' }}>
+                      Registrar Nuevo Trámite de Personal
+                    </Text>
+                    <Text style={{ color: THEME.slate500, fontSize: 12 }}>
+                      Vinculación y Desvinculación articulada con la base de Nómina
+                    </Text>
+                  </View>
+                </View>
                 <Pressable
-                  key={t}
-                  onPress={() => setNuevoTipoProceso(t)}
+                  onPress={() => {
+                    resetFormularioRegistro();
+                    setModalRegistroVisible(false);
+                  }}
+                  style={{
+                    padding: 6,
+                    borderRadius: 8,
+                    backgroundColor: THEME.slate100,
+                  }}
+                >
+                  <Ionicons name="close" size={20} color={THEME.slate600} />
+                </Pressable>
+              </View>
+
+              {/* Selector Tipo de Trámite */}
+              <View>
+                <Text
+                  style={{
+                    color: THEME.slate700,
+                    fontSize: 12,
+                    fontWeight: '700',
+                    marginBottom: 6,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Tipo de Proceso
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {(['VINCULACION', 'DESVINCULACION'] as const).map((t) => {
+                    const activo = nuevoTipoProceso === t;
+                    return (
+                      <Pressable
+                        key={t}
+                        onPress={() => {
+                          setNuevoTipoProceso(t);
+                          if (!nominaItemSeleccionado) {
+                            setNominaTipoBusqueda(t === 'DESVINCULACION' ? 'SERVIDORES' : 'PLAZAS');
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          paddingHorizontal: 12,
+                          alignItems: 'center',
+                          borderRadius: 10,
+                          backgroundColor: activo ? THEME.marca600 : THEME.slate100,
+                          borderWidth: 1,
+                          borderColor: activo ? THEME.marca700 : THEME.slate200,
+                          flexDirection: 'row',
+                          justifyContent: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <Ionicons
+                          name={t === 'VINCULACION' ? 'log-in-outline' : 'log-out-outline'}
+                          size={18}
+                          color={activo ? THEME.white : THEME.slate600}
+                        />
+                        <Text
+                          style={{
+                            color: activo ? THEME.white : THEME.slate700,
+                            fontSize: 13,
+                            fontWeight: '600',
+                          }}
+                        >
+                          {t === 'VINCULACION' ? 'Vinculación de Personal' : 'Desvinculación / Retiro'}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Selector Modo de Origen: Búsqueda en Nómina vs Ingreso Manual */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  backgroundColor: THEME.slate100,
+                  padding: 4,
+                  borderRadius: 10,
+                  gap: 4,
+                }}
+              >
+                <Pressable
+                  onPress={() => setModalModoEntrada('NOMINA')}
                   style={{
                     flex: 1,
                     paddingVertical: 8,
-                    alignItems: 'center',
                     borderRadius: 8,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6,
                     backgroundColor:
-                      nuevoTipoProceso === t ? THEME.marca600 : THEME.slate100,
+                      modalModoEntrada === 'NOMINA' ? THEME.white : 'transparent',
+                    shadowColor: modalModoEntrada === 'NOMINA' ? '#000' : 'transparent',
+                    shadowOpacity: modalModoEntrada === 'NOMINA' ? 0.06 : 0,
+                    shadowRadius: 4,
+                    elevation: modalModoEntrada === 'NOMINA' ? 2 : 0,
                   }}
                 >
+                  <Ionicons
+                    name="search-circle"
+                    size={18}
+                    color={modalModoEntrada === 'NOMINA' ? THEME.marca600 : THEME.slate500}
+                  />
                   <Text
                     style={{
-                      color: nuevoTipoProceso === t ? THEME.white : THEME.slate600,
                       fontSize: 12,
-                      fontWeight: '600',
+                      fontWeight: '700',
+                      color: modalModoEntrada === 'NOMINA' ? THEME.marca900 : THEME.slate600,
                     }}
                   >
-                    {t === 'VINCULACION' ? 'Vinculación' : 'Desvinculación'}
+                    Búsqueda en Nómina Oficial
                   </Text>
                 </Pressable>
-              ))}
-            </View>
 
-            {/* Inputs */}
-            <View style={{ gap: 10 }}>
-              <TextInput
-                value={nombreInput}
-                onChangeText={setNombreInput}
-                placeholder="Nombre completo del servidor..."
-                placeholderTextColor={THEME.slate400}
-                style={{
-                  backgroundColor: THEME.slate50,
-                  color: THEME.slate900,
-                  padding: 10,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: THEME.slate200,
-                  fontSize: 13,
-                }}
-              />
-              <TextInput
-                value={cedulaInput}
-                onChangeText={setCedulaInput}
-                placeholder="Cédula de ciudadanía..."
-                placeholderTextColor={THEME.slate400}
-                style={{
-                  backgroundColor: THEME.slate50,
-                  color: THEME.slate900,
-                  padding: 10,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: THEME.slate200,
-                  fontSize: 13,
-                }}
-              />
-              <TextInput
-                value={cargoInput}
-                onChangeText={setCargoInput}
-                placeholder="Denominación del cargo..."
-                placeholderTextColor={THEME.slate400}
-                style={{
-                  backgroundColor: THEME.slate50,
-                  color: THEME.slate900,
-                  padding: 10,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: THEME.slate200,
-                  fontSize: 13,
-                }}
-              />
-            </View>
+                <Pressable
+                  onPress={() => setModalModoEntrada('MANUAL')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6,
+                    backgroundColor:
+                      modalModoEntrada === 'MANUAL' ? THEME.white : 'transparent',
+                    shadowColor: modalModoEntrada === 'MANUAL' ? '#000' : 'transparent',
+                    shadowOpacity: modalModoEntrada === 'MANUAL' ? 0.06 : 0,
+                    shadowRadius: 4,
+                    elevation: modalModoEntrada === 'MANUAL' ? 2 : 0,
+                  }}
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={16}
+                    color={modalModoEntrada === 'MANUAL' ? THEME.marca600 : THEME.slate500}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '700',
+                      color: modalModoEntrada === 'MANUAL' ? THEME.marca900 : THEME.slate600,
+                    }}
+                  >
+                    Ingreso Manual Libre
+                  </Text>
+                </Pressable>
+              </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
-              <Pressable
-                onPress={() => setModalRegistroVisible(false)}
+              {/* =================================================================== */}
+              {/* SECCIÓN: BÚSQUEDA EN NÓMINA (SERVIDORES O PLAZAS)                   */}
+              {/* =================================================================== */}
+              {modalModoEntrada === 'NOMINA' && (
+                <View
+                  style={{
+                    backgroundColor: THEME.marca50,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: THEME.marca100,
+                    padding: 14,
+                    gap: 12,
+                  }}
+                >
+                  {/* Selector de tipo de búsqueda dentro de nómina */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: THEME.marca900, fontSize: 13, fontWeight: '700' }}>
+                      Consultar Base de Nómina
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <Pressable
+                        onPress={() => {
+                          setNominaTipoBusqueda('PLAZAS');
+                          if (nominaQuery.trim()) {
+                            ejecutarBusquedaNomina(nominaQuery, 'PLAZAS');
+                          }
+                        }}
+                        style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor:
+                            nominaTipoBusqueda === 'PLAZAS' ? THEME.marca600 : THEME.white,
+                          borderWidth: 1,
+                          borderColor:
+                            nominaTipoBusqueda === 'PLAZAS' ? THEME.marca600 : THEME.slate200,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '600',
+                            color:
+                              nominaTipoBusqueda === 'PLAZAS' ? THEME.white : THEME.slate700,
+                          }}
+                        >
+                          Plazas / Vacantes
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => {
+                          setNominaTipoBusqueda('SERVIDORES');
+                          if (nominaQuery.trim()) {
+                            ejecutarBusquedaNomina(nominaQuery, 'SERVIDORES');
+                          }
+                        }}
+                        style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor:
+                            nominaTipoBusqueda === 'SERVIDORES' ? THEME.marca600 : THEME.white,
+                          borderWidth: 1,
+                          borderColor:
+                            nominaTipoBusqueda === 'SERVIDORES' ? THEME.marca600 : THEME.slate200,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '600',
+                            color:
+                              nominaTipoBusqueda === 'SERVIDORES' ? THEME.white : THEME.slate700,
+                          }}
+                        >
+                          Servidores (Perno)
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  {/* Barra de Búsqueda */}
+                  <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                    <View
+                      style={{
+                        flex: 1,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: THEME.white,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        paddingHorizontal: 10,
+                      }}
+                    >
+                      <Ionicons name="search" size={16} color={THEME.slate400} />
+                      <TextInput
+                        value={nominaQuery}
+                        onChangeText={(t) => {
+                          setNominaQuery(t);
+                          ejecutarBusquedaNomina(t, nominaTipoBusqueda);
+                        }}
+                        placeholder={
+                          nominaTipoBusqueda === 'PLAZAS'
+                            ? 'Buscar por cargo, código, grado o ID plaza...'
+                            : 'Buscar por cédula o nombre del funcionario...'
+                        }
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 8,
+                          paddingHorizontal: 8,
+                          fontSize: 12,
+                          color: THEME.slate900,
+                        }}
+                      />
+                      {nominaQuery.length > 0 && (
+                        <Pressable
+                          onPress={() => {
+                            setNominaQuery('');
+                            setNominaResultadosServidores([]);
+                            setNominaResultadosPlazas([]);
+                          }}
+                        >
+                          <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                        </Pressable>
+                      )}
+                    </View>
+
+                    <Pressable
+                      onPress={() => ejecutarBusquedaNomina(nominaQuery, nominaTipoBusqueda)}
+                      style={{
+                        backgroundColor: THEME.marca600,
+                        paddingHorizontal: 14,
+                        paddingVertical: 9,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      {nominaCargando ? (
+                        <ActivityIndicator size="small" color={THEME.white} />
+                      ) : (
+                        <Ionicons name="search-outline" size={15} color={THEME.white} />
+                      )}
+                      <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '600' }}>
+                        Buscar
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Indicador de ítem de nómina actualmente seleccionado */}
+                  {nominaItemSeleccionado && (
+                    <View
+                      style={{
+                        backgroundColor: THEME.emeraldBg,
+                        borderWidth: 1,
+                        borderColor: THEME.emeraldRing,
+                        borderRadius: 8,
+                        padding: 10,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="checkmark-circle" size={16} color={THEME.emeraldText} />
+                          <Text
+                            style={{
+                              color: THEME.emeraldText,
+                              fontSize: 12,
+                              fontWeight: '700',
+                            }}
+                          >
+                            Vinculado a Nómina: {nominaItemSeleccionado.titulo}
+                          </Text>
+                        </View>
+                        <Text style={{ color: THEME.slate600, fontSize: 11, paddingLeft: 22 }}>
+                          {nominaItemSeleccionado.detalle}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={limpiarSeleccionNomina}
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderWidth: 1,
+                          borderColor: THEME.emeraldRing,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: THEME.emeraldText, fontSize: 11, fontWeight: '600' }}>
+                          Quitar
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {/* Lista de resultados de la búsqueda */}
+                  {!nominaItemSeleccionado && nominaQuery.trim().length > 0 && (
+                    <View style={{ gap: 6, maxHeight: 180 }}>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, fontWeight: '600' }}>
+                        Resultados encontrados:
+                      </Text>
+                      <ScrollView
+                        nestedScrollEnabled={true}
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          maxHeight: 150,
+                        }}
+                      >
+                        {nominaTipoBusqueda === 'SERVIDORES' &&
+                          nominaResultadosServidores.map((item, idx) => (
+                            <Pressable
+                              key={`${item.cedula}-${idx}`}
+                              onPress={() => seleccionarServidorNomina(item)}
+                              style={({ pressed }) => ({
+                                padding: 9,
+                                borderBottomWidth:
+                                  idx === nominaResultadosServidores.length - 1 ? 0 : 1,
+                                borderBottomColor: THEME.slate100,
+                                backgroundColor: pressed ? THEME.marca50 : THEME.white,
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                              })}
+                            >
+                              <View style={{ flex: 1, gap: 2 }}>
+                                <Text
+                                  style={{ color: THEME.slate900, fontSize: 12, fontWeight: '700' }}
+                                >
+                                  {item.nombre_completo ||
+                                    `${item.nombres || ''} ${item.primer_apellido || ''}`}
+                                </Text>
+                                <Text style={{ color: THEME.slate500, fontSize: 11 }}>
+                                  C.C. {item.cedula} • {item.cargo || item.plaza_cargo || 'Sin cargo'}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text
+                                  style={{ color: THEME.marca700, fontSize: 10, fontWeight: '700' }}
+                                >
+                                  Seleccionar
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+
+                        {nominaTipoBusqueda === 'PLAZAS' &&
+                          nominaResultadosPlazas.map((plaza, idx) => (
+                            <Pressable
+                              key={`${plaza.id_plaza}-${idx}`}
+                              onPress={() => seleccionarPlazaNomina(plaza)}
+                              style={({ pressed }) => ({
+                                padding: 9,
+                                borderBottomWidth:
+                                  idx === nominaResultadosPlazas.length - 1 ? 0 : 1,
+                                borderBottomColor: THEME.slate100,
+                                backgroundColor: pressed ? THEME.marca50 : THEME.white,
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                              })}
+                            >
+                              <View style={{ flex: 1, gap: 2 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text
+                                    style={{
+                                      color: THEME.slate900,
+                                      fontSize: 12,
+                                      fontWeight: '700',
+                                    }}
+                                  >
+                                    Plaza #{plaza.id_plaza}: {plaza.cargo}
+                                  </Text>
+                                  <View
+                                    style={{
+                                      backgroundColor:
+                                        plaza.estado_cargo === 'VACANTE DEFINITIVA'
+                                          ? THEME.roseBg
+                                          : plaza.estado_cargo === 'VACANTE TEMPORAL'
+                                          ? THEME.amberBg
+                                          : THEME.emeraldBg,
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 1,
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: 9,
+                                        fontWeight: '700',
+                                        color:
+                                          plaza.estado_cargo === 'VACANTE DEFINITIVA'
+                                            ? THEME.roseText
+                                            : plaza.estado_cargo === 'VACANTE TEMPORAL'
+                                            ? THEME.amberText
+                                            : THEME.emeraldText,
+                                      }}
+                                    >
+                                      {plaza.estado_cargo}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Text style={{ color: THEME.slate500, fontSize: 11 }}>
+                                  Cód: {plaza.codigo || 'N/A'} Gr: {plaza.grado || 'N/A'} •{' '}
+                                  {plaza.dependencia_cargo}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  backgroundColor: THEME.marca50,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text
+                                  style={{ color: THEME.marca700, fontSize: 10, fontWeight: '700' }}
+                                >
+                                  Seleccionar
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+
+                        {((nominaTipoBusqueda === 'SERVIDORES' &&
+                          nominaResultadosServidores.length === 0) ||
+                          (nominaTipoBusqueda === 'PLAZAS' &&
+                            nominaResultadosPlazas.length === 0)) &&
+                          !nominaCargando && (
+                            <View style={{ padding: 12, alignItems: 'center' }}>
+                              <Text style={{ color: THEME.slate400, fontSize: 11 }}>
+                                No se encontraron registros coincidentes en nómina.
+                              </Text>
+                            </View>
+                          )}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* =================================================================== */}
+              {/* FORMULARIO DE DETALLES DEL TRÁMITE                                  */}
+              {/* =================================================================== */}
+              <View style={{ gap: 10 }}>
+                <Text
+                  style={{
+                    color: THEME.slate700,
+                    fontSize: 12,
+                    fontWeight: '700',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Datos del Servidor y Cargo
+                </Text>
+
+                <View style={{ gap: 8 }}>
+                  <View>
+                    <Text style={{ color: THEME.slate600, fontSize: 11, marginBottom: 4 }}>
+                      Nombre Completo del Servidor o Postulante *
+                    </Text>
+                    <TextInput
+                      value={nombreInput}
+                      onChangeText={setNombreInput}
+                      placeholder="Ej. MARÍA FERNANDA RAMÍREZ..."
+                      placeholderTextColor={THEME.slate400}
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        color: THEME.slate900,
+                        padding: 10,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        fontSize: 13,
+                      }}
+                    />
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, marginBottom: 4 }}>
+                        Cédula de Ciudadanía *
+                      </Text>
+                      <TextInput
+                        value={cedulaInput}
+                        onChangeText={setCedulaInput}
+                        keyboardType="numeric"
+                        placeholder="Ej. 1018475892"
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: THEME.slate50,
+                          color: THEME.slate900,
+                          padding: 10,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          fontSize: 13,
+                        }}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={{ color: THEME.slate600, fontSize: 11, marginBottom: 4 }}>
+                        Denominación del Cargo *
+                      </Text>
+                      <TextInput
+                        value={cargoInput}
+                        onChangeText={setCargoInput}
+                        placeholder="Ej. PROFESIONAL ESPECIALIZADO 222-19"
+                        placeholderTextColor={THEME.slate400}
+                        style={{
+                          backgroundColor: THEME.slate50,
+                          color: THEME.slate900,
+                          padding: 10,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          fontSize: 13,
+                        }}
+                      />
+                    </View>
+                  </View>
+
+                  <View>
+                    <Text style={{ color: THEME.slate600, fontSize: 11, marginBottom: 4 }}>
+                      Dependencia Institucional
+                    </Text>
+                    <TextInput
+                      value={dependenciaInput}
+                      onChangeText={setDependenciaInput}
+                      placeholder="Ej. DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS"
+                      placeholderTextColor={THEME.slate400}
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        color: THEME.slate900,
+                        padding: 10,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        fontSize: 13,
+                      }}
+                    />
+                  </View>
+
+                  {/* Modalidad de Personal */}
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={{ color: THEME.slate600, fontSize: 11, marginBottom: 6 }}>
+                      Modalidad de Vinculación / Nombramiento
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {(
+                        [
+                          { key: 'CARRERA_ADMINISTRATIVA', label: 'Carrera Administrativa' },
+                          { key: 'LIBRE_NOMBRAMIENTO', label: 'Libre Nombramiento' },
+                          { key: 'PROVISIONALIDAD', label: 'Provisionalidad' },
+                          { key: 'PRACTICANTE_JUDICANTE', label: 'Judicante / Practicante' },
+                        ] as const
+                      ).map((m) => {
+                        const sel = nuevaModalidad === m.key;
+                        return (
+                          <Pressable
+                            key={m.key}
+                            onPress={() => setNuevaModalidad(m.key)}
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 7,
+                              backgroundColor: sel ? THEME.marca100 : THEME.slate50,
+                              borderWidth: 1,
+                              borderColor: sel ? THEME.marca600 : THEME.slate200,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                fontWeight: sel ? '700' : '500',
+                                color: sel ? THEME.marca900 : THEME.slate600,
+                              }}
+                            >
+                              {m.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Causal de Retiro (Solo si es DESVINCULACIÓN) */}
+                  {nuevoTipoProceso === 'DESVINCULACION' && (
+                    <View style={{ marginTop: 6, gap: 4 }}>
+                      <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
+                        Causal Normativa de Retiro (PR-145 / Ley 909 de 2004) *
+                      </Text>
+                      <View
+                        style={{
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          maxHeight: 120,
+                        }}
+                      >
+                        <ScrollView nestedScrollEnabled={true} style={{ padding: 4 }}>
+                          {CAUSALES_RETIRO.map((causal) => {
+                            const act = causalInput === causal;
+                            return (
+                              <Pressable
+                                key={causal}
+                                onPress={() => setCausalInput(causal)}
+                                style={{
+                                  paddingVertical: 6,
+                                  paddingHorizontal: 8,
+                                  borderRadius: 6,
+                                  backgroundColor: act ? THEME.marca50 : 'transparent',
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                              >
+                                <Ionicons
+                                  name={act ? 'radio-button-on' : 'radio-button-off'}
+                                  size={14}
+                                  color={act ? THEME.marca600 : THEME.slate400}
+                                />
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: act ? THEME.marca900 : THEME.slate600,
+                                    fontWeight: act ? '700' : '400',
+                                    flex: 1,
+                                  }}
+                                >
+                                  {causal}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Botones de Acción */}
+              <View
                 style={{
-                  backgroundColor: THEME.slate100,
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 8,
+                  flexDirection: 'row',
+                  justifyContent: 'flex-end',
+                  gap: 10,
+                  marginTop: 6,
+                  borderTopWidth: 1,
+                  borderTopColor: THEME.slate100,
+                  paddingTop: 12,
                 }}
               >
-                <Text style={{ color: THEME.slate700, fontWeight: '600', fontSize: 12 }}>
-                  Cancelar
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handleCrearTramite}
-                style={{
-                  backgroundColor: THEME.marca600,
-                  paddingHorizontal: 18,
-                  paddingVertical: 9,
-                  borderRadius: 8,
-                }}
-              >
-                <Text style={{ color: THEME.white, fontWeight: '600', fontSize: 12 }}>
-                  Crear Trámite
-                </Text>
-              </Pressable>
-            </View>
+                <Pressable
+                  onPress={() => {
+                    resetFormularioRegistro();
+                    setModalRegistroVisible(false);
+                  }}
+                  style={{
+                    backgroundColor: THEME.slate100,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: THEME.slate700, fontWeight: '600', fontSize: 12 }}>
+                    Cancelar
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleCrearTramite}
+                  style={{
+                    backgroundColor: THEME.marca600,
+                    paddingHorizontal: 20,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Ionicons name="checkmark" size={16} color={THEME.white} />
+                  <Text style={{ color: THEME.white, fontWeight: '600', fontSize: 12 }}>
+                    Crear Trámite
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
