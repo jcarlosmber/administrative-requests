@@ -24,6 +24,7 @@ export interface ContratoSecop {
   estado: string;
   esActivo: boolean;
   esActivoFinalizado?: boolean;
+  plazoVencido?: boolean;
   esHistorico?: boolean;
   fechaFirma: string | null;
   fechaInicio: string | null;
@@ -204,6 +205,7 @@ function analizarContratosRaw(contratos: any[] = []): {
       estado: c.estado_contrato || 'Desconocido',
       esActivo,
       esActivoFinalizado,
+      plazoVencido: haVencidoPorFecha,
       esHistorico,
       fechaFirma: c.fecha_de_firma ? c.fecha_de_firma.split('T')[0] : null,
       fechaInicio: c.fecha_de_inicio_del_contrato ? c.fecha_de_inicio_del_contrato.split('T')[0] : null,

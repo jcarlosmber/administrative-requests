@@ -197,6 +197,7 @@ export interface RequisitoEtapa {
   notaNormativa?: string;
   tipoAccionEspecial?: 'SECOP' | 'INGRESOS_IA';
   norma?: string;
+  textoNormativo?: string;
   detalleProcedimiento?: string;
   observaciones?: string;
   radicadoSoporte?: string;
@@ -290,7 +291,8 @@ export function generarEtapasParaCaso(
                 label: 'Identificación de la vacante definitiva en la OPEC institucional',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 31, Num. 1; Decreto 1083 de 2015, Art. 2.2.5.3.1',
+                norma: 'Ley 909 de 2004, Art. 31, Num. 1 • Decreto 1083 de 2015, Art. 2.2.5.3.1',
+                textoNormativo: 'El artículo 31 de la Ley 909 establece que la provisión definitiva de los empleos de carrera se hará mediante nombramiento en período de prueba con base en el orden de mérito de la lista de elegibles en firme. El Decreto 1083 ordena verificar que la plaza se encuentre formalmente vacante en forma definitiva y reportada en la OPEC institucional.',
                 detalleProcedimiento: 'Verificar en el Manual Específico de Funciones y Competencias Laborales la denominación, código, grado y propósito principal del empleo reportado en la OPEC institucional.',
               },
               {
@@ -298,7 +300,8 @@ export function generarEtapasParaCaso(
                 label: 'Consulta en Banco Nacional de Listas de Elegibles (BNLE SIMO 4.0)',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto Ley 760 de 2005; Circular Conjunta CNSC 011 de 2021',
+                norma: 'Decreto Ley 760 de 2005 • Circular Conjunta CNSC 011 de 2021',
+                textoNormativo: 'Las entidades públicas tienen la obligación legal ineludible de consultar prioritariamente el Banco Nacional de Listas de Elegibles (SIMO 4.0) de la CNSC. Si existe lista en firme para el empleo o empleo equivalente, su uso es preferente, vinculante y de carácter obligatorio.',
                 detalleProcedimiento: 'Ingresar con el rol institucional a la plataforma SIMO de la CNSC y consultar el estado de firmeza de la lista de elegibles correspondiente a la convocatoria territorial vigente.',
               },
               {
@@ -306,7 +309,8 @@ export function generarEtapasParaCaso(
                 label: 'Constatación de funciones y perfil equivalente en la OPEC',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.6.2; Criterio Unificado CNSC',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.6.2 • Criterio Unificado CNSC',
+                textoNormativo: 'Para aplicar una lista de elegibles, el empleo vacante debe ser coincidente o equivalente en denominación, código, nivel jerárquico, grado salarial, funciones y requisitos mínimos con los ofertados en la OPEC del concurso público.',
                 detalleProcedimiento: 'Comparar que los requisitos de estudio y experiencia requeridos en la vacante coincidan exactamente con la OPEC ofertada y no existan modificaciones reglamentarias sobrevinientes.',
               },
             ],
@@ -330,6 +334,7 @@ export function generarEtapasParaCaso(
                 cumplido: true,
                 obligatorio: true,
                 norma: 'Ley 909 de 2004, Art. 31 Numeral 4',
+                textoNormativo: 'La autoridad nominadora debe remitir solicitud formal de autorización de uso de lista a la CNSC dentro de los términos reglamentarios, respetando estrictamente el orden descendente de mérito de los elegibles.',
                 detalleProcedimiento: 'Radicar la comunicación oficial requiriendo el uso de lista de elegibles en firme ante la CNSC para el empleo específico.',
               },
               {
@@ -337,7 +342,8 @@ export function generarEtapasParaCaso(
                 label: 'Recepción de lista de elegibles con orden de mérito estricto',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto Ley 760 de 2005, Art. 14; Resolución CNSC en firme',
+                norma: 'Decreto Ley 760 de 2005, Art. 14 • Resolución CNSC en firme',
+                textoNormativo: 'La lista de elegibles queda en firme una vez decididas las reclamaciones. El orden de mérito es inmodificable y cualquier designación que altere la prelación numérica es nula de pleno derecho conforme a la jurisprudencia constitucional.',
                 detalleProcedimiento: 'Constatar la ejecutoria de la resolución que conformó la lista de elegibles y el orden inmodificable de mérito obtenido en las pruebas.',
               },
               {
@@ -345,7 +351,8 @@ export function generarEtapasParaCaso(
                 label: 'Revisión de soportes de los 3 primeros elegibles por Comisión de Personal',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 16, Lit. a; Decreto 1083 de 2015, Art. 2.2.6.21',
+                norma: 'Ley 909 de 2004, Art. 16, Lit. a • Decreto 1083 de 2015, Art. 2.2.6.21',
+                textoNormativo: 'La Comisión de Personal tiene competencia legal para constatar que el elegible no incurra en causales de exclusión sobrevinientes y verificar el cumplimiento estricto del orden de mérito antes de que se profiera el nombramiento.',
                 detalleProcedimiento: 'Verificar cumplimiento de requisitos mínimos en los soportes aportados en la inscripción y certificar la no configuración de causales de exclusión legal.',
               },
             ],
@@ -369,7 +376,8 @@ export function generarEtapasParaCaso(
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-018',
-                norma: 'Ley 1960 de 2019; Ley 909 de 2004 Art. 24 y 25',
+                norma: 'Ley 909 de 2004, Art. 24 • Ley 1960 de 2019, Art. 1',
+                textoNormativo: 'El encargo y la provisionalidad son figuras transitorias que cesan de pleno derecho cuando la plaza deba proveerse en forma definitiva por mérito. Los servidores en encargo retornan inmediatamente a sus empleos de carrera de origen.',
                 detalleProcedimiento: 'Cotejar en PERNO y la matriz de planta el estado actual del funcionario que ocupa la plaza para proceder a su reubicación o desvinculación formal según corresponda.',
               },
               {
@@ -377,7 +385,8 @@ export function generarEtapasParaCaso(
                 label: 'Memorando de comunicación sobre provisión por mérito de la plaza',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Sentencia C-288 de 2014; Sentencia SU-446 de 2011 Corte Constitucional',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.4',
+                textoNormativo: 'La administración debe comunicar formalmente la terminación del encargo o nombramiento provisional, motivando el acto en la obligación legal de nombrar al elegible que superó el concurso de méritos.',
                 detalleProcedimiento: 'Remitir memorando oficial informando la provisión de la vacante por concurso de méritos, preservando garantías de especial protección si aplican (retén social, prepensionados, madres cabeza de familia).',
               },
               {
@@ -385,7 +394,8 @@ export function generarEtapasParaCaso(
                 label: 'Fijación de fecha límite de entrega de funciones e inventarios',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 951 de 2005; Procedimiento 2311500-PR-002',
+                norma: 'Circular Conjunta CNSC - DAFP 001 de 2020',
+                textoNormativo: 'La entidad otorgará un término prudencial no inferior a 5 días ni superior a 10 para la entrega formal del despacho, bienes, expedientes e inventarios, asegurando que no se interrumpa el servicio público.',
                 detalleProcedimiento: 'Establecer la fecha formal para la suscripción de las actas de entrega de cargo e inventario físico e informático.',
               },
             ],
@@ -409,7 +419,8 @@ export function generarEtapasParaCaso(
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.4; Acuerdo CNSC',
+                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24',
+                textoNormativo: 'El nombramiento en período de prueba se expedirá mediante acto administrativo motivado del nominador, determinando el plazo legal improrrogable de seis (6) meses y la convocatoria de concurso respectiva.',
                 detalleProcedimiento: 'Redactar el proyecto de resolución incluyendo antecedentes de la convocatoria, OPEC, puesto en lista y asignación salarial reglamentaria.',
               },
               {
@@ -417,7 +428,8 @@ export function generarEtapasParaCaso(
                 label: 'Firma por Secretario Jurídico Distrital y numeración oficial',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto Distrital 323 de 2016; Resolución 001 de la SJD',
+                norma: 'Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá',
+                textoNormativo: 'Todo acto administrativo de nombramiento debe ser suscrito por la autoridad nominadora competente, radicado, numerado y fechado oficialmente para que surta plenos efectos jurídicos.',
                 detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y posterior radicación y fechado en el sistema documental corporativo.',
               },
               {
@@ -426,7 +438,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-019',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6 y Art. 2.2.5.1.7',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6',
+                textoNormativo: 'La persona nombrada dispone de un término improrrogable de diez (10) días hábiles contados a partir de la comunicación para manifestar si acepta o declina el nombramiento. De no haber aceptación expresa, se procederá a nombrar al siguiente en la lista.',
                 detalleProcedimiento: 'Enviar comunicación electrónica certificada requiriendo al interesado manifestar por escrito su aceptación dentro del término perentorio de 10 días hábiles.',
               },
               {
@@ -434,7 +447,8 @@ export function generarEtapasParaCaso(
                 label: 'Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)',
                 cumplido: false,
                 obligatorio: false,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.7, Parágrafo',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.7',
+                textoNormativo: 'Aceptado el nombramiento, el ciudadano cuenta con diez (10) días hábiles para tomar posesión. Este plazo puede prorrogarse por justa causa debidamente acreditada hasta por noventa (90) días continuos si debe desplazarse de otra ciudad o por fuerza mayor.',
                 detalleProcedimiento: 'Si el candidato alega justa causa comprobada (ej. incapacidad o renuncia en otra entidad), autorizar prórroga para posesionarse hasta por 90 días calendario adicionales.',
               },
             ],
@@ -457,7 +471,8 @@ export function generarEtapasParaCaso(
                 label: 'Examen médico ocupacional de ingreso con concepto de aptitud',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Resolución 2346 de 2007 MinProtección Social; Decreto 1072 de 2015',
+                norma: 'Resolución 2346 de 2007 MinProtección Social • Decreto 1072 de 2015',
+                textoNormativo: 'Es obligatoria la evaluación médica ocupacional pre-ingreso, a cargo de la entidad, con el fin de certificar la aptitud psicofísica y compatibilidad con las exigencias funcionales del empleo a desempeñar.',
                 detalleProcedimiento: 'Verificar la expedición del certificado médico de aptitud laboral emitido por IPS con licencia en Seguridad y Salud en el Trabajo.',
               },
               {
@@ -466,7 +481,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 tipoAccionEspecial: 'SECOP',
-                norma: 'Constitución Política, Art. 128; Ley 80 de 1993, Art. 8; Ley 734/2002 / Ley 1952 de 2019',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Consultar en tiempo real a través de la API SECOP II de Datos Abiertos que el aspirante no figure como contratista con contratos vigentes en ejecución antes de la posesión.',
               },
               {
@@ -474,7 +490,8 @@ export function generarEtapasParaCaso(
                 label: 'Declaración de Bienes y Rentas y Conflicto de Intereses en SIDEAP/SIGEP',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019; Ley 190 de 1995; Decreto 1083 de 2015 Art. 2.2.5.1.8',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'Nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público. Es deber inexcusable de Talento Humano consultar SECOP II para verificar la ausencia de contratos estatales en ejecución antes de autorizar la posesión.',
                 detalleProcedimiento: 'Exigir el certificado digital de radicación de la declaración de bienes y rentas y conflicto de intereses diligenciada en SIDEAP / SIGEP II.',
               },
               {
@@ -482,7 +499,8 @@ export function generarEtapasParaCaso(
                 label: 'Consulta de antecedentes (Policía, Procuraduría SIRI, Contraloría SIBOR, REDAM)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2097 de 2021 (REDAM); Ley 1952 de 2019; Ley 610 de 2000; Código Nacional de Seguridad Ciudadana',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • Ley 190 de 1995',
+                textoNormativo: 'Es requisito previo y habilitante para la posesión publicar y registrar bajo la gravedad de juramento en el SIDEAP/SIGEP II la declaración de bienes y rentas, la última declaración de renta y el registro de posibles conflictos de intereses.',
                 detalleProcedimiento: 'Generar los certificados oficiales en línea de Policía Nacional, Procuraduría General de la Nación, Contraloría General de la República y Registro de Deudores Alimentarios Morosos.',
               },
               {
@@ -491,7 +509,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-127',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.8; Formato institucional SJD',
+                norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021, Art. 6',
+                textoNormativo: 'Talento Humano verificará los antecedentes disciplinarios (SIRI Procuraduría), fiscales (SIBOR Contraloría), judiciales (Policía Nacional), medidas correctivas (RNMC) y la no inscripción en el Registro de Deudores Alimentarios Morosos (REDAM).',
                 detalleProcedimiento: 'Diligenciar el acta de posesión con toma formal del juramento de rigor, firmada por el servidor y el nominador o su delegado.',
               },
             ],
@@ -514,7 +533,8 @@ export function generarEtapasParaCaso(
                 label: 'Afiliación a ARL, EPS, Fondo Pensiones, Cesantías y Caja Compensación',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 100 de 1993; Decreto 1295 de 1994; Ley 789 de 2002',
+                norma: 'Ley 100 de 1993 • Decreto Ley 1295 de 1994 • Decreto 1072 de 2015',
+                textoNormativo: 'La afiliación patronal al Sistema de Seguridad Social Integral (EPS, ARL, Fondo de Pensiones, Cesantías y Caja de Compensación) debe surtirse con fecha de inicio igual a la del día de la posesión formal.',
                 detalleProcedimiento: 'Radicar formularios de afiliación ante Positiva ARL, EPS y fondo de pensiones y cesantías escogido libremente por el servidor.',
               },
               {
@@ -522,7 +542,8 @@ export function generarEtapasParaCaso(
                 label: 'Inclusión en nómina institucional (Sistema PERNO)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Resolución Distrital de Nómina y Tesorería; Procedimiento 2311420-PR-001',
+                norma: 'Decreto Distrital 101 de 2004 • Manual Distrital de Nómina',
+                textoNormativo: 'Se debe registrar el alta en el sistema de nómina institucional dentro del período contable respectivo, garantizando la debida apropiación de salarios y factores prestacionales.',
                 detalleProcedimiento: 'Registrar la plaza, asignación básica, cuenta bancaria para dispersión y descuentos de ley en el módulo de personal PERNO.',
               },
               {
@@ -530,7 +551,8 @@ export function generarEtapasParaCaso(
                 label: 'Activación del servidor en aplicativo SIDEAP Distrital',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto Distrital 580 de 2017; Directiva 003 del DASCD',
+                norma: 'Decreto Distrital 083 de 2001 • Directiva Distrital 001 de 2018',
+                textoNormativo: 'El servidor debe ser activado y habilitado en el Sistema Distrital del Empleo y la Administración Pública (SIDEAP) para la expedición de certificaciones laborales y trámites institucionales.',
                 detalleProcedimiento: 'Cambiar el estado de la vacante a provista en SIDEAP y habilitar permisos en la intranet distrital.',
               },
               {
@@ -538,7 +560,8 @@ export function generarEtapasParaCaso(
                 label: 'Reporte de posesión en aplicativo BNLE SIMO 4.0 ante la CNSC',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Circular CNSC 011 de 2021, Numeral 3',
+                norma: 'Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31',
+                textoNormativo: 'La entidad nominadora debe reportar obligatoriamente a la CNSC a través de SIMO 4.0 la posesión del elegible en período de prueba dentro de los cinco (5) días hábiles siguientes a su ocurrencia.',
                 detalleProcedimiento: 'Cargar en la plataforma SIMO de la Comisión Nacional del Servicio Civil el acta de posesión y la resolución numerada.',
               },
               {
@@ -547,7 +570,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-106',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.9.1; Plan Institucional de Capacitación SJD',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.6.25 • Acuerdo CNSC de Evaluación del Desempeño Laboral',
+                textoNormativo: 'Durante los seis (6) meses del período de prueba se concertarán compromisos funcionales y comportamentales. Al superarse con calificación sobresaliente o satisfactoria, el servidor adquiere los derechos de carrera y el registro RPCA ante la CNSC.',
                 detalleProcedimiento: 'Entregar cartilla de bienvenida, manual específico de funciones y concertar compromisos de evaluación del periodo de prueba.',
               },
             ],
@@ -574,7 +598,8 @@ export function generarEtapasParaCaso(
                 label: 'Recepción de Hoja de Vida remitida por Despacho del Nominador',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 5, Num. 2; Manual de Funciones SJD',
+                norma: 'Ley 909 de 2004, Art. 5 • Decreto 1083 de 2015, Art. 2.2.5.3.3',
+                textoNormativo: 'Los empleos de Libre Nombramiento y Remoción son de dirección, conducción, orientación institucional y confianza. La designación corresponde a la facultad discrecional de la autoridad nominadora.',
                 detalleProcedimiento: 'Recibir expediente digital o físico remitido formalmente por el Despacho con visto bueno de postulación.',
               },
               {
@@ -583,7 +608,8 @@ export function generarEtapasParaCaso(
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-019',
-                norma: 'Ley 1437 de 2011, Art. 56 (CPACA); Decreto Distrital 844 de 2019',
+                norma: 'Ley 1437 de 2011, Art. 53 • Ley 527 de 1999',
+                textoNormativo: 'El aspirante debe suscribir la autorización expresa para ser notificado de todos los actos y requerimientos mediante la dirección electrónica institucional reportada en su hoja de vida.',
                 detalleProcedimiento: 'Suscribir consentimiento expreso para surtir todas las notificaciones del trámite mediante la dirección de correo electrónico aportada.',
               },
               {
@@ -591,7 +617,8 @@ export function generarEtapasParaCaso(
                 label: 'Registro y cargue completo de soportes académicos y laborales en SIDEAP',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto Distrital 580 de 2017; Directiva 003 del DASCD',
+                norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
+                textoNormativo: 'Toda la documentación académica, tarjetas profesionales, certificaciones laborales y antecedentes deben cargarse y validarse formalmente en el sistema distrital SIDEAP antes de proferir el acto de nombramiento.',
                 detalleProcedimiento: 'Digitalizar diplomas, actas de grado, tarjetas profesionales y certificados laborales con fechas exactas y funciones descritas.',
               },
             ],
@@ -614,7 +641,8 @@ export function generarEtapasParaCaso(
                 label: 'Consulta de antecedentes: Policía, Procuraduría SIRI, Contraloría SIBOR, RNMC y REDAM',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1952 de 2019; Ley 610 de 2000; Ley 1801 de 2016; Ley 2097 de 2021',
+                norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
+                textoNormativo: 'Es obligatorio obtener las certificaciones ordinarias y especiales de antecedentes de la Procuraduría, Contraloría, Policía Nacional, RNMC y el certificado de no reporte de deudor moroso en el REDAM.',
                 detalleProcedimiento: 'Verificar ausencia de sanciones disciplinarias vigentes, fallos de responsabilidad fiscal, medidas correctivas policiales y deudores de alimentos.',
               },
               {
@@ -623,7 +651,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 tipoAccionEspecial: 'SECOP',
-                norma: 'Constitución Política, Art. 128; Ley 80 de 1993, Art. 8; Ley 1474 de 2011',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Comprobar mediante consulta web a la API SECOP II que el aspirante no posea contratos de prestación de servicios o de obra en ejecución con entidades del Estado.',
               },
               {
@@ -633,7 +662,8 @@ export function generarEtapasParaCaso(
                 obligatorio: true,
                 codigoFormato: '2311300-FT-318',
                 tipoAccionEspecial: 'INGRESOS_IA',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.5; Manual Específico de Funciones SJD',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'Se debe realizar la consulta preventiva en SECOP II para garantizar que el aspirante a cargo directivo no tenga contratos activos en ejecución con entidades del Estado, evitando transgresiones a la prohibición constitucional de doble asignación.',
                 detalleProcedimiento: 'Expedir la certificación técnica FT-318 que acredita el cumplimiento exacto de los meses de experiencia directiva o profesional y títulos de posgrado exigidos.',
               },
               {
@@ -641,7 +671,8 @@ export function generarEtapasParaCaso(
                 label: 'Verificación paridad Ley de Cuotas (Decreto 455/2020 y Ley 2424/2024: 50% mujeres)',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 581 de 2000; Decreto Reglamentario 455 de 2020; Ley 2424 de 2024',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.5 • Manual Específico de Funciones y Competencias',
+                textoNormativo: 'Talento Humano debe certificar mediante el formato institucional FT-318 que el candidato acredita los títulos académicos de pregrado y posgrado y la experiencia profesional directiva requerida para el nivel del empleo.',
                 detalleProcedimiento: 'Revisar la matriz de participación institucional de la Secretaría Jurídica Distrital para garantizar mínimo el 50% de mujeres en el máximo nivel decisorio.',
               },
             ],
@@ -664,7 +695,8 @@ export function generarEtapasParaCaso(
                 label: 'Solicitud de evaluación de competencias gerenciales en SEVCOM DASCD (Circular 004/2019)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Circular Conjunta 004 de 2019 DASCD; Decreto 815 de 2018',
+                norma: 'Acuerdo Distrital 782 de 2020 • Circular DASCD 004 de 2019',
+                textoNormativo: 'Los candidatos a cargos directivos de Libre Nombramiento y Remoción en Bogotá deben ser evaluados a través del Sistema de Evaluación de Competencias (SEVCOM) administrado por el DASCD.',
                 detalleProcedimiento: 'Agendar al candidato en la plataforma SEVCOM del Departamento Administrativo del Servicio Civil Distrital.',
               },
               {
@@ -672,7 +704,8 @@ export function generarEtapasParaCaso(
                 label: 'Aprobación de la prueba de competencias del aspirante',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Criterio Técnico DASCD; Manual de Competencias Directivas',
+                norma: 'Acuerdo Distrital 782 de 2020, Art. 4',
+                textoNormativo: 'Para continuar con el trámite de designación en el cargo directivo, el aspirante debe obtener concepto favorable en la valoración de competencias directivas y gerenciales aplicada por el DASCD.',
                 detalleProcedimiento: 'Revisar el informe de resultados remitido por el DASCD con concepto favorable en competencias directivas.',
               },
               {
@@ -680,7 +713,8 @@ export function generarEtapasParaCaso(
                 label: 'Publicación de la Hoja de Vida por mínimo 5 días en portal web (Acuerdo 782/2020)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Acuerdo Distrital 782 de 2020; Directiva 008 de 2020',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.13.2.3 • Directiva Presidencial 01 de 2020 • Acuerdo 782 de 2020',
+                textoNormativo: 'La hoja de vida del candidato a empleo de Libre Nombramiento y Remoción debe publicarse obligatoriamente durante no menos de cinco (5) días calendario en la página web institucional para conocimiento y observaciones de la ciudadanía antes de la designación.',
                 detalleProcedimiento: 'Subir formato de hoja de vida institucional al módulo de transparencia y verificar ausencia de objeciones ciudadanas en el buzón durante 5 días calendario.',
               },
             ],
@@ -704,7 +738,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.4',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.3 • Ley 909 de 2004, Art. 23',
+                textoNormativo: 'El nombramiento ordinario en cargo de libre nombramiento se adoptará por resolución o decreto de la autoridad nominadora en ejercicio de su facultad discrecional de libre nombramiento y remoción.',
                 detalleProcedimiento: 'Proyectar el acto administrativo con visto bueno del Director de Gestión Corporativa y firma del Secretario Jurídico.',
               },
               {
@@ -712,7 +747,8 @@ export function generarEtapasParaCaso(
                 label: 'Numeración, fechado y comunicación al designado',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto Distrital 323 de 2016',
+                norma: 'Ley 1437 de 2011, Art. 65 • Estatuto de Bogotá',
+                textoNormativo: 'El acto administrativo debe contar con numeración oficial consecutiva, fecha y comunicación formal al interesado mediante los canales electrónicos autorizados.',
                 detalleProcedimiento: 'Radicar y numerar en el sistema documental, comunicando oficialmente al designado para su aceptación.',
               },
               {
@@ -721,6 +757,7 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6',
+                textoNormativo: 'El designado dispone de diez (10) días hábiles siguientes a la comunicación para manifestar su aceptación o declinación formal al nombramiento.',
                 detalleProcedimiento: 'Recibir memorial suscrito por el designado manifestando la aceptación del cargo dentro de los 10 días hábiles.',
               },
             ],
@@ -743,7 +780,8 @@ export function generarEtapasParaCaso(
                 label: 'Examen médico ocupacional de ingreso',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Resolución 2346 de 2007; Decreto 1072 de 2015',
+                norma: 'Resolución 2346 de 2007 • Decreto 1072 de 2015',
+                textoNormativo: 'Práctica médica de ingreso obligatoria por especialista en seguridad y salud en el trabajo, con el correspondiente concepto de aptitud psicofísica.',
                 detalleProcedimiento: 'Constatar aptitud psicofísica laboral emitida por médico especialista en SST.',
               },
               {
@@ -751,7 +789,8 @@ export function generarEtapasParaCaso(
                 label: 'Publicación proactiva Bienes y Rentas en SIDEAP/SIGEP (Ley 2013/2019)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019; Decreto 830 de 2021',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
+                textoNormativo: 'Publicación proactiva y juramentada de bienes y rentas, declaración del impuesto de renta y registro de conflicto de intereses en la plataforma SIDEAP / SIGEP II con corte previo a la posesión.',
                 detalleProcedimiento: 'Publicar el formulario proactivo de declaración jurada de bienes y conflicto de intereses en el aplicativo de la Función Pública.',
               },
               {
@@ -760,7 +799,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-127',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.8',
+                norma: 'Constitución Política, Art. 122 • Ley 4 de 1913, Art. 257 • Decreto 1083 de 2015, Art. 2.2.5.1.8',
+                textoNormativo: 'Toma de juramento constitucional y suscripción formal del acta de posesión en formato 2311300-FT-127 ante el nominador o su delegado autorizado.',
                 detalleProcedimiento: 'Firma formal del acta de posesión ante el Secretario Jurídico Distrital.',
               },
               {
@@ -769,7 +809,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-106',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.9.1',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.11.2.1 • Ley 951 de 2005 (Acta de Entrega)',
+                textoNormativo: 'Entrega del manual de funciones directivas, inducción institucional y suscripción del acta formal de entrega de despacho y empalme conforme a la Ley 951 de 2005.',
                 detalleProcedimiento: 'Entrega de responsabilidades misionales, equipos directivos y mapa de riesgos institucionales.',
               },
             ],
@@ -792,7 +833,8 @@ export function generarEtapasParaCaso(
                 label: 'Afiliación a ARL, EPS, Fondo Pensiones, Cesantías y Caja Compensación',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 100 de 1993; Decreto 1295 de 1994',
+                norma: 'Ley 100 de 1993 • Decreto 1295 de 1994',
+                textoNormativo: 'Afiliación patronal al Sistema de Seguridad Social Integral con vigencia retroactiva a la fecha y hora exacta de posesión del directivo.',
                 detalleProcedimiento: 'Afiliar con nivel de riesgo de acuerdo a la matriz ocupacional desde la fecha exacta de posesión.',
               },
               {
@@ -800,7 +842,8 @@ export function generarEtapasParaCaso(
                 label: 'Inclusión en nómina institucional (PERNO)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Manual de Nómina SJD; Procedimiento 2311420-PR-001',
+                norma: 'Decreto Distrital 101 de 2004',
+                textoNormativo: 'Alta en el sistema de nómina PERNO distrital para imputación de gastos salariales y asignación de gastos de representación si aplican al nivel jerárquico.',
                 detalleProcedimiento: 'Vincular cédula, datos bancarios, retención en la fuente y gastos de representación.',
               },
               {
@@ -808,7 +851,8 @@ export function generarEtapasParaCaso(
                 label: 'Activación del servidor en el módulo de Talento Humano en SIDEAP',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Directiva 003 de 2021 DASCD',
+                norma: 'Decreto Distrital 083 de 2001',
+                textoNormativo: 'Activación del servidor en el módulo de Talento Humano en SIDEAP habilitando el perfil directivo institucional.',
                 detalleProcedimiento: 'Actualizar plaza a ocupada y emitir carné digital institucional.',
               },
             ],
@@ -835,7 +879,8 @@ export function generarEtapasParaCaso(
                 label: 'Consulta en Banco Nacional de Listas de Elegibles de la CNSC para el empleo',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 25; Circular CNSC 011 de 2021',
+                norma: 'Ley 909 de 2004, Art. 25 • Circular Conjunta CNSC - DAFP 003 de 2020',
+                textoNormativo: 'Antes de acudir a la provisión transitoria mediante nombramiento provisional, la entidad debe constatar en el Banco de Listas de Elegibles de la CNSC que no existe lista en firme disponible para el empleo.',
                 detalleProcedimiento: 'Consultar aplicativo SIMO y dejar evidencia de consulta sin registros coincidentes en firme.',
               },
               {
@@ -843,7 +888,8 @@ export function generarEtapasParaCaso(
                 label: 'Constancia de no existencia de lista de elegibles disponible para periodo de prueba',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.1',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.1 • Criterio Unificado CNSC',
+                textoNormativo: 'Talento Humano debe expedir constancia expresa e інcontrovertible de la inexistencia de elegibles en lista de concurso público en firme para la vacante.',
                 detalleProcedimiento: 'Expedir constancia suscrita por Talento Humano certificando que no hay elegibles para la vacante.',
               },
               {
@@ -851,7 +897,8 @@ export function generarEtapasParaCaso(
                 label: 'Reporte previo de vacancia definitiva a la CNSC (Ley 1960/2019 parágrafo 2)',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1960 de 2019, Parágrafo 2',
+                norma: 'Ley 1960 de 2019, Parágrafo 2 del Art. 1 • Circular CNSC 011 de 2021',
+                textoNormativo: 'Las vacancias definitivas deben ser reportadas a la CNSC para que sean incluidas en la siguiente convocatoria pública de méritos, aun si se proveen transitoriamente.',
                 detalleProcedimiento: 'Radicar el reporte de la vacante definitiva en SIMO en cumplimiento del deber legal institucional.',
               },
             ],
@@ -874,7 +921,8 @@ export function generarEtapasParaCaso(
                 label: 'Publicación de convocatoria interna para encargo a servidores de carrera',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1960 de 2019, Art. 1; Circular CNSC 003/2020',
+                norma: 'Ley 1960 de 2019, Art. 1 • Ley 909 de 2004, Art. 24 • Decreto 1083 de 2015, Art. 2.2.5.3.2',
+                textoNormativo: 'Los empleados con derechos de carrera administrativa tienen derecho preferencial a ser encargados de los empleos vacantes de forma definitiva o temporal si cumplen los requisitos del cargo y no tienen sanción disciplinaria.',
                 detalleProcedimiento: 'Publicar circular interna en la intranet convocando a servidores titulares de carrera con evaluación destacada.',
               },
               {
@@ -882,7 +930,8 @@ export function generarEtapasParaCaso(
                 label: 'Evaluación de solicitudes de encargo preferencial',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.2; Criterio CNSC',
+                norma: 'Ley 1960 de 2019, Art. 1 • Circular Conjunta CNSC 003 de 2020',
+                textoNormativo: 'Se debe efectuar la valoración de las postulaciones de servidores de carrera para verificar su última calificación de servicios sobresaliente o satisfactoria y el cumplimiento de requisitos mínimos.',
                 detalleProcedimiento: 'Cotejar requisitos del manual, antigüedad y calificación de servicios de los postulados.',
               },
               {
@@ -890,7 +939,8 @@ export function generarEtapasParaCaso(
                 label: 'Certificación de que ningún servidor de carrera cumple requisitos o aceptó encargo',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1960 de 2019; Ley 909 de 2004 Art. 25',
+                norma: 'Ley 909 de 2004, Art. 25 • Decreto 1083 de 2015, Art. 2.2.5.3.3',
+                textoNormativo: 'Solo cuando ningún empleado de carrera cumpla los requisitos exigidos para el encargo o no acepte la designación, la administración queda legalmente facultada para nombrar de manera provisional a un tercero.',
                 detalleProcedimiento: 'Expedir constancia de trámite de encargo desierto como requisito de validez del nombramiento provisional posterior.',
               },
             ],
@@ -913,7 +963,8 @@ export function generarEtapasParaCaso(
                 label: 'Recepción de Hoja de Vida del candidato y cargue en SIDEAP',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto Distrital 580 de 2017',
+                norma: 'Decreto Distrital 083 de 2001 • Directiva Distrital 001 de 2018',
+                textoNormativo: 'Cargue riguroso y verificación de la hoja de vida y soportes del candidato externo en el aplicativo distrital SIDEAP.',
                 detalleProcedimiento: 'Validar cargue completo de cédula, diplomas y soportes laborales en SIDEAP.',
               },
               {
@@ -922,7 +973,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 tipoAccionEspecial: 'SECOP',
-                norma: 'Constitución Política, Art. 128; Ley 80 de 1993, Art. 8',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Verificar en la API SECOP II la ausencia de contratos activos con entidades públicas.',
               },
               {
@@ -930,7 +982,8 @@ export function generarEtapasParaCaso(
                 label: 'Consulta de antecedentes judiciales, disciplinarios, fiscales y REDAM',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1952 de 2019; Ley 610 de 2000; Ley 2097 de 2021',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'Verificación en SECOP II de que el aspirante al nombramiento provisional no registre contratos vigentes en ejecución con entidades del Estado, impidiendo una doble vinculación o conflicto de intereses.',
                 detalleProcedimiento: 'Descargar certificados vigentes de Policía, Procuraduría, Contraloría y REDAM.',
               },
               {
@@ -940,7 +993,8 @@ export function generarEtapasParaCaso(
                 obligatorio: true,
                 codigoFormato: '2311300-FT-318',
                 tipoAccionEspecial: 'INGRESOS_IA',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.5',
+                norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
+                textoNormativo: 'Consulta de certificados de antecedentes disciplinarios, de responsabilidad fiscal, judiciales y del Registro de Deudores Alimentarios Morosos.',
                 detalleProcedimiento: 'Expedir certificado técnico que acredite los requisitos mínimos de estudio y experiencia del empleo.',
               },
             ],
@@ -964,7 +1018,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.1',
+                norma: 'Ley 909 de 2004, Art. 25 • Decreto 1083 de 2015, Art. 2.2.5.3.3',
+                textoNormativo: 'La resolución de nombramiento provisional debe motivar expresamente la transitoriedad del empleo, la constancia de encargo desierto y la condición resolutoria del nombramiento hasta cuando la CNSC provea la vacante por concurso.',
                 detalleProcedimiento: 'Redactar resolución indicando la naturaleza transitoria y la justificación del encargo desierto.',
               },
               {
@@ -972,7 +1027,8 @@ export function generarEtapasParaCaso(
                 label: 'Firma de la resolución por la autoridad nominadora y numeración',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto Distrital 323 de 2016',
+                norma: 'Ley 1437 de 2011, Art. 65 • Estatuto de Bogotá',
+                textoNormativo: 'Suscripción por el nominador, radicación con número y fecha oficial en el sistema de gestión documental de la entidad.',
                 detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y numeración en correspondencia.',
               },
               {
@@ -982,6 +1038,7 @@ export function generarEtapasParaCaso(
                 obligatorio: true,
                 codigoFormato: '2311520-FT-019',
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6',
+                textoNormativo: 'Término legal de diez (10) días hábiles para la aceptación del nombramiento provisional contados desde su comunicación formal.',
                 detalleProcedimiento: 'Notificar electrónicamente con plazo perentorio de aceptación formal.',
               },
             ],
@@ -1004,7 +1061,8 @@ export function generarEtapasParaCaso(
                 label: 'Examen médico ocupacional de ingreso',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Resolución 2346 de 2007 MinProtección Social',
+                norma: 'Resolución 2346 de 2007 • Decreto 1072 de 2015',
+                textoNormativo: 'Examen de ingreso de salud ocupacional obligatorio con concepto de aptitud psicofísica favorable emitido por médico especialista.',
                 detalleProcedimiento: 'Verificar concepto médico apto sin restricciones impeditivas.',
               },
               {
@@ -1012,7 +1070,8 @@ export function generarEtapasParaCaso(
                 label: 'Declaración juramentada de bienes y rentas y conflicto de intereses',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2013 de 2019; Ley 190 de 1995',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
+                textoNormativo: 'Publicación juramentada y obligatoria en SIDEAP / SIGEP II de la declaración de bienes y rentas y registro de conflicto de intereses previo al acto de posesión.',
                 detalleProcedimiento: 'Validar radicado de SIDEAP / SIGEP marcando ingreso al servicio.',
               },
               {
@@ -1021,7 +1080,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-127',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.8',
+                norma: 'Constitución Política, Art. 122 • Ley 4 de 1913, Art. 257 • Decreto 1083 de 2015, Art. 2.2.5.1.8',
+                textoNormativo: 'Juramento constitucional y formalización del acta de posesión (Formato 2311300-FT-127), asumiendo el servidor la condición de empleado público provisional.',
                 detalleProcedimiento: 'Firma formal del acta de posesión y toma de juramento legal.',
               },
             ],
@@ -1044,7 +1104,8 @@ export function generarEtapasParaCaso(
                 label: 'Afiliaciones a ARL y Seguridad Social Integral',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 100 de 1993; Decreto 1295 de 1994',
+                norma: 'Ley 100 de 1993 • Decreto 1295 de 1994',
+                textoNormativo: 'Afiliación patronal inmediata a ARL, EPS, Fondo de Pensiones, Cesantías y Caja de Compensación Familiar.',
                 detalleProcedimiento: 'Ingresar afiliaciones a Positiva ARL, EPS y fondo de pensiones y cesantías.',
               },
               {
@@ -1052,7 +1113,8 @@ export function generarEtapasParaCaso(
                 label: 'Inclusión en nómina (PERNO) y actualización en SIDEAP',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-001',
+                norma: 'Decreto Distrital 101 de 2004',
+                textoNormativo: 'Registro en nómina distrital PERNO y activación en el SIDEAP de la Secretaría Jurídica Distrital.',
                 detalleProcedimiento: 'Registrar la plaza en nómina y cambiar el estado del servidor a activo.',
               },
               {
@@ -1061,7 +1123,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-106',
-                norma: 'Decreto 1083 de 2015, Art. 2.2.9.1',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.11.2.1 • Formato 2311300-FT-106',
+                textoNormativo: 'Inducción institucional, entrega formal del puesto y notificación de las obligaciones y deberes funcionales conforme a la Ley 1952 de 2019.',
                 detalleProcedimiento: 'Realizar inducción y suscribir formato institucional FT-106.',
               },
             ],
@@ -1088,7 +1151,8 @@ export function generarEtapasParaCaso(
                 label: 'Solicitud y expedición de CDP para auxilio de sostenimiento / ARL en vigencia',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto 111 de 1996 Estatuto Orgánico del Presupuesto; Res. 3546/2018',
+                norma: 'Ley 2043 de 2020 • Decreto 111 de 1996 • Estatuto Orgánico de Presupuesto',
+                textoNormativo: 'Antes de convocar o vincular practicantes o judicantes remunerados se debe expedir el Certificado de Disponibilidad Presupuestal (CDP) en Bogdata para amparar el auxilio de sostenimiento y el pago de aportes a ARL.',
                 detalleProcedimiento: 'Expedir Certificado de Disponibilidad Presupuestal con rubro específico de prácticas o judicaturas.',
               },
               {
@@ -1096,7 +1160,8 @@ export function generarEtapasParaCaso(
                 label: 'Consolidación de requerimientos de dependencias y perfiles requeridos',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-137 SJD',
+                norma: 'Ley 2043 de 2020, Art. 4 • Procedimiento Institucional PR-137',
+                textoNormativo: 'Las áreas de la entidad deben presentar las necesidades formativas justificadas para que la práctica guarde estricta relación con el plan de estudios del estudiante.',
                 detalleProcedimiento: 'Recepcionar las solicitudes de estudiantes de derecho y áreas afines remitidas por las direcciones.',
               },
               {
@@ -1104,7 +1169,8 @@ export function generarEtapasParaCaso(
                 label: 'Registro de plazas en módulo de prácticas laborales de SIDEAP',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Directiva DASCD; Ley 2043 de 2020',
+                norma: 'Directiva Distrital 001 de 2018 • Módulo de Prácticas SIDEAP',
+                textoNormativo: 'Registro de las plazas de prácticas en el módulo correspondiente de SIDEAP para garantizar la transparencia y seguimiento en el Distrito Capital.',
                 detalleProcedimiento: 'Registrar la oferta institucional de prácticas en la plataforma distrital de prácticas formativas.',
               },
             ],
@@ -1127,7 +1193,8 @@ export function generarEtapasParaCaso(
                 label: 'Publicación de convocatoria oficial en portal web institucional / DASCD',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1780 de 2016; Ley 2043 de 2020 Art. 4',
+                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 7 • Portal Distrital DASCD',
+                textoNormativo: 'Publicación de la convocatoria de prácticas formativas en los canales oficiales y coordinación con facultades y consultorios jurídicos acreditados.',
                 detalleProcedimiento: 'Publicar los términos de la convocatoria y requisitos de postulación académica.',
               },
               {
@@ -1135,7 +1202,8 @@ export function generarEtapasParaCaso(
                 label: 'Verificación carta de presentación de la universidad y plan de práctica académica',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 4',
+                norma: 'Ley 552 de 1999 • Ley 2043 de 2020, Art. 3 • Res. 3546 de 2018',
+                textoNormativo: 'Verificación de la carta oficial de presentación suscrita por el decano o director de consultorio jurídico de la institución de educación superior debidamente reconocida por el MEN.',
                 detalleProcedimiento: 'Validar carta oficial de decanatura y plan de actividades aprobado por la facultad.',
               },
               {
@@ -1143,7 +1211,8 @@ export function generarEtapasParaCaso(
                 label: 'Entrevista en dependencia receptora y remisión de acta de selección final',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-137',
+                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 12',
+                textoNormativo: 'Entrevista técnica formativa y designación formal del tutor institucional que supervisará y evaluará el desempeño del practicante o judicante.',
                 detalleProcedimiento: 'Realizar entrevista técnica y remitir acta de selección del judicante seleccionado.',
               },
             ],
@@ -1166,7 +1235,8 @@ export function generarEtapasParaCaso(
                 label: 'Consulta de antecedentes SIRI, SIBOR, Policía, Personería, RNMC y REDAM',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1952 de 2019; Ley 2097 de 2021',
+                norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
+                textoNormativo: 'Verificación preventiva de antecedentes judiciales, disciplinarios, fiscales, medidas de policía y REDAM para estudiantes aspirantes a práctica.',
                 detalleProcedimiento: 'Verificar certificados disciplinarios, fiscales, policiales y REDAM sin anotaciones.',
               },
               {
@@ -1175,7 +1245,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 tipoAccionEspecial: 'SECOP',
-                norma: 'Ley 80 de 1993, Art. 8; Art. 128 Constitucional',
+                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
+                textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Consultar en línea si el estudiante posee contratos con el estado que generen incompatibilidad.',
               },
               {
@@ -1183,7 +1254,8 @@ export function generarEtapasParaCaso(
                 label: 'Proyección de Resolución de Vinculación Formativa',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Resolución 3546 de 2018 MinTrabajo; Ley 2043 de 2020',
+                norma: 'Ley 80 de 1993, Art. 8 • Constitución Política, Art. 128',
+                textoNormativo: 'Consulta en SECOP II para corroborar que el estudiante no cuente con contratos activos incompatibles con la dedicación horaria de la práctica formativa.',
                 detalleProcedimiento: 'Redactar resolución indicando plazo de práctica (mínimo 6 o 9 meses judicatura) y tutor asignado.',
               },
               {
@@ -1192,7 +1264,8 @@ export function generarEtapasParaCaso(
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-019',
-                norma: 'Resolución SJD de Delegación de Funciones',
+                norma: 'Ley 2043 de 2020, Art. 5 • Resolución 3546 de 2018 MinTrabajo, Art. 10',
+                textoNormativo: 'La vinculación formativa se formaliza mediante resolución expedida por la Dirección de Gestión Corporativa, señalando término de duración, tutor, horario y auxilio si aplica.',
                 detalleProcedimiento: 'Someter a firma y notificar al estudiante y a la universidad correspondiente.',
               },
             ],
@@ -1215,7 +1288,8 @@ export function generarEtapasParaCaso(
                 label: 'Afiliación obligatoria a ARL por la entidad (Resolución 3546/2018)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto 055 de 2015; Resolución 3546 de 2018 MinTrabajo',
+                norma: 'Decreto 055 de 2015 • Decreto 1072 de 2015, Art. 2.2.4.2.3.1 • Res. 3546 de 2018',
+                textoNormativo: 'La entidad pública contratante tiene la obligación inexcusable de afiliar y cotizar al practicante o judicante al Sistema General de Riesgos Laborales (ARL) a través de la ARL Positiva un (1) día antes del inicio de actividades.',
                 detalleProcedimiento: 'Afiliar a Positiva ARL indicando centro de trabajo y actividades formativas.',
               },
               {
@@ -1223,7 +1297,8 @@ export function generarEtapasParaCaso(
                 label: 'Solicitud y expedición de Certificado de Registro Presupuestal (CRP)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Estatuto Orgánico del Presupuesto Distrital',
+                norma: 'Decreto 111 de 1996 • Procedimiento Presupuestal 2311420-PR-063',
+                textoNormativo: 'Expedición del Certificado de Registro Presupuestal (CRP) en Bogdata para amparar el compromiso presupuestal del auxilio y la seguridad social.',
                 detalleProcedimiento: 'Imputar el valor del auxilio al CDP expedido en el aplicativo Bogdata.',
               },
               {
@@ -1231,7 +1306,8 @@ export function generarEtapasParaCaso(
                 label: 'Suscripción del Acta de Inicio de práctica o judicatura',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-137 SJD',
+                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 11',
+                textoNormativo: 'Suscripción del acta de inicio formal con participación del estudiante, el tutor institucional y el responsable de Talento Humano.',
                 detalleProcedimiento: 'Firmar acta de inicio suscrita por el judicante, el tutor y Talento Humano.',
               },
               {
@@ -1239,7 +1315,8 @@ export function generarEtapasParaCaso(
                 label: 'Solicitud de creación de tercero en Bogdata (Procedimiento 2311420-PR-063)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Procedimiento Distrital de Pagos Bogdata',
+                norma: 'Procedimiento Distrital 2311420-PR-063 en Sistema Bogdata',
+                textoNormativo: 'Creación y registro formal del practicante como tercero acreedor en la plataforma Bogdata de la Secretaría Distrital de Hacienda.',
                 detalleProcedimiento: 'Crear la cuenta bancaria del estudiante en la Secretaría Distrital de Hacienda.',
               },
             ],
@@ -1262,7 +1339,8 @@ export function generarEtapasParaCaso(
                 label: 'Diligenciamiento de encuesta de condiciones de salud inicial',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto 1072 de 2015 SG-SST',
+                norma: 'Decreto 1072 de 2015 • SG-SST Institucional',
+                textoNormativo: 'Diligenciamiento de la encuesta de condiciones de salud previa para identificación de riesgos ocupacionales y ergonomía.',
                 detalleProcedimiento: 'Aplicar la encuesta de autoreporte de condiciones de salud institucional.',
               },
               {
@@ -1270,7 +1348,8 @@ export function generarEtapasParaCaso(
                 label: 'Inducción institucional y entrega de puesto de trabajo',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-137',
+                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 14',
+                textoNormativo: 'Inducción al quehacer institucional, asignación del puesto físico/digital y entrega de herramientas informáticas.',
                 detalleProcedimiento: 'Brindar inducción de la entidad y asignar computador y correo institucional.',
               },
               {
@@ -1278,7 +1357,8 @@ export function generarEtapasParaCaso(
                 label: 'Radicación de informes mensuales de actividades aprobados por el tutor',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2043 de 2020 Art. 6; Acuerdo CSJ para Judicaturas',
+                norma: 'Ley 552 de 1999 • Ley 2043 de 2020, Art. 6',
+                textoNormativo: 'Presentación periódica y radicación de los informes de actividades jurídicas o administrativas debidamente aprobados por el tutor asignado.',
                 detalleProcedimiento: 'Verificar la presentación mensual de informes con visto bueno del tutor asignado.',
               },
             ],
@@ -1301,7 +1381,8 @@ export function generarEtapasParaCaso(
                 label: 'Trámite mensual de pago de apoyo de sostenimiento con soporte bancario',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 789 de 2002; Res. 3546/2018 MinTrabajo',
+                norma: 'Ley 2043 de 2020, Art. 7 • Procedimiento Contable Bogdata',
+                textoNormativo: 'Trámite mensual de desembolso del apoyo económico de sostenimiento previa certificación de cumplimiento expedida por el tutor.',
                 detalleProcedimiento: 'Generar orden de giro mensual en Bogdata previa certificación del tutor.',
               },
               {
@@ -1309,7 +1390,8 @@ export function generarEtapasParaCaso(
                 label: 'Expedición de Certificación Final de Práctica / Judicatura firmada por Dirección',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 2043 de 2020 Art. 6; Ley 552 de 1999',
+                norma: 'Ley 2043 de 2020, Arts. 6 y 8 • Ley 552 de 1999 • Decreto 1083 de 2015',
+                textoNormativo: 'Expedición formal de la Certificación de Práctica / Judicatura, la cual es válida como experiencia profesional computable para el ejercicio de la profesión y provisión de empleos públicos.',
                 detalleProcedimiento: 'Expedir certificación con firmas oficiales para el trámite del título de abogado o tarjeta profesional.',
               },
             ],
@@ -1447,7 +1529,8 @@ export function generarEtapasParaCaso(
             label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
             cumplido: false,
             obligatorio: true,
-            norma: 'Ley 190 de 1995; Ley 2013 de 2019; Decreto 1083 de 2015 Art. 2.2.11.1.10',
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • Ley 190 de 1995',
+                textoNormativo: 'Es requisito previo y habilitante para la posesión publicar y registrar bajo gravedad de juramento en el SIDEAP/SIGEP II la declaración de bienes y rentas, la última declaración del impuesto sobre la renta y el registro de posibles conflictos de intereses. Su omisión impide legalmente formalizar la posesión.',
             detalleProcedimiento: 'Generar el certificado digital de SIDEAP acreditando la declaración de bienes actualizada al corte de retiro.',
           },
           {
@@ -1478,7 +1561,8 @@ export function generarEtapasParaCaso(
             label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
             cumplido: false,
             obligatorio: true,
-            norma: 'Resolución 2346 de 2007 MinProtección Social, Art. 6; Dec. 1072/2015',
+                norma: 'Resolución 2346 de 2007 MinProtección Social • Decreto 1072 de 2015',
+                textoNormativo: 'Es obligatoria la evaluación médica ocupacional de ingreso con concepto de aptitud psicofísica expedido por médico especialista en seguridad y salud en el trabajo previo al inicio de actividades laborales.',
             detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS o recibir carta de desistimiento expreso del servidor.',
           },
           {
@@ -1534,7 +1618,8 @@ export function generarEtapasParaCaso(
             label: 'Registro de novedad de retiro en nómina y desactivación en SIDEAP',
             cumplido: false,
             obligatorio: true,
-            norma: 'Decreto Distrital 580 de 2017; Sistema PERNO',
+                norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
+                textoNormativo: 'Activación del servidor en el Sistema Distrital del Empleo y la Administración Pública (SIDEAP), habilitando su ficha y expediente digital de talento humano.',
             detalleProcedimiento: 'Registrar la fecha de retiro definitiva en PERNO para suspender devengos posteriores.',
           },
           {
@@ -1587,7 +1672,8 @@ export function generarEtapasParaCaso(
                 label: 'Reporte de vacancia definitiva en SIMO 4.4 ante la CNSC (plazo 5 días hábiles Circular 011/2021)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Circular Conjunta CNSC 011 de 2021, Numeral 2; Ley 909/2004 Art. 31',
+                norma: 'Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31',
+                textoNormativo: 'La entidad nominadora debe registrar en el aplicativo SIMO 4.0 de la CNSC la posesión efectiva del elegible dentro de los cinco (5) días hábiles siguientes, para descargar la posición del Banco Nacional de Listas de Elegibles.',
                 detalleProcedimiento: 'Cargar el acto de retiro en SIMO 4.4 para habilitar la vacante en el banco de listas o futura convocatoria.',
               },
               {
@@ -1631,6 +1717,22 @@ export function generarEtapasParaCaso(
     ];
   }
 }
+export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[] {
+  return etapas.map((etapa, idx) => ({
+    ...etapa,
+    estado: idx === 0 ? 'in_progress' : 'pending',
+    observacionesFase: undefined,
+    requisitos: etapa.requisitos.map((req) => ({
+      ...req,
+      cumplido: false,
+      fecha_cumplimiento: undefined,
+      observaciones: undefined,
+      radicadoSoporte: undefined,
+      usuarioRegistro: undefined,
+    })),
+  }));
+}
+
 const CASOS_BASE: CasoFlujoFuncionario[] = [
   {
     id: 'TR-2026-001',
@@ -1899,9 +2001,60 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [filtroModalidadDesvinculacion, setFiltroModalidadDesvinculacion] = useState<'TODAS' | ModalidadPersonal>('TODAS');
   const [busquedaDesvinculaciones, setBusquedaDesvinculaciones] = useState('');
 
-  // Casos con flujos
-  const [casos, setCasos] = useState<CasoFlujoFuncionario[]>(CASOS_BASE);
-  const [casoSeleccionadoId, setCasoSeleccionadoId] = useState<string>(CASOS_BASE[0].id);
+  // Claves de persistencia en almacenamiento local (Web / App)
+  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v2';
+  const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v2';
+
+  const obtenerCasosIniciales = (): CasoFlujoFuncionario[] => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const guardados = window.localStorage.getItem(STORAGE_KEY_CASOS);
+        if (guardados) {
+          const parsed = JSON.parse(guardados);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.warn('Error leyendo trámites de localStorage:', e);
+      }
+    }
+    return CASOS_BASE;
+  };
+
+  const obtenerCasoActivoInicial = (): string => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const guardado = window.localStorage.getItem(STORAGE_KEY_CASO_ACTIVO);
+        if (guardado) return guardado;
+      } catch (e) {}
+    }
+    return CASOS_BASE[0]?.id || '';
+  };
+
+  // Casos con flujos inicializados con persistencia
+  const [casos, setCasos] = useState<CasoFlujoFuncionario[]>(obtenerCasosIniciales);
+  const [casoSeleccionadoId, setCasoSeleccionadoId] = useState<string>(obtenerCasoActivoInicial);
+
+  // Guardar en localStorage de forma reactiva ante cualquier cambio en casos
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casos));
+      } catch (e) {
+        console.warn('Error guardando trámites en localStorage:', e);
+      }
+    }
+  }, [casos]);
+
+  // Guardar el ID del caso activo seleccionado para preservarlo tras recargar (F5)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.localStorage && casoSeleccionadoId) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY_CASO_ACTIVO, casoSeleccionadoId);
+      } catch (e) {}
+    }
+  }, [casoSeleccionadoId]);
 
   // Modal para registrar nuevo trámite
   const [modalRegistroVisible, setModalRegistroVisible] = useState(false);
@@ -2324,6 +2477,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       if (res.tieneContratosActivos) {
         setSecopFiltroTab('activos');
         setSecopModalFiltroTab('activos');
+      } else if ((res.totalActivosFinalizados || 0) > 0) {
+        setSecopFiltroTab('finalizados');
+        setSecopModalFiltroTab('finalizados');
       } else {
         setSecopFiltroTab('todos');
         setSecopModalFiltroTab('todos');
@@ -2360,13 +2516,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const renderReporteSecopDetallado = (
     res: ResultadoConsultaSecop,
     candidatoInfo?: { nombre: string; cedula: string; casoId?: string } | null,
-    filtroActual: 'activos' | 'historicos' | 'todos' = 'activos',
-    cambiarFiltro: (tab: 'activos' | 'historicos' | 'todos') => void = () => {},
+    filtroActual: 'activos' | 'finalizados' | 'historicos' | 'todos' = 'activos',
+    cambiarFiltro: (tab: 'activos' | 'finalizados' | 'historicos' | 'todos') => void = () => {},
     esModal = false
   ) => {
+    const totalActivosVigentes = res.totalActivosVigentes ?? res.totalActivos;
+    const totalActivosFinalizados = res.totalActivosFinalizados ?? (res.contratosActivosFinalizados ? res.contratosActivosFinalizados.length : 0);
+
     const contratosFiltrados =
       filtroActual === 'activos'
-        ? res.contratosActivos
+        ? (res.contratosActivos || [])
+        : filtroActual === 'finalizados'
+        ? (res.contratosActivosFinalizados || [])
         : filtroActual === 'historicos'
         ? res.contratosHistoricos
         : res.todosContratos;
@@ -2375,23 +2536,75 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const montoSaldoPendiente = res.resumenFinanciero?.valorPendienteActivo ?? 0;
     const montoPagadoActivo = res.resumenFinanciero?.valorPagadoActivo ?? 0;
 
+    const esAlertaActivo = res.tieneContratosActivos;
+    const esAlertaFinalizado = !esAlertaActivo && totalActivosFinalizados > 0;
+    const esSoloHistorico = !esAlertaActivo && !esAlertaFinalizado && res.totalHistoricos > 0;
+
+    const bannerBg = esAlertaActivo
+      ? THEME.roseBg
+      : esAlertaFinalizado
+      ? THEME.amberBg
+      : esSoloHistorico
+      ? THEME.skyBg
+      : THEME.emeraldBg;
+
+    const bannerBorder = esAlertaActivo
+      ? THEME.roseRing
+      : esAlertaFinalizado
+      ? THEME.amberRing
+      : esSoloHistorico
+      ? THEME.skyRing
+      : THEME.emeraldRing;
+
+    const bannerIconBg = esAlertaActivo
+      ? '#FFE4E6'
+      : esAlertaFinalizado
+      ? '#FEF3C7'
+      : esSoloHistorico
+      ? '#E0F2FE'
+      : '#D1FAE5';
+
+    const bannerIconColor = esAlertaActivo
+      ? THEME.roseText
+      : esAlertaFinalizado
+      ? THEME.amberText
+      : esSoloHistorico
+      ? THEME.skyText
+      : THEME.emeraldText;
+
+    const bannerIconName = esAlertaActivo
+      ? 'warning'
+      : esAlertaFinalizado
+      ? 'time'
+      : esSoloHistorico
+      ? 'information-circle'
+      : 'shield-checkmark';
+
+    const bannerTitulo = esAlertaActivo
+      ? '⚠️ ALERTA DE CONTRATOS EN EJECUCIÓN (POSIBLE INHABILIDAD)'
+      : esAlertaFinalizado
+      ? '⏱️ CONTRATOS ACTIVOS CON PLAZO VENCIDO (PENDIENTES DE CIERRE EN SECOP)'
+      : esSoloHistorico
+      ? '✓ REGISTRO VERIFICADO: SOLO CONTRATOS HISTÓRICOS CERRADOS'
+      : '✓ ESTADO LIMPIO EN SECOP II: SIN CONTRATOS REGISTRADOS';
+
     return (
       <View style={{ gap: 16, width: '100%' }}>
         {/* BANNER DE SEMÁFORO Y DICTAMEN NORMATIVO */}
         <View
           style={{
-            backgroundColor: res.tieneContratosActivos
-              ? THEME.roseBg
-              : res.totalHistoricos > 0
-              ? THEME.skyBg
-              : THEME.emeraldBg,
+            backgroundColor: bannerBg,
+
+
+
+
             borderRadius: 12,
             borderWidth: 1.5,
-            borderColor: res.tieneContratosActivos
-              ? THEME.roseRing
-              : res.totalHistoricos > 0
-              ? THEME.skyRing
-              : THEME.emeraldRing,
+            borderColor: bannerBorder,
+
+
+
+
             padding: 16,
             gap: 12,
           }}
@@ -2402,32 +2615,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 width: 38,
                 height: 38,
                 borderRadius: 10,
-                backgroundColor: res.tieneContratosActivos
-                  ? '#FFE4E6'
-                  : res.totalHistoricos > 0
-                  ? '#E0F2FE'
-                  : '#D1FAE5',
+                backgroundColor: bannerIconBg,
+
+
+
+
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginTop: 2,
               }}
             >
               <Ionicons
-                name={
-                  res.tieneContratosActivos
-                    ? 'warning'
-                    : res.totalHistoricos > 0
-                    ? 'information-circle'
-                    : 'shield-checkmark'
-                }
+                name={bannerIconName as any}
+
+
+
+
+
+
                 size={22}
-                color={
-                  res.tieneContratosActivos
-                    ? THEME.roseText
-                    : res.totalHistoricos > 0
-                    ? THEME.skyText
-                    : THEME.emeraldText
-                }
+                color={bannerIconColor}
+
+
+
+
+
+
               />
             </View>
             <View style={{ flex: 1, gap: 4 }}>
@@ -2436,19 +2649,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   style={{
                     fontSize: 14,
                     fontWeight: '800',
-                    color: res.tieneContratosActivos
-                      ? THEME.roseText
-                      : res.totalHistoricos > 0
-                      ? THEME.skyText
-                      : THEME.emeraldText,
+                    color: bannerIconColor,
                     letterSpacing: 0.2,
                   }}
                 >
-                  {res.tieneContratosActivos
-                    ? '⚠️ ALERTA DE CONTRATOS EN EJECUCIÓN (POSIBLE INHABILIDAD)'
-                    : res.totalHistoricos > 0
-                    ? '✓ REGISTRO VERIFICADO: SOLO CONTRATOS HISTÓRICOS CERRADOS'
-                    : '✓ ESTADO LIMPIO EN SECOP II: SIN CONTRATOS REGISTRADOS'}
+                  {bannerTitulo}
                 </Text>
                 {res.tieneContratosActivos && (
                   <View
@@ -2461,6 +2666,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   >
                     <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '800' }}>
                       RIESGO ART. 128 C.P.
+                    </Text>
+                  </View>
+                )}
+                {esAlertaFinalizado && (
+                  <View
+                    style={{
+                      backgroundColor: '#D97706',
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '800' }}>
+                      PLAZO VENCIDO / POR LIQUIDAR
                     </Text>
                   </View>
                 )}
@@ -2504,27 +2723,29 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
             <View
               style={{
-                backgroundColor: res.tieneContratosActivos ? '#FFF1F2' : '#F0FDF4',
+                backgroundColor: esAlertaActivo ? '#FFF1F2' : esAlertaFinalizado ? '#FFFBEB' : '#F0FDF4',
                 padding: 8,
                 borderRadius: 6,
                 borderLeftWidth: 3,
-                borderLeftColor: res.tieneContratosActivos ? THEME.roseText : THEME.emeraldText,
+                borderLeftColor: esAlertaActivo ? THEME.roseText : esAlertaFinalizado ? '#D97706' : THEME.emeraldText,
               }}
             >
               <Text
                 style={{
-                  color: res.tieneContratosActivos ? THEME.roseText : THEME.emeraldText,
+                  color: esAlertaActivo ? THEME.roseText : esAlertaFinalizado ? '#92400E' : THEME.emeraldText,
                   fontSize: 11.5,
                   fontWeight: '700',
                 }}
               >
-                {res.tieneContratosActivos
+                {esAlertaActivo
                   ? '📌 ACCIÓN PREVENTIVA OBLIGATORIA PARA TALENTO HUMANO / POSESIÓN:'
+                  : esAlertaFinalizado
+                  ? '📌 VERIFICACIÓN PREVENTIVA DE TERMINACIÓN / PAZ Y SALVO:'
                   : '📌 CONCEPTO PRELIMINAR TALENTO HUMANO:'}
               </Text>
               <Text
                 style={{
-                  color: res.tieneContratosActivos ? '#881337' : '#065F46',
+                  color: esAlertaActivo ? '#881337' : esAlertaFinalizado ? '#78350F' : '#065F46',
                   fontSize: 11,
                   lineHeight: 16,
                   marginTop: 2,
@@ -2552,7 +2773,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               backgroundColor: THEME.white,
               borderRadius: 10,
               borderWidth: 1,
-              borderColor: res.totalActivos > 0 ? THEME.roseRing : THEME.slate200,
+              borderColor: totalActivosVigentes > 0 ? THEME.roseRing : THEME.slate200,
               padding: 12,
               gap: 4,
             }}
@@ -2564,15 +2785,46 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               style={{
                 fontSize: 20,
                 fontWeight: '800',
-                color: res.totalActivos > 0 ? THEME.roseText : THEME.emeraldText,
+                color: totalActivosVigentes > 0 ? THEME.roseText : THEME.emeraldText,
               }}
             >
-              {res.totalActivos}
+              {totalActivosVigentes}
             </Text>
             <Text style={{ fontSize: 10, color: THEME.slate400 }}>
-              {res.totalActivos > 0 ? 'Con alerta de inhabilidad' : 'Sin alertas vigentes'}
+              {totalActivosVigentes > 0 ? 'Con alerta de inhabilidad' : 'Sin contratos vigentes'}
             </Text>
           </View>
+
+          {totalActivosFinalizados > 0 && (
+            <View
+              style={{
+                flex: 1,
+                minWidth: 130,
+                backgroundColor: '#FFFBEB',
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#FDE68A',
+                padding: 12,
+                gap: 4,
+              }}
+            >
+              <Text style={{ fontSize: 11, color: '#92400E', fontWeight: '600' }}>
+                Plazo Vencido / Sin Liquidar
+              </Text>
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: '800',
+                  color: '#D97706',
+                }}
+              >
+                {totalActivosFinalizados}
+              </Text>
+              <Text style={{ fontSize: 10, color: '#B45309' }}>
+                Exigir acta o paz y salvo
+              </Text>
+            </View>
+          )}
 
           <View
             style={{
@@ -2683,7 +2935,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 borderRadius: 8,
                 backgroundColor:
                   filtroActual === 'activos'
-                    ? res.totalActivos > 0
+                    ? totalActivosVigentes > 0
                       ? THEME.roseText
                       : THEME.marca600
                     : THEME.slate100,
@@ -2699,9 +2951,35 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   fontWeight: '700',
                 }}
               >
-                Contratos Activos ({res.totalActivos})
+                En Ejecución Vigente ({totalActivosVigentes})
               </Text>
             </Pressable>
+
+            {totalActivosFinalizados > 0 && (
+              <Pressable
+                onPress={() => cambiarFiltro('finalizados')}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  backgroundColor:
+                    filtroActual === 'finalizados' ? '#D97706' : '#FEF3C7',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Text
+                  style={{
+                    color: filtroActual === 'finalizados' ? THEME.white : '#92400E',
+                    fontSize: 12,
+                    fontWeight: '700',
+                  }}
+                >
+                  Plazo Vencido ({totalActivosFinalizados})
+                </Text>
+              </Pressable>
+            )}
 
             <Pressable
               onPress={() => cambiarFiltro('historicos')}
@@ -2802,16 +3080,62 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           </View>
         ) : (
           <View style={{ gap: 14 }}>
-            {contratosFiltrados.map((c, i) => (
+            {contratosFiltrados.map((c, i) => {
+              const esVigente = c.esActivo && !c.plazoVencido;
+              const esFinalizadoActivo = c.esActivo && c.plazoVencido;
+
+              const cardBorder = esVigente
+                ? THEME.roseRing
+                : esFinalizadoActivo
+                ? '#FDE68A'
+                : THEME.slate200;
+
+              const cardLeftBorder = esVigente
+                ? THEME.roseText
+                : esFinalizadoActivo
+                ? '#D97706'
+                : THEME.emeraldText;
+
+              const badgeBg = esVigente
+                ? THEME.roseBg
+                : esFinalizadoActivo
+                ? '#FEF3C7'
+                : THEME.emeraldBg;
+
+              const badgeBorder = esVigente
+                ? THEME.roseRing
+                : esFinalizadoActivo
+                ? '#FDE68A'
+                : THEME.emeraldRing;
+
+              const badgeColor = esVigente
+                ? THEME.roseText
+                : esFinalizadoActivo
+                ? '#92400E'
+                : THEME.emeraldText;
+
+              const badgeIcon = esVigente
+                ? 'alert-circle'
+                : esFinalizadoActivo
+                ? 'time'
+                : 'checkmark-circle';
+
+              const badgeTexto = esVigente
+                ? c.estado.toUpperCase()
+                : esFinalizadoActivo
+                ? `${c.estado.toUpperCase()} (PLAZO VENCIDO)`
+                : c.estado.toUpperCase();
+
+              return (
               <View
                 key={`${c.idContrato}-${i}`}
                 style={{
                   backgroundColor: THEME.white,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: c.esActivo ? THEME.roseRing : THEME.slate200,
+                  borderColor: cardBorder,
                   borderLeftWidth: 4,
-                  borderLeftColor: c.esActivo ? THEME.roseText : THEME.emeraldText,
+                  borderLeftColor: cardLeftBorder,
                   padding: 16,
                   gap: 12,
                   shadowColor: '#000',
@@ -2841,11 +3165,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                   <View
                     style={{
-                      backgroundColor: c.esActivo ? THEME.roseBg : THEME.emeraldBg,
+                      backgroundColor: badgeBg,
                       paddingHorizontal: 10,
                       paddingVertical: 4,
                       borderRadius: 8,
-                      borderColor: c.esActivo ? THEME.roseRing : THEME.emeraldRing,
+                      borderColor: badgeBorder,
                       borderWidth: 1,
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -2853,18 +3177,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     }}
                   >
                     <Ionicons
-                      name={c.esActivo ? 'alert-circle' : 'checkmark-circle'}
+                      name={badgeIcon as any}
                       size={13}
-                      color={c.esActivo ? THEME.roseText : THEME.emeraldText}
+                      color={badgeColor}
                     />
                     <Text
                       style={{
-                        color: c.esActivo ? THEME.roseText : THEME.emeraldText,
+                        color: badgeColor,
                         fontSize: 11,
                         fontWeight: '800',
                       }}
                     >
-                      {c.estado.toUpperCase()}
+                      {badgeTexto}
                     </Text>
                   </View>
                 </View>
@@ -3103,7 +3427,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   </Pressable>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
@@ -3215,6 +3540,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   });
   const [fasesNormaExpandida, setFasesNormaExpandida] = useState<Record<string, boolean>>({});
   const [reqDetalleExpandido, setReqDetalleExpandido] = useState<Record<string, boolean>>({});
+  const [secopResumenExpandido, setSecopResumenExpandido] = useState<Record<string, boolean>>({});
+
+  const toggleSecopResumen = (reqId: string) => {
+    setSecopResumenExpandido((prev) => ({ ...prev, [reqId]: !prev[reqId] }));
+  };
 
   // Modal para Cierre / Observaciones de Requisito
   const [modalObsReqVisible, setModalObsReqVisible] = useState(false);
@@ -3444,8 +3774,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       return;
     }
 
-    const nuevoId = `TR-${new Date().getFullYear()}-${String(casos.length + 1).padStart(3, '0')}`;
-    const etapasGeneradas = generarEtapasParaCaso(nuevoTipoProceso, nuevaModalidad);
+    // Calcular el consecutivo máximo existente para evitar IDs duplicados
+    const numMax = casos.reduce((max, c) => {
+      const match = c.id.match(/TR-\d+-(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, casos.length);
+    const nuevoId = `TR-${new Date().getFullYear()}-${String(numMax + 1).padStart(3, '0')}`;
+
+    // Generar etapas totalmente en blanco para el nuevo trámite (ningún requisito pre-marcado)
+    const etapasBase = generarEtapasParaCaso(nuevoTipoProceso, nuevaModalidad);
+    const etapasLimpias = limpiarEtapasParaNuevoTramite(etapasBase);
 
     const nuevoCaso: CasoFlujoFuncionario = {
       id: nuevoId,
@@ -3458,13 +3800,25 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       dependencia: dependenciaInput.trim() || 'SECRETARÍA JURÍDICA DISTRITAL',
       causal: nuevoTipoProceso === 'DESVINCULACION' ? causalInput : undefined,
       fecha_inicio_tramite: new Date().toISOString().split('T')[0],
-      etapas: etapasGeneradas,
-      etapa_activa_id: etapasGeneradas[0]?.id,
-      observaciones: 'Trámite registrado y en proceso de validaciones preliminares.',
+      etapas: etapasLimpias,
+      etapa_activa_id: etapasLimpias[0]?.id,
+      observaciones: 'Trámite registrado e iniciado. Todos los requisitos están pendientes de verificación.',
     };
 
-    setCasos([nuevoCaso, ...casos]);
+    const nuevosCasos = [nuevoCaso, ...casos];
+    setCasos(nuevosCasos);
     setCasoSeleccionadoId(nuevoId);
+
+    // Guardado inmediato en localStorage para blindar contra F5 o recargas instantáneas
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem('rrhh_vinculaciones_casos_v2', JSON.stringify(nuevosCasos));
+        window.localStorage.setItem('rrhh_vinculaciones_caso_activo_v2', nuevoId);
+      } catch (e) {
+        console.warn('Error al guardar de inmediato en localStorage:', e);
+      }
+    }
+
     if (nuevoTipoProceso === 'VINCULACION') {
       setTabActiva('ingresos');
     } else {
@@ -5233,6 +5587,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <View style={{ gap: 8 }}>
                                     {etapa.requisitos.map((req) => {
                                       const estaReqDetalle = reqDetalleExpandido[req.id] ?? false;
+                                      const estaSecopExpandido = secopResumenExpandido[req.id] ?? false;
 
                                       return (
                                         <View
@@ -5261,7 +5616,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </Pressable>
 
                                             <View style={{ flex: 1, gap: 4 }}>
-                                              <Pressable onPress={() => toggleRequisito(casoActivo.id, etapa.id, req.id)}>
+                                              <Pressable onPress={() => toggleRequisito(casoActivo.id, etapa.id, req.id)} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                                                 <Text
                                                   style={{
                                                     fontSize: 12.5,
@@ -5273,6 +5628,77 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 >
                                                   {req.label}
                                                 </Text>
+                                                {/* Resumen de activos junto al título si ya se consultó en SECOP II */}
+                                                {req.tipoAccionEspecial === 'SECOP' && casoActivo.resultadoSecop && (() => {
+                                                  const sec = casoActivo.resultadoSecop;
+                                                  const vigentes = sec.totalActivosVigentes ?? sec.totalActivos;
+                                                  const finalizados = sec.totalActivosFinalizados ?? 0;
+
+                                                  if (vigentes > 0) {
+                                                    return (
+                                                      <View
+                                                        style={{
+                                                          backgroundColor: THEME.roseBg,
+                                                          borderColor: THEME.roseRing,
+                                                          borderWidth: 1,
+                                                          paddingHorizontal: 7,
+                                                          paddingVertical: 2,
+                                                          borderRadius: 6,
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 4,
+                                                        }}
+                                                      >
+                                                        <Ionicons name="warning" size={11} color={THEME.roseText} />
+                                                        <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.roseText }}>
+                                                          ⚠️ {vigentes} Activo{vigentes > 1 ? 's' : ''} (Art. 128 C.P.)
+                                                        </Text>
+                                                      </View>
+                                                    );
+                                                  }
+                                                  if (finalizados > 0) {
+                                                    return (
+                                                      <View
+                                                        style={{
+                                                          backgroundColor: '#FEF3C7',
+                                                          borderColor: '#FDE68A',
+                                                          borderWidth: 1,
+                                                          paddingHorizontal: 7,
+                                                          paddingVertical: 2,
+                                                          borderRadius: 6,
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 4,
+                                                        }}
+                                                      >
+                                                        <Ionicons name="time" size={11} color="#92400E" />
+                                                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>
+                                                          ⏱️ {finalizados} Plazo Vencido
+                                                        </Text>
+                                                      </View>
+                                                    );
+                                                  }
+                                                  return (
+                                                    <View
+                                                      style={{
+                                                        backgroundColor: THEME.emeraldBg,
+                                                        borderColor: THEME.emeraldRing,
+                                                        borderWidth: 1,
+                                                        paddingHorizontal: 7,
+                                                        paddingVertical: 2,
+                                                        borderRadius: 6,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 4,
+                                                      }}
+                                                    >
+                                                      <Ionicons name="shield-checkmark" size={11} color={THEME.emeraldText} />
+                                                      <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.emeraldText }}>
+                                                        ✓ 0 Activos (Limpio)
+                                                      </Text>
+                                                    </View>
+                                                  );
+                                                })()}
                                               </Pressable>
 
                                               {/* Badges y Acciones Rápidas */}
@@ -5311,30 +5737,72 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   </View>
                                                 )}
 
-                                                {/* SECOP II */}
+                                                {/* SECOP II: Consulta y Botón Expansible */}
                                                 {req.tipoAccionEspecial === 'SECOP' && (
-                                                  <Pressable
-                                                    onPress={(e) => {
-                                                      e.stopPropagation();
-                                                      abrirConsultaSecopParaCandidato(
-                                                        casoActivo.servidor_nombre,
-                                                        casoActivo.servidor_cedula,
-                                                        casoActivo.id
-                                                      );
-                                                    }}
-                                                    style={{
-                                                      backgroundColor: THEME.skyBg,
-                                                      paddingHorizontal: 6,
-                                                      paddingVertical: 1.5,
-                                                      borderRadius: 4,
-                                                      borderColor: THEME.skyRing,
-                                                      borderWidth: 1,
-                                                    }}
-                                                  >
-                                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.skyText }}>
-                                                      🔍 Consultar SECOP II
-                                                    </Text>
-                                                  </Pressable>
+                                                  <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+                                                    <Pressable
+                                                      onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        abrirConsultaSecopParaCandidato(
+                                                          casoActivo.servidor_nombre,
+                                                          casoActivo.servidor_cedula,
+                                                          casoActivo.id
+                                                        );
+                                                      }}
+                                                      style={{
+                                                        backgroundColor: THEME.skyBg,
+                                                        paddingHorizontal: 6,
+                                                        paddingVertical: 1.5,
+                                                        borderRadius: 4,
+                                                        borderColor: THEME.skyRing,
+                                                        borderWidth: 1,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 3,
+                                                      }}
+                                                    >
+                                                      <Ionicons name="search" size={10} color={THEME.skyText} />
+                                                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.skyText }}>
+                                                        {casoActivo.resultadoSecop ? 'Reconsultar SECOP II' : 'Consultar SECOP II'}
+                                                      </Text>
+                                                    </Pressable>
+
+                                                    {/* Botón Expansible para ver Resumen de lo Encontrado en SECOP II */}
+                                                    {casoActivo.resultadoSecop && (
+                                                      <Pressable
+                                                        onPress={(e) => {
+                                                          e.stopPropagation();
+                                                          toggleSecopResumen(req.id);
+                                                        }}
+                                                        style={{
+                                                          backgroundColor: estaSecopExpandido ? THEME.skyText : '#E0F2FE',
+                                                          paddingHorizontal: 6,
+                                                          paddingVertical: 1.5,
+                                                          borderRadius: 4,
+                                                          borderColor: THEME.skyRing,
+                                                          borderWidth: 1,
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 3,
+                                                        }}
+                                                      >
+                                                        <Ionicons
+                                                          name={estaSecopExpandido ? 'chevron-up' : 'document-text-outline'}
+                                                          size={10}
+                                                          color={estaSecopExpandido ? THEME.white : THEME.skyText}
+                                                        />
+                                                        <Text
+                                                          style={{
+                                                            fontSize: 9.5,
+                                                            fontWeight: '700',
+                                                            color: estaSecopExpandido ? THEME.white : THEME.skyText,
+                                                          }}
+                                                        >
+                                                          {estaSecopExpandido ? '▲ Ocultar Resumen' : '▼ Ver Resumen'}
+                                                        </Text>
+                                                      </Pressable>
+                                                    )}
+                                                  </View>
                                                 )}
 
                                                 {/* Validar con IA */}
@@ -5409,6 +5877,245 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 </Pressable>
                                               </View>
 
+                                              
+                                              {/* RESUMEN EXPANSIBLE SECOP II: CUANDO YA FUE CONSULTADO */}
+                                              {req.tipoAccionEspecial === 'SECOP' && casoActivo.resultadoSecop && !estaSecopExpandido && (() => {
+                                                const sec = casoActivo.resultadoSecop;
+                                                const vigentes = sec.totalActivosVigentes ?? sec.totalActivos;
+                                                const finalizados = sec.totalActivosFinalizados ?? 0;
+                                                const tieneVigentes = vigentes > 0;
+                                                const tieneFinalizados = finalizados > 0;
+
+                                                const bgMin = tieneVigentes ? '#FFF1F2' : tieneFinalizados ? '#FFFBEB' : '#F0FDF4';
+                                                const borderMin = tieneVigentes ? THEME.roseRing : tieneFinalizados ? '#FDE68A' : THEME.emeraldRing;
+                                                const textMin = tieneVigentes ? THEME.roseText : tieneFinalizados ? '#92400E' : THEME.emeraldText;
+
+                                                return (
+                                                  <Pressable
+                                                    onPress={() => toggleSecopResumen(req.id)}
+                                                    style={{
+                                                      backgroundColor: bgMin,
+                                                      borderWidth: 1,
+                                                      borderColor: borderMin,
+                                                      borderRadius: 6,
+                                                      paddingHorizontal: 8,
+                                                      paddingVertical: 5,
+                                                      marginTop: 3,
+                                                      flexDirection: 'row',
+                                                      alignItems: 'center',
+                                                      justifyContent: 'space-between',
+                                                      gap: 6,
+                                                    }}
+                                                  >
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                                                      <Ionicons
+                                                        name={tieneVigentes ? 'warning' : tieneFinalizados ? 'time' : 'shield-checkmark'}
+                                                        size={13}
+                                                        color={textMin}
+                                                      />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: textMin, flex: 1 }} numberOfLines={1}>
+                                                        {tieneVigentes
+                                                          ? `⚠️ Alerta: ${vigentes} contrato(s) en ejecución. Posible inhabilidad Art. 128 C.P.`
+                                                          : tieneFinalizados
+                                                          ? `⏱️ Verificación preventiva: ${finalizados} contrato(s) con plazo vencido pendiente liquidación.`
+                                                          : '✓ Registro limpio: Sin contratos estatales en ejecución en SECOP II.'}
+                                                      </Text>
+                                                    </View>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: textMin }}>
+                                                        Ver resumen
+                                                      </Text>
+                                                      <Ionicons name="chevron-down" size={11} color={textMin} />
+                                                    </View>
+                                                  </Pressable>
+                                                );
+                                              })()}
+
+                                              {/* PANEL COMPLETO EXPANDIDO DE RESUMEN SECOP II */}
+                                              {req.tipoAccionEspecial === 'SECOP' && casoActivo.resultadoSecop && estaSecopExpandido && (() => {
+                                                const sec = casoActivo.resultadoSecop;
+                                                const vigentes = sec.totalActivosVigentes ?? sec.totalActivos;
+                                                const finalizados = sec.totalActivosFinalizados ?? 0;
+                                                const historicos = sec.totalHistoricos ?? 0;
+                                                const tieneVigentes = vigentes > 0;
+                                                const tieneFinalizados = finalizados > 0;
+
+                                                const bgResumen = tieneVigentes ? '#FFF1F2' : tieneFinalizados ? '#FFFBEB' : '#F0FDF4';
+                                                const borderResumen = tieneVigentes ? THEME.roseRing : tieneFinalizados ? '#FDE68A' : THEME.emeraldRing;
+                                                const textResumenColor = tieneVigentes ? THEME.roseText : tieneFinalizados ? '#92400E' : THEME.emeraldText;
+
+                                                return (
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: bgResumen,
+                                                      borderRadius: 8,
+                                                      borderWidth: 1,
+                                                      borderColor: borderResumen,
+                                                      padding: 10,
+                                                      marginTop: 4,
+                                                      gap: 8,
+                                                    }}
+                                                  >
+                                                    {/* Cabecera del Resumen */}
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                                                        <Ionicons
+                                                          name={tieneVigentes ? 'warning' : tieneFinalizados ? 'time' : 'shield-checkmark'}
+                                                          size={16}
+                                                          color={textResumenColor}
+                                                        />
+                                                        <View style={{ flex: 1 }}>
+                                                          <Text style={{ fontSize: 11.5, fontWeight: '800', color: textResumenColor }}>
+                                                            {tieneVigentes
+                                                              ? '⚠️ REGISTRA CONTRATOS ACTIVOS EN EJECUCIÓN'
+                                                              : tieneFinalizados
+                                                              ? '⏱️ REGISTRA CONTRATOS CON PLAZO VENCIDO (SIN LIQUIDAR)'
+                                                              : '✓ ESTADO LIMPIO: SIN CONTRATOS ACTIVOS EN SECOP II'}
+                                                          </Text>
+                                                          <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                                            Consulta realizada: {sec.fechaHoraConsulta || sec.fechaConsulta} • Documento: {casoActivo.servidor_cedula}
+                                                          </Text>
+                                                        </View>
+                                                      </View>
+
+                                                      {/* Botón para abrir el Reporte Detallado Completo */}
+                                                      <Pressable
+                                                        onPress={() =>
+                                                          abrirConsultaSecopParaCandidato(
+                                                            casoActivo.servidor_nombre,
+                                                            casoActivo.servidor_cedula,
+                                                            casoActivo.id
+                                                          )
+                                                        }
+                                                        style={{
+                                                          backgroundColor: THEME.white,
+                                                          paddingHorizontal: 8,
+                                                          paddingVertical: 3,
+                                                          borderRadius: 6,
+                                                          borderWidth: 1,
+                                                          borderColor: THEME.slate300,
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 4,
+                                                        }}
+                                                      >
+                                                        <Ionicons name="open-outline" size={11} color={THEME.marca700} />
+                                                        <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca700 }}>
+                                                          Ver Reporte Completo
+                                                        </Text>
+                                                      </Pressable>
+                                                    </View>
+
+                                                    {/* Mini KPIs del Resumen */}
+                                                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                                                      <View
+                                                        style={{
+                                                          flex: 1,
+                                                          minWidth: 85,
+                                                          backgroundColor: THEME.white,
+                                                          paddingHorizontal: 8,
+                                                          paddingVertical: 5,
+                                                          borderRadius: 6,
+                                                          borderWidth: 1,
+                                                          borderColor: tieneVigentes ? THEME.roseRing : THEME.slate200,
+                                                        }}
+                                                      >
+                                                        <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>Vigentes</Text>
+                                                        <Text style={{ fontSize: 13, fontWeight: '800', color: tieneVigentes ? THEME.roseText : THEME.emeraldText }}>
+                                                          {vigentes}
+                                                        </Text>
+                                                      </View>
+
+                                                      <View
+                                                        style={{
+                                                          flex: 1,
+                                                          minWidth: 85,
+                                                          backgroundColor: THEME.white,
+                                                          paddingHorizontal: 8,
+                                                          paddingVertical: 5,
+                                                          borderRadius: 6,
+                                                          borderWidth: 1,
+                                                          borderColor: tieneFinalizados ? '#FDE68A' : THEME.slate200,
+                                                        }}
+                                                      >
+                                                        <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>Plazo Vencido</Text>
+                                                        <Text style={{ fontSize: 13, fontWeight: '800', color: tieneFinalizados ? '#D97706' : THEME.slate700 }}>
+                                                          {finalizados}
+                                                        </Text>
+                                                      </View>
+
+                                                      <View
+                                                        style={{
+                                                          flex: 1,
+                                                          minWidth: 85,
+                                                          backgroundColor: THEME.white,
+                                                          paddingHorizontal: 8,
+                                                          paddingVertical: 5,
+                                                          borderRadius: 6,
+                                                          borderWidth: 1,
+                                                          borderColor: THEME.slate200,
+                                                        }}
+                                                      >
+                                                        <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>Históricos</Text>
+                                                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate800 }}>
+                                                          {historicos}
+                                                        </Text>
+                                                      </View>
+
+                                                      {(sec.valorTotalActivo || 0) > 0 && (
+                                                        <View
+                                                          style={{
+                                                            flex: 1,
+                                                            minWidth: 110,
+                                                            backgroundColor: THEME.white,
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 5,
+                                                            borderRadius: 6,
+                                                            borderWidth: 1,
+                                                            borderColor: THEME.slate200,
+                                                          }}
+                                                        >
+                                                          <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>Total Activo</Text>
+                                                          <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.marca900 }}>
+                                                            ${(sec.valorTotalActivo || 0).toLocaleString('es-CO')}
+                                                          </Text>
+                                                        </View>
+                                                      )}
+                                                    </View>
+
+                                                    {/* Dictamen Breve */}
+                                                    {sec.dictamen && (
+                                                      <View
+                                                        style={{
+                                                          backgroundColor: THEME.white,
+                                                          padding: 8,
+                                                          borderRadius: 6,
+                                                          borderWidth: 1,
+                                                          borderColor: THEME.slate200,
+                                                        }}
+                                                      >
+                                                        <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate700, marginBottom: 2 }}>
+                                                          📋 Dictamen Técnico Registrado:
+                                                        </Text>
+                                                        <Text style={{ fontSize: 10.5, color: THEME.slate800, lineHeight: 15 }} numberOfLines={3}>
+                                                          {sec.dictamen}
+                                                        </Text>
+                                                      </View>
+                                                    )}
+
+                                                    {/* Entidades Estatales */}
+                                                    {sec.entidadesActivas && sec.entidadesActivas.length > 0 && (
+                                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                        <Ionicons name="business-outline" size={12} color={THEME.slate600} />
+                                                        <Text style={{ fontSize: 10, color: THEME.slate700, flex: 1 }}>
+                                                          <Text style={{ fontWeight: '700' }}>Entidades concurrentes:</Text> {sec.entidadesActivas.join(', ')}
+                                                        </Text>
+                                                      </View>
+                                                    )}
+                                                  </View>
+                                                );
+                                              })()}
+
                                               {/* Panel Expandido del Requisito con Procedimiento y Norma completa */}
                                               {estaReqDetalle && (
                                                 <View
@@ -5423,13 +6130,35 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   }}
                                                 >
                                                   {req.norma && (
-                                                    <View style={{ flexDirection: 'row', gap: 4 }}>
-                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate700 }}>
-                                                        ⚖️ Norma:
-                                                      </Text>
-                                                      <Text style={{ fontSize: 10.5, color: THEME.slate600, flex: 1 }}>
-                                                        {req.norma}
-                                                      </Text>
+                                                    <View style={{ gap: 4 }}>
+                                                      <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+                                                        <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca800 }}>
+                                                          ⚖️ Fundamento Legal:
+                                                        </Text>
+                                                        <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.slate800, flex: 1 }}>
+                                                          {req.norma}
+                                                        </Text>
+                                                      </View>
+                                                      {req.textoNormativo && (
+                                                        <View
+                                                          style={{
+                                                            backgroundColor: THEME.white,
+                                                            borderLeftWidth: 3,
+                                                            borderLeftColor: THEME.marca700,
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 6,
+                                                            borderRadius: 4,
+                                                            marginTop: 2,
+                                                          }}
+                                                        >
+                                                          <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca800, marginBottom: 1 }}>
+                                                            📜 Disposición Legal Incluida:
+                                                          </Text>
+                                                          <Text style={{ fontSize: 10, color: THEME.slate700, fontStyle: 'italic', lineHeight: 14 }}>
+                                                            «{req.textoNormativo}»
+                                                          </Text>
+                                                        </View>
+                                                      )}
                                                     </View>
                                                   )}
 
@@ -7952,15 +8681,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 )}
 
                 {modalReqContext?.req.norma && (
-                  <View style={{ backgroundColor: THEME.marca50, padding: 8, borderRadius: 6, marginTop: 4 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>
-                      ⚖️ Fundamento Jurídico Aplicable:
-                    </Text>
-                    <Text style={{ fontSize: 11, color: THEME.slate700, marginTop: 2, lineHeight: 15 }}>
-                      {modalReqContext.req.norma}
-                    </Text>
-                  </View>
-                )}
+                    <View style={{ backgroundColor: THEME.marca50, padding: 9, borderRadius: 6, marginTop: 4, borderWidth: 1, borderColor: THEME.marca100 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>
+                        ⚖️ Fundamento Jurídico Aplicable: {modalReqContext.req.norma}
+                      </Text>
+                      {modalReqContext.req.textoNormativo ? (
+                        <View
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderLeftWidth: 3,
+                            borderLeftColor: THEME.marca700,
+                            paddingHorizontal: 8,
+                            paddingVertical: 6,
+                            borderRadius: 4,
+                            marginTop: 5,
+                          }}
+                        >
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca800, marginBottom: 2 }}>
+                            📜 Mandato Legal & Texto Normativo Incluido:
+                          </Text>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate800, fontStyle: 'italic', lineHeight: 15 }}>
+                            «{modalReqContext.req.textoNormativo}»
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
 
                 {modalReqContext?.req.detalleProcedimiento && (
                   <View style={{ marginTop: 2 }}>
