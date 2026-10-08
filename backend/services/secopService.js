@@ -46,11 +46,15 @@ function analizarContratos(contratos = []) {
     
     // Verificar si la fecha de fin aún está vigente
     let vigentePorFecha = false;
+    let diasRestantes = null;
     if (c.fecha_de_fin_del_contrato) {
       try {
         const fechaFin = new Date(c.fecha_de_fin_del_contrato);
-        if (!isNaN(fechaFin.getTime()) && fechaFin >= hoy) {
-          vigentePorFecha = true;
+        if (!isNaN(fechaFin.getTime())) {
+          diasRestantes = Math.ceil((fechaFin.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+          if (fechaFin >= hoy) {
+            vigentePorFecha = true;
+          }
         }
       } catch (e) {}
     }
@@ -60,30 +64,45 @@ function analizarContratos(contratos = []) {
 
     const esActivo = (esActivoPorEstado || vigentePorFecha) && !esCerradoDefinitivo;
 
+    const valorTotal = parseFloat(c.valor_del_contrato || 0);
+    const valorPagado = parseFloat(c.valor_pagado || 0);
+    const valorPendiente = parseFloat(
+      c.valor_pendiente_de_ejecucion || c.valor_pendiente_de_pago || Math.max(0, valorTotal - valorPagado)
+    );
+    const porcentajeEjecucion = valorTotal > 0 ? Math.min(100, Math.round((valorPagado / valorTotal) * 100)) : 0;
+
     const contratoItem = {
       idContrato: c.id_contrato || c.referencia_del_contrato || 'N/D',
       referencia: c.referencia_del_contrato || 'Sin referencia',
       procesoCompra: c.proceso_de_compra || '',
       entidad: c.nombre_entidad || 'Entidad no especificada',
       nitEntidad: c.nit_entidad || '',
-      ordenEntidad: c.orden || '',
+      codigoEntidad: c.codigo_entidad || '',
+      ordenEntidad: c.orden || 'Nacional / Territorial',
       departamento: c.departamento || '',
       ciudad: c.ciudad || '',
       proveedor: c.proveedor_adjudicado || c.nombre_representante_legal || '',
       documentoProveedor: c.documento_proveedor || c.identificaci_n_representante_legal || '',
-      tipoDocumento: c.tipodocproveedor || '',
+      tipoDocumento: c.tipodocproveedor || 'CC',
       tipoContrato: c.tipo_de_contrato || 'Prestación de servicios',
-      modalidad: c.modalidad_de_contratacion || '',
+      subtipoContrato: c.subtipo_de_contrato || '',
+      modalidad: c.modalidad_de_contratacion || 'Contratación Directa',
+      justificacionModalidad: c.justificacion_modalidad_de || '',
       objeto: c.objeto_del_contrato || c.descripcion_del_proceso || 'Sin objeto registrado',
       estado: c.estado_contrato || 'Desconocido',
       esActivo,
       fechaFirma: c.fecha_de_firma ? c.fecha_de_firma.split('T')[0] : null,
       fechaInicio: c.fecha_de_inicio_del_contrato ? c.fecha_de_inicio_del_contrato.split('T')[0] : null,
       fechaFin: c.fecha_de_fin_del_contrato ? c.fecha_de_fin_del_contrato.split('T')[0] : null,
+      fechaLiquidacion: c.fecha_de_liquidacion ? c.fecha_de_liquidacion.split('T')[0] : null,
+      diasRestantes,
+      plazoEjecucion: c.plazo_de_ejec_del_contrato || c.duraci_n_del_contrato || '',
       duracion: c.duraci_n_del_contrato || '',
-      valorTotal: parseFloat(c.valor_del_contrato || 0),
-      valorPagado: parseFloat(c.valor_pagado || 0),
-      valorPendiente: parseFloat(c.valor_pendiente_de_ejecucion || c.valor_pendiente_de_pago || 0),
+      valorTotal,
+      valorPagado,
+      valorPendiente,
+      porcentajeEjecucion,
+      saldoFavorEntidad: parseFloat(c.saldo_a_favor_de_la_entidad || 0),
       urlProceso: c.urlproceso?.url || (typeof c.urlproceso === 'string' ? c.urlproceso : null),
       supervisor: c.nombre_supervisor || null,
       ordenadorGasto: c.nombre_ordenador_del_gasto || null,
@@ -99,6 +118,10 @@ function analizarContratos(contratos = []) {
   const tieneContratosActivos = activos.length > 0;
   const entidadesActivas = Array.from(new Set(activos.map(a => a.entidad)));
   const valorTotalActivo = activos.reduce((sum, a) => sum + (a.valorTotal || 0), 0);
+  const valorPagadoActivo = activos.reduce((sum, a) => sum + (a.valorPagado || 0), 0);
+  const valorPendienteActivo = activos.reduce((sum, a) => sum + (a.valorPendiente || 0), 0);
+  const valorTotalHistorico = historicos.reduce((sum, h) => sum + (h.valorTotal || 0), 0);
+  const porcentajeTotalPagado = valorTotalActivo > 0 ? Math.round((valorPagadoActivo / valorTotalActivo) * 100) : 0;
 
   let nivelRiesgo = 'SIN_RIESGO';
   let dictamen = 'No se registran contratos activos en SECOP II. Sin alerta de inhabilidad contractual preliminar.';
@@ -109,6 +132,38 @@ function analizarContratos(contratos = []) {
   } else if (historicos.length > 0) {
     dictamen = `Registro verificado: Se encontraron ${historicos.length} contrato(s) históricos en SECOP II, todos cerrados o terminados formalmente. No se evidencian contratos en ejecución actualmente.`;
   }
+
+  const resumenNormativo = {
+    titulo: 'Fundamentación Constitucional y Legal Aplicable',
+    articulos: [
+      {
+        norma: 'Artículo 128 de la Constitución Política de Colombia',
+        descripcion: 'Nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público, o de empresas o instituciones estatales.'
+      },
+      {
+        norma: 'Ley 80 de 1993, Art. 8 (Inhabilidades e Incompatibilidades)',
+        descripcion: 'Prohíbe celebrar contratos o posesionarse en cargos públicos existiendo contratos estatales en vigor que generen conflicto de interés o concurrencia no exceptuada.'
+      },
+      {
+        norma: 'Ley 1952 de 2019 / Ley 2094 de 2021 (Código General Disciplinario)',
+        descripcion: 'Constituye falta gravísima desempeñar cargos o celebrar contratos públicos en situación de inhabilidad sobreviniente o doble percepción.'
+      }
+    ],
+    orientacionTalentoHumano: tieneContratosActivos
+      ? 'ACCIÓN PREVENTIVA OBLIGATORIA: Previo a formalizar la posesión, la Subdirección de Talento Humano debe requerir al aspirante la acreditación formal de la cesión, suspensión o acta de terminación bilateral y liquidación con paz y salvo suscrita con la entidad contratante.'
+      : 'CONCEPTO FAVORABLE: No se registran contratos en ejecución en SECOP II. Continúe con la verificación ordinaria de antecedentes y requisitos.',
+    accionRequerida: tieneContratosActivos
+      ? 'Exigir Acta de Terminación Bilateral / Liquidación o Suspensión Formal aprobada por la entidad pública antes del acto de posesión.'
+      : 'Apto para posesión en materia de contratación estatal preliminar.'
+  };
+
+  const resumenFinanciero = {
+    valorTotalActivo,
+    valorPagadoActivo,
+    valorPendienteActivo,
+    valorTotalHistorico,
+    porcentajeTotalPagado
+  };
 
   return {
     totalContratos: contratos.length,
@@ -121,7 +176,9 @@ function analizarContratos(contratos = []) {
     valorTotalActivo,
     contratosActivos: activos,
     contratosHistoricos: historicos,
-    todosContratos: [...activos, ...historicos]
+    todosContratos: [...activos, ...historicos],
+    resumenNormativo,
+    resumenFinanciero
   };
 }
 

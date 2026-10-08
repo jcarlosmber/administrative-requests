@@ -3,8 +3,8 @@ import VinculacionesDesvinculacionesScreen from './vinculaciones-desvinculacione
 
 /**
  * Pantalla de compatibilidad para la ruta anterior /rrhh/desvinculaciones
- * Redirige visualmente y renderiza el módulo integral de Vinculaciones y Desvinculaciones.
+ * Renderiza el módulo integral situándose directamente en la pestaña de Desvinculaciones.
  */
 export default function DesvinculacionesScreen() {
-  return <VinculacionesDesvinculacionesScreen />;
+  return <VinculacionesDesvinculacionesScreen tabInicial="desvinculaciones" />;
 }
