@@ -4548,6 +4548,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <View
                   style={{
                     flex: 1,
+                    minWidth: 220,
                     flexDirection: 'row',
                     alignItems: 'center',
                     backgroundColor: THEME.slate50,
@@ -4589,7 +4590,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 </View>
 
                 {/* Filtro Modalidad y Diferenciación de Regímenes */}
-                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexShrink: 1, minWidth: 0 }}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700 }}>
                     Régimen:
                   </Text>
@@ -4945,7 +4946,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 </View>
 
                 {/* Columna Derecha: Pipeline y Detalle del Trámite */}
-                <View style={{ flex: 1, gap: 14 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
                   {casoActivo ? (
                     <View
                       style={{
@@ -4973,8 +4974,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           borderBottomColor: THEME.slate200,
                         }}
                       >
-                        <View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0, alignSelf: 'stretch' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <Text
                               style={{ color: THEME.slate900, fontSize: 16, fontWeight: '700' }}
                             >
@@ -5031,9 +5032,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 }}
                               >
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
                                     <Ionicons name={infoModActivo.icono} size={16} color={infoModActivo.colorTexto} />
-                                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
+                                    <Text style={{ flexShrink: 1, fontSize: 12.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
                                       Régimen: {infoModActivo.titulo} ({casoActivo.etapas.length} Fases Específicas)
                                     </Text>
                                   </View>
@@ -5240,7 +5241,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             borderColor: THEME.slate200,
                           }}
                         >
-                          <View>
+                          <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0 }}>
                             <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
                               Fases del Procedimiento Administrativo ({casoActivo.etapas.length} Fases)
                             </Text>

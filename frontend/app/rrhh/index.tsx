@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
-  ImageBackground,
   Modal,
   Platform,
   Pressable,
@@ -15,7 +14,6 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from '../../lib/supabase';
@@ -491,7 +489,7 @@ export default function ModulosRRHHPagina() {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backgroundColor: 'rgba(15, 23, 42, 0.45)',
               justifyContent: 'center',
               alignItems: 'center',
               padding: 20,
@@ -499,16 +497,16 @@ export default function ModulosRRHHPagina() {
           >
             <View
               style={{
-                backgroundColor: '#0F2133',
-                borderRadius: 20,
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
                 borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderColor: '#E2E8F0',
                 padding: 24,
                 width: '100%',
                 maxWidth: 520,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: 0.4,
+                shadowOpacity: 0.15,
                 shadowRadius: 24,
                 elevation: 10,
               }}
@@ -521,7 +519,7 @@ export default function ModulosRRHHPagina() {
                   justifyContent: 'space-between',
                   paddingBottom: 14,
                   borderBottomWidth: 1,
-                  borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+                  borderBottomColor: '#F1F5F9',
                   marginBottom: 16,
                 }}
               >
@@ -531,18 +529,18 @@ export default function ModulosRRHHPagina() {
                       width: 38,
                       height: 38,
                       borderRadius: 10,
-                      backgroundColor: 'rgba(190, 31, 45, 0.2)',
+                      backgroundColor: '#EEF4FB',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name="information-circle" size={22} color="#F87171" />
+                    <Ionicons name="information-circle" size={22} color="#1F5A96" />
                   </View>
                   <Text
                     style={{
-                      color: '#FFFFFF',
+                      color: '#0F172A',
                       fontSize: 16,
-                      fontWeight: '800',
+                      fontWeight: '700',
                       maxWidth: 360,
                     }}
                   >
@@ -560,9 +558,9 @@ export default function ModulosRRHHPagina() {
               {/* Contenido Modal */}
               <Text
                 style={{
-                  color: '#CBD5E1',
-                  fontSize: 13,
-                  lineHeight: 19,
+                  color: '#475569',
+                  fontSize: 13.5,
+                  lineHeight: 20,
                   marginBottom: 16,
                 }}
               >
@@ -571,7 +569,7 @@ export default function ModulosRRHHPagina() {
 
               <Text
                 style={{
-                  color: '#93C5FD',
+                  color: '#1F5A96',
                   fontSize: 12,
                   fontWeight: '700',
                   textTransform: 'uppercase',
@@ -595,14 +593,14 @@ export default function ModulosRRHHPagina() {
                     <Ionicons
                       name="checkmark-circle"
                       size={16}
-                      color="#10B981"
+                      color="#047857"
                       style={{ marginTop: 2 }}
                     />
                     <Text
                       style={{
                         flex: 1,
-                        color: '#E2E8F0',
-                        fontSize: 12.5,
+                        color: '#334155',
+                        fontSize: 13,
                         lineHeight: 18,
                       }}
                     >
@@ -625,11 +623,11 @@ export default function ModulosRRHHPagina() {
                   style={{
                     paddingHorizontal: 16,
                     paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: 8,
+                    backgroundColor: '#F1F5F9',
                   }}
                 >
-                  <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '700' }}>
+                  <Text style={{ color: '#334155', fontSize: 13, fontWeight: '600' }}>
                     Cerrar
                   </Text>
                 </Pressable>
@@ -644,15 +642,15 @@ export default function ModulosRRHHPagina() {
                     style={{
                       paddingHorizontal: 18,
                       paddingVertical: 10,
-                      borderRadius: 10,
-                      backgroundColor: COLORS.primary,
+                      borderRadius: 8,
+                      backgroundColor: '#174A7E',
                       flexDirection: 'row',
                       alignItems: 'center',
                       gap: 6,
                     }}
                   >
-                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                      Ir al Módulo
+                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>
+                      Ir al módulo
                     </Text>
                     <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
                   </Pressable>

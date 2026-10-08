@@ -68,7 +68,7 @@ function MenuLateral() {
   return (
     <View
       style={{
-        width: 248,
+        width: 232,
         backgroundColor: TH.marca900,
         paddingTop: 22,
         paddingBottom: 16,
@@ -139,7 +139,8 @@ function MenuLateral() {
 
 export function MarcoRRHH({ children }: { children: React.ReactNode }) {
   const { width } = useWindowDimensions();
-  const enMenu = width >= 992;
+  // Desde 1200 px: con menos ancho los módulos quedan apretados al restar el menú
+  const enMenu = width >= 1200;
   return (
     <MarcoCtx.Provider value={{ enMenu }}>
       {enMenu ? (
