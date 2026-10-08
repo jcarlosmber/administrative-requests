@@ -20,6 +20,7 @@ import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno } from '..
 import mockPlazasData from '../../lib/plantaMockData.json';
 import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
+import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
 type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno' | null;
@@ -75,6 +76,7 @@ const ESTADOS = ['TODOS', 'OCUPADO', 'VACANTE DEFINITIVA', 'VACANTE TEMPORAL'];
 
 export default function NominaScreen() {
   const router = useRouter();
+  const { enMenu } = useMarcoRRHH();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
   const isTablet = width >= 640;
@@ -1321,6 +1323,8 @@ export default function NominaScreen() {
           >
             {/* Lado izquierdo: Regresar + Título con subtítulo */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {!enMenu && (
+                <>
               <Pressable
                 onPress={() => router.replace('/rrhh')}
                 style={({ pressed }) => ({
@@ -1340,6 +1344,8 @@ export default function NominaScreen() {
               </Pressable>
 
               <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+                </>
+              )}
 
               <View>
                 <Text

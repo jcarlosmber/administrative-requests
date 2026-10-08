@@ -1,8 +1,10 @@
 import React from 'react';
 import { Stack } from 'expo-router';
+import { MarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 export default function RRHHLayout() {
   return (
+    <MarcoRRHH>
     <Stack
       screenOptions={{
         headerShown: false,
@@ -14,5 +16,6 @@ export default function RRHHLayout() {
       <Stack.Screen name="desvinculaciones" options={{ headerShown: false }} />
       <Stack.Screen name="vinculaciones-desvinculaciones" options={{ headerShown: false }} />
     </Stack>
+    </MarcoRRHH>
   );
 }

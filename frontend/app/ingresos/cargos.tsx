@@ -13,8 +13,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ingresosService, CargoEvaluado } from '../../lib/ingresosService';
+import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
-export default function CargosOficialesScreen() {
+function CargosOficialesScreen() {
   const router = useRouter();
   const [cargos, setCargos] = useState<CargoEvaluado[]>([]);
   const [loading, setLoading] = useState(true);
@@ -672,3 +673,5 @@ export default function CargosOficialesScreen() {
     </View>
   );
 }
+
+export default conMarcoRRHH(CargosOficialesScreen);

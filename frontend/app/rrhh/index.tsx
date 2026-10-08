@@ -285,482 +285,194 @@ export default function ModulosRRHHPagina() {
     },
   ];
 
+  // Colores de cada módulo sobre fondo claro (misma paleta de la app de contratos)
+  const ESTILO_MODULO: Record<string, { color: string; fondo: string }> = {
+    ingresos: { color: '#BE1F2D', fondo: '#FDECEE' },
+    teletrabajo: { color: '#0369A1', fondo: '#E0F2FE' },
+    vinculaciones_desvinculaciones: { color: '#6D28D9', fondo: '#EDE9FE' },
+    nomina: { color: '#047857', fondo: '#D1FAE5' },
+  };
+
   return (
-    <ImageBackground
-      source={require('../../assets/sjd_hero.png')}
-      style={{ flex: 1, width: '100%', height: '100%' }}
-      resizeMode="cover"
-    >
-      <LinearGradient
-        colors={['rgba(10, 24, 34, 0.92)', 'rgba(6, 16, 23, 0.97)']}
-        style={{ flex: 1 }}
-      >
-        <StatusBar style="light" />
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <StatusBar style="dark" />
         <SafeAreaView style={{ flex: 1 }}>
           <ScrollView
             contentContainerStyle={{
-              paddingHorizontal: isDesktop ? 40 : 18,
-              paddingTop: Platform.OS === 'ios' ? 20 : 16,
+              paddingHorizontal: isDesktop ? 32 : 16,
+              paddingTop: isDesktop ? 32 : 18,
               paddingBottom: 40,
-              minHeight: '100%',
-              justifyContent: 'space-between',
+              maxWidth: 1280,
+              width: '100%',
+              alignSelf: 'center',
             }}
             showsVerticalScrollIndicator={false}
           >
             {/* ====================================================
-                BARRA SUPERIOR DE NAVEGACIÓN
+                ENCABEZADO DE LA PÁGINA (ESTILO APP DE CONTRATOS)
                ==================================================== */}
-            <View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                  paddingBottom: 20,
-                  borderBottomWidth: 1,
-                  borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-                }}
-              >
-                <Pressable
-                  onPress={() => router.replace('/')}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    paddingHorizontal: 14,
-                    paddingVertical: 9,
-                    borderRadius: 10,
-                    backgroundColor: pressed ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.15)',
-                  })}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-                    {isDesktop ? 'Volver al Portal Principal' : 'Volver'}
-                  </Text>
-                </Pressable>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View
+              style={{
+                flexDirection: isDesktop ? 'row' : 'column',
+                alignItems: isDesktop ? 'flex-end' : 'flex-start',
+                justifyContent: 'space-between',
+                gap: 14,
+                marginBottom: 24,
+              }}
+            >
+              <View style={{ flexShrink: 1 }}>
+                {!isDesktop && (
                   <Pressable
-                    onPress={() => router.push('/dashboard')}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 13,
-                      paddingVertical: 9,
-                      borderRadius: 10,
-                      backgroundColor: pressed ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.06)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.15)',
-                    })}
+                    onPress={() => router.replace('/')}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}
+                    accessibilityRole="button"
                   >
-                    <Ionicons name="home-outline" size={16} color="#CBD5E1" />
-                    <Text style={{ color: '#CBD5E1', fontSize: 13, fontWeight: '600' }}>
-                      Servicios Generales
-                    </Text>
+                    <Ionicons name="arrow-back" size={16} color="#1F5A96" />
+                    <Text style={{ color: '#1F5A96', fontSize: 13, fontWeight: '600' }}>Volver al portal</Text>
                   </Pressable>
-
-                  <Pressable
-                    onPress={() => setModalDevopsVisible(true)}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 13,
-                      paddingVertical: 9,
-                      borderRadius: 10,
-                      backgroundColor: pressed ? 'rgba(56, 189, 248, 0.25)' : 'rgba(56, 189, 248, 0.12)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(56, 189, 248, 0.35)',
-                    })}
-                  >
-                    <Ionicons name="terminal" size={16} color="#38BDF8" />
-                    <Text style={{ color: '#38BDF8', fontSize: 13, fontWeight: '700' }}>
-                      bash • root@10.54.80.209:~/backend
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => router.replace('/login')}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingHorizontal: 13,
-                      paddingVertical: 9,
-                      borderRadius: 10,
-                      backgroundColor: pressed ? 'rgba(190, 31, 45, 0.3)' : 'rgba(190, 31, 45, 0.15)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(190, 31, 45, 0.35)',
-                    })}
-                  >
-                    <Ionicons name="person-circle-outline" size={16} color="#F87171" />
-                    <Text style={{ color: '#FCA5A5', fontSize: 13, fontWeight: '700' }}>
-                      Iniciar Sesión
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* ====================================================
-                  CABECERA INSTITUCIONAL RRHH (ESTILO LOGIN)
-                 ==================================================== */}
-              <View
-                style={{
-                  alignItems: 'center',
-                  marginTop: isDesktop ? 34 : 22,
-                  marginBottom: isDesktop ? 36 : 24,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                    marginBottom: 10,
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: isDesktop ? 36 : 28,
-                      fontWeight: '900',
-                      color: '#FFFFFF',
-                      letterSpacing: 2,
-                    }}
-                  >
-                    SASGE
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: COLORS.primary,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                    }}
-                  >
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>
-                      RRHH
-                    </Text>
-                  </View>
-                </View>
-
-                <Text
-                  style={{
-                    color: '#CBD5E1',
-                    fontSize: isDesktop ? 18 : 15,
-                    fontWeight: '800',
-                    letterSpacing: 1.2,
-                    textAlign: 'center',
-                    textTransform: 'uppercase',
-                    maxWidth: 700,
-                  }}
-                >
+                )}
+                <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                  Secretaría Jurídica Distrital · Dirección de Talento Humano
+                </Text>
+                <Text style={{ color: '#0F172A', fontSize: isDesktop ? 26 : 22, fontWeight: '700', marginTop: 4 }}>
                   Gestión Estratégica del Talento Humano
                 </Text>
-                <Text
-                  style={{
-                    color: COLORS.textMuted,
-                    fontSize: isDesktop ? 14 : 13,
-                    textAlign: 'center',
-                    marginTop: 6,
-                    maxWidth: 620,
-                    lineHeight: 20,
-                  }}
-                >
-                  Seleccione el proceso institucional que desea tramitar o consultar. Módulos integrados con la Secretaría Jurídica Distrital.
+                <Text style={{ color: '#64748B', fontSize: 14, marginTop: 6, lineHeight: 20, maxWidth: 720 }}>
+                  Seleccione el proceso institucional que desea tramitar o consultar.
                 </Text>
               </View>
 
-              {/* ====================================================
-                  CUADRÍCULA DE LOS 4 MÓDULOS PRINCIPALES
-                 ==================================================== */}
-              <View
-                style={{
-                  flexDirection: isDesktop ? 'row' : 'column',
-                  flexWrap: isDesktop ? 'wrap' : 'nowrap',
-                  gap: 20,
-                  justifyContent: 'center',
-                  alignItems: 'stretch',
-                  maxWidth: 1240,
-                  width: '100%',
-                  alignSelf: 'center',
-                }}
-              >
-                {modulos.map((item) => {
-                  return (
-                    <View
-                      key={item.id}
-                      style={{
-                        width: isDesktop ? '48.5%' : '100%',
-                        backgroundColor: COLORS.bgCardDarkSoft,
-                        borderRadius: 20,
-                        borderWidth: 1,
-                        borderColor: item.activo
-                          ? item.id === 'nomina'
-                            ? 'rgba(16, 185, 129, 0.5)'
-                            : 'rgba(190, 31, 45, 0.45)'
-                          : COLORS.borderDark,
-                        padding: 24,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 8 },
-                        shadowOpacity: 0.25,
-                        shadowRadius: 16,
-                        elevation: 5,
-                      }}
-                    >
-                      {/* Cabecera de la tarjeta */}
-                      <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <Pressable
+                  onPress={() => setModalDevopsVisible(true)}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+                    borderWidth: 1, borderColor: '#E2E8F0',
+                    backgroundColor: pressed ? '#F1F5F9' : '#FFFFFF',
+                  })}
+                >
+                  <Ionicons name="terminal-outline" size={15} color="#334155" />
+                  <Text style={{ color: '#334155', fontSize: 12.5, fontWeight: '600' }}>Servidor</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => router.replace('/login')}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row', alignItems: 'center', gap: 6,
+                    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
+                    borderWidth: 1, borderColor: '#E2E8F0',
+                    backgroundColor: pressed ? '#F1F5F9' : '#FFFFFF',
+                  })}
+                >
+                  <Ionicons name="person-circle-outline" size={15} color="#334155" />
+                  <Text style={{ color: '#334155', fontSize: 12.5, fontWeight: '600' }}>Iniciar sesión</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {/* ====================================================
+                TARJETAS DE LOS 4 MÓDULOS
+               ==================================================== */}
+            <View
+              style={{
+                flexDirection: isDesktop || isTablet ? 'row' : 'column',
+                flexWrap: 'wrap',
+                gap: 20,
+              }}
+            >
+              {modulos.map((item) => {
+                const estilo = ESTILO_MODULO[item.id] ?? { color: '#1F5A96', fondo: '#EEF4FB' };
+                return (
+                  <View
+                    key={item.id}
+                    style={{
+                      width: isDesktop || isTablet ? '48.8%' : '100%',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      padding: 22,
+                      justifyContent: 'space-between',
+                      shadowColor: '#0F172A',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 3,
+                      elevation: 1,
+                    }}
+                  >
+                    <View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                         <View
                           style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            marginBottom: 16,
+                            width: 44, height: 44, borderRadius: 10,
+                            backgroundColor: estilo.fondo,
+                            alignItems: 'center', justifyContent: 'center',
                           }}
                         >
-                          <View
-                            style={{
-                              width: 56,
-                              height: 56,
-                              borderRadius: 14,
-                              backgroundColor: item.fondoIcono,
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.1)',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            <Ionicons
-                              name={item.icono}
-                              size={28}
-                              color={item.colorIcono}
-                            />
-                          </View>
-
-                          <View
-                            style={{
-                              backgroundColor: item.activo
-                                ? 'rgba(190, 31, 45, 0.25)'
-                                : 'rgba(255, 255, 255, 0.1)',
-                              paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 20,
-                              borderWidth: 1,
-                              borderColor: item.activo
-                                ? COLORS.primary
-                                : 'rgba(255, 255, 255, 0.2)',
-                            }}
-                          >
-                            <Text
-                              style={{
-                                color: item.activo ? '#FFA4AC' : '#CBD5E1',
-                                fontSize: 10,
-                                fontWeight: '800',
-                                letterSpacing: 0.8,
-                              }}
-                            >
-                              {item.badge}
-                            </Text>
-                          </View>
+                          <Ionicons name={item.icono} size={22} color={estilo.color} />
                         </View>
-
-                        {/* Título y Subtítulo */}
-                        <Text
-                          style={{
-                            color: COLORS.white,
-                            fontSize: 18,
-                            fontWeight: '800',
-                            marginBottom: 4,
-                            lineHeight: 24,
-                          }}
-                        >
-                          {item.titulo}
-                        </Text>
-                        <Text
-                          style={{
-                            color: '#93C5FD',
-                            fontSize: 12,
-                            fontWeight: '600',
-                            marginBottom: 12,
-                          }}
-                        >
-                          {item.subtitulo}
-                        </Text>
-
-                        {/* Descripción */}
-                        <Text
-                          style={{
-                            color: '#CBD5E1',
-                            fontSize: 13,
-                            lineHeight: 19,
-                            marginBottom: 16,
-                          }}
-                        >
-                          {item.descripcion}
-                        </Text>
-
-                        {/* Etiquetas o Tags */}
                         <View
                           style={{
-                            flexDirection: 'row',
-                            flexWrap: 'wrap',
-                            gap: 6,
-                            marginBottom: 20,
+                            paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1,
+                            backgroundColor: item.activo ? '#ECFDF5' : '#F1F5F9',
+                            borderColor: item.activo ? '#A7F3D0' : '#E2E8F0',
                           }}
                         >
-                          {item.tags.map((tag, idx) => (
-                            <View
-                              key={idx}
-                              style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 6,
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.08)',
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  color: '#94A3B8',
-                                  fontSize: 11,
-                                  fontWeight: '600',
-                                }}
-                              >
-                                {tag}
-                              </Text>
-                            </View>
-                          ))}
+                          <Text style={{ color: item.activo ? '#047857' : '#475569', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.4 }}>
+                            {item.badge}
+                          </Text>
                         </View>
                       </View>
 
-                      {/* Botones de acción */}
-                      <View style={{ gap: 10 }}>
-                        <Pressable
-                          onPress={() => {
-                            if (item.ruta) {
-                              router.push(item.ruta as any);
-                            }
-                          }}
-                          style={({ pressed }) => ({
-                            minHeight: 46,
-                            borderRadius: 12,
-                            backgroundColor: item.activo
-                              ? pressed
-                                ? (item.id === 'nomina' ? '#059669' : COLORS.primaryHover)
-                                : (item.id === 'nomina' ? '#10B981' : COLORS.primary)
-                              : pressed
-                              ? '#1E3A5F'
-                              : '#1E293B',
-                            borderWidth: 1,
-                            borderColor: item.activo
-                              ? (item.id === 'nomina' ? '#10B981' : COLORS.primary)
-                              : 'rgba(255, 255, 255, 0.15)',
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            gap: 8,
-                            paddingHorizontal: 16,
-                            shadowColor: item.activo ? (item.id === 'nomina' ? '#10B981' : COLORS.primary) : '#000',
-                            shadowOffset: { width: 0, height: 3 },
-                            shadowOpacity: item.activo ? 0.35 : 0.15,
-                            shadowRadius: 8,
-                            elevation: 3,
-                          })}
-                          accessibilityRole="button"
-                        >
-                          <Ionicons
-                            name={item.activo ? 'arrow-forward-circle' : 'open-outline'}
-                            size={18}
-                            color="#FFFFFF"
-                          />
-                          <Text
-                            style={{
-                              color: '#FFFFFF',
-                              fontSize: 14,
-                              fontWeight: '800',
-                            }}
-                          >
-                            {item.activo ? 'Ingresar a Validación' : 'Abrir Módulo'}
-                          </Text>
-                        </Pressable>
+                      <Text style={{ color: '#0F172A', fontSize: 17, fontWeight: '700', lineHeight: 23 }}>{item.titulo}</Text>
+                      <Text style={{ color: '#1F5A96', fontSize: 12.5, fontWeight: '600', marginTop: 2, marginBottom: 10 }}>{item.subtitulo}</Text>
+                      <Text style={{ color: '#475569', fontSize: 13.5, lineHeight: 20, marginBottom: 14 }}>{item.descripcion}</Text>
 
-                        <Pressable
-                          onPress={() => abrirInfoModulo(item)}
-                          style={({ pressed }) => ({
-                            minHeight: 38,
-                            borderRadius: 10,
-                            backgroundColor: pressed
-                              ? 'rgba(255, 255, 255, 0.1)'
-                              : 'transparent',
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            gap: 6,
-                          })}
-                        >
-                          <Ionicons
-                            name="information-circle-outline"
-                            size={16}
-                            color="#94A3B8"
-                          />
-                          <Text
-                            style={{
-                              color: '#94A3B8',
-                              fontSize: 12,
-                              fontWeight: '600',
-                            }}
-                          >
-                            Ver alcances y detalles
-                          </Text>
-                        </Pressable>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                        {item.tags.map((tag, idx) => (
+                          <View key={idx} style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 }}>
+                            <Text style={{ color: '#475569', fontSize: 11.5, fontWeight: '500' }}>{tag}</Text>
+                          </View>
+                        ))}
                       </View>
                     </View>
-                  );
-                })}
-              </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 14 }}>
+                      <Pressable
+                        onPress={() => abrirInfoModulo(item)}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+                      >
+                        <Ionicons name="information-circle-outline" size={15} color="#64748B" />
+                        <Text style={{ color: '#64748B', fontSize: 12.5, fontWeight: '500' }}>Ver alcances y detalles</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => { if (item.ruta) router.push(item.ruta as any); }}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row', alignItems: 'center', gap: 6,
+                          paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8,
+                          backgroundColor: pressed ? '#123A63' : '#174A7E',
+                        })}
+                        accessibilityRole="button"
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>Abrir módulo</Text>
+                        <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
 
             {/* ====================================================
                 PIE DE PÁGINA INSTITUCIONAL (LOGO SJD)
                ==================================================== */}
-            <View
-              style={{
-                alignItems: 'center',
-                paddingTop: 36,
-                marginTop: 20,
-                borderTopWidth: 1,
-                borderTopColor: 'rgba(255, 255, 255, 0.08)',
-              }}
-            >
+            <View style={{ alignItems: 'center', paddingTop: 28, marginTop: 32, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
               <Image
-                source={require('../../assets/logos/sjd blanco amarillo.png')}
-                style={{
-                  width: isDesktop ? 220 : 170,
-                  height: isDesktop ? 50 : 38,
-                  opacity: 0.9,
-                }}
+                source={require('../../assets/logos/SJD color.png')}
+                style={{ width: isDesktop ? 190 : 150, height: isDesktop ? 44 : 34 }}
                 resizeMode="contain"
               />
-              <Text
-                style={{
-                  color: '#64748B',
-                  fontSize: 11,
-                  marginTop: 10,
-                  fontWeight: '600',
-                  textAlign: 'center',
-                }}
-              >
+              <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 8, textAlign: 'center' }}>
                 Alcaldía Mayor de Bogotá • Secretaría Jurídica Distrital • Dirección de Talento Humano
               </Text>
             </View>
@@ -1498,7 +1210,6 @@ export default function ModulosRRHHPagina() {
             </View>
           </View>
         </Modal>
-      </LinearGradient>
-    </ImageBackground>
+    </View>
   );
 }

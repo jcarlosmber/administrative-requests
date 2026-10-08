@@ -25,6 +25,7 @@ import {
   ResumenFinancieroSecop,
 } from '../../lib/secopService';
 import { ingresosService } from '../../lib/ingresosService';
+import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 // ============================================================================
 // SISTEMA DE DISEÑO INSTITUCIONAL NAVY + SLATE (IDÉNTICO A NÓMINA)
@@ -1981,6 +1982,7 @@ const CAUSALES_RETIRO = [
 
 export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { tabInicial?: 'ingresos' | 'desvinculaciones' } = {}) {
   const router = useRouter();
+  const { enMenu } = useMarcoRRHH();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
   const isTablet = width >= 640;
@@ -3870,6 +3872,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           >
             {/* Lado izquierdo: Regresar + Título con subtítulo */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {!enMenu && (
+                <>
               <Pressable
                 onPress={() => router.replace('/rrhh')}
                 style={({ pressed }) => ({
@@ -3889,6 +3893,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   Volver al Portal
                 </Text>
               </Pressable>
+                </>
+              )}
 
               <View
                 style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
