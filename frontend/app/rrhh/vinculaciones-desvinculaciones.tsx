@@ -2308,6 +2308,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   entidadesActivas: res.entidadesActivas,
                   valorTotalActivo: res.valorTotalActivo,
                   contratosActivos: res.contratosActivos,
+                  contratosActivosFinalizados: res.contratosActivosFinalizados || [],
+                  entidadesFinalizadas: res.entidadesFinalizadas || [],
                   todosContratos: res.todosContratos,
                   resumenNormativo: res.resumenNormativo,
                   resumenFinanciero: res.resumenFinanciero,
