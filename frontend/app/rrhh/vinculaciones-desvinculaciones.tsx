@@ -5051,8 +5051,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         </View>
 
-                        {/* Botones de acción del caso (alineados en la cabecera superior) */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {/* Botones de acción del caso (apilados verticalmente: consulta encima de validación) */}
+                        <View
+                          style={{
+                            flexDirection: 'column',
+                            alignItems: isTablet ? 'flex-end' : 'stretch',
+                            gap: 8,
+                            flexShrink: 0,
+                          }}
+                        >
                           <Pressable
                             onPress={() =>
                               abrirConsultaSecopParaCandidato(
@@ -5064,6 +5071,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
+                              justifyContent: 'center',
                               gap: 6,
                               backgroundColor: THEME.skyBg,
                               paddingHorizontal: 13,
@@ -5071,6 +5079,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               borderRadius: 8,
                               borderWidth: 1,
                               borderColor: THEME.skyRing,
+                              minWidth: isTablet ? 175 : undefined,
                             }}
                           >
                             <Ionicons name="search" size={14} color={THEME.skyText} />
@@ -5087,6 +5096,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
+                                justifyContent: 'center',
                                 gap: 6,
                                 backgroundColor: THEME.emeraldBg,
                                 paddingHorizontal: 13,
@@ -5094,6 +5104,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 borderRadius: 8,
                                 borderWidth: 1,
                                 borderColor: THEME.emeraldRing,
+                                minWidth: isTablet ? 175 : undefined,
                               }}
                             >
                               <Ionicons name="sparkles" size={14} color={THEME.emeraldText} />
