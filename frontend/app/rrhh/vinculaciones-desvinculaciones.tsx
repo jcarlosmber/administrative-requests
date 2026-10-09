@@ -4968,8 +4968,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           borderBottomColor: THEME.slate200,
                         }}
                       >
-<<<<<<< HEAD
-                        <View style={{ flex: 1, gap: 5 }}>
+                        <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0, alignSelf: 'stretch', gap: 5 }}>
                           <View
                             style={{
                               flexDirection: 'row',
@@ -4978,10 +4977,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               gap: 8,
                             }}
                           >
-=======
-                        <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0, alignSelf: 'stretch' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
->>>>>>> 902098e1d5ed5c593ef40928d0067c9248fc8341
                             <Text
                               style={{
                                 color: THEME.slate900,
@@ -5025,7 +5020,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                           </View>
 
-<<<<<<< HEAD
                           <View
                             style={{
                               flexDirection: 'row',
@@ -5055,65 +5049,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
                           </View>
-=======
-                          {/* BANNER INFORMATIVO DEL RÉGIMEN Y SUS FASES */}
-                          {(() => {
-                            const infoModActivo = obtenerInfoModalidad(casoActivo.modalidad);
-                            return (
-                              <View
-                                style={{
-                                  marginTop: 8,
-                                  backgroundColor: infoModActivo.colorBg,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: infoModActivo.colorBorde,
-                                  padding: 10,
-                                  gap: 5,
-                                }}
-                              >
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
-                                    <Ionicons name={infoModActivo.icono} size={16} color={infoModActivo.colorTexto} />
-                                    <Text style={{ flexShrink: 1, fontSize: 12.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
-                                      Régimen: {infoModActivo.titulo} ({casoActivo.etapas.length} Fases Específicas)
-                                    </Text>
-                                  </View>
-
-                                  <Pressable
-                                    onPress={() => {
-                                      setTabGuiaModalidad(casoActivo.modalidad);
-                                      setModalGuiaModalidadesVisible(true);
-                                    }}
-                                    style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 4,
-                                      paddingHorizontal: 8,
-                                      paddingVertical: 3,
-                                      borderRadius: 4,
-                                      backgroundColor: THEME.white,
-                                      borderWidth: 1,
-                                      borderColor: infoModActivo.colorBorde,
-                                    }}
-                                  >
-                                    <Ionicons name="information-circle-outline" size={13} color={infoModActivo.colorTexto} />
-                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: infoModActivo.colorTexto }}>
-                                      Ver Guía & Diferencias
-                                    </Text>
-                                  </Pressable>
-                                </View>
-
-                                <Text style={{ fontSize: 11, color: THEME.slate700, lineHeight: 15 }}>
-                                  {infoModActivo.descripcionFases}
-                                </Text>
-
-                                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
-                                  ⚖️ {infoModActivo.marcoLegal}
-                                </Text>
-                              </View>
-                            );
-                          })()}
->>>>>>> 902098e1d5ed5c593ef40928d0067c9248fc8341
                         </View>
 
                         {/* Botones de acción del caso (alineados en la cabecera superior) */}
