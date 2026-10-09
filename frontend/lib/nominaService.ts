@@ -399,25 +399,6 @@ export const nominaService = {
               resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
             };
 
-            const titularCed = plazaActual.titular_cedula ? String(plazaActual.titular_cedula).trim() : null;
-            if (titularCed) {
-              const perFunc = listPerno.find((per) => String(per.cedula).trim() === titularCed);
-              if (perFunc && (perFunc.estado_funcionario === 'R' || perFunc.fecha_retiro)) {
-                const activo = plazaActual.id_perno
-                  ? listPerno.find((per) => per.posicion_planta === plazaActual.id_perno && per.estado_funcionario === 'A' && !per.fecha_retiro)
-                  : null;
-                if (activo) {
-                  plazaActual.titular_cedula = activo.cedula;
-                  plazaActual.titular_nombre = activo.nombre_completo || `${activo.nombres} ${activo.primer_apellido}`;
-                  plazaActual.estado_cargo = 'OCUPADO';
-                } else {
-                  plazaActual.titular_cedula = null;
-                  plazaActual.titular_nombre = 'VACANTE DEFINITIVA';
-                  plazaActual.estado_cargo = 'VACANTE DEFINITIVA';
-                }
-              }
-            }
-
             return plazaActual;
           });
 
@@ -428,36 +409,8 @@ export const nominaService = {
       // Fallback local silencioso si la API aún no está disponible
     }
 
-    // Filtrar sobre los datos precargados reales garantizando sólo personal actual
-    const listPernoFallback = (mockPernoData as unknown as PersonaPerno[]) || [];
-    let result = ((mockPlazasData as unknown as PlazaNomina[]) || []).map((p) => {
-      const titularCed = p.titular_cedula ? String(p.titular_cedula).trim() : null;
-      if (titularCed) {
-        const perFunc = listPernoFallback.find((per) => String(per.cedula).trim() === titularCed);
-        if (perFunc && (perFunc.estado_funcionario === 'R' || perFunc.fecha_retiro)) {
-          const activo = p.id_perno
-            ? listPernoFallback.find((per) => per.posicion_planta === p.id_perno && per.estado_funcionario === 'A' && !per.fecha_retiro)
-            : null;
-          if (activo) {
-            return {
-              ...p,
-              titular_cedula: activo.cedula,
-              titular_nombre: activo.nombre_completo || `${activo.nombres} ${activo.primer_apellido}`,
-              estado_cargo: 'OCUPADO',
-            };
-          } else {
-            return {
-              ...p,
-              titular_cedula: null,
-              titular_nombre: 'VACANTE DEFINITIVA',
-              estado_cargo: 'VACANTE DEFINITIVA',
-            };
-          }
-        }
-      }
-      return p;
-    });
-
+    // Retornar datos precargados reales aplicando filtros
+    const result = ((mockPlazasData as unknown as PlazaNomina[]) || []);
     return aplicarFiltrosPlazas(result, filtros);
   },
 
@@ -603,6 +556,66 @@ export const nominaService = {
 
   getPlantillaPernoUrl(): string {
     return `${API_URL}/api/nomina/plantilla/perno`;
+  },
+
+  // Subir Libro Completo: Nómina Integral (PLANTA SJD + PLANTA PERNO)
+  async uploadCompleto(file: { uri: string; name: string; type?: string; file?: any }): Promise<{
+    success: boolean;
+    mensaje: string;
+    planta?: {
+      sheetName: string;
+      rowHeader: number;
+      procesados: number;
+      actualizados: number;
+      filasOmitidas?: number;
+      advertencias?: string[];
+    };
+    perno?: {
+      sheetName: string;
+      rowHeader: number;
+      procesados: number;
+      actualizados: number;
+      retiradosOSinPlaza?: number;
+      advertencias?: string[];
+    };
+    registros_actualizados?: number;
+    registros_procesados?: number;
+    advertencias?: string[];
+    total_advertencias?: number;
+    error?: string;
+  }> {
+    try {
+      const formData = new FormData();
+      if (file.file) {
+        formData.append('archivo', file.file);
+      } else if (file.uri && (file.uri.startsWith('blob:') || file.uri.startsWith('data:'))) {
+        const blob = await fetch(file.uri).then((r) => r.blob());
+        formData.append('archivo', blob, file.name);
+      } else {
+        // @ts-ignore
+        formData.append('archivo', {
+          uri: file.uri,
+          name: file.name,
+          type: file.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        });
+      }
+
+      const res = await fetch(`${API_URL}/api/nomina/upload-completo`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (!res.ok && !json.mensaje) {
+        json.mensaje = json.error || `Error ${res.status} al procesar archivo`;
+      }
+      return json;
+    } catch (e: any) {
+      return {
+        success: false,
+        mensaje: `Error al procesar archivo en el servidor: ${e.message}`,
+      };
+    }
   },
 
   // Subir Archivo 1: Planta de Personal (Imagen 1)

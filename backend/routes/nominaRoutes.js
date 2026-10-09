@@ -3,6 +3,7 @@ const multer = require('multer');
 const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
+const excelHelper = require('../nominaExcelHelper');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -320,6 +321,7 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS peldano_escalera INT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS manual_funciones TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS resolucion_manual TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS edad INT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_vacancia DATE;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_reporte_simo DATE;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS proceso_seleccion_simo TEXT;
@@ -385,6 +387,30 @@ module.exports = function (pool) {
             updated_at TIMESTAMPTZ DEFAULT NOW()
         );
 
+        -- Garantizar la presencia de todas las columnas en personal_perno_sjd
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS libreta_militar TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS clase_libreta TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS distrito_militar TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS tipo_sangre TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS rh TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS fecha_ingreso_nacion DATE;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS codigo_eps TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS codigo_fondo_pensiones TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS codigo_fondo_cesantias TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS dependencia_cod TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS dependencia TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS cargo_cod TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS grado TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS asignacion_basica NUMERIC(14, 2);
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS cargo TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS posicion_planta INT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS sede_cod TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS sede TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS fecha_efectiva_nombramiento DATE;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS fecha_efectiva_encargo DATE;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS numero_acto_encargo TEXT;
+        ALTER TABLE public.personal_perno_sjd ADD COLUMN IF NOT EXISTS fecha_acto_encargo DATE;
+
         -- Corregir mojibake en registros existentes de la tabla
         UPDATE public.planta_personal_sjd SET
           dependencia_cargo = REPLACE(REPLACE(REPLACE(dependencia_cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
@@ -392,52 +418,6 @@ module.exports = function (pool) {
           cargo = REPLACE(REPLACE(REPLACE(cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
           titular_nombre = REPLACE(REPLACE(REPLACE(titular_nombre, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA')
         WHERE dependencia_cargo LIKE '%Ã%' OR dependencia_funcional LIKE '%Ã%' OR cargo LIKE '%Ã%' OR titular_nombre LIKE '%Ã%';
-
-        -- Sincronizar titulares activos de PERNO en la planta y remover funcionarios desvinculados/retirados
-        UPDATE public.planta_personal_sjd pl
-        SET 
-          titular_cedula = act.cedula,
-          titular_nombre = act.nombre_completo,
-          tipo_funcionario = COALESCE(act.tipo_funcionario, pl.tipo_funcionario),
-          direccion = COALESCE(act.direccion, pl.direccion),
-          telefono = COALESCE(act.telefono, pl.telefono),
-          sexo = COALESCE(act.sexo, pl.sexo),
-          fondo_salud = COALESCE(act.fondo_salud, pl.fondo_salud),
-          fondo_pension = COALESCE(act.fondo_pension, pl.fondo_pension),
-          fondo_cesantias = COALESCE(act.fondo_cesantias, pl.fondo_cesantias),
-          tipo_nombramiento = COALESCE(act.tipo_nombramiento, pl.tipo_nombramiento),
-          acto_nombramiento = COALESCE(act.acto_nombramiento, pl.acto_nombramiento),
-          numero_acto_nombramiento = COALESCE(act.numero_acto_nombramiento, pl.numero_acto_nombramiento),
-          estado_cargo = 'OCUPADO',
-          situacion_titular = COALESCE(pl.situacion_titular, 'EN PROPIEDAD'),
-          updated_at = NOW()
-        FROM public.personal_perno_sjd act
-        WHERE pl.id_perno = act.posicion_planta
-          AND act.estado_funcionario = 'A'
-          AND act.fecha_retiro IS NULL
-          AND (
-            pl.titular_cedula IN (
-              SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
-            )
-            OR pl.titular_cedula IS NULL
-            OR pl.titular_cedula != act.cedula
-          );
-
-        -- Marcar como vacante definitiva las plazas cuyo titular esté retirado y no tengan reemplazo activo
-        UPDATE public.planta_personal_sjd pl
-        SET 
-          titular_cedula = NULL,
-          titular_nombre = 'VACANTE DEFINITIVA',
-          estado_cargo = 'VACANTE DEFINITIVA',
-          situacion_titular = 'VACANTE DEFINITIVA',
-          updated_at = NOW()
-        WHERE pl.titular_cedula IN (
-          SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
-        )
-        AND NOT EXISTS (
-          SELECT 1 FROM public.personal_perno_sjd act 
-          WHERE act.posicion_planta = pl.id_perno AND act.estado_funcionario = 'A' AND act.fecha_retiro IS NULL
-        );
       `);
     } catch (e) {
       console.warn('Advertencia al verificar tablas de nómina:', e.message);
@@ -862,22 +842,24 @@ module.exports = function (pool) {
         cantidad: cant,
       }));
 
-      // Vacantes definitivas vs ocupadas
+      // Vacantes temporales vs definitivas
+      const plazasVacTemporal = plazas.filter(p => {
+        const est = (p.estado_cargo || '').toUpperCase();
+        const sit = (p.situacion_administrativa || '').toUpperCase();
+        const tit = (p.titular_nombre || '').toUpperCase();
+        const sitTit = (p.situacion_titular || '').toUpperCase();
+        return est === 'VACANTE TEMPORAL' || sit === 'VACANTE TEMPORAL' || tit === 'VACANTE TEMPORAL' || sitTit.includes('TEMPORAL');
+      });
+      const totalVacTemporales = plazasVacTemporal.length;
+
       const plazasVacDefinitiva = plazas.filter(p => {
+        if (plazasVacTemporal.includes(p)) return false;
         const est = (p.estado_cargo || '').toUpperCase();
         const sit = (p.situacion_administrativa || '').toUpperCase();
         const tit = (p.titular_nombre || '').toUpperCase();
         return est === 'VACANTE DEFINITIVA' || sit === 'VACANTE DEFINITIVA' || tit === 'VACANTE DEFINITIVA';
       });
       const totalVacDefinitivas = plazasVacDefinitiva.length;
-
-      const plazasVacTemporal = plazas.filter(p => {
-        const est = (p.estado_cargo || '').toUpperCase();
-        const sit = (p.situacion_administrativa || '').toUpperCase();
-        const tit = (p.titular_nombre || '').toUpperCase();
-        return (est === 'VACANTE TEMPORAL' || sit === 'VACANTE TEMPORAL' || tit === 'VACANTE TEMPORAL') && !plazasVacDefinitiva.includes(p);
-      });
-      const totalVacTemporales = plazasVacTemporal.length;
 
       // Situaciones administrativas / modalidades de vinculación
       let conteoCarrera = 0;
@@ -1453,7 +1435,93 @@ Secretaría Jurídica Distrital
     }
   });
 
-  // 3. Procesar Carga de Archivo 1: Planta de Personal (Imagen 1)
+  // 3. Procesar Carga Unificada: Libro Completo de Nómina (Extrae PLANTA SJD y PLANTA PERNO)
+  router.post('/upload-completo', upload.single('archivo'), async (req, res) => {
+    try {
+      await ensureTables();
+      if (!req.file) {
+        return res.status(400).json({ success: false, error: 'No se envió ningún archivo para procesar.' });
+      }
+
+      const nombreOrig = req.file.originalname || '';
+      if (!nombreOrig.match(/\.(xlsx|xls)$/i)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Formato no compatible. Por favor sube un archivo de Microsoft Excel (.xlsx o .xls).'
+        });
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      try {
+        await workbook.xlsx.load(req.file.buffer);
+      } catch (errBuffer) {
+        return res.status(400).json({
+          success: false,
+          error: 'No se pudo leer el archivo Excel. Asegúrate de que no esté dañado ni protegido con contraseña.'
+        });
+      }
+
+      const sheetPlanta = excelHelper.obtenerHojaPlanta(workbook);
+      const sheetPerno = excelHelper.obtenerHojaPerno(workbook);
+
+      if (!sheetPlanta && !sheetPerno) {
+        return res.status(400).json({
+          success: false,
+          error: 'El archivo Excel no contiene la hoja PLANTA SJD ni la hoja PLANTA PERNO.'
+        });
+      }
+
+      let resPlanta = null;
+      let resPerno = null;
+
+      if (sheetPlanta) {
+        resPlanta = await excelHelper.procesarExtraccionPlanta(sheetPlanta, workbook, pool);
+      }
+
+      if (sheetPerno) {
+        resPerno = await excelHelper.procesarExtraccionPerno(sheetPerno, pool);
+      }
+
+      await pool.query(`
+        INSERT INTO public.nomina_import_logs (tipo_archivo, nombre_archivo, registros_procesados, registros_actualizados, detalles)
+        VALUES ('LIBRO_COMPLETO', $1, $2, $3, $4)
+      `, [
+        nombreOrig,
+        (resPlanta?.procesados || 0) + (resPerno?.procesados || 0),
+        (resPlanta?.actualizados || 0) + (resPerno?.actualizados || 0),
+        JSON.stringify({ planta: resPlanta, perno: resPerno })
+      ]);
+
+      const msgs = [];
+      if (resPlanta) {
+        msgs.push(`Planta Oficial (${resPlanta.sheetName}, Fila ${resPlanta.rowHeader}): ${resPlanta.actualizados} plazas sincronizadas`);
+      }
+      if (resPerno) {
+        msgs.push(`Planta Perno (${resPerno.sheetName}, Fila ${resPerno.rowHeader}): ${resPerno.procesados} registros procesados, ${resPerno.actualizados} funcionarios vinculados`);
+      }
+
+      const advertenciasTotal = [
+        ...(resPlanta?.advertencias || []),
+        ...(resPerno?.advertencias || [])
+      ];
+
+      res.json({
+        success: true,
+        mensaje: `Libro de Nómina procesado con éxito. ${msgs.join('. ')}.`,
+        planta: resPlanta,
+        perno: resPerno,
+        registros_procesados: (resPlanta?.procesados || 0) + (resPerno?.procesados || 0),
+        registros_actualizados: (resPlanta?.actualizados || 0) + (resPerno?.actualizados || 0),
+        advertencias: advertenciasTotal.slice(0, 10),
+        total_advertencias: advertenciasTotal.length
+      });
+    } catch (error) {
+      console.error('Error procesando libro completo de nómina:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 4. Procesar Carga de Archivo 1: Planta de Personal (con detección de libro completo)
   router.post('/upload-planta', upload.single('archivo'), async (req, res) => {
     try {
       await ensureTables();
@@ -1461,7 +1529,6 @@ Secretaría Jurídica Distrital
         return res.status(400).json({ success: false, error: 'No se envió ningún archivo para procesar.' });
       }
 
-      // 1. Comprobación de formato de archivo
       const nombreOrig = req.file.originalname || '';
       if (!nombreOrig.match(/\.(xlsx|xls)$/i)) {
         return res.status(400).json({
@@ -1480,463 +1547,53 @@ Secretaría Jurídica Distrital
         });
       }
 
-      let sheet = workbook.getWorksheet('PLANTA SJD (2)') || 
-                  workbook.getWorksheet('PLANTA SJD') || 
-                  workbook.worksheets[0];
+      const sheetPlanta = excelHelper.obtenerHojaPlanta(workbook);
+      const sheetPerno = excelHelper.obtenerHojaPerno(workbook);
 
-      if (!sheet || sheet.rowCount < 2) {
+      if (!sheetPlanta) {
         return res.status(400).json({
           success: false,
-          error: 'La hoja de cálculo está vacía o no contiene registros suficientes para procesar.'
+          error: 'No se encontró la hoja PLANTA SJD en el archivo subido.'
         });
       }
 
-      // 2. Localizar fila de encabezados
-      let rowHeader = 4;
-      let encabezadosTexto = '';
-      for (let r = 1; r <= 15; r++) {
-        const row = sheet.getRow(r);
-        let rowText = '';
-        row.eachCell((c) => { rowText += ' ' + String(c.value || '').toUpperCase(); });
-        if (rowText.includes('CEDULA') || rowText.includes('APELLIDOS') || rowText.includes('NOMENCLATURA') || rowText.includes('ID SIDEAP')) {
-          rowHeader = r;
-          encabezadosTexto = rowText;
-          break;
-        }
-      }
+      const resPlanta = await excelHelper.procesarExtraccionPlanta(sheetPlanta, workbook, pool);
+      let resPerno = null;
 
-      // 3. Comprobación de confusión de archivo: ¿Es en realidad un archivo de Planta Perno?
-      const esPernoEnPlanta = (
-        encabezadosTexto.includes('NUMERO_IDENTIFICACION') ||
-        encabezadosTexto.includes('PRIMER_APELLIDO') ||
-        encabezadosTexto.includes('FONDO_SALUD') ||
-        encabezadosTexto.includes('TIPO_FUNCIONARIO')
-      ) && !encabezadosTexto.includes('ID_SIDEAP') && !encabezadosTexto.includes('NOMENCLATURA');
-
-      if (esPernoEnPlanta) {
-        return res.status(400).json({
-          success: false,
-          error: 'Atención: Has intentado subir el archivo de "Planta Perno / Nómina" en la sección de "Planta Oficial". Por favor selecciona el archivo correcto de Planta Oficial o súbelo en el botón de Planta Perno.'
-        });
-      }
-
-      // 4. Indexar en memoria hojas complementarias del mismo libro si existen (PLANTA PERNO y SIDEAP)
-      // para resolver fórmulas VLOOKUP congeladas o nombres actualizados por cédula/ID
-      const mapaPernoPorCedula = new Map();
-      const mapaPernoPorId = new Map();
-      const mapaSideapPorId = new Map();
-
-      const sheetPernoAux = workbook.getWorksheet('PLANTA PERNO');
-      if (sheetPernoAux && sheetPernoAux.rowCount > 2) {
-        for (let rp = 2; rp <= sheetPernoAux.rowCount; rp++) {
-          const rowP = sheetPernoAux.getRow(rp);
-          const cRaw = cleanDoc(getVal(rowP.getCell(1)));
-          if (!cRaw) continue;
-
-          const ape1 = cleanText(getVal(rowP.getCell(2)) || '').toUpperCase();
-          const ape2 = cleanText(getVal(rowP.getCell(3)) || '').toUpperCase();
-          const nom = cleanText(getVal(rowP.getCell(4)) || '').toUpperCase();
-          const nomComp = [nom, ape1, ape2].filter(Boolean).join(' ').trim();
-
-          const infoPerno = {
-            cedula: cRaw,
-            nombreCompleto: nomComp,
-            direccion: cleanText(getVal(rowP.getCell(7)) || '').toUpperCase(),
-            telefono: cleanText(getVal(rowP.getCell(8)) || ''),
-            sexo: cleanText(getVal(rowP.getCell(9)) || '').toUpperCase(),
-            tipoFuncionario: cleanText(getVal(rowP.getCell(15)) || '').toUpperCase(),
-            fondoSalud: cleanText(getVal(rowP.getCell(20)) || '').toUpperCase(),
-            fondoPension: cleanText(getVal(rowP.getCell(22)) || '').toUpperCase(),
-            fondoCesantias: cleanText(getVal(rowP.getCell(24)) || '').toUpperCase(),
-            idPerno: parseInt(String(getVal(rowP.getCell(31)) || ''), 10) || null,
-            tipoNomb: cleanText(getVal(rowP.getCell(34)) || '').toUpperCase(),
-            totalDevengado: cleanMoney(getVal(rowP.getCell(29))) || null,
-          };
-
-          mapaPernoPorCedula.set(cRaw, infoPerno);
-          if (infoPerno.idPerno) {
-            mapaPernoPorId.set(infoPerno.idPerno, infoPerno);
-          }
-        }
-      }
-
-      const sheetSideapAux = workbook.getWorksheet('SIDEAP');
-      if (sheetSideapAux && sheetSideapAux.rowCount > 2) {
-        for (let rs = 2; rs <= sheetSideapAux.rowCount; rs++) {
-          const rowS = sheetSideapAux.getRow(rs);
-          const idS = parseInt(String(getVal(rowS.getCell(1)) || ''), 10);
-          const nomS = cleanText(getVal(rowS.getCell(3)) || '').toUpperCase();
-          const cedS = cleanDoc(getVal(rowS.getCell(4)));
-          if (idS && (nomS || cedS)) {
-            mapaSideapPorId.set(idS, { idSideap: idS, nombre: nomS, cedula: cedS });
-          }
-        }
-      }
-
-      // 5. Mapear encabezados dinámicamente de la hoja de Planta
-      function normH(val) {
-        return String(val || '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toUpperCase()
-          .trim();
-      }
-
-      const headerRow = sheet.getRow(rowHeader);
-      const colMap = {};
-      headerRow.eachCell((c, colNum) => {
-        const raw = normH(c.value);
-        if (raw === 'ID' || raw === 'ID_PLAZA' || raw === 'ID PLAZA' || raw === 'PLAZA') {
-          colMap.id = colNum;
-        } else if (raw === 'ID SIDEAP' || raw === 'ID_SIDEAP' || (raw.includes('SIDEAP') && !raw.includes('VINCULAC') && !raw.includes('CARGO/'))) {
-          colMap.id_sideap = colNum;
-        } else if (raw === 'ID PERNO' || raw === 'ID_PERNO' || (raw.includes('PERNO') && !raw.includes('VINCULAC'))) {
-          colMap.id_perno = colNum;
-        } else if (raw.includes('SITUACION') && (raw.includes('TITULAR') || raw.includes('DEL CARGO'))) {
-          colMap.situacion_titular = colNum; // Col 14 (N)
-        } else if (raw === 'SITUACION ADMINISTRATIVA' || raw === 'SITUACION' || (raw.includes('SITUACION') && !raw.includes('TITULAR'))) {
-          colMap.situacion_admin = colNum; // Col 13 (M)
-        } else if (raw.includes('TITULAR') && (raw.includes('CEDULA') || raw.includes('DOCUMENTO') || raw.includes('C.C'))) {
-          colMap.titular_cedula = colNum; // Col 15 (O)
-        } else if (raw.includes('TITULAR') && (raw.includes('CARGO') || raw.includes('NOMBRE') || raw.includes('SERVIDOR') || raw.includes('EMPLEO'))) {
-          colMap.titular_nombre = colNum; // Col 16 (P)
-        } else if (raw === 'CEDULA' || raw === 'DOCUMENTO') {
-          if (!colMap.cedula_actual) {
-            colMap.cedula_actual = colNum; // Col 4 (D): Ocupante actual
-          } else if (!colMap.titular_cedula) {
-            colMap.titular_cedula = colNum; // Col 15 (O): Titular
-          }
-        } else if ((raw.includes('APELLIDOS') || raw.includes('NOMBRES')) && !colMap.nombre_actual) {
-          colMap.nombre_actual = colNum; // Col 5 (E)
-        } else if (raw === 'ID-E' || raw === 'IDE' || raw === 'ID_E' || raw.includes('ID-E') || raw.includes('ID ESCALERA') || raw === 'ESCALERA') {
-          colMap.id_escalera = colNum; // Col 17 (Q)
-        } else if ((raw === 'N' || raw.includes('PELDANO') || raw.includes('PELDAÑO')) && !colMap.peldano_escalera) {
-          colMap.peldano_escalera = colNum; // Col 18 (R)
-        } else if (raw.includes('VINCULACION A LA ENTIDAD') || raw.includes('TIPO DE VINCULACION')) {
-          colMap.tipo_vinculacion = colNum; // Col 6 (F)
-        } else if (raw.includes('OPEC')) {
-          colMap.opec = colNum;
-        } else if (raw.includes('ESTADO DEL CARGO') || raw.includes('ESTADO CARGO')) {
-          colMap.estado_cargo = colNum; // Col 25 (Y)
-        } else if (raw === 'NIVEL') {
-          colMap.nivel = colNum; // Col 26 (Z)
-        } else if (raw.includes('NOMENCLATURA') || raw === 'CARGO' || raw.includes('DENOMINACION')) {
-          colMap.cargo = colNum; // Col 27 (AA)
-        } else if (raw.includes('CODIGO')) {
-          colMap.codigo = colNum; // Col 28 (AB)
-        } else if (raw.includes('GRADO')) {
-          colMap.grado = colNum; // Col 29 (AC)
-        } else if (raw.includes('DEPENDENCIA DEL CARGO') || raw === 'DEPENDENCIA') {
-          colMap.dep_cargo = colNum; // Col 31 (AE)
-        } else if (raw.includes('DEPENDENCIA FUNCIONAL')) {
-          colMap.dep_funcional = colNum; // Col 30 (AD) o 32 (AF)
-        } else if (raw.includes('PROPOSITO')) {
-          colMap.proposito = colNum; // Col 31 (AE) o 33 (AG)
-        } else if (raw === 'FUNCIONES' || raw === 'FUNCIONES ESENCIALES' || raw.includes('FUNCIONES ESENCIALES') || (raw.includes('FUNCIONES') && !raw.includes('RES') && !raw.includes('RESOLUC') && !raw.includes('MANUAL') && !raw.includes('PAGINA') && !raw.includes('PÁGINA'))) {
-          if (!colMap.funciones) colMap.funciones = colNum; // Col 32 (AF)
-        } else if (raw.includes('REQUISITOS')) {
-          colMap.requisitos = colNum; // Col 33 (AG) o 35 (AI)
-        } else if (raw.includes('MANUAL') || raw.includes('PAGINA') || raw.includes('PÁGINA') || raw.includes('RESOLUCION') || raw.includes('RESOLUCIÓN')) {
-          colMap.manual_funciones = colNum; // Col 34 (AH)
-        } else if (raw.includes('ASIGNACION BASICA') || raw.includes('SUELDO BASICO') || raw.includes('ASIGNACION')) {
-          colMap.asignacion = colNum; // Col 35 (AI) o 37 (AK)
-        }
-      });
-
-      // 6. Comprobación de columnas obligatorias
-      if (!colMap.id) {
-        return res.status(400).json({
-          success: false,
-          error: 'No se encontró la columna requerida "ID" (identificador numérico de cada plaza) en la fila de encabezados.'
-        });
-      }
-
-      if (!colMap.cargo && !colMap.codigo) {
-        return res.status(400).json({
-          success: false,
-          error: 'No se encontró la columna de "CARGO / NOMENCLATURA" en el archivo.'
-        });
-      }
-
-      let procesados = 0;
-      let actualizados = 0;
-      let filasOmitidas = 0;
-      const advertencias = [];
-      const plazasVistas = new Set();
-
-      for (let r = rowHeader + 1; r <= sheet.rowCount; r++) {
-        const row = sheet.getRow(r);
-        const idCellVal = getVal(row.getCell(colMap.id || 1));
-        
-        // Comprobar si la fila está completamente vacía
-        if (idCellVal === null || idCellVal === undefined || String(idCellVal).trim() === '') {
-          let tieneContenido = false;
-          row.eachCell(() => { tieneContenido = true; });
-          if (tieneContenido) {
-            filasOmitidas++;
-            if (advertencias.length < 10) {
-              advertencias.push(`Fila ${r}: Omitida porque no contiene un ID de plaza.`);
-            }
-          }
-          continue;
-        }
-
-        const idPlaza = parseInt(String(idCellVal).trim(), 10);
-        if (isNaN(idPlaza) || idPlaza <= 0) {
-          filasOmitidas++;
-          if (advertencias.length < 10) {
-            advertencias.push(`Fila ${r}: Omitida porque el ID '${idCellVal}' no es un número entero válido.`);
-          }
-          continue;
-        }
-
-        if (plazasVistas.has(idPlaza)) {
-          if (advertencias.length < 10) {
-            advertencias.push(`Fila ${r}: El ID de plaza ${idPlaza} aparece duplicado en el archivo (se actualizará con este registro).`);
-          }
-        }
-        plazasVistas.add(idPlaza);
-
-        const idSideap = parseInt(getVal(row.getCell(colMap.id_sideap || 2)), 10) || null;
-        const idPerno = parseInt(getVal(row.getCell(colMap.id_perno || 3)), 10) || null;
-        
-        // Columnas D y E: Ocupante / Encargo actual en el puesto
-        let cedulaActual = cleanDoc(getVal(row.getCell(colMap.cedula_actual || 4)));
-        let nombreActual = cleanText(getVal(row.getCell(colMap.nombre_actual || 5)) || '').toUpperCase();
-        let tipoVinculacion = cleanText(getVal(row.getCell(colMap.tipo_vinculacion || 6)) || '').toUpperCase();
-        
-        // Columnas M y N: Situaciones administrativas
-        let situacionAdmin = cleanText(getVal(row.getCell(colMap.situacion_admin || 13)) || '').toUpperCase();
-        let situacionTitular = cleanText(getVal(row.getCell(colMap.situacion_titular || 14)) || '').toUpperCase();
-
-        // Columnas O y P: Titular oficial de la plaza
-        let titularCedula = cleanDoc(getVal(row.getCell(colMap.titular_cedula || 15)));
-        let titularNombre = cleanText(getVal(row.getCell(colMap.titular_nombre || 16)) || '').toUpperCase();
-
-        // Resolución inteligente de VLOOKUP en memoria con PLANTA PERNO y SIDEAP
-        if (cedulaActual && mapaPernoPorCedula.has(cedulaActual)) {
-          const pernoInfo = mapaPernoPorCedula.get(cedulaActual);
-          if (pernoInfo.nombreCompleto) {
-            nombreActual = pernoInfo.nombreCompleto;
-          }
-          if (!tipoVinculacion && pernoInfo.tipoFuncionario) {
-            tipoVinculacion = pernoInfo.tipoFuncionario;
-          }
-        } else if (idSideap && mapaSideapPorId.has(idSideap)) {
-          const sideapInfo = mapaSideapPorId.get(idSideap);
-          if (sideapInfo.nombre && (!nombreActual || nombreActual.includes('VACANTE') || nombreActual.includes('IF('))) {
-            nombreActual = sideapInfo.nombre;
-            if (!cedulaActual && sideapInfo.cedula) cedulaActual = sideapInfo.cedula;
-          }
-        }
-
-        if (titularCedula && mapaPernoPorCedula.has(titularCedula)) {
-          const pernoInfo = mapaPernoPorCedula.get(titularCedula);
-          if (pernoInfo.nombreCompleto) {
-            titularNombre = pernoInfo.nombreCompleto;
-          }
-        }
-
-        const normActual = nombreActual.toUpperCase();
-        const normTitular = titularNombre.toUpperCase();
-        const actualEsVacante = !normActual || normActual.includes('VACANTE') || normActual.includes('VACANCIA');
-        const titularEsVacante = !normTitular || normTitular.includes('VACANTE') || normTitular.includes('VACANCIA');
-        const esEncargoPorSituacion = situacionAdmin.includes('ENCARGO') || situacionTitular.includes('ENCARGO');
-
-        // Determinación de Titular del empleo
-        if (!titularEsVacante) {
-          // El titular oficial es el registrado en Col O y P
-        } else {
-          // Si la columna de Titular dice VACANTE o está vacía:
-          if (esEncargoPorSituacion) {
-            titularNombre = situacionTitular || 'VACANTE TEMPORAL';
-            titularCedula = null;
-          } else if (!actualEsVacante) {
-            // Si Col D/E tiene un servidor vinculado (en propiedad o periodo de prueba), esa persona es el titular
-            titularNombre = nombreActual;
-            titularCedula = cedulaActual;
-            if (!situacionTitular || situacionTitular.includes('VACANTE')) {
-              situacionTitular = situacionAdmin || 'EN PROPIEDAD';
-            }
-          } else {
-            titularNombre = 'VACANTE DEFINITIVA';
-            titularCedula = null;
-          }
-        }
-
-        // Determinación de Servidor en Encargo (Columnas D y E)
-        let esEncargo = false;
-        let encargoNombre = null;
-        let encargoCedula = null;
-
-        if (!actualEsVacante) {
-          const hayDiferencia = titularCedula && cedulaActual 
-            ? (titularCedula !== cedulaActual) 
-            : (titularNombre && normActual !== normTitular);
-
-          if (esEncargoPorSituacion || hayDiferencia) {
-            esEncargo = true;
-            encargoNombre = nombreActual;
-            encargoCedula = cedulaActual;
-          }
-        }
-
-        titularCedula = titularCedula ? titularCedula : null;
-        encargoCedula = encargoCedula ? encargoCedula : null;
-
-        let estadoCargo = String(getVal(row.getCell(colMap.estado_cargo || 25)) || '').trim().toUpperCase();
-        if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
-          if (actualEsVacante && titularEsVacante) {
-            estadoCargo = 'VACANTE DEFINITIVA';
-          } else if (normActual.includes('TEMPORAL') || normTitular.includes('TEMPORAL') || situacionAdmin.includes('TEMPORAL') || situacionTitular.includes('TEMPORAL')) {
-            estadoCargo = 'VACANTE TEMPORAL';
-          } else if (!actualEsVacante || !titularEsVacante) {
-            estadoCargo = 'OCUPADO';
-          } else {
-            estadoCargo = 'VACANTE DEFINITIVA';
-          }
-        }
-
-        let nivel = String(getVal(row.getCell(colMap.nivel || 26)) || getVal(row.getCell(26)) || getVal(row.getCell(25)) || '').trim().toUpperCase();
-        if (nivel.includes('DIRECTIV')) nivel = 'DIRECTIVO';
-        else if (nivel.includes('ASESOR')) nivel = 'ASESOR';
-        else if (nivel.includes('PROFESIONAL')) nivel = 'PROFESIONAL';
-        else if (nivel.includes('TECNIC') || nivel.includes('TÉCNIC')) nivel = 'TECNICO';
-        else if (nivel.includes('ASISTENCIAL')) nivel = 'ASISTENCIAL';
-
-        const cargoNom = cleanText(getVal(row.getCell(colMap.cargo || 27)) || getVal(row.getCell(27)) || '').toUpperCase();
-        const codigo = cleanText(getVal(row.getCell(colMap.codigo || 28)) || getVal(row.getCell(28)) || '');
-        const grado = cleanText(getVal(row.getCell(colMap.grado || 29)) || getVal(row.getCell(29)) || '');
-        const opec = cleanText(getVal(row.getCell(colMap.opec || 24)) || '');
-        const depCargo = cleanDependencia(getVal(row.getCell(colMap.dep_cargo || 31)) || getVal(row.getCell(31)) || '');
-        const depFuncional = cleanDependencia(getVal(row.getCell(colMap.dep_funcional || 32)) || getVal(row.getCell(32)) || depCargo);
-        const proposito = cleanText(getVal(row.getCell(colMap.proposito || 33)) || getVal(row.getCell(33)) || '');
-        const funcionesRaw = cleanText(getVal(row.getCell(colMap.funciones || 32)) || getVal(row.getCell(32)) || '');
-        const requisitos = cleanText(getVal(row.getCell(colMap.requisitos || 33)) || getVal(row.getCell(33)) || '');
-        const manualFuncionesRaw = cleanText(getVal(row.getCell(colMap.manual_funciones || 34)) || getVal(row.getCell(34)) || '');
-        const asignacion = cleanMoney(getVal(row.getCell(colMap.asignacion || 35)) || getVal(row.getCell(35)) || getVal(row.getCell(37)));
-
-        // Columnas Q y R: Escaleras de encargo (ID-E y N)
-        let idEscalera = cleanText(getVal(row.getCell(colMap.id_escalera || 17)) || '').trim();
-        if (idEscalera === '-' || idEscalera === '0' || idEscalera.toLowerCase().includes('[object')) idEscalera = '';
-
-        let peldanoRaw = getVal(row.getCell(colMap.peldano_escalera || 18));
-        let peldanoEscalera = null;
-        if (peldanoRaw !== null && peldanoRaw !== undefined && String(peldanoRaw).trim() !== '') {
-          const pNum = parseInt(String(peldanoRaw).trim(), 10);
-          if (!isNaN(pNum) && pNum > 0) {
-            peldanoEscalera = pNum;
-          }
-        }
-
-        if (!idEscalera) {
-          idEscalera = null;
-          peldanoEscalera = null;
-        }
-
-        const funcionesArr = parseFunctions(funcionesRaw);
-
-        // Datos complementarios de seguridad social desde el mapa en memoria si aplica
-        const personaMatch = (titularCedula && mapaPernoPorCedula.get(titularCedula)) || 
-                             (cedulaActual && mapaPernoPorCedula.get(cedulaActual)) || null;
-
-        await pool.query(`
-          INSERT INTO public.planta_personal_sjd (
-            id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
-            dependencia_cargo, dependencia_funcional, proposito, funciones,
-            requisitos, asignacion_basica, estado_cargo,
-            titular_cedula, titular_nombre, situacion_titular,
-            encargo_cedula, encargo_nombre, es_encargo,
-            tipo_vinculacion, situacion_administrativa, opec,
-            id_escalera, peldano_escalera,
-            fondo_salud, fondo_pension, fondo_cesantias, telefono, direccion, sexo,
-            manual_funciones, resolucion_manual,
-            updated_at
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7,
-            $8, $9, $10, $11,
-            $12, $13, $14,
-            $15, $16, $17,
-            $18, $19, $20,
-            $21, $22, $23,
-            $24, $25,
-            $26, $27, $28, $29, $30, $31,
-            $32, $33,
-            NOW()
-          )
-          ON CONFLICT (id_plaza) DO UPDATE SET
-            id_sideap = COALESCE(EXCLUDED.id_sideap, public.planta_personal_sjd.id_sideap),
-            id_perno = COALESCE(EXCLUDED.id_perno, public.planta_personal_sjd.id_perno),
-            nivel = EXCLUDED.nivel,
-            cargo = EXCLUDED.cargo,
-            codigo = EXCLUDED.codigo,
-            grado = EXCLUDED.grado,
-            dependencia_cargo = EXCLUDED.dependencia_cargo,
-            dependencia_funcional = EXCLUDED.dependencia_funcional,
-            proposito = EXCLUDED.proposito,
-            funciones = EXCLUDED.funciones,
-            requisitos = EXCLUDED.requisitos,
-            asignacion_basica = EXCLUDED.asignacion_basica,
-            estado_cargo = EXCLUDED.estado_cargo,
-            titular_cedula = EXCLUDED.titular_cedula,
-            titular_nombre = EXCLUDED.titular_nombre,
-            situacion_titular = EXCLUDED.situacion_titular,
-            encargo_cedula = EXCLUDED.encargo_cedula,
-            encargo_nombre = EXCLUDED.encargo_nombre,
-            es_encargo = EXCLUDED.es_encargo,
-            tipo_vinculacion = EXCLUDED.tipo_vinculacion,
-            situacion_administrativa = EXCLUDED.situacion_administrativa,
-            opec = EXCLUDED.opec,
-            id_escalera = EXCLUDED.id_escalera,
-            peldano_escalera = EXCLUDED.peldano_escalera,
-            fondo_salud = COALESCE(EXCLUDED.fondo_salud, public.planta_personal_sjd.fondo_salud),
-            fondo_pension = COALESCE(EXCLUDED.fondo_pension, public.planta_personal_sjd.fondo_pension),
-            fondo_cesantias = COALESCE(EXCLUDED.fondo_cesantias, public.planta_personal_sjd.fondo_cesantias),
-            telefono = COALESCE(EXCLUDED.telefono, public.planta_personal_sjd.telefono),
-            direccion = COALESCE(EXCLUDED.direccion, public.planta_personal_sjd.direccion),
-            sexo = COALESCE(EXCLUDED.sexo, public.planta_personal_sjd.sexo),
-            manual_funciones = COALESCE(EXCLUDED.manual_funciones, public.planta_personal_sjd.manual_funciones),
-            resolucion_manual = COALESCE(EXCLUDED.resolucion_manual, public.planta_personal_sjd.resolucion_manual),
-            updated_at = NOW();
-        `, [
-          idPlaza, idSideap, idPerno, nivel, cargoNom, codigo, grado,
-          depCargo, depFuncional, proposito, JSON.stringify(funcionesArr),
-          requisitos, asignacion, estadoCargo,
-          titularCedula, titularNombre, situacionTitular,
-          encargoCedula, encargoNombre, esEncargo,
-          tipoVinculacion, situacionAdmin, opec,
-          idEscalera, peldanoEscalera,
-          personaMatch?.fondoSalud || null,
-          personaMatch?.fondoPension || null,
-          personaMatch?.fondoCesantias || null,
-          personaMatch?.telefono || null,
-          personaMatch?.direccion || null,
-          personaMatch?.sexo || null,
-          manualFuncionesRaw || null,
-          manualFuncionesRaw || null
-        ]);
-
-        procesados++;
-        actualizados++;
+      if (sheetPerno) {
+        resPerno = await excelHelper.procesarExtraccionPerno(sheetPerno, pool);
       }
 
       await pool.query(`
-        INSERT INTO public.nomina_import_logs (tipo_archivo, nombre_archivo, registros_procesados, registros_actualizados)
-        VALUES ('PLANTA', $1, $2, $3)
-      `, [req.file.originalname, procesados, actualizados]);
+        INSERT INTO public.nomina_import_logs (tipo_archivo, nombre_archivo, registros_procesados, registros_actualizados, detalles)
+        VALUES ('PLANTA', $1, $2, $3, $4)
+      `, [
+        nombreOrig,
+        resPlanta.procesados + (resPerno?.procesados || 0),
+        resPlanta.actualizados + (resPerno?.actualizados || 0),
+        JSON.stringify({ planta: resPlanta, perno: resPerno })
+      ]);
 
-      const detalleAdv = advertencias.length > 0 
-        ? ` (${advertencias.length} advertencia${advertencias.length > 1 ? 's' : ''})` 
-        : '';
+      let mensajeExito = `Archivo de Planta procesado exitosamente (${resPlanta.sheetName}, Fila ${resPlanta.rowHeader}): ${resPlanta.actualizados} plazas sincronizadas.`;
+      if (resPerno) {
+        mensajeExito += ` Además, se detectó y sincronizó automáticamente la hoja ${resPerno.sheetName} (Fila ${resPerno.rowHeader}) con ${resPerno.procesados} registros de nómina.`;
+      }
+
+      const advertenciasTotal = [
+        ...resPlanta.advertencias,
+        ...(resPerno?.advertencias || [])
+      ];
 
       res.json({
         success: true,
-        mensaje: `Archivo de Planta procesado exitosamente. Se sincronizaron ${actualizados} plazas en el sistema.${detalleAdv}`,
-        registros_procesados: procesados,
-        registros_actualizados: actualizados,
-        filas_omitidas: filasOmitidas,
-        advertencias: advertencias.slice(0, 10),
-        total_advertencias: advertencias.length
+        mensaje: mensajeExito,
+        planta: resPlanta,
+        perno: resPerno,
+        registros_procesados: resPlanta.procesados + (resPerno?.procesados || 0),
+        registros_actualizados: resPlanta.actualizados + (resPerno?.actualizados || 0),
+        filas_omitidas: resPlanta.filasOmitidas,
+        advertencias: advertenciasTotal.slice(0, 10),
+        total_advertencias: advertenciasTotal.length
       });
     } catch (error) {
       console.error('Error procesando archivo de planta:', error);
@@ -1944,7 +1601,7 @@ Secretaría Jurídica Distrital
     }
   });
 
-  // 4. Procesar Carga de Archivo 2: Planta Perno / Nómina (Imagen 2)
+  // 5. Procesar Carga de Archivo 2: Planta Perno (con detección de libro completo)
   router.post('/upload-perno', upload.single('archivo'), async (req, res) => {
     try {
       await ensureTables();
@@ -1952,7 +1609,6 @@ Secretaría Jurídica Distrital
         return res.status(400).json({ success: false, error: 'No se envió ningún archivo para procesar.' });
       }
 
-      // 1. Comprobación de formato de archivo
       const nombreOrig = req.file.originalname || '';
       if (!nombreOrig.match(/\.(xlsx|xls)$/i)) {
         return res.status(400).json({
@@ -1971,265 +1627,48 @@ Secretaría Jurídica Distrital
         });
       }
 
-      let sheet = workbook.getWorksheet('PLANTA PERNO') || 
-                  workbook.worksheets[0];
+      const sheetPlanta = excelHelper.obtenerHojaPlanta(workbook);
+      const sheetPerno = excelHelper.obtenerHojaPerno(workbook);
 
-      if (!sheet || sheet.rowCount < 2) {
+      if (!sheetPerno) {
         return res.status(400).json({
           success: false,
-          error: 'La hoja de cálculo está vacía o no contiene registros suficientes para procesar.'
+          error: 'No se encontró la hoja PLANTA PERNO en el archivo subido.'
         });
       }
 
-      // 2. Buscar fila de encabezados
-      let rowHeader = 9;
-      let encabezadosTexto = '';
-      for (let r = 1; r <= 15; r++) {
-        const row = sheet.getRow(r);
-        let rowText = '';
-        row.eachCell((c) => { rowText += ' ' + String(c.value || '').toUpperCase(); });
-        if (rowText.includes('NUMERO_IDENTIFICACION') || rowText.includes('PRIMER_APELLIDO') || rowText.includes('IDENTIFICACION')) {
-          rowHeader = r;
-          encabezadosTexto = rowText;
-          break;
-        }
+      let resPlanta = null;
+      if (sheetPlanta) {
+        resPlanta = await excelHelper.procesarExtraccionPlanta(sheetPlanta, workbook, pool);
       }
 
-      // 3. Comprobación de confusión de archivo: ¿Es en realidad un archivo de Planta Oficial?
-      const esPlantaEnPerno = (
-        encabezadosTexto.includes('ID_SIDEAP') ||
-        encabezadosTexto.includes('NOMENCLATURA') ||
-        encabezadosTexto.includes('SITUACIÓN ADMINISTRATIVA')
-      ) && !encabezadosTexto.includes('NUMERO_IDENTIFICACION');
-
-      if (esPlantaEnPerno) {
-        return res.status(400).json({
-          success: false,
-          error: 'Atención: Has intentado subir el archivo de "Planta Oficial" en la sección de "Planta Perno / Nómina". Por favor sube el archivo correspondiente.'
-        });
-      }
-
-      // 4. Mapear encabezados dinámicamente
-      const headerRow = sheet.getRow(rowHeader);
-      const colMap = {};
-      headerRow.eachCell((c, colNum) => {
-        const rawTxt = String(c.value || '').toUpperCase();
-        const txt = rawTxt.replace(/[\r\n_]+/g, ' ').trim();
-        const norm = txt.replace(/\s+/g, '');
-
-        // 1. Cédula del funcionario: buscar con prioridad estricta para evitar confusión con LIBRETA_MILITAR u otras
-        if (!colMap.cedula) {
-          if (
-            (norm.includes('NUMEROIDENTIFICA') || norm.includes('IDENTIFICACION') || norm === 'CEDULA' || norm === 'CÉDULA' || colNum === 1) &&
-            !norm.includes('MILITAR') && !norm.includes('TRIBUTAR') && !norm.includes('FISCAL')
-          ) {
-            colMap.cedula = colNum;
-            return;
-          }
-        }
-
-        if (!colMap.ape1 && txt.includes('PRIMER APELLIDO')) colMap.ape1 = colNum;
-        else if (!colMap.ape2 && txt.includes('SEGUNDO APELLIDO')) colMap.ape2 = colNum;
-        else if (!colMap.nombres && (txt === 'NOMBRE' || txt.includes('NOMBRES'))) colMap.nombres = colNum;
-        else if (!colMap.estado_funcionario && (txt.includes('ESTADO FUNCIONARIO') || txt === 'ESTADO')) colMap.estado_funcionario = colNum;
-        else if (!colMap.direccion && txt.includes('DIRECCION')) colMap.direccion = colNum;
-        else if (!colMap.telefono && txt.includes('TELEFONO')) colMap.telefono = colNum;
-        else if (!colMap.sexo && (txt === 'SEXO' || txt.includes('GENERO'))) colMap.sexo = colNum;
-        else if (!colMap.tipo_funcionario && txt.includes('TIPO FUNCIONARIO')) colMap.tipo_funcionario = colNum;
-        else if (!colMap.fondo_salud && (txt.includes('FONDO SALUD') || txt === 'EPS')) colMap.fondo_salud = colNum;
-        else if (!colMap.fondo_pension && (txt.includes('FONDO PENSION') || txt === 'PENSION')) colMap.fondo_pension = colNum;
-        else if (!colMap.fondo_cesantias && (txt.includes('FONDO CESANTIAS') || txt === 'CESANTIAS')) colMap.fondo_cesantias = colNum;
-        else if (!colMap.id_perno && (txt.includes('ID PERNO') || txt === 'ID_PERNO' || txt === 'PERNO' || txt.includes('POSICION_PLANTA'))) colMap.id_perno = colNum;
-        else if (!colMap.tipo_nomb && txt.includes('TIPO NOMB')) colMap.tipo_nomb = colNum;
-        else if (!colMap.acto_nomb && txt.includes('ACTO NOMB') && !txt.includes('NUMERO') && !txt.includes('FECHA')) colMap.acto_nomb = colNum;
-        else if (!colMap.num_acto && (txt.includes('NUMERO ACTO NOMB') || txt.includes('NUM ACTO'))) colMap.num_acto = colNum;
-        else if (!colMap.devengado && txt.includes('DEVENGADO')) colMap.devengado = colNum;
-        else if (!colMap.fecha_nacimiento && txt.includes('FECHA NACIMIENTO')) colMap.fecha_nacimiento = colNum;
-        else if (!colMap.fecha_ingreso_entidad && txt.includes('FECHA INGRESO ENTIDAD')) colMap.fecha_ingreso_entidad = colNum;
-        else if (!colMap.fecha_ingreso_distrito && txt.includes('FECHA INGRESO DISTRITO')) colMap.fecha_ingreso_distrito = colNum;
-        else if (!colMap.fecha_acto_nomb && txt.includes('FECHA ACTO NOMB')) colMap.fecha_acto_nomb = colNum;
-        else if (!colMap.fecha_retiro && txt.includes('FECHA RETIRO')) colMap.fecha_retiro = colNum;
-      });
-
-      // Si no se asignó cédula por encabezado, tomar por defecto columna 1
-      if (!colMap.cedula) {
-        colMap.cedula = 1;
-      }
-
-      let procesados = 0;
-      let actualizados = 0;
-      let retiradosOSinPlaza = 0;
-      const advertencias = [];
-
-      for (let r = rowHeader + 1; r <= sheet.rowCount; r++) {
-        const row = sheet.getRow(r);
-        const cedulaRaw = getVal(row.getCell(colMap.cedula || 1));
-        const cedula = cleanDoc(cedulaRaw);
-        if (!cedula) continue;
-
-        const idPerno = parseInt(String(getVal(row.getCell(colMap.id_perno || 31)) || ''), 10) || null;
-        const ape1 = cleanText(getVal(row.getCell(colMap.ape1 || 2)) || '').toUpperCase();
-        const ape2 = cleanText(getVal(row.getCell(colMap.ape2 || 3)) || '').toUpperCase();
-        const nom = cleanText(getVal(row.getCell(colMap.nombres || 4)) || '').toUpperCase();
-        const nomComp = [nom, ape1, ape2].filter(Boolean).join(' ').trim();
-
-        const estadoFuncRaw = cleanText(getVal(row.getCell(colMap.estado_funcionario || 5)) || '').toUpperCase();
-        const fechaRetiro = cleanDate(getVal(row.getCell(colMap.fecha_retiro || 42)));
-        const esRetirado = estadoFuncRaw === 'R' || estadoFuncRaw.includes('RETIRAD') || !!fechaRetiro;
-
-        const direccion = cleanText(getVal(row.getCell(colMap.direccion || 7)) || '').toUpperCase();
-        const telefono = cleanText(getVal(row.getCell(colMap.telefono || 8)) || '');
-        const sexo = cleanText(getVal(row.getCell(colMap.sexo || 9)) || '').toUpperCase();
-        const tipoFuncionario = cleanText(getVal(row.getCell(colMap.tipo_funcionario || 15)) || '').toUpperCase();
-        const fondoSalud = cleanText(getVal(row.getCell(colMap.fondo_salud || 20)) || '').toUpperCase();
-        const fondoPension = cleanText(getVal(row.getCell(colMap.fondo_pension || 22)) || '').toUpperCase();
-        const fondoCesantias = cleanText(getVal(row.getCell(colMap.fondo_cesantias || 24)) || '').toUpperCase();
-        const tipoNomb = cleanText(getVal(row.getCell(colMap.tipo_nomb || 34)) || '').toUpperCase();
-        const actoNomb = cleanText(getVal(row.getCell(colMap.acto_nomb || 35)) || '').toUpperCase();
-        const numActo = cleanText(getVal(row.getCell(colMap.num_acto || 37)) || '');
-        const totalDevengado = cleanMoney(getVal(row.getCell(colMap.devengado || 43))) || null;
-
-        // Limpieza y soporte de fechas tanto en serial numérico (ej. 31103) como en fecha formateada
-        const fechaNacimiento = cleanDate(getVal(row.getCell(colMap.fecha_nacimiento || 6)));
-        const fechaIngresoEntidad = cleanDate(getVal(row.getCell(colMap.fecha_ingreso_entidad || 16)));
-        const fechaIngresoDistrito = cleanDate(getVal(row.getCell(colMap.fecha_ingreso_distrito || 17)));
-        const fechaActoNomb = cleanDate(getVal(row.getCell(colMap.fecha_acto_nomb || 38)));
-
-        // Guardar/actualizar historial en personal_perno_sjd
-        try {
-          await pool.query(`
-            INSERT INTO public.personal_perno_sjd (
-              cedula, primer_apellido, segundo_apellido, nombres, nombre_completo,
-              estado_funcionario, fecha_nacimiento, direccion, telefono, sexo,
-              tipo_funcionario, fecha_ingreso_entidad, fecha_ingreso_distrito,
-              fondo_salud, fondo_pension, fondo_cesantias,
-              posicion_planta, tipo_nombramiento, acto_nombramiento, numero_acto_nombramiento,
-              fecha_acto_nombramiento, fecha_retiro, total_devengado, updated_at
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW()
-            ) ON CONFLICT (cedula) DO UPDATE SET
-              estado_funcionario = EXCLUDED.estado_funcionario,
-              fecha_retiro = EXCLUDED.fecha_retiro,
-              total_devengado = COALESCE(EXCLUDED.total_devengado, public.personal_perno_sjd.total_devengado),
-              updated_at = NOW()
-          `, [
-            cedula, ape1, ape2, nom, nomComp,
-            esRetirado ? 'R' : 'A', fechaNacimiento, direccion, telefono, sexo,
-            tipoFuncionario, fechaIngresoEntidad, fechaIngresoDistrito,
-            fondoSalud, fondoPension, fondoCesantias,
-            idPerno, tipoNomb, actoNomb, numActo,
-            fechaActoNomb, fechaRetiro, totalDevengado
-          ]);
-        } catch (ePerno) {
-          // Continuar
-        }
-
-        procesados++;
-
-        if (esRetirado) {
-          // Si este funcionario está retirado, NO debe ser titular de la plaza en el Censo de Plazas
-          retiradosOSinPlaza++;
-          // Si la plaza aún tenía su cédula como titular, desvincularla
-          await pool.query(`
-            UPDATE public.planta_personal_sjd SET
-              titular_cedula = NULL,
-              titular_nombre = 'VACANTE DEFINITIVA',
-              estado_cargo = 'VACANTE DEFINITIVA',
-              situacion_titular = 'VACANTE DEFINITIVA',
-              updated_at = NOW()
-            WHERE titular_cedula = $1
-          `, [cedula]);
-          continue;
-        }
-
-        // Si es ACTIVO, actualizar la plaza vinculando por cédula (titular o encargo)
-        const updateRes = await pool.query(`
-          UPDATE public.planta_personal_sjd SET
-            tipo_funcionario = COALESCE(NULLIF($1, ''), tipo_funcionario),
-            direccion = COALESCE(NULLIF($2, ''), direccion),
-            telefono = COALESCE(NULLIF($3, ''), telefono),
-            sexo = COALESCE(NULLIF($4, ''), sexo),
-            fondo_salud = COALESCE(NULLIF($5, ''), fondo_salud),
-            fondo_pension = COALESCE(NULLIF($6, ''), fondo_pension),
-            fondo_cesantias = COALESCE(NULLIF($7, ''), fondo_cesantias),
-            tipo_nombramiento = COALESCE(NULLIF($8, ''), tipo_nombramiento),
-            acto_nombramiento = COALESCE(NULLIF($9, ''), acto_nombramiento),
-            numero_acto_nombramiento = COALESCE(NULLIF($10, ''), numero_acto_nombramiento),
-            total_devengado = COALESCE($11, total_devengado),
-            fecha_nacimiento = COALESCE($12::date, fecha_nacimiento),
-            fecha_ingreso_entidad = COALESCE($13::date, fecha_ingreso_entidad),
-            fecha_ingreso_distrito = COALESCE($14::date, fecha_ingreso_distrito),
-            fecha_acto_nombramiento = COALESCE($15::date, fecha_acto_nombramiento),
-            updated_at = NOW()
-          WHERE titular_cedula = $16 OR encargo_cedula = $16 OR titular_cedula = $17 OR encargo_cedula = $17
-        `, [
-          tipoFuncionario, direccion, telefono, sexo, fondoSalud, fondoPension,
-          fondoCesantias, tipoNomb, actoNomb, numActo, totalDevengado,
-          fechaNacimiento, fechaIngresoEntidad, fechaIngresoDistrito, fechaActoNomb,
-          cedula, String(parseInt(cedula, 10) || '')
-        ]);
-
-        if (updateRes.rowCount > 0) {
-          actualizados += updateRes.rowCount;
-        } else if (idPerno && nomComp) {
-          // Si no coincidió la cédula pero existe el ID PERNO y el funcionario está ACTIVO,
-          // actualizar la plaza con el nuevo titular oficial actual
-          const updatePernoId = await pool.query(`
-            UPDATE public.planta_personal_sjd SET
-              titular_cedula = $1,
-              titular_nombre = $2,
-              tipo_funcionario = COALESCE(NULLIF($3, ''), tipo_funcionario),
-              direccion = COALESCE(NULLIF($4, ''), direccion),
-              telefono = COALESCE(NULLIF($5, ''), telefono),
-              sexo = COALESCE(NULLIF($6, ''), sexo),
-              fondo_salud = COALESCE(NULLIF($7, ''), fondo_salud),
-              fondo_pension = COALESCE(NULLIF($8, ''), fondo_pension),
-              fondo_cesantias = COALESCE(NULLIF($9, ''), fondo_cesantias),
-              tipo_nombramiento = COALESCE(NULLIF($10, ''), tipo_nombramiento),
-              acto_nombramiento = COALESCE(NULLIF($11, ''), acto_nombramiento),
-              numero_acto_nombramiento = COALESCE(NULLIF($12, ''), numero_acto_nombramiento),
-              total_devengado = COALESCE($13, total_devengado),
-              fecha_nacimiento = COALESCE($14::date, fecha_nacimiento),
-              fecha_ingreso_entidad = COALESCE($15::date, fecha_ingreso_entidad),
-              fecha_ingreso_distrito = COALESCE($16::date, fecha_ingreso_distrito),
-              fecha_acto_nombramiento = COALESCE($17::date, fecha_acto_nombramiento),
-              estado_cargo = 'OCUPADO',
-              updated_at = NOW()
-            WHERE id_perno = $18
-          `, [
-            cedula, nomComp, tipoFuncionario, direccion, telefono, sexo,
-            fondoSalud, fondoPension, fondoCesantias, tipoNomb, actoNomb,
-            numActo, totalDevengado, fechaNacimiento, fechaIngresoEntidad,
-            fechaIngresoDistrito, fechaActoNomb, idPerno
-          ]);
-
-          if (updatePernoId.rowCount > 0) {
-            actualizados += updatePernoId.rowCount;
-          } else {
-            retiradosOSinPlaza++;
-          }
-        } else {
-          retiradosOSinPlaza++;
-        }
-      }
+      const resPerno = await excelHelper.procesarExtraccionPerno(sheetPerno, pool);
 
       await pool.query(`
-        INSERT INTO public.nomina_import_logs (tipo_archivo, nombre_archivo, registros_procesados, registros_actualizados)
-        VALUES ('PLANTA_PERNO', $1, $2, $3)
-      `, [req.file.originalname, procesados, actualizados]);
+        INSERT INTO public.nomina_import_logs (tipo_archivo, nombre_archivo, registros_procesados, registros_actualizados, detalles)
+        VALUES ('PERNO', $1, $2, $3, $4)
+      `, [
+        nombreOrig,
+        resPerno.procesados + (resPlanta?.procesados || 0),
+        resPerno.actualizados + (resPlanta?.actualizados || 0),
+        JSON.stringify({ planta: resPlanta, perno: resPerno })
+      ]);
 
-      const detalleRetirados = retiradosOSinPlaza > 0 
-        ? ` (${retiradosOSinPlaza} registros corresponden a personal histórico o retirado sin cargo activo en la planta).` 
-        : '.';
+      let mensajeExito = `Archivo Planta Perno procesado exitosamente (${resPerno.sheetName}, Fila ${resPerno.rowHeader}): ${resPerno.actualizados} funcionarios vinculados y ${resPerno.procesados} registros en histórico.`;
+      if (resPlanta) {
+        mensajeExito += ` Además, se sincronizaron ${resPlanta.actualizados} plazas desde la hoja ${resPlanta.sheetName} (Fila ${resPlanta.rowHeader}).`;
+      }
 
       res.json({
         success: true,
-        mensaje: `Archivo de Planta Perno procesado exitosamente. Se sincronizaron datos de ${actualizados} funcionarios con cargo activo${detalleRetirados}`,
-        registros_procesados: procesados,
-        registros_actualizados: actualizados,
-        registros_retirados_o_sin_plaza: retiradosOSinPlaza,
-        advertencias: [],
-        total_advertencias: 0
+        mensaje: mensajeExito,
+        planta: resPlanta,
+        perno: resPerno,
+        registros_procesados: resPerno.procesados + (resPlanta?.procesados || 0),
+        registros_actualizados: resPerno.actualizados + (resPlanta?.actualizados || 0),
+        registros_retirados_o_sin_plaza: resPerno.retiradosOSinPlaza,
+        advertencias: resPerno.advertencias.slice(0, 10),
+        total_advertencias: resPerno.advertencias.length
       });
     } catch (error) {
       console.error('Error procesando archivo de planta perno:', error);
@@ -2486,6 +1925,10 @@ Secretaría Jurídica Distrital
           const depCargo = cleanDependencia(getVal(row.getCell(29)));
           const depFuncional = cleanDependencia(getVal(row.getCell(30))) || depCargo;
 
+          // Columna 10 y 11: Sexo y edad de la planta oficial
+          const sexoPlanta = cleanText(getVal(row.getCell(10)));
+          const edadPlanta = parseInt(getVal(row.getCell(11)), 10) || null;
+
           // Columna 31: Propósito
           const proposito = cleanText(getVal(row.getCell(31)));
 
@@ -2494,6 +1937,9 @@ Secretaría Jurídica Distrital
 
           // Columna 33: Requisitos
           const requisitos = cleanText(getVal(row.getCell(33)));
+
+          // Columna 34: Páginas Manual de Funciones / Resolución del Archivo de Planta Oficial
+          const manualFuncionesRaw = cleanText(getVal(row.getCell(34))) || null;
 
           // Columna 35: Asignación básica
           const asignacion = cleanMoney(getVal(row.getCell(35)));
@@ -2538,10 +1984,10 @@ Secretaría Jurídica Distrital
               requisitos, asignacion_basica, estado_cargo, titular_cedula,
               titular_nombre, tipo_vinculacion, situacion_administrativa,
               situacion_titular, encargo_cedula, encargo_nombre, es_encargo,
-              opec, id_escalera, peldano_escalera, updated_at
+              opec, id_escalera, peldano_escalera, manual_funciones, resolucion_manual, edad, sexo, updated_at
             ) VALUES (
               $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-              $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, NOW()
+              $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, NOW()
             )
             ON CONFLICT (id_plaza) DO UPDATE SET
               nivel = EXCLUDED.nivel,
@@ -2566,6 +2012,10 @@ Secretaría Jurídica Distrital
               opec = EXCLUDED.opec,
               id_escalera = EXCLUDED.id_escalera,
               peldano_escalera = EXCLUDED.peldano_escalera,
+              manual_funciones = EXCLUDED.manual_funciones,
+              resolucion_manual = EXCLUDED.resolucion_manual,
+              edad = COALESCE(EXCLUDED.edad, public.planta_personal_sjd.edad),
+              sexo = COALESCE(EXCLUDED.sexo, public.planta_personal_sjd.sexo),
               updated_at = NOW();
           `, [
             idPlaza, parseInt(getVal(row.getCell(2)), 10) || null, parseInt(getVal(row.getCell(3)), 10) || null,
@@ -2574,7 +2024,8 @@ Secretaría Jurídica Distrital
             estadoCargo, titularCedula, titularNombre, tipoVinculacion, situacionAdmin,
             situacionTitular || (titularNombre === 'VACANTE DEFINITIVA' ? 'VACANTE DEFINITIVA' : 'EN PROPIEDAD'),
             encargoCedula, encargoNombre, esEncargo,
-            opec, idEscalera, peldanoEscalera
+            opec, idEscalera, peldanoEscalera,
+            manualFuncionesRaw, manualFuncionesRaw, edadPlanta, sexoPlanta
           ]);
           countPlanta++;
         }
@@ -2587,6 +2038,7 @@ Secretaría Jurídica Distrital
           const cedula = String(getVal(row.getCell(1)) || '').trim();
           if (!cedula) continue;
 
+          const fechaNac = cleanDate(getVal(row.getCell(6)));
           const tipoFunc = String(getVal(row.getCell(15)) || '').trim();
           const dir = String(getVal(row.getCell(7)) || '').trim();
           const tel = String(getVal(row.getCell(8)) || '').trim();
@@ -2605,9 +2057,10 @@ Secretaría Jurídica Distrital
               fondo_salud = $5, fondo_pension = $6, fondo_cesantias = $7,
               tipo_nombramiento = $8, acto_nombramiento = $9, numero_acto_nombramiento = $10,
               total_devengado = COALESCE($11, total_devengado),
+              fecha_nacimiento = COALESCE($13, fecha_nacimiento),
               updated_at = NOW()
-            WHERE titular_cedula = $12
-          `, [tipoFunc, dir, tel, sexo, eps, pension, cesantias, tipoNomb, actoNomb, numActo, totalDevengado, cedula]);
+            WHERE titular_cedula = $12 OR encargo_cedula = $12
+          `, [tipoFunc, dir, tel, sexo, eps, pension, cesantias, tipoNomb, actoNomb, numActo, totalDevengado, cedula, fechaNac]);
 
           if (u.rowCount > 0) countPerno += u.rowCount;
         }

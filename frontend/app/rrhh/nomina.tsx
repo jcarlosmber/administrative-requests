@@ -161,11 +161,13 @@ export default function NominaScreen() {
   const [infoModalAdvertencias, setInfoModalAdvertencias] = useState<string[]>([]);
 
   // Carga de Archivos
+  const [cargandoArchivoCompleto, setCargandoArchivoCompleto] = useState(false);
+  const [nombreArchivoCompleto, setNombreArchivoCompleto] = useState<string | null>(null);
   const [cargandoArchivoPlanta, setCargandoArchivoPlanta] = useState(false);
   const [cargandoArchivoPerno, setCargandoArchivoPerno] = useState(false);
   const [nombreArchivoPlanta, setNombreArchivoPlanta] = useState<string | null>(null);
   const [nombreArchivoPerno, setNombreArchivoPerno] = useState<string | null>(null);
-  const [guiaArchivoActiva, setGuiaArchivoActiva] = useState<'planta' | 'perno' | 'reglas'>('planta');
+  const [guiaArchivoActiva, setGuiaArchivoActiva] = useState<'completo' | 'planta' | 'perno' | 'reglas'>('completo');
 
   const mostrarModal = (
     titulo: string,
@@ -1126,12 +1128,12 @@ export default function NominaScreen() {
     filtroSoloVacantesReporte,
   ]);
 
-  // 4. Lista de Situaciones Administrativas (en cascada)
+  // 4. Lista de Tipos de Vinculación al Cargo / SIDEAP (en cascada)
   const listaSituaciones = useMemo(() => {
     const base = todasLasPlazas.filter((p) => coincideCriteriosCenso(p, 'situacion'));
     const map = new Map<string, number>();
     base.forEach((p) => {
-      const sit = (p.situacion_administrativa || p.situacion_titular || p.tipo_vinculacion || '').trim() || 'EN PROPIEDAD';
+      const sit = (p.tipo_vinculacion || p.situacion_titular || p.situacion_administrativa || '').trim() || 'EN PROPIEDAD';
       map.set(sit, (map.get(sit) || 0) + 1);
     });
     return Array.from(map.entries())
@@ -1270,7 +1272,7 @@ export default function NominaScreen() {
       .sort((a, b) => (Number(a.peldano_escalera) || 999) - (Number(b.peldano_escalera) || 999));
   }, [plazaModal, todasLasPlazas]);
 
-  // 9. Datos enriquecidos de la plaza seleccionada con el Manual de Funciones y PERNO
+  // 9. Datos enriquecidos de la plaza seleccionada con el Manual de Funciones del Archivo de Planta Oficial y PERNO
   const plazaModalEnriquecida = useMemo(() => {
     if (!plazaModal) return null;
     const mockMatch = (mockPlazasData as any[]).find(
@@ -1281,6 +1283,61 @@ export default function NominaScreen() {
           String(m.grado) === String(plazaModal.grado))
     );
 
+    // Cédulas limpias para búsqueda en PERNO
+    const titularCedulaLimpia = plazaModal.titular_cedula
+      ? String(plazaModal.titular_cedula).trim()
+      : mockMatch?.titular_cedula
+      ? String(mockMatch.titular_cedula).trim()
+      : '';
+    const encargoCedulaLimpia = plazaModal.encargo_cedula
+      ? String(plazaModal.encargo_cedula).trim()
+      : mockMatch?.encargo_cedula
+      ? String(mockMatch.encargo_cedula).trim()
+      : '';
+
+    // Buscar en todoElPerno
+    const pernoTitular = titularCedulaLimpia
+      ? todoElPerno.find((p) => String(p.cedula).trim() === titularCedulaLimpia)
+      : null;
+
+    const pernoEncargo = encargoCedulaLimpia
+      ? todoElPerno.find((p) => String(p.cedula).trim() === encargoCedulaLimpia)
+      : null;
+
+    const pernoPorPosicion = plazaModal.id_perno
+      ? todoElPerno.find((p) => p.posicion_planta === plazaModal.id_perno)
+      : null;
+
+    // Servidor activo principal (el que desempeña el cargo: encargo primero, si no titular, o por posición de nómina)
+    const pernoActivo = pernoEncargo || pernoTitular || pernoPorPosicion;
+
+    // Edades calculadas desde la fecha de nacimiento registrada en PERNO
+    const edadTitular = pernoTitular?.fecha_nacimiento
+      ? calcEdad(pernoTitular.fecha_nacimiento)
+      : (!plazaModal.es_encargo && (plazaModal.edad || mockMatch?.edad) ? Number(plazaModal.edad || mockMatch?.edad) : null);
+
+    const edadEncargo = pernoEncargo?.fecha_nacimiento
+      ? calcEdad(pernoEncargo.fecha_nacimiento)
+      : (plazaModal.es_encargo && (plazaModal.edad || mockMatch?.edad) ? Number(plazaModal.edad || mockMatch?.edad) : null);
+
+    const edadActiva = pernoActivo?.fecha_nacimiento
+      ? calcEdad(pernoActivo.fecha_nacimiento)
+      : (plazaModal.edad || mockMatch?.edad || (pernoTitular?.fecha_nacimiento ? calcEdad(pernoTitular.fecha_nacimiento) : null));
+
+    // Manual de Funciones textual del Archivo de Planta Oficial (Columna AH: Páginas Manual de Funciones)
+    const manualOficial =
+      plazaModal.manual_funciones ||
+      mockMatch?.manual_funciones ||
+      plazaModal.resolucion_manual ||
+      mockMatch?.resolucion_manual ||
+      'No registrado en Columna AH';
+
+    const resolucionOficial =
+      plazaModal.resolucion_manual ||
+      mockMatch?.resolucion_manual ||
+      manualOficial;
+
+    // Funciones esenciales del empleo (Columna AF del Archivo de Planta Oficial)
     const funcionesArray: string[] = (() => {
       if (Array.isArray(plazaModal.funciones) && plazaModal.funciones.length > 0) {
         return plazaModal.funciones;
@@ -1300,6 +1357,7 @@ export default function NominaScreen() {
       ];
     })();
 
+    // Propósito principal del empleo (Columna AE del Archivo de Planta Oficial)
     const propositoTexto: string =
       plazaModal.proposito ||
       mockMatch?.proposito ||
@@ -1307,6 +1365,7 @@ export default function NominaScreen() {
         plazaModal.dependencia_cargo || 'dependencia'
       }, asegurando la eficiencia, eficacia y cumplimiento normativo institucional de la Secretaría Jurídica Distrital.`;
 
+    // Requisitos oficiales del cargo (Columna AG del Archivo de Planta Oficial)
     const requisitosTexto: string =
       plazaModal.requisitos ||
       mockMatch?.requisitos ||
@@ -1317,40 +1376,63 @@ export default function NominaScreen() {
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
-      fondo_salud: plazaModal.fondo_salud || mockMatch?.fondo_salud || 'No reportada',
-      fondo_pension: plazaModal.fondo_pension || mockMatch?.fondo_pension || 'No reportado',
-      fondo_cesantias: plazaModal.fondo_cesantias || mockMatch?.fondo_cesantias || 'No reportado',
-      telefono: plazaModal.telefono || mockMatch?.telefono || 'No registrado',
-      direccion: plazaModal.direccion || mockMatch?.direccion || 'No registrada',
-      sexo: plazaModal.sexo || mockMatch?.sexo || '---',
-      tipo_funcionario: plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA',
+      manual_funciones: manualOficial,
+      resolucion_manual: resolucionOficial,
+      // Datos de las personas en PERNO
+      perno_activo: pernoActivo,
+      perno_titular: pernoTitular,
+      perno_encargo: pernoEncargo,
+      edad_activa: edadActiva,
+      edad_titular: edadTitular,
+      edad_encargo: edadEncargo,
+      fecha_nacimiento_activa: pernoActivo?.fecha_nacimiento || null,
+      fecha_nacimiento_titular: pernoTitular?.fecha_nacimiento || null,
+      fecha_nacimiento_encargo: pernoEncargo?.fecha_nacimiento || null,
+      tipo_sangre_activa: pernoActivo?.tipo_sangre ? `${pernoActivo.tipo_sangre} ${pernoActivo.rh || ''}`.trim() : null,
+      fondo_salud: pernoActivo?.fondo_salud || plazaModal.fondo_salud || mockMatch?.fondo_salud || 'No reportada',
+      fondo_pension: pernoActivo?.fondo_pension || plazaModal.fondo_pension || mockMatch?.fondo_pension || 'No reportado',
+      fondo_cesantias: pernoActivo?.fondo_cesantias || plazaModal.fondo_cesantias || mockMatch?.fondo_cesantias || 'No reportado',
+      telefono: pernoActivo?.telefono || plazaModal.telefono || mockMatch?.telefono || 'No registrado',
+      direccion: pernoActivo?.direccion || plazaModal.direccion || mockMatch?.direccion || 'No registrada',
+      sexo: pernoActivo?.sexo || plazaModal.sexo || mockMatch?.sexo || '---',
+      tipo_funcionario: pernoActivo?.tipo_funcionario || plazaModal.tipo_funcionario || mockMatch?.tipo_funcionario || 'EMPLEADO DE PLANTA',
       acto_nombramiento:
+        pernoActivo?.acto_nombramiento ||
         plazaModal.acto_nombramiento ||
         mockMatch?.acto_nombramiento ||
         plazaModal.numero_acto_nombramiento ||
         'Resolución institucional',
       numero_acto_nombramiento:
-        plazaModal.numero_acto_nombramiento || mockMatch?.numero_acto_nombramiento || '---',
+        pernoActivo?.numero_acto_nombramiento ||
+        plazaModal.numero_acto_nombramiento ||
+        mockMatch?.numero_acto_nombramiento ||
+        '---',
       fecha_acto_nombramiento:
-        plazaModal.fecha_acto_nombramiento || mockMatch?.fecha_acto_nombramiento || null,
+        pernoActivo?.fecha_acto_nombramiento ||
+        plazaModal.fecha_acto_nombramiento ||
+        mockMatch?.fecha_acto_nombramiento ||
+        null,
       fecha_ingreso_entidad:
-        (plazaModal as any).fecha_ingreso_entidad || mockMatch?.fecha_ingreso_entidad || null,
+        pernoActivo?.fecha_ingreso_entidad ||
+        (plazaModal as any).fecha_ingreso_entidad ||
+        mockMatch?.fecha_ingreso_entidad ||
+        null,
       fecha_ingreso_distrito:
-        (plazaModal as any).fecha_ingreso_distrito || mockMatch?.fecha_ingreso_distrito || null,
+        pernoActivo?.fecha_ingreso_distrito ||
+        (plazaModal as any).fecha_ingreso_distrito ||
+        mockMatch?.fecha_ingreso_distrito ||
+        null,
       total_devengado:
+        pernoActivo?.total_devengado ||
         plazaModal.total_devengado ||
         (mockMatch?.total_devengado ? Number(mockMatch.total_devengado) : null) ||
         (plazaModal.asignacion_basica ? Number(plazaModal.asignacion_basica) : null),
-      resolucion_manual:
-        plazaModal.resolucion_manual || mockMatch?.resolucion_manual || plazaModal.manual_funciones || mockMatch?.manual_funciones || 'RES. 085 de 2020',
-      manual_funciones:
-        plazaModal.manual_funciones || mockMatch?.manual_funciones || plazaModal.resolucion_manual || mockMatch?.resolucion_manual || 'RES. 085 de 2020',
       pv: plazaModal.pv || mockMatch?.pv || null,
       pp_oe: plazaModal.pp_oe || mockMatch?.pp_oe || null,
       vt_lm: plazaModal.vt_lm || mockMatch?.vt_lm || null,
       vt_lnr: plazaModal.vt_lnr || mockMatch?.vt_lnr || null,
     };
-  }, [plazaModal]);
+  }, [plazaModal, todoElPerno]);
 
   // Funciones del Modal de Filtro
   const abrirPicker = (tipo: PickerTipo, origen: 'censo' | 'reporte' = 'censo') => {
@@ -1376,7 +1458,7 @@ export default function NominaScreen() {
       case 'dependencia':
         return 'Seleccionar Dependencia';
       case 'situacion':
-        return 'Seleccionar Situación Administrativa Titular del Cargo';
+        return 'Seleccionar Tipo de Vinculación al Cargo / SIDEAP';
       case 'sideap':
         return 'Seleccionar por ID SIDEAP';
       case 'perno':
@@ -1400,9 +1482,9 @@ export default function NominaScreen() {
     if (pickerTipo === 'codigoGrado') {
       return listaCodigoGrado.map((cg) => ({
         valor: cg.valor,
-        etiquetaPrincipal: cg.etiqueta,
+        etiquetaPrincipal: `${cg.etiqueta} • ${cg.denominacionCargo}`,
         denominacionCargo: cg.denominacionCargo,
-        etiquetaSecundaria: `${cg.denominacionCargo} • ${cg.count} plaza(s) disponibles`,
+        etiquetaSecundaria: `${cg.count} plaza(s) disponibles`,
         badge: cg.nivelesTexto || undefined,
         seleccionado: codigosGradosSeleccionados.includes(cg.valor),
       }));
@@ -1419,11 +1501,11 @@ export default function NominaScreen() {
     if (pickerTipo === 'situacion') {
       return listaSituaciones.map((sit) => {
         const isVacante = sit.valor.toUpperCase().includes('VACANTE');
-        const isPropiedad = sit.valor.toUpperCase().includes('PROPIEDAD');
+        const isPropiedad = sit.valor.toUpperCase().includes('PROPIEDAD') || sit.valor.toUpperCase().includes('CARRERA');
         return {
           valor: sit.valor,
           etiquetaPrincipal: sit.etiqueta,
-          etiquetaSecundaria: `${sit.count} plaza(s) registradas con esta situación`,
+          etiquetaSecundaria: `${sit.count} plaza(s) vinculadas`,
           badge: isVacante ? 'VACANCIA' : isPropiedad ? 'EN PROPIEDAD' : 'ACTIVO',
           seleccionado: filtroSituacion.toLowerCase() === sit.valor.toLowerCase(),
         };
@@ -1540,6 +1622,49 @@ export default function NominaScreen() {
     });
     return conteo;
   }, [plazas]);
+
+  // Manejo de carga de Libro Completo (PLANTA SJD + PLANTA PERNO)
+  const handleSeleccionarArchivoCompleto = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel',
+          '*/*',
+        ],
+        copyToCacheDirectory: true,
+      });
+
+      if (res.canceled || !res.assets || res.assets.length === 0) return;
+
+      const file = res.assets[0];
+      setNombreArchivoCompleto(file.name);
+      setCargandoArchivoCompleto(true);
+
+      const resultado = await nominaService.uploadCompleto({
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        file: (file as any).file,
+      });
+
+      if (resultado.success) {
+        mostrarModal(
+          'Libro Completo de Nómina Procesado',
+          resultado.mensaje || 'Se sincronizaron ambas hojas (PLANTA SJD y PLANTA PERNO) correctamente.',
+          resultado.advertencias && resultado.advertencias.length > 0 ? 'info' : 'success',
+          resultado.advertencias || []
+        );
+        cargarDatos();
+      } else {
+        mostrarModal('Error de Validación', resultado.mensaje || (resultado as any).error || 'No se pudo procesar el archivo.', 'error');
+      }
+    } catch (e: any) {
+      mostrarModal('Error al procesar', 'Ocurrió un error leyendo el libro de nómina: ' + e.message, 'error');
+    } finally {
+      setCargandoArchivoCompleto(false);
+    }
+  };
 
   // Manejo de carga de archivo 1 (Planta)
   const handleSeleccionarArchivoPlanta = async () => {
@@ -3051,12 +3176,12 @@ export default function NominaScreen() {
                     </View>
                   </Pressable>
 
-                  {/* 4. Modal: Situación Administrativa Titular del Cargo */}
+                  {/* 4. Modal: Tipo de Vinculación al Cargo / SIDEAP */}
                   <Pressable
                     onPress={() => abrirPicker('situacion')}
                     style={({ pressed }) => ({
                       flex: 1,
-                      minWidth: isTablet ? 220 : '100%',
+                      minWidth: isTablet ? 230 : '100%',
                       backgroundColor: filtroSituacion ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
                       borderWidth: 1,
                       borderColor: filtroSituacion ? THEME.marca600 : THEME.slate200,
@@ -3067,7 +3192,7 @@ export default function NominaScreen() {
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                       <Text style={{ fontSize: 9.5, fontWeight: '700', color: filtroSituacion ? THEME.marca700 : THEME.slate400, textTransform: 'uppercase' }}>
-                        Situación Adm. Titular
+                        TIPO DE VINCULACIÓN AL CARGO/ SIDEAP
                       </Text>
                       {filtroSituacion ? (
                         <Pressable
@@ -3085,7 +3210,7 @@ export default function NominaScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
                         <Ionicons name="document-text-outline" size={14} color={filtroSituacion ? THEME.marca700 : THEME.slate400} />
                         <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroSituacion ? '600' : '400', color: filtroSituacion ? THEME.marca900 : THEME.slate600 }}>
-                          {filtroSituacion || 'Todas las situaciones'}
+                          {filtroSituacion || 'Todas las vinculaciones'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
@@ -3998,7 +4123,123 @@ export default function NominaScreen() {
                   </Text>
                 </View>
 
-                {/* Tarjetas de Carga Rápida */}
+                {/* TARJETA DESTACADA: CARGA INTEGRAL DEL LIBRO COMPLETO (PLANTA SJD + PLANTA PERNO) */}
+                <View
+                  style={{
+                    backgroundColor: '#EFF6FF',
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                    borderColor: '#93C5FD',
+                    padding: 22,
+                    marginTop: 20,
+                    width: '100%',
+                    shadowColor: '#1D4ED8',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.08,
+                    shadowRadius: 8,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View
+                        style={{
+                          backgroundColor: '#1E40AF',
+                          width: 38,
+                          height: 38,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="layers" size={22} color={THEME.white} />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E3A8A' }}>
+                          Carga Integral de Nómina (Libro Completo)
+                        </Text>
+                        <Text style={{ fontSize: 12, color: '#3B82F6', fontWeight: '500' }}>
+                          Extrae automáticamente la hoja PLANTA SJD y la hoja PLANTA PERNO
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: '#DBEAFE',
+                        borderColor: '#BFDBFE',
+                        borderWidth: 1,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 9999,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#1D4ED8' }}>
+                        Opción Recomendada
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={{ fontSize: 12.5, color: THEME.slate700, lineHeight: 19, marginBottom: 14 }}>
+                    Ideal cuando te envían el archivo maestro de nómina (ejemplo: <Text style={{ fontWeight: '700', color: '#1E3A8A' }}>PLANTA DE PERSONAL -SJD_...xlsx</Text>).
+                    El sistema detecta de forma inteligente:{'\n'}
+                    • <Text style={{ fontWeight: '700', color: THEME.slate900 }}>Hoja PLANTA SJD:</Text> Extrae las 170 plazas oficiales (cabecera detectada automáticamente desde la Fila 4).{'\n'}
+                    • <Text style={{ fontWeight: '700', color: THEME.slate900 }}>Hoja PLANTA PERNO:</Text> Extrae afiliaciones EPS, pensión, cesantías y nombramientos (cabecera detectada automáticamente desde la Fila 9).{'\n'}
+                    • <Text style={{ fontWeight: '700', color: '#1E40AF' }}>Flexibilidad:</Text> Localiza los títulos y columnas exactas automáticamente aunque cambie el número de fila en futuras versiones.
+                  </Text>
+
+                  <View
+                    style={{
+                      flexDirection: isTablet ? 'row' : 'column',
+                      alignItems: isTablet ? 'center' : 'stretch',
+                      gap: 14,
+                      backgroundColor: THEME.white,
+                      padding: 14,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                      borderStyle: 'dashed',
+                    }}
+                  >
+                    <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Ionicons name="document-attach-outline" size={26} color="#2563EB" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800 }} numberOfLines={1}>
+                          {nombreArchivoCompleto || 'Seleccionar archivo maestro de nómina (.xlsx)'}
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                          Sincroniza simultáneamente el Censo de Plazas y la Base de Personal
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      onPress={handleSeleccionarArchivoCompleto}
+                      disabled={cargandoArchivoCompleto}
+                      style={({ pressed }) => ({
+                        backgroundColor: '#1E40AF',
+                        paddingVertical: 10,
+                        paddingHorizontal: 20,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: 220,
+                        opacity: pressed || cargandoArchivoCompleto ? 0.8 : 1,
+                      })}
+                    >
+                      {cargandoArchivoCompleto ? (
+                        <ActivityIndicator size="small" color={THEME.white} />
+                      ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="cloud-upload" size={17} color={THEME.white} />
+                          <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '700' }}>
+                            Subir Libro Completo (.xlsx)
+                          </Text>
+                        </View>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
+
+                {/* Tarjetas de Carga Rápida Individual */}
                 <View
                   style={{
                     flexDirection: isTablet ? 'row' : 'column',
@@ -4049,7 +4290,7 @@ export default function NominaScreen() {
                       </View>
 
                       <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 12 }}>
-                        Hoja requerida: <Text style={{ fontWeight: '700' }}>PLANTA SJD (2)</Text> o <Text style={{ fontWeight: '700' }}>PLANTA SJD</Text>. Encabezados en <Text style={{ fontWeight: '700' }}>Fila 4</Text>, datos desde <Text style={{ fontWeight: '700' }}>Fila 5</Text>.
+                        Hoja requerida: <Text style={{ fontWeight: '700' }}>PLANTA SJD</Text>. Encabezados detectados automáticamente desde <Text style={{ fontWeight: '700' }}>Fila 4</Text> (adaptable). Sincroniza PERNO si existe en el archivo.
                       </Text>
 
                       <View
@@ -4169,7 +4410,7 @@ export default function NominaScreen() {
                       </View>
 
                       <Text style={{ fontSize: 12, color: THEME.slate600, lineHeight: 18, marginBottom: 12 }}>
-                        Hoja requerida: <Text style={{ fontWeight: '700' }}>PLANTA PERNO</Text>. Encabezados en <Text style={{ fontWeight: '700' }}>Fila 9</Text>, datos desde <Text style={{ fontWeight: '700' }}>Fila 10</Text>.
+                        Hoja requerida: <Text style={{ fontWeight: '700' }}>PLANTA PERNO</Text>. Encabezados detectados automáticamente desde <Text style={{ fontWeight: '700' }}>Fila 9</Text> (adaptable). Sincroniza PLANTA si existe en el archivo.
                       </Text>
 
                       <View
@@ -6799,7 +7040,6 @@ export default function NominaScreen() {
                 ) : (
                   opcionesModalFiltradas.map((item, idx) => {
                     const seleccionado = item.seleccionado;
-                    const esMulti = pickerTipo === 'codigoGrado';
 
                     return (
                       <Pressable
@@ -6808,8 +7048,9 @@ export default function NominaScreen() {
                         style={({ pressed }) => ({
                           flexDirection: 'row',
                           alignItems: 'center',
+                          justifyContent: 'space-between',
                           paddingVertical: 12,
-                          paddingHorizontal: 18,
+                          paddingHorizontal: 20,
                           backgroundColor: seleccionado
                             ? THEME.marca50
                             : pressed
@@ -6817,67 +7058,53 @@ export default function NominaScreen() {
                             : THEME.white,
                           borderBottomWidth: 1,
                           borderBottomColor: THEME.slate100,
-                          gap: 12,
                         })}
                       >
-                        {/* Checkbox en modo múltiple */}
-                        {esMulti && (
-                          <Ionicons
-                            name={seleccionado ? 'checkbox' : 'square-outline'}
-                            size={21}
-                            color={seleccionado ? THEME.marca700 : THEME.slate400}
-                          />
-                        )}
-
-                        <View style={{ flex: 1 }}>
-                          {/* Fila con código, grado y badge */}
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>
-                                <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca900 }}>
-                                  {item.etiquetaPrincipal}
-                                </Text>
-                              </View>
-                              {item.badge ? (
-                                <View
-                                  style={{
-                                    backgroundColor: THEME.slate100,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 2,
-                                    borderRadius: 4,
-                                  }}
-                                >
-                                  <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.slate600 }}>
-                                    {item.badge}
-                                  </Text>
-                                </View>
-                              ) : null}
-                            </View>
-
-                            {!esMulti && seleccionado && (
-                              <Ionicons name="checkmark-circle" size={19} color={THEME.marca600} />
-                            )}
-                          </View>
-
-                          {/* Denominación del cargo visible en modo código y grado */}
-                          {esMulti && (item as any).denominacionCargo ? (
-                            <Text
-                              style={{
-                                fontSize: 13,
-                                fontWeight: '700',
-                                color: seleccionado ? THEME.marca900 : THEME.slate800,
-                                marginTop: 4,
-                              }}
-                            >
-                              {(item as any).denominacionCargo}
-                            </Text>
-                          ) : null}
-
+                        <View style={{ flex: 1, paddingRight: 12 }}>
+                          <Text
+                            style={{
+                              fontSize: 13,
+                              fontWeight: seleccionado ? '700' : '500',
+                              color: seleccionado ? THEME.marca800 : THEME.slate800,
+                            }}
+                          >
+                            {item.etiquetaPrincipal}
+                          </Text>
                           {item.etiquetaSecundaria ? (
                             <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
                               {item.etiquetaSecundaria}
                             </Text>
                           ) : null}
+                        </View>
+
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          {item.badge ? (
+                            <View
+                              style={{
+                                backgroundColor: THEME.slate100,
+                                paddingHorizontal: 7,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.slate600 }}>
+                                {item.badge}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {seleccionado ? (
+                            <Ionicons name="checkmark-circle" size={19} color={THEME.marca600} />
+                          ) : (
+                            <View
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: 9,
+                                borderWidth: 1,
+                                borderColor: THEME.slate300,
+                              }}
+                            />
+                          )}
                         </View>
                       </Pressable>
                     );
@@ -7037,7 +7264,15 @@ export default function NominaScreen() {
                     {(plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual) ? (
                       <View style={{ backgroundColor: 'rgba(254, 243, 199, 0.25)', borderColor: 'rgba(253, 230, 138, 0.4)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
                         <Text style={{ color: '#FEF3C7', fontSize: 10, fontWeight: '700' }}>
-                          Manual Col. AH: {plazaModalEnriquecida.manual_funciones || plazaModalEnriquecida.resolucion_manual}
+                          Manual Planta Oficial: {plazaModalEnriquecida.manual_funciones || plazaModalEnriquecida.resolucion_manual}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {plazaModalEnriquecida?.edad_activa ? (
+                      <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(110, 231, 183, 0.4)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="person-outline" size={11} color="#A7F3D0" />
+                        <Text style={{ color: '#D1FAE5', fontSize: 10, fontWeight: '700' }}>
+                          {plazaModalEnriquecida.edad_activa} años (PERNO)
                         </Text>
                       </View>
                     ) : null}
@@ -7403,7 +7638,7 @@ export default function NominaScreen() {
                       </View>
                     ) : null}
 
-                    {/* Manual de Funciones Oficial (Columna AH) */}
+                    {/* Manual de Funciones Oficial (Archivo de Planta Oficial - Columna AH) */}
                     <View
                       style={{
                         width: '100%',
@@ -7419,18 +7654,18 @@ export default function NominaScreen() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="bookmark-outline" size={15} color={THEME.marca700} />
                           <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
-                            Manual de Funciones Oficial (Columna AH)
+                            Manual de Funciones en Archivo de Planta Oficial (Columna AH)
                           </Text>
                         </View>
                         <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1E40AF' }}>COLUMNA AH</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1E40AF' }}>PLANTA OFICIAL · COL. AH</Text>
                         </View>
                       </View>
                       <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate900, marginTop: 4 }}>
                         {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No especificado en Columna AH'}
                       </Text>
                       <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
-                        Rango de folios y resolución aprobatoria del Manual Específico de Funciones y de Competencias Laborales de la SJD.
+                        Páginas del Manual Específico de Funciones y de Competencias Laborales de la SJD registradas textualmente en la Columna AH del Archivo de Planta Oficial.
                       </Text>
                     </View>
                   </View>
@@ -7483,6 +7718,23 @@ export default function NominaScreen() {
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
                               {plazaModal.encargo_cedula ? `C.C. ${plazaModal.encargo_cedula}` : 'No registrada'}
                             </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#B45309' }}>
+                                {plazaModalEnriquecida?.edad_encargo ? `${plazaModalEnriquecida.edad_encargo} años` : (plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : 'No registrada')}
+                              </Text>
+                              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#92400E' }}>PERNO</Text>
+                              </View>
+                            </View>
+                            {plazaModalEnriquecida?.fecha_nacimiento_encargo ? (
+                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                F. Nac: {plazaModalEnriquecida.fecha_nacimiento_encargo}
+                              </Text>
+                            ) : null}
                           </View>
 
                           <View>
@@ -7545,6 +7797,23 @@ export default function NominaScreen() {
                           </View>
 
                           <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                                {plazaModalEnriquecida?.edad_titular ? `${plazaModalEnriquecida.edad_titular} años` : 'No registrada'}
+                              </Text>
+                              <View style={{ backgroundColor: THEME.slate200, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>PERNO</Text>
+                              </View>
+                            </View>
+                            {plazaModalEnriquecida?.fecha_nacimiento_titular ? (
+                              <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                F. Nac: {plazaModalEnriquecida.fecha_nacimiento_titular}
+                              </Text>
+                            ) : null}
+                          </View>
+
+                          <View>
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Situación del Titular</Text>
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 1 }}>
                               {cleanLabel(plazaModal.situacion_titular, 'En comisión o encargo en otro empleo')}
@@ -7587,6 +7856,25 @@ export default function NominaScreen() {
                         <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                           {plazaModal?.titular_cedula ? `C.C. ${plazaModal.titular_cedula}` : '---'}
                         </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Edad de la Persona</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                            {plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : '---'}
+                          </Text>
+                          {plazaModalEnriquecida?.edad_activa ? (
+                            <View style={{ backgroundColor: THEME.marca50, borderColor: THEME.marca100, borderWidth: 1, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca700 }}>PERNO</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        {plazaModalEnriquecida?.fecha_nacimiento_activa ? (
+                          <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                            F. Nac: {plazaModalEnriquecida.fecha_nacimiento_activa}
+                          </Text>
+                        ) : null}
                       </View>
 
                       <View style={{ flex: 1, minWidth: 140 }}>
@@ -7657,7 +7945,7 @@ export default function NominaScreen() {
               {/* ========================================================= */}
               {modalTab === 'funciones' && (
                 <ScrollView style={{ padding: 20 }}>
-                  {/* Banner de identificación del cargo */}
+                  {/* Banner de identificación del cargo y manual de planta oficial */}
                   <View
                     style={{
                       backgroundColor: '#F8FAFC',
@@ -7679,7 +7967,7 @@ export default function NominaScreen() {
                     >
                       <View>
                         <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase' }}>
-                          Manual Específico de Funciones y Competencias Laborales
+                          Manual de Funciones · Archivo de Planta Oficial SJD
                         </Text>
                         <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
                           {plazaModal?.cargo} · Cód. {plazaModal?.codigo} Gr. {plazaModal?.grado}
@@ -7708,7 +7996,7 @@ export default function NominaScreen() {
                         ) : null}
                         <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                           <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
-                            {plazaModalEnriquecida?.funciones?.length || 0} Funciones (Cols. AH y AF)
+                            {plazaModalEnriquecida?.funciones?.length || 0} Funciones Oficiales (Cols. AH y AF)
                           </Text>
                         </View>
                       </View>
@@ -7737,7 +8025,7 @@ export default function NominaScreen() {
                     ) : null}
                   </View>
 
-                  {/* Tarjeta Destacada: Manual de Funciones Textual (Columna AH) */}
+                  {/* Tarjeta Destacada: Manual de Funciones en Archivo de Planta Oficial (Columna AH) */}
                   <View
                     style={{
                       backgroundColor: '#FEF3C7',
@@ -7764,15 +8052,15 @@ export default function NominaScreen() {
                         </View>
                         <View>
                           <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#92400E', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            Manual de Funciones Textual (Columna AH)
+                            Manual de Funciones en Archivo de Planta Oficial (Columna AH)
                           </Text>
                           <Text style={{ fontSize: 11, color: '#B45309' }}>
-                            Folios y Acto Administrativo del Manual Específico
+                            Páginas del Manual Específico registradas en la Planta Oficial
                           </Text>
                         </View>
                       </View>
                       <View style={{ backgroundColor: '#FDE68A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#78350F' }}>COLUMNA AH OFICIAL</Text>
+                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#78350F' }}>PLANTA OFICIAL · COL. AH</Text>
                       </View>
                     </View>
 
@@ -7787,7 +8075,7 @@ export default function NominaScreen() {
                       }}
                     >
                       <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Texto Oficial en Planta (Columna AH - Páginas Manual de Funciones):
+                        Texto Oficial en Archivo de Planta (Columna AH - Páginas Manual de Funciones):
                       </Text>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#78350F', marginTop: 4 }}>
                         {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No registrado en Columna AH'}
@@ -7795,11 +8083,11 @@ export default function NominaScreen() {
                     </View>
 
                     <Text style={{ fontSize: 11.5, color: '#92400E', marginTop: 8, lineHeight: 17 }}>
-                      Identificación formal del manual de funciones y competencias laborales conforme a la Columna AH de la planta de personal de la Secretaría Jurídica Distrital.
+                      Páginas y acto administrativo formal del Manual Específico de Funciones y de Competencias Laborales conforme al Archivo Oficial de Planta de Personal de la Secretaría Jurídica Distrital.
                     </Text>
                   </View>
 
-                  {/* Propósito Principal del Empleo */}
+                  {/* Propósito Principal del Empleo (Columna AE) */}
                   <View
                     style={{
                       backgroundColor: '#EFF6FF',
@@ -7824,7 +8112,7 @@ export default function NominaScreen() {
                         <Ionicons name="compass-outline" size={16} color={THEME.white} />
                       </View>
                       <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca900, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        Propósito Principal del Empleo
+                        Propósito Principal del Empleo (Archivo de Planta Oficial - Col. AE)
                       </Text>
                     </View>
                     <Text
@@ -7839,7 +8127,7 @@ export default function NominaScreen() {
                     </Text>
                   </View>
 
-                  {/* Funciones Esenciales Asignadas */}
+                  {/* Funciones Esenciales Asignadas (Columna AF) */}
                   <View style={{ marginBottom: 12 }}>
                     <Text
                       style={{
@@ -7851,7 +8139,7 @@ export default function NominaScreen() {
                         marginBottom: 10,
                       }}
                     >
-                      Funciones Esenciales del Cargo
+                      Funciones Esenciales del Cargo (Archivo de Planta Oficial - Col. AF)
                     </Text>
 
                     <View style={{ gap: 10 }}>
@@ -8239,11 +8527,58 @@ export default function NominaScreen() {
                       padding: 16,
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, marginBottom: 12 }}>
-                      Datos Sociodemográficos y de Contacto
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                        Datos Sociodemográficos y de Contacto (PERNO)
+                      </Text>
+                      <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#92400E' }}>PERSONAL PERNO</Text>
+                      </View>
+                    </View>
 
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                      {/* Edad de la persona */}
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', padding: 10, borderRadius: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                          <Ionicons name="calendar-outline" size={14} color="#15803D" />
+                          <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '700', textTransform: 'uppercase' }}>
+                            Edad de la Persona
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: '#14532D' }}>
+                          {plazaModalEnriquecida?.edad_activa ? `${plazaModalEnriquecida.edad_activa} años` : 'No reportada'}
+                        </Text>
+                      </View>
+
+                      {/* Fecha de Nacimiento */}
+                      <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, borderWidth: 1, borderColor: THEME.slate200, padding: 10, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Fecha de Nacimiento
+                        </Text>
+                        <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate800, marginTop: 3 }}>
+                          {plazaModalEnriquecida?.fecha_nacimiento_activa || 'No registrada'}
+                        </Text>
+                      </View>
+
+                      {/* Sexo / Género */}
+                      <View style={{ flex: 1, minWidth: 140 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Sexo / Género</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.sexo || '---'}
+                        </Text>
+                      </View>
+
+                      {/* RH y Grupo Sanguíneo */}
+                      {plazaModalEnriquecida?.tipo_sangre_activa ? (
+                        <View style={{ flex: 1, minWidth: 140 }}>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Grupo Sanguíneo / RH</Text>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                            {plazaModalEnriquecida.tipo_sangre_activa}
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {/* Teléfono */}
                       <View style={{ flex: 1, minWidth: 140 }}>
                         <Text style={{ fontSize: 11, color: THEME.slate500 }}>Teléfono Registrado</Text>
                         <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
@@ -8251,17 +8586,11 @@ export default function NominaScreen() {
                         </Text>
                       </View>
 
-                      <View style={{ flex: 1, minWidth: 140 }}>
+                      {/* Dirección */}
+                      <View style={{ width: '100%' }}>
                         <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dirección de Residencia</Text>
                         <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
                           {plazaModalEnriquecida?.direccion || 'No registrada'}
-                        </Text>
-                      </View>
-
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Sexo / Género</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModalEnriquecida?.sexo || '---'}
                         </Text>
                       </View>
                     </View>
