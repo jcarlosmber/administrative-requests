@@ -146,6 +146,8 @@ export default function NominaScreen() {
   const [pickerTipo, setPickerTipo] = useState<PickerTipo>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerBusqueda, setPickerBusqueda] = useState('');
+  const [codigosGradosSeleccionados, setCodigosGradosSeleccionados] = useState<string[]>([]);
+  const [pickerOrigen, setPickerOrigen] = useState<'censo' | 'reporte'>('censo');
 
   // Modal de Detalle de Plaza y Pestañas de la Ficha Técnica Integral
   const [plazaModal, setPlazaModal] = useState<PlazaNomina | null>(null);
@@ -899,10 +901,89 @@ export default function NominaScreen() {
     };
   }, [pernoModal, plazas, todasLasPlazas]);
 
-  // 1. Lista de Cargos (con conteo)
+  // Helpers de comprobación en cascada para el Censo y para Reportes
+  const coincideCriteriosCenso = (
+    p: PlazaNomina,
+    omitir: 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno' | 'ninguno' = 'ninguno'
+  ) => {
+    if (omitir !== 'cargo' && filtroCargo) {
+      if ((p.cargo || '').trim().toLowerCase() !== filtroCargo.trim().toLowerCase()) return false;
+    }
+    if (omitir !== 'codigoGrado' && filtroCodigoGrado) {
+      if (!coincideCodigoGrado(p, filtroCodigoGrado)) return false;
+    }
+    if (omitir !== 'dependencia' && filtroDependencia) {
+      const depQ = filtroDependencia.trim().toLowerCase();
+      const depC = (p.dependencia_cargo || '').toLowerCase();
+      const depF = (p.dependencia_funcional || '').toLowerCase();
+      if (!depC.includes(depQ) && !depF.includes(depQ)) return false;
+    }
+    if (nivelSeleccionado !== 'TODOS') {
+      const nivFiltro = nivelSeleccionado.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (pNiv !== nivFiltro) return false;
+    }
+    if (estadoSeleccionado !== 'TODOS') {
+      if ((p.estado_cargo || '').toUpperCase() !== estadoSeleccionado.toUpperCase()) return false;
+    }
+    if (omitir !== 'situacion' && filtroSituacion) {
+      const sitP = (p.situacion_administrativa || p.situacion_titular || p.tipo_vinculacion || '').trim().toLowerCase();
+      if (!sitP.includes(filtroSituacion.trim().toLowerCase())) return false;
+    }
+    if (omitir !== 'sideap' && filtroSideap) {
+      if (String(p.id_sideap) !== String(filtroSideap).trim()) return false;
+    }
+    if (omitir !== 'perno' && filtroPerno) {
+      if (String(p.id_perno) !== String(filtroPerno).trim()) return false;
+    }
+    if (soloEncargo && !p.es_encargo) return false;
+    return true;
+  };
+
+  const coincideCriteriosReporte = (
+    p: PlazaNomina,
+    omitir: 'codigoGrado' | 'dependencia' | 'ninguno' = 'ninguno'
+  ) => {
+    if (omitir !== 'codigoGrado' && filtroCodigoGradoReporte) {
+      if (!coincideCodigoGrado(p, filtroCodigoGradoReporte)) return false;
+    }
+    if (omitir !== 'dependencia' && filtroDependenciaReporte !== 'TODAS') {
+      const depQ = filtroDependenciaReporte.trim().toLowerCase();
+      const depC = (p.dependencia_cargo || '').toLowerCase();
+      const depF = (p.dependencia_funcional || '').toLowerCase();
+      if (!depC.includes(depQ) && !depF.includes(depQ)) return false;
+    }
+    if (filtroNivelReporte !== 'TODOS') {
+      const nivFiltro = filtroNivelReporte.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (pNiv !== nivFiltro) return false;
+    }
+    if (filtroEstadoCargoReporte !== 'TODOS') {
+      if ((p.estado_cargo || '').toUpperCase() !== filtroEstadoCargoReporte.toUpperCase()) return false;
+    }
+    if (filtroVinculacionReporte !== 'TODAS') {
+      const vincP = (p.tipo_vinculacion || p.situacion_titular || '').toUpperCase();
+      if (!vincP.includes(filtroVinculacionReporte.toUpperCase())) return false;
+    }
+    if (filtroSoloEncargoReporte && !p.es_encargo) return false;
+    if (filtroSoloVacantesReporte) {
+      const est = (p.estado_cargo || '').toUpperCase();
+      const tit = (p.titular_nombre || '').toUpperCase();
+      if (!est.includes('VACANTE') && !tit.includes('VACANTE')) return false;
+    }
+    return true;
+  };
+
+  // 1. Lista de Cargos (con conteo y cálculo en cascada)
   const listaCargos = useMemo(() => {
+    const base = todasLasPlazas.filter((p) =>
+      pickerOrigen === 'reporte'
+        ? coincideCriteriosReporte(p, 'ninguno')
+        : coincideCriteriosCenso(p, 'cargo')
+    );
+
     const map = new Map<string, number>();
-    todasLasPlazas.forEach((p) => {
+    base.forEach((p) => {
       if (p.cargo) {
         const nom = p.cargo.trim();
         map.set(nom, (map.get(nom) || 0) + 1);
@@ -911,15 +992,44 @@ export default function NominaScreen() {
     return Array.from(map.entries())
       .map(([cargo, count]) => ({ valor: cargo, etiqueta: cargo, count }))
       .sort((a, b) => a.valor.localeCompare(b.valor));
-  }, [todasLasPlazas]);
+  }, [
+    todasLasPlazas,
+    pickerOrigen,
+    filtroCodigoGrado,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
+    filtroSideap,
+    filtroPerno,
+    soloEncargo,
+    filtroCodigoGradoReporte,
+    filtroDependenciaReporte,
+    filtroNivelReporte,
+    filtroEstadoCargoReporte,
+    filtroVinculacionReporte,
+    filtroSoloEncargoReporte,
+    filtroSoloVacantesReporte,
+  ]);
 
-  // 2. Lista de Códigos y Grados (con conteo unificado y normalizado)
+  // 2. Lista de Códigos y Grados (con conteo unificado, normalizado y en CASCADA según cargo, nivel y dependencias)
   const listaCodigoGrado = useMemo(() => {
-    const base = filtroCargo
-      ? todasLasPlazas.filter((p) => (p.cargo || '').toLowerCase() === filtroCargo.toLowerCase())
-      : todasLasPlazas;
+    const base = todasLasPlazas.filter((p) =>
+      pickerOrigen === 'reporte'
+        ? coincideCriteriosReporte(p, 'codigoGrado')
+        : coincideCriteriosCenso(p, 'codigoGrado')
+    );
 
-    const map = new Map<string, { codigo: string; grado: string; count: number }>();
+    const map = new Map<
+      string,
+      {
+        codigo: string;
+        grado: string;
+        count: number;
+        cargos: Set<string>;
+        niveles: Set<string>;
+      }
+    >();
     base.forEach((p) => {
       const rawCod = p.codigo ? String(p.codigo).trim() : '';
       const rawGra = p.grado ? String(p.grado).trim() : '';
@@ -928,34 +1038,67 @@ export default function NominaScreen() {
       const grNorm = rawGra.replace(/^0+/, '') || rawGra;
       const codNorm = rawCod.replace(/^0+/, '') || rawCod;
       const keyGroup = `${codNorm}-${grNorm}`;
+      const nomCargo = (p.cargo || '').trim();
+      const nomNiv = (p.nivel || '').trim();
 
       if (!map.has(keyGroup)) {
-        map.set(keyGroup, { codigo: cod, grado: gr, count: 1 });
+        const cargos = new Set<string>();
+        if (nomCargo) cargos.add(nomCargo);
+        const niveles = new Set<string>();
+        if (nomNiv) niveles.add(nomNiv);
+        map.set(keyGroup, { codigo: cod, grado: gr, count: 1, cargos, niveles });
       } else {
-        map.get(keyGroup)!.count += 1;
+        const entry = map.get(keyGroup)!;
+        entry.count += 1;
+        if (nomCargo) entry.cargos.add(nomCargo);
+        if (nomNiv) entry.niveles.add(nomNiv);
       }
     });
 
     return Array.from(map.values())
-      .map((val) => ({
-        valor: `${val.codigo}-${val.grado}`,
-        codigo: val.codigo,
-        grado: val.grado,
-        etiqueta: `Cód. ${val.codigo} - Grado ${val.grado}`,
-        count: val.count,
-      }))
+      .map((val) => {
+        const cargosArr = Array.from(val.cargos);
+        const denominacionCargo = cargosArr.length > 0 ? cargosArr.join(' / ') : 'Sin denominación asignada';
+        const nivelesTexto = Array.from(val.niveles).join(' • ');
+        return {
+          valor: `${val.codigo}-${val.grado}`,
+          codigo: val.codigo,
+          grado: val.grado,
+          etiqueta: `Cód. ${val.codigo} - Grado ${val.grado}`,
+          denominacionCargo,
+          cargos: cargosArr,
+          nivelesTexto,
+          count: val.count,
+        };
+      })
       .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, undefined, { numeric: true }));
-  }, [todasLasPlazas, filtroCargo]);
+  }, [
+    todasLasPlazas,
+    pickerOrigen,
+    filtroCargo,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
+    filtroSideap,
+    filtroPerno,
+    soloEncargo,
+    filtroDependenciaReporte,
+    filtroNivelReporte,
+    filtroEstadoCargoReporte,
+    filtroVinculacionReporte,
+    filtroSoloEncargoReporte,
+    filtroSoloVacantesReporte,
+  ]);
 
-  // 3. Lista de Dependencias (con conteo)
+  // 3. Lista de Dependencias (en cascada según cargo, código-grado y nivel)
   const listaDependencias = useMemo(() => {
-    let base = todasLasPlazas;
-    if (filtroCargo) {
-      base = base.filter((p) => (p.cargo || '').toLowerCase() === filtroCargo.toLowerCase());
-    }
-    if (filtroCodigoGrado) {
-      base = base.filter((p) => coincideCodigoGrado(p, filtroCodigoGrado));
-    }
+    const base = todasLasPlazas.filter((p) =>
+      pickerOrigen === 'reporte'
+        ? coincideCriteriosReporte(p, 'dependencia')
+        : coincideCriteriosCenso(p, 'dependencia')
+    );
+
     const map = new Map<string, number>();
     base.forEach((p) => {
       const dep = p.dependencia_cargo ? p.dependencia_cargo.trim() : 'Sin dependencia asignada';
@@ -964,17 +1107,28 @@ export default function NominaScreen() {
     return Array.from(map.entries())
       .map(([dep, count]) => ({ valor: dep, etiqueta: dep, count }))
       .sort((a, b) => a.valor.localeCompare(b.valor));
-  }, [todasLasPlazas, filtroCargo, filtroCodigoGrado]);
+  }, [
+    todasLasPlazas,
+    pickerOrigen,
+    filtroCargo,
+    filtroCodigoGrado,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
+    filtroSideap,
+    filtroPerno,
+    soloEncargo,
+    filtroCodigoGradoReporte,
+    filtroNivelReporte,
+    filtroEstadoCargoReporte,
+    filtroVinculacionReporte,
+    filtroSoloEncargoReporte,
+    filtroSoloVacantesReporte,
+  ]);
 
-  // 4. Lista de Situaciones Administrativas del Titular del Cargo
+  // 4. Lista de Situaciones Administrativas (en cascada)
   const listaSituaciones = useMemo(() => {
-    let base = todasLasPlazas;
-    if (filtroCargo) {
-      base = base.filter((p) => (p.cargo || '').toLowerCase() === filtroCargo.toLowerCase());
-    }
-    if (filtroDependencia) {
-      base = base.filter((p) => (p.dependencia_cargo || '').toLowerCase() === filtroDependencia.toLowerCase());
-    }
+    const base = todasLasPlazas.filter((p) => coincideCriteriosCenso(p, 'situacion'));
     const map = new Map<string, number>();
     base.forEach((p) => {
       const sit = (p.situacion_administrativa || p.situacion_titular || p.tipo_vinculacion || '').trim() || 'EN PROPIEDAD';
@@ -983,12 +1137,22 @@ export default function NominaScreen() {
     return Array.from(map.entries())
       .map(([sit, count]) => ({ valor: sit, etiqueta: sit, count }))
       .sort((a, b) => b.count - a.count || a.valor.localeCompare(b.valor));
-  }, [todasLasPlazas, filtroCargo, filtroDependencia]);
+  }, [
+    todasLasPlazas,
+    filtroCargo,
+    filtroCodigoGrado,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSideap,
+    filtroPerno,
+    soloEncargo,
+  ]);
 
-  // 5. Lista de ID SIDEAP disponibles
+  // 5. Lista de ID SIDEAP disponibles (en cascada)
   const listaSideap = useMemo(() => {
     return todasLasPlazas
-      .filter((p) => p.id_sideap != null)
+      .filter((p) => p.id_sideap != null && coincideCriteriosCenso(p, 'sideap'))
       .map((p) => ({
         valor: String(p.id_sideap),
         etiquetaPrincipal: `ID SIDEAP: ${p.id_sideap}`,
@@ -997,12 +1161,22 @@ export default function NominaScreen() {
         plaza: p,
       }))
       .sort((a, b) => Number(a.valor) - Number(b.valor));
-  }, [todasLasPlazas]);
+  }, [
+    todasLasPlazas,
+    filtroCargo,
+    filtroCodigoGrado,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
+    filtroPerno,
+    soloEncargo,
+  ]);
 
-  // 6. Lista de ID PERNO disponibles
+  // 6. Lista de ID PERNO disponibles (en cascada)
   const listaPerno = useMemo(() => {
     return todasLasPlazas
-      .filter((p) => p.id_perno != null)
+      .filter((p) => p.id_perno != null && coincideCriteriosCenso(p, 'perno'))
       .map((p) => ({
         valor: String(p.id_perno),
         etiquetaPrincipal: `ID PERNO: ${p.id_perno}`,
@@ -1011,7 +1185,40 @@ export default function NominaScreen() {
         plaza: p,
       }))
       .sort((a, b) => Number(a.valor) - Number(b.valor));
-  }, [todasLasPlazas]);
+  }, [
+    todasLasPlazas,
+    filtroCargo,
+    filtroCodigoGrado,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
+    filtroSideap,
+    soloEncargo,
+  ]);
+
+  // Auto-ajuste defensivo en cascada: depurar filtros subordinados cuando el filtro padre cambia
+  useEffect(() => {
+    if (!filtroCodigoGrado) return;
+    const codigosActuales = filtroCodigoGrado.split(',').map((s) => s.trim()).filter(Boolean);
+    const codigosValidos = new Set(listaCodigoGrado.map((cg) => cg.valor));
+    const conservados = codigosActuales.filter((c) => codigosValidos.has(c));
+
+    if (conservados.length !== codigosActuales.length) {
+      setFiltroCodigoGrado(conservados.join(', '));
+    }
+  }, [listaCodigoGrado]);
+
+  useEffect(() => {
+    if (!filtroCodigoGradoReporte) return;
+    const codigosActuales = filtroCodigoGradoReporte.split(',').map((s) => s.trim()).filter(Boolean);
+    const codigosValidos = new Set(listaCodigoGrado.map((cg) => cg.valor));
+    const conservados = codigosActuales.filter((c) => codigosValidos.has(c));
+
+    if (conservados.length !== codigosActuales.length) {
+      setFiltroCodigoGradoReporte(conservados.join(', '));
+    }
+  }, [listaCodigoGrado]);
 
   // 7. Lista agrupada de todas las escaleras de encargo (Calculada sobre la totalidad de la planta)
   const todasLasEscaleras = useMemo(() => {
@@ -1146,9 +1353,17 @@ export default function NominaScreen() {
   }, [plazaModal]);
 
   // Funciones del Modal de Filtro
-  const abrirPicker = (tipo: PickerTipo) => {
+  const abrirPicker = (tipo: PickerTipo, origen: 'censo' | 'reporte' = 'censo') => {
     setPickerTipo(tipo);
+    setPickerOrigen(origen);
     setPickerBusqueda('');
+    if (tipo === 'codigoGrado') {
+      const valorActual = origen === 'reporte' ? filtroCodigoGradoReporte : filtroCodigoGrado;
+      const actuales = valorActual
+        ? valorActual.split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+      setCodigosGradosSeleccionados(actuales);
+    }
     setPickerVisible(true);
   };
 
@@ -1157,7 +1372,7 @@ export default function NominaScreen() {
       case 'cargo':
         return 'Seleccionar Denominación del Cargo';
       case 'codigoGrado':
-        return 'Seleccionar Código y Grado';
+        return 'Seleccionar Códigos y Grados (Multi-selección)';
       case 'dependencia':
         return 'Seleccionar Dependencia';
       case 'situacion':
@@ -1186,9 +1401,10 @@ export default function NominaScreen() {
       return listaCodigoGrado.map((cg) => ({
         valor: cg.valor,
         etiquetaPrincipal: cg.etiqueta,
-        etiquetaSecundaria: `${cg.count} plaza(s) disponibles`,
-        badge: undefined,
-        seleccionado: filtroCodigoGrado === cg.valor,
+        denominacionCargo: cg.denominacionCargo,
+        etiquetaSecundaria: `${cg.denominacionCargo} • ${cg.count} plaza(s) disponibles`,
+        badge: cg.nivelesTexto || undefined,
+        seleccionado: codigosGradosSeleccionados.includes(cg.valor),
       }));
     }
     if (pickerTipo === 'dependencia') {
@@ -1241,7 +1457,7 @@ export default function NominaScreen() {
     listaSideap,
     listaPerno,
     filtroCargo,
-    filtroCodigoGrado,
+    codigosGradosSeleccionados,
     filtroDependencia,
     filtroSituacion,
     filtroSideap,
@@ -1254,14 +1470,25 @@ export default function NominaScreen() {
     return opcionesModal.filter(
       (op) =>
         op.etiquetaPrincipal.toLowerCase().includes(q) ||
+        ((op as any).denominacionCargo && (op as any).denominacionCargo.toLowerCase().includes(q)) ||
         (op.etiquetaSecundaria && op.etiquetaSecundaria.toLowerCase().includes(q)) ||
-        (op.valor && op.valor.toLowerCase().includes(q))
+        (op.valor && op.valor.toLowerCase().includes(q)) ||
+        (op.badge && op.badge.toLowerCase().includes(q))
     );
   }, [opcionesModal, pickerBusqueda]);
 
+  const toggleSeleccionCodigoGrado = (valor: string) => {
+    setCodigosGradosSeleccionados((prev) =>
+      prev.includes(valor) ? prev.filter((v) => v !== valor) : [...prev, valor]
+    );
+  };
+
   const seleccionarOpcionModal = (item: { valor: string }) => {
+    if (pickerTipo === 'codigoGrado') {
+      toggleSeleccionCodigoGrado(item.valor);
+      return;
+    }
     if (pickerTipo === 'cargo') setFiltroCargo(item.valor);
-    else if (pickerTipo === 'codigoGrado') setFiltroCodigoGrado(item.valor);
     else if (pickerTipo === 'dependencia') setFiltroDependencia(item.valor);
     else if (pickerTipo === 'situacion') setFiltroSituacion(item.valor);
     else if (pickerTipo === 'sideap') setFiltroSideap(item.valor);
@@ -2772,7 +2999,11 @@ export default function NominaScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
                         <Ionicons name="ribbon-outline" size={14} color={filtroCodigoGrado ? THEME.marca700 : THEME.slate400} />
                         <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroCodigoGrado ? '600' : '400', color: filtroCodigoGrado ? THEME.marca900 : THEME.slate600 }}>
-                          {filtroCodigoGrado ? `Cód-Gr: ${filtroCodigoGrado}` : 'Todos los grados'}
+                          {filtroCodigoGrado
+                            ? filtroCodigoGrado.includes(',')
+                              ? `${filtroCodigoGrado.split(',').length} grados seleccionados`
+                              : `Cód-Gr: ${filtroCodigoGrado}`
+                            : 'Todos los grados'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
@@ -4722,25 +4953,49 @@ export default function NominaScreen() {
                         ) : null}
                       </View>
 
-                      {/* Filtro Código y Grado en Reportes */}
-                      <View style={{ flex: 1, minWidth: isTablet ? 170 : '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: filtroCodigoGradoReporte ? THEME.marca50 : THEME.slate50, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: filtroCodigoGradoReporte ? THEME.marca600 : THEME.slate300, gap: 6 }}>
-                        <Ionicons name="ribbon-outline" size={16} color={filtroCodigoGradoReporte ? THEME.marca700 : THEME.slate400} />
-                        <TextInput
-                          value={filtroCodigoGradoReporte}
-                          onChangeText={(t) => {
-                            setFiltroCodigoGradoReporte(t);
-                            setPaginaReporte(1);
-                          }}
-                          placeholder="Cód-Grado (ej. 115-06)"
-                          placeholderTextColor={THEME.slate400}
-                          style={{ flex: 1, fontSize: 12.5, color: THEME.slate900, padding: 0 }}
-                        />
+                      {/* Filtro Código y Grado en Reportes (Selector Modal con Multi-selección y Denominación de Cargo) */}
+                      <Pressable
+                        onPress={() => abrirPicker('codigoGrado', 'reporte')}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          minWidth: isTablet ? 190 : '100%',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          backgroundColor: filtroCodigoGradoReporte ? THEME.marca50 : pressed ? THEME.slate100 : THEME.slate50,
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderWidth: 1,
+                          borderColor: filtroCodigoGradoReporte ? THEME.marca600 : THEME.slate300,
+                          gap: 6,
+                        })}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                          <Ionicons name="ribbon-outline" size={16} color={filtroCodigoGradoReporte ? THEME.marca700 : THEME.slate400} />
+                          <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: filtroCodigoGradoReporte ? '600' : '400', color: filtroCodigoGradoReporte ? THEME.marca900 : THEME.slate600, flex: 1 }}>
+                            {filtroCodigoGradoReporte
+                              ? filtroCodigoGradoReporte.includes(',')
+                                ? `${filtroCodigoGradoReporte.split(',').length} grados seleccionados`
+                                : `Cód-Gr: ${filtroCodigoGradoReporte}`
+                              : 'Código y Grado'}
+                          </Text>
+                        </View>
                         {filtroCodigoGradoReporte ? (
-                          <Pressable onPress={() => setFiltroCodigoGradoReporte('')}>
+                          <Pressable
+                            hitSlop={8}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setFiltroCodigoGradoReporte('');
+                              setPaginaReporte(1);
+                            }}
+                          >
                             <Ionicons name="close-circle" size={16} color={THEME.marca700} />
                           </Pressable>
-                        ) : null}
-                      </View>
+                        ) : (
+                          <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
+                        )}
+                      </Pressable>
 
                       {/* Botón Restablecer Filtros si hay alguno activo */}
                       {(busquedaReporte || filtroVinculacionReporte !== 'TODAS' || filtroNivelReporte !== 'TODOS' || filtroDependenciaReporte !== 'TODAS' || filtroEstadoCargoReporte !== 'TODOS' || filtroCodigoGradoReporte || filtroSoloEncargoReporte || filtroSoloVacantesReporte) ? (
@@ -6380,8 +6635,8 @@ export default function NominaScreen() {
             <View
               style={{
                 width: '100%',
-                maxWidth: 620,
-                maxHeight: '82%',
+                maxWidth: 640,
+                maxHeight: '84%',
                 backgroundColor: THEME.white,
                 borderRadius: 16,
                 overflow: 'hidden',
@@ -6407,7 +6662,9 @@ export default function NominaScreen() {
                     {getTituloPicker()}
                   </Text>
                   <Text style={{ color: 'rgba(214, 228, 244, 0.75)', fontSize: 11.5, marginTop: 2 }}>
-                    Mostrando {opcionesModalFiltradas.length} de {opcionesModal.length} opciones disponibles
+                    {pickerTipo === 'codigoGrado'
+                      ? `Mostrando ${opcionesModalFiltradas.length} opciones • ${codigosGradosSeleccionados.length} seleccionados`
+                      : `Mostrando ${opcionesModalFiltradas.length} de ${opcionesModal.length} opciones disponibles`}
                   </Text>
                 </View>
                 <Pressable
@@ -6440,7 +6697,11 @@ export default function NominaScreen() {
                   <TextInput
                     value={pickerBusqueda}
                     onChangeText={setPickerBusqueda}
-                    placeholder="Filtrar opciones disponibles..."
+                    placeholder={
+                      pickerTipo === 'codigoGrado'
+                        ? 'Buscar por código, grado o denominación del cargo (ej. Profesional, 219, 01)...'
+                        : 'Filtrar opciones disponibles...'
+                    }
                     placeholderTextColor={THEME.slate400}
                     style={{ flex: 1, marginLeft: 8, fontSize: 13, color: THEME.slate900, padding: 0 }}
                   />
@@ -6451,36 +6712,79 @@ export default function NominaScreen() {
                   ) : null}
                 </View>
 
-                {/* Opción para limpiar la selección actual */}
-                <Pressable
-                  onPress={() => {
-                    if (pickerTipo === 'cargo') setFiltroCargo('');
-                    else if (pickerTipo === 'codigoGrado') setFiltroCodigoGrado('');
-                    else if (pickerTipo === 'dependencia') setFiltroDependencia('');
-                    else if (pickerTipo === 'situacion') setFiltroSituacion('');
-                    else if (pickerTipo === 'sideap') setFiltroSideap('');
-                    else if (pickerTipo === 'perno') setFiltroPerno('');
-                    setPickerVisible(false);
-                  }}
-                  style={({ pressed }) => ({
-                    marginTop: 10,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: 7,
-                    paddingHorizontal: 10,
-                    borderRadius: 6,
-                    backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
-                  })}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="apps-outline" size={14} color={THEME.marca700} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.marca800 }}>
-                      Mostrar todas (Sin filtro en este campo)
-                    </Text>
+                {/* Acciones para selección múltiple en Código y Grado */}
+                {pickerTipo === 'codigoGrado' ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Pressable
+                        onPress={() => {
+                          const visibles = opcionesModalFiltradas.map((op) => op.valor);
+                          setCodigosGradosSeleccionados((prev) => Array.from(new Set([...prev, ...visibles])));
+                        }}
+                        style={({ pressed }) => ({
+                          paddingVertical: 5,
+                          paddingHorizontal: 10,
+                          borderRadius: 6,
+                          backgroundColor: pressed ? THEME.marca100 : THEME.marca50,
+                        })}
+                      >
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>
+                          Seleccionar Todos ({opcionesModalFiltradas.length})
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setCodigosGradosSeleccionados([])}
+                        style={({ pressed }) => ({
+                          paddingVertical: 5,
+                          paddingHorizontal: 10,
+                          borderRadius: 6,
+                          backgroundColor: pressed ? THEME.slate300 : THEME.slate200,
+                        })}
+                      >
+                        <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate700 }}>
+                          Desmarcar Todos
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={{ backgroundColor: codigosGradosSeleccionados.length > 0 ? THEME.marca50 : THEME.slate100, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: codigosGradosSeleccionados.length > 0 ? THEME.marca600 : THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: codigosGradosSeleccionados.length > 0 ? THEME.marca800 : THEME.slate600 }}>
+                        {codigosGradosSeleccionados.length} seleccionado(s)
+                      </Text>
+                    </View>
                   </View>
-                  <Ionicons name="arrow-forward" size={13} color={THEME.slate400} />
-                </Pressable>
+                ) : (
+                  /* Opción para limpiar la selección actual en otros tipos */
+                  <Pressable
+                    onPress={() => {
+                      if (pickerTipo === 'cargo') setFiltroCargo('');
+                      else if (pickerTipo === 'dependencia') setFiltroDependencia('');
+                      else if (pickerTipo === 'situacion') setFiltroSituacion('');
+                      else if (pickerTipo === 'sideap') setFiltroSideap('');
+                      else if (pickerTipo === 'perno') setFiltroPerno('');
+                      setPickerVisible(false);
+                    }}
+                    style={({ pressed }) => ({
+                      marginTop: 10,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 7,
+                      paddingHorizontal: 10,
+                      borderRadius: 6,
+                      backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                    })}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="apps-outline" size={14} color={THEME.marca700} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.marca800 }}>
+                        Mostrar todas (Sin filtro en este campo)
+                      </Text>
+                    </View>
+                    <Ionicons name="arrow-forward" size={13} color={THEME.slate400} />
+                  </Pressable>
+                )}
               </View>
 
               {/* Lista de opciones scrolleable */}
@@ -6495,6 +6799,8 @@ export default function NominaScreen() {
                 ) : (
                   opcionesModalFiltradas.map((item, idx) => {
                     const seleccionado = item.seleccionado;
+                    const esMulti = pickerTipo === 'codigoGrado';
+
                     return (
                       <Pressable
                         key={item.valor + '-' + idx}
@@ -6502,9 +6808,8 @@ export default function NominaScreen() {
                         style={({ pressed }) => ({
                           flexDirection: 'row',
                           alignItems: 'center',
-                          justifyContent: 'space-between',
                           paddingVertical: 12,
-                          paddingHorizontal: 20,
+                          paddingHorizontal: 18,
                           backgroundColor: seleccionado
                             ? THEME.marca50
                             : pressed
@@ -6512,53 +6817,67 @@ export default function NominaScreen() {
                             : THEME.white,
                           borderBottomWidth: 1,
                           borderBottomColor: THEME.slate100,
+                          gap: 12,
                         })}
                       >
-                        <View style={{ flex: 1, paddingRight: 12 }}>
-                          <Text
-                            style={{
-                              fontSize: 13,
-                              fontWeight: seleccionado ? '700' : '500',
-                              color: seleccionado ? THEME.marca800 : THEME.slate800,
-                            }}
-                          >
-                            {item.etiquetaPrincipal}
-                          </Text>
+                        {/* Checkbox en modo múltiple */}
+                        {esMulti && (
+                          <Ionicons
+                            name={seleccionado ? 'checkbox' : 'square-outline'}
+                            size={21}
+                            color={seleccionado ? THEME.marca700 : THEME.slate400}
+                          />
+                        )}
+
+                        <View style={{ flex: 1 }}>
+                          {/* Fila con código, grado y badge */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca900 }}>
+                                  {item.etiquetaPrincipal}
+                                </Text>
+                              </View>
+                              {item.badge ? (
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.slate100,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.slate600 }}>
+                                    {item.badge}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            {!esMulti && seleccionado && (
+                              <Ionicons name="checkmark-circle" size={19} color={THEME.marca600} />
+                            )}
+                          </View>
+
+                          {/* Denominación del cargo visible en modo código y grado */}
+                          {esMulti && (item as any).denominacionCargo ? (
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontWeight: '700',
+                                color: seleccionado ? THEME.marca900 : THEME.slate800,
+                                marginTop: 4,
+                              }}
+                            >
+                              {(item as any).denominacionCargo}
+                            </Text>
+                          ) : null}
+
                           {item.etiquetaSecundaria ? (
                             <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
                               {item.etiquetaSecundaria}
                             </Text>
                           ) : null}
-                        </View>
-
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          {item.badge ? (
-                            <View
-                              style={{
-                                backgroundColor: THEME.slate100,
-                                paddingHorizontal: 7,
-                                paddingVertical: 2,
-                                borderRadius: 4,
-                              }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: '600', color: THEME.slate600 }}>
-                                {item.badge}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {seleccionado ? (
-                            <Ionicons name="checkmark-circle" size={19} color={THEME.marca600} />
-                          ) : (
-                            <View
-                              style={{
-                                width: 18,
-                                height: 18,
-                                borderRadius: 9,
-                                borderWidth: 1,
-                                borderColor: THEME.slate300,
-                              }}
-                            />
-                          )}
                         </View>
                       </Pressable>
                     );
@@ -6567,29 +6886,87 @@ export default function NominaScreen() {
               </ScrollView>
 
               {/* Pie de modal */}
-              <View
-                style={{
-                  padding: 14,
-                  borderTopWidth: 1,
-                  borderTopColor: THEME.slate100,
-                  backgroundColor: THEME.slate50,
-                  alignItems: 'flex-end',
-                }}
-              >
-                <Pressable
-                  onPress={() => setPickerVisible(false)}
+              {pickerTipo === 'codigoGrado' ? (
+                <View
                   style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    backgroundColor: THEME.slate200,
+                    padding: 14,
+                    borderTopWidth: 1,
+                    borderTopColor: THEME.slate200,
+                    backgroundColor: THEME.slate50,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700 }}>
-                    Cerrar
-                  </Text>
-                </Pressable>
-              </View>
+                  <Pressable
+                    onPress={() => setPickerVisible(false)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: THEME.slate300,
+                      backgroundColor: THEME.white,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate700 }}>
+                      Cancelar
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      const valorFinal = codigosGradosSeleccionados.join(', ');
+                      if (pickerOrigen === 'reporte') {
+                        setFiltroCodigoGradoReporte(valorFinal);
+                        setPaginaReporte(1);
+                      } else {
+                        setFiltroCodigoGrado(valorFinal);
+                      }
+                      setPickerVisible(false);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingHorizontal: 18,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      backgroundColor: THEME.marca800,
+                    }}
+                  >
+                    <Ionicons name="checkmark-done" size={16} color={THEME.white} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.white }}>
+                      Aplicar Filtro ({codigosGradosSeleccionados.length})
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View
+                  style={{
+                    padding: 14,
+                    borderTopWidth: 1,
+                    borderTopColor: THEME.slate100,
+                    backgroundColor: THEME.slate50,
+                    alignItems: 'flex-end',
+                  }}
+                >
+                  <Pressable
+                    onPress={() => setPickerVisible(false)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      backgroundColor: THEME.slate200,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700 }}>
+                      Cerrar
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           </View>
         </Modal>

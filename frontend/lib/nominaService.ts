@@ -222,13 +222,26 @@ export interface FiltrosPlazasNomina {
   solo_encargo?: boolean;
 }
 
-// Helper para comprobar coincidencia flexible de Código y Grado (normalizando ceros a la izquierda)
+// Helper para comprobar coincidencia flexible de Código y Grado (normalizando ceros a la izquierda y soportando múltiples selecciones con comas o arrays)
 export function coincideCodigoGrado(
   plaza: { codigo?: string | number | null; grado?: string | number | null },
-  filtro?: string | null
+  filtro?: string | string[] | null
 ): boolean {
-  if (!filtro || !filtro.trim() || filtro === 'TODOS') return true;
+  if (!filtro) return true;
+  if (Array.isArray(filtro)) {
+    if (filtro.length === 0 || filtro.includes('TODOS')) return true;
+    return filtro.some((item) => coincideCodigoGrado(plaza, item));
+  }
   const fTrim = filtro.trim();
+  if (!fTrim || fTrim === 'TODOS') return true;
+
+  // Si vienen múltiples códigos y grados separados por comas
+  if (fTrim.includes(',')) {
+    const items = fTrim.split(',').map((s) => s.trim()).filter(Boolean);
+    if (items.length === 0) return true;
+    return items.some((item) => coincideCodigoGrado(plaza, item));
+  }
+
   const codPlaza = String(plaza.codigo ?? '').trim();
   const graPlaza = String(plaza.grado ?? '').trim();
 

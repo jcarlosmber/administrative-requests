@@ -520,37 +520,48 @@ module.exports = function (pool) {
         query += ` AND TRIM(cargo) ILIKE TRIM($${idx})`;
       }
 
-      // Filtro de Código y Grado (soporta 'COD-GRA', solo código o solo grado, con normalización de ceros)
+      // Filtro de Código y Grado (soporta lista separada por comas '219-01, 222-24', 'COD-GRA', solo código o solo grado, con normalización de ceros)
       if (codigo_grado && codigo_grado.trim() && codigo_grado !== 'TODOS') {
-        const cgVal = codigo_grado.trim();
-        if (cgVal.includes('-')) {
-          const parts = cgVal.split('-');
-          const codPart = parts[0].trim();
-          const graPart = parts[1].trim();
-          const codLtrim = codPart.replace(/^0+/, '') || '0';
-          const graLtrim = graPart.replace(/^0+/, '') || '0';
+        const rawItems = codigo_grado.includes(',')
+          ? codigo_grado.split(',').map((s) => s.trim()).filter(Boolean)
+          : [codigo_grado.trim()];
 
-          params.push(codPart, codLtrim, graPart, graLtrim);
-          const iCod = params.length - 3;
-          const iCodL = params.length - 2;
-          const iGra = params.length - 1;
-          const iGraL = params.length;
+        if (rawItems.length > 0) {
+          const orClauses = [];
+          for (const item of rawItems) {
+            if (item.includes('-')) {
+              const parts = item.split('-');
+              const codPart = parts[0].trim();
+              const graPart = parts[1].trim();
+              const codLtrim = codPart.replace(/^0+/, '') || '0';
+              const graLtrim = graPart.replace(/^0+/, '') || '0';
 
-          query += ` AND (
-            (TRIM(codigo) ILIKE TRIM($${iCod}) OR LTRIM(TRIM(codigo), '0') = $${iCodL})
-            AND
-            (TRIM(grado) ILIKE TRIM($${iGra}) OR LTRIM(TRIM(grado), '0') = $${iGraL})
-          )`;
-        } else {
-          const ltrimVal = cgVal.replace(/^0+/, '') || '0';
-          params.push(cgVal, ltrimVal);
-          const iVal = params.length - 1;
-          const iValL = params.length;
-          query += ` AND (
-            TRIM(codigo) ILIKE TRIM($${iVal}) OR LTRIM(TRIM(codigo), '0') = $${iValL} OR
-            TRIM(grado) ILIKE TRIM($${iVal}) OR LTRIM(TRIM(grado), '0') = $${iValL} OR
-            (COALESCE(codigo, '') || '-' || COALESCE(grado, '')) ILIKE $${iVal}
-          )`;
+              params.push(codPart, codLtrim, graPart, graLtrim);
+              const iCod = params.length - 3;
+              const iCodL = params.length - 2;
+              const iGra = params.length - 1;
+              const iGraL = params.length;
+
+              orClauses.push(`(
+                (TRIM(codigo) ILIKE TRIM($${iCod}) OR LTRIM(TRIM(codigo), '0') = $${iCodL})
+                AND
+                (TRIM(grado) ILIKE TRIM($${iGra}) OR LTRIM(TRIM(grado), '0') = $${iGraL})
+              )`);
+            } else {
+              const ltrimVal = item.replace(/^0+/, '') || '0';
+              params.push(item, ltrimVal);
+              const iVal = params.length - 1;
+              const iValL = params.length;
+              orClauses.push(`(
+                TRIM(codigo) ILIKE TRIM($${iVal}) OR LTRIM(TRIM(codigo), '0') = $${iValL} OR
+                TRIM(grado) ILIKE TRIM($${iVal}) OR LTRIM(TRIM(grado), '0') = $${iValL} OR
+                (COALESCE(codigo, '') || '-' || COALESCE(grado, '')) ILIKE $${iVal}
+              )`);
+            }
+          }
+          if (orClauses.length > 0) {
+            query += ` AND (${orClauses.join(' OR ')})`;
+          }
         }
       }
 
