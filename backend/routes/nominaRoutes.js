@@ -386,6 +386,52 @@ module.exports = function (pool) {
           cargo = REPLACE(REPLACE(REPLACE(cargo, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA'),
           titular_nombre = REPLACE(REPLACE(REPLACE(titular_nombre, 'DIRECCIÃ“N', 'DIRECCIÓN'), 'SECRETARÃA', 'SECRETARÍA'), 'JURÃDICA', 'JURÍDICA')
         WHERE dependencia_cargo LIKE '%Ã%' OR dependencia_funcional LIKE '%Ã%' OR cargo LIKE '%Ã%' OR titular_nombre LIKE '%Ã%';
+
+        -- Sincronizar titulares activos de PERNO en la planta y remover funcionarios desvinculados/retirados
+        UPDATE public.planta_personal_sjd pl
+        SET 
+          titular_cedula = act.cedula,
+          titular_nombre = act.nombre_completo,
+          tipo_funcionario = COALESCE(act.tipo_funcionario, pl.tipo_funcionario),
+          direccion = COALESCE(act.direccion, pl.direccion),
+          telefono = COALESCE(act.telefono, pl.telefono),
+          sexo = COALESCE(act.sexo, pl.sexo),
+          fondo_salud = COALESCE(act.fondo_salud, pl.fondo_salud),
+          fondo_pension = COALESCE(act.fondo_pension, pl.fondo_pension),
+          fondo_cesantias = COALESCE(act.fondo_cesantias, pl.fondo_cesantias),
+          tipo_nombramiento = COALESCE(act.tipo_nombramiento, pl.tipo_nombramiento),
+          acto_nombramiento = COALESCE(act.acto_nombramiento, pl.acto_nombramiento),
+          numero_acto_nombramiento = COALESCE(act.numero_acto_nombramiento, pl.numero_acto_nombramiento),
+          estado_cargo = 'OCUPADO',
+          situacion_titular = COALESCE(pl.situacion_titular, 'EN PROPIEDAD'),
+          updated_at = NOW()
+        FROM public.personal_perno_sjd act
+        WHERE pl.id_perno = act.posicion_planta
+          AND act.estado_funcionario = 'A'
+          AND act.fecha_retiro IS NULL
+          AND (
+            pl.titular_cedula IN (
+              SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
+            )
+            OR pl.titular_cedula IS NULL
+            OR pl.titular_cedula != act.cedula
+          );
+
+        -- Marcar como vacante definitiva las plazas cuyo titular esté retirado y no tengan reemplazo activo
+        UPDATE public.planta_personal_sjd pl
+        SET 
+          titular_cedula = NULL,
+          titular_nombre = 'VACANTE DEFINITIVA',
+          estado_cargo = 'VACANTE DEFINITIVA',
+          situacion_titular = 'VACANTE DEFINITIVA',
+          updated_at = NOW()
+        WHERE pl.titular_cedula IN (
+          SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM public.personal_perno_sjd act 
+          WHERE act.posicion_planta = pl.id_perno AND act.estado_funcionario = 'A' AND act.fecha_retiro IS NULL
+        );
       `);
     } catch (e) {
       console.warn('Advertencia al verificar tablas de nómina:', e.message);
@@ -1343,6 +1389,7 @@ module.exports = function (pool) {
         if (!colMap.ape1 && txt.includes('PRIMER APELLIDO')) colMap.ape1 = colNum;
         else if (!colMap.ape2 && txt.includes('SEGUNDO APELLIDO')) colMap.ape2 = colNum;
         else if (!colMap.nombres && (txt === 'NOMBRE' || txt.includes('NOMBRES'))) colMap.nombres = colNum;
+        else if (!colMap.estado_funcionario && (txt.includes('ESTADO FUNCIONARIO') || txt === 'ESTADO')) colMap.estado_funcionario = colNum;
         else if (!colMap.direccion && txt.includes('DIRECCION')) colMap.direccion = colNum;
         else if (!colMap.telefono && txt.includes('TELEFONO')) colMap.telefono = colNum;
         else if (!colMap.sexo && (txt === 'SEXO' || txt.includes('GENERO'))) colMap.sexo = colNum;
@@ -1350,7 +1397,7 @@ module.exports = function (pool) {
         else if (!colMap.fondo_salud && (txt.includes('FONDO SALUD') || txt === 'EPS')) colMap.fondo_salud = colNum;
         else if (!colMap.fondo_pension && (txt.includes('FONDO PENSION') || txt === 'PENSION')) colMap.fondo_pension = colNum;
         else if (!colMap.fondo_cesantias && (txt.includes('FONDO CESANTIAS') || txt === 'CESANTIAS')) colMap.fondo_cesantias = colNum;
-        else if (!colMap.id_perno && (txt.includes('ID PERNO') || txt === 'ID_PERNO' || txt === 'PERNO')) colMap.id_perno = colNum;
+        else if (!colMap.id_perno && (txt.includes('ID PERNO') || txt === 'ID_PERNO' || txt === 'PERNO' || txt.includes('POSICION_PLANTA'))) colMap.id_perno = colNum;
         else if (!colMap.tipo_nomb && txt.includes('TIPO NOMB')) colMap.tipo_nomb = colNum;
         else if (!colMap.acto_nomb && txt.includes('ACTO NOMB') && !txt.includes('NUMERO') && !txt.includes('FECHA')) colMap.acto_nomb = colNum;
         else if (!colMap.num_acto && (txt.includes('NUMERO ACTO NOMB') || txt.includes('NUM ACTO'))) colMap.num_acto = colNum;
@@ -1359,6 +1406,7 @@ module.exports = function (pool) {
         else if (!colMap.fecha_ingreso_entidad && txt.includes('FECHA INGRESO ENTIDAD')) colMap.fecha_ingreso_entidad = colNum;
         else if (!colMap.fecha_ingreso_distrito && txt.includes('FECHA INGRESO DISTRITO')) colMap.fecha_ingreso_distrito = colNum;
         else if (!colMap.fecha_acto_nomb && txt.includes('FECHA ACTO NOMB')) colMap.fecha_acto_nomb = colNum;
+        else if (!colMap.fecha_retiro && txt.includes('FECHA RETIRO')) colMap.fecha_retiro = colNum;
       });
 
       // Si no se asignó cédula por encabezado, tomar por defecto columna 1
@@ -1383,6 +1431,10 @@ module.exports = function (pool) {
         const nom = cleanText(getVal(row.getCell(colMap.nombres || 4)) || '').toUpperCase();
         const nomComp = [nom, ape1, ape2].filter(Boolean).join(' ').trim();
 
+        const estadoFuncRaw = cleanText(getVal(row.getCell(colMap.estado_funcionario || 5)) || '').toUpperCase();
+        const fechaRetiro = cleanDate(getVal(row.getCell(colMap.fecha_retiro || 42)));
+        const esRetirado = estadoFuncRaw === 'R' || estadoFuncRaw.includes('RETIRAD') || !!fechaRetiro;
+
         const direccion = cleanText(getVal(row.getCell(colMap.direccion || 7)) || '').toUpperCase();
         const telefono = cleanText(getVal(row.getCell(colMap.telefono || 8)) || '');
         const sexo = cleanText(getVal(row.getCell(colMap.sexo || 9)) || '').toUpperCase();
@@ -1401,7 +1453,54 @@ module.exports = function (pool) {
         const fechaIngresoDistrito = cleanDate(getVal(row.getCell(colMap.fecha_ingreso_distrito || 17)));
         const fechaActoNomb = cleanDate(getVal(row.getCell(colMap.fecha_acto_nomb || 38)));
 
-        // Actualizar la persona en la plaza vinculando por cédula (titular o encargo)
+        // Guardar/actualizar historial en personal_perno_sjd
+        try {
+          await pool.query(`
+            INSERT INTO public.personal_perno_sjd (
+              cedula, primer_apellido, segundo_apellido, nombres, nombre_completo,
+              estado_funcionario, fecha_nacimiento, direccion, telefono, sexo,
+              tipo_funcionario, fecha_ingreso_entidad, fecha_ingreso_distrito,
+              fondo_salud, fondo_pension, fondo_cesantias,
+              posicion_planta, tipo_nombramiento, acto_nombramiento, numero_acto_nombramiento,
+              fecha_acto_nombramiento, fecha_retiro, total_devengado, updated_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW()
+            ) ON CONFLICT (cedula) DO UPDATE SET
+              estado_funcionario = EXCLUDED.estado_funcionario,
+              fecha_retiro = EXCLUDED.fecha_retiro,
+              total_devengado = COALESCE(EXCLUDED.total_devengado, public.personal_perno_sjd.total_devengado),
+              updated_at = NOW()
+          `, [
+            cedula, ape1, ape2, nom, nomComp,
+            esRetirado ? 'R' : 'A', fechaNacimiento, direccion, telefono, sexo,
+            tipoFuncionario, fechaIngresoEntidad, fechaIngresoDistrito,
+            fondoSalud, fondoPension, fondoCesantias,
+            idPerno, tipoNomb, actoNomb, numActo,
+            fechaActoNomb, fechaRetiro, totalDevengado
+          ]);
+        } catch (ePerno) {
+          // Continuar
+        }
+
+        procesados++;
+
+        if (esRetirado) {
+          // Si este funcionario está retirado, NO debe ser titular de la plaza en el Censo de Plazas
+          retiradosOSinPlaza++;
+          // Si la plaza aún tenía su cédula como titular, desvincularla
+          await pool.query(`
+            UPDATE public.planta_personal_sjd SET
+              titular_cedula = NULL,
+              titular_nombre = 'VACANTE DEFINITIVA',
+              estado_cargo = 'VACANTE DEFINITIVA',
+              situacion_titular = 'VACANTE DEFINITIVA',
+              updated_at = NOW()
+            WHERE titular_cedula = $1
+          `, [cedula]);
+          continue;
+        }
+
+        // Si es ACTIVO, actualizar la plaza vinculando por cédula (titular o encargo)
         const updateRes = await pool.query(`
           UPDATE public.planta_personal_sjd SET
             tipo_funcionario = COALESCE(NULLIF($1, ''), tipo_funcionario),
@@ -1428,11 +1527,11 @@ module.exports = function (pool) {
           cedula, String(parseInt(cedula, 10) || '')
         ]);
 
-        procesados++;
         if (updateRes.rowCount > 0) {
           actualizados += updateRes.rowCount;
         } else if (idPerno && nomComp) {
-          // Si no coincidió la cédula pero existe el ID PERNO, actualizar la plaza con el nuevo titular oficial
+          // Si no coincidió la cédula pero existe el ID PERNO y el funcionario está ACTIVO,
+          // actualizar la plaza con el nuevo titular oficial actual
           const updatePernoId = await pool.query(`
             UPDATE public.planta_personal_sjd SET
               titular_cedula = $1,
@@ -1817,6 +1916,53 @@ module.exports = function (pool) {
           if (u.rowCount > 0) countPerno += u.rowCount;
         }
       }
+
+      // Asegurar que las plazas reflejen únicamente a los funcionarios activos y no a retirados
+      await pool.query(`
+        UPDATE public.planta_personal_sjd pl
+        SET 
+          titular_cedula = act.cedula,
+          titular_nombre = act.nombre_completo,
+          tipo_funcionario = COALESCE(act.tipo_funcionario, pl.tipo_funcionario),
+          direccion = COALESCE(act.direccion, pl.direccion),
+          telefono = COALESCE(act.telefono, pl.telefono),
+          sexo = COALESCE(act.sexo, pl.sexo),
+          fondo_salud = COALESCE(act.fondo_salud, pl.fondo_salud),
+          fondo_pension = COALESCE(act.fondo_pension, pl.fondo_pension),
+          fondo_cesantias = COALESCE(act.fondo_cesantias, pl.fondo_cesantias),
+          tipo_nombramiento = COALESCE(act.tipo_nombramiento, pl.tipo_nombramiento),
+          acto_nombramiento = COALESCE(act.acto_nombramiento, pl.acto_nombramiento),
+          numero_acto_nombramiento = COALESCE(act.numero_acto_nombramiento, pl.numero_acto_nombramiento),
+          estado_cargo = 'OCUPADO',
+          situacion_titular = COALESCE(pl.situacion_titular, 'EN PROPIEDAD'),
+          updated_at = NOW()
+        FROM public.personal_perno_sjd act
+        WHERE pl.id_perno = act.posicion_planta
+          AND act.estado_funcionario = 'A'
+          AND act.fecha_retiro IS NULL
+          AND (
+            pl.titular_cedula IN (
+              SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
+            )
+            OR pl.titular_cedula IS NULL
+            OR pl.titular_cedula != act.cedula
+          );
+
+        UPDATE public.planta_personal_sjd pl
+        SET 
+          titular_cedula = NULL,
+          titular_nombre = 'VACANTE DEFINITIVA',
+          estado_cargo = 'VACANTE DEFINITIVA',
+          situacion_titular = 'VACANTE DEFINITIVA',
+          updated_at = NOW()
+        WHERE pl.titular_cedula IN (
+          SELECT cedula FROM public.personal_perno_sjd WHERE estado_funcionario = 'R' OR fecha_retiro IS NOT NULL
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM public.personal_perno_sjd act 
+          WHERE act.posicion_planta = pl.id_perno AND act.estado_funcionario = 'A' AND act.fecha_retiro IS NULL
+        );
+      `);
 
       res.json({
         success: true,

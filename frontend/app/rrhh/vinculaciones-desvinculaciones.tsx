@@ -865,41 +865,34 @@ export function generarEtapasParaCaso(
             id: 'v_prov_1',
             numero: 1,
             titulo: 'Verificación Lista CNSC',
-            subtitulo: 'Certificar ausencia de listas de elegibles',
+            subtitulo: 'Verificación mérito y constancia de inexistencia de listas',
             icono: 'search-outline',
             estado: 'completed',
             tiempoEstimadoDias: 2,
             responsable: 'Profesional Universitario TH',
-            normaGeneral: 'Ley 909 de 2004, Art. 25; Ley 1960 de 2019, Parágrafo 2; Criterio Unificado CNSC',
-            plazoLegal: 'Reporte previo obligatorio en SIMO',
-            procedimientoDetallado: 'Constatar que no existe lista de elegibles vigente en la CNSC para el empleo vacante en forma definitiva o temporal antes de considerar nombramiento provisional.',
+            normaGeneral: 'Ley 909 de 2004, Arts. 24 y 25; Decreto 1083 de 2015, Arts. 2.2.5.3.1 y 2.2.5.3.2; Ley 1960 de 2019',
+            plazoLegal: 'Verificación previa y reporte obligatorio en SIMO',
+            procedimientoDetallado: 'Constatar las alternativas de provisión por mérito en el Banco Nacional de Listas de Elegibles de la CNSC y expedir constancia suscrita de no existencia de listas aplicables antes de acudir a la provisión transitoria.',
             requisitos: [
               {
                 id: 'vp1_1',
-                label: 'Consulta en Banco Nacional de Listas de Elegibles de la CNSC para el empleo',
+                label: 'Consulta en Banco Nacional de Listas de Elegibles de la CNSC y Constancia de Inexistencia',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 25 • Circular Conjunta CNSC - DAFP 003 de 2020',
-                textoNormativo: 'Antes de acudir a la provisión transitoria mediante nombramiento provisional, la entidad debe constatar en el Banco de Listas de Elegibles de la CNSC que no existe lista en firme disponible para el empleo.',
-                detalleProcedimiento: 'Consultar aplicativo SIMO y dejar evidencia de consulta sin registros coincidentes en firme.',
-              },
-              {
-                id: 'vp1_2',
-                label: 'Constancia de no existencia de lista de elegibles disponible para periodo de prueba',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.1 • Criterio Unificado CNSC',
-                textoNormativo: 'Talento Humano debe expedir constancia expresa e інcontrovertible de la inexistencia de elegibles en lista de concurso público en firme para la vacante.',
-                detalleProcedimiento: 'Expedir constancia suscrita por Talento Humano certificando que no hay elegibles para la vacante.',
+                norma: 'Ley 909 de 2004, Arts. 24 y 25 • Decreto 1083 de 2015, Arts. 2.2.5.3.1 y 2.2.5.3.2 • Disposiciones de Listas de Elegibles',
+                notaNormativa: 'Antes de efectuar un nombramiento provisional para proveer una vacante definitiva de un empleo de carrera administrativa, la entidad debe verificar las alternativas de provisión mediante el sistema de mérito, incluyendo la existencia de listas de elegibles vigentes y aplicables. Esta verificación permite establecer si procede acudir a la provisión transitoria, de conformidad con las reglas legales y reglamentarias correspondientes.',
+                textoNormativo: 'Decreto 1083 de 2015, artículo 2.2.5.3.1: «Las vacantes definitivas en empleos de carrera se proveerán en periodo de prueba o en ascenso, con las personas que hayan sido seleccionadas mediante el sistema de mérito». El mismo artículo contempla la posibilidad de proveer transitoriamente los empleos de carrera que se encuentren vacantes de manera definitiva mediante encargo o nombramiento provisional, en los términos establecidos en las disposiciones aplicables.\n\nDecreto 1083 de 2015, artículo 2.2.5.3.2: establece las reglas para la provisión de vacantes temporales, incluida la aplicación de las listas de elegibles en los supuestos legalmente previstos. Su aplicación debe examinarse de acuerdo con la naturaleza de la vacante y las circunstancias particulares del empleo.',
+                detalleProcedimiento: 'Consultar el Banco Nacional de Listas de Elegibles de la Comisión Nacional del Servicio Civil (CNSC) y verificar si existen listas en firme, vigentes y jurídicamente aplicables al empleo objeto de provisión, incluyendo la procedencia de su uso cuando corresponda. Dejar evidencia documental de la consulta y de su resultado. Cuando no se identifiquen listas aplicables, elaborar una constancia suscrita por el responsable competente que indique, como mínimo, la identificación del empleo, la fecha de consulta, el resultado obtenido y la conclusión sobre la existencia o inexistencia de listas aplicables. Incorporar la constancia y los soportes al expediente del trámite de provisión.',
               },
               {
                 id: 'vp1_3',
-                label: 'Reporte previo de vacancia definitiva a la CNSC (Ley 1960/2019 parágrafo 2)',
+                label: 'Reporte previo de vacancia definitiva a la CNSC en SIMO (Ley 1960/2019)',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 1960 de 2019, Parágrafo 2 del Art. 1 • Circular CNSC 011 de 2021',
-                textoNormativo: 'Las vacancias definitivas deben ser reportadas a la CNSC para que sean incluidas en la siguiente convocatoria pública de méritos, aun si se proveen transitoriamente.',
-                detalleProcedimiento: 'Radicar el reporte de la vacante definitiva en SIMO en cumplimiento del deber legal institucional.',
+                norma: 'Ley 1960 de 2019, Art. 1, Parágrafo 2 • Decreto 1083 de 2015, Art. 2.2.6.34 • Circular Externa CNSC 011 de 2021',
+                notaNormativa: 'Las entidades deben informar a la Comisión Nacional del Servicio Civil (CNSC) la existencia de las vacantes definitivas en empleos de carrera administrativa antes de su provisión mediante encargo o nombramiento provisional. El reporte debe realizarse a través del aplicativo SIMO, conforme a los lineamientos y plazos establecidos por la CNSC, con el propósito de garantizar la adecuada administración de la Oferta Pública de Empleos de Carrera (OPEC).',
+                textoNormativo: 'Ley 1960 de 2019, artículo 1, parágrafo 2: «Previo a proveer vacantes definitivas mediante encargo o nombramiento provisional, el nominador o en quien este haya delegado, informará la existencia de la vacante a la Comisión Nacional del Servicio Civil a través del medio que esta indique».\n\nCircular Externa 011 de 2021 de la CNSC: Establece que las entidades deben reportar las vacantes definitivas de empleos de carrera administrativa en el aplicativo SIMO dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad, de acuerdo con las instrucciones y el procedimiento definidos por la Comisión.',
+                detalleProcedimiento: 'Reportar en SIMO la vacante definitiva del empleo de carrera administrativa antes de efectuar su provisión transitoria, dentro del plazo establecido por la CNSC. Verificar que la información registrada en la OPEC esté completa y actualizada, y conservar la evidencia del reporte, incluyendo el registro de la vacante y los soportes que permitan acreditar el cumplimiento de esta obligación.',
               },
             ],
           },
@@ -936,12 +929,13 @@ export function generarEtapasParaCaso(
               },
               {
                 id: 'vp2_3',
-                label: 'Certificación de que ningún servidor de carrera cumple requisitos o aceptó encargo',
+                label: 'Verificación del Derecho Preferencial a Encargo y Constancia de Procedencia de Provisión Transitoria',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 25 • Decreto 1083 de 2015, Art. 2.2.5.3.3',
-                textoNormativo: 'Solo cuando ningún empleado de carrera cumpla los requisitos exigidos para el encargo o no acepte la designación, la administración queda legalmente facultada para nombrar de manera provisional a un tercero.',
-                detalleProcedimiento: 'Expedir constancia de trámite de encargo desierto como requisito de validez del nombramiento provisional posterior.',
+                norma: 'Ley 909 de 2004, Art. 24 (modificado por Ley 1960 de 2019, Art. 1) • Decreto 1083 de 2015, Art. 2.2.5.3.1',
+                notaNormativa: 'La provisión transitoria de una vacante definitiva de carrera administrativa mediante nombramiento provisional procede excepcionalmente cuando no sea posible efectuarla mediante encargo, conforme al orden de provisión y los requisitos legales aplicables. Para ello, la entidad debe verificar el derecho preferencial de los empleados de carrera administrativa y documentar el resultado del procedimiento.',
+                textoNormativo: 'Ley 909 de 2004, artículo 24, modificado por el artículo 1 de la Ley 1960 de 2019: «Mientras se surte el proceso de selección para proveer empleos de carrera administrativa, los empleados de carrera tendrán derecho a ser encargados en estos si acreditan los requisitos para su ejercicio, poseen las aptitudes y habilidades para su desempeño, no han sido sancionados disciplinariamente en el último año y su última evaluación del desempeño sea sobresaliente».',
+                detalleProcedimiento: 'Verificar y documentar el cumplimiento de los requisitos para el encargo por parte de los empleados de carrera administrativa que puedan tener derecho preferencial sobre la vacante. Incorporar los soportes de la verificación, la publicación de la convocatoria interna cuando corresponda y sus resultados. Si no se identifican servidores con derecho al encargo, o se acredita que no es posible efectuarlo, dejar constancia escrita de las verificaciones realizadas y de sus resultados, como soporte para evaluar la procedencia del nombramiento provisional.',
               },
             ],
           },
@@ -4955,7 +4949,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         shadowRadius: 2,
                       }}
                     >
-                      {/* Cabecera del Caso */}
+                      {/* Cabecera Principal del Caso: Identidad y Acciones Rápidas */}
                       <View
                         style={{
                           flexDirection: isTablet ? 'row' : 'column',
@@ -4967,17 +4961,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           borderBottomColor: THEME.slate200,
                         }}
                       >
-                        <View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ flex: 1, gap: 5 }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
                             <Text
-                              style={{ color: THEME.slate900, fontSize: 16, fontWeight: '700' }}
+                              style={{
+                                color: THEME.slate900,
+                                fontSize: 17,
+                                fontWeight: '800',
+                                letterSpacing: -0.2,
+                              }}
                             >
                               {casoActivo.servidor_nombre}
                             </Text>
+
                             <View
                               style={{
-                                paddingHorizontal: 8,
-                                paddingVertical: 2,
+                                paddingHorizontal: 9,
+                                paddingVertical: 2.5,
                                 borderRadius: 9999,
                                 backgroundColor:
                                   casoActivo.tipo_proceso === 'VINCULACION'
@@ -4997,79 +5004,48 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       ? THEME.emeraldText
                                       : THEME.roseText,
                                   fontSize: 10.5,
-                                  fontWeight: '700',
+                                  fontWeight: '800',
+                                  letterSpacing: 0.4,
                                 }}
                               >
                                 {casoActivo.tipo_proceso}
                               </Text>
                             </View>
                           </View>
-                          <Text style={{ color: THEME.slate500, fontSize: 12, marginTop: 3 }}>
-                            Cédula: {casoActivo.servidor_cedula} • {casoActivo.cargo} •{' '}
-                            {casoActivo.dependencia}
-                          </Text>
 
-                          {/* BANNER INFORMATIVO DEL RÉGIMEN Y SUS FASES */}
-                          {(() => {
-                            const infoModActivo = obtenerInfoModalidad(casoActivo.modalidad);
-                            return (
-                              <View
-                                style={{
-                                  marginTop: 8,
-                                  backgroundColor: infoModActivo.colorBg,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: infoModActivo.colorBorde,
-                                  padding: 10,
-                                  gap: 5,
-                                }}
-                              >
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <Ionicons name={infoModActivo.icono} size={16} color={infoModActivo.colorTexto} />
-                                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
-                                      Régimen: {infoModActivo.titulo} ({casoActivo.etapas.length} Fases Específicas)
-                                    </Text>
-                                  </View>
-
-                                  <Pressable
-                                    onPress={() => {
-                                      setTabGuiaModalidad(casoActivo.modalidad);
-                                      setModalGuiaModalidadesVisible(true);
-                                    }}
-                                    style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 4,
-                                      paddingHorizontal: 8,
-                                      paddingVertical: 3,
-                                      borderRadius: 4,
-                                      backgroundColor: THEME.white,
-                                      borderWidth: 1,
-                                      borderColor: infoModActivo.colorBorde,
-                                    }}
-                                  >
-                                    <Ionicons name="information-circle-outline" size={13} color={infoModActivo.colorTexto} />
-                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: infoModActivo.colorTexto }}>
-                                      Ver Guía & Diferencias
-                                    </Text>
-                                  </Pressable>
-                                </View>
-
-                                <Text style={{ fontSize: 11, color: THEME.slate700, lineHeight: 15 }}>
-                                  {infoModActivo.descripcionFases}
-                                </Text>
-
-                                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
-                                  ⚖️ {infoModActivo.marcoLegal}
-                                </Text>
-                              </View>
-                            );
-                          })()}
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Ionicons name="card-outline" size={13} color={THEME.slate400} />
+                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '600' }}>
+                                Cédula: {casoActivo.servidor_cedula}
+                              </Text>
+                            </View>
+                            <Text style={{ color: THEME.slate300, fontSize: 12 }}>•</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Ionicons name="briefcase-outline" size={13} color={THEME.slate400} />
+                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '500' }}>
+                                {casoActivo.cargo}
+                              </Text>
+                            </View>
+                            <Text style={{ color: THEME.slate300, fontSize: 12 }}>•</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Ionicons name="business-outline" size={13} color={THEME.slate400} />
+                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '500' }}>
+                                {casoActivo.dependencia}
+                              </Text>
+                            </View>
+                          </View>
                         </View>
 
-                        {/* Botones de acción del caso */}
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {/* Botones de acción del caso (alineados en la cabecera superior) */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <Pressable
                             onPress={() =>
                               abrirConsultaSecopParaCandidato(
@@ -5083,8 +5059,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               alignItems: 'center',
                               gap: 6,
                               backgroundColor: THEME.skyBg,
-                              paddingHorizontal: 12,
-                              paddingVertical: 7,
+                              paddingHorizontal: 13,
+                              paddingVertical: 7.5,
                               borderRadius: 8,
                               borderWidth: 1,
                               borderColor: THEME.skyRing,
@@ -5092,7 +5068,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           >
                             <Ionicons name="search" size={14} color={THEME.skyText} />
                             <Text
-                              style={{ color: THEME.skyText, fontSize: 11.5, fontWeight: '600' }}
+                              style={{ color: THEME.skyText, fontSize: 11.5, fontWeight: '700' }}
                             >
                               Consultar SECOP II
                             </Text>
@@ -5106,8 +5082,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 alignItems: 'center',
                                 gap: 6,
                                 backgroundColor: THEME.emeraldBg,
-                                paddingHorizontal: 12,
-                                paddingVertical: 7,
+                                paddingHorizontal: 13,
+                                paddingVertical: 7.5,
                                 borderRadius: 8,
                                 borderWidth: 1,
                                 borderColor: THEME.emeraldRing,
@@ -5118,7 +5094,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 style={{
                                   color: THEME.emeraldText,
                                   fontSize: 11.5,
-                                  fontWeight: '600',
+                                  fontWeight: '700',
                                 }}
                               >
                                 Validación FT-318 IA
@@ -5127,6 +5103,119 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           )}
                         </View>
                       </View>
+
+                      {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
+                      {(() => {
+                        const infoModActivo = obtenerInfoModalidad(casoActivo.modalidad);
+                        return (
+                          <View
+                            style={{
+                              backgroundColor: infoModActivo.colorBg,
+                              borderRadius: 10,
+                              borderWidth: 1,
+                              borderColor: infoModActivo.colorBorde,
+                              padding: 12,
+                              gap: 8,
+                            }}
+                          >
+                            {/* Fila Superior del Banner: Título, Subtítulo y Botón Ver Guía */}
+                            <View
+                              style={{
+                                flexDirection: isTablet ? 'row' : 'column',
+                                justifyContent: 'space-between',
+                                alignItems: isTablet ? 'center' : 'flex-start',
+                                gap: 8,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <View
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 7,
+                                    backgroundColor: infoModActivo.colorTexto,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Ionicons name={infoModActivo.icono as any} size={16} color={THEME.white} />
+                                </View>
+
+                                <View>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <Text style={{ fontSize: 13, fontWeight: '800', color: infoModActivo.colorTexto }}>
+                                      Régimen: {infoModActivo.titulo}
+                                    </Text>
+                                    <View
+                                      style={{
+                                        backgroundColor: THEME.white,
+                                        paddingHorizontal: 7,
+                                        paddingVertical: 1.5,
+                                        borderRadius: 9999,
+                                        borderWidth: 1,
+                                        borderColor: infoModActivo.colorBorde,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 10, fontWeight: '700', color: infoModActivo.colorTexto }}>
+                                        {casoActivo.etapas.length} Fases Específicas
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <Text style={{ fontSize: 11, color: THEME.slate600 }}>
+                                    {infoModActivo.subtitulo}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Botón Ver Guía & Diferencias */}
+                              <Pressable
+                                onPress={() => {
+                                  setTabGuiaModalidad(casoActivo.modalidad);
+                                  setModalGuiaModalidadesVisible(true);
+                                }}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  paddingHorizontal: 11,
+                                  paddingVertical: 5,
+                                  borderRadius: 6,
+                                  backgroundColor: THEME.white,
+                                  borderWidth: 1,
+                                  borderColor: infoModActivo.colorBorde,
+                                }}
+                              >
+                                <Ionicons name="information-circle-outline" size={14} color={infoModActivo.colorTexto} />
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: infoModActivo.colorTexto }}>
+                                  Ver Guía & Diferencias
+                                </Text>
+                              </Pressable>
+                            </View>
+
+                            {/* Descripción del Régimen */}
+                            <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>
+                              {infoModActivo.descripcionFases}
+                            </Text>
+
+                            {/* Marco Legal */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                paddingTop: 4,
+                                borderTopWidth: 1,
+                                borderTopColor: 'rgba(0, 0, 0, 0.05)',
+                              }}
+                            >
+                              <Text style={{ fontSize: 11 }}>⚖️</Text>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate600, flex: 1 }}>
+                                {infoModActivo.marcoLegal}
+                              </Text>
+                            </View>
+                          </View>
+                        );
+                      })()}
 
                       {/* Stepper Horizontal Limpio */}
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -6139,6 +6228,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                           {req.norma}
                                                         </Text>
                                                       </View>
+                                                      {req.notaNormativa && (
+                                                        <View
+                                                          style={{
+                                                            backgroundColor: THEME.marca50,
+                                                            borderLeftWidth: 3,
+                                                            borderLeftColor: THEME.marca600,
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 6,
+                                                            borderRadius: 4,
+                                                            marginTop: 2,
+                                                          }}
+                                                        >
+                                                          <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.marca800, marginBottom: 1 }}>
+                                                            💡 Resumen Jurídico:
+                                                          </Text>
+                                                          <Text style={{ fontSize: 10, color: THEME.slate700, lineHeight: 14 }}>
+                                                            {req.notaNormativa}
+                                                          </Text>
+                                                        </View>
+                                                      )}
                                                       {req.textoNormativo && (
                                                         <View
                                                           style={{
@@ -9106,6 +9215,778 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           </View>
         </View>
       </Modal>
+
+      {/* =================================================================== */}
+      {/* MODAL GUÍA COMPARATIVA DE REGÍMENES & FASES ESPECÍFICAS            */}
+      {/* =================================================================== */}
+      <Modal
+        visible={modalGuiaModalidadesVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalGuiaModalidadesVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: THEME.white,
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 960,
+              maxHeight: '92%',
+              borderWidth: 1,
+              borderColor: THEME.slate200,
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* Header del Modal */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 22,
+                paddingVertical: 16,
+                backgroundColor: THEME.marca900,
+                borderBottomWidth: 1,
+                borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                <View
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  <Ionicons name="book" size={20} color={THEME.white} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: THEME.white, fontSize: 16, fontWeight: '800' }}>
+                    Guía Normativa de Regímenes & Fases Específicas
+                  </Text>
+                  <Text style={{ color: THEME.marca100, fontSize: 12, marginTop: 1 }}>
+                    Fundamentos legales, etapas secuenciales y diferencias clave en el empleo público distrital
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={() => setModalGuiaModalidadesVisible(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="close" size={20} color={THEME.white} />
+              </Pressable>
+            </View>
+
+            {/* Pestañas de Regímenes */}
+            <View
+              style={{
+                flexDirection: 'row',
+                backgroundColor: THEME.slate100,
+                borderBottomWidth: 1,
+                borderBottomColor: THEME.slate200,
+                paddingHorizontal: 12,
+                gap: 6,
+                paddingTop: 8,
+              }}
+            >
+              {[
+                { id: 'CARRERA_ADMINISTRATIVA' as ModalidadPersonal, label: 'Carrera Administrativa', icon: 'ribbon-outline', badge: '6 Fases' },
+                { id: 'LIBRE_NOMBRAMIENTO' as ModalidadPersonal, label: 'Libre Nombramiento', icon: 'shield-outline', badge: '6 Fases' },
+                { id: 'PROVISIONALIDAD' as ModalidadPersonal, label: 'Nombramiento Provisional', icon: 'hourglass-outline', badge: '6 Fases' },
+                { id: 'PRACTICANTE_JUDICANTE' as ModalidadPersonal, label: 'Pasante / Judicante', icon: 'school-outline', badge: '5 Fases' },
+              ].map((tab) => {
+                const activo = tabGuiaModalidad === tab.id;
+                const infoM = obtenerInfoModalidad(tab.id);
+                return (
+                  <Pressable
+                    key={tab.id}
+                    onPress={() => setTabGuiaModalidad(tab.id)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 7,
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderTopLeftRadius: 8,
+                      borderTopRightRadius: 8,
+                      backgroundColor: activo ? THEME.white : 'transparent',
+                      borderBottomWidth: activo ? 3 : 0,
+                      borderBottomColor: activo ? infoM.colorTexto : 'transparent',
+                      marginBottom: activo ? -1 : 0,
+                    }}
+                  >
+                    <Ionicons
+                      name={tab.icon as any}
+                      size={15}
+                      color={activo ? infoM.colorTexto : THEME.slate500}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: activo ? '700' : '600',
+                        color: activo ? infoM.colorTexto : THEME.slate600,
+                      }}
+                    >
+                      {tab.label}
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: activo ? infoM.colorBg : THEME.slate200,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1.5,
+                        borderRadius: 10,
+                        borderWidth: activo ? 1 : 0,
+                        borderColor: infoM.colorBorde,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: '700',
+                          color: activo ? infoM.colorTexto : THEME.slate600,
+                        }}
+                      >
+                        {tab.badge}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Contenido Principal con Scroll */}
+            <ScrollView
+              style={{ flex: 1, backgroundColor: THEME.white }}
+              contentContainerStyle={{ padding: 22, gap: 18 }}
+            >
+              {(() => {
+                const infoActual = obtenerInfoModalidad(tabGuiaModalidad);
+                const etapasActuales = generarEtapasParaCaso('VINCULACION', tabGuiaModalidad);
+
+                return (
+                  <>
+                    {/* Banner Informativo del Régimen Actual */}
+                    <View
+                      style={{
+                        backgroundColor: infoActual.colorBg,
+                        borderWidth: 1.5,
+                        borderColor: infoActual.colorBorde,
+                        borderRadius: 12,
+                        padding: 18,
+                        gap: 12,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 10,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View
+                            style={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 8,
+                              backgroundColor: infoActual.colorTexto,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Ionicons name={infoActual.icono as any} size={20} color={THEME.white} />
+                          </View>
+                          <View>
+                            <Text
+                              style={{
+                                fontSize: 16,
+                                fontWeight: '800',
+                                color: infoActual.colorTexto,
+                              }}
+                            >
+                              {infoActual.titulo}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: THEME.slate600, marginTop: 1 }}>
+                              {infoActual.subtitulo}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 6,
+                            backgroundColor: THEME.white,
+                            borderWidth: 1,
+                            borderColor: infoActual.colorBorde,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              fontWeight: '800',
+                              color: infoActual.colorTexto,
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            {infoActual.badgeTexto}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Marco Legal */}
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          padding: 10,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: infoActual.colorBorde,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <Ionicons name="scale-outline" size={16} color={infoActual.colorTexto} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                            Marco Jurídico Aplicable:
+                          </Text>
+                          <Text style={{ fontSize: 11.5, color: THEME.slate700, marginTop: 2 }}>
+                            {infoActual.marcoLegal}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Grid: Diferencia Clave vs Requisito Principal */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: 12,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flex: 1,
+                            minWidth: 280,
+                            backgroundColor: THEME.white,
+                            borderRadius: 8,
+                            padding: 12,
+                            borderLeftWidth: 4,
+                            borderLeftColor: infoActual.colorTexto,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            gap: 4,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="git-compare-outline" size={15} color={infoActual.colorTexto} />
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                fontWeight: '800',
+                                color: infoActual.colorTexto,
+                              }}
+                            >
+                              Diferencia Clave & Estabilidad
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 17 }}>
+                            {infoActual.diferenciaClave}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={{
+                            flex: 1,
+                            minWidth: 280,
+                            backgroundColor: THEME.white,
+                            borderRadius: 8,
+                            padding: 12,
+                            borderLeftWidth: 4,
+                            borderLeftColor: THEME.marca600,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            gap: 4,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="checkbox-outline" size={15} color={THEME.marca600} />
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                fontWeight: '800',
+                                color: THEME.marca700,
+                              }}
+                            >
+                              Requisito Habilitante Principal
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 17 }}>
+                            {infoActual.requisitoPrincipal}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Flujo y Resumen Operativo */}
+                      <View style={{ gap: 3 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate600 }}>
+                          Resumen del Trámite Institucional:
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 17 }}>
+                          {infoActual.descripcionFases}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Desglose de Fases Específicas */}
+                    <View style={{ gap: 10, marginTop: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="git-network-outline" size={18} color={THEME.slate800} />
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                            Fases del Proceso ({etapasActuales.length} Etapas Secuenciales Obligatorias)
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                          Orden técnico y legal exigido por Talento Humano
+                        </Text>
+                      </View>
+
+                      <View style={{ gap: 10 }}>
+                        {etapasActuales.map((etapa, idx) => (
+                          <View
+                            key={etapa.id || idx}
+                            style={{
+                              backgroundColor: THEME.slate50,
+                              borderRadius: 10,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              padding: 14,
+                              gap: 10,
+                            }}
+                          >
+                            {/* Cabecera de la Fase */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                gap: 8,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                                <View
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 14,
+                                    backgroundColor: infoActual.colorTexto,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}
+                                >
+                                  <Text style={{ color: THEME.white, fontWeight: '800', fontSize: 12 }}>
+                                    {etapa.numero}
+                                  </Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                                    {etapa.titulo}
+                                  </Text>
+                                  <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
+                                    {etapa.subtitulo}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Badges de tiempo y responsable */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                {etapa.tiempoEstimadoDias ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: THEME.white,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: THEME.slate300,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                    }}
+                                  >
+                                    <Ionicons name="time-outline" size={12} color={THEME.slate600} />
+                                    <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.slate700 }}>
+                                      {etapa.tiempoEstimadoDias} {etapa.tiempoEstimadoDias === 1 ? 'día' : 'días'}
+                                    </Text>
+                                  </View>
+                                ) : null}
+
+                                {etapa.responsable ? (
+                                  <View
+                                    style={{
+                                      backgroundColor: THEME.marca50,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: THEME.marca100,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                    }}
+                                  >
+                                    <Ionicons name="person-outline" size={12} color={THEME.marca700} />
+                                    <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.marca700 }}>
+                                      {etapa.responsable}
+                                    </Text>
+                                  </View>
+                                ) : null}
+                              </View>
+                            </View>
+
+                            {/* Procedimiento detallado y norma */}
+                            {etapa.procedimientoDetallado && (
+                              <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>
+                                {etapa.procedimientoDetallado}
+                              </Text>
+                            )}
+
+                            {etapa.normaGeneral && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                <Ionicons name="bookmark-outline" size={12} color={THEME.slate500} />
+                                <Text style={{ fontSize: 10.5, color: THEME.slate500, fontStyle: 'italic' }}>
+                                  {etapa.normaGeneral} {etapa.plazoLegal ? `• Plazo: ${etapa.plazoLegal}` : ''}
+                                </Text>
+                              </View>
+                            )}
+
+                            {/* Requisitos de la Fase */}
+                            {etapa.requisitos && etapa.requisitos.length > 0 && (
+                              <View
+                                style={{
+                                  backgroundColor: THEME.white,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: THEME.slate200,
+                                  padding: 10,
+                                  gap: 6,
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textTransform: 'uppercase' }}>
+                                  Requisitos & Validaciones de la Fase:
+                                </Text>
+
+                                {etapa.requisitos.map((req, rIdx) => (
+                                  <View
+                                    key={req.id || rIdx}
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'flex-start',
+                                      gap: 8,
+                                      paddingVertical: 4,
+                                      borderTopWidth: rIdx > 0 ? 1 : 0,
+                                      borderTopColor: THEME.slate100,
+                                    }}
+                                  >
+                                    <Ionicons
+                                      name={req.cumplido ? 'checkmark-circle' : 'ellipse-outline'}
+                                      size={14}
+                                      color={req.cumplido ? THEME.emerald600 : THEME.slate400}
+                                      style={{ marginTop: 2 }}
+                                    />
+                                    <View style={{ flex: 1, gap: 2 }}>
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                        <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate800, flex: 1 }}>
+                                          {req.label}
+                                        </Text>
+                                        {req.codigoFormato && (
+                                          <View
+                                            style={{
+                                              backgroundColor: THEME.slate100,
+                                              paddingHorizontal: 5,
+                                              paddingVertical: 1.5,
+                                              borderRadius: 4,
+                                              borderWidth: 1,
+                                              borderColor: THEME.slate300,
+                                            }}
+                                          >
+                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.slate700 }}>
+                                              {req.codigoFormato}
+                                            </Text>
+                                          </View>
+                                        )}
+                                        {req.tipoAccionEspecial === 'SECOP' && (
+                                          <View
+                                            style={{
+                                              backgroundColor: THEME.skyBg,
+                                              paddingHorizontal: 5,
+                                              paddingVertical: 1.5,
+                                              borderRadius: 4,
+                                            }}
+                                          >
+                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.skyText }}>
+                                              API SECOP II
+                                            </Text>
+                                          </View>
+                                        )}
+                                        {req.tipoAccionEspecial === 'INGRESOS_IA' && (
+                                          <View
+                                            style={{
+                                              backgroundColor: '#faf5ff',
+                                              paddingHorizontal: 5,
+                                              paddingVertical: 1.5,
+                                              borderRadius: 4,
+                                            }}
+                                          >
+                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#6b21a8' }}>
+                                              IA FT-318
+                                            </Text>
+                                          </View>
+                                        )}
+                                      </View>
+                                      {req.norma && (
+                                        <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                                          {req.norma}
+                                        </Text>
+                                      )}
+                                    </View>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Matriz Comparativa Resumida entre Regímenes */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.slate50,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 16,
+                        gap: 12,
+                        marginTop: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="swap-horizontal" size={18} color={THEME.marca700} />
+                        <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900 }}>
+                          Matriz Comparativa Rápida entre los 4 Regímenes
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {/* Cabecera de la tabla */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            backgroundColor: THEME.slate100,
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderBottomWidth: 1,
+                            borderBottomColor: THEME.slate200,
+                          }}
+                        >
+                          <Text style={{ flex: 1.2, fontSize: 10.5, fontWeight: '800', color: THEME.slate700 }}>
+                            Régimen
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, fontWeight: '800', color: THEME.slate700 }}>
+                            Vía de Provisión
+                          </Text>
+                          <Text style={{ flex: 1.8, fontSize: 10.5, fontWeight: '800', color: THEME.slate700 }}>
+                            Estabilidad Laboral
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, fontWeight: '800', color: THEME.slate700 }}>
+                            Causa de Retiro
+                          </Text>
+                        </View>
+
+                        {/* Fila Carrera */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderBottomWidth: 1,
+                            borderBottomColor: THEME.slate100,
+                            backgroundColor: tabGuiaModalidad === 'CARRERA_ADMINISTRATIVA' ? '#eff6ff' : THEME.white,
+                          }}
+                        >
+                          <Text style={{ flex: 1.2, fontSize: 10.5, fontWeight: '700', color: '#1e40af' }}>
+                            Carrera Adm.
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Concurso Méritos (CNSC)
+                          </Text>
+                          <Text style={{ flex: 1.8, fontSize: 10.5, color: THEME.slate700 }}>
+                            Plena (Derechos de Carrera tras 6 meses)
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Evaluación insatisfactoria o sanción
+                          </Text>
+                        </View>
+
+                        {/* Fila Libre Nombramiento */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderBottomWidth: 1,
+                            borderBottomColor: THEME.slate100,
+                            backgroundColor: tabGuiaModalidad === 'LIBRE_NOMBRAMIENTO' ? '#faf5ff' : THEME.white,
+                          }}
+                        >
+                          <Text style={{ flex: 1.2, fontSize: 10.5, fontWeight: '700', color: '#6b21a8' }}>
+                            Libre Nombramiento
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Discrecional del Nominador (SEVCOM + Web)
+                          </Text>
+                          <Text style={{ flex: 1.8, fontSize: 10.5, color: THEME.slate700 }}>
+                            Precaria / Sin estabilidad relativa
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Declaratoria de insubsistencia discrecional
+                          </Text>
+                        </View>
+
+                        {/* Fila Provisionalidad */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            borderBottomWidth: 1,
+                            borderBottomColor: THEME.slate100,
+                            backgroundColor: tabGuiaModalidad === 'PROVISIONALIDAD' ? '#fffbeb' : THEME.white,
+                          }}
+                        >
+                          <Text style={{ flex: 1.2, fontSize: 10.5, fontWeight: '700', color: '#b45309' }}>
+                            Provisionalidad
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Transitoria (Sin lista CNSC + Encargo desierto)
+                          </Text>
+                          <Text style={{ flex: 1.8, fontSize: 10.5, color: THEME.slate700 }}>
+                            Relativa intermedia (Hasta que la CNSC provea por mérito)
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Llegada de elegible o encargo de titular
+                          </Text>
+                        </View>
+
+                        {/* Fila Pasante */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            paddingVertical: 8,
+                            paddingHorizontal: 10,
+                            backgroundColor: tabGuiaModalidad === 'PRACTICANTE_JUDICANTE' ? '#ecfeff' : THEME.white,
+                          }}
+                        >
+                          <Text style={{ flex: 1.2, fontSize: 10.5, fontWeight: '700', color: '#0e7490' }}>
+                            Pasante / Judicante
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Convenio Universitario / Ley 2043/2020
+                          </Text>
+                          <Text style={{ flex: 1.8, fontSize: 10.5, color: THEME.slate700 }}>
+                            No laboral (Formación académica y cómputo de experiencia)
+                          </Text>
+                          <Text style={{ flex: 1.5, fontSize: 10.5, color: THEME.slate700 }}>
+                            Culminación de horas/término convenido
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </>
+                );
+              })()}
+            </ScrollView>
+
+            {/* Footer del Modal */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingHorizontal: 22,
+                paddingVertical: 14,
+                backgroundColor: THEME.slate50,
+                borderTopWidth: 1,
+                borderTopColor: THEME.slate200,
+              }}
+            >
+              <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                Sistema Integrado de Gestión RRHH • Subdirección de Talento Humano
+              </Text>
+
+              <Pressable
+                onPress={() => setModalGuiaModalidadesVisible(false)}
+                style={{
+                  backgroundColor: THEME.marca600,
+                  paddingHorizontal: 20,
+                  paddingVertical: 9,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12.5 }}>
+                  Entendido / Cerrar Guía
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+

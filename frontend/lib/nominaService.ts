@@ -51,27 +51,27 @@ export interface PersonaPerno {
   // Campos vinculados a la Planta Oficial
   plaza_id_plaza?: number | null;
   plaza_id_sideap?: number | null;
-  plaza_nivel?: string;
-  plaza_cargo?: string;
-  plaza_codigo?: string;
-  plaza_grado?: string;
-  plaza_dependencia_cargo?: string;
-  plaza_dependencia_funcional?: string;
-  plaza_proposito?: string;
-  plaza_funciones?: string[] | string;
-  plaza_requisitos?: string;
-  plaza_estado_cargo?: string;
-  plaza_situacion_titular?: string;
-  plaza_tipo_vinculacion?: string;
-  plaza_situacion_administrativa?: string;
-  plaza_encargo_cedula?: string;
-  plaza_encargo_nombre?: string;
-  plaza_es_encargo?: boolean;
-  plaza_opec?: string;
+  plaza_nivel?: string | null;
+  plaza_cargo?: string | null;
+  plaza_codigo?: string | null;
+  plaza_grado?: string | null;
+  plaza_dependencia_cargo?: string | null;
+  plaza_dependencia_funcional?: string | null;
+  plaza_proposito?: string | null;
+  plaza_funciones?: string[] | string | null;
+  plaza_requisitos?: string | null;
+  plaza_estado_cargo?: string | null;
+  plaza_situacion_titular?: string | null;
+  plaza_tipo_vinculacion?: string | null;
+  plaza_situacion_administrativa?: string | null;
+  plaza_encargo_cedula?: string | null;
+  plaza_encargo_nombre?: string | null;
+  plaza_es_encargo?: boolean | null;
+  plaza_opec?: string | null;
   plaza_id_escalera?: string | null;
   plaza_peldano_escalera?: number | null;
-  plaza_resolucion_manual?: string;
-  plaza_manual_funciones?: string;
+  plaza_resolucion_manual?: string | null;
+  plaza_manual_funciones?: string | null;
 }
 
 export interface PlazaNomina {
@@ -89,11 +89,11 @@ export interface PlazaNomina {
   requisitos?: string;
   asignacion_basica?: number | string;
   estado_cargo: 'OCUPADO' | 'VACANTE DEFINITIVA' | 'VACANTE TEMPORAL' | 'ENCARGO' | string;
-  titular_cedula?: string;
-  titular_nombre?: string;
-  situacion_titular?: string;
-  encargo_cedula?: string;
-  encargo_nombre?: string;
+  titular_cedula?: string | null;
+  titular_nombre?: string | null;
+  situacion_titular?: string | null;
+  encargo_cedula?: string | null;
+  encargo_nombre?: string | null;
   es_encargo?: boolean;
   tipo_vinculacion?: string;
   situacion_administrativa?: string;
@@ -177,9 +177,10 @@ export const nominaService = {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.plazas) && data.plazas.length > 0) {
+          const listPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
           return data.plazas.map((p: PlazaNomina) => {
             const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
-            return {
+            let plazaActual: PlazaNomina = {
               ...p,
               id_escalera: p.id_escalera || m?.id_escalera || null,
               peldano_escalera: p.peldano_escalera || m?.peldano_escalera || null,
@@ -189,6 +190,28 @@ export const nominaService = {
               opec: p.opec || m?.opec || null,
               situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
             };
+
+            // Garantía: Si el titular reportado estuviera retirado en PERNO, sustituir por el activo actual o vacante
+            const titularCed = plazaActual.titular_cedula ? String(plazaActual.titular_cedula).trim() : null;
+            if (titularCed) {
+              const perFunc = listPerno.find((per) => String(per.cedula).trim() === titularCed);
+              if (perFunc && (perFunc.estado_funcionario === 'R' || perFunc.fecha_retiro)) {
+                const activo = plazaActual.id_perno
+                  ? listPerno.find((per) => per.posicion_planta === plazaActual.id_perno && per.estado_funcionario === 'A' && !per.fecha_retiro)
+                  : null;
+                if (activo) {
+                  plazaActual.titular_cedula = activo.cedula;
+                  plazaActual.titular_nombre = activo.nombre_completo || `${activo.nombres} ${activo.primer_apellido}`;
+                  plazaActual.estado_cargo = 'OCUPADO';
+                } else {
+                  plazaActual.titular_cedula = null;
+                  plazaActual.titular_nombre = 'VACANTE DEFINITIVA';
+                  plazaActual.estado_cargo = 'VACANTE DEFINITIVA';
+                }
+              }
+            }
+
+            return plazaActual;
           });
         }
       }
@@ -196,8 +219,35 @@ export const nominaService = {
       // Fallback local silencioso si la API aún no está disponible
     }
 
-    // Filtrar sobre los datos precargados reales
-    let result = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    // Filtrar sobre los datos precargados reales garantizando sólo personal actual
+    const listPernoFallback = (mockPernoData as unknown as PersonaPerno[]) || [];
+    let result = ((mockPlazasData as unknown as PlazaNomina[]) || []).map((p) => {
+      const titularCed = p.titular_cedula ? String(p.titular_cedula).trim() : null;
+      if (titularCed) {
+        const perFunc = listPernoFallback.find((per) => String(per.cedula).trim() === titularCed);
+        if (perFunc && (perFunc.estado_funcionario === 'R' || perFunc.fecha_retiro)) {
+          const activo = p.id_perno
+            ? listPernoFallback.find((per) => per.posicion_planta === p.id_perno && per.estado_funcionario === 'A' && !per.fecha_retiro)
+            : null;
+          if (activo) {
+            return {
+              ...p,
+              titular_cedula: activo.cedula,
+              titular_nombre: activo.nombre_completo || `${activo.nombres} ${activo.primer_apellido}`,
+              estado_cargo: 'OCUPADO',
+            };
+          } else {
+            return {
+              ...p,
+              titular_cedula: null,
+              titular_nombre: 'VACANTE DEFINITIVA',
+              estado_cargo: 'VACANTE DEFINITIVA',
+            };
+          }
+        }
+      }
+      return p;
+    });
 
     if (filtros?.busqueda && filtros.busqueda.trim()) {
       const q = filtros.busqueda.trim().toLowerCase();

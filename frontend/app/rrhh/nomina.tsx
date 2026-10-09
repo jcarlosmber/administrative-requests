@@ -201,10 +201,50 @@ export default function NominaScreen() {
         nominaService.getEstadisticas(),
         nominaService.getPersonalPerno(),
       ]);
+      const rawPerno = Array.isArray(pernoList) && pernoList.length > 0
+        ? pernoList
+        : ((mockPernoData as unknown as PersonaPerno[]) || []);
+
+      const pernoActivosPorPos = new Map<number, PersonaPerno>();
+      const pernoRetirados = new Set<string>();
+
+      rawPerno.forEach((per) => {
+        const esRet = per.estado_funcionario === 'R' || !!per.fecha_retiro;
+        if (esRet) {
+          pernoRetirados.add(String(per.cedula).trim());
+        } else if (per.estado_funcionario === 'A' && !per.fecha_retiro && per.posicion_planta) {
+          pernoActivosPorPos.set(per.posicion_planta, per);
+        }
+      });
+
       const listadoEnriquecido = (listado || []).map((p: PlazaNomina) => {
         const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
+        const titularCed = p.titular_cedula ? String(p.titular_cedula).trim() : (m?.titular_cedula ? String(m.titular_cedula).trim() : null);
+        const titularEstaRetirado = titularCed ? pernoRetirados.has(titularCed) : false;
+        const posPlanta = p.id_perno || m?.id_perno;
+        const funcionarioActivo = posPlanta ? pernoActivosPorPos.get(posPlanta) : null;
+
+        let titularNombreFinal = p.titular_nombre || m?.titular_nombre || null;
+        let titularCedulaFinal = p.titular_cedula || m?.titular_cedula || null;
+        let estadoCargoFinal = p.estado_cargo || m?.estado_cargo || 'OCUPADO';
+
+        if (titularEstaRetirado) {
+          if (funcionarioActivo) {
+            titularNombreFinal = funcionarioActivo.nombre_completo || `${funcionarioActivo.nombres} ${funcionarioActivo.primer_apellido}`;
+            titularCedulaFinal = funcionarioActivo.cedula;
+            estadoCargoFinal = 'OCUPADO';
+          } else {
+            titularNombreFinal = null;
+            titularCedulaFinal = null;
+            estadoCargoFinal = 'VACANTE DEFINITIVA';
+          }
+        }
+
         return {
           ...p,
+          titular_nombre: titularNombreFinal,
+          titular_cedula: titularCedulaFinal,
+          estado_cargo: estadoCargoFinal,
           id_escalera: p.id_escalera || m?.id_escalera || null,
           peldano_escalera: p.peldano_escalera || m?.peldano_escalera || null,
           encargo_cedula: p.encargo_cedula || m?.encargo_cedula || null,
@@ -216,11 +256,7 @@ export default function NominaScreen() {
       });
       setPlazas(listadoEnriquecido);
       setEstadisticas(stats);
-      if (Array.isArray(pernoList) && pernoList.length > 0) {
-        setPersonalPerno(pernoList);
-      } else {
-        setPersonalPerno((mockPernoData as unknown as PersonaPerno[]) || []);
-      }
+      setPersonalPerno(rawPerno);
     } catch (e: any) {
       mostrarModal('Error de Conexión', 'No fue posible cargar los datos de nómina: ' + e.message, 'error');
       setPersonalPerno((mockPernoData as unknown as PersonaPerno[]) || []);
