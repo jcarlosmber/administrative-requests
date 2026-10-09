@@ -15,6 +15,7 @@ export default function RRHHLayout() {
       <Stack.Screen name="teletrabajo" options={{ headerShown: false }} />
       <Stack.Screen name="desvinculaciones" options={{ headerShown: false }} />
       <Stack.Screen name="vinculaciones-desvinculaciones" options={{ headerShown: false }} />
+      <Stack.Screen name="peticiones-opec" options={{ headerShown: false }} />
     </Stack>
     </MarcoRRHH>
   );

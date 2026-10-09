@@ -90,6 +90,7 @@ export default function NominaScreen() {
   // ========================================================================
   type SubReporteTipo =
     | 'vinculacion_sideap'
+    | 'estructura_niveles'
     | 'ocupacion_vacancias'
     | 'dependencias_costo'
     | 'paridad_demografia'
@@ -102,6 +103,9 @@ export default function NominaScreen() {
   const [filtroNivelReporte, setFiltroNivelReporte] = useState('TODOS');
   const [filtroDependenciaReporte, setFiltroDependenciaReporte] = useState('TODAS');
   const [filtroEstadoCargoReporte, setFiltroEstadoCargoReporte] = useState('TODOS');
+  const [filtroCodigoGradoReporte, setFiltroCodigoGradoReporte] = useState('');
+  const [filtroSoloEncargoReporte, setFiltroSoloEncargoReporte] = useState(false);
+  const [filtroSoloVacantesReporte, setFiltroSoloVacantesReporte] = useState(false);
   const [paginaReporte, setPaginaReporte] = useState(1);
   const filasPorPaginaReporte = 15;
   const [plazaDetalleReporte, setPlazaDetalleReporte] = useState<PlazaNomina | null>(null);
@@ -484,6 +488,36 @@ export default function NominaScreen() {
       porAfp[a] = (porAfp[a] || 0) + 1;
     });
 
+    // Fondos de Cesantías en PERNO
+    const porCesantias: Record<string, number> = {};
+    todoElPerno.forEach((p) => {
+      const c = (p.fondo_cesantias || 'SIN FONDO').trim();
+      porCesantias[c] = (porCesantias[c] || 0) + 1;
+    });
+
+    // Grupos etarios para planeación y retiro pensional
+    const gruposEdad = {
+      menor30: 0,
+      de30a45: 0,
+      de46a60: 0,
+      mayor60: 0,
+    };
+    listPlazas.forEach((p: any) => {
+      const ed = Number(p.edad) || 0;
+      if (ed > 0) {
+        if (ed < 30) gruposEdad.menor30++;
+        else if (ed <= 45) gruposEdad.de30a45++;
+        else if (ed <= 60) gruposEdad.de46a60++;
+        else gruposEdad.mayor60++;
+      }
+    });
+
+    // Conciliación detallada
+    const activosPerno = todoElPerno.filter((p) => p.estado_funcionario === 'A' && !p.fecha_retiro);
+    const servidoresSinPlaza = activosPerno.filter(
+      (per) => !per.posicion_planta || !listPlazas.some((pl) => pl.id_perno === per.posicion_planta || String(pl.titular_cedula) === String(per.cedula))
+    );
+
     return {
       totalPlazas,
       conSideap,
@@ -505,29 +539,48 @@ export default function NominaScreen() {
       edadPromedio,
       porEps,
       porAfp,
+      porCesantias,
+      gruposEdad,
+      servidoresSinPlaza,
     };
   }, [plazas, todasLasPlazas, todoElPerno]);
 
-  // Plazas filtradas para la tabla del Reporte de Vinculación / SIDEAP
+  // Plazas filtradas para las tablas y analíticas de Reportes
   const plazasFiltradasReporte = useMemo(() => {
     const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
     let res = listPlazas;
-    if (subReporteActivo === 'vinculacion_sideap') {
-      if (filtroVinculacionReporte !== 'TODAS') {
-        res = res.filter((p) => (p.tipo_vinculacion || '').toUpperCase().trim() === filtroVinculacionReporte);
-      }
-      if (filtroNivelReporte !== 'TODOS') {
-        res = res.filter((p) => p.nivel === filtroNivelReporte);
-      }
-      if (filtroDependenciaReporte !== 'TODAS') {
-        res = res.filter((p) => (p.dependencia_cargo || p.dependencia_funcional) === filtroDependenciaReporte);
-      }
-      if (filtroEstadoCargoReporte !== 'TODOS') {
-        res = res.filter((p) => p.estado_cargo === filtroEstadoCargoReporte);
-      }
-      if (busquedaReporte.trim()) {
-        const q = busquedaReporte.trim().toLowerCase();
-        res = res.filter((p) =>
+
+    if (filtroVinculacionReporte !== 'TODAS') {
+      res = res.filter((p) => (p.tipo_vinculacion || '').toUpperCase().trim() === filtroVinculacionReporte);
+    }
+    if (filtroNivelReporte !== 'TODOS') {
+      const nq = filtroNivelReporte.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      res = res.filter((p) => (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === nq);
+    }
+    if (filtroDependenciaReporte !== 'TODAS') {
+      const depQ = filtroDependenciaReporte.trim().toLowerCase();
+      res = res.filter(
+        (p) =>
+          (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(depQ)) ||
+          (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(depQ))
+      );
+    }
+    if (filtroEstadoCargoReporte !== 'TODOS') {
+      res = res.filter((p) => (p.estado_cargo || '').toUpperCase() === filtroEstadoCargoReporte);
+    }
+    if (filtroCodigoGradoReporte && filtroCodigoGradoReporte.trim() && filtroCodigoGradoReporte !== 'TODOS') {
+      res = res.filter((p) => coincideCodigoGrado(p, filtroCodigoGradoReporte));
+    }
+    if (filtroSoloEncargoReporte) {
+      res = res.filter((p) => p.es_encargo === true || (p.encargo_cedula && p.encargo_cedula.toString().trim() !== ''));
+    }
+    if (filtroSoloVacantesReporte) {
+      res = res.filter((p) => p.estado_cargo !== 'OCUPADO' || p.titular_nombre?.includes('VACANTE'));
+    }
+    if (busquedaReporte.trim()) {
+      const q = busquedaReporte.trim().toLowerCase();
+      res = res.filter(
+        (p) =>
           String(p.id_plaza).includes(q) ||
           String(p.id_sideap || '').includes(q) ||
           String(p.id_perno || '').includes(q) ||
@@ -538,20 +591,24 @@ export default function NominaScreen() {
           (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
           (p.titular_cedula && p.titular_cedula.includes(q)) ||
           (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(q)) ||
+          (p.situacion_titular && p.situacion_titular.toLowerCase().includes(q)) ||
+          (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(q)) ||
           (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q)) ||
           (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(q))
-        );
-      }
+      );
     }
+
     return res;
   }, [
     plazas,
     todasLasPlazas,
-    subReporteActivo,
     filtroVinculacionReporte,
     filtroNivelReporte,
     filtroDependenciaReporte,
     filtroEstadoCargoReporte,
+    filtroCodigoGradoReporte,
+    filtroSoloEncargoReporte,
+    filtroSoloVacantesReporte,
     busquedaReporte,
   ]);
 
@@ -686,6 +743,28 @@ export default function NominaScreen() {
             p.fecha_ingreso_entidad || '',
             `"${(p.fondo_salud || '').replace(/"/g, '""')}"`,
             `"${(p.fondo_pension || '').replace(/"/g, '""')}"`,
+          ].join(';') + '\n';
+        });
+      } else if (tipo === 'estructura_niveles') {
+        nombreArchivo = 'Reporte_Estructura_Jerarquica_Niveles.csv';
+        const headers = ['Nivel_Jerarquico', 'Plazas_Autorizadas', 'Porcentaje_Planta', 'Plazas_Provistas', 'Vacantes', 'Masa_Salarial_Mensual'];
+        csvContent = headers.join(';') + '\n';
+        Object.entries(distribucionPorNivel).forEach(([nivel, cant]) => {
+          const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
+          const pct = ((cant / totalBase) * 100).toFixed(1);
+          const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
+            (p) => (p.nivel || '').toUpperCase().includes(nivel.substring(0, 5))
+          );
+          const prov = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
+          const vac = plazasDelNivel.length - prov;
+          const masa = plazasDelNivel.reduce((acc, p) => acc + (Number(p.asignacion_basica) || 0), 0);
+          csvContent += [
+            `"${nivel}"`,
+            cant,
+            `${pct}%`,
+            prov,
+            vac,
+            masa,
           ].join(';') + '\n';
         });
       } else if (tipo === 'seguridad_social') {
@@ -2173,7 +2252,56 @@ export default function NominaScreen() {
               </View>
             </Pressable>
 
-            {/* Pestaña: Peticiones OPEC y Equivalentes */}
+            {/* Pestaña 2: Reportes & Analítica (Ubicada de número 2) */}
+            <Pressable
+              onPress={() => setTabActiva('reportes')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 11,
+                paddingHorizontal: 16,
+                borderBottomWidth: 2,
+                borderBottomColor: tabActiva === 'reportes' ? THEME.marca600 : 'transparent',
+                marginBottom: -1,
+              }}
+            >
+              <Ionicons
+                name="bar-chart"
+                size={16}
+                color={tabActiva === 'reportes' ? THEME.marca700 : THEME.slate400}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: tabActiva === 'reportes' ? '700' : '500',
+                  color: tabActiva === 'reportes' ? THEME.marca700 : THEME.slate500,
+                }}
+              >
+                Reportes & Analítica
+              </Text>
+              <View
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: tabActiva === 'reportes' ? THEME.marca100 : THEME.slate100,
+                  borderRadius: 9999,
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: tabActiva === 'reportes' ? THEME.marca800 : THEME.slate600,
+                  }}
+                >
+                  7
+                </Text>
+              </View>
+            </Pressable>
+
+            {/* Pestaña 3: Peticiones OPEC y Equivalentes */}
             <Pressable
               onPress={() => setTabActiva('peticiones')}
               style={{
@@ -2216,7 +2344,7 @@ export default function NominaScreen() {
               </View>
             </Pressable>
 
-            {/* Pestaña 2: Escaleras de Encargos */}
+            {/* Pestaña 4: Escaleras de Encargos */}
             <Pressable
               onPress={() => setTabActiva('escaleras')}
               style={{
@@ -2255,7 +2383,7 @@ export default function NominaScreen() {
               )}
             </Pressable>
 
-            {/* Pestaña: Personal Integral / PERNO (Activos y Desvinculados) */}
+            {/* Pestaña 5: Personal Integral / PERNO (Activos y Desvinculados) */}
             <Pressable
               onPress={() => setTabActiva('perno')}
               style={{
@@ -2319,31 +2447,7 @@ export default function NominaScreen() {
               )}
             </Pressable>
 
-            {/* Pestaña 3: Estructura por Niveles */}
-            <Pressable
-              onPress={() => setTabActiva('estructura')}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingVertical: 11,
-                paddingHorizontal: 16,
-                borderBottomWidth: 2,
-                borderBottomColor: tabActiva === 'estructura' ? THEME.marca600 : 'transparent',
-                marginBottom: -1,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: tabActiva === 'estructura' ? THEME.marca700 : THEME.slate500,
-                }}
-              >
-                Estructura por Niveles
-              </Text>
-            </Pressable>
-
-            {/* Pestaña 3: Carga de Archivos */}
+            {/* Pestaña 6: Carga de Archivos de Nómina */}
             <Pressable
               onPress={() => setTabActiva('archivos')}
               style={{
@@ -2380,55 +2484,6 @@ export default function NominaScreen() {
                   </Text>
                 </View>
               )}
-            </Pressable>
-
-            {/* Pestaña: Reportes & Analítica */}
-            <Pressable
-              onPress={() => setTabActiva('reportes')}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingVertical: 11,
-                paddingHorizontal: 16,
-                borderBottomWidth: 2,
-                borderBottomColor: tabActiva === 'reportes' ? THEME.marca600 : 'transparent',
-                marginBottom: -1,
-              }}
-            >
-              <Ionicons
-                name="bar-chart"
-                size={16}
-                color={tabActiva === 'reportes' ? THEME.marca700 : THEME.slate400}
-                style={{ marginRight: 6 }}
-              />
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: tabActiva === 'reportes' ? THEME.marca700 : THEME.slate500,
-                }}
-              >
-                Reportes & Analítica
-              </Text>
-              <View
-                style={{
-                  marginLeft: 8,
-                  backgroundColor: tabActiva === 'reportes' ? THEME.marca100 : THEME.slate100,
-                  borderRadius: 9999,
-                  paddingHorizontal: 7,
-                  paddingVertical: 2,
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontWeight: '700',
-                    color: tabActiva === 'reportes' ? THEME.marca800 : THEME.slate600,
-                  }}
-                >
-                  6
-                </Text>
-              </View>
             </Pressable>
           </View>
 
@@ -3651,94 +3706,7 @@ export default function NominaScreen() {
             </View>
           )}
 
-          {/* ============================================================== */}
-          {/* PESTAÑA: ESTRUCTURA POR NIVELES                                */}
-          {/* ============================================================== */}
-          {tabActiva === 'estructura' && (
-            <View style={{ width: '100%' }}>
-              <View
-                style={{
-                  backgroundColor: THEME.white,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: THEME.slate200,
-                  padding: 20,
-                  marginBottom: 20,
-                  width: '100%',
-                }}
-              >
-                <Text style={{ fontSize: 16, fontWeight: '600', color: THEME.slate900 }}>
-                  Distribución Jerárquica de la Planta
-                </Text>
-                <Text style={{ fontSize: 13, color: THEME.slate500, marginTop: 4 }}>
-                  Resumen de plazas provistas y vacantes por nivel administrativo en la entidad.
-                </Text>
 
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 16,
-                    marginTop: 20,
-                    width: '100%',
-                  }}
-                >
-                  {Object.entries(distribucionPorNivel).map(([nivel, cant]) => {
-                    const totalBase = estadisticas?.total_plazas || (plazas.length > 0 ? plazas.length : 170);
-                    const porcentaje = Math.round((cant / totalBase) * 100);
-                    return (
-                      <View
-                        key={nivel}
-                        style={{
-                          flex: 1,
-                          minWidth: isTablet ? 200 : '100%',
-                          backgroundColor: THEME.slate50,
-                          borderRadius: 10,
-                          borderWidth: 1,
-                          borderColor: THEME.slate200,
-                          padding: 16,
-                        }}
-                      >
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                          }}
-                        >
-                          {renderBadgeNivel(nivel)}
-                          <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate500 }}>
-                            {porcentaje}%
-                          </Text>
-                        </View>
-                        <Text style={{ fontSize: 24, fontWeight: '700', color: THEME.slate900, marginTop: 8 }}>
-                          {cant} <Text style={{ fontSize: 13, fontWeight: '400', color: THEME.slate500 }}>plazas</Text>
-                        </Text>
-                        <View
-                          style={{
-                            height: 6,
-                            backgroundColor: THEME.slate200,
-                            borderRadius: 3,
-                            marginTop: 10,
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <View
-                            style={{
-                              height: '100%',
-                              width: `${porcentaje}%`,
-                              backgroundColor: THEME.marca600,
-                              borderRadius: 3,
-                            }}
-                          />
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
-          )}
 
           {/* ============================================================== */}
           {/* PESTAÑA: CARGA DE ARCHIVOS Y GUÍA DE ESTRUCTURA                */}
@@ -4599,6 +4567,7 @@ export default function NominaScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                   {[
                     { id: 'vinculacion_sideap', label: 'Tipo de Vinculación & SIDEAP', icono: 'business-outline' },
+                    { id: 'estructura_niveles', label: 'Estructura por Niveles', icono: 'layers-outline' },
                     { id: 'ocupacion_vacancias', label: 'Ocupación & Vacancias', icono: 'pie-chart-outline' },
                     { id: 'dependencias_costo', label: 'Dependencias & Presupuesto', icono: 'cash-outline' },
                     { id: 'paridad_demografia', label: 'Paridad & Demografía (Ley 2424)', icono: 'people-outline' },
@@ -4716,29 +4685,35 @@ export default function NominaScreen() {
                     </View>
                   </View>
 
-                  {/* Barra de Filtros y Búsqueda de la Tabla */}
+                  {/* Barra de Filtros Avanzada y Completa para Reportes & Analítica */}
                   <View
                     style={{
                       backgroundColor: THEME.white,
-                      borderRadius: 10,
-                      padding: 14,
+                      borderRadius: 12,
+                      padding: 16,
                       borderWidth: 1,
                       borderColor: THEME.slate200,
-                      gap: 10,
+                      gap: 12,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 2,
                     }}
                   >
+                    {/* Fila 1: Buscador general, Código/Grado y Botón Limpiar */}
                     <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10, alignItems: isDesktop ? 'center' : 'stretch' }}>
-                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: THEME.slate50, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: THEME.slate300, gap: 6 }}>
-                        <Ionicons name="search" size={16} color={THEME.slate400} />
+                      {/* Buscador de texto */}
+                      <View style={{ flex: 2, flexDirection: 'row', alignItems: 'center', backgroundColor: THEME.slate50, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: THEME.slate300, gap: 8 }}>
+                        <Ionicons name="search" size={17} color={THEME.slate400} />
                         <TextInput
                           value={busquedaReporte}
                           onChangeText={(t) => {
                             setBusquedaReporte(t);
                             setPaginaReporte(1);
                           }}
-                          placeholder="Buscar por cédula, titular, cargo, ID SIDEAP o ID PERNO..."
+                          placeholder="Buscar por cédula, titular, cargo, cód, grado, SIDEAP o PERNO..."
                           placeholderTextColor={THEME.slate400}
-                          style={{ flex: 1, fontSize: 12.5, color: THEME.slate900 }}
+                          style={{ flex: 1, fontSize: 13, color: THEME.slate900, padding: 0 }}
                         />
                         {busquedaReporte ? (
                           <Pressable onPress={() => setBusquedaReporte('')}>
@@ -4747,7 +4722,176 @@ export default function NominaScreen() {
                         ) : null}
                       </View>
 
-                      {/* Filtro Tipo Vinculación */}
+                      {/* Filtro Código y Grado en Reportes */}
+                      <View style={{ flex: 1, minWidth: isTablet ? 170 : '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: filtroCodigoGradoReporte ? THEME.marca50 : THEME.slate50, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: filtroCodigoGradoReporte ? THEME.marca600 : THEME.slate300, gap: 6 }}>
+                        <Ionicons name="ribbon-outline" size={16} color={filtroCodigoGradoReporte ? THEME.marca700 : THEME.slate400} />
+                        <TextInput
+                          value={filtroCodigoGradoReporte}
+                          onChangeText={(t) => {
+                            setFiltroCodigoGradoReporte(t);
+                            setPaginaReporte(1);
+                          }}
+                          placeholder="Cód-Grado (ej. 115-06)"
+                          placeholderTextColor={THEME.slate400}
+                          style={{ flex: 1, fontSize: 12.5, color: THEME.slate900, padding: 0 }}
+                        />
+                        {filtroCodigoGradoReporte ? (
+                          <Pressable onPress={() => setFiltroCodigoGradoReporte('')}>
+                            <Ionicons name="close-circle" size={16} color={THEME.marca700} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+
+                      {/* Botón Restablecer Filtros si hay alguno activo */}
+                      {(busquedaReporte || filtroVinculacionReporte !== 'TODAS' || filtroNivelReporte !== 'TODOS' || filtroDependenciaReporte !== 'TODAS' || filtroEstadoCargoReporte !== 'TODOS' || filtroCodigoGradoReporte || filtroSoloEncargoReporte || filtroSoloVacantesReporte) ? (
+                        <Pressable
+                          onPress={() => {
+                            setBusquedaReporte('');
+                            setFiltroVinculacionReporte('TODAS');
+                            setFiltroNivelReporte('TODOS');
+                            setFiltroDependenciaReporte('TODAS');
+                            setFiltroEstadoCargoReporte('TODOS');
+                            setFiltroCodigoGradoReporte('');
+                            setFiltroSoloEncargoReporte(false);
+                            setFiltroSoloVacantesReporte(false);
+                            setPaginaReporte(1);
+                          }}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 5,
+                            backgroundColor: THEME.roseBg,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: THEME.roseRing,
+                          }}
+                        >
+                          <Ionicons name="refresh-outline" size={14} color={THEME.roseText} />
+                          <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.roseText }}>
+                            Limpiar Filtros
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+
+                    {/* Fila 2: Chips de Niveles, Estado del Cargo y Toggles de Encargos/Vacantes */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: THEME.slate100 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                        Nivel:
+                      </Text>
+                      {['TODOS', 'DIRECTIVO', 'ASESOR', 'PROFESIONAL', 'TECNICO', 'ASISTENCIAL'].map((nv) => {
+                        const sel = filtroNivelReporte === nv;
+                        return (
+                          <Pressable
+                            key={nv}
+                            onPress={() => {
+                              setFiltroNivelReporte(nv);
+                              setPaginaReporte(1);
+                            }}
+                            style={{
+                              paddingHorizontal: 9,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                              borderWidth: 1,
+                              borderColor: sel ? THEME.marca800 : THEME.slate200,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700 }}>
+                              {nv}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+
+                      <View style={{ width: 1, height: 16, backgroundColor: THEME.slate200, marginHorizontal: 2 }} />
+
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                        Estado:
+                      </Text>
+                      {['TODOS', 'OCUPADO', 'VACANTE DEFINITIVA', 'VACANTE TEMPORAL'].map((st) => {
+                        const sel = filtroEstadoCargoReporte === st;
+                        return (
+                          <Pressable
+                            key={st}
+                            onPress={() => {
+                              setFiltroEstadoCargoReporte(st);
+                              setPaginaReporte(1);
+                            }}
+                            style={{
+                              paddingHorizontal: 9,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                              borderWidth: 1,
+                              borderColor: sel ? THEME.marca800 : THEME.slate200,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700 }}>
+                              {st}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+
+                      <View style={{ width: 1, height: 16, backgroundColor: THEME.slate200, marginHorizontal: 2 }} />
+
+                      {/* Toggle Solo Encargos */}
+                      <Pressable
+                        onPress={() => {
+                          setFiltroSoloEncargoReporte(!filtroSoloEncargoReporte);
+                          setPaginaReporte(1);
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 9,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor: filtroSoloEncargoReporte ? '#FEF3C7' : THEME.slate100,
+                          borderWidth: 1,
+                          borderColor: filtroSoloEncargoReporte ? '#F59E0B' : THEME.slate200,
+                        }}
+                      >
+                        <Ionicons name="flash-outline" size={13} color={filtroSoloEncargoReporte ? '#B45309' : THEME.slate500} />
+                        <Text style={{ fontSize: 11, fontWeight: filtroSoloEncargoReporte ? '700' : '500', color: filtroSoloEncargoReporte ? '#B45309' : THEME.slate700 }}>
+                          Solo Encargos
+                        </Text>
+                      </Pressable>
+
+                      {/* Toggle Solo Vacantes */}
+                      <Pressable
+                        onPress={() => {
+                          setFiltroSoloVacantesReporte(!filtroSoloVacantesReporte);
+                          setPaginaReporte(1);
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 9,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                          backgroundColor: filtroSoloVacantesReporte ? '#FEE2E2' : THEME.slate100,
+                          borderWidth: 1,
+                          borderColor: filtroSoloVacantesReporte ? '#EF4444' : THEME.slate200,
+                        }}
+                      >
+                        <Ionicons name="alert-circle-outline" size={13} color={filtroSoloVacantesReporte ? '#DC2626' : THEME.slate500} />
+                        <Text style={{ fontSize: 11, fontWeight: filtroSoloVacantesReporte ? '700' : '500', color: filtroSoloVacantesReporte ? '#DC2626' : THEME.slate700 }}>
+                          Solo Vacantes
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {/* Fila 3: Filtro Tipo Vinculación */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                        Vinculación:
+                      </Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                         {['TODAS', 'CARRERA ADMINISTRATIVA', 'EN ENCARGO', 'EN PROVISIONALIDAD', 'EN PERIODO DE PRUEBA', 'NOMBRAMIENTO ORDINARIO'].map((tv) => {
                           const sel = filtroVinculacionReporte === tv;
@@ -4760,9 +4904,11 @@ export default function NominaScreen() {
                               }}
                               style={{
                                 paddingHorizontal: 10,
-                                paddingVertical: 6,
+                                paddingVertical: 5,
                                 borderRadius: 6,
-                                backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                                backgroundColor: sel ? THEME.marca800 : THEME.slate100,
+                                borderWidth: 1,
+                                borderColor: sel ? THEME.marca900 : THEME.slate200,
                               }}
                             >
                               <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700 }}>
@@ -4774,113 +4920,153 @@ export default function NominaScreen() {
                       </ScrollView>
                     </View>
 
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                      <Text style={{ fontSize: 12, color: THEME.slate600, fontWeight: '600' }}>
-                        Mostrando {plazasFiltradasReporte.length} plazas coincidentes
+                    {/* Fila 4: Filtro de Dependencias */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
+                        Dependencia:
                       </Text>
-                      {/* Filtro Nivel */}
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        {['TODOS', 'DIRECTIVO', 'ASESOR', 'PROFESIONAL', 'ASISTENCIAL'].map((nv) => {
-                          const sel = filtroNivelReporte === nv;
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                        <Pressable
+                          onPress={() => {
+                            setFiltroDependenciaReporte('TODAS');
+                            setPaginaReporte(1);
+                          }}
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            backgroundColor: filtroDependenciaReporte === 'TODAS' ? THEME.marca800 : THEME.slate100,
+                            borderWidth: 1,
+                            borderColor: filtroDependenciaReporte === 'TODAS' ? THEME.marca900 : THEME.slate200,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: filtroDependenciaReporte === 'TODAS' ? '700' : '500', color: filtroDependenciaReporte === 'TODAS' ? THEME.white : THEME.slate700 }}>
+                            Todas las Dependencias
+                          </Text>
+                        </Pressable>
+                        {listaDependencias.map((dep) => {
+                          const sel = filtroDependenciaReporte.toLowerCase() === dep.valor.toLowerCase();
                           return (
                             <Pressable
-                              key={nv}
+                              key={dep.valor}
                               onPress={() => {
-                                setFiltroNivelReporte(nv);
+                                setFiltroDependenciaReporte(dep.valor);
                                 setPaginaReporte(1);
                               }}
                               style={{
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 4,
-                                backgroundColor: sel ? THEME.marca600 : THEME.slate100,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 6,
+                                backgroundColor: sel ? THEME.marca800 : THEME.slate100,
+                                borderWidth: 1,
+                                borderColor: sel ? THEME.marca900 : THEME.slate200,
                               }}
                             >
-                              <Text style={{ fontSize: 10.5, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate600 }}>
-                                {nv}
+                              <Text numberOfLines={1} style={{ fontSize: 11, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700, maxWidth: 220 }}>
+                                {dep.etiqueta} ({dep.count})
                               </Text>
                             </Pressable>
                           );
                         })}
-                      </View>
+                      </ScrollView>
+                    </View>
+
+                    {/* Pie de filtros: Contador */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 6, borderTopWidth: 1, borderTopColor: THEME.slate100 }}>
+                      <Text style={{ fontSize: 12, color: THEME.slate600, fontWeight: '700' }}>
+                        Mostrando {plazasFiltradasReporte.length} plazas coincidentes en este reporte
+                      </Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate400 }}>
+                        Página {paginaReporte} de {Math.max(1, Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte))}
+                      </Text>
                     </View>
                   </View>
 
-                  {/* Tabla de Vinculación al Cargo / SIDEAP */}
-                  <View style={{ backgroundColor: THEME.white, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden' }}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                      <View>
-                        {/* Cabecera Tabla */}
-                        <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: THEME.slate200 }}>
-                          <Text style={{ width: 60, fontSize: 11, fontWeight: '700', color: THEME.white }}>PLAZA</Text>
-                          <Text style={{ width: 85, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID SIDEAP</Text>
-                          <Text style={{ width: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID PERNO</Text>
-                          <Text style={{ width: 95, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
-                          <Text style={{ width: 220, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
-                          <Text style={{ width: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
-                          <Text style={{ width: 200, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
-                          <Text style={{ width: 170, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VINCULACIÓN</Text>
-                          <Text style={{ width: 140, fontSize: 11, fontWeight: '700', color: THEME.white }}>SITUACIÓN TITULAR</Text>
-                          <Text style={{ width: 180, fontSize: 11, fontWeight: '700', color: THEME.white }}>TITULAR / SERVIDOR</Text>
-                          <Text style={{ width: 110, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
+                  {/* Tabla de Vinculación al Cargo / SIDEAP (Columnas con Porcentajes al 100% de la pantalla) */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden', width: '100%' }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ width: '100%', minWidth: 1050 }}>
+                      <View style={{ width: '100%', minWidth: 1050 }}>
+                        {/* Cabecera Tabla con Porcentajes que suman 100% */}
+                        <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 11, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: THEME.slate200, width: '100%', alignItems: 'center' }}>
+                          <Text style={{ width: '5%', minWidth: 50, fontSize: 11, fontWeight: '700', color: THEME.white }}>PLAZA</Text>
+                          <Text style={{ width: '7%', minWidth: 70, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID SIDEAP</Text>
+                          <Text style={{ width: '6%', minWidth: 65, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID PERNO</Text>
+                          <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
+                          <Text style={{ width: '18%', minWidth: 160, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
+                          <Text style={{ width: '6%', minWidth: 60, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
+                          <Text style={{ width: '16%', minWidth: 140, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                          <Text style={{ width: '12%', minWidth: 110, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VINCULACIÓN</Text>
+                          <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>SITUACIÓN</Text>
+                          <Text style={{ width: '14%', minWidth: 130, fontSize: 11, fontWeight: '700', color: THEME.white }}>TITULAR / SERVIDOR</Text>
+                          <Text style={{ width: '8%', minWidth: 85, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
                         </View>
 
                         {/* Filas */}
-                        {plazasFiltradasReporte
-                          .slice((paginaReporte - 1) * filasPorPaginaReporte, paginaReporte * filasPorPaginaReporte)
-                          .map((p, idx) => {
-                            const esPar = idx % 2 === 0;
-                            const esOcupada = p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE');
+                        {plazasFiltradasReporte.length === 0 ? (
+                          <View style={{ paddingVertical: 40, alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                            <Ionicons name="search-outline" size={28} color={THEME.slate300} />
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate500, marginTop: 8 }}>
+                              No se encontraron plazas con los filtros seleccionados
+                            </Text>
+                          </View>
+                        ) : (
+                          plazasFiltradasReporte
+                            .slice((paginaReporte - 1) * filasPorPaginaReporte, paginaReporte * filasPorPaginaReporte)
+                            .map((p, idx) => {
+                              const esPar = idx % 2 === 0;
+                              const esOcupada = p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE');
 
-                            return (
-                              <Pressable
-                                key={p.id_plaza}
-                                onPress={() => {
-                                  setPlazaDetalleReporte(p);
-                                  setModalDetallePlazaReporteVisible(true);
-                                }}
-                                style={{
-                                  flexDirection: 'row',
-                                  paddingVertical: 10,
-                                  paddingHorizontal: 12,
-                                  backgroundColor: esPar ? THEME.white : THEME.slate50,
-                                  borderBottomWidth: 1,
-                                  borderBottomColor: THEME.slate100,
-                                  alignItems: 'center',
-                                }}
-                              >
-                                <Text style={{ width: 60, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>#{p.id_plaza}</Text>
-                                <View style={{ width: 85 }}>
-                                  <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#3730A3' }}>{p.id_sideap || 'N/A'}</Text>
+                              return (
+                                <Pressable
+                                  key={p.id_plaza}
+                                  onPress={() => {
+                                    setPlazaDetalleReporte(p);
+                                    setModalDetallePlazaReporteVisible(true);
+                                  }}
+                                  style={{
+                                    flexDirection: 'row',
+                                    width: '100%',
+                                    paddingVertical: 10,
+                                    paddingHorizontal: 14,
+                                    backgroundColor: esPar ? THEME.white : THEME.slate50,
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: THEME.slate100,
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <Text style={{ width: '5%', minWidth: 50, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>#{p.id_plaza}</Text>
+                                  <View style={{ width: '7%', minWidth: 70 }}>
+                                    <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#3730A3' }}>{p.id_sideap || 'N/A'}</Text>
+                                    </View>
                                   </View>
-                                </View>
-                                <View style={{ width: 80 }}>
-                                  <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>{p.id_perno || 'N/A'}</Text>
+                                  <View style={{ width: '6%', minWidth: 65 }}>
+                                    <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>{p.id_perno || 'N/A'}</Text>
+                                    </View>
                                   </View>
-                                </View>
-                                <Text style={{ width: 95, fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>{p.nivel}</Text>
-                                <Text style={{ width: 220, fontSize: 11.5, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>{p.cargo}</Text>
-                                <Text style={{ width: 80, fontSize: 11, color: THEME.slate600 }}>{p.codigo} - {p.grado}</Text>
-                                <Text style={{ width: 200, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo || p.dependencia_funcional}</Text>
-                                <View style={{ width: 170 }}>
-                                  <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
-                                    <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }}>{p.tipo_vinculacion || 'SIN DEFINIR'}</Text>
+                                  <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '600', color: THEME.slate700 }} numberOfLines={1}>{p.nivel}</Text>
+                                  <Text style={{ width: '18%', minWidth: 160, fontSize: 11.5, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>{p.cargo}</Text>
+                                  <Text style={{ width: '6%', minWidth: 60, fontSize: 11, color: THEME.slate600 }}>{p.codigo} - {p.grado}</Text>
+                                  <Text style={{ width: '16%', minWidth: 140, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo || p.dependencia_funcional}</Text>
+                                  <View style={{ width: '12%', minWidth: 110 }}>
+                                    <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }} numberOfLines={1}>{p.tipo_vinculacion || 'SIN DEFINIR'}</Text>
+                                    </View>
                                   </View>
-                                </View>
-                                <Text style={{ width: 140, fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }} numberOfLines={1}>
-                                  {p.situacion_titular || p.estado_cargo}
-                                </Text>
-                                <Text style={{ width: 180, fontSize: 11, color: THEME.slate800, fontWeight: '600' }} numberOfLines={1}>
-                                  {p.titular_nombre || 'VACANTE'}
-                                </Text>
-                                <Text style={{ width: 110, fontSize: 11.5, fontWeight: '700', color: THEME.marca900, textAlign: 'right' }}>
-                                  {formatMoneda(p.asignacion_basica)}
-                                </Text>
-                              </Pressable>
-                            );
-                          })}
+                                  <Text style={{ width: '8%', minWidth: 80, fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }} numberOfLines={1}>
+                                    {p.situacion_titular || p.estado_cargo}
+                                  </Text>
+                                  <Text style={{ width: '14%', minWidth: 130, fontSize: 11, color: THEME.slate800, fontWeight: '600' }} numberOfLines={1}>
+                                    {p.titular_nombre || 'VACANTE'}
+                                  </Text>
+                                  <Text style={{ width: '8%', minWidth: 85, fontSize: 11.5, fontWeight: '700', color: THEME.marca900, textAlign: 'right' }}>
+                                    {formatMoneda(p.asignacion_basica)}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })
+                        )}
                       </View>
                     </ScrollView>
 
@@ -4913,10 +5099,158 @@ export default function NominaScreen() {
               )}
 
               {/* ============================================================== */}
+              {/* SUB-REPORTE: ESTRUCTURA POR NIVELES INTEGRADA DENTRO DE REPORTES*/}
+              {/* ============================================================== */}
+              {subReporteActivo === 'estructura_niveles' && (
+                <View style={{ gap: 16 }}>
+                  {/* Tarjetas KPI de Distribución Jerárquica */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: THEME.slate200, gap: 16 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                          Distribución Jerárquica de la Planta de Personal
+                        </Text>
+                        <Text style={{ fontSize: 12.5, color: THEME.slate500, marginTop: 2 }}>
+                          Resumen oficial de plazas autorizadas, porcentaje de participación y balance jerárquico.
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: THEME.marca100 }}>
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>
+                          {metricasReportes.totalPlazas} Plazas Totales
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Tarjetas por cada nivel */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, width: '100%' }}>
+                      {Object.entries(distribucionPorNivel).map(([nivel, cant]) => {
+                        const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
+                        const porcentaje = Math.round((cant / totalBase) * 100);
+                        const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
+                          (p) => (p.nivel || '').toUpperCase().includes(nivel.substring(0, 5))
+                        );
+                        const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
+                        const vacantesNivel = plazasDelNivel.length - provistasNivel;
+
+                        return (
+                          <View
+                            key={nivel}
+                            style={{
+                              flex: 1,
+                              minWidth: isTablet ? 200 : '100%',
+                              backgroundColor: THEME.slate50,
+                              borderRadius: 10,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              padding: 16,
+                              gap: 6,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                              {renderBadgeNivel(nivel)}
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate600 }}>
+                                {porcentaje}%
+                              </Text>
+                            </View>
+
+                            <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>
+                              {cant} <Text style={{ fontSize: 13, fontWeight: '500', color: THEME.slate500 }}>plazas</Text>
+                            </Text>
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+                              <Text style={{ fontSize: 11, color: THEME.emeraldText, fontWeight: '600' }}>
+                                ✓ {provistasNivel} provistas
+                              </Text>
+                              <Text style={{ fontSize: 11, color: vacantesNivel > 0 ? '#b45309' : THEME.slate400, fontWeight: '600' }}>
+                                {vacantesNivel > 0 ? `⚡ ${vacantesNivel} vacantes` : 'Sin vacantes'}
+                              </Text>
+                            </View>
+
+                            <View style={{ height: 6, backgroundColor: THEME.slate200, borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                              <View
+                                style={{
+                                  height: '100%',
+                                  width: `${porcentaje}%`,
+                                  backgroundColor: THEME.marca600,
+                                  borderRadius: 3,
+                                }}
+                              />
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Tabla Detallada de Niveles Jerárquicos y Masa Salarial */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                      Cuadro Comparativo de Niveles y Costo Salarial
+                    </Text>
+
+                    <View style={{ borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden' }}>
+                      <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 14 }}>
+                        <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL JERÁRQUICO</Text>
+                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>PLAZAS AUTORIZADAS</Text>
+                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>% PLANTA</Text>
+                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>PROVISTAS</Text>
+                        <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'center' }}>VACANTES</Text>
+                        <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>MASA SALARIAL MES</Text>
+                      </View>
+
+                      {Object.entries(distribucionPorNivel).map(([nivel, cant], idx) => {
+                        const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
+                        const pct = ((cant / totalBase) * 100).toFixed(1);
+                        const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
+                          (p) => (p.nivel || '').toUpperCase().includes(nivel.substring(0, 5))
+                        );
+                        const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
+                        const vacantesNivel = plazasDelNivel.length - provistasNivel;
+                        const masaNivel = plazasDelNivel.reduce((acc, p) => acc + (Number(p.asignacion_basica) || 0), 0);
+
+                        return (
+                          <View
+                            key={nivel}
+                            style={{
+                              flexDirection: 'row',
+                              paddingVertical: 10,
+                              paddingHorizontal: 14,
+                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                              borderBottomWidth: 1,
+                              borderBottomColor: THEME.slate100,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <View style={{ flex: 1.5, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              {renderBadgeNivel(nivel)}
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 12, fontWeight: '700', color: THEME.slate900, textAlign: 'center' }}>
+                              {cant}
+                            </Text>
+                            <Text style={{ flex: 1, fontSize: 11.5, color: THEME.slate600, textAlign: 'center' }}>
+                              {pct}%
+                            </Text>
+                            <Text style={{ flex: 1, fontSize: 11.5, fontWeight: '700', color: THEME.emeraldText, textAlign: 'center' }}>
+                              {provistasNivel}
+                            </Text>
+                            <Text style={{ flex: 1, fontSize: 11.5, fontWeight: '700', color: vacantesNivel > 0 ? '#b45309' : THEME.slate400, textAlign: 'center' }}>
+                              {vacantesNivel}
+                            </Text>
+                            <Text style={{ flex: 1.5, fontSize: 12, fontWeight: '700', color: THEME.marca900, textAlign: 'right' }}>
+                              {formatMoneda(masaNivel)}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+              )}{/* ============================================================== */}
               {/* SUB-REPORTE 2: OCUPACIÓN & VACANCIAS                           */}
               {/* ============================================================== */}
               {subReporteActivo === 'ocupacion_vacancias' && (
                 <View style={{ gap: 16 }}>
+                  {/* Tarjetas KPI de Vacancias */}
                   <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
                       <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>PLAZAS OCUPADAS</Text>
@@ -4927,7 +5261,7 @@ export default function NominaScreen() {
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
                       <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '700' }}>VACANTES DEFINITIVAS</Text>
                       <Text style={{ fontSize: 26, fontWeight: '800', color: '#dc2626', marginTop: 4 }}>{metricasReportes.vacantesDef}</Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Requieren concurso o provisión transitoria</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Para encargo o convocatoria SIMO/CNSC</Text>
                     </View>
 
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
@@ -4943,39 +5277,76 @@ export default function NominaScreen() {
                     </View>
                   </View>
 
-                  {/* Listado de Plazas Vacantes */}
-                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                      Inventario de Vacancias Definitivas y Temporales
-                    </Text>
-                    <View style={{ gap: 8 }}>
-                      {(plazas.length > 0 ? plazas : todasLasPlazas)
-                        .filter((p) => p.estado_cargo !== 'OCUPADO' || p.titular_nombre?.includes('VACANTE'))
-                        .map((p) => (
-                          <View key={p.id_plaza} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: THEME.slate50, borderWidth: 1, borderColor: THEME.slate200 }}>
-                            <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca800 }}>PLAZA #{p.id_plaza}</Text>
-                                <View style={{ backgroundColor: p.estado_cargo === 'VACANTE DEFINITIVA' ? '#fee2e2' : '#fef3c7', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                                  <Text style={{ fontSize: 10, fontWeight: '700', color: p.estado_cargo === 'VACANTE DEFINITIVA' ? '#991b1b' : '#92400e' }}>
-                                    {p.estado_cargo}
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>{p.cargo} ({p.codigo}-{p.grado})</Text>
-                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>{p.dependencia_cargo} • Asignación: {formatMoneda(p.asignacion_basica)}</Text>
-                            </View>
-                            <Pressable
-                              onPress={() => {
-                                setPlazaDetalleReporte(p);
-                                setModalDetallePlazaReporteVisible(true);
-                              }}
-                              style={{ backgroundColor: THEME.marca50, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: THEME.marca100 }}
-                            >
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>Ver Ficha</Text>
-                            </Pressable>
+                  {/* Tabla Paginada de Vacancias con Anchos Porcentuales al 100% */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 14 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <View>
+                        <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900 }}>
+                          Inventario Oficial de Vacancias de Planta
+                        </Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate500, marginTop: 1 }}>
+                          Total de vacantes identificadas: {metricasReportes.vacantesDef + metricasReportes.vacantesTemp} plazas disponibles
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden', width: '100%' }}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={true} contentContainerStyle={{ width: '100%', minWidth: 950 }}>
+                        <View style={{ width: '100%', minWidth: 950 }}>
+                          <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 12, width: '100%' }}>
+                            <Text style={{ width: '7%', minWidth: 60, fontSize: 11, fontWeight: '700', color: THEME.white }}>PLAZA</Text>
+                            <Text style={{ width: '8%', minWidth: 70, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID SIDEAP</Text>
+                            <Text style={{ width: '10%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
+                            <Text style={{ width: '25%', minWidth: 180, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
+                            <Text style={{ width: '8%', minWidth: 65, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
+                            <Text style={{ width: '20%', minWidth: 150, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                            <Text style={{ width: '12%', minWidth: 100, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VACANCIA</Text>
+                            <Text style={{ width: '10%', minWidth: 90, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
                           </View>
-                        ))}
+
+                          {(plazas.length > 0 ? plazas : todasLasPlazas)
+                            .filter((p) => p.estado_cargo !== 'OCUPADO' || p.titular_nombre?.includes('VACANTE'))
+                            .map((p, idx) => {
+                              const esDef = p.estado_cargo === 'VACANTE DEFINITIVA';
+                              return (
+                                <Pressable
+                                  key={p.id_plaza}
+                                  onPress={() => {
+                                    setPlazaDetalleReporte(p);
+                                    setModalDetallePlazaReporteVisible(true);
+                                  }}
+                                  style={{
+                                    flexDirection: 'row',
+                                    paddingVertical: 10,
+                                    paddingHorizontal: 12,
+                                    backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: THEME.slate100,
+                                    alignItems: 'center',
+                                    width: '100%',
+                                  }}
+                                >
+                                  <Text style={{ width: '7%', minWidth: 60, fontSize: 11.5, fontWeight: '800', color: THEME.marca800 }}>#{p.id_plaza}</Text>
+                                  <Text style={{ width: '8%', minWidth: 70, fontSize: 11, color: THEME.slate700 }}>#{p.id_sideap || 'N/A'}</Text>
+                                  <Text style={{ width: '10%', minWidth: 80, fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>{p.nivel}</Text>
+                                  <Text style={{ width: '25%', minWidth: 180, fontSize: 12, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>{p.cargo}</Text>
+                                  <Text style={{ width: '8%', minWidth: 65, fontSize: 11, color: THEME.slate600 }}>{p.codigo}-{p.grado}</Text>
+                                  <Text style={{ width: '20%', minWidth: 150, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo}</Text>
+                                  <View style={{ width: '12%', minWidth: 100 }}>
+                                    <View style={{ backgroundColor: esDef ? '#FEE2E2' : '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: esDef ? '#DC2626' : '#B45309' }}>
+                                        {esDef ? 'DEFINITIVA' : 'TEMPORAL'}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  <Text style={{ width: '10%', minWidth: 90, fontSize: 11.5, fontWeight: '700', color: THEME.marca900, textAlign: 'right' }}>
+                                    {formatMoneda(p.asignacion_basica)}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                        </View>
+                      </ScrollView>
                     </View>
                   </View>
                 </View>
@@ -5012,28 +5383,30 @@ export default function NominaScreen() {
                       Distribución de Personal y Costo Fiscal por Dependencia
                     </Text>
                     <View style={{ gap: 8 }}>
-                      {Object.entries(metricasReportes.porDependencia).map(([dep, data]) => {
-                        const pctMasa = ((data.masaSalarial / (metricasReportes.masaSalarialMensual || 1)) * 100).toFixed(1);
-                        return (
-                          <View key={dep} style={{ padding: 14, borderRadius: 8, backgroundColor: THEME.slate50, borderWidth: 1, borderColor: THEME.slate200, gap: 8 }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, flex: 1 }}>{dep}</Text>
-                              <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca800 }}>{formatMoneda(data.masaSalarial)}/mes</Text>
+                      {Object.entries(metricasReportes.porDependencia)
+                        .sort((a, b) => b[1].masaSalarial - a[1].masaSalarial)
+                        .map(([dep, data]) => {
+                          const pctMasa = ((data.masaSalarial / (metricasReportes.masaSalarialMensual || 1)) * 100).toFixed(1);
+                          return (
+                            <View key={dep} style={{ padding: 14, borderRadius: 8, backgroundColor: THEME.slate50, borderWidth: 1, borderColor: THEME.slate200, gap: 8 }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, flex: 1 }}>{dep}</Text>
+                                <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca800 }}>{formatMoneda(data.masaSalarial)}/mes</Text>
+                              </View>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
+                                  {data.cantidad} plazas ({data.provistas} provistas, {data.vacantes} vacantes)
+                                </Text>
+                                <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                                  Representa el {pctMasa}% del costo salarial institucional
+                                </Text>
+                              </View>
+                              <View style={{ height: 6, backgroundColor: THEME.slate200, borderRadius: 3, overflow: 'hidden' }}>
+                                <View style={{ width: (`${pctMasa}%` as any), height: '100%', backgroundColor: THEME.marca600, borderRadius: 3 }} />
+                              </View>
                             </View>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
-                                {data.cantidad} plazas ({data.provistas} provistas, {data.vacantes} vacantes)
-                              </Text>
-                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                                Representa el {pctMasa}% del costo salarial institucional
-                              </Text>
-                            </View>
-                            <View style={{ height: 6, backgroundColor: THEME.slate200, borderRadius: 3, overflow: 'hidden' }}>
-                              <View style={{ width: (`${pctMasa}%` as any), height: '100%', backgroundColor: THEME.marca600, borderRadius: 3 }} />
-                            </View>
-                          </View>
-                        );
-                      })}
+                          );
+                        })}
                     </View>
                   </View>
                 </View>
@@ -5080,6 +5453,38 @@ export default function NominaScreen() {
                       <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Cálculo sobre servidores de planta provistos</Text>
                     </View>
                   </View>
+
+                  {/* Pirámide de Edad y Planeación Pensional */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 14 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                      Distribución por Rangos de Edad (Planeación y Relevo Pensional)
+                    </Text>
+                    <View style={{ gap: 10 }}>
+                      {[
+                        { label: 'Jóvenes (< 30 años)', cant: metricasReportes.gruposEdad.menor30, color: '#3B82F6', desc: 'Iniciando carrera administrativa' },
+                        { label: 'Consolidación (30 - 45 años)', cant: metricasReportes.gruposEdad.de30a45, color: '#10B981', desc: 'Plena productividad institucional' },
+                        { label: 'Madurez Profesional (46 - 60 años)', cant: metricasReportes.gruposEdad.de46a60, color: '#F59E0B', desc: 'Experiencia y memoria técnica' },
+                        { label: 'Próximos a Pensión / Retiro (> 60 años)', cant: metricasReportes.gruposEdad.mayor60, color: '#EF4444', desc: 'Requieren plan de relevo generacional (Ley 1821)' },
+                      ].map((grp) => {
+                        const totalEd = (metricasReportes.gruposEdad.menor30 + metricasReportes.gruposEdad.de30a45 + metricasReportes.gruposEdad.de46a60 + metricasReportes.gruposEdad.mayor60) || 1;
+                        const pct = Math.round((grp.cant / totalEd) * 100);
+                        return (
+                          <View key={grp.label} style={{ gap: 4 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>{grp.label}</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700 }}>
+                                {grp.cant} servidores ({pct}%)
+                              </Text>
+                            </View>
+                            <View style={{ height: 8, backgroundColor: THEME.slate100, borderRadius: 4, overflow: 'hidden' }}>
+                              <View style={{ width: (`${pct}%` as any), height: '100%', backgroundColor: grp.color, borderRadius: 4 }} />
+                            </View>
+                            <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>{grp.desc}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
                 </View>
               )}
 
@@ -5092,21 +5497,59 @@ export default function NominaScreen() {
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
                       <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>TOTAL REGISTROS PERNO</Text>
                       <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{todoElPerno.length}</Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Historial de nómina distrital</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Historial consolidado</Text>
                     </View>
 
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>SERVIDORES ACTIVOS EN NÓMINA</Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>ACTIVOS EN NÓMINA</Text>
                       <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.emeraldText, marginTop: 4 }}>{estadisticasPerno.activos}</Text>
                       <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Frente a {metricasReportes.totalPlazas} plazas de estructura</Text>
                     </View>
 
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '700' }}>RETIRADOS / DESVINCULADOS</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: '#dc2626', marginTop: 4 }}>{estadisticasPerno.retirados}</Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Histórico de personal desvinculado</Text>
+                      <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '700' }}>ALERTAS DE CONCILIACIÓN</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: '#dc2626', marginTop: 4 }}>
+                        {metricasReportes.servidoresSinPlaza.length}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Servidores activos sin plaza fija asociada</Text>
                     </View>
                   </View>
+
+                  {/* Tabla de Servidores con Alertas de Conciliación */}
+                  {metricasReportes.servidoresSinPlaza.length > 0 && (
+                    <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                        Servidores Activos en Nómina sin Plaza Oficial Enlazada
+                      </Text>
+                      <View style={{ borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden' }}>
+                        <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 12 }}>
+                          <Text style={{ flex: 1, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÉDULA</Text>
+                          <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: THEME.white }}>NOMBRE FUNCIONARIO</Text>
+                          <Text style={{ flex: 1.5, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO PERNO</Text>
+                          <Text style={{ flex: 2, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                        </View>
+                        {metricasReportes.servidoresSinPlaza.map((s: any, idx: number) => (
+                          <View
+                            key={s.cedula}
+                            style={{
+                              flexDirection: 'row',
+                              paddingVertical: 9,
+                              paddingHorizontal: 12,
+                              backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                              borderBottomWidth: 1,
+                              borderBottomColor: THEME.slate100,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{ flex: 1, fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }}>{s.cedula}</Text>
+                            <Text style={{ flex: 2, fontSize: 12, fontWeight: '600', color: THEME.slate900 }}>{s.nombre_completo || `${s.nombres} ${s.primer_apellido}`}</Text>
+                            <Text style={{ flex: 1.5, fontSize: 11.5, color: THEME.slate600 }}>{s.cargo}</Text>
+                            <Text style={{ flex: 2, fontSize: 11.5, color: THEME.slate600 }}>{s.dependencia}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
 
@@ -5119,7 +5562,7 @@ export default function NominaScreen() {
                     {/* EPS */}
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 10 }}>
                       <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                        Distribución por Entidades Promotoras de Salud (EPS)
+                        Entidades Promotoras de Salud (EPS)
                       </Text>
                       <View style={{ gap: 8 }}>
                         {Object.entries(metricasReportes.porEps).map(([eps, cant]) => (
@@ -5136,7 +5579,7 @@ export default function NominaScreen() {
                     {/* Fondos de Pensiones */}
                     <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 10 }}>
                       <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                        Distribución por Administradoras de Fondos de Pensiones (AFP)
+                        Fondos de Pensiones (AFP)
                       </Text>
                       <View style={{ gap: 8 }}>
                         {Object.entries(metricasReportes.porAfp).map(([afp, cant]) => (
@@ -5146,6 +5589,23 @@ export default function NominaScreen() {
                               <Text style={{ fontSize: 11, fontWeight: '700', color: afp === 'COLPENSIONES' ? '#166534' : '#3730a3' }}>
                                 {cant} afiliados
                               </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Fondos de Cesantías */}
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 10 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                        Fondos de Cesantías
+                      </Text>
+                      <View style={{ gap: 8 }}>
+                        {Object.entries(metricasReportes.porCesantias).map(([ces, cant]) => (
+                          <View key={ces} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: THEME.slate100 }}>
+                            <Text style={{ fontSize: 12, color: THEME.slate800, fontWeight: '600', flex: 1 }}>{ces}</Text>
+                            <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>{cant} afiliados</Text>
                             </View>
                           </View>
                         ))}
