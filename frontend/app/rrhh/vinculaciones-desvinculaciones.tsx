@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as DocumentPicker from 'expo-document-picker';
+import { API_URL } from '../../lib/supabase';
 import mockPlazasData from '../../lib/plantaMockData.json';
 import { nominaService, PlazaNomina, PersonaPerno } from '../../lib/nominaService';
 import {
@@ -105,7 +107,86 @@ export interface InfoModalidadConfig {
   diferenciaClave: string;
 }
 
-export function obtenerInfoModalidad(m: ModalidadPersonal): InfoModalidadConfig {
+export function obtenerInfoModalidad(
+  m: ModalidadPersonal,
+  tipo: TipoProceso = 'VINCULACION'
+): InfoModalidadConfig {
+  if (tipo === 'DESVINCULACION') {
+    switch (m) {
+      case 'CARRERA_ADMINISTRATIVA':
+        return {
+          titulo: 'Carrera Administrativa (Retiro)',
+          subtitulo: 'Causales Taxativas de Retiro (Art. 41 Ley 909) / Reporte SIMO y Cancelación RPCA',
+          badgeTexto: 'RETIRO DE CARRERA',
+          icono: 'ribbon-outline',
+          colorTexto: '#1e40af',
+          colorBg: '#eff6ff',
+          colorBorde: '#93c5fd',
+          marcoLegal: 'Ley 909 de 2004, Arts. 41 y 44 • Decreto 1083 de 2015 • Ley 100 de 1993, Art. 33 • C-1037/2003 • Circular CNSC 011 de 2021',
+          descripcionFases: 'Retiro por causales taxativas objetivas. Exige constatar causal idónea, inclusión previa en nómina pensional en retiro por pensión, acto motivado, entrega formal de cargo, examen médico de egreso, 4 paz y salvos, liquidación prestacional y reporte en SIMO 4.4 dentro de los 5 días con cancelación de RPCA.',
+          requisitoPrincipal: 'Causal objetiva demostrada, inclusión en nómina de pensionados (si aplica) y reporte SIMO dentro de 5 días hábiles.',
+          diferenciaClave: 'Servidor titular de derechos adquiridos de carrera. No procede remoción discrecional; en supresión de empleo goza de derecho preferencial a reincorporación o indemnización (Art. 44).',
+        };
+      case 'LIBRE_NOMBRAMIENTO':
+        return {
+          titulo: 'Libre Nombramiento y Remoción (Retiro)',
+          subtitulo: 'Insubsistencia Discrecional / Renuncia / Entrega de Despacho (Ley 951/2005)',
+          badgeTexto: 'RETIRO DIRECTIVO',
+          icono: 'shield-outline',
+          colorTexto: '#6b21a8',
+          colorBg: '#faf5ff',
+          colorBorde: '#d8b4fe',
+          marcoLegal: 'Ley 909 de 2004, Art. 41 lit. a • Decreto 1083 de 2015 • Ley 951 de 2005 • Decreto Ley 1045 de 1978',
+          descripcionFases: 'Retiro discrecional o por aceptación de renuncia. Exige verificar inexistencia de fuero de maternidad prevalente, resolución y comunicación formal, suscripción del Acta de Entrega de Despacho con remisión obligatoria a Control Interno dentro de 15 días hábiles (Ley 951/2005) y liquidación con prima técnica y gastos de representación.',
+          requisitoPrincipal: 'Acta circunstanciada de entrega de despacho remitida a Control Interno (Ley 951/2005) y descargo patrimonial.',
+          diferenciaClave: 'Remoción discrecional sin necesidad de motivación de fondo, sujeta al cumplimiento estricto del régimen de rendición de cuentas e informes de gestión.',
+        };
+      case 'PROVISIONALIDAD':
+        return {
+          titulo: 'Nombramiento Provisional (Retiro)',
+          subtitulo: 'Motivación Expresa Obligatoria (SU-917/10) & Blindaje Retén Social (SU-087/22)',
+          badgeTexto: 'RETIRO PROVISIONAL',
+          icono: 'hourglass-outline',
+          colorTexto: '#b45309',
+          colorBg: '#fffbeb',
+          colorBorde: '#fde68a',
+          marcoLegal: 'Ley 909 de 2004, Art. 25 • Decreto 1083 de 2015, Art. 2.2.5.3.4 • Corte Constitucional: SU-917/2010, SU-440/2021 y SU-087/2022 • Circular Conjunta CNSC-DAFP 001/2020',
+          descripcionFases: 'Desvinculación condicionada al mérito o causal objetiva. Exige verificación previa de retén social (prepensionados a menos de 3 años, condición de discapacidad o cabeza de familia), resolución con motivación fáctica y jurídica expresa individualizando el elegible de concurso que asume la plaza, recurso de reposición (Art. 74 CPACA), 4 paz y salvos, liquidación y cierre en SIMO.',
+          requisitoPrincipal: 'Certificación técnica de verificación de retén social y motivación expresa individualizando la OPEC del concurso en la resolución.',
+          diferenciaClave: 'Estabilidad laboral relativa transitoria. El retiro sin motivación expresa o desconociendo el retén social vicia el acto de nulidad y genera orden judicial de reintegro.',
+        };
+      case 'PRACTICANTE_JUDICANTE':
+        return {
+          titulo: 'Pasante / Judicante / Prácticas (Cierre)',
+          subtitulo: 'Terminación Formativa / Retiro ARL / Certificación de Experiencia (Ley 2043/2020)',
+          badgeTexto: 'CIERRE FORMATIVO',
+          icono: 'school-outline',
+          colorTexto: '#0e7490',
+          colorBg: '#ecfeff',
+          colorBorde: '#a5f3fc',
+          marcoLegal: 'Ley 2043 de 2020, Art. 6 • Resolución 3546 de 2018 MinTrabajo • Decreto 055 de 2015 • Decreto 616 de 2021',
+          descripcionFases: 'Culminación pedagógica y académica. NO genera resolución de retiro estatutario ni liquidación de prestaciones sociales. Exige informe final de actividades, evaluación aprobatoria del tutor institucional, retiro inmediato de ARL Positiva, cierre presupuestal del CRP en Bogdata y expedición de la Certificación Oficial con validez legal de experiencia profesional computable.',
+          requisitoPrincipal: 'Informe final avalado por tutor, novedad de retiro de ARL y Certificación de Práctica firmada con validez de experiencia (Ley 2043/2020).',
+          diferenciaClave: 'Vínculo estrictamente formativo y no laboral; no es empleado público y concluye con certificación computable como experiencia laboral/profesional.',
+        };
+      default:
+        return {
+          titulo: 'Desvinculación de Personal',
+          subtitulo: 'Retiro y Cierre Administrativo',
+          badgeTexto: 'DESVINCULACIÓN',
+          icono: 'log-out-outline',
+          colorTexto: '#1e40af',
+          colorBg: '#eff6ff',
+          colorBorde: '#93c5fd',
+          marcoLegal: 'Ley 909 de 2004 • Decreto 1083 de 2015',
+          descripcionFases: 'Procedimiento institucional de desvinculación.',
+          requisitoPrincipal: 'Documento soporte y acto administrativo o constancia de cierre.',
+          diferenciaClave: 'Depende del régimen constitucional de vinculación.',
+        };
+    }
+  }
+
+  // VINCULACIÓN (Por defecto)
   switch (m) {
     case 'CARRERA_ADMINISTRATIVA':
       return {
@@ -188,6 +269,18 @@ export type ModalidadPersonal =
 
 export type EstadoEtapa = 'completed' | 'in_progress' | 'pending';
 
+export interface DocumentoSoporteAdjunto {
+  id: string;
+  nombre: string;
+  uri: string;
+  size?: number;
+  mimeType?: string;
+  fechaSubida: string;
+  usuario?: string;
+  faseNombre?: string;
+  requisitoNombre?: string;
+}
+
 export interface RequisitoEtapa {
   id: string;
   label: string;
@@ -203,6 +296,211 @@ export interface RequisitoEtapa {
   observaciones?: string;
   radicadoSoporte?: string;
   usuarioRegistro?: string;
+  posiblesEvidencias?: string[];
+}
+
+
+// ============================================================================
+// SISTEMA DE CRONOGRAMA, TÉRMINOS LEGALES PERENTORIOS Y SEMÁFORO DE ALERTAS
+// ============================================================================
+export interface HitoTerminoLegal {
+  id: string;
+  nombre: string;
+  plazoDiasHabiles: number;
+  norma: string;
+  articulos: string;
+  descripcion: string;
+  tipoProceso: TipoProceso;
+  modalidades: ModalidadPersonal[];
+  requisitoAsociadoId?: string;
+}
+
+export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
+  {
+    id: 'tl_carr_exclusiones',
+    nombre: 'Exclusiones de Lista de Elegibles ante CNSC',
+    plazoDiasHabiles: 5,
+    norma: 'Decreto Ley 760 de 2005',
+    articulos: 'Art. 14',
+    descripcion: 'Término fatal para que la Comisión de Personal solicite a la CNSC la exclusión de aspirantes de la lista.',
+    tipoProceso: 'VINCULACION',
+    modalidades: ['CARRERA_ADMINISTRATIVA'],
+    requisitoAsociadoId: 'vc2_3',
+  },
+  {
+    id: 'tl_vin_aceptacion',
+    nombre: 'Aceptación Formal del Nombramiento',
+    plazoDiasHabiles: 10,
+    norma: 'Decreto 1083 de 2015',
+    articulos: 'Art. 2.2.5.1.6',
+    descripcion: 'Plazo legal del servidor designado para manifestar por escrito si acepta o no el nombramiento.',
+    tipoProceso: 'VINCULACION',
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'LIBRE_NOMBRAMIENTO', 'PROVISIONALIDAD'],
+    requisitoAsociadoId: 'vc4_4',
+  },
+  {
+    id: 'tl_vin_posesion',
+    nombre: 'Toma de Posesión del Cargo',
+    plazoDiasHabiles: 10,
+    norma: 'Decreto 1083 de 2015',
+    articulos: 'Art. 2.2.5.1.7',
+    descripcion: 'Plazo legal improrrogable (salvo prórroga motivada) para prestar juramento y tomar posesión tras la aceptación.',
+    tipoProceso: 'VINCULACION',
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'LIBRE_NOMBRAMIENTO', 'PROVISIONALIDAD'],
+    requisitoAsociadoId: 'vc6_2',
+  },
+  {
+    id: 'tl_des_simo',
+    nombre: 'Reporte de Vacancia Definitiva en SIMO 4.4 ante la CNSC',
+    plazoDiasHabiles: 5,
+    norma: 'Circular Externa CNSC 011 de 2021',
+    articulos: 'Num. 2 • Ley 1960 de 2019',
+    descripcion: 'Plazo perentorio de 5 días hábiles siguientes al retiro para reportar la novedad de vacancia en SIMO.',
+    tipoProceso: 'DESVINCULACION',
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'PROVISIONALIDAD'],
+    requisitoAsociadoId: 'dc6_1',
+  },
+  {
+    id: 'tl_des_entrega_control_interno',
+    nombre: 'Remisión de Acta de Entrega de Despacho a Control Interno',
+    plazoDiasHabiles: 15,
+    norma: 'Ley 951 de 2005',
+    articulos: 'Art. 8',
+    descripcion: 'Obligación legal de radicar copia auténtica del acta e informe de gestión directivo ante Control Interno dentro de 15 días hábiles.',
+    tipoProceso: 'DESVINCULACION',
+    modalidades: ['LIBRE_NOMBRAMIENTO'],
+    requisitoAsociadoId: 'dl3_2',
+  },
+  {
+    id: 'tl_des_arl_pasantes',
+    nombre: 'Desafiliación Inmediata de ARL Positiva',
+    plazoDiasHabiles: 3,
+    norma: 'Decreto 055 de 2015',
+    articulos: 'Art. 5',
+    descripcion: 'Trámite de retiro en plataforma ARL para cesar cobros patronales y actualizar cobertura tras finalizar la práctica.',
+    tipoProceso: 'DESVINCULACION',
+    modalidades: ['PRACTICANTE_JUDICANTE'],
+    requisitoAsociadoId: 'dpj2_2',
+  },
+];
+
+export function calcularDiasHabilesTranscurridos(fechaInicioStr: string): number {
+  if (!fechaInicioStr) return 0;
+  const partes = fechaInicioStr.split('-');
+  if (partes.length !== 3) return 0;
+  const inicio = new Date(parseInt(partes[0], 10), parseInt(partes[1], 10) - 1, parseInt(partes[2], 10));
+  const hoy = new Date();
+  
+  let count = 0;
+  const cur = new Date(inicio);
+  while (cur <= hoy) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) { // Lunes a Viernes
+      count++;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return Math.max(0, count - 1);
+}
+
+export interface ResultadoSemaforo {
+  estado: 'CUMPLIDO' | 'EN_TERMINO' | 'PROXIMO' | 'VENCIDO';
+  texto: string;
+  colorTexto: string;
+  colorBg: string;
+  colorBorde: string;
+  icono: string;
+  diasRestantes: number;
+  hitoNombre: string;
+  norma: string;
+}
+
+export function evaluarSemaforoTramite(caso: CasoFlujoFuncionario): ResultadoSemaforo {
+  // Buscar el hito legal más crítico para esta modalidad y proceso
+  const hito = HITOS_TERMINOS_LEGALES.find(
+    (h) => h.tipoProceso === caso.tipo_proceso && h.modalidades.includes(caso.modalidad)
+  );
+
+  if (!hito) {
+    return {
+      estado: 'EN_TERMINO',
+      texto: 'En Término Normal',
+      colorTexto: '#047857',
+      colorBg: '#d1fae5',
+      colorBorde: '#a7f3d0',
+      icono: 'checkmark-circle-outline',
+      diasRestantes: 10,
+      hitoNombre: 'Trámite Ordinario',
+      norma: 'Decreto 1083 de 2015',
+    };
+  }
+
+  // Verificar si el requisito asociado está cumplido
+  let cumplido = false;
+  if (hito.requisitoAsociadoId) {
+    for (const et of caso.etapas) {
+      const rq = et.requisitos.find((r) => r.id === hito.requisitoAsociadoId);
+      if (rq && rq.cumplido) {
+        cumplido = true;
+        break;
+      }
+    }
+  }
+
+  if (cumplido) {
+    return {
+      estado: 'CUMPLIDO',
+      texto: `Cumplido a Tiempo (${hito.plazoDiasHabiles}d)`,
+      colorTexto: '#047857',
+      colorBg: '#d1fae5',
+      colorBorde: '#a7f3d0',
+      icono: 'checkmark-done-circle',
+      diasRestantes: 0,
+      hitoNombre: hito.nombre,
+      norma: `${hito.norma} ${hito.articulos}`,
+    };
+  }
+
+  const diasHabilesPasados = calcularDiasHabilesTranscurridos(caso.fecha_inicio_tramite);
+  const diasRestantes = hito.plazoDiasHabiles - diasHabilesPasados;
+
+  if (diasRestantes > 2) {
+    return {
+      estado: 'EN_TERMINO',
+      texto: `En Término (${diasRestantes}d hábiles)`,
+      colorTexto: '#065f46',
+      colorBg: '#ecfdf5',
+      colorBorde: '#a7f3d0',
+      icono: 'time-outline',
+      diasRestantes,
+      hitoNombre: hito.nombre,
+      norma: `${hito.norma} ${hito.articulos}`,
+    };
+  } else if (diasRestantes >= 0) {
+    return {
+      estado: 'PROXIMO',
+      texto: `Próximo a Vencer (${diasRestantes}d hábiles)`,
+      colorTexto: '#92400e',
+      colorBg: '#fef3c7',
+      colorBorde: '#fde68a',
+      icono: 'alert-circle-outline',
+      diasRestantes,
+      hitoNombre: hito.nombre,
+      norma: `${hito.norma} ${hito.articulos}`,
+    };
+  } else {
+    return {
+      estado: 'VENCIDO',
+      texto: `Término Vencido (${Math.abs(diasRestantes)}d venc)`,
+      colorTexto: '#b91c1c',
+      colorBg: '#fee2e2',
+      colorBorde: '#fecaca',
+      icono: 'warning-outline',
+      diasRestantes,
+      hitoNombre: hito.nombre,
+      norma: `${hito.norma} ${hito.articulos}`,
+    };
+  }
 }
 
 export interface EtapaFlujo {
@@ -296,7 +594,13 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 909 de 2004, Art. 31, Num. 1 • Decreto 1083 de 2015, Art. 2.2.5.3.1',
                 textoNormativo: 'El artículo 31 de la Ley 909 establece que la provisión definitiva de los empleos de carrera se hará mediante nombramiento en período de prueba con base en el orden de mérito de la lista de elegibles en firme. El Decreto 1083 ordena verificar que la plaza se encuentre formalmente vacante en forma definitiva y reportada en la OPEC institucional.',
                 detalleProcedimiento: 'Verificar en el Manual Específico de Funciones y Competencias Laborales la denominación, código, grado y propósito principal del empleo reportado en la OPEC institucional.',
-              },
+              
+              posiblesEvidencias: [
+                "Ficha técnica de la OPEC institucional generada en SIMO",
+          "Certificado de vacancia definitiva expedido por Talento Humano",
+          "Manual específico de funciones del empleo correspondiente",
+              ],
+            },
               {
                 id: 'vc1_2',
                 label: 'Consulta en Banco Nacional de Listas de Elegibles (BNLE SIMO 4.0)',
@@ -305,7 +609,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Ley 760 de 2005 • Circular Conjunta CNSC 011 de 2021',
                 textoNormativo: 'Las entidades públicas tienen la obligación legal ineludible de consultar prioritariamente el Banco Nacional de Listas de Elegibles (SIMO 4.0) de la CNSC. Si existe lista en firme para el empleo o empleo equivalente, su uso es preferente, vinculante y de carácter obligatorio.',
                 detalleProcedimiento: 'Ingresar con el rol institucional a la plataforma SIMO de la CNSC y consultar el estado de firmeza de la lista de elegibles correspondiente a la convocatoria territorial vigente.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte oficial de consulta en SIMO 4.0 con el estado de firme",
+              ],
+            },
               {
                 id: 'vc1_3',
                 label: 'Constatación de funciones y perfil equivalente en la OPEC',
@@ -314,7 +622,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.6.2 • Criterio Unificado CNSC',
                 textoNormativo: 'Para aplicar una lista de elegibles, el empleo vacante debe ser coincidente o equivalente en denominación, código, nivel jerárquico, grado salarial, funciones y requisitos mínimos con los ofertados en la OPEC del concurso público.',
                 detalleProcedimiento: 'Comparar que los requisitos de estudio y experiencia requeridos en la vacante coincidan exactamente con la OPEC ofertada y no existan modificaciones reglamentarias sobrevinientes.',
-              },
+              
+              posiblesEvidencias: [
+                "Cuadro comparativo técnico entre el Manual de Funciones vigente y la OPEC del acuerdo de convocatoria del concurso de méritos",
+              ],
+            },
             ],
           },
           {
@@ -338,7 +650,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 909 de 2004, Art. 31 Numeral 4',
                 textoNormativo: 'La autoridad nominadora debe remitir solicitud formal de autorización de uso de lista a la CNSC dentro de los términos reglamentarios, respetando estrictamente el orden descendente de mérito de los elegibles.',
                 detalleProcedimiento: 'Radicar la comunicación oficial requiriendo el uso de lista de elegibles en firme ante la CNSC para el empleo específico.',
-              },
+              
+              posiblesEvidencias: [
+                "Oficio o comunicación oficial con radicado de salida institucional dirigido a la CNSC solicitando autori",
+              ],
+            },
               {
                 id: 'vc2_2',
                 label: 'Recepción de lista de elegibles con orden de mérito estricto',
@@ -347,15 +663,26 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Ley 760 de 2005, Art. 14 • Resolución CNSC en firme',
                 textoNormativo: 'La lista de elegibles queda en firme una vez decididas las reclamaciones. El orden de mérito es inmodificable y cualquier designación que altere la prelación numérica es nula de pleno derecho conforme a la jurisprudencia constitucional.',
                 detalleProcedimiento: 'Constatar la ejecutoria de la resolución que conformó la lista de elegibles y el orden inmodificable de mérito obtenido en las pruebas.',
-              },
+              
+              posiblesEvidencias: [
+                "Resolución de la CNSC en firme que conforma y adopta la lista de elegibles",
+          "Certificado de ejecutoria expedido por la CNSC",
+          "Listado oficial de elegibles con puntajes y puestos",
+              ],
+            },
               {
                 id: 'vc2_3',
-                label: 'Revisión de soportes de los 3 primeros elegibles por Comisión de Personal',
+                label: 'Revisión por Comisión de Personal y término preclusivo de exclusión (5 días)',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 16, Lit. a • Decreto 1083 de 2015, Art. 2.2.6.21',
-                textoNormativo: 'La Comisión de Personal tiene competencia legal para constatar que el elegible no incurra en causales de exclusión sobrevinientes y verificar el cumplimiento estricto del orden de mérito antes de que se profiera el nombramiento.',
-                detalleProcedimiento: 'Verificar cumplimiento de requisitos mínimos en los soportes aportados en la inscripción y certificar la no configuración de causales de exclusión legal.',
+                norma: 'Ley 909 de 2004, Art. 16, Lit. a • Decreto Ley 760 de 2005, Art. 14 • Decreto 1083 de 2015, Art. 2.2.6.21',
+                textoNormativo: 'De conformidad con el artículo 14 del Decreto Ley 760 de 2005, dentro de los cinco (5) días hábiles siguientes a la publicación de la lista de elegibles, la Comisión de Personal podrá solicitar a la CNSC la exclusión de la persona o personas que no reúnan los requisitos o incurran en causales de exclusión legal.',
+                detalleProcedimiento: 'Verificar los soportes de los primeros elegibles en estricto orden de mérito dentro del término perentorio de cinco (5) días hábiles siguientes a la firmeza de la lista, y certificar la procedencia del nombramiento ante el nominador.',
+                posiblesEvidencias: [
+                  'Acta de sesión de la Comisión de Personal revisando la lista de elegibles.',
+                  'Constancia de no haberse presentado solicitud de exclusión dentro de los 5 días hábiles.',
+                  'Comunicación formal suscrita remitida al nominador autorizando la provisión.',
+                ],
               },
             ],
           },
@@ -381,7 +708,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 909 de 2004, Art. 24 • Ley 1960 de 2019, Art. 1',
                 textoNormativo: 'El encargo y la provisionalidad son figuras transitorias que cesan de pleno derecho cuando la plaza deba proveerse en forma definitiva por mérito. Los servidores en encargo retornan inmediatamente a sus empleos de carrera de origen.',
                 detalleProcedimiento: 'Cotejar en PERNO y la matriz de planta el estado actual del funcionario que ocupa la plaza para proceder a su reubicación o desvinculación formal según corresponda.',
-              },
+              
+              posiblesEvidencias: [
+                "Ficha de caracteri",
+              ],
+            },
               {
                 id: 'vc3_2',
                 label: 'Memorando de comunicación sobre provisión por mérito de la plaza',
@@ -390,7 +721,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.4',
                 textoNormativo: 'La administración debe comunicar formalmente la terminación del encargo o nombramiento provisional, motivando el acto en la obligación legal de nombrar al elegible que superó el concurso de méritos.',
                 detalleProcedimiento: 'Remitir memorando oficial informando la provisión de la vacante por concurso de méritos, preservando garantías de especial protección si aplican (retén social, prepensionados, madres cabeza de familia).',
-              },
+              
+              posiblesEvidencias: [
+                "Memorando oficial remitido al funcionario en encargo o provisional",
+          "Constancia de radicación en CORDIS o SIGA con acuse de recibo",
+              ],
+            },
               {
                 id: 'vc3_3',
                 label: 'Fijación de fecha límite de entrega de funciones e inventarios',
@@ -399,7 +735,12 @@ export function generarEtapasParaCaso(
                 norma: 'Circular Conjunta CNSC - DAFP 001 de 2020',
                 textoNormativo: 'La entidad otorgará un término prudencial no inferior a 5 días ni superior a 10 para la entrega formal del despacho, bienes, expedientes e inventarios, asegurando que no se interrumpa el servicio público.',
                 detalleProcedimiento: 'Establecer la fecha formal para la suscripción de las actas de entrega de cargo e inventario físico e informático.',
-              },
+              
+              posiblesEvidencias: [
+                "Cronograma de empalme suscrito por el jefe de la dependencia",
+          "Citación para entrega de archivos y bienes inventariados",
+              ],
+            },
             ],
           },
           {
@@ -424,7 +765,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24',
                 textoNormativo: 'El nombramiento en período de prueba se expedirá mediante acto administrativo motivado del nominador, determinando el plazo legal improrrogable de seis (6) meses y la convocatoria de concurso respectiva.',
                 detalleProcedimiento: 'Redactar el proyecto de resolución incluyendo antecedentes de la convocatoria, OPEC, puesto en lista y asignación salarial reglamentaria.',
-              },
+              
+              posiblesEvidencias: [
+                "Proyecto de resolución en formato FT-130 con visto bueno jurídico",
+          "Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva",
+              ],
+            },
               {
                 id: 'vc4_2',
                 label: 'Firma por Secretario Jurídico Distrital y numeración oficial',
@@ -433,7 +779,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá',
                 textoNormativo: 'Todo acto administrativo de nombramiento debe ser suscrito por la autoridad nominadora competente, radicado, numerado y fechado oficialmente para que surta plenos efectos jurídicos.',
                 detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y posterior radicación y fechado en el sistema documental corporativo.',
-              },
+              
+              posiblesEvidencias: [
+                "Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial",
+              ],
+            },
               {
                 id: 'vc4_3',
                 label: 'Comunicación al candidato (10 días hábiles para manifestar aceptación)',
@@ -443,7 +793,13 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6',
                 textoNormativo: 'La persona nombrada dispone de un término improrrogable de diez (10) días hábiles contados a partir de la comunicación para manifestar si acepta o declina el nombramiento. De no haber aceptación expresa, se procederá a nombrar al siguiente en la lista.',
                 detalleProcedimiento: 'Enviar comunicación electrónica certificada requiriendo al interesado manifestar por escrito su aceptación dentro del término perentorio de 10 días hábiles.',
-              },
+              
+              posiblesEvidencias: [
+                "Oficio de notificación electrónica certificada en formato FT-019",
+          "Acuse de recibo del correo institucional",
+          "Memorial de aceptación expresa suscrito por el elegible dentro del término legal",
+              ],
+            },
               {
                 id: 'vc4_4',
                 label: 'Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)',
@@ -452,7 +808,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.7',
                 textoNormativo: 'Aceptado el nombramiento, el ciudadano cuenta con diez (10) días hábiles para tomar posesión. Este plazo puede prorrogarse por justa causa debidamente acreditada hasta por noventa (90) días continuos si debe desplazarse de otra ciudad o por fuerza mayor.',
                 detalleProcedimiento: 'Si el candidato alega justa causa comprobada (ej. incapacidad o renuncia en otra entidad), autorizar prórroga para posesionarse hasta por 90 días calendario adicionales.',
-              },
+              
+              posiblesEvidencias: [
+                "Oficio formal de aceptación suscrito por el elegible",
+          "Copia de documento de identidad y manifestación escrita de aceptación",
+              ],
+            },
             ],
           },
           {
@@ -476,7 +837,11 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 2346 de 2007 MinProtección Social • Decreto 1072 de 2015',
                 textoNormativo: 'Es obligatoria la evaluación médica ocupacional pre-ingreso, a cargo de la entidad, con el fin de certificar la aptitud psicofísica y compatibilidad con las exigencias funcionales del empleo a desempeñar.',
                 detalleProcedimiento: 'Verificar la expedición del certificado médico de aptitud laboral emitido por IPS con licencia en Seguridad y Salud en el Trabajo.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado de aptitud médica ocupacional emitido por la IPS de salud en el trabajo con concepto de apto",
+              ],
+            },
               {
                 id: 'vc5_secop',
                 label: 'Consulta de contratos activos en SECOP II (Verificación de Inhabilidades / Art. 128 C.P.)',
@@ -486,7 +851,13 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
                 textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Consultar en tiempo real a través de la API SECOP II de Datos Abiertos que el aspirante no figure como contratista con contratos vigentes en ejecución antes de la posesión.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte en PDF de la consulta en la API de SECOP II de Datos Abiertos",
+          "Dictamen preventivo de cero contratos vigentes en ejecución",
+          "Captura de pantalla de la consulta en plataforma",
+              ],
+            },
               {
                 id: 'vc5_2',
                 label: 'Declaración de Bienes y Rentas y Conflicto de Intereses en SIDEAP/SIGEP',
@@ -495,7 +866,12 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
                 textoNormativo: 'Nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público. Es deber inexcusable de Talento Humano consultar SECOP II para verificar la ausencia de contratos estatales en ejecución antes de autorizar la posesión.',
                 detalleProcedimiento: 'Exigir el certificado digital de radicación de la declaración de bienes y rentas y conflicto de intereses diligenciada en SIDEAP / SIGEP II.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado digital expedido por SIDEAP/SIGEP II con radicado de ingreso",
+          "Formulario de conflicto de intereses debidamente firmado electrónicamente",
+              ],
+            },
               {
                 id: 'vc5_3',
                 label: 'Consulta de antecedentes (Policía, Procuraduría SIRI, Contraloría SIBOR, REDAM)',
@@ -504,6 +880,26 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • Ley 190 de 1995',
                 textoNormativo: 'Es requisito previo y habilitante para la posesión publicar y registrar bajo la gravedad de juramento en el SIDEAP/SIGEP II la declaración de bienes y rentas, la última declaración de renta y el registro de posibles conflictos de intereses.',
                 detalleProcedimiento: 'Generar los certificados oficiales en línea de Policía Nacional, Procuraduría General de la Nación, Contraloría General de la República y Registro de Deudores Alimentarios Morosos.',
+              
+              posiblesEvidencias: [
+                "Certificados ordinarios de antecedentes expedidos en línea por Policía Nacional, Procuraduría, Contraloría, Personería y el certificado de no deudor alimentario del REDAM",
+              ],
+            },
+              {
+                id: 'vc5_ft318',
+                label: 'Certificado de Cumplimiento de Requisitos para Tomar Posesión (2311300-FT-318)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-318',
+                tipoAccionEspecial: 'INGRESOS_IA',
+                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Acuerdo de Convocatoria CNSC',
+                textoNormativo: 'Antes de dar posesión, la entidad comprobará el cumplimiento de las calidades y requisitos del aspirante seleccionado en concurso de méritos mediante el formato oficial 2311300-FT-318 expedido por Talento Humano.',
+                detalleProcedimiento: 'Generar y validar el archivo Excel oficial 2311300-FT-318 (Certificado de Cumplimiento de Requisitos para Tomar Posesión) en el módulo de Validación Técnica de Ingresos para certificar la idoneidad documental previa al juramento y posesión.',
+                posiblesEvidencias: [
+                  'Certificado institucional 2311300-FT-318 (Certificado de Cumplimiento de Requisitos para Tomar Posesión) en Excel oficial generado y suscrito.',
+                  'Dictamen técnico de verificación de cumplimiento de requisitos asistido por IA.',
+                  'Certificaciones laborales y títulos académicos cotejados frente al manual de funciones.',
+                ],
               },
               {
                 id: 'vc5_4',
@@ -514,7 +910,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021, Art. 6',
                 textoNormativo: 'Talento Humano verificará los antecedentes disciplinarios (SIRI Procuraduría), fiscales (SIBOR Contraloría), judiciales (Policía Nacional), medidas correctivas (RNMC) y la no inscripción en el Registro de Deudores Alimentarios Morosos (REDAM).',
                 detalleProcedimiento: 'Diligenciar el acta de posesión con toma formal del juramento de rigor, firmada por el servidor y el nominador o su delegado.',
-              },
+              
+              posiblesEvidencias: [
+                "Acta de Posesión original en formato 2311300-FT-127 con juramento constitucional, firmada por el servidor y el nominador",
+              ],
+            },
             ],
           },
           {
@@ -538,7 +938,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 100 de 1993 • Decreto Ley 1295 de 1994 • Decreto 1072 de 2015',
                 textoNormativo: 'La afiliación patronal al Sistema de Seguridad Social Integral (EPS, ARL, Fondo de Pensiones, Cesantías y Caja de Compensación) debe surtirse con fecha de inicio igual a la del día de la posesión formal.',
                 detalleProcedimiento: 'Radicar formularios de afiliación ante Positiva ARL, EPS y fondo de pensiones y cesantías escogido libremente por el servidor.',
-              },
+              
+              posiblesEvidencias: [
+                "Formularios radicados ante Positiva ARL con fecha del día de posesión",
+          "Certificados de vinculación activa a EPS, AFP y Caja de Compensación (Compensar)",
+              ],
+            },
               {
                 id: 'vc6_2',
                 label: 'Inclusión en nómina institucional (Sistema PERNO)',
@@ -547,7 +952,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 101 de 2004 • Manual Distrital de Nómina',
                 textoNormativo: 'Se debe registrar el alta en el sistema de nómina institucional dentro del período contable respectivo, garantizando la debida apropiación de salarios y factores prestacionales.',
                 detalleProcedimiento: 'Registrar la plaza, asignación básica, cuenta bancaria para dispersión y descuentos de ley en el módulo de personal PERNO.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte de novedades de alta en el sistema de nómina distrital PERNO",
+          "Certificación bancaria del servidor",
+              ],
+            },
               {
                 id: 'vc6_3',
                 label: 'Activación del servidor en aplicativo SIDEAP Distrital',
@@ -556,7 +966,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 083 de 2001 • Directiva Distrital 001 de 2018',
                 textoNormativo: 'El servidor debe ser activado y habilitado en el Sistema Distrital del Empleo y la Administración Pública (SIDEAP) para la expedición de certificaciones laborales y trámites institucionales.',
                 detalleProcedimiento: 'Cambiar el estado de la vacante a provista en SIDEAP y habilitar permisos en la intranet distrital.',
-              },
+              
+              posiblesEvidencias: [
+                "Ficha de servicio activo generada en SIDEAP",
+          "Carné institucional digital activado",
+              ],
+            },
               {
                 id: 'vc6_4',
                 label: 'Reporte de posesión en aplicativo BNLE SIMO 4.0 ante la CNSC',
@@ -565,7 +980,12 @@ export function generarEtapasParaCaso(
                 norma: 'Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31',
                 textoNormativo: 'La entidad nominadora debe reportar obligatoriamente a la CNSC a través de SIMO 4.0 la posesión del elegible en período de prueba dentro de los cinco (5) días hábiles siguientes a su ocurrencia.',
                 detalleProcedimiento: 'Cargar en la plataforma SIMO de la Comisión Nacional del Servicio Civil el acta de posesión y la resolución numerada.',
-              },
+              
+              posiblesEvidencias: [
+                "Comprobante de cargue del acta de posesión y resolución en SIMO 4.0",
+          "Constancia de retiro de la posición del BNLE emitida por la plataforma de la CNSC",
+              ],
+            },
               {
                 id: 'vc6_5',
                 label: 'Inducción y entrenamiento en puesto de trabajo (Formato 2311300-FT-106)',
@@ -575,7 +995,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.6.25 • Acuerdo CNSC de Evaluación del Desempeño Laboral',
                 textoNormativo: 'Durante los seis (6) meses del período de prueba se concertarán compromisos funcionales y comportamentales. Al superarse con calificación sobresaliente o satisfactoria, el servidor adquiere los derechos de carrera y el registro RPCA ante la CNSC.',
                 detalleProcedimiento: 'Entregar cartilla de bienvenida, manual específico de funciones y concertar compromisos de evaluación del periodo de prueba.',
-              },
+              
+              posiblesEvidencias: [
+                "Acta de inducción institucional en formato FT-106",
+          "Formato oficial de concertación de compromisos funcionales y comportamentales del periodo de prueba en el aplicativo EDL de la CNSC",
+              ],
+            },
             ],
           },
         ];
@@ -603,7 +1028,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 909 de 2004, Art. 5 • Decreto 1083 de 2015, Art. 2.2.5.3.3',
                 textoNormativo: 'Los empleos de Libre Nombramiento y Remoción son de dirección, conducción, orientación institucional y confianza. La designación corresponde a la facultad discrecional de la autoridad nominadora.',
                 detalleProcedimiento: 'Recibir expediente digital o físico remitido formalmente por el Despacho con visto bueno de postulación.',
-              },
+              
+              posiblesEvidencias: [
+                "Memorando de postulación o remisión suscrito por el Despacho del Secretario Jurídico Distrital",
+          "Expediente de hoja de vida recibido en Talento Humano",
+              ],
+            },
               {
                 id: 'vl1_2',
                 label: 'Autorización formal de notificación electrónica',
@@ -613,7 +1043,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1437 de 2011, Art. 53 • Ley 527 de 1999',
                 textoNormativo: 'El aspirante debe suscribir la autorización expresa para ser notificado de todos los actos y requerimientos mediante la dirección electrónica institucional reportada en su hoja de vida.',
                 detalleProcedimiento: 'Suscribir consentimiento expreso para surtir todas las notificaciones del trámite mediante la dirección de correo electrónico aportada.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato institucional 2311520-FT-019 debidamente firmado",
+          "Constancia de autorización expresa de correo electrónico para notificaciones",
+              ],
+            },
               {
                 id: 'vl1_3',
                 label: 'Registro y cargue completo de soportes académicos y laborales en SIDEAP',
@@ -622,7 +1057,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
                 textoNormativo: 'Toda la documentación académica, tarjetas profesionales, certificaciones laborales y antecedentes deben cargarse y validarse formalmente en el sistema distrital SIDEAP antes de proferir el acto de nombramiento.',
                 detalleProcedimiento: 'Digitalizar diplomas, actas de grado, tarjetas profesionales y certificados laborales con fechas exactas y funciones descritas.',
-              },
+              
+              posiblesEvidencias: [
+                "Hoja de vida digital generada por SIDEAP",
+          "Soportes digitali",
+              ],
+            },
             ],
           },
           {
@@ -646,7 +1086,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
                 textoNormativo: 'Es obligatorio obtener las certificaciones ordinarias y especiales de antecedentes de la Procuraduría, Contraloría, Policía Nacional, RNMC y el certificado de no reporte de deudor moroso en el REDAM.',
                 detalleProcedimiento: 'Verificar ausencia de sanciones disciplinarias vigentes, fallos de responsabilidad fiscal, medidas correctivas policiales y deudores de alimentos.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificados vigentes de antecedentes disciplinarios, fiscales, policiales y REDAM sin anotaciones inhabilitantes",
+              ],
+            },
               {
                 id: 'vl2_secop',
                 label: 'Consulta de contratos en SECOP II (Verificación Inhabilidad / Art. 128 C.P.)',
@@ -656,26 +1100,40 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
                 textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Comprobar mediante consulta web a la API SECOP II que el aspirante no posea contratos de prestación de servicios o de obra en ejecución con entidades del Estado.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte en PDF de consulta en tiempo real en SECOP II",
+          "Dictamen de no existencia de contratos estatales en ejecución",
+              ],
+            },
               {
                 id: 'vl2_2',
-                label: 'Certificado de Cumplimiento de Requisitos (2311300-FT-318) / Validación IA',
+                label: 'Certificado de Cumplimiento de Requisitos para Tomar Posesión (2311300-FT-318)',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-318',
                 tipoAccionEspecial: 'INGRESOS_IA',
-                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
-                textoNormativo: 'Se debe realizar la consulta preventiva en SECOP II para garantizar que el aspirante a cargo directivo no tenga contratos activos en ejecución con entidades del Estado, evitando transgresiones a la prohibición constitucional de doble asignación.',
-                detalleProcedimiento: 'Expedir la certificación técnica FT-318 que acredita el cumplimiento exacto de los meses de experiencia directiva o profesional y títulos de posgrado exigidos.',
+                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Manual Específico de Funciones y Competencias Laborales',
+                textoNormativo: 'Antes de efectuar el nombramiento y autorizar la posesión, la entidad debe certificar el estricto cumplimiento de los requisitos de estudio y experiencia directiva mediante el formato institucional oficial 2311300-FT-318 "Certificado de Cumplimiento de Requisitos para Tomar Posesión", generado oficialmente en el módulo de Validación Técnica de Ingresos.',
+                detalleProcedimiento: 'Generar el archivo oficial de Excel del formato 2311300-FT-318 desde el módulo de Validación Técnica de Ingresos (con IA) para acreditar el cumplimiento exacto de meses de experiencia directiva/profesional y títulos exigidos.',
+                posiblesEvidencias: [
+                  'Certificado institucional de cumplimiento de requisitos para tomar posesión (Formato oficial 2311300-FT-318 en Excel) firmado por Talento Humano.',
+                  'Dictamen técnico de verificación de hoja de vida asistido por IA emitido desde Validación Técnica de Ingresos.',
+                  'Certificaciones laborales con funciones y tiempo computado en meses acreditados.',
+                ],
               },
               {
                 id: 'vl2_3',
-                label: 'Verificación paridad Ley de Cuotas (Decreto 455/2020 y Ley 2424/2024: 50% mujeres)',
+                label: 'Verificación paridad Ley de Cuotas (50% mujeres en cargos directivos)',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.5 • Manual Específico de Funciones y Competencias',
-                textoNormativo: 'Talento Humano debe certificar mediante el formato institucional FT-318 que el candidato acredita los títulos académicos de pregrado y posgrado y la experiencia profesional directiva requerida para el nivel del empleo.',
+                norma: 'Ley 581 de 2000 • Ley 2424 de 2024, Arts. 1 y 2 • Decreto 455 de 2020',
+                textoNormativo: 'La Ley 2424 de 2024 establece que la participación de las mujeres en los niveles decisorios de la administración pública (máximo nivel decisorio y otros niveles decisorios) será de al menos el cincuenta por ciento (50%).',
                 detalleProcedimiento: 'Revisar la matriz de participación institucional de la Secretaría Jurídica Distrital para garantizar mínimo el 50% de mujeres en el máximo nivel decisorio.',
+                posiblesEvidencias: [
+                  'Matriz institucional de paridad de género actualizada a la fecha.',
+                  'Certificación suscrita por Talento Humano acreditando el cumplimiento del 50% de mujeres en el nivel directivo.',
+                ],
               },
             ],
           },
@@ -700,7 +1158,12 @@ export function generarEtapasParaCaso(
                 norma: 'Acuerdo Distrital 782 de 2020 • Circular DASCD 004 de 2019',
                 textoNormativo: 'Los candidatos a cargos directivos de Libre Nombramiento y Remoción en Bogotá deben ser evaluados a través del Sistema de Evaluación de Competencias (SEVCOM) administrado por el DASCD.',
                 detalleProcedimiento: 'Agendar al candidato en la plataforma SEVCOM del Departamento Administrativo del Servicio Civil Distrital.',
-              },
+              
+              posiblesEvidencias: [
+                "Solicitud de agendamiento en la plataforma SEVCOM radicada ante el DASCD",
+          "Citación electrónica al aspirante",
+              ],
+            },
               {
                 id: 'vl3_2',
                 label: 'Aprobación de la prueba de competencias del aspirante',
@@ -709,7 +1172,11 @@ export function generarEtapasParaCaso(
                 norma: 'Acuerdo Distrital 782 de 2020, Art. 4',
                 textoNormativo: 'Para continuar con el trámite de designación en el cargo directivo, el aspirante debe obtener concepto favorable en la valoración de competencias directivas y gerenciales aplicada por el DASCD.',
                 detalleProcedimiento: 'Revisar el informe de resultados remitido por el DASCD con concepto favorable en competencias directivas.',
-              },
+              
+              posiblesEvidencias: [
+                "Informe de resultados de evaluación psicométrica emitido por el DASCD con concepto favorable de competencias gerenciales",
+              ],
+            },
               {
                 id: 'vl3_3',
                 label: 'Publicación de la Hoja de Vida por mínimo 5 días en portal web (Acuerdo 782/2020)',
@@ -718,7 +1185,13 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.13.2.3 • Directiva Presidencial 01 de 2020 • Acuerdo 782 de 2020',
                 textoNormativo: 'La hoja de vida del candidato a empleo de Libre Nombramiento y Remoción debe publicarse obligatoriamente durante no menos de cinco (5) días calendario en la página web institucional para conocimiento y observaciones de la ciudadanía antes de la designación.',
                 detalleProcedimiento: 'Subir formato de hoja de vida institucional al módulo de transparencia y verificar ausencia de objeciones ciudadanas en el buzón durante 5 días calendario.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificación de publicación en el portal web institucional por el término mínimo de 5 días calendario",
+          "Captura de pantalla del enlace de transparencia con fecha inicial y final",
+          "Certificado de no haberse recibido observaciones ciudadanas o informe de trámite de las recibidas",
+              ],
+            },
             ],
           },
           {
@@ -743,7 +1216,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.3 • Ley 909 de 2004, Art. 23',
                 textoNormativo: 'El nombramiento ordinario en cargo de libre nombramiento se adoptará por resolución o decreto de la autoridad nominadora en ejercicio de su facultad discrecional de libre nombramiento y remoción.',
                 detalleProcedimiento: 'Proyectar el acto administrativo con visto bueno del Director de Gestión Corporativa y firma del Secretario Jurídico.',
-              },
+              
+              posiblesEvidencias: [
+                "Proyecto de acto administrativo en formato FT-130",
+          "Resolución de nombramiento ordinario suscrita por el Secretario Jurídico Distrital",
+              ],
+            },
               {
                 id: 'vl4_2',
                 label: 'Numeración, fechado y comunicación al designado',
@@ -752,7 +1230,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1437 de 2011, Art. 65 • Estatuto de Bogotá',
                 textoNormativo: 'El acto administrativo debe contar con numeración oficial consecutiva, fecha y comunicación formal al interesado mediante los canales electrónicos autorizados.',
                 detalleProcedimiento: 'Radicar y numerar en el sistema documental, comunicando oficialmente al designado para su aceptación.',
-              },
+              
+              posiblesEvidencias: [
+                "Radicado oficial de salida y número de resolución asignado",
+          "Oficio de comunicación formal remitido al correo del designado",
+              ],
+            },
               {
                 id: 'vl4_3',
                 label: 'Aceptación formal dentro del término legal (10 días hábiles)',
@@ -761,7 +1244,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6',
                 textoNormativo: 'El designado dispone de diez (10) días hábiles siguientes a la comunicación para manifestar su aceptación o declinación formal al nombramiento.',
                 detalleProcedimiento: 'Recibir memorial suscrito por el designado manifestando la aceptación del cargo dentro de los 10 días hábiles.',
-              },
+              
+              posiblesEvidencias: [
+                "Carta o escrito firmado por el designado manifestando formalmente la aceptación del cargo dentro de los 10 días hábiles legales",
+              ],
+            },
             ],
           },
           {
@@ -785,7 +1272,11 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 2346 de 2007 • Decreto 1072 de 2015',
                 textoNormativo: 'Práctica médica de ingreso obligatoria por especialista en seguridad y salud en el trabajo, con el correspondiente concepto de aptitud psicofísica.',
                 detalleProcedimiento: 'Constatar aptitud psicofísica laboral emitida por médico especialista en SST.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado de examen médico de ingreso laboral con concepto de apto expedido por IPS especiali",
+              ],
+            },
               {
                 id: 'vl5_2',
                 label: 'Publicación proactiva Bienes y Rentas en SIDEAP/SIGEP (Ley 2013/2019)',
@@ -794,7 +1285,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
                 textoNormativo: 'Publicación proactiva y juramentada de bienes y rentas, declaración del impuesto de renta y registro de conflicto de intereses en la plataforma SIDEAP / SIGEP II con corte previo a la posesión.',
                 detalleProcedimiento: 'Publicar el formulario proactivo de declaración jurada de bienes y conflicto de intereses en el aplicativo de la Función Pública.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado de publicación proactiva de declaración jurada de bienes, rentas y conflicto de intereses de la Función Pública",
+              ],
+            },
               {
                 id: 'vl5_3',
                 label: 'Suscripción del Acta de Posesión (Formato 2311300-FT-127)',
@@ -804,7 +1299,11 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 122 • Ley 4 de 1913, Art. 257 • Decreto 1083 de 2015, Art. 2.2.5.1.8',
                 textoNormativo: 'Toma de juramento constitucional y suscripción formal del acta de posesión en formato 2311300-FT-127 ante el nominador o su delegado autorizado.',
                 detalleProcedimiento: 'Firma formal del acta de posesión ante el Secretario Jurídico Distrital.',
-              },
+              
+              posiblesEvidencias: [
+                "Acta de Posesión original en formato 2311300-FT-127 firmada ante el Secretario Jurídico Distrital con juramento constitucional",
+              ],
+            },
               {
                 id: 'vl5_4',
                 label: 'Entrega manual de funciones y plan de inducción gerencial (2311300-FT-106)',
@@ -814,7 +1313,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.11.2.1 • Ley 951 de 2005 (Acta de Entrega)',
                 textoNormativo: 'Entrega del manual de funciones directivas, inducción institucional y suscripción del acta formal de entrega de despacho y empalme conforme a la Ley 951 de 2005.',
                 detalleProcedimiento: 'Entrega de responsabilidades misionales, equipos directivos y mapa de riesgos institucionales.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato FT-106 suscrito",
+          "Acta de empalme y entrega de despacho directivo conforme a los lineamientos de la Ley 951 de 2005",
+              ],
+            },
             ],
           },
           {
@@ -838,7 +1342,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 100 de 1993 • Decreto 1295 de 1994',
                 textoNormativo: 'Afiliación patronal al Sistema de Seguridad Social Integral con vigencia retroactiva a la fecha y hora exacta de posesión del directivo.',
                 detalleProcedimiento: 'Afiliar con nivel de riesgo de acuerdo a la matriz ocupacional desde la fecha exacta de posesión.',
-              },
+              
+              posiblesEvidencias: [
+                "Radicados oficiales de afiliación ante Positiva ARL (con nivel de riesgo directivo), EPS, Fondo de Pensiones y Caja de Compensación",
+              ],
+            },
               {
                 id: 'vl6_2',
                 label: 'Inclusión en nómina institucional (PERNO)',
@@ -847,7 +1355,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 101 de 2004',
                 textoNormativo: 'Alta en el sistema de nómina PERNO distrital para imputación de gastos salariales y asignación de gastos de representación si aplican al nivel jerárquico.',
                 detalleProcedimiento: 'Vincular cédula, datos bancarios, retención en la fuente y gastos de representación.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte de alta en PERNO con la asignación básica y gastos de representación parametri",
+              ],
+            },
               {
                 id: 'vl6_3',
                 label: 'Activación del servidor en el módulo de Talento Humano en SIDEAP',
@@ -856,7 +1368,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 083 de 2001',
                 textoNormativo: 'Activación del servidor en el módulo de Talento Humano en SIDEAP habilitando el perfil directivo institucional.',
                 detalleProcedimiento: 'Actualizar plaza a ocupada y emitir carné digital institucional.',
-              },
+              
+              posiblesEvidencias: [
+                "Ficha de vinculación activa en SIDEAP",
+          "Emisión de carné institucional digital y asignación de perfil directivo en el sistema documental",
+              ],
+            },
             ],
           },
         ];
@@ -885,6 +1402,12 @@ export function generarEtapasParaCaso(
                 notaNormativa: 'Antes de efectuar un nombramiento provisional para proveer una vacante definitiva de un empleo de carrera administrativa, la entidad debe verificar las alternativas de provisión mediante el sistema de mérito, incluyendo la existencia de listas de elegibles vigentes y aplicables. Esta verificación permite establecer si procede acudir a la provisión transitoria, de conformidad con las reglas legales y reglamentarias correspondientes.',
                 textoNormativo: 'Decreto 1083 de 2015, artículo 2.2.5.3.1: «Las vacantes definitivas en empleos de carrera se proveerán en periodo de prueba o en ascenso, con las personas que hayan sido seleccionadas mediante el sistema de mérito». El mismo artículo contempla la posibilidad de proveer transitoriamente los empleos de carrera que se encuentren vacantes de manera definitiva mediante encargo o nombramiento provisional, en los términos establecidos en las disposiciones aplicables.\n\nDecreto 1083 de 2015, artículo 2.2.5.3.2: establece las reglas para la provisión de vacantes temporales, incluida la aplicación de las listas de elegibles en los supuestos legalmente previstos. Su aplicación debe examinarse de acuerdo con la naturaleza de la vacante y las circunstancias particulares del empleo.',
                 detalleProcedimiento: 'Consultar el Banco Nacional de Listas de Elegibles de la Comisión Nacional del Servicio Civil (CNSC) y verificar si existen listas en firme, vigentes y jurídicamente aplicables al empleo objeto de provisión, incluyendo la procedencia de su uso cuando corresponda. Dejar evidencia documental de la consulta y de su resultado. Cuando no se identifiquen listas aplicables, elaborar una constancia suscrita por el responsable competente que indique, como mínimo, la identificación del empleo, la fecha de consulta, el resultado obtenido y la conclusión sobre la existencia o inexistencia de listas aplicables. Incorporar la constancia y los soportes al expediente del trámite de provisión.',
+                posiblesEvidencias: [
+                  'Reporte en PDF de consulta en SIMO 4.0 / Banco Nacional de Listas de Elegibles (BNLE).',
+                  'Captura de pantalla de la consulta por denominación, código y grado en SIMO con fecha y hora.',
+                  'Constancia oficial de inexistencia de listas aplicables suscrita por Dirección de Gestión Corporativa.',
+                  'Memorando interno de resultados radicado en el sistema de gestión documental.',
+                ],
               },
               {
                 id: 'vp1_3',
@@ -895,6 +1418,11 @@ export function generarEtapasParaCaso(
                 notaNormativa: 'Las entidades deben informar a la Comisión Nacional del Servicio Civil (CNSC) la existencia de las vacantes definitivas en empleos de carrera administrativa antes de su provisión mediante encargo o nombramiento provisional. El reporte debe realizarse a través del aplicativo SIMO, conforme a los lineamientos y plazos establecidos por la CNSC, con el propósito de garantizar la adecuada administración de la Oferta Pública de Empleos de Carrera (OPEC).',
                 textoNormativo: 'Ley 1960 de 2019, artículo 1, parágrafo 2: «Previo a proveer vacantes definitivas mediante encargo o nombramiento provisional, el nominador o en quien este haya delegado, informará la existencia de la vacante a la Comisión Nacional del Servicio Civil a través del medio que esta indique».\n\nCircular Externa 011 de 2021 de la CNSC: Establece que las entidades deben reportar las vacantes definitivas de empleos de carrera administrativa en el aplicativo SIMO dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad, de acuerdo con las instrucciones y el procedimiento definidos por la Comisión.',
                 detalleProcedimiento: 'Reportar en SIMO la vacante definitiva del empleo de carrera administrativa antes de efectuar su provisión transitoria, dentro del plazo establecido por la CNSC. Verificar que la información registrada en la OPEC esté completa y actualizada, y conservar la evidencia del reporte, incluyendo el registro de la vacante y los soportes que permitan acreditar el cumplimiento de esta obligación.',
+                posiblesEvidencias: [
+                  'Comprobante electrónico de reporte de vacante definitiva emitido por SIMO.',
+                  'Captura de pantalla del módulo OPEC institucional con la novedad registrada.',
+                  'Acuse de cargue ante la CNSC dentro de los 5 días hábiles siguientes a la novedad.',
+                ],
               },
             ],
           },
@@ -919,6 +1447,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1960 de 2019, Art. 1 • Ley 909 de 2004, Art. 24 • Decreto 1083 de 2015, Art. 2.2.5.3.2',
                 textoNormativo: 'Los empleados con derechos de carrera administrativa tienen derecho preferencial a ser encargados de los empleos vacantes de forma definitiva o temporal si cumplen los requisitos del cargo y no tienen sanción disciplinaria.',
                 detalleProcedimiento: 'Publicar circular interna en la intranet convocando a servidores titulares de carrera con evaluación destacada.',
+                posiblesEvidencias: [
+                  'Circular interna numerada y fechada emitida por la Dirección de Gestión Corporativa.',
+                  'Captura de pantalla de la publicación en la intranet institucional y cartelera virtual.',
+                  'Constancia de envío de correo masivo a los funcionarios de carrera administrativa.',
+                ],
               },
               {
                 id: 'vp2_2',
@@ -928,6 +1461,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1960 de 2019, Art. 1 • Circular Conjunta CNSC 003 de 2020',
                 textoNormativo: 'Se debe efectuar la valoración de las postulaciones de servidores de carrera para verificar su última calificación de servicios sobresaliente o satisfactoria y el cumplimiento de requisitos mínimos.',
                 detalleProcedimiento: 'Cotejar requisitos del manual, antigüedad y calificación de servicios de los postulados.',
+                posiblesEvidencias: [
+                  'Matriz o cuadro comparativo de verificación de requisitos y calificación EDL de los postulados.',
+                  'Certificados de la última Evaluación del Desempeño Laboral (EDL) sobresaliente o satisfactoria.',
+                  'Certificados de antecedentes disciplinarios acreditando no registrar sanción en el último año.',
+                ],
               },
               {
                 id: 'vp2_3',
@@ -938,6 +1476,11 @@ export function generarEtapasParaCaso(
                 notaNormativa: 'La provisión transitoria de una vacante definitiva de carrera administrativa mediante nombramiento provisional procede excepcionalmente cuando no sea posible efectuarla mediante encargo, conforme al orden de provisión y los requisitos legales aplicables. Para ello, la entidad debe verificar el derecho preferencial de los empleados de carrera administrativa y documentar el resultado del procedimiento.',
                 textoNormativo: 'Ley 909 de 2004, artículo 24, modificado por el artículo 1 de la Ley 1960 de 2019: «Mientras se surte el proceso de selección para proveer empleos de carrera administrativa, los empleados de carrera tendrán derecho a ser encargados en estos si acreditan los requisitos para su ejercicio, poseen las aptitudes y habilidades para su desempeño, no han sido sancionados disciplinariamente en el último año y su última evaluación del desempeño sea sobresaliente».',
                 detalleProcedimiento: 'Verificar y documentar el cumplimiento de los requisitos para el encargo por parte de los empleados de carrera administrativa que puedan tener derecho preferencial sobre la vacante. Incorporar los soportes de la verificación, la publicación de la convocatoria interna cuando corresponda y sus resultados. Si no se identifican servidores con derecho al encargo, o se acredita que no es posible efectuarlo, dejar constancia escrita de las verificaciones realizadas y de sus resultados, como soporte para evaluar la procedencia del nombramiento provisional.',
+                posiblesEvidencias: [
+                  'Constancia oficial suscrita por el Nominador o Director(a) declarando desierto el encargo preferente.',
+                  'Publicación oficial de resultados de la convocatoria interna en la intranet.',
+                  'Comunicaciones de declinación o no aceptación voluntaria suscritas por servidores con derecho preferencial.',
+                ],
               },
             ],
           },
@@ -962,7 +1505,13 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 083 de 2001 • Directiva Distrital 001 de 2018',
                 textoNormativo: 'Cargue riguroso y verificación de la hoja de vida y soportes del candidato externo en el aplicativo distrital SIDEAP.',
                 detalleProcedimiento: 'Validar cargue completo de cédula, diplomas y soportes laborales en SIDEAP.',
-              },
+              
+              posiblesEvidencias: [
+                "Hoja de vida de persona natural generada desde el aplicativo SIDEAP",
+          "Soportes académicos foliados (diplomas, actas de grado y tarjeta profesional)",
+          "Certificaciones laborales con funciones pormenorizadas y fechas ciertas",
+              ],
+            },
               {
                 id: 'vp3_secop',
                 label: 'Consulta de contratos activos en SECOP II (Inhabilidades / Art. 128 C.P.)',
@@ -972,26 +1521,42 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
                 textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Verificar en la API SECOP II la ausencia de contratos activos con entidades públicas.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte de verificación preventiva expedido por el módulo SECOP II con marca temporal",
+          "Declaración bajo gravedad de juramento de no registrar contratos estatales en ejecución",
+              ],
+            },
               {
                 id: 'vp3_2',
                 label: 'Consulta de antecedentes judiciales, disciplinarios, fiscales y REDAM',
                 cumplido: true,
                 obligatorio: true,
-                norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
-                textoNormativo: 'Verificación en SECOP II de que el aspirante al nombramiento provisional no registre contratos vigentes en ejecución con entidades del Estado, impidiendo una doble vinculación o conflicto de intereses.',
-                detalleProcedimiento: 'Descargar certificados vigentes de Policía, Procuraduría, Contraloría y REDAM.',
+                norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
+                textoNormativo: 'Consulta obligatoria de antecedentes disciplinarios (SIRI Procuraduría), de responsabilidad fiscal (SIBOR Contraloría), judiciales (Policía Nacional), medidas correctivas (RNMC) y de no deudor alimentario moroso en el REDAM.',
+                detalleProcedimiento: 'Descargar certificados vigentes oficiales de Policía, Procuraduría, Contraloría, Personería y REDAM con fecha del día de verificación.',
+                posiblesEvidencias: [
+                  'Certificado de antecedentes disciplinarios expedido por la Procuraduría General de la Nación.',
+                  'Certificado de antecedentes fiscales expedido por la Contraloría General de la República.',
+                  'Certificado de antecedentes judiciales de la Policía Nacional.',
+                  'Certificado de no registro en el Registro de Deudores Alimentarios Morosos (REDAM).',
+                ],
               },
               {
                 id: 'vp3_3',
-                label: 'Certificación de Cumplimiento de Requisitos (2311300-FT-318) - Validación Técnica IA',
+                label: 'Certificado de Cumplimiento de Requisitos para Tomar Posesión (2311300-FT-318)',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311300-FT-318',
                 tipoAccionEspecial: 'INGRESOS_IA',
-                norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
-                textoNormativo: 'Consulta de certificados de antecedentes disciplinarios, de responsabilidad fiscal, judiciales y del Registro de Deudores Alimentarios Morosos.',
-                detalleProcedimiento: 'Expedir certificado técnico que acredite los requisitos mínimos de estudio y experiencia del empleo.',
+                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Manual Específico de Funciones y Competencias Laborales SJD',
+                textoNormativo: 'Corresponde a Talento Humano verificar y expedir el formato institucional oficial 2311300-FT-318 "Certificado de Cumplimiento de Requisitos para Tomar Posesión" (generado en el módulo de Validación Técnica de Ingresos), acreditando que el aspirante cumple los requisitos de estudio y experiencia del cargo antes de expedir el nombramiento y autorizar la posesión.',
+                detalleProcedimiento: 'Generar y descargar el archivo oficial de Excel del Formato 2311300-FT-318 desde el módulo de Validación Técnica de Ingresos (con IA), verificar el concepto favorable CUMPLE y suscribir la certificación formal.',
+                posiblesEvidencias: [
+                  'Formato institucional 2311300-FT-318 "Certificado de Cumplimiento de Requisitos para Tomar Posesión" (archivo Excel oficial descargado de Validación de Ingresos) suscrito por el responsable.',
+                  'Reporte técnico de verificación de cumplimiento de requisitos asistido por IA.',
+                  'Soportes académicos y laborales validados en el expediente digital.',
+                ],
               },
             ],
           },
@@ -1017,7 +1582,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 909 de 2004, Art. 25 • Decreto 1083 de 2015, Art. 2.2.5.3.3',
                 textoNormativo: 'La resolución de nombramiento provisional debe motivar expresamente la transitoriedad del empleo, la constancia de encargo desierto y la condición resolutoria del nombramiento hasta cuando la CNSC provea la vacante por concurso.',
                 detalleProcedimiento: 'Redactar resolución indicando la naturaleza transitoria y la justificación del encargo desierto.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato oficial 2311300-FT-318 (Certificado de Cumplimiento de Requisitos para Tomar Posesión) en Excel firmado con concepto favorable CUMPLE",
+          "Matriz de ponderación técnica de experiencia laboral y títulos académicos",
+              ],
+            },
               {
                 id: 'vp4_2',
                 label: 'Firma de la resolución por la autoridad nominadora y numeración',
@@ -1026,7 +1596,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1437 de 2011, Art. 65 • Estatuto de Bogotá',
                 textoNormativo: 'Suscripción por el nominador, radicación con número y fecha oficial en el sistema de gestión documental de la entidad.',
                 detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y numeración en correspondencia.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado de antecedentes de Procuraduría, Contraloría, PONAL, Personería, REDAM y RNMC",
+          "Comprobante de consulta oficial en el aplicativo SEVCOM del DASCD",
+              ],
+            },
               {
                 id: 'vp4_3',
                 label: 'Comunicación oficial al seleccionado indicando 10 días para aceptación',
@@ -1036,7 +1611,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.6',
                 textoNormativo: 'Término legal de diez (10) días hábiles para la aceptación del nombramiento provisional contados desde su comunicación formal.',
                 detalleProcedimiento: 'Notificar electrónicamente con plazo perentorio de aceptación formal.',
-              },
+              
+              posiblesEvidencias: [
+                "Concepto jurídico de viabilidad suscrito por profesional de Talento Humano",
+          "Constancia de verificación de no inhabilidades ni incompatibilidades sobrevinientes",
+              ],
+            },
             ],
           },
           {
@@ -1060,7 +1640,12 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 2346 de 2007 • Decreto 1072 de 2015',
                 textoNormativo: 'Examen de ingreso de salud ocupacional obligatorio con concepto de aptitud psicofísica favorable emitido por médico especialista.',
                 detalleProcedimiento: 'Verificar concepto médico apto sin restricciones impeditivas.',
-              },
+              
+              posiblesEvidencias: [
+                "Minuta de Resolución en Formato institucional 2311520-FT-130 con visto bueno",
+          "Lista de chequeo previa de requisitos aprobada por la Dirección de Gestión Corporativa",
+              ],
+            },
               {
                 id: 'vp5_2',
                 label: 'Declaración juramentada de bienes y rentas y conflicto de intereses',
@@ -1069,7 +1654,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
                 textoNormativo: 'Publicación juramentada y obligatoria en SIDEAP / SIGEP II de la declaración de bienes y rentas y registro de conflicto de intereses previo al acto de posesión.',
                 detalleProcedimiento: 'Validar radicado de SIDEAP / SIGEP marcando ingreso al servicio.',
-              },
+              
+              posiblesEvidencias: [
+                "Resolución firmada por el Secretario Jurídico Distrital con consecutivo institucional y fecha",
+          "Acto administrativo radicado oficialmente en el sistema de gestión documental",
+              ],
+            },
               {
                 id: 'vp5_3',
                 label: 'Suscripción de Acta de Posesión (Formato 2311300-FT-127)',
@@ -1079,7 +1669,12 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 122 • Ley 4 de 1913, Art. 257 • Decreto 1083 de 2015, Art. 2.2.5.1.8',
                 textoNormativo: 'Juramento constitucional y formalización del acta de posesión (Formato 2311300-FT-127), asumiendo el servidor la condición de empleado público provisional.',
                 detalleProcedimiento: 'Firma formal del acta de posesión y toma de juramento legal.',
-              },
+              
+              posiblesEvidencias: [
+                "Oficio de comunicación en Formato 2311520-FT-019 con radicado de salida",
+          "Constancia de notificación personal o acuse técnico de correo electrónico certificado",
+              ],
+            },
             ],
           },
           {
@@ -1103,7 +1698,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 100 de 1993 • Decreto 1295 de 1994',
                 textoNormativo: 'Afiliación patronal inmediata a ARL, EPS, Fondo de Pensiones, Cesantías y Caja de Compensación Familiar.',
                 detalleProcedimiento: 'Ingresar afiliaciones a Positiva ARL, EPS y fondo de pensiones y cesantías.',
-              },
+              
+              posiblesEvidencias: [
+                "Escrito de aceptación del nombramiento radicado dentro del término legal de 10 días",
+          "Documento de identidad y manifestación formal de no tener impedimentos sobrevinientes",
+              ],
+            },
               {
                 id: 'vp6_2',
                 label: 'Inclusión en nómina (PERNO) y actualización en SIDEAP',
@@ -1112,7 +1712,13 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto Distrital 101 de 2004',
                 textoNormativo: 'Registro en nómina distrital PERNO y activación en el SIDEAP de la Secretaría Jurídica Distrital.',
                 detalleProcedimiento: 'Registrar la plaza en nómina y cambiar el estado del servidor a activo.',
-              },
+              
+              posiblesEvidencias: [
+                "Acta de posesión suscrita en Formato 2311520-FT-017 por el nominado y el nominador",
+          "Declaración Juramentada de Bienes y Rentas descargada de SIDEAP opción Ingreso",
+          "Declaración proactiva de bienes y conflictos de interés (Ley 2013 de 2019)",
+              ],
+            },
               {
                 id: 'vp6_3',
                 label: 'Inducción y entrenamiento en puesto de trabajo (Formato 2311300-FT-106)',
@@ -1122,7 +1728,12 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1083 de 2015, Art. 2.2.11.2.1 • Formato 2311300-FT-106',
                 textoNormativo: 'Inducción institucional, entrega formal del puesto y notificación de las obligaciones y deberes funcionales conforme a la Ley 1952 de 2019.',
                 detalleProcedimiento: 'Realizar inducción y suscribir formato institucional FT-106.',
-              },
+              
+              posiblesEvidencias: [
+                "Comprobantes de afiliación al Sistema de Seguridad Social Integral (EPS, AFP, ARL Positiva)",
+          "Reporte de novedad de posesión procesado en el sistema de nómina PERNO y activación en SIDEAP",
+              ],
+            },
             ],
           },
         ];
@@ -1150,7 +1761,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2043 de 2020 • Decreto 111 de 1996 • Estatuto Orgánico de Presupuesto',
                 textoNormativo: 'Antes de convocar o vincular practicantes o judicantes remunerados se debe expedir el Certificado de Disponibilidad Presupuestal (CDP) en Bogdata para amparar el auxilio de sostenimiento y el pago de aportes a ARL.',
                 detalleProcedimiento: 'Expedir Certificado de Disponibilidad Presupuestal con rubro específico de prácticas o judicaturas.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado de Disponibilidad Presupuestal (CDP) expedido en el sistema Bogdata con rubro específico de auxilio y seguridad social",
+              ],
+            },
               {
                 id: 'vj1_2',
                 label: 'Consolidación de requerimientos de dependencias y perfiles requeridos',
@@ -1159,7 +1774,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2043 de 2020, Art. 4 • Procedimiento Institucional PR-137',
                 textoNormativo: 'Las áreas de la entidad deben presentar las necesidades formativas justificadas para que la práctica guarde estricta relación con el plan de estudios del estudiante.',
                 detalleProcedimiento: 'Recepcionar las solicitudes de estudiantes de derecho y áreas afines remitidas por las direcciones.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato PR-137 de solicitud de practicante/judicante diligenciado y justificado por las direcciones solicitantes",
+              ],
+            },
               {
                 id: 'vj1_3',
                 label: 'Registro de plazas en módulo de prácticas laborales de SIDEAP',
@@ -1168,7 +1787,12 @@ export function generarEtapasParaCaso(
                 norma: 'Directiva Distrital 001 de 2018 • Módulo de Prácticas SIDEAP',
                 textoNormativo: 'Registro de las plazas de prácticas en el módulo correspondiente de SIDEAP para garantizar la transparencia y seguimiento en el Distrito Capital.',
                 detalleProcedimiento: 'Registrar la oferta institucional de prácticas en la plataforma distrital de prácticas formativas.',
-              },
+              
+              posiblesEvidencias: [
+                "Ficha técnica de registro de la plaza formativa en el módulo de prácticas de SIDEAP",
+          "Certificación institucional de cupo formativo habilitado en la Secretaría",
+              ],
+            },
             ],
           },
           {
@@ -1192,7 +1816,12 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 7 • Portal Distrital DASCD',
                 textoNormativo: 'Publicación de la convocatoria de prácticas formativas en los canales oficiales y coordinación con facultades y consultorios jurídicos acreditados.',
                 detalleProcedimiento: 'Publicar los términos de la convocatoria y requisitos de postulación académica.',
-              },
+              
+              posiblesEvidencias: [
+                "Publicación de términos de convocatoria en la web distrital",
+          "Comunicaciones dirigidas a facultades de derecho y universidades con convenio",
+              ],
+            },
               {
                 id: 'vj2_2',
                 label: 'Verificación carta de presentación de la universidad y plan de práctica académica',
@@ -1201,7 +1830,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 552 de 1999 • Ley 2043 de 2020, Art. 3 • Res. 3546 de 2018',
                 textoNormativo: 'Verificación de la carta oficial de presentación suscrita por el decano o director de consultorio jurídico de la institución de educación superior debidamente reconocida por el MEN.',
                 detalleProcedimiento: 'Validar carta oficial de decanatura y plan de actividades aprobado por la facultad.',
-              },
+              
+              posiblesEvidencias: [
+                "Carta oficial de presentación suscrita por el Decano de la Facultad o Director del Consultorio Jurídico",
+          "Certificado de terminación de materias académicas",
+              ],
+            },
               {
                 id: 'vj2_3',
                 label: 'Entrevista en dependencia receptora y remisión de acta de selección final',
@@ -1210,7 +1844,12 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 12',
                 textoNormativo: 'Entrevista técnica formativa y designación formal del tutor institucional que supervisará y evaluará el desempeño del practicante o judicante.',
                 detalleProcedimiento: 'Realizar entrevista técnica y remitir acta de selección del judicante seleccionado.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato de entrevista técnica de selección",
+          "Acta de escogencia del estudiante suscrita por el tutor y el director de área",
+              ],
+            },
             ],
           },
           {
@@ -1234,7 +1873,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 1952 de 2019 • Ley 610 de 2000 • Ley 1801 de 2016 • Ley 2097 de 2021',
                 textoNormativo: 'Verificación preventiva de antecedentes judiciales, disciplinarios, fiscales, medidas de policía y REDAM para estudiantes aspirantes a práctica.',
                 detalleProcedimiento: 'Verificar certificados disciplinarios, fiscales, policiales y REDAM sin anotaciones.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificados de antecedentes descargados en línea verificando ausencia de inhabilidades o deudas alimentarias",
+              ],
+            },
               {
                 id: 'vj3_secop',
                 label: 'Verificación en SECOP II de ausencia de contratos incompatibles',
@@ -1244,7 +1887,11 @@ export function generarEtapasParaCaso(
                 norma: 'Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38',
                 textoNormativo: 'El artículo 128 de la Constitución Política prescribe que nadie podrá desempeñar simultáneamente más de un empleo público ni recibir más de una asignación que provenga del tesoro público. Es obligación de Talento Humano consultar en tiempo real el SECOP II para verificar la inexistencia de contratos estatales en ejecución antes de dar posesión al aspirante.',
                 detalleProcedimiento: 'Consultar en línea si el estudiante posee contratos con el estado que generen incompatibilidad.',
-              },
+              
+              posiblesEvidencias: [
+                "Reporte técnico de consulta en SECOP II certificando ausencia de contratos estatales incompatibles con la dedicación horaria formativa",
+              ],
+            },
               {
                 id: 'vj3_2',
                 label: 'Proyección de Resolución de Vinculación Formativa',
@@ -1253,7 +1900,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 80 de 1993, Art. 8 • Constitución Política, Art. 128',
                 textoNormativo: 'Consulta en SECOP II para corroborar que el estudiante no cuente con contratos activos incompatibles con la dedicación horaria de la práctica formativa.',
                 detalleProcedimiento: 'Redactar resolución indicando plazo de práctica (mínimo 6 o 9 meses judicatura) y tutor asignado.',
-              },
+              
+              posiblesEvidencias: [
+                "Proyecto de resolución de vinculación indicando periodo (6 o 9 meses), auxilio económico y designación del tutor institucional",
+              ],
+            },
               {
                 id: 'vj3_3',
                 label: 'Firma por Director(a) de Gestión Corporativa y notificación formal',
@@ -1263,7 +1914,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2043 de 2020, Art. 5 • Resolución 3546 de 2018 MinTrabajo, Art. 10',
                 textoNormativo: 'La vinculación formativa se formaliza mediante resolución expedida por la Dirección de Gestión Corporativa, señalando término de duración, tutor, horario y auxilio si aplica.',
                 detalleProcedimiento: 'Someter a firma y notificar al estudiante y a la universidad correspondiente.',
-              },
+              
+              posiblesEvidencias: [
+                "Resolución suscrita por la Dirección de Gestión Corporativa, numerada y con notificación oficial al estudiante y a la universidad",
+              ],
+            },
             ],
           },
           {
@@ -1287,7 +1942,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 055 de 2015 • Decreto 1072 de 2015, Art. 2.2.4.2.3.1 • Res. 3546 de 2018',
                 textoNormativo: 'La entidad pública contratante tiene la obligación inexcusable de afiliar y cotizar al practicante o judicante al Sistema General de Riesgos Laborales (ARL) a través de la ARL Positiva un (1) día antes del inicio de actividades.',
                 detalleProcedimiento: 'Afiliar a Positiva ARL indicando centro de trabajo y actividades formativas.',
-              },
+              
+              posiblesEvidencias: [
+                "Formulario y radicado de afiliación a Positiva ARL con cobertura un (1) día previo al inicio efectivo de la práctica",
+              ],
+            },
               {
                 id: 'vj4_2',
                 label: 'Solicitud y expedición de Certificado de Registro Presupuestal (CRP)',
@@ -1296,7 +1955,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 111 de 1996 • Procedimiento Presupuestal 2311420-PR-063',
                 textoNormativo: 'Expedición del Certificado de Registro Presupuestal (CRP) en Bogdata para amparar el compromiso presupuestal del auxilio y la seguridad social.',
                 detalleProcedimiento: 'Imputar el valor del auxilio al CDP expedido en el aplicativo Bogdata.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificado de Registro Presupuestal (CRP) expedido en Bogdata imputando el valor del auxilio al CDP",
+              ],
+            },
               {
                 id: 'vj4_3',
                 label: 'Suscripción del Acta de Inicio de práctica o judicatura',
@@ -1305,7 +1968,11 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 11',
                 textoNormativo: 'Suscripción del acta de inicio formal con participación del estudiante, el tutor institucional y el responsable de Talento Humano.',
                 detalleProcedimiento: 'Firmar acta de inicio suscrita por el judicante, el tutor y Talento Humano.',
-              },
+              
+              posiblesEvidencias: [
+                "Acta de Inicio original debidamente firmada por el practicante, el tutor asignado y el responsable de Talento Humano",
+              ],
+            },
               {
                 id: 'vj4_4',
                 label: 'Solicitud de creación de tercero en Bogdata (Procedimiento 2311420-PR-063)',
@@ -1314,7 +1981,12 @@ export function generarEtapasParaCaso(
                 norma: 'Procedimiento Distrital 2311420-PR-063 en Sistema Bogdata',
                 textoNormativo: 'Creación y registro formal del practicante como tercero acreedor en la plataforma Bogdata de la Secretaría Distrital de Hacienda.',
                 detalleProcedimiento: 'Crear la cuenta bancaria del estudiante en la Secretaría Distrital de Hacienda.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato de creación de tercero en la Secretaría Distrital de Hacienda",
+          "Certificación bancaria del estudiante",
+              ],
+            },
             ],
           },
           {
@@ -1338,7 +2010,11 @@ export function generarEtapasParaCaso(
                 norma: 'Decreto 1072 de 2015 • SG-SST Institucional',
                 textoNormativo: 'Diligenciamiento de la encuesta de condiciones de salud previa para identificación de riesgos ocupacionales y ergonomía.',
                 detalleProcedimiento: 'Aplicar la encuesta de autoreporte de condiciones de salud institucional.',
-              },
+              
+              posiblesEvidencias: [
+                "Formato de encuesta de autoreporte de condiciones de salud inicial y ergonomía revisado por SST",
+              ],
+            },
               {
                 id: 'vj5_2',
                 label: 'Inducción institucional y entrega de puesto de trabajo',
@@ -1347,7 +2023,11 @@ export function generarEtapasParaCaso(
                 norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 14',
                 textoNormativo: 'Inducción al quehacer institucional, asignación del puesto físico/digital y entrega de herramientas informáticas.',
                 detalleProcedimiento: 'Brindar inducción de la entidad y asignar computador y correo institucional.',
-              },
+              
+              posiblesEvidencias: [
+                "Acta de inducción y entrega de herramientas informáticas y credenciales distritales",
+              ],
+            },
               {
                 id: 'vj5_3',
                 label: 'Radicación de informes mensuales de actividades aprobados por el tutor',
@@ -1356,7 +2036,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 552 de 1999 • Ley 2043 de 2020, Art. 6',
                 textoNormativo: 'Presentación periódica y radicación de los informes de actividades jurídicas o administrativas debidamente aprobados por el tutor asignado.',
                 detalleProcedimiento: 'Verificar la presentación mensual de informes con visto bueno del tutor asignado.',
-              },
+              
+              posiblesEvidencias: [
+                "Informes mensuales de actividades jurídicas o administrativas radicados en el sistema documental, con visto bueno y firma del tutor institucional",
+              ],
+            },
             ],
           },
           {
@@ -1380,7 +2064,12 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2043 de 2020, Art. 7 • Procedimiento Contable Bogdata',
                 textoNormativo: 'Trámite mensual de desembolso del apoyo económico de sostenimiento previa certificación de cumplimiento expedida por el tutor.',
                 detalleProcedimiento: 'Generar orden de giro mensual en Bogdata previa certificación del tutor.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificación mensual de cumplimiento de actividades expedida por el tutor",
+          "Orden de pago y soporte de transferencia bancaria en Bogdata",
+              ],
+            },
               {
                 id: 'vj6_2',
                 label: 'Expedición de Certificación Final de Práctica / Judicatura firmada por Dirección',
@@ -1389,328 +2078,1335 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 2043 de 2020, Arts. 6 y 8 • Ley 552 de 1999 • Decreto 1083 de 2015',
                 textoNormativo: 'Expedición formal de la Certificación de Práctica / Judicatura, la cual es válida como experiencia profesional computable para el ejercicio de la profesión y provisión de empleos públicos.',
                 detalleProcedimiento: 'Expedir certificación con firmas oficiales para el trámite del título de abogado o tarjeta profesional.',
-              },
+              
+              posiblesEvidencias: [
+                "Certificación Final original firmada por la Dirección de Gestión Corporativa acreditando periodo, horas cumplidas, modalidad y concepto favorable (válida como experiencia profesional computable según Ley 2043/2020 ante el Consejo Superior de la Judicatura)",
+              ],
+            },
             ],
           },
         ];
     }
   } else {
-    // DESVINCULACIÓN (Procedimiento PR-074)
-    const esCarrera = modalidad === 'CARRERA_ADMINISTRATIVA';
-    return [
-      {
-        id: 'd_serv_1',
-        numero: 1,
-        titulo: 'Causal & Soportes Legales',
-        subtitulo: 'Recepción y verificación legal de retiro',
-        icono: 'document-text-outline',
-        estado: 'completed',
-        tiempoEstimadoDias: 1,
-        responsable: 'Profesional Universitario TH',
-        normaGeneral: 'Ley 909 de 2004, Art. 41; Decreto 1083 de 2015, Art. 2.2.11.1.1 al 2.2.11.1.11; Formato 2311520-FT-018',
-        plazoLegal: '30 días para resolver solicitudes de renuncia (Art. 2.2.11.1.2)',
-        procedimientoDetallado: 'Radicar y constatar la causal jurídica de retiro del servicio (renuncia libre y espontánea, pensión de vejez/invalidez, declaratoria de insubsistencia, retiro forzoso a los 70 años según Ley 1821 de 2016 o calificación insatisfactoria).',
-        requisitos: [
+    // DESVINCULACIÓN (Procedimiento PR-074 y PR-137 diferenciado por régimen constitucional)
+    switch (modalidad) {
+      case 'CARRERA_ADMINISTRATIVA':
+        return [
           {
-            id: 'ds1_1',
-            label: 'Recepción del documento soporte (Renuncia, Insubsistencia, Pensión, Retiro forzoso)',
-            cumplido: true,
-            obligatorio: true,
-            codigoFormato: '2311520-FT-018',
-            norma: 'Ley 909 de 2004, Art. 41; Decreto 1083 de 2015, Art. 2.2.11.1.1',
-            detalleProcedimiento: 'Radicar en el sistema documental el soporte formal de retiro con firma auténtica del servidor o acto administrativo de pensión.',
-          },
-          {
-            id: 'ds1_2',
-            label: 'Verificación de la causal conforme al Art. 41 de la Ley 909 de 2004',
-            cumplido: true,
-            obligatorio: true,
-            norma: 'Ley 909 de 2004, Art. 41 literales a a n',
-            detalleProcedimiento: 'Constatar que la causal encuadre taxativamente en el régimen legal del empleo público y que no concurran fueros de estabilidad relativa no agotados.',
-          },
-          {
-            id: 'ds1_3',
-            label: 'Verificación de no renuncia en blanco o bajo coacción (Art. 2.2.11.1.3 Dec. 1083)',
-            cumplido: true,
-            obligatorio: true,
-            norma: 'Decreto 1083 de 2015, Art. 2.2.11.1.3; Jurisprudencia Consejo de Estado',
-            detalleProcedimiento: 'Cerciorarse de que el escrito de renuncia sea inequívoco, espontáneo, no contenga fórmulas preimpresas en blanco y precise la fecha de efectividad deseada.',
-          },
-        ],
-      },
-      {
-        id: 'd_serv_2',
-        numero: 2,
-        titulo: 'Acto de Desvinculación',
-        subtitulo: 'Resolución de retiro oficial y comunicación',
-        icono: 'newspaper-outline',
-        estado: 'completed',
-        tiempoEstimadoDias: 2,
-        responsable: 'Nominador / Técnico Notificaciones',
-        normaGeneral: 'Decreto 1083 de 2015, Art. 2.2.11.1.2; Formato 2311520-FT-130; Formato 2311520-FT-019',
-        plazoLegal: 'Debe notificarse antes de la fecha de efectividad del retiro',
-        procedimientoDetallado: 'Proyectar, suscribir y notificar el acto administrativo motivado que acepta la renuncia, declara la insubsistencia o retira del servicio al funcionario público.',
-        requisitos: [
-          {
-            id: 'ds2_1',
-            label: 'Elaboración de Resolución de desvinculación (Formato 2311520-FT-130)',
-            cumplido: true,
-            obligatorio: true,
-            codigoFormato: '2311520-FT-130',
-            norma: 'Decreto 1083 de 2015, Art. 2.2.11.1.2',
-            detalleProcedimiento: 'Proyectar la resolución con la motivación de la causal, indicando fecha precisa del último día laborado y orden de liquidación.',
-          },
-          {
-            id: 'ds2_2',
-            label: 'Firma por autoridad nominadora, numeración y fechado',
-            cumplido: true,
-            obligatorio: true,
-            norma: 'Decreto Distrital 323 de 2016; Resolución SJD',
-            detalleProcedimiento: 'Firma del Secretario Jurídico Distrital y numeración consecutiva en la correspondencia oficial.',
-          },
-          {
-            id: 'ds2_3',
-            label: 'Comunicación formal al servidor por correo electrónico',
-            cumplido: true,
-            obligatorio: true,
-            codigoFormato: '2311520-FT-019',
-            norma: 'Ley 1437 de 2011, Art. 56; Decreto 1083 de 2015, Art. 2.2.11.1.2',
-            detalleProcedimiento: 'Notificar electrónicamente la resolución al servidor aportando copia completa y constancia de entrega.',
-          },
-        ],
-      },
-      {
-        id: 'd_serv_3',
-        numero: 3,
-        titulo: 'Formatos Entrega de Cargo',
-        subtitulo: 'FT-333, FT-219, FT-436 y SIDEAP Retiro',
-        icono: 'folder-open-outline',
-        estado: 'in_progress',
-        tiempoEstimadoDias: 2,
-        responsable: 'Servidor saliente / Control Interno',
-        normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Procedimiento Institucional PR-074; Directiva 003 DASCD',
-        plazoLegal: 'Hasta el último día de permanencia en el cargo',
-        procedimientoDetallado: 'El servidor saliente debe diligenciar y suscribir los informes de gestión, actas de entrega de puesto, encuestas de retiro y actualizar su declaración jurada en SIDEAP seleccionando Retiro.',
-        requisitos: [
-          {
-            id: 'ds3_1',
-            label: 'Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)',
-            cumplido: true,
-            obligatorio: true,
-            codigoFormato: '2311300-FT-219',
-            norma: 'Procedimiento 2311420-PR-074 SJD',
-            detalleProcedimiento: 'Aplicar la encuesta estructurada de clima organizacional y motivos de desvinculación laboral.',
-          },
-          {
-            id: 'ds3_2',
-            label: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
-            cumplido: true,
-            obligatorio: true,
-            codigoFormato: '2311300-FT-436',
-            norma: 'Procedimiento 2311420-PR-074; Circular Interna SJD',
-            detalleProcedimiento: 'Detallar pendientes de trámites, asuntos jurídicos a cargo, claves de acceso y archivo en trámite.',
-          },
-          {
-            id: 'ds3_3',
-            label: 'Acta de Informe de Gestión y Entrega del Cargo (2311300-FT-333)',
-            cumplido: false,
-            obligatorio: true,
-            codigoFormato: '2311300-FT-333',
-            notaNormativa: 'Si es directivo, copia obligatoria a Control Interno Ley 951/2005',
-            norma: 'Ley 951 de 2005, Art. 8; Directiva Presidencial 01 de 2018',
-            detalleProcedimiento: 'Si ocupaba cargo directivo o asesor, anexar informe detallado de estado de la gestión con copia perentoria a la Oficina de Control Interno.',
-          },
-          {
-            id: 'ds3_4',
-            label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
-            cumplido: false,
-            obligatorio: true,
-                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021 • Ley 190 de 1995',
-                textoNormativo: 'Es requisito previo y habilitante para la posesión publicar y registrar bajo gravedad de juramento en el SIDEAP/SIGEP II la declaración de bienes y rentas, la última declaración del impuesto sobre la renta y el registro de posibles conflictos de intereses. Su omisión impide legalmente formalizar la posesión.',
-            detalleProcedimiento: 'Generar el certificado digital de SIDEAP acreditando la declaración de bienes actualizada al corte de retiro.',
-          },
-          {
-            id: 'ds3_5',
-            label: 'Declaración de Conflicto de Intereses seleccionando Retiro del Servicio',
-            cumplido: false,
-            obligatorio: true,
-            norma: 'Ley 2013 de 2019; Ley 1437 de 2011',
-            detalleProcedimiento: 'Diligenciar en la plataforma de la Función Pública la declaración proactiva de inhabilidades posteriores al cargo.',
-          },
-        ],
-      },
-      {
-        id: 'd_serv_4',
-        numero: 4,
-        titulo: 'Examen & 4 Paz y Salvos',
-        subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
-        icono: 'checkbox-outline',
-        estado: 'pending',
-        tiempoEstimadoDias: 3,
-        responsable: 'SST / TIC / Almacén / Archivo',
-        normaGeneral: 'Resolución 2346 de 2007 MinProtección, Art. 6; Procedimiento PR-074 SJD; Ley 594 de 2000',
-        plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
-        procedimientoDetallado: 'Trámite integral de los 4 paz y salvos institucionales: entrega de equipos de cómputo y accesos en TIC, entrega de inventarios en Almacén (FT-200), transferencia documental en Archivo y paz y salvo de Talento Humano.',
-        requisitos: [
-          {
-            id: 'ds4_1',
-            label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
-            cumplido: false,
-            obligatorio: true,
-                norma: 'Resolución 2346 de 2007 MinProtección Social • Decreto 1072 de 2015',
-                textoNormativo: 'Es obligatoria la evaluación médica ocupacional de ingreso con concepto de aptitud psicofísica expedido por médico especialista en seguridad y salud en el trabajo previo al inicio de actividades laborales.',
-            detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS o recibir carta de desistimiento expreso del servidor.',
-          },
-          {
-            id: 'ds4_2',
-            label: 'Paz y Salvo TIC: Entrega de computador, periféricos, cierre correo y accesos',
-            cumplido: false,
-            obligatorio: true,
-            norma: 'Política de Seguridad de la Información SJD; ISO 27001',
-            detalleProcedimiento: 'Recibir hardware, desactivar buzón corporativo de correo, token VPN y accesos a aplicativos institucionales.',
-          },
-          {
-            id: 'ds4_3',
-            label: 'Paz y Salvo Almacén: Devolución de bienes muebles individuales (2311500-FT-200)',
-            cumplido: false,
-            obligatorio: true,
-            codigoFormato: '2311500-FT-200',
-            norma: 'Procedimiento de Almacén e Inventarios SJD',
-            detalleProcedimiento: 'Verificar descargo de bienes muebles e individuales en el inventario del Almacén institucional.',
-          },
-          {
-            id: 'ds4_4',
-            label: 'Paz y Salvo Archivo: Transferencia de expedientes judiciales/administrativos',
-            cumplido: false,
-            obligatorio: true,
-            norma: 'Ley 594 de 2000 Ley General de Archivos; TRD SJD',
-            detalleProcedimiento: 'Constatar la entrega de expedientes físicos y electrónicos conforme a las Tablas de Retención Documental.',
-          },
-          {
-            id: 'ds4_5',
-            label: 'Paz y Salvo Talento Humano: Devolución carné institucional y firmas completas',
-            cumplido: false,
-            obligatorio: true,
-            norma: 'Procedimiento 2311420-PR-074',
-            detalleProcedimiento: 'Devolución física del carné institucional y consolidación de las 4 firmas en el formato de Paz y Salvo general.',
-          },
-        ],
-      },
-      {
-        id: 'd_serv_5',
-        numero: 5,
-        titulo: 'Liquidación & Nómina',
-        subtitulo: 'Cálculo técnico de prestaciones y ordenación de pago',
-        icono: 'cash-outline',
-        estado: 'pending',
-        tiempoEstimadoDias: 3,
-        responsable: 'Profesional Especializado Nómina',
-        normaGeneral: 'Decreto Ley 1045 de 1978, Art. 45; Decreto Distrital 514 de 2006; Formato 2311520-FT-130',
-        plazoLegal: 'Pago dentro de la siguiente nómina ordinaria o máximo 15 días',
-        procedimientoDetallado: 'Registro de la novedad de retiro en PERNO, desactivación en SIDEAP, liquidación de prestaciones sociales proporcionales y expedición de la resolución de reconocimiento y ordenación de pago.',
-        requisitos: [
-          {
-            id: 'ds5_1',
-            label: 'Registro de novedad de retiro en nómina y desactivación en SIDEAP',
-            cumplido: false,
-            obligatorio: true,
-                norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
-                textoNormativo: 'Activación del servidor en el Sistema Distrital del Empleo y la Administración Pública (SIDEAP), habilitando su ficha y expediente digital de talento humano.',
-            detalleProcedimiento: 'Registrar la fecha de retiro definitiva en PERNO para suspender devengos posteriores.',
-          },
-          {
-            id: 'ds5_2',
-            label: 'Liquidación técnica de prestaciones (vacaciones, cesantías, primas y salarios)',
-            cumplido: false,
-            obligatorio: true,
-            norma: 'Decreto Ley 1045 de 1978; Decreto Distrital 514 de 2006',
-            detalleProcedimiento: 'Liquidar días laborados del mes, prima de servicios, prima de navidad, cesantías consolidadas y vacaciones compensadas en dinero.',
-          },
-          {
-            id: 'ds5_3',
-            label: 'Elaboración de Resolución de Reconocimiento y Liquidación de Prestaciones',
-            cumplido: false,
-            obligatorio: true,
-            codigoFormato: '2311520-FT-130',
-            norma: 'Estatuto Presupuestal Distrital; Procedimiento 2311420-PR-001',
-            detalleProcedimiento: 'Proyectar el acto de reconocimiento económico suscrito por el ordenador del gasto.',
-          },
-          {
-            id: 'ds5_4',
-            label: 'Notificación del acto de liquidación y remisión formal a Nómina para pago',
-            cumplido: false,
-            obligatorio: true,
-            norma: 'Ley 1437 de 2011; Tesorería SJD',
-            detalleProcedimiento: 'Remitir expediente liquidatorio a Tesorería para dispersión en cuenta bancaria del exservidor.',
-          },
-        ],
-      },
-      {
-        id: 'd_serv_6',
-        numero: 6,
-        titulo: esCarrera ? 'SIMO 4.4, RPCA & Cierre' : 'Cierre Historia Laboral',
-        subtitulo: esCarrera ? 'Reporte obligatorio CNSC (5 días) y RPCA' : 'Archivo definitivo en Historia Laboral',
-        icono: 'checkmark-done-circle-outline',
-        estado: 'pending',
-        tiempoEstimadoDias: esCarrera ? 5 : 1,
-        responsable: 'Profesional TH / Archivo',
-        normaGeneral: esCarrera
-          ? 'Circular CNSC 011 de 2021; Ley 909 de 2004, Art. 14 y 31; Ley 594 de 2000'
-          : 'Ley 594 de 2000 (Ley General de Archivos); Acuerdo AGN 004/2019',
-        plazoLegal: esCarrera ? 'Reporte CNSC dentro de los 5 días hábiles siguientes' : 'Inmediato',
-        procedimientoDetallado: esCarrera
-          ? 'Para servidores con derechos de carrera: reporte de vacancia en SIMO 4.4 ante la CNSC, solicitud de cancelación del Registro Público de Carrera Administrativa (RPCA) y archivo de la historia laboral.'
-          : 'Consolidación de todo el expediente en la Historia Laboral física y electrónica, foliación y actualización en SIDEAP.',
-        requisitos: esCarrera
-          ? [
+            id: 'd_carr_1',
+            numero: 1,
+            titulo: 'Causal & Soportes Legales',
+            subtitulo: 'Recepción y verificación legal de retiro de carrera',
+            icono: 'document-text-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'Profesional Universitario TH',
+            normaGeneral: 'Ley 909 de 2004, Art. 41; Decreto 1083 de 2015, Art. 2.2.11.1.1 al 2.2.11.1.11; Formato 2311520-FT-018',
+            plazoLegal: '30 días para resolver solicitudes de renuncia (Art. 2.2.11.1.2)',
+            procedimientoDetallado: 'Radicar y constatar la causal jurídica de retiro del servicio de carrera (renuncia libre y espontánea, pensión de vejez/invalidez, declaratoria de insubsistencia por período de prueba o EDL no satisfactoria, retiro forzoso a los 70 años según Ley 1821 de 2016 o supresión de empleo con derechos preferenciales).',
+            requisitos: [
               {
-                id: 'ds6_1',
-                label: 'Reporte de vacancia definitiva en SIMO 4.4 ante la CNSC (plazo 5 días hábiles Circular 011/2021)',
+                id: 'dc1_1',
+                label: 'Recepción del documento soporte de retiro de carrera (Formato 2311520-FT-018)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-018',
+                norma: 'Ley 909 de 2004, Art. 41 • Decreto 1083 de 2015, Art. 2.2.11.1.1',
+                notaNormativa: 'El retiro del servicio de carrera procede taxativamente por causales legales objetivas que deben estar sustentadas documentalmente antes de proferir el acto de desvinculación.',
+                textoNormativo: 'Ley 909 de 2004, artículo 41: El retiro del servicio de quienes estén desempeñando empleos de libre nombramiento y remoción y de carrera administrativa se produce por las causales consagradas taxativamente en la ley.',
+                detalleProcedimiento: 'Radicar en el sistema documental el soporte formal de retiro con firma auténtica del servidor de carrera, acto administrativo pensional o constancia de calificación.',
+                posiblesEvidencias: [
+                  'Memorial de renuncia libre y espontánea radicado en el sistema de gestión documental.',
+                  'Resolución de reconocimiento pensional expedida por Colpensiones o fondo privado.',
+                  'Formato institucional 2311520-FT-018 de verificación de trámite de personal.',
+                ],
+              },
+              {
+                id: 'dc1_2',
+                label: 'Verificación estricta de la causal y garantías de carrera (Art. 41 y 44 Ley 909)',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Ley 909 de 2004, Art. 41 y Art. 44 • Decreto 1083 de 2015, Art. 2.2.11.1.1',
+                notaNormativa: 'Constatación rigurosa de que la causal invocada respete la estabilidad laboral propia de los derechos de carrera administrativa y fueros especiales.',
+                textoNormativo: 'Los empleados de carrera que sean retirados por supresión del empleo tienen derecho preferencial a ser reincorporados a empleos iguales o equivalentes, o a recibir la indemnización legal consagrada en el artículo 44 de la Ley 909 de 2004.',
+                detalleProcedimiento: 'Constatar que la causal encuadre taxativamente en la ley y verificar que no concurran fueros de estabilidad reforzada sin trámite previo.',
+                posiblesEvidencias: [
+                  'Concepto de viabilidad jurídica de retiro de carrera expedido por Talento Humano.',
+                  'Certificación de verificación de derechos de carrera administrativa y fueros.',
+                ],
+              },
+              {
+                id: 'dc1_3',
+                label: 'Verificación de inclusión en nómina pensional o renuncia no condicionada',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Ley 100 de 1993, Art. 33 (modificado Ley 797/2003) • Sentencia C-1037/2003 • Decreto 1083 de 2015, Art. 2.2.11.1.3',
+                notaNormativa: 'Garantía constitucional de no retiro por pensión hasta tanto el servidor no figure efectivamente incorporado en la nómina de pago de la administradora de pensiones.',
+                textoNormativo: 'De conformidad con la jurisprudencia constitucional unificada (C-1037 de 2003), no se podrá desvincular al servidor que cumple requisitos de pensión hasta tanto no se le notifique su inclusión en la nómina pensional correspondiente.',
+                detalleProcedimiento: 'Comprobar soporte de inclusión en nómina de pensionados o cerciorarse de que la renuncia sea libre, espontánea y con fecha cierta sin fórmulas preimpresas.',
+                posiblesEvidencias: [
+                  'Constancia o certificación de inclusión en nómina pensional emitida por la entidad administradora.',
+                  'Escrito de renuncia sin enmendaduras con manifestación inequívoca de voluntad.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_carr_2',
+            numero: 2,
+            titulo: 'Acto Administrativo de Retiro',
+            subtitulo: 'Resolución de retiro motivada y notificación formal',
+            icono: 'newspaper-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 2,
+            responsable: 'Nominador / Técnico Notificaciones',
+            normaGeneral: 'Decreto 1083 de 2015, Art. 2.2.11.1.2; Formato 2311520-FT-130; CPACA Art. 67 y 74',
+            plazoLegal: 'Debe notificarse antes de la fecha de efectividad del retiro',
+            procedimientoDetallado: 'Proyectar, suscribir y notificar el acto administrativo que acepta la renuncia, declara la insubsistencia motivada o retira formalmente del servicio de carrera al funcionario.',
+            requisitos: [
+              {
+                id: 'dc2_1',
+                label: 'Elaboración de Resolución de Retiro motivada (Formato 2311520-FT-130)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-130',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.11.1.2 • CPACA Ley 1437 de 2011',
+                textoNormativo: 'El acto administrativo de retiro de un empleado de carrera debe fundamentarse en la causal legal comprobada, expresando los motivos fácticos y jurídicos correspondientes.',
+                detalleProcedimiento: 'Proyectar la resolución motivando con precisión la causal de retiro, la fecha exacta del último día laborado y la orden de liquidación de prestaciones.',
+                posiblesEvidencias: [
+                  'Proyecto de resolución de retiro en formato institucional 2311520-FT-130 con visto bueno jurídico.',
+                ],
+              },
+              {
+                id: 'dc2_2',
+                label: 'Firma por autoridad nominadora, numeración y fechado oficial',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Decreto Distrital 323 de 2016 • Estatuto Orgánico de Bogotá',
+                textoNormativo: 'El acto de retiro debe ser suscrito por la autoridad nominadora competente, radicado, numerado y fechado oficialmente para que surta plenos efectos jurídicos.',
+                detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y posterior radicación y numeración consecutiva en correspondencia oficial.',
+                posiblesEvidencias: [
+                  'Resolución de retiro suscrita por el nominador, debidamente numerada y fechada.',
+                ],
+              },
+              {
+                id: 'dc2_3',
+                label: 'Notificación personal formal e indicación de recursos de ley (CPACA)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-019',
+                norma: 'Ley 1437 de 2011, Arts. 67, 69 y 74 • Decreto 1083 de 2015, Art. 2.2.11.1.2',
+                textoNormativo: 'Los actos que decidan el retiro del servicio en carrera administrativa deben ser notificados personalmente al interesado; cuando procedan recursos legales, se advertirán expresamente en la diligencia.',
+                detalleProcedimiento: 'Notificar personalmente o por medios electrónicos autorizados, advirtiendo los recursos procedentes si es del caso (reposición en casos de período de prueba o EDL).',
+                posiblesEvidencias: [
+                  'Acta de notificación personal o constancia de notificación electrónica con acuse de recibo certificado.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_carr_3',
+            numero: 3,
+            titulo: 'Formatos Entrega de Cargo',
+            subtitulo: 'FT-333, FT-219, FT-436 y SIDEAP Retiro',
+            icono: 'folder-open-outline',
+            estado: 'in_progress',
+            tiempoEstimadoDias: 2,
+            responsable: 'Servidor saliente / Control Interno',
+            normaGeneral: 'Ley 951 de 2005; Ley 2013 de 2019; Procedimiento PR-074 SJD',
+            plazoLegal: 'Hasta el último día de permanencia en el cargo',
+            procedimientoDetallado: 'El servidor saliente de carrera debe diligenciar los formatos de entrega de cargo, encuestas de retiro y actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP/SIGEP II marcando Retiro.',
+            requisitos: [
+              {
+                id: 'dc3_1',
+                label: 'Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-219',
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Diligenciar la encuesta estructurada de clima organizacional y motivos de retiro del servicio.',
+                posiblesEvidencias: [
+                  'Formato institucional 2311300-FT-219 diligenciado y firmado por el funcionario saliente.',
+                ],
+              },
+              {
+                id: 'dc3_2',
+                label: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo (2311300-FT-436)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-436',
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Detallar inventario de trámites pendientes, procesos jurídicos a cargo, claves de acceso y estado del archivo en gestión.',
+                posiblesEvidencias: [
+                  'Formato 2311300-FT-436 suscrito por el funcionario saliente y su jefe inmediato.',
+                ],
+              },
+              {
+                id: 'dc3_3',
+                label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
+                textoNormativo: 'Los servidores públicos deben publicar y actualizar en el SIDEAP/SIGEP II su declaración jurada de bienes y rentas al momento de su retiro del servicio.',
+                detalleProcedimiento: 'Generar y radicar el certificado digital de SIDEAP de declaración de bienes actualizada al último día de labores.',
+                posiblesEvidencias: [
+                  'Certificado digital de declaración de bienes y rentas en SIDEAP con marcación de Retiro.',
+                ],
+              },
+              {
+                id: 'dc3_4',
+                label: 'Declaración proactiva de Conflicto de Intereses seleccionando Retiro',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011',
+                detalleProcedimiento: 'Diligenciar en la plataforma de la Función Pública la declaración de inhabilidades e incompatibilidades posteriores al cargo.',
+                posiblesEvidencias: [
+                  'Formulario de conflicto de intereses con corte de retiro debidamente radicado.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_carr_4',
+            numero: 4,
+            titulo: 'Examen & 4 Paz y Salvos',
+            subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
+            icono: 'checkbox-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 3,
+            responsable: 'SST / TIC / Almacén / Archivo',
+            normaGeneral: 'Resolución 2346 de 2007 MinProtección, Art. 6; Ley 594 de 2000; Procedimiento PR-074 SJD',
+            plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Trámite integral de los 4 paz y salvos institucionales: entrega de equipos TIC y revocación de accesos, descargo de bienes en Almacén (FT-200), transferencia documental en Archivo y paz y salvo de Talento Humano.',
+            requisitos: [
+              {
+                id: 'dc4_1',
+                label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Resolución 2346 de 2007, Art. 6 • Decreto 1072 de 2015',
+                textoNormativo: 'Las evaluaciones médicas ocupacionales de egreso tienen por objetivo valorar y registrar las condiciones de salud en las que el trabajador se retira de la entidad.',
+                detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS ocupacional o archivar carta de desistimiento voluntario suscrita por el servidor.',
+                posiblesEvidencias: [
+                  'Certificado de examen médico ocupacional de egreso o acta de desistimiento voluntario.',
+                ],
+              },
+              {
+                id: 'dc4_2',
+                label: 'Paz y Salvo TIC: Entrega de computador, periféricos, buzón y accesos',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Política de Seguridad de la Información SJD; ISO 27001',
+                detalleProcedimiento: 'Recibir hardware, desactivar buzón corporativo de correo, token VPN y perfiles de acceso a bases de datos.',
+                posiblesEvidencias: [
+                  'Formato de paz y salvo de la Dirección de TIC firmado.',
+                ],
+              },
+              {
+                id: 'dc4_3',
+                label: 'Paz y Salvo Almacén: Devolución de bienes muebles individuales (2311500-FT-200)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311500-FT-200',
+                norma: 'Procedimiento de Almacén e Inventarios SJD',
+                detalleProcedimiento: 'Verificar descargo total de bienes muebles e individuales asignados al funcionario de carrera en el inventario del Almacén.',
+                posiblesEvidencias: [
+                  'Formato 2311500-FT-200 con firma del responsable de Almacén certificando paz y salvo.',
+                ],
+              },
+              {
+                id: 'dc4_4',
+                label: 'Paz y Salvo Archivo: Transferencia de expedientes judiciales y administrativos',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 594 de 2000 Ley General de Archivos; Tablas de Retención Documental SJD',
+                detalleProcedimiento: 'Constatar la transferencia formal de expedientes físicos y electrónicos conforme a las TRD institucionales.',
+                posiblesEvidencias: [
+                  'Paz y salvo firmado por el área de Gestión Documental y Archivo.',
+                ],
+              },
+              {
+                id: 'dc4_5',
+                label: 'Paz y Salvo Talento Humano: Devolución carné institucional y firmas consolidadas',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Devolución física del carné institucional y consolidación de las cuatro (4) firmas en el formato de Paz y Salvo General.',
+                posiblesEvidencias: [
+                  'Formato consolidado de Paz y Salvo General con las cuatro firmas institucionales.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_carr_5',
+            numero: 5,
+            titulo: 'Liquidación & Nómina',
+            subtitulo: 'Cálculo de prestaciones sociales y ordenación de pago',
+            icono: 'cash-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 3,
+            responsable: 'Profesional Especializado Nómina',
+            normaGeneral: 'Decreto Ley 1045 de 1978, Art. 45; Decreto Distrital 514 de 2006; Formato 2311520-FT-130',
+            plazoLegal: 'Pago dentro de la siguiente nómina ordinaria o máximo 15 días',
+            procedimientoDetallado: 'Registro de novedad de retiro en nómina PERNO, desactivación en SIDEAP, liquidación de prestaciones sociales proporcionales y expedición de la resolución de reconocimiento y ordenación de pago.',
+            requisitos: [
+              {
+                id: 'dc5_1',
+                label: 'Registro de novedad de retiro en nómina y desactivación en SIDEAP',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
+                detalleProcedimiento: 'Registrar la novedad de retiro definitivo en el sistema distrital PERNO y actualizar ficha en SIDEAP a estado retirado.',
+                posiblesEvidencias: [
+                  'Reporte de novedad de retiro procesado en PERNO.',
+                  'Ficha de SIDEAP con estado Retirado.',
+                ],
+              },
+              {
+                id: 'dc5_2',
+                label: 'Liquidación técnica de prestaciones sociales de carrera (Dec. Ley 1045/1978)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Ley 1045 de 1978 • Decreto Distrital 514 de 2006',
+                detalleProcedimiento: 'Liquidar días laborados del mes, prima de servicios, prima de navidad, cesantías consolidadas y vacaciones compensadas en dinero.',
+                posiblesEvidencias: [
+                  'Hoja técnica de liquidación de prestaciones sociales y factores salariales de carrera.',
+                ],
+              },
+              {
+                id: 'dc5_3',
+                label: 'Elaboración de Resolución de Reconocimiento y Liquidación (2311520-FT-130)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-130',
+                norma: 'Estatuto Presupuestal Distrital • Procedimiento 2311420-PR-001',
+                detalleProcedimiento: 'Proyectar el acto administrativo de liquidación económica suscrito por el ordenador del gasto competente.',
+                posiblesEvidencias: [
+                  'Resolución de liquidación firmada por el ordenador del gasto.',
+                ],
+              },
+              {
+                id: 'dc5_4',
+                label: 'Notificación del acto de liquidación y remisión formal a Tesorería para pago',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 1437 de 2011 • Tesorería Distrital SJD',
+                detalleProcedimiento: 'Notificar al exfuncionario y remitir expediente liquidatorio a Tesorería para dispersión bancaria.',
+                posiblesEvidencias: [
+                  'Comprobante de dispersión bancaria y orden de pago de Tesorería.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_carr_6',
+            numero: 6,
+            titulo: 'SIMO 4.4, RPCA & Cierre CNSC',
+            subtitulo: 'Reporte obligatorio CNSC (5 días) y cancelación RPCA',
+            icono: 'checkmark-done-circle-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 5,
+            responsable: 'Profesional TH / Archivo',
+            normaGeneral: 'Circular CNSC 011 de 2021; Ley 909 de 2004, Arts. 14 y 31; Ley 594 de 2000',
+            plazoLegal: 'Reporte CNSC dentro de los 5 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Para servidores de carrera: reporte de la vacancia definitiva en SIMO 4.4 ante la CNSC dentro de los 5 días hábiles, trámite de cancelación del Registro Público de Carrera Administrativa (RPCA) y archivo de la historia laboral.',
+            requisitos: [
+              {
+                id: 'dc6_1',
+                label: 'Reporte de vacancia definitiva en SIMO 4.4 ante la CNSC (plazo 5 días hábiles)',
                 cumplido: false,
                 obligatorio: true,
                 norma: 'Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31',
-                textoNormativo: 'La entidad nominadora debe registrar en el aplicativo SIMO 4.0 de la CNSC la posesión efectiva del elegible dentro de los cinco (5) días hábiles siguientes, para descargar la posición del Banco Nacional de Listas de Elegibles.',
-                detalleProcedimiento: 'Cargar el acto de retiro en SIMO 4.4 para habilitar la vacante en el banco de listas o futura convocatoria.',
+                textoNormativo: 'Las entidades deben reportar a la CNSC en el aplicativo SIMO las vacantes definitivas de carrera administrativa dentro de los cinco (5) días hábiles siguientes a la ocurrencia de la novedad de retiro.',
+                detalleProcedimiento: 'Cargar el acto de retiro en SIMO 4.4 para liberar y habilitar la plaza en la OPEC para futura provisión por mérito.',
+                posiblesEvidencias: [
+                  'Comprobante de cargue de vacancia definitiva en SIMO 4.4 emitido por la CNSC.',
+                ],
               },
               {
-                id: 'ds6_2',
+                id: 'dc6_2',
                 label: 'Cancelación del Registro Público de Carrera Administrativa (RPCA) ante la CNSC',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 909 de 2004, Art. 14; Acuerdo CNSC',
-                detalleProcedimiento: 'Radicar la solicitud de exclusión y cancelación del registro en el RPCA por motivo de retiro.',
+                norma: 'Ley 909 de 2004, Art. 14 • Criterio Unificado CNSC',
+                textoNormativo: 'Producido el retiro definitivo del servicio de un empleado con derechos de carrera, la entidad solicitará a la CNSC la cancelación de su inscripción en el Registro Público de Carrera.',
+                detalleProcedimiento: 'Radicar la solicitud de exclusión y cancelación del registro en el RPCA ante la Dirección de Carrera de la CNSC.',
+                posiblesEvidencias: [
+                  'Radicado formal de solicitud de cancelación de RPCA ante la CNSC.',
+                  'Certificado de actualización de registro de la CNSC.',
+                ],
               },
               {
-                id: 'ds6_3',
+                id: 'dc6_3',
                 label: 'Archivo integral en Historia Laboral (Hoja de Control 2311520-FT-244)',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-244',
                 norma: 'Ley 594 de 2000; Acuerdo 004 de 2019 AGN',
-                detalleProcedimiento: 'Foliar y coser todo el expediente administrativo en la Historia Laboral con su hoja de control final.',
+                detalleProcedimiento: 'Foliar y archivar todo el expediente de retiro en la Historia Laboral con su hoja de control final.',
+                posiblesEvidencias: [
+                  'Hoja de control de historia laboral 2311520-FT-244 foliada y firmada.',
+                ],
               },
-            ]
-          : [
+            ],
+          },
+        ];
+
+      case 'PROVISIONALIDAD':
+        return [
+          {
+            id: 'd_prov_1',
+            numero: 1,
+            titulo: 'Causal Objetiva & Retén Social',
+            subtitulo: 'Verificación de causal objetiva y estabilidad laboral reforzada',
+            icono: 'shield-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 2,
+            responsable: 'Profesional Universitario TH',
+            normaGeneral: 'Sentencias Corte Constitucional SU-917/2010, SU-440/2021 y SU-087/2022; Circular Conjunta CNSC-DAFP 001 de 2020',
+            plazoLegal: 'Verificación previa e ineludible al acto de retiro',
+            procedimientoDetallado: 'Constatar la causal objetiva de desvinculación provisional (nombramiento de titular de mérito con lista ejecutoriada o encargo de carrera) y verificar de forma obligatoria los criterios de estabilidad laboral reforzada (retén social: prepensionados, discapacidad, madres/padres cabeza de familia).',
+            requisitos: [
               {
-                id: 'ds6_1_nc',
-                label: 'Actualización y archivo de soportes en Historia Laboral (Hoja Control 2311520-FT-244)',
+                id: 'dp1_1',
+                label: 'Identificación y verificación de causal legal objetiva de retiro provisional',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Ley 909 de 2004, Art. 25 • Decreto 1083 de 2015, Art. 2.2.5.3.4 • SU-917 de 2010',
+                notaNormativa: 'El retiro del empleado provisional no es discrecional; solo procede válidamente por causas objetivas legalmente consagradas, tales como la provisión de la plaza por concurso de méritos o encargo.',
+                textoNormativo: 'Corte Constitucional, Sentencia SU-917 de 2010: El nombramiento provisional confiere una estabilidad laboral relativa. El retiro del empleado provisional únicamente puede fundarse en razones objetivas del servicio, principalmente la provisión del empleo con una persona seleccionada por concurso de méritos.',
+                detalleProcedimiento: 'Cotejar en SIMO y la OPEC institucional que la vacante cuenta con elegible en lista en firme o servidor de carrera con derecho preferencial a encargo.',
+                posiblesEvidencias: [
+                  'Resolución de nombramiento en período de prueba del elegible de mérito que sustituye la plaza.',
+                  'Lista de elegibles en firme expedida por la CNSC para el empleo.',
+                  'Acto administrativo de sanción disciplinaria o evaluación insatisfactoria (si esa fuera la causal).',
+                ],
+              },
+              {
+                id: 'dp1_2',
+                label: 'Verificación obligatoria de Estabilidad Ocupacional Reforzada / Retén Social',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Sentencia SU-087 de 2022 • Circular Conjunta CNSC - DAFP 001 de 2020 • Ley 790 de 2002',
+                notaNormativa: 'Deber ineludible de verificar si el provisional goza de especial protección constitucional (prepensionado a menos de 3 años, enfermedad catastrófica/discapacidad, o madre/padre cabeza de familia) antes de ordenar su retiro frente a otros provisionales en empleos iguales o equivalentes.',
+                textoNormativo: 'Circular Conjunta CNSC-DAFP 001 de 2020: En caso de concurrir múltiples empleados provisionales en empleos de la misma denominación y perfil, la administración debe proteger preferentemente la permanencia de aquellos que acrediten la condición de prepensionados, personas con discapacidad o madres y padres cabeza de familia sin otra fuente de ingresos.',
+                detalleProcedimiento: 'Revisar la historia laboral y certificaciones de semanas cotizadas (menos de 3 años de pensión), historias clínicas de SST o condición de cabeza de familia. Si hay más provisionales en cargos equivalentes, desplazar primero al que no goce de fuero.',
+                posiblesEvidencias: [
+                  'Matriz institucional de servidores en situación de Retén Social / Estabilidad Reforzada.',
+                  'Historial de semanas cotizadas en Colpensiones/AFP (para verificación de prepensionado).',
+                  'Dictamen médico laboral de SST o certificado de condición de cabeza de familia.',
+                ],
+              },
+              {
+                id: 'dp1_3',
+                label: 'Constancia técnica y jurídica de ponderación de estabilidad relativa',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Sentencia SU-087 de 2022 • Criterio Unificado CNSC',
+                detalleProcedimiento: 'Elaborar y suscribir concepto técnico motivado certificando la ponderación de estabilidad ocupacional reforzada y la procedencia legal del retiro frente al mérito.',
+                posiblesEvidencias: [
+                  'Concepto jurídico suscrito por la Dirección de Gestión Corporativa motivando la selección del servidor para el retiro.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prov_2',
+            numero: 2,
+            titulo: 'Acto de Retiro Motivado',
+            subtitulo: 'Resolución expresamente motivada y notificación formal (SU-917/2010)',
+            icono: 'newspaper-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 2,
+            responsable: 'Nominador / Notificaciones',
+            normaGeneral: 'Sentencias Corte Constitucional SU-917/2010 y SU-440/2021; CPACA Arts. 67, 69 y 74; Formato 2311520-FT-130',
+            plazoLegal: 'Notificación formal antes de la fecha de efectividad del retiro',
+            procedimientoDetallado: 'Proyectar y notificar la Resolución de terminación del nombramiento provisional con motivación expresa, fáctica y jurídica detallada (individualizando la vacante, la lista de elegibles de la CNSC y el titular de mérito). Se prohíben fórmulas genéricas.',
+            requisitos: [
+              {
+                id: 'dp2_1',
+                label: 'Elaboración de Resolución de Retiro con Motivación Expresa y Suficiente (SU-917/2010)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-130',
+                norma: 'Corte Constitucional SU-917 de 2010 y SU-440 de 2021 • Decreto 1083 de 2015, Art. 2.2.5.3.4',
+                notaNormativa: 'Obligación estricta de motivación: El acto debe señalar expresamente la causal objetiva, individualizando el concurso de méritos, la lista de elegibles de la CNSC y el nombre del servidor nombrado en período de prueba.',
+                textoNormativo: 'Corte Constitucional, Sentencia SU-440 de 2021: El acto de desvinculación de un funcionario en provisionalidad debe motivarse de manera clara, detallada y precisa en razones de servicio o en la provisión del empleo por quien superó el concurso. La ausencia de motivación expresa genera la nulidad del acto administrativo y la consecuente orden de reintegro o indemnización.',
+                detalleProcedimiento: 'Redactar el proyecto de resolución en formato FT-130 citando la convocatoria de la CNSC, número de resolución de la lista de elegibles, elegible nombrado y fecha exacta de retiro.',
+                posiblesEvidencias: [
+                  'Proyecto de resolución motivada en formato 2311520-FT-130 con visto bueno jurídico.',
+                ],
+              },
+              {
+                id: 'dp2_2',
+                label: 'Firma por autoridad nominadora, numeración y fechado oficial',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Estatuto Orgánico de Bogotá • Ley 1437 de 2011, Art. 65',
+                detalleProcedimiento: 'Someter a suscripción del Secretario Jurídico Distrital y posterior radicación, numeración y fechado oficial.',
+                posiblesEvidencias: [
+                  'Resolución de retiro provisional suscrita por el nominador con número y fecha asignados.',
+                ],
+              },
+              {
+                id: 'dp2_3',
+                label: 'Notificación personal formal conforme al CPACA e información de recursos (Art. 74)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-019',
+                norma: 'Ley 1437 de 2011, Arts. 67, 69 y 74 • Decreto 1083 de 2015',
+                textoNormativo: 'Contra el acto administrativo motivado que desvincula a un empleado provisional procede el recurso de reposición en los términos del artículo 74 del Código de Procedimiento Administrativo y de lo Contencioso Administrativo.',
+                detalleProcedimiento: 'Notificar personalmente o mediante correo electrónico certificado al empleado provisional, indicándole que contra el acto procede el recurso de reposición dentro de los 10 días siguientes.',
+                posiblesEvidencias: [
+                  'Acta de notificación personal o constancia de entrega electrónica certificada con copia íntegra del acto.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prov_3',
+            numero: 3,
+            titulo: 'Formatos Entrega de Cargo',
+            subtitulo: 'FT-436, FT-219 y SIDEAP Retiro',
+            icono: 'folder-open-outline',
+            estado: 'in_progress',
+            tiempoEstimadoDias: 2,
+            responsable: 'Servidor saliente / TH',
+            normaGeneral: 'Ley 2013 de 2019; Procedimiento PR-074 SJD',
+            plazoLegal: 'Hasta el último día de labores',
+            procedimientoDetallado: 'El servidor provisional debe diligenciar el formato de entrega de puesto FT-436, la encuesta de retiro FT-219 y actualizar su declaración jurada de bienes y conflicto de intereses en SIDEAP marcando Retiro.',
+            requisitos: [
+              {
+                id: 'dp3_1',
+                label: 'Diligenciamiento de Evaluación de Retiro (Formato 2311300-FT-219)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-219',
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Diligenciar el formulario institucional de percepción del clima laboral y motivos de retiro.',
+                posiblesEvidencias: [
+                  'Formato 2311300-FT-219 debidamente firmado.',
+                ],
+              },
+              {
+                id: 'dp3_2',
+                label: 'Acta de Entrega de Cargo por Retiro Definitivo (Formato 2311300-FT-436)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-436',
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Diligenciar informe de empalme con detalle de tareas en curso, expedientes y claves asignadas para entrega al nuevo titular.',
+                posiblesEvidencias: [
+                  'Formato 2311300-FT-436 firmado por el servidor provisional y su jefe inmediato.',
+                ],
+              },
+              {
+                id: 'dp3_3',
+                label: 'Declaración de Bienes y Rentas en SIDEAP marcando opción Retiro',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
+                detalleProcedimiento: 'Generar el certificado digital de SIDEAP de declaración juramentada de bienes con corte a fecha de retiro.',
+                posiblesEvidencias: [
+                  'Certificado digital expedido por SIDEAP/SIGEP II con radicado de retiro.',
+                ],
+              },
+              {
+                id: 'dp3_4',
+                label: 'Declaración de Conflicto de Intereses en SIDEAP / Función Pública marcando Retiro',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011',
+                detalleProcedimiento: 'Registrar la declaración de inhabilidades posteriores en el aplicativo distrital.',
+                posiblesEvidencias: [
+                  'Comprobante de cargue de declaración de conflicto de intereses con corte de retiro.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prov_4',
+            numero: 4,
+            titulo: 'Examen & 4 Paz y Salvos',
+            subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
+            icono: 'checkbox-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 3,
+            responsable: 'SST / TIC / Almacén / Archivo',
+            normaGeneral: 'Resolución 2346 de 2007 MinProtección; Procedimiento PR-074 SJD; Ley 594 de 2000',
+            plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Trámite de los 4 paz y salvos institucionales: entrega de equipo y accesos en TIC, entrega de inventarios en Almacén (FT-200), transferencia en Archivo y paz y salvo de Talento Humano.',
+            requisitos: [
+              {
+                id: 'dp4_1',
+                label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Resolución 2346 de 2007, Art. 6 • Decreto 1072 de 2015',
+                detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS ocupacional o archivar desistimiento voluntario.',
+                posiblesEvidencias: [
+                  'Certificado de examen médico de egreso de IPS o carta de desistimiento voluntario.',
+                ],
+              },
+              {
+                id: 'dp4_2',
+                label: 'Paz y Salvo TIC: Entrega de hardware, periféricos y desactivación de accesos',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Política de Seguridad de la Información SJD',
+                detalleProcedimiento: 'Recibir equipos de cómputo, revocar buzón corporativo y credenciales de acceso.',
+                posiblesEvidencias: [
+                  'Paz y salvo firmado por el área de TIC.',
+                ],
+              },
+              {
+                id: 'dp4_3',
+                label: 'Paz y Salvo Almacén: Devolución de bienes muebles individuales (2311500-FT-200)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311500-FT-200',
+                norma: 'Procedimiento de Almacén e Inventarios SJD',
+                detalleProcedimiento: 'Verificar descargo de bienes muebles e individuales asignados al empleado provisional.',
+                posiblesEvidencias: [
+                  'Formato 2311500-FT-200 firmado por el responsable de Almacén.',
+                ],
+              },
+              {
+                id: 'dp4_4',
+                label: 'Paz y Salvo Archivo: Transferencia de expedientes judiciales/administrativos',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 594 de 2000; TRD SJD',
+                detalleProcedimiento: 'Constatar entrega formal de expedientes según las Tablas de Retención Documental.',
+                posiblesEvidencias: [
+                  'Paz y salvo suscrito por Gestión Documental y Archivo.',
+                ],
+              },
+              {
+                id: 'dp4_5',
+                label: 'Paz y Salvo Talento Humano: Devolución carné institucional y firmas consolidadas',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Devolución de carné institucional y verificación de las 4 firmas en el Paz y Salvo general.',
+                posiblesEvidencias: [
+                  'Formato consolidado de Paz y Salvo General con las cuatro firmas institucionales.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prov_5',
+            numero: 5,
+            titulo: 'Liquidación & Nómina',
+            subtitulo: 'Cálculo de prestaciones sociales y ordenación de pago',
+            icono: 'cash-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 3,
+            responsable: 'Profesional Especializado Nómina',
+            normaGeneral: 'Decreto Ley 1045 de 1978; Decreto Distrital 514 de 2006; Formato 2311520-FT-130',
+            plazoLegal: 'Siguiente nómina ordinaria o máximo 15 días',
+            procedimientoDetallado: 'Registro de novedad de retiro en PERNO, desactivación en SIDEAP, liquidación técnica de prestaciones proporcionales y resolución de pago.',
+            requisitos: [
+              {
+                id: 'dp5_1',
+                label: 'Registro de novedad de retiro en nómina PERNO y desactivación en SIDEAP',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
+                detalleProcedimiento: 'Registrar novedad de retiro en nómina PERNO y actualizar estado a retirado en SIDEAP.',
+                posiblesEvidencias: [
+                  'Pantallazo o reporte de novedad en PERNO.',
+                  'Ficha en SIDEAP con estado Retirado.',
+                ],
+              },
+              {
+                id: 'dp5_2',
+                label: 'Liquidación técnica de prestaciones sociales (vacaciones, primas, cesantías)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Ley 1045 de 1978 • Decreto Distrital 514 de 2006',
+                detalleProcedimiento: 'Calcular salarios pendientes, prima de servicios, prima de navidad, cesantías y compensación de vacaciones.',
+                posiblesEvidencias: [
+                  'Hoja técnica de liquidación de prestaciones sociales del servidor provisional.',
+                ],
+              },
+              {
+                id: 'dp5_3',
+                label: 'Elaboración de Resolución de Reconocimiento y Liquidación (2311520-FT-130)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-130',
+                norma: 'Estatuto Presupuestal Distrital • Procedimiento 2311420-PR-001',
+                detalleProcedimiento: 'Proyectar el acto de reconocimiento prestacional suscrito por el ordenador del gasto.',
+                posiblesEvidencias: [
+                  'Resolución de reconocimiento y pago de prestaciones firmada por el ordenador del gasto.',
+                ],
+              },
+              {
+                id: 'dp5_4',
+                label: 'Notificación del acto liquidatorio y remisión a Tesorería para pago',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 1437 de 2011 • Tesorería Distrital SJD',
+                detalleProcedimiento: 'Notificar al exservidor y remitir a Tesorería para dispersión bancaria.',
+                posiblesEvidencias: [
+                  'Comprobante de dispersión bancaria de Tesorería.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prov_6',
+            numero: 6,
+            titulo: 'SIMO CNSC & Historia Laboral',
+            subtitulo: 'Reporte de novedad ante la CNSC y archivo definitivo',
+            icono: 'checkmark-done-circle-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 2,
+            responsable: 'Profesional TH / Archivo',
+            normaGeneral: 'Circular Externa CNSC 011 de 2021; Ley 594 de 2000; Formato 2311520-FT-244',
+            plazoLegal: 'Reporte SIMO dentro de los 5 días hábiles siguientes',
+            procedimientoDetallado: 'Reportar en SIMO la finalización del nombramiento provisional y archivar todo el expediente foliado en la Historia Laboral.',
+            requisitos: [
+              {
+                id: 'dp6_1',
+                label: 'Reporte de novedad de retiro provisional en el aplicativo SIMO ante la CNSC',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Circular Externa CNSC 011 de 2021',
+                textoNormativo: 'Las entidades deben actualizar en el aplicativo SIMO el estado de ocupación de las plazas de carrera, descargando los nombramientos provisionales que hayan cesado.',
+                detalleProcedimiento: 'Cargar la novedad de retiro en el módulo de personal en SIMO de la CNSC.',
+                posiblesEvidencias: [
+                  'Comprobante de registro de novedad de retiro en SIMO expedido por la CNSC.',
+                ],
+              },
+              {
+                id: 'dp6_2',
+                label: 'Archivo integral en Historia Laboral con Hoja de Control (2311520-FT-244)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-244',
+                norma: 'Ley 594 de 2000; Acuerdo AGN 004 de 2019',
+                detalleProcedimiento: 'Foliar y archivar los actos de nombramiento provisional, posesión, resolución motivada de retiro y paz y salvos en la Historia Laboral.',
+                posiblesEvidencias: [
+                  'Hoja de control de historia laboral 2311520-FT-244 debidamente foliada.',
+                ],
+              },
+            ],
+          },
+        ];
+
+      case 'LIBRE_NOMBRAMIENTO':
+        return [
+          {
+            id: 'd_lnr_1',
+            numero: 1,
+            titulo: 'Causal de Retiro Directivo',
+            subtitulo: 'Insubsistencia discrecional o aceptación de renuncia',
+            icono: 'document-text-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'Profesional Universitario TH',
+            normaGeneral: 'Ley 909 de 2004, Art. 41 literales a y b; Decreto 1083 de 2015, Arts. 2.2.11.1.2 al 2.2.11.1.4',
+            plazoLegal: 'Inmediato previa decisión del nominador',
+            procedimientoDetallado: 'Recepción del memorial de renuncia libre y espontánea o manifestación del nominador de declarar la insubsistencia en ejercicio de la facultad discrecional, constatando la no configuración de fuero de maternidad o fuero biológico prevalente.',
+            requisitos: [
+              {
+                id: 'dl1_1',
+                label: 'Recepción del documento soporte de retiro (Insubsistencia o Renuncia)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-018',
+                norma: 'Ley 909 de 2004, Art. 41 literales a y b • Decreto 1083 de 2015, Art. 2.2.11.1.4',
+                textoNormativo: 'En los empleos de libre nombramiento y remoción, la declaratoria de insubsistencia se efectúa en ejercicio de la facultad discrecional que tiene la autoridad nominadora, atendiendo razones de mejoramiento del servicio.',
+                detalleProcedimiento: 'Radicar la decisión del nominador o la carta de renuncia del funcionario directivo o asesor.',
+                posiblesEvidencias: [
+                  'Oficio del Despacho disponiendo la insubsistencia o memorial de renuncia radicado.',
+                  'Formato 2311520-FT-018 de verificación de trámite.',
+                ],
+              },
+              {
+                id: 'dl1_2',
+                label: 'Verificación de fueros especiales (Fuero de Maternidad/Lactancia prevalente)',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Constitución Política, Art. 43 • Sentencia SU-070 de 2013 • Decreto 1083 de 2015',
+                notaNormativa: 'Incluso en empleos de libre nombramiento y remoción, el fuero de maternidad y lactancia prima sobre la facultad discrecional, prohibiendo la declaratoria de insubsistencia sin causa justa y autorización legal.',
+                detalleProcedimiento: 'Verificar en registros médicos y de Talento Humano que la persona no se encuentre en embarazo ni licencia de maternidad/lactancia.',
+                posiblesEvidencias: [
+                  'Certificación de Talento Humano acreditando no existencia de fuero de maternidad/lactancia.',
+                ],
+              },
+              {
+                id: 'dl1_3',
+                label: 'Verificación de espontaneidad y fecha cierta en caso de renuncia',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Decreto 1083 de 2015, Art. 2.2.11.1.3 • Jurisprudencia Consejo de Estado',
+                detalleProcedimiento: 'Si la causal es renuncia, cerciorarse de que sea un acto voluntario, espontáneo y sin presiones indebidas.',
+                posiblesEvidencias: [
+                  'Carta de renuncia con firma auténtica y fecha cierta de desvinculación.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_lnr_2',
+            numero: 2,
+            titulo: 'Acto de Insubsistencia / Retiro',
+            subtitulo: 'Decreto o resolución del nominador y comunicación inmediata',
+            icono: 'newspaper-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'Nominador / Notificaciones',
+            normaGeneral: 'Decreto 1083 de 2015, Art. 2.2.11.1.4; Decreto Distrital 323 de 2016; Formato 2311520-FT-130',
+            plazoLegal: 'Comunicación con efectos a partir de la fecha que señale el acto',
+            procedimientoDetallado: 'Expedición del decreto o resolución de declaratoria de insubsistencia o aceptación de renuncia debidamente suscrito por el Secretario Jurídico Distrital y comunicación inmediata.',
+            requisitos: [
+              {
+                id: 'dl2_1',
+                label: 'Elaboración de Resolución de Insubsistencia o Aceptación de Renuncia (2311520-FT-130)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-130',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.11.1.4 • Ley 909 de 2004, Art. 41 lit. a',
+                textoNormativo: 'La declaratoria de insubsistencia no requiere de motivación formal en virtud de la facultad discrecional del nominador, pero debe expedirse mediante acto administrativo idóneo.',
+                detalleProcedimiento: 'Proyectar el acto administrativo de retiro ordinario o insubsistencia con la fecha de efectividad del cese en funciones.',
+                posiblesEvidencias: [
+                  'Proyecto de acto administrativo en formato 2311520-FT-130 con visto bueno.',
+                ],
+              },
+              {
+                id: 'dl2_2',
+                label: 'Firma por autoridad nominadora, radicación, numeración y fechado oficial',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Estatuto Orgánico de Bogotá • Ley 1437 de 2011, Art. 65',
+                detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y numeración en correspondencia oficial.',
+                posiblesEvidencias: [
+                  'Resolución suscrita por el nominador con número consecutivo y fecha oficial.',
+                ],
+              },
+              {
+                id: 'dl2_3',
+                label: 'Comunicación formal o notificación inmediata al directivo cesante',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-019',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.11.1.4 • CPACA Art. 65',
+                detalleProcedimiento: 'Comunicar oficialmente al directivo cesante el contenido del acto administrativo de retiro.',
+                posiblesEvidencias: [
+                  'Oficio de comunicación en formato 2311520-FT-019 con acuse de recibo del directivo.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_lnr_3',
+            numero: 3,
+            titulo: 'Entrega Despacho & Control Interno',
+            subtitulo: 'Acta de informe de gestión (Ley 951/2005) y SIDEAP Retiro',
+            icono: 'folder-open-outline',
+            estado: 'in_progress',
+            tiempoEstimadoDias: 2,
+            responsable: 'Directivo saliente / Control Interno',
+            normaGeneral: 'Ley 951 de 2005, Art. 8; Ley 2013 de 2019; Procedimiento PR-074 SJD',
+            plazoLegal: 'Informe de entrega dentro de 15 días hábiles a Control Interno (Ley 951/2005)',
+            procedimientoDetallado: 'Obligación imperativa de todo servidor de nivel directivo y asesor de suscribir el Acta de Informe de Gestión (FT-333) y remitir copia a la Oficina de Control Interno dentro de los 15 días hábiles, además de diligenciar los formatos FT-436, FT-219 y la declaración de SIDEAP Retiro.',
+            requisitos: [
+              {
+                id: 'dl3_1',
+                label: 'Acta de Informe de Gestión y Entrega de Despacho (Ley 951/2005) - Formato FT-333',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-333',
+                norma: 'Ley 951 de 2005, Art. 8 • Directiva Presidencial 01 de 2018',
+                notaNormativa: 'Obligación legal indelegable de rendir informe de entrega del despacho a quien lo suceda o al superior jerárquico, con copia a Control Interno dentro de los 15 días hábiles.',
+                textoNormativo: 'Ley 951 de 2005, artículo 8: El servidor público saliente deberá entregar a quien lo sustituya legalmente un informe general de los asuntos a su cargo y del estado de los recursos puestos a su disposición, con copia a la Oficina de Control Interno.',
+                detalleProcedimiento: 'Elaborar el informe exhaustivo del estado del despacho, metas del plan de acción, asuntos judiciales pendientes y remitir copia oficial a Control Interno.',
+                posiblesEvidencias: [
+                  'Acta de Informe de Gestión y Entrega en formato 2311300-FT-333 suscrita.',
+                  'Radicado de entrega de copia a la Oficina de Control Interno dentro de los 15 días hábiles.',
+                ],
+              },
+              {
+                id: 'dl3_2',
+                label: 'Entrega de Cargo por Retiro Definitivo (Formato 2311300-FT-436)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-436',
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Detallar inventario de claves de acceso, trámites prioritarios y expedientes del despacho.',
+                posiblesEvidencias: [
+                  'Formato 2311300-FT-436 firmado por el directivo saliente y el Secretario Jurídico.',
+                ],
+              },
+              {
+                id: 'dl3_3',
+                label: 'Diligenciamiento de Evaluación y Encuesta de Retiro (2311300-FT-219)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-219',
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Diligenciar encuesta institucional de retiro directivo.',
+                posiblesEvidencias: [
+                  'Formato 2311300-FT-219 diligenciado.',
+                ],
+              },
+              {
+                id: 'dl3_4',
+                label: 'Declaración proactiva de Bienes y Rentas en SIDEAP/SIGEP II marcando Retiro',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021',
+                detalleProcedimiento: 'Generar el certificado digital de SIDEAP de declaración jurada de bienes y rentas con corte al último día en funciones directivas.',
+                posiblesEvidencias: [
+                  'Certificado digital de SIDEAP con radicado de retiro del servicio.',
+                ],
+              },
+              {
+                id: 'dl3_5',
+                label: 'Declaración proactiva de Conflicto de Intereses e Inhabilidades Posteriores',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2013 de 2019 • Ley 1437 de 2011',
+                detalleProcedimiento: 'Diligenciar en la plataforma de la Función Pública la declaración de no conflicto de intereses e inhabilidades posteriores para directivos.',
+                posiblesEvidencias: [
+                  'Comprobante digital de cargue de declaración de inhabilidades posteriores.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_lnr_4',
+            numero: 4,
+            titulo: 'Examen & 4 Paz y Salvos',
+            subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
+            icono: 'checkbox-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 3,
+            responsable: 'SST / TIC / Almacén / Archivo',
+            normaGeneral: 'Resolución 2346 de 2007 MinProtección; Procedimiento PR-074 SJD; Ley 594 de 2000',
+            plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Trámite de los 4 paz y salvos institucionales: entrega de computador portátil directivo, smartphone institucional y revocación de tokens de firma digital; descargo de bienes en Almacén (FT-200); transferencia de expedientes directivos en Archivo; y paz y salvo de Talento Humano.',
+            requisitos: [
+              {
+                id: 'dl4_1',
+                label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Resolución 2346 de 2007, Art. 6 • Decreto 1072 de 2015',
+                detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS ocupacional o archivar desistimiento voluntario.',
+                posiblesEvidencias: [
+                  'Certificado de examen de egreso laboral o desistimiento voluntario suscrito.',
+                ],
+              },
+              {
+                id: 'dl4_2',
+                label: 'Paz y Salvo TIC: Entrega de laptop, smartphone, token y revocación firmas digitales',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Política de Seguridad de la Información SJD; Ley 527 de 1999',
+                detalleProcedimiento: 'Recibir hardware directivo asignado, revocar buzón oficial, token VPN y cancelar certificado de firma digital institucional.',
+                posiblesEvidencias: [
+                  'Paz y salvo firmado por TIC con constancia de revocación de firma digital.',
+                ],
+              },
+              {
+                id: 'dl4_3',
+                label: 'Paz y Salvo Almacén: Descargo de bienes muebles individuales (2311500-FT-200)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311500-FT-200',
+                norma: 'Procedimiento de Almacén e Inventarios SJD',
+                detalleProcedimiento: 'Verificar descargo total de bienes muebles del despacho a cargo del directivo.',
+                posiblesEvidencias: [
+                  'Formato 2311500-FT-200 firmado por el responsable de Almacén.',
+                ],
+              },
+              {
+                id: 'dl4_4',
+                label: 'Paz y Salvo Archivo: Transferencia de expedientes directivos y del despacho',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 594 de 2000 General de Archivos; TRD SJD',
+                detalleProcedimiento: 'Constatar la transferencia formal de expedientes y resoluciones de despacho a Gestión Documental.',
+                posiblesEvidencias: [
+                  'Paz y salvo firmado por Gestión Documental y Archivo.',
+                ],
+              },
+              {
+                id: 'dl4_5',
+                label: 'Paz y Salvo Talento Humano: Devolución carné directivo y firmas consolidadas',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Procedimiento 2311420-PR-074 SJD',
+                detalleProcedimiento: 'Devolución de credenciales institucionales y consolidación de las 4 firmas en el Paz y Salvo General.',
+                posiblesEvidencias: [
+                  'Formato consolidado de Paz y Salvo General con las cuatro firmas institucionales.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_lnr_5',
+            numero: 5,
+            titulo: 'Liquidación & Gastos de Rep.',
+            subtitulo: 'Prestaciones directivas, prima técnica y gastos de representación',
+            icono: 'cash-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 3,
+            responsable: 'Profesional Especializado Nómina',
+            normaGeneral: 'Decreto Ley 1045 de 1978; Decreto Distrital 514 de 2006; Formato 2311520-FT-130',
+            plazoLegal: 'Siguiente nómina ordinaria o máximo 15 días',
+            procedimientoDetallado: 'Registro de novedad de retiro en nómina PERNO, desactivación en SIDEAP, liquidación de prestaciones directivas incluyendo prima técnica y gastos de representación proporcionales, y expedición de resolución de pago.',
+            requisitos: [
+              {
+                id: 'dl5_1',
+                label: 'Registro de novedad de retiro en nómina PERNO y desactivación de perfil en SIDEAP',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Distrital 083 de 2001 • Directiva DASCD 001 de 2018',
+                detalleProcedimiento: 'Registrar la fecha definitiva de retiro en el módulo de personal PERNO y desactivar el perfil directivo en SIDEAP.',
+                posiblesEvidencias: [
+                  'Reporte de novedad procesada en PERNO.',
+                  'Ficha en SIDEAP con perfil directivo desactivado.',
+                ],
+              },
+              {
+                id: 'dl5_2',
+                label: 'Liquidación técnica de prestaciones con prima técnica y gastos de representación',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto Ley 1045 de 1978 • Decretos salariales distritales anuales',
+                detalleProcedimiento: 'Liquidar asignación básica, gastos de representación proporcionales, prima técnica, prima de servicios, navidad, cesantías y vacaciones compensadas.',
+                posiblesEvidencias: [
+                  'Hoja técnica de liquidación de prestaciones sociales del nivel directivo.',
+                ],
+              },
+              {
+                id: 'dl5_3',
+                label: 'Elaboración de Resolución de Reconocimiento y Liquidación (2311520-FT-130)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: '2311520-FT-130',
+                norma: 'Estatuto Presupuestal Distrital • Procedimiento 2311420-PR-001',
+                detalleProcedimiento: 'Proyectar el acto de reconocimiento prestacional firmado por el ordenador del gasto.',
+                posiblesEvidencias: [
+                  'Resolución de liquidación firmada por el ordenador del gasto.',
+                ],
+              },
+              {
+                id: 'dl5_4',
+                label: 'Notificación del acto liquidatorio y remisión a Tesorería para pago',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 1437 de 2011 • Tesorería Distrital SJD',
+                detalleProcedimiento: 'Notificar al exfuncionario y remitir el expediente a Tesorería para dispersión en cuenta bancaria.',
+                posiblesEvidencias: [
+                  'Comprobante de dispersión bancaria de Tesorería.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_lnr_6',
+            numero: 6,
+            titulo: 'Cierre & Control Interno',
+            subtitulo: 'Constancia de entrega Ley 951/2005 y archivo en Historia Laboral',
+            icono: 'checkmark-done-circle-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 2,
+            responsable: 'Profesional TH / Archivo',
+            normaGeneral: 'Ley 951 de 2005, Art. 8; Ley 594 de 2000; Formato 2311520-FT-244',
+            plazoLegal: '15 días hábiles siguientes al retiro',
+            procedimientoDetallado: 'Constatar la radicación formal de la copia del Acta de Entrega en la Oficina de Control Interno y realizar la foliación y archivo definitivo del expediente directivo.',
+            requisitos: [
+              {
+                id: 'dl6_1',
+                label: 'Constatación y archivo de radicado de entrega de copia a Control Interno (Ley 951/2005)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 951 de 2005, Art. 8',
+                textoNormativo: 'De conformidad con el artículo 8 de la Ley 951 de 2005, el servidor público que se separe de su empleo en el nivel directivo o asesor deberá remitir copia formal de su informe de entrega a la Oficina de Control Interno dentro de los 15 días hábiles siguientes.',
+                detalleProcedimiento: 'Verificar la existencia del radicado oficial de correspondencia de entrega del informe de gestión a la Oficina de Control Interno.',
+                posiblesEvidencias: [
+                  'Oficio con sello y radicado oficial de recibido de la Oficina de Control Interno.',
+                ],
+              },
+              {
+                id: 'dl6_2',
+                label: 'Archivo integral y foliación final en Historia Laboral con Hoja de Control (2311520-FT-244)',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-244',
                 norma: 'Ley 594 de 2000; Hoja de Control SJD',
-                detalleProcedimiento: 'Foliar y archivar los actos de retiro, paz y salvos y liquidación en la Historia Laboral.',
-              },
-              {
-                id: 'ds6_2_nc',
-                label: 'Constatación de entrega de copia a Control Interno si pertenecía a nivel directivo',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Ley 951 de 2005, Art. 8',
-                detalleProcedimiento: 'Archivar el radicado de entrega de copia del informe de gestión a la Oficina de Control Interno.',
+                detalleProcedimiento: 'Foliar y coser todo el expediente directivo en la Historia Laboral con su hoja de control final.',
+                posiblesEvidencias: [
+                  'Hoja de control 2311520-FT-244 foliada y archivada en archivo central.',
+                ],
               },
             ],
-      },
-    ];
+          },
+        ];
+
+      case 'PRACTICANTE_JUDICANTE':
+        return [
+          {
+            id: 'd_prac_1',
+            numero: 1,
+            titulo: 'Culminación Formativa',
+            subtitulo: 'Verificación de plazo formativo o causal de terminación',
+            icono: 'school-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'Profesional Especializado TH',
+            normaGeneral: 'Ley 2043 de 2020; Resolución 3546 de 2018 MinTrabajo; Ley 552 de 1999',
+            plazoLegal: 'Al vencimiento del término pactado (6 o 9 meses de judicatura)',
+            procedimientoDetallado: 'Constatar el cumplimiento efectivo del plazo de la práctica formativa o judicatura (mínimo 6 o 9 meses continuos según la modalidad) o tramitar la solicitud formal y concertada de terminación justificada con la universidad.',
+            requisitos: [
+              {
+                id: 'dpj1_1',
+                label: 'Verificación del cumplimiento del plazo pactado o causal de retiro justificado',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Ley 2043 de 2020, Art. 4 • Resolución 3546 de 2018 MinTrabajo • Ley 552 de 1999',
+                notaNormativa: 'Las prácticas y judicaturas son relaciones exclusivamente formativas de origen académico. No generan relación laboral ni estatutaria.',
+                textoNormativo: 'Resolución 3546 de 2018 de MinTrabajo: La práctica laboral es una actividad formativa desarrollada por un estudiante de programas de formación profesional, tecnológica o técnica, que busca complementar sus estudios. Su terminación se rige por el cumplimiento del periodo formativo convenido.',
+                detalleProcedimiento: 'Cotejar en la resolución de vinculación formativa la fecha de inicio y vencimiento del término convenido para la judicatura o práctica.',
+                posiblesEvidencias: [
+                  'Resolución de vinculación formativa original con las fechas de inicio y plazo pactado.',
+                  'Acta de inicio de judicatura o práctica suscrita.',
+                ],
+              },
+              {
+                id: 'dpj1_2',
+                label: 'Comunicación oficial a la Institución de Educación Superior sobre culminación',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 16 • Convenio de Cooperación Académica',
+                detalleProcedimiento: 'Remitir oficio formal a la Decanatura de la Facultad de Derecho o Dirección de Consultorio Jurídico informando la culminación del periodo de práctica.',
+                posiblesEvidencias: [
+                  'Oficio formal radicado y remitido a la universidad informando la terminación formativa.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prac_2',
+            numero: 2,
+            titulo: 'Informe Final & Evaluación',
+            subtitulo: 'Informe final de actividades y concepto del tutor institucional',
+            icono: 'document-text-outline',
+            estado: 'completed',
+            tiempoEstimadoDias: 2,
+            responsable: 'Tutor Institucional / Estudiante',
+            normaGeneral: 'Ley 2043 de 2020, Art. 6; Ley 552 de 1999; Resolución 3546 de 2018 MinTrabajo',
+            plazoLegal: 'Última semana del periodo formativo',
+            procedimientoDetallado: 'El estudiante debe radicar su Informe Final de Actividades y el tutor institucional asignado debe expedir la evaluación final de competencias y el concepto favorable de cumplimiento.',
+            requisitos: [
+              {
+                id: 'dpj2_1',
+                label: 'Presentación y radicación del Informe Final de Actividades por el estudiante',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Ley 2043 de 2020, Art. 6 • Ley 552 de 1999',
+                detalleProcedimiento: 'Radicar en el sistema documental el informe global que compila las gestiones jurídicas, sustanciación de conceptos y actividades desarrolladas.',
+                posiblesEvidencias: [
+                  'Informe Final de Actividades de judicatura radicado en el sistema de gestión documental.',
+                ],
+              },
+              {
+                id: 'dpj2_2',
+                label: 'Evaluación final y concepto favorable de cumplimiento expedido por el tutor',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Resolución 3546 de 2018 MinTrabajo, Art. 15 • Ley 2043 de 2020',
+                textoNormativo: 'El tutor institucional asignado deberá emitir la evaluación final del estudiante y certificar el cumplimiento cabal de las metas y horas convenidas en el plan de práctica.',
+                detalleProcedimiento: 'El tutor institucional suscribe el formato de evaluación y concepto favorable acreditando idoneidad, asistencia y cumplimiento de las metas formativas.',
+                posiblesEvidencias: [
+                  'Formato de evaluación final y concepto favorable de judicatura firmado por el tutor asignado.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prac_3',
+            numero: 3,
+            titulo: 'Paz y Salvo Formativo',
+            subtitulo: 'Devolución de carné, equipo TIC y entrega de asuntos al tutor',
+            icono: 'checkbox-outline',
+            estado: 'in_progress',
+            tiempoEstimadoDias: 1,
+            responsable: 'Tutor / TIC / TH',
+            normaGeneral: 'Procedimiento PR-137 SJD; Política de Seguridad TIC',
+            plazoLegal: 'Último día de labores formativas',
+            procedimientoDetallado: 'Entrega formal de expedientes y asuntos asignados al tutor o dependencia receptora, devolución física del carné de practicante, equipo de cómputo y desactivación de accesos.',
+            requisitos: [
+              {
+                id: 'dpj3_1',
+                label: 'Devolución de equipo de cómputo, accesorios y cierre de buzón institucional',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Política de Seguridad de la Información SJD',
+                detalleProcedimiento: 'Hacer entrega del equipo de cómputo portátil y accesorios en el área de TIC y suspender buzón de correo electrónico.',
+                posiblesEvidencias: [
+                  'Constancia de recepción de equipo suscrita por TIC.',
+                ],
+              },
+              {
+                id: 'dpj3_2',
+                label: 'Entrega y empalme de expedientes y asuntos jurídicos asignados al tutor',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Procedimiento Institucional 2311420-PR-137 SJD',
+                detalleProcedimiento: 'Suscribir acta de entrega de temas jurídicos y proyectos de respuesta con el tutor institucional.',
+                posiblesEvidencias: [
+                  'Acta de entrega y empalme de asuntos suscrita entre el judicante y el tutor.',
+                ],
+              },
+              {
+                id: 'dpj3_3',
+                label: 'Devolución física del carné de practicante y firma de Paz y Salvo Formativo',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Procedimiento Institucional 2311420-PR-137 SJD',
+                detalleProcedimiento: 'Entregar el carné físico institucional en Talento Humano y consolidar firmas en el Paz y Salvo Formativo.',
+                posiblesEvidencias: [
+                  'Formato institucional de Paz y Salvo Formativo con firmas del tutor, TIC y Talento Humano.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prac_4',
+            numero: 4,
+            titulo: 'Desafiliación ARL & Bogdata',
+            subtitulo: 'Novedad de retiro en ARL Positiva y cierre presupuestal',
+            icono: 'shield-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 1,
+            responsable: 'Auxiliar TH / Gestión Financiera',
+            normaGeneral: 'Decreto 055 de 2015 MinSalud; Procedimiento Bogdata 2311420-PR-063',
+            plazoLegal: 'Día siguiente a la terminación de la práctica',
+            procedimientoDetallado: 'Tramitar la novedad de retiro de la cobertura de riesgos laborales ante ARL Positiva, procesar el último giro del auxilio de sostenimiento sin prestaciones sociales y liberar el saldo del CRP en Bogdata.',
+            requisitos: [
+              {
+                id: 'dpj4_1',
+                label: 'Desafiliación oportuna de Positiva ARL en el Sistema General de Riesgos Laborales',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Decreto 055 de 2015 • Decreto 1072 de 2015, Art. 2.2.4.2.3.1',
+                textoNormativo: 'La entidad debe tramitar la novedad de retiro del estudiante en el Sistema de Riesgos Laborales inmediatamente culmine la práctica formativa.',
+                detalleProcedimiento: 'Radicar la novedad de retiro en la plataforma web de Positiva ARL con fecha del último día de actividades.',
+                posiblesEvidencias: [
+                  'Certificado de novedad de retiro o desafiliación expedido por Positiva ARL.',
+                ],
+              },
+              {
+                id: 'dpj4_2',
+                label: 'Trámite del último pago proporcional del auxilio de sostenimiento (sin prestaciones)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2043 de 2020, Art. 7 • Procedimiento Presupuestal Bogdata 2311420-PR-063',
+                notaNormativa: 'Al no existir vínculo laboral ni contractual, los practicantes y judicantes no tienen derecho a liquidación de cesantías, primas ni vacaciones de la Ley 1045 de 1978. Solo reciben su auxilio proporcional pactado.',
+                detalleProcedimiento: 'Generar la orden de pago del auxilio proporcional de sostenimiento en Bogdata con visto bueno del tutor.',
+                posiblesEvidencias: [
+                  'Orden de pago y soporte de transferencia bancaria del auxilio final en Bogdata.',
+                ],
+              },
+              {
+                id: 'dpj4_3',
+                label: 'Cierre y liberación del saldo del Certificado de Registro Presupuestal (CRP)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Estatuto Orgánico del Presupuesto • Procedimiento 2311420-PR-063',
+                detalleProcedimiento: 'Liberar en Bogdata el saldo remanente no ejecutado del CRP y CDP de prácticas formativas.',
+                posiblesEvidencias: [
+                  'Comprobante de liberación de saldos de CRP en el sistema Bogdata de la Secretaría Distrital de Hacienda.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prac_5',
+            numero: 5,
+            titulo: 'Certificación de Judicatura',
+            subtitulo: 'Certificación oficial firmada por Dirección (Ley 2043/2020)',
+            icono: 'ribbon-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 2,
+            responsable: 'Dirección Gestión Corporativa',
+            normaGeneral: 'Ley 2043 de 2020, Arts. 6 y 8; Ley 552 de 1999; Acuerdo Consejo Superior de la Judicatura',
+            plazoLegal: 'Máximo 5 días hábiles posteriores a la culminación',
+            procedimientoDetallado: 'Expedición de la Certificación Final de Judicatura o Práctica Profesional firmada por la Dirección de Gestión Corporativa, válida formalmente como experiencia profesional computable ante el Consejo Superior de la Judicatura y universidades.',
+            requisitos: [
+              {
+                id: 'dpj5_1',
+                label: 'Proyección y firma de Certificación Final de Judicatura / Práctica por Dirección',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 2043 de 2020, Arts. 6 y 8 • Ley 552 de 1999',
+                textoNormativo: 'Ley 2043 de 2020, artículo 6: La certificación de la práctica laboral o judicatura expedida por la entidad receptora deberá contener la fecha de inicio y terminación, las actividades desarrolladas y la constancia de cumplimiento, teniendo plena validez como experiencia profesional para todos los efectos legales.',
+                detalleProcedimiento: 'Redactar y suscribir la certificación detallando fecha de inicio, fecha final, modalidad, tutor, funciones y concepto favorable.',
+                posiblesEvidencias: [
+                  'Certificación Final oficial suscrita por el Director(a) de Gestión Corporativa con sello institucional.',
+                ],
+              },
+              {
+                id: 'dpj5_2',
+                label: 'Entrega de certificación original al judicante para trámites ante el CSJ o Universidad',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Acuerdo Consejo Superior de la Judicatura • Ley 552 de 1999',
+                detalleProcedimiento: 'Entregar el documento original con radicado oficial para el trámite de la tarjeta profesional de abogado o convalidación de grado.',
+                posiblesEvidencias: [
+                  'Oficio de entrega formal o acuse de recibo del judicante de la certificación original.',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'd_prac_6',
+            numero: 6,
+            titulo: 'Cierre SIDEAP & Archivo',
+            subtitulo: 'Cierre de la plaza en SIDEAP Prácticas y archivo del expediente',
+            icono: 'checkmark-done-circle-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 1,
+            responsable: 'Talento Humano / Archivo',
+            normaGeneral: 'Directiva Distrital 001 de 2018; Ley 594 de 2000; TRD SJD',
+            plazoLegal: 'Inmediato',
+            procedimientoDetallado: 'Actualizar el módulo de prácticas de SIDEAP liberando o cerrando la plaza formativa y custodiar el expediente completo en la serie documental de convenios y prácticas académicas.',
+            requisitos: [
+              {
+                id: 'dpj6_1',
+                label: 'Novedad de cierre de la plaza en el módulo de prácticas laborales de SIDEAP',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Directiva Distrital 001 de 2018 • Módulo de Prácticas SIDEAP',
+                detalleProcedimiento: 'Actualizar el estado del practicante/judicante a finalizado en la plataforma distrital SIDEAP.',
+                posiblesEvidencias: [
+                  'Comprobante de actualización de estado finalizado en SIDEAP Prácticas.',
+                ],
+              },
+              {
+                id: 'dpj6_2',
+                label: 'Archivo del expediente formativo completo en la serie documental institucional',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 594 de 2000 Ley General de Archivos; Tablas de Retención Documental SJD',
+                detalleProcedimiento: 'Foliar y archivar los convenios, informes de tutor, acta de entrega y certificación en el fondo documental.',
+                posiblesEvidencias: [
+                  'Rótulo y hoja de foliación del expediente formativo archivado en el archivo central.',
+                ],
+              },
+            ],
+          },
+        ];
+    }
   }
 }
 export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[] {
@@ -1748,12 +3444,21 @@ export function sincronizarEtapasCaso(
       return etapaM;
     }
 
-    const requisitosSincronizados = etapaM.requisitos.map((reqM) => {
+    const requisitosSincronizados = etapaM.requisitos.map((reqM, reqIdx) => {
       let reqG = etapaG.requisitos?.find((rg) => rg.id === reqM.id);
 
       // Reconciliación especial para requisitos unificados (ej: vp1_1)
       if (reqM.id === 'vp1_1' && !reqG) {
         reqG = etapaG.requisitos?.find((rg) => rg.id === 'vp1_1' || rg.id === 'vp1_2');
+      }
+
+      // Reconciliación inteligente para requisitos de desvinculación provenientes del modelo genérico anterior (dsX_Y)
+      if (!reqG && reqM.id.startsWith('d') && etapaG.requisitos) {
+        const idGenericoEquivalente = `ds${etapaM.numero}_${reqIdx + 1}`;
+        reqG = etapaG.requisitos.find((rg) => rg.id === idGenericoEquivalente);
+        if (!reqG && etapaG.requisitos[reqIdx]) {
+          reqG = etapaG.requisitos[reqIdx];
+        }
       }
 
       if (reqG) {
@@ -1797,7 +3502,7 @@ const CASOS_BASE: CasoFlujoFuncionario[] = [
     fecha_inicio_tramite: '2026-03-20',
     fecha_efectiva: '2026-03-31',
     etapas: generarEtapasParaCaso('DESVINCULACION', 'CARRERA_ADMINISTRATIVA'),
-    etapa_activa_id: 'd_serv_3',
+    etapa_activa_id: 'd_carr_3',
     observaciones: 'Plaza de carrera en vacancia definitiva. Pendiente radicación en SIMO 4.4.',
   },
   {
@@ -1848,7 +3553,7 @@ const CASOS_BASE: CasoFlujoFuncionario[] = [
     fecha_inicio_tramite: '2026-04-02',
     fecha_efectiva: '2026-04-18',
     etapas: generarEtapasParaCaso('DESVINCULACION', 'PROVISIONALIDAD'),
-    etapa_activa_id: 'd_serv_3',
+    etapa_activa_id: 'd_prov_3',
     observaciones: 'Pensión concedida por Colpensiones. En trámite entrega de puesto.',
   },
   {
@@ -2011,19 +3716,250 @@ const CASOS_BASE: CasoFlujoFuncionario[] = [
       todosContratos: [],
     },
   },
+  {
+    id: 'TR-2026-007',
+    tipo_proceso: 'DESVINCULACION',
+    modalidad: 'LIBRE_NOMBRAMIENTO',
+    id_plaza: 5,
+    servidor_nombre: 'DRA. ANDREA CAROLINA CAMARGO VILLAMIL',
+    servidor_cedula: '52912443',
+    cargo: 'SUBSECRETARIO DE DESPACHO',
+    codigo: '045',
+    grado: '06',
+    dependencia: 'SUBSECRETARÍA JURÍDICA DISTRITAL',
+    causal: 'Renuncia regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
+    acto_administrativo: 'Resolución No. 064 de 2026',
+    fecha_inicio_tramite: '2026-04-05',
+    fecha_efectiva: '2026-04-18',
+    etapas: generarEtapasParaCaso('DESVINCULACION', 'LIBRE_NOMBRAMIENTO'),
+    etapa_activa_id: 'd_lnr_3',
+    observaciones: 'Cargo directivo. Suscrita acta circunstanciada de informe y entrega de despacho. Pendiente remisión de copia a Control Interno dentro de 15 días hábiles (Ley 951 de 2005, Art. 8).',
+  },
+  {
+    id: 'TR-2026-008',
+    tipo_proceso: 'DESVINCULACION',
+    modalidad: 'PRACTICANTE_JUDICANTE',
+    servidor_nombre: 'VALENTINA GÓMEZ MARTÍNEZ',
+    servidor_cedula: '1019284712',
+    cargo: 'JUDICANTE AD-HONOREM',
+    dependencia: 'DIRECCIÓN DISTRITAL DE ESTUDIOS',
+    causal: 'Culminación regular del período formativo / judicatura acordada (Ley 2043 de 2020 • Res. 3546 de 2018)',
+    fecha_inicio_tramite: '2026-04-08',
+    fecha_efectiva: '2026-04-20',
+    etapas: generarEtapasParaCaso('DESVINCULACION', 'PRACTICANTE_JUDICANTE'),
+    etapa_activa_id: 'd_prac_4',
+    observaciones: 'Período formativo culminado con evaluación sobresaliente del tutor. Retiro de ARL tramitado. En proyección expedición de Certificación Final con validez de experiencia profesional (Ley 2043 de 2020).',
+  },
 ];
 
+
+// ============================================================================
+// CATÁLOGO DE FORMATOS OFICIALES Y PLANTILLAS DE TALENTO HUMANO
+// ============================================================================
+export const GOOGLE_FORMS_EVALUACION_RETIRO =
+  'https://docs.google.com/forms/d/e/1FAIpQLSfvOxm8Du2CU6nGLPlN3bjLPjF7X765F8vCfaaPUlAFhtgSNg/viewform?usp=header';
+
+export interface FormatoInstitucionalOficial {
+  id: string;
+  codigo: string;
+  nombre: string;
+  version: string;
+  archivo: string;
+  tipo: 'DOCX' | 'DOC' | 'XLSX' | 'PDF';
+  proceso: 'VINCULACION' | 'DESVINCULACION' | 'GUIA_NORMATIVA';
+  fasesRecomendadas: string[];
+  descripcion: string;
+  formularioGoogleUrl?: string;
+  requisitosAsociados?: string[];
+}
+
+export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
+  {
+    id: 'FT-268',
+    codigo: '2310200-FT-268',
+    nombre: 'Compromiso de Confidencialidad de Información',
+    version: 'V2',
+    archivo: '2310200-FT-268 Compromiso de Confidencialidad de Información V2.docx',
+    tipo: 'DOCX',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Inducción y Puesto de Trabajo', 'Posesión'],
+    descripcion: 'Compromiso formal de estricta reserva, custodia y confidencialidad de la información y bases de datos institucionales.',
+    requisitosAsociados: ['vp6_3', 'vc6_5', 'vl5_4', 'vp5_3', 'vc5_4', 'vl5_3'],
+  },
+  {
+    id: 'FT-027',
+    codigo: '2311300-FT-027',
+    nombre: 'Declaración Juramentada de No Deudor Alimentario / Inhabilidades',
+    version: 'V1',
+    archivo: '2311300-FT-027 V1.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Antecedentes y REDAM', 'Posesión'],
+    descripcion: 'Declaración jurada de no figurar en el REDAM ni registrar inhabilidades o incompatibilidades legales para ejercer empleo público.',
+    requisitosAsociados: ['vp3_2', 'vc5_3', 'vl2_1', 'vp5_2', 'vc5_2', 'vl5_2'],
+  },
+  {
+    id: 'FT-319',
+    codigo: '2311300-FT-319',
+    nombre: 'Autorización para Verificación de Títulos Académicos',
+    version: 'V1',
+    archivo: '2311300-FT-319 Autorización para Verificación de Títulos.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Recepción Hoja de Vida', 'Validación Técnica'],
+    descripcion: 'Autorización formal del aspirante para que la entidad consulte y certifique autenticidad de títulos ante instituciones académicas.',
+    requisitosAsociados: ['vp3_1', 'vl1_3', 'vc5_ft318', 'vp3_3', 'vl2_2'],
+  },
+  {
+    id: 'FT-127',
+    codigo: '2311300-FT-127',
+    nombre: 'Acta de Posesión (Plantilla Oficial)',
+    version: 'V2',
+    archivo: 'Acta de Posesión_V2.docx',
+    tipo: 'DOCX',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Posesión & Exámenes'],
+    descripcion: 'Plantilla oficial para elaborar el Acta solemne de juramento y posesión del empleo público.',
+    requisitosAsociados: ['vp5_3', 'vc5_4', 'vl5_3'],
+  },
+  {
+    id: 'FT-106',
+    codigo: '2311300-FT-106',
+    nombre: 'Acta de Ubicación y Entrenamiento en Puesto de Trabajo',
+    version: 'V4',
+    archivo: 'Ubicación y entrenamiento puesto de trabajo_V4.docx',
+    tipo: 'DOCX',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Nómina & Entrenamiento / Inducción'],
+    descripcion: 'Acta suscrita con el jefe inmediato que documenta la inducción, entrega de funciones y responsabilidades del puesto.',
+    requisitosAsociados: ['vp6_3', 'vc6_5', 'vl5_4'],
+  },
+  {
+    id: 'GUI-POSESION-01',
+    codigo: 'GUI-POSESION-01',
+    nombre: 'Requisitos para Tomar Posesión del Cargo (Lista de Chequeo)',
+    version: 'V5',
+    archivo: 'Requisitos para tomar posesion del cargo_V5.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Comunicación del Nombramiento', 'Posesión'],
+    descripcion: 'Guía institucional con el listado exhaustivo de documentos que el aspirante debe recopilar y allegar antes de la posesión.',
+    requisitosAsociados: ['vp4_3', 'vl4_2', 'vc4_3', 'vp5_1', 'vc5_1', 'vl5_1'],
+  },
+  {
+    id: 'FT-219',
+    codigo: '2311300-FT-219',
+    nombre: 'Evaluación de Retiro de Servidores Públicos',
+    version: 'V2',
+    archivo: '2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx',
+    tipo: 'XLSX',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Circuito de Paz y Salvo', 'Cierre y Liquidación'],
+    formularioGoogleUrl: GOOGLE_FORMS_EVALUACION_RETIRO,
+    descripcion: 'Encuesta oficial de valoración de la experiencia laboral del servidor público saliente. Disponible en línea en Google Forms o en Excel.',
+    requisitosAsociados: ['dp4_3', 'dc4_3', 'dl4_3', 'dp4_2', 'dc4_2', 'dl4_2'],
+  },
+  {
+    id: 'FT-436',
+    codigo: '2311300-FT-436',
+    nombre: 'Entrega de Cargo por Ausencia Temporal o Retiro Definitivo',
+    version: 'V1',
+    archivo: '2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx',
+    tipo: 'XLSX',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Entrega de Cargo y Bienes', 'Paz y Salvo Dependencia'],
+    descripcion: 'Matriz en Excel para relacionar inventario físico, equipos, expedientes archivísticos, procesos en trámite y claves asignadas.',
+    requisitosAsociados: ['dp2_1', 'dc2_1', 'dl2_1', 'dp2_2', 'dc2_2', 'dl2_2'],
+  },
+  {
+    id: 'ACTA-LEY-951',
+    codigo: 'ACTA-GESTION-951',
+    nombre: 'Acta de Informe de Gestión y Entrega de Cargo (Ley 951 de 2005)',
+    version: 'V3',
+    archivo: 'Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx',
+    tipo: 'DOCX',
+    proceso: 'DESVINCULACION',
+    fasesRecomendadas: ['Control Interno (Directivos y LNR)'],
+    descripcion: 'Acta formal obligatoria para radicar ante la Oficina de Control Interno dentro de los 15 días hábiles siguientes al retiro.',
+    requisitosAsociados: ['dl2_3', 'dl2_1'],
+  },
+  {
+    id: 'PR-VINC-01',
+    codigo: 'PR-VINC-01',
+    nombre: 'Procedimiento Vinculación de Servidores Públicos (Copia Controlada)',
+    version: 'V1',
+    archivo: 'VINCULACIÓN DE SERVIDORES PÚBLICOS_V1_copia_controlada.pdf',
+    tipo: 'PDF',
+    proceso: 'GUIA_NORMATIVA',
+    fasesRecomendadas: ['Consulta General de Proceso'],
+    descripcion: 'Manual de procedimiento oficial documentado del sistema de gestión de calidad distrital para el ingreso de personal.',
+  },
+  {
+    id: 'PR-DESV-06',
+    codigo: 'PR-DESV-06',
+    nombre: 'Procedimiento Desvinculación de Servidores Públicos (Copia Controlada)',
+    version: 'V6',
+    archivo: 'Desvinculación de Servidores Públicos_V6_copia_controlada (3).pdf',
+    tipo: 'PDF',
+    proceso: 'GUIA_NORMATIVA',
+    fasesRecomendadas: ['Consulta General de Proceso'],
+    descripcion: 'Manual oficial del procedimiento PR-074 para retiro, entrega de puesto, circuito de paz y salvo y liquidación.',
+  },
+  {
+    id: 'PR-PRAC-02',
+    codigo: 'PR-PRAC-02',
+    nombre: 'Procedimiento Vinculación de Practicantes y Judicantes (Copia Controlada)',
+    version: 'V2',
+    archivo: 'Vinculación de Practicantes_V2_copia_controlada (2).pdf',
+    tipo: 'PDF',
+    proceso: 'GUIA_NORMATIVA',
+    fasesRecomendadas: ['Consulta General de Proceso'],
+    descripcion: 'Manual oficial que reglamenta la vinculación formativa de practicantes y judicantes en la Secretaría Jurídica Distrital.',
+  },
+];
+
+export const CAUSALES_RETIRO_POR_MODALIDAD: Record<ModalidadPersonal, string[]> = {
+  CARRERA_ADMINISTRATIVA: [
+    'Renuncia libre y regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
+    'Retiro con derecho a pensión de vejez/invalidez con inclusión en nómina (Ley 909, Art. 41 lit. e • C-1037/2003)',
+    'Declaratoria de insubsistencia por Calificación No Satisfactoria en EDL (Ley 909, Art. 41 lit. b)',
+    'Supresión del empleo de carrera con indemnización o reincorporación (Ley 909, Art. 41 lit. l y Art. 44)',
+    'Edad de retiro forzoso - 70 años (Ley 1821 de 2016 • Ley 909, Art. 41 lit. g)',
+    'Destitución como consecuencia de proceso disciplinario en firme (Ley 909, Art. 41 lit. h)',
+    'Declaratoria de vacancia del empleo por abandono del cargo (Ley 909, Art. 41 lit. i)',
+    'Muerte del servidor público (Ley 909, Art. 41 lit. m)',
+  ],
+  PROVISIONALIDAD: [
+    'Provisión definitiva por elegible de mérito en período de prueba (Decreto 1083 de 2015, Art. 2.2.5.3.4 • SU-917/2010)',
+    'Provisión transitoria mediante encargo preferencial a servidor de carrera (Ley 909 de 2004, Art. 24)',
+    'Renuncia regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
+    'Retiro con pensión de vejez o invalidez con inclusión en nómina (Ley 909, Art. 41 lit. e)',
+    'Calificación no satisfactoria en la evaluación del desempeño de servicios (Decreto 1083, Art. 2.2.5.3.4)',
+    'Edad de retiro forzoso - 70 años (Ley 1821 de 2016)',
+    'Destitución disciplinaria en firme o decisión judicial (Ley 909, Art. 41 lit. h y k)',
+    'Muerte del servidor público (Ley 909, Art. 41 lit. m)',
+  ],
+  LIBRE_NOMBRAMIENTO: [
+    'Declaratoria de insubsistencia del nombramiento discrecional (Ley 909 de 2004, Art. 41 lit. a)',
+    'Renuncia regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
+    'Retiro con pensión de jubilación o vejez con inclusión en nómina (Ley 909, Art. 41 lit. e)',
+    'Edad de retiro forzoso - 70 años (Ley 1821 de 2016 • Ley 909, Art. 41 lit. g)',
+    'Destitución como consecuencia de proceso disciplinario (Ley 909, Art. 41 lit. h)',
+    'Muerte del servidor público (Ley 909, Art. 41 lit. m)',
+  ],
+  PRACTICANTE_JUDICANTE: [
+    'Culminación regular del período formativo / judicatura acordada (Ley 2043 de 2020 • Res. 3546 de 2018)',
+    'Terminación anticipada de común acuerdo entre la entidad y la institución de educación superior',
+    'Renuncia voluntaria justificada presentada por el estudiante / judicante',
+    'Incumplimiento grave de obligaciones formativas o del reglamento institucional',
+  ],
+};
+
 const CAUSALES_RETIRO = [
-  'Renuncia regularmente aceptada (Art. 41 lit. a)',
-  'Obtención de pensión de vejez o invalidez (Art. 41 lit. b)',
-  'Declaratoria de insubsistencia - Libre Nombramiento y Remoción (Art. 41 lit. c)',
-  'Revocatoria / Insubsistencia de Nombramiento Provisional',
-  'Destitución como consecuencia de proceso disciplinario (Art. 41 lit. d)',
-  'Declaratoria de insubsistencia por Calificación No Satisfactoria (Art. 41 lit. e)',
-  'Supresión del empleo de carrera con indemnización o reincorporación (Art. 41 lit. f)',
-  'Edad de retiro forzoso - 70 años (Ley 1821 de 2016 / Art. 41 lit. g)',
-  'Declaratoria de vacancia del empleo por abandono del mismo (Art. 41 lit. i)',
-  'Muerte del servidor (Art. 41 lit. n)',
+  ...CAUSALES_RETIRO_POR_MODALIDAD.CARRERA_ADMINISTRATIVA,
+  ...CAUSALES_RETIRO_POR_MODALIDAD.PROVISIONALIDAD,
+  ...CAUSALES_RETIRO_POR_MODALIDAD.LIBRE_NOMBRAMIENTO,
+  ...CAUSALES_RETIRO_POR_MODALIDAD.PRACTICANTE_JUDICANTE,
 ];
 
 export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { tabInicial?: 'ingresos' | 'desvinculaciones' } = {}) {
@@ -2121,6 +4057,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [modalRegistroVisible, setModalRegistroVisible] = useState(false);
   const [modalGuiaModalidadesVisible, setModalGuiaModalidadesVisible] = useState(false);
   const [tabGuiaModalidad, setTabGuiaModalidad] = useState<ModalidadPersonal>('CARRERA_ADMINISTRATIVA');
+  const [tabGuiaTipoProceso, setTabGuiaTipoProceso] = useState<TipoProceso>('VINCULACION');
   const [nuevoTipoProceso, setNuevoTipoProceso] = useState<TipoProceso>('VINCULACION');
   const [nuevaModalidad, setNuevaModalidad] = useState<ModalidadPersonal>('LIBRE_NOMBRAMIENTO');
   const [plazaSeleccionadaId, setPlazaSeleccionadaId] = useState<number | null>(null);
@@ -3502,6 +5439,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [ingresosCargando, setIngresosCargando] = useState(false);
   const [validacionesIngresos, setValidacionesIngresos] = useState<any[]>([]);
 
+  const handleDescargarExcelFT318 = (idValidacion: string) => {
+    try {
+      const url = ingresosService.getExcelDownloadUrl(idValidacion);
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        Linking.openURL(url);
+      }
+    } catch (e: any) {
+      console.warn('Error al abrir descarga de Excel FT-318:', e.message);
+    }
+  };
+
   const cargarValidacionesIngresos = async () => {
     try {
       setIngresosCargando(true);
@@ -3609,6 +5559,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     v_prov_3: true,
     v_prac_1: true,
     v_prac_3: true,
+    d_carr_1: true,
+    d_carr_3: true,
+    d_prov_1: true,
+    d_prov_3: true,
+    d_lnr_1: true,
+    d_lnr_3: true,
+    d_prac_1: true,
+    d_prac_3: true,
     d_serv_1: true,
     d_serv_3: true,
   });
@@ -3622,6 +5580,56 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
   // Modal para Cierre / Observaciones de Requisito
   const [modalObsReqVisible, setModalObsReqVisible] = useState(false);
+  // Estados para Cronograma de Términos Legales, Nómina y Exportación
+  const [modalTerminosVisible, setModalTerminosVisible] = useState(false);
+  const [modalSyncNominaVisible, setModalSyncNominaVisible] = useState(false);
+  const [modalReporteAuditoriaVisible, setModalReporteAuditoriaVisible] = useState(false);
+  const [reporteAuditoriaContenido, setReporteAuditoriaContenido] = useState<string>('');
+  const [modalFormatosVisible, setModalFormatosVisible] = useState(false);
+  const [filtroProcesoFormatos, setFiltroProcesoFormatos] = useState<'TODOS' | 'VINCULACION' | 'DESVINCULACION' | 'GUIA_NORMATIVA'>('TODOS');
+  const [busquedaFormatos, setBusquedaFormatos] = useState('');
+
+  const handleDescargarFormatoOficial = (nombreArchivo: string) => {
+    try {
+      const url = `${API_URL}/api/rrhh/formatos/descargar/${encodeURIComponent(nombreArchivo)}`;
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        Linking.openURL(url);
+      }
+    } catch (e: any) {
+      console.warn('Error al descargar formato:', e.message);
+    }
+  };
+
+  const handleAbrirEvaluacionRetiroGoogleForms = () => {
+    try {
+      if (Platform.OS === 'web') {
+        window.open(GOOGLE_FORMS_EVALUACION_RETIRO, '_blank');
+      } else {
+        Linking.openURL(GOOGLE_FORMS_EVALUACION_RETIRO);
+      }
+    } catch (e: any) {
+      console.warn('Error al abrir Google Forms:', e.message);
+    }
+  };
+  
+  // Estados para gestión y carga de documentos de soporte
+  const [modalExpedienteVisible, setModalExpedienteVisible] = useState(false);
+  const [modalMensajeDoc, setModalMensajeDoc] = useState<{
+    visible: boolean;
+    titulo: string;
+    mensaje: string;
+    tipo?: 'exito' | 'error' | 'info';
+  } | null>(null);
+  const [modalEliminarDoc, setModalEliminarDoc] = useState<{
+    visible: boolean;
+    casoId: string;
+    etapaId?: string;
+    requisitoId?: string;
+    docId: string;
+    nombreDoc: string;
+  } | null>(null);
   const [modalReqContext, setModalReqContext] = useState<{
     casoId: string;
     etapaId: string;
@@ -4859,10 +6867,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           style={{
                             flexDirection: 'row',
                             justifyContent: 'space-between',
-                            alignItems: 'center',
+                            alignItems: 'flex-start',
+                            gap: 8,
                           }}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              flexWrap: 'wrap',
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
                             <View
                               style={{
                                 paddingHorizontal: 7,
@@ -4914,22 +6932,40 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
                               );
                             })()}
+                          </View>
 
+                          <View style={{ alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
                             <Text
-                              style={{ color: THEME.slate400, fontSize: 10.5, fontWeight: '600' }}
+                              style={{
+                                color: THEME.slate400,
+                                fontSize: 10,
+                                fontWeight: '700',
+                                letterSpacing: 0.2,
+                              }}
                             >
                               {c.id}
                             </Text>
+                            <View
+                              style={{
+                                paddingHorizontal: 6,
+                                paddingVertical: 1,
+                                borderRadius: 9999,
+                                backgroundColor: THEME.emeraldBg,
+                                borderWidth: 1,
+                                borderColor: THEME.emeraldRing,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: THEME.emeraldText,
+                                  fontSize: 10.5,
+                                  fontWeight: '700',
+                                }}
+                              >
+                                {porcentaje}%
+                              </Text>
+                            </View>
                           </View>
-                          <Text
-                            style={{
-                              color: THEME.emeraldText,
-                              fontSize: 11.5,
-                              fontWeight: '700',
-                            }}
-                          >
-                            {porcentaje}%
-                          </Text>
                         </View>
 
                         <View>
@@ -5194,6 +7230,66 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 }}
                               >
                                 Validación FT-318 IA
+                              </Text>
+                            </Pressable>
+                          )}
+
+                          {/* Botón Formatos Oficiales del Proceso */}
+                          <Pressable
+                            onPress={() => setModalFormatosVisible(true)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 6,
+                              backgroundColor: '#f1f5f9',
+                              paddingHorizontal: 13,
+                              paddingVertical: 7.5,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: '#cbd5e1',
+                              minWidth: isTablet ? 175 : undefined,
+                            }}
+                          >
+                            <Ionicons name="folder-open-outline" size={14} color="#334155" />
+                            <Text
+                              style={{
+                                color: '#1e293b',
+                                fontSize: 11.5,
+                                fontWeight: '700',
+                              }}
+                            >
+                              Formatos Oficiales
+                            </Text>
+                          </Pressable>
+
+                          {/* Enlace Directo a Evaluación de Retiro (Google Forms) si es Desvinculación */}
+                          {casoActivo.tipo_proceso === 'DESVINCULACION' && (
+                            <Pressable
+                              onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                backgroundColor: '#ecfdf5',
+                                paddingHorizontal: 13,
+                                paddingVertical: 7.5,
+                                borderRadius: 8,
+                                borderWidth: 1,
+                                borderColor: '#a7f3d0',
+                                minWidth: isTablet ? 175 : undefined,
+                              }}
+                            >
+                              <Ionicons name="clipboard-outline" size={14} color="#047857" />
+                              <Text
+                                style={{
+                                  color: '#065f46',
+                                  fontSize: 11.5,
+                                  fontWeight: '700',
+                                }}
+                              >
+                                📝 Evaluación Retiro (Forms)
                               </Text>
                             </Pressable>
                           )}
@@ -5990,27 +8086,89 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   </View>
                                                 )}
 
-                                                {/* Validar con IA */}
-                                                {req.tipoAccionEspecial === 'INGRESOS_IA' && (
-                                                  <Pressable
-                                                    onPress={(e) => {
-                                                      e.stopPropagation();
-                                                      router.push('/ingresos/nueva');
-                                                    }}
-                                                    style={{
-                                                      backgroundColor: THEME.emeraldBg,
-                                                      paddingHorizontal: 6,
-                                                      paddingVertical: 1.5,
-                                                      borderRadius: 4,
-                                                      borderColor: THEME.emeraldRing,
-                                                      borderWidth: 1,
-                                                    }}
-                                                  >
-                                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.emeraldText }}>
-                                                      ✨ Validar con IA (FT-318)
-                                                    </Text>
-                                                  </Pressable>
-                                                )}
+                                                {/* Validar con IA y Descarga de Excel Oficial 2311300-FT-318 */}
+                                                {req.tipoAccionEspecial === 'INGRESOS_IA' && (() => {
+                                                  const valCoincidente = validacionesIngresos.find(
+                                                    (v) =>
+                                                      (casoActivo.servidor_cedula && v.candidato_documento === casoActivo.servidor_cedula) ||
+                                                      (casoActivo.servidor_nombre &&
+                                                        v.candidato_nombre &&
+                                                        v.candidato_nombre.toLowerCase().includes(casoActivo.servidor_nombre.toLowerCase().split(' ')[0]))
+                                                  );
+
+                                                  return (
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                      {valCoincidente ? (
+                                                        <>
+                                                          <Pressable
+                                                            onPress={(e) => {
+                                                              e.stopPropagation();
+                                                              handleDescargarExcelFT318(valCoincidente.id);
+                                                            }}
+                                                            style={{
+                                                              backgroundColor: '#dcfce7',
+                                                              paddingHorizontal: 7,
+                                                              paddingVertical: 2,
+                                                              borderRadius: 4,
+                                                              borderColor: '#86efac',
+                                                              borderWidth: 1,
+                                                              flexDirection: 'row',
+                                                              alignItems: 'center',
+                                                              gap: 3,
+                                                            }}
+                                                          >
+                                                            <Ionicons name="download" size={11} color="#166534" />
+                                                            <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#166534' }}>
+                                                              Excel FT-318 ({valCoincidente.resultado_final || 'CUMPLE'})
+                                                            </Text>
+                                                          </Pressable>
+
+                                                          <Pressable
+                                                            onPress={(e) => {
+                                                              e.stopPropagation();
+                                                              router.push(`/ingresos/${valCoincidente.id}`);
+                                                            }}
+                                                            style={{
+                                                              backgroundColor: THEME.emeraldBg,
+                                                              paddingHorizontal: 6,
+                                                              paddingVertical: 2,
+                                                              borderRadius: 4,
+                                                              borderColor: THEME.emeraldRing,
+                                                              borderWidth: 1,
+                                                            }}
+                                                          >
+                                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.emeraldText }}>
+                                                              Ver Dictamen
+                                                            </Text>
+                                                          </Pressable>
+                                                        </>
+                                                      ) : (
+                                                        <Pressable
+                                                          onPress={(e) => {
+                                                            e.stopPropagation();
+                                                            router.push('/ingresos/nueva');
+                                                          }}
+                                                          style={{
+                                                            backgroundColor: THEME.emeraldBg,
+                                                            paddingHorizontal: 7,
+                                                            paddingVertical: 2,
+                                                            borderRadius: 4,
+                                                            borderColor: THEME.emeraldRing,
+                                                            borderWidth: 1,
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            gap: 3,
+                                                          }}
+                                                        >
+                                                          <Ionicons name="sparkles" size={10} color={THEME.emeraldText} />
+                                                          <Text style={{ fontSize: 9.5, fontWeight: '700', color: THEME.emeraldText }}>
+                                                            Validación Técnica FT-318 (Excel)
+                                                          </Text>
+                                                        </Pressable>
+                                                      )}
+                                                    </View>
+                                                  );
+                                                })()}
 
                                                 {/* Botón Desplegable para ver detalle inline */}
                                                 <Pressable
@@ -6377,6 +8535,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       </Text>
                                                     </View>
                                                   )}
+
+                                                  {req.posiblesEvidencias && req.posiblesEvidencias.length > 0 && (
+                                                    <View
+                                                      style={{
+                                                        marginTop: 5,
+                                                        backgroundColor: THEME.white,
+                                                        padding: 7,
+                                                        borderRadius: 5,
+                                                        borderWidth: 1,
+                                                        borderColor: THEME.slate200,
+                                                        gap: 3,
+                                                      }}
+                                                    >
+                                                      <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate700, marginBottom: 1 }}>
+                                                        📁 Posibles Evidencias Documentales:
+                                                      </Text>
+                                                      {req.posiblesEvidencias.map((evidencia, evIdx) => (
+                                                        <View key={evIdx} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 5 }}>
+                                                          <Text style={{ fontSize: 10, color: THEME.marca600, lineHeight: 14 }}>•</Text>
+                                                          <Text style={{ fontSize: 10, color: THEME.slate600, flex: 1, lineHeight: 14 }}>
+                                                            {evidencia}
+                                                          </Text>
+                                                        </View>
+                                                      ))}
+                                                    </View>
+                                                  )}
                                                 </View>
                                               )}
 
@@ -6658,13 +8842,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: THEME.emeraldText, fontSize: 14, fontWeight: '700' }}>
-                      VALIDACIÓN TÉCNICA DE REQUISITOS (FORMATO 2311300-FT-318)
+                      VALIDACIÓN TÉCNICA DE INGRESOS — CERTIFICADO DE CUMPLIMIENTO DE REQUISITOS PARA TOMAR POSESIÓN (FORMATO 2311300-FT-318)
                     </Text>
                     <Text
                       style={{ color: THEME.slate600, fontSize: 12, marginTop: 2, lineHeight: 18 }}
                     >
-                      Cotejo de hojas de vida frente al Manual Específico de Funciones institucional.
-                      El dictamen con IA calcula la experiencia relacionada y valida títulos.
+                      Cotejo técnico de hojas de vida asistido por IA frente al Manual Específico de Funciones institucional.
+                      Genera y certifica oficialmente el archivo Excel 2311300-FT-318 exigido por ley previo a autorizar la posesión.
                     </Text>
                   </View>
                 </View>
@@ -6760,7 +8944,29 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       <Text style={{ color: THEME.slate600, fontSize: 12 }}>
                         Cargo: {val.cargo_nombre} (Cód. {val.cargo_codigo} Gr. {val.cargo_grado})
                       </Text>
-                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+                        <Pressable
+                          onPress={() => handleDescargarExcelFT318(val.id)}
+                          style={{
+                            backgroundColor: '#dcfce7',
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: '#86efac',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
+                        >
+                          <Ionicons name="download-outline" size={14} color="#166534" />
+                          <Text
+                            style={{ color: '#166534', fontSize: 11, fontWeight: '700' }}
+                          >
+                            Descargar Excel (2311300-FT-318)
+                          </Text>
+                        </Pressable>
+
                         <Pressable
                           onPress={() => router.push(`/ingresos/${val.id}`)}
                           style={{
@@ -6862,6 +9068,193 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       </Text>
                     </View>
                   ))}
+                </View>
+
+                {/* Formatos y Plantillas Descargables del Retiro */}
+                <View
+                  style={{
+                    marginTop: 10,
+                    backgroundColor: '#f8fafc',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: '#cbd5e1',
+                    padding: 16,
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Ionicons name="folder-open" size={20} color={THEME.marca700} />
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
+                        Formatos Oficiales y Encuesta de Retiro (PR-074)
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => setModalFormatosVisible(true)}
+                      style={{
+                        backgroundColor: THEME.marca50,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: THEME.marca100,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
+                        Ver Catálogo Completo
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Tarjeta de Evaluación de Retiro con Google Forms */}
+                  <View
+                    style={{
+                      backgroundColor: '#ecfdf5',
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#a7f3d0',
+                      padding: 12,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                      <View style={{ flex: 1, minWidth: 240 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#065f46' }}>
+                          Evaluación de Retiro de Servidores (2311300-FT-219)
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>
+                          Para facilitar y agilizar el diligenciamiento, el servidor puede completarlo en línea mediante el formulario oficial de Google Forms o descargar la plantilla en Excel.
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        <Pressable
+                          onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                          style={{
+                            backgroundColor: '#059669',
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            borderRadius: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Ionicons name="open-outline" size={13} color="#ffffff" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#ffffff' }}>
+                            Diligenciar en Google Forms
+                          </Text>
+                        </Pressable>
+
+                        <Pressable
+                          onPress={() => handleDescargarFormatoOficial('2311300-FT-219 Evaluación de Rétiro V2 (3).xlsx')}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            borderWidth: 1,
+                            borderColor: '#86efac',
+                            paddingHorizontal: 10,
+                            paddingVertical: 7,
+                            borderRadius: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Ionicons name="download-outline" size={13} color="#166534" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#166534' }}>
+                            Excel FT-219
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Fila de Formatos Adicionales de Retiro */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    <Pressable
+                      onPress={() => handleDescargarFormatoOficial('2311300-FT-436 ENTREGA DE CARGO POR AUSENCIA TEMPORAL O RETIRO DEFINITIVO (4).xlsx')}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        borderWidth: 1,
+                        borderColor: '#cbd5e1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        flex: 1,
+                        minWidth: 200,
+                      }}
+                    >
+                      <Ionicons name="cube-outline" size={16} color="#0284c7" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                          Entrega de Cargo (FT-436)
+                        </Text>
+                        <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>
+                          Plantilla en Excel para inventario y pendientes
+                        </Text>
+                      </View>
+                      <Ionicons name="download-outline" size={13} color={THEME.slate600} />
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleDescargarFormatoOficial('Acta de Informe de Gestión y Entrega de Cargo_V3 (5).docx')}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        borderWidth: 1,
+                        borderColor: '#cbd5e1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        flex: 1,
+                        minWidth: 200,
+                      }}
+                    >
+                      <Ionicons name="ribbon-outline" size={16} color="#4f46e5" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                          Acta Informe de Gestión
+                        </Text>
+                        <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>
+                          Word oficial (Ley 951 - Control Interno)
+                        </Text>
+                      </View>
+                      <Ionicons name="download-outline" size={13} color={THEME.slate600} />
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => handleDescargarFormatoOficial('Desvinculación de Servidores Públicos_V6_copia_controlada (3).pdf')}
+                      style={{
+                        backgroundColor: '#ffffff',
+                        borderWidth: 1,
+                        borderColor: '#cbd5e1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        flex: 1,
+                        minWidth: 200,
+                      }}
+                    >
+                      <Ionicons name="book-outline" size={16} color="#dc2626" />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                          Manual PR-074
+                        </Text>
+                        <Text style={{ fontSize: 9.5, color: THEME.slate500 }}>
+                          Procedimiento de Desvinculación V6 (PDF)
+                        </Text>
+                      </View>
+                      <Ionicons name="download-outline" size={13} color={THEME.slate600} />
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             </View>
@@ -8127,7 +10520,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         }}
                       >
                         <ScrollView nestedScrollEnabled={true} style={{ padding: 4 }}>
-                          {CAUSALES_RETIRO.map((causal) => {
+                          {(CAUSALES_RETIRO_POR_MODALIDAD[nuevaModalidad] || CAUSALES_RETIRO).map((causal) => {
                             const act = causalInput === causal;
                             return (
                               <Pressable
@@ -8925,6 +11318,193 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 )}
               </View>
 
+              {/* ============================================================== */}
+              {/* FORMATOS INSTITUCIONALES OFICIALES APLICABLES AL REQUISITO     */}
+              {/* ============================================================== */}
+              {(() => {
+                const reqId = modalReqContext?.req.id || '';
+                const reqCodigo = modalReqContext?.req.codigoFormato || '';
+                const reqLabel = (modalReqContext?.req.label || '').toLowerCase();
+
+                // Buscar formatos relacionados
+                const formatosSugeridos = LISTA_FORMATOS_OFICIALES.filter((f) => {
+                  if (f.requisitosAsociados && f.requisitosAsociados.includes(reqId)) return true;
+                  if (reqCodigo && f.codigo.includes(reqCodigo)) return true;
+                  if (reqLabel.includes('confidencialidad') && f.id === 'FT-268') return true;
+                  if (reqLabel.includes('retiro') && (f.id === 'FT-219' || f.id === 'FT-436')) return true;
+                  if (reqLabel.includes('posesión') && f.id === 'FT-127') return true;
+                  if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
+                  if (reqLabel.includes('antecedentes') && f.id === 'FT-027') return true;
+                  if (reqLabel.includes('títulos') && f.id === 'FT-319') return true;
+                  if (reqLabel.includes('entrega de cargo') && (f.id === 'FT-436' || f.id === 'ACTA-LEY-951')) return true;
+                  return false;
+                });
+
+                const esEvaluacionRetiro = reqLabel.includes('retiro') || reqId.includes('4_3') || reqId.includes('4_2');
+
+                return (
+                  <View
+                    style={{
+                      backgroundColor: '#f8fafc',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#e2e8f0',
+                      padding: 12,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="folder-outline" size={16} color={THEME.marca700} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>
+                          Plantillas y Formatos Oficiales del Proceso
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => setModalFormatosVisible(true)}
+                        style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: THEME.marca50 }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca700 }}>
+                          Ver Catálogo Completo
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {/* Si aplica Evaluación de Retiro, botón prominente para Google Forms */}
+                    {esEvaluacionRetiro && (
+                      <View
+                        style={{
+                          backgroundColor: '#ecfdf5',
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: '#a7f3d0',
+                          padding: 10,
+                          flexDirection: isTablet ? 'row' : 'column',
+                          justifyContent: 'space-between',
+                          alignItems: isTablet ? 'center' : 'flex-start',
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#065f46' }}>
+                            📝 Formulario de Evaluación de Retiro (En Línea)
+                          </Text>
+                          <Text style={{ fontSize: 10.5, color: '#047857', marginTop: 2 }}>
+                            Facilita el diligenciamiento ágil para el servidor saliente mediante Google Forms oficial.
+                          </Text>
+                        </View>
+                        <Pressable
+                          onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                          style={{
+                            backgroundColor: '#059669',
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Ionicons name="open-outline" size={13} color="#ffffff" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#ffffff' }}>
+                            Abrir Google Forms
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+
+                    {formatosSugeridos.length > 0 ? (
+                      <View style={{ gap: 6 }}>
+                        {formatosSugeridos.map((fmt) => (
+                          <View
+                            key={fmt.id}
+                            style={{
+                              backgroundColor: THEME.white,
+                              borderRadius: 6,
+                              padding: 8,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 8,
+                            }}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: fmt.tipo === 'XLSX' ? '#dcfce7' : fmt.tipo === 'PDF' ? '#fee2e2' : '#e0e7ff',
+                                    paddingHorizontal: 4,
+                                    paddingVertical: 1,
+                                    borderRadius: 3,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 9,
+                                      fontWeight: '800',
+                                      color: fmt.tipo === 'XLSX' ? '#166534' : fmt.tipo === 'PDF' ? '#991b1b' : '#3730a3',
+                                    }}
+                                  >
+                                    {fmt.tipo}
+                                  </Text>
+                                </View>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
+                                  {fmt.codigo}
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate600, marginTop: 1 }} numberOfLines={1}>
+                                {fmt.nombre}
+                              </Text>
+                            </View>
+
+                            <Pressable
+                              onPress={() => handleDescargarFormatoOficial(fmt.archivo)}
+                              style={{
+                                backgroundColor: THEME.marca50,
+                                borderWidth: 1,
+                                borderColor: THEME.marca100,
+                                paddingHorizontal: 9,
+                                paddingVertical: 4.5,
+                                borderRadius: 5,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                            >
+                              <Ionicons name="download-outline" size={12} color={THEME.marca700} />
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca700 }}>
+                                Descargar
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500, fontStyle: 'italic' }}>
+                          Descargue aquí cualquier plantilla oficial del proceso de talento humano.
+                        </Text>
+                        <Pressable
+                          onPress={() => setModalFormatosVisible(true)}
+                          style={{
+                            backgroundColor: THEME.slate100,
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            borderRadius: 4,
+                          }}
+                        >
+                          <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.slate700 }}>
+                            Ver Formatos
+                          </Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
               {/* Formulario de Observaciones y Soporte */}
               <View style={{ gap: 12 }}>
                 {/* Campo de Observaciones Multilínea */}
@@ -9402,6 +11982,63 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               </Pressable>
             </View>
 
+            {/* Selector de Proceso en Guía: Vinculación vs Desvinculación */}
+            <View
+              style={{
+                flexDirection: 'row',
+                backgroundColor: THEME.slate200,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                gap: 8,
+                alignItems: 'center',
+                borderBottomWidth: 1,
+                borderBottomColor: THEME.slate300,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Proceso:
+              </Text>
+              {(['VINCULACION', 'DESVINCULACION'] as const).map((tp) => {
+                const activo = tabGuiaTipoProceso === tp;
+                return (
+                  <Pressable
+                    key={tp}
+                    onPress={() => setTabGuiaTipoProceso(tp)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 5,
+                      paddingHorizontal: 12,
+                      borderRadius: 6,
+                      backgroundColor: activo ? THEME.white : 'transparent',
+                      borderWidth: 1,
+                      borderColor: activo ? THEME.marca600 : 'transparent',
+                      shadowColor: activo ? '#000' : 'transparent',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: activo ? 0.08 : 0,
+                      shadowRadius: 2,
+                    }}
+                  >
+                    <Ionicons
+                      name={tp === 'VINCULACION' ? 'log-in-outline' : 'log-out-outline'}
+                      size={14}
+                      color={activo ? THEME.marca800 : THEME.slate600}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: activo ? '700' : '500',
+                        color: activo ? THEME.marca900 : THEME.slate700,
+                      }}
+                    >
+                      {tp === 'VINCULACION' ? 'Vinculación / Ingreso' : 'Desvinculación / Retiro'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             {/* Pestañas de Regímenes */}
             <View
               style={{
@@ -9418,7 +12055,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 { id: 'CARRERA_ADMINISTRATIVA' as ModalidadPersonal, label: 'Carrera Administrativa', icon: 'ribbon-outline', badge: '6 Fases' },
                 { id: 'LIBRE_NOMBRAMIENTO' as ModalidadPersonal, label: 'Libre Nombramiento', icon: 'shield-outline', badge: '6 Fases' },
                 { id: 'PROVISIONALIDAD' as ModalidadPersonal, label: 'Nombramiento Provisional', icon: 'hourglass-outline', badge: '6 Fases' },
-                { id: 'PRACTICANTE_JUDICANTE' as ModalidadPersonal, label: 'Pasante / Judicante', icon: 'school-outline', badge: '5 Fases' },
+                { id: 'PRACTICANTE_JUDICANTE' as ModalidadPersonal, label: 'Pasante / Judicante', icon: 'school-outline', badge: tabGuiaTipoProceso === 'VINCULACION' ? '5 Fases' : '4 Fases' },
               ].map((tab) => {
                 const activo = tabGuiaModalidad === tab.id;
                 const infoM = obtenerInfoModalidad(tab.id);
@@ -9485,8 +12122,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               contentContainerStyle={{ padding: 22, gap: 18 }}
             >
               {(() => {
-                const infoActual = obtenerInfoModalidad(tabGuiaModalidad);
-                const etapasActuales = generarEtapasParaCaso('VINCULACION', tabGuiaModalidad);
+                const infoActual = obtenerInfoModalidad(tabGuiaModalidad, tabGuiaTipoProceso);
+                const etapasActuales = generarEtapasParaCaso(tabGuiaTipoProceso, tabGuiaModalidad);
 
                 return (
                   <>
@@ -10082,6 +12719,401 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           </View>
         </View>
       </Modal>
+
+      {/* =================================================================== */}
+      {/* MODAL INSTITUCIONAL: BANCO DE FORMATOS OFICIALES Y PLANTILLAS RRHH  */}
+      {/* =================================================================== */}
+      <Modal
+        visible={modalFormatosVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalFormatosVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: THEME.white,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: THEME.slate200,
+              width: '100%',
+              maxWidth: 760,
+              maxHeight: '92%',
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            {/* Cabecera */}
+            <View
+              style={{
+                backgroundColor: THEME.marca900,
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="folder-open" size={20} color={THEME.white} />
+                </View>
+                <View>
+                  <Text style={{ color: THEME.white, fontSize: 14.5, fontWeight: '800' }}>
+                    Banco de Formatos Oficiales y Plantillas de RRHH
+                  </Text>
+                  <Text style={{ color: THEME.marca100, fontSize: 11 }}>
+                    Secretaría Jurídica Distrital — Dirección de Gestión Corporativa / Talento Humano
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={() => setModalFormatosVisible(false)}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close" size={22} color={THEME.white} />
+              </Pressable>
+            </View>
+
+            {/* Barra de Búsqueda y Filtros */}
+            <View style={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: THEME.slate200 }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: THEME.slate50,
+                  borderRadius: 8,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderWidth: 1,
+                  borderColor: THEME.slate300,
+                  gap: 6,
+                }}
+              >
+                <Ionicons name="search" size={16} color={THEME.slate400} />
+                <TextInput
+                  value={busquedaFormatos}
+                  onChangeText={setBusquedaFormatos}
+                  placeholder="Buscar formato por código, denominación o palabra clave..."
+                  placeholderTextColor={THEME.slate400}
+                  style={{ flex: 1, fontSize: 12.5, color: THEME.slate900 }}
+                />
+                {busquedaFormatos ? (
+                  <Pressable onPress={() => setBusquedaFormatos('')}>
+                    <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                  </Pressable>
+                ) : null}
+              </View>
+
+              {/* Pestañas de Filtro */}
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                {[
+                  { id: 'TODOS', label: 'Todos' },
+                  { id: 'VINCULACION', label: 'Vinculación' },
+                  { id: 'DESVINCULACION', label: 'Desvinculación' },
+                  { id: 'GUIA_NORMATIVA', label: 'Manuales y Calidad' },
+                ].map((f) => {
+                  const sel = filtroProcesoFormatos === f.id;
+                  return (
+                    <Pressable
+                      key={f.id}
+                      onPress={() => setFiltroProcesoFormatos(f.id as any)}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        backgroundColor: sel ? THEME.marca800 : THEME.slate100,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: sel ? '700' : '500',
+                          color: sel ? THEME.white : THEME.slate700,
+                        }}
+                      >
+                        {f.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Listado de Formatos */}
+            <ScrollView contentContainerStyle={{ padding: 18, gap: 10 }}>
+              {/* Tarjeta destacada del Google Form de Evaluación de Retiro */}
+              {(filtroProcesoFormatos === 'TODOS' || filtroProcesoFormatos === 'DESVINCULACION') && (
+                <View
+                  style={{
+                    backgroundColor: '#ecfdf5',
+                    borderRadius: 10,
+                    borderWidth: 1.5,
+                    borderColor: '#6ee7b7',
+                    padding: 14,
+                    gap: 8,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 260 }}>
+                      <View style={{ backgroundColor: '#10b981', padding: 8, borderRadius: 8 }}>
+                        <Ionicons name="clipboard" size={18} color="#ffffff" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#065f46' }}>
+                          Formulario de Evaluación de Retiro (Google Forms Oficial)
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#047857' }}>
+                          Formulario en la nube para el diligenciamiento ágil y directo del servidor público saliente
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                      style={{
+                        backgroundColor: '#059669',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 7,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                      }}
+                    >
+                      <Ionicons name="open-outline" size={14} color="#ffffff" />
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#ffffff' }}>
+                        Diligenciar en Línea
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#047857', lineHeight: 15 }}>
+                    Permite capturar de manera digital e inmediata la percepción de clima organizacional, motivos de retiro y aportes de mejora institucional.
+                  </Text>
+                </View>
+              )}
+
+              {/* Formatos filtrados */}
+              {(() => {
+                let filtrados = LISTA_FORMATOS_OFICIALES;
+                if (filtroProcesoFormatos !== 'TODOS') {
+                  filtrados = filtrados.filter((f) => f.proceso === filtroProcesoFormatos);
+                }
+                if (busquedaFormatos.trim()) {
+                  const q = busquedaFormatos.trim().toLowerCase();
+                  filtrados = filtrados.filter(
+                    (f) =>
+                      f.codigo.toLowerCase().includes(q) ||
+                      f.nombre.toLowerCase().includes(q) ||
+                      f.descripcion.toLowerCase().includes(q)
+                  );
+                }
+
+                if (filtrados.length === 0) {
+                  return (
+                    <View style={{ padding: 30, alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="search-outline" size={32} color={THEME.slate300} />
+                      <Text style={{ color: THEME.slate600, fontSize: 13, fontWeight: '600' }}>
+                        No se encontraron formatos coincidentes
+                      </Text>
+                    </View>
+                  );
+                }
+
+                return filtrados.map((fmt) => {
+                  const esExcel = fmt.tipo === 'XLSX';
+                  const esPdf = fmt.tipo === 'PDF';
+                  const esWord = fmt.tipo === 'DOCX' || fmt.tipo === 'DOC';
+
+                  return (
+                    <View
+                      key={fmt.id}
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        padding: 13,
+                        gap: 8,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <View
+                              style={{
+                                backgroundColor: esExcel ? '#dcfce7' : esPdf ? '#fee2e2' : '#e0e7ff',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: '800',
+                                  color: esExcel ? '#166534' : esPdf ? '#991b1b' : '#3730a3',
+                                }}
+                              >
+                                {fmt.tipo}
+                              </Text>
+                            </View>
+
+                            <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate900 }}>
+                              {fmt.codigo}
+                            </Text>
+
+                            <View
+                              style={{
+                                backgroundColor: THEME.slate100,
+                                paddingHorizontal: 6,
+                                paddingVertical: 1.5,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 9.5, fontWeight: '600', color: THEME.slate600 }}>
+                                {fmt.version}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca800, marginTop: 4 }}>
+                            {fmt.nombre}
+                          </Text>
+
+                          <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 3, lineHeight: 16 }}>
+                            {fmt.descripcion}
+                          </Text>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate500 }}>
+                              Fases sugeridas:
+                            </Text>
+                            {fmt.fasesRecomendadas.map((fs, idx) => (
+                              <View
+                                key={idx}
+                                style={{
+                                  backgroundColor: THEME.slate50,
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1.5,
+                                  borderRadius: 4,
+                                  borderWidth: 1,
+                                  borderColor: THEME.slate200,
+                                }}
+                              >
+                                <Text style={{ fontSize: 9.5, color: THEME.slate600 }}>
+                                  {fs}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+
+                        {/* Botones de Acción */}
+                        <View style={{ flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}>
+                          <Pressable
+                            onPress={() => handleDescargarFormatoOficial(fmt.archivo)}
+                            style={{
+                              backgroundColor: esExcel ? '#166534' : esPdf ? '#991b1b' : THEME.marca700,
+                              paddingHorizontal: 12,
+                              paddingVertical: 6.5,
+                              borderRadius: 6,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 5,
+                            }}
+                          >
+                            <Ionicons name="download-outline" size={13} color={THEME.white} />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.white }}>
+                              Descargar
+                            </Text>
+                          </Pressable>
+
+                          {fmt.formularioGoogleUrl && (
+                            <Pressable
+                              onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                              style={{
+                                backgroundColor: '#ecfdf5',
+                                borderWidth: 1,
+                                borderColor: '#a7f3d0',
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 6,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                              }}
+                            >
+                              <Ionicons name="open-outline" size={12} color="#047857" />
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#047857' }}>
+                                Google Forms
+                              </Text>
+                            </Pressable>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
+            </ScrollView>
+
+            {/* Pie del modal */}
+            <View
+              style={{
+                backgroundColor: THEME.slate50,
+                paddingHorizontal: 18,
+                paddingVertical: 12,
+                borderTopWidth: 1,
+                borderTopColor: THEME.slate200,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                {LISTA_FORMATOS_OFICIALES.length} formatos oficiales y guías registradas
+              </Text>
+              <Pressable
+                onPress={() => setModalFormatosVisible(false)}
+                style={{
+                  backgroundColor: THEME.slate200,
+                  paddingHorizontal: 14,
+                  paddingVertical: 7,
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                  Cerrar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }

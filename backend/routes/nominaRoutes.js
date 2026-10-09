@@ -318,6 +318,8 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS estado_cargo TEXT DEFAULT 'OCUPADO';
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS id_escalera TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS peldano_escalera INT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS manual_funciones TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS resolucion_manual TEXT;
 
         CREATE TABLE IF NOT EXISTS public.nomina_import_logs (
             id SERIAL PRIMARY KEY,
@@ -738,8 +740,20 @@ module.exports = function (pool) {
           pl.id_escalera AS plaza_id_escalera,
           pl.peldano_escalera AS plaza_peldano_escalera
         FROM public.personal_perno_sjd per
-        LEFT JOIN public.planta_personal_sjd pl 
-          ON (per.cedula = pl.titular_cedula OR per.cedula = pl.encargo_cedula)
+        LEFT JOIN LATERAL (
+          SELECT * FROM public.planta_personal_sjd pl
+          WHERE pl.encargo_cedula = per.cedula 
+             OR pl.titular_cedula = per.cedula 
+             OR (per.posicion_planta IS NOT NULL AND pl.id_perno = per.posicion_planta)
+          ORDER BY 
+            CASE 
+              WHEN pl.encargo_cedula = per.cedula THEN 1
+              WHEN pl.titular_cedula = per.cedula THEN 2
+              ELSE 3
+            END,
+            pl.id_plaza ASC
+          LIMIT 1
+        ) pl ON true
         WHERE 1=1
       `;
       const params = [];
@@ -996,15 +1010,17 @@ module.exports = function (pool) {
         } else if (raw.includes('DEPENDENCIA DEL CARGO') || raw === 'DEPENDENCIA') {
           colMap.dep_cargo = colNum; // Col 31 (AE)
         } else if (raw.includes('DEPENDENCIA FUNCIONAL')) {
-          colMap.dep_funcional = colNum; // Col 32 (AF)
+          colMap.dep_funcional = colNum; // Col 30 (AD) o 32 (AF)
         } else if (raw.includes('PROPOSITO')) {
-          colMap.proposito = colNum; // Col 33 (AG)
-        } else if (raw === 'FUNCIONES' || raw === 'FUNCIONES ESENCIALES' || raw.includes('FUNCIONES ESENCIALES') || (raw.includes('FUNCIONES') && !raw.includes('RES') && !raw.includes('RESOLUC'))) {
-          if (!colMap.funciones) colMap.funciones = colNum; // Col 34 (AH)
+          colMap.proposito = colNum; // Col 31 (AE) o 33 (AG)
+        } else if (raw === 'FUNCIONES' || raw === 'FUNCIONES ESENCIALES' || raw.includes('FUNCIONES ESENCIALES') || (raw.includes('FUNCIONES') && !raw.includes('RES') && !raw.includes('RESOLUC') && !raw.includes('MANUAL') && !raw.includes('PAGINA') && !raw.includes('PÁGINA'))) {
+          if (!colMap.funciones) colMap.funciones = colNum; // Col 32 (AF)
         } else if (raw.includes('REQUISITOS')) {
-          colMap.requisitos = colNum; // Col 35 (AI)
+          colMap.requisitos = colNum; // Col 33 (AG) o 35 (AI)
+        } else if (raw.includes('MANUAL') || raw.includes('PAGINA') || raw.includes('PÁGINA') || raw.includes('RESOLUCION') || raw.includes('RESOLUCIÓN')) {
+          colMap.manual_funciones = colNum; // Col 34 (AH)
         } else if (raw.includes('ASIGNACION BASICA') || raw.includes('SUELDO BASICO') || raw.includes('ASIGNACION')) {
-          colMap.asignacion = colNum; // Col 37 (AK)
+          colMap.asignacion = colNum; // Col 35 (AI) o 37 (AK)
         }
       });
 
@@ -1176,9 +1192,10 @@ module.exports = function (pool) {
         const depCargo = cleanDependencia(getVal(row.getCell(colMap.dep_cargo || 31)) || getVal(row.getCell(31)) || '');
         const depFuncional = cleanDependencia(getVal(row.getCell(colMap.dep_funcional || 32)) || getVal(row.getCell(32)) || depCargo);
         const proposito = cleanText(getVal(row.getCell(colMap.proposito || 33)) || getVal(row.getCell(33)) || '');
-        const funcionesRaw = cleanText(getVal(row.getCell(colMap.funciones || 34)) || getVal(row.getCell(34)) || '');
-        const requisitos = cleanText(getVal(row.getCell(colMap.requisitos || 35)) || getVal(row.getCell(35)) || '');
-        const asignacion = cleanMoney(getVal(row.getCell(colMap.asignacion || 37)) || getVal(row.getCell(37)));
+        const funcionesRaw = cleanText(getVal(row.getCell(colMap.funciones || 32)) || getVal(row.getCell(32)) || '');
+        const requisitos = cleanText(getVal(row.getCell(colMap.requisitos || 33)) || getVal(row.getCell(33)) || '');
+        const manualFuncionesRaw = cleanText(getVal(row.getCell(colMap.manual_funciones || 34)) || getVal(row.getCell(34)) || '');
+        const asignacion = cleanMoney(getVal(row.getCell(colMap.asignacion || 35)) || getVal(row.getCell(35)) || getVal(row.getCell(37)));
 
         // Columnas Q y R: Escaleras de encargo (ID-E y N)
         let idEscalera = cleanText(getVal(row.getCell(colMap.id_escalera || 17)) || '').trim();
@@ -1214,6 +1231,7 @@ module.exports = function (pool) {
             tipo_vinculacion, situacion_administrativa, opec,
             id_escalera, peldano_escalera,
             fondo_salud, fondo_pension, fondo_cesantias, telefono, direccion, sexo,
+            manual_funciones, resolucion_manual,
             updated_at
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
@@ -1224,6 +1242,7 @@ module.exports = function (pool) {
             $21, $22, $23,
             $24, $25,
             $26, $27, $28, $29, $30, $31,
+            $32, $33,
             NOW()
           )
           ON CONFLICT (id_plaza) DO UPDATE SET
@@ -1257,6 +1276,8 @@ module.exports = function (pool) {
             telefono = COALESCE(EXCLUDED.telefono, public.planta_personal_sjd.telefono),
             direccion = COALESCE(EXCLUDED.direccion, public.planta_personal_sjd.direccion),
             sexo = COALESCE(EXCLUDED.sexo, public.planta_personal_sjd.sexo),
+            manual_funciones = COALESCE(EXCLUDED.manual_funciones, public.planta_personal_sjd.manual_funciones),
+            resolucion_manual = COALESCE(EXCLUDED.resolucion_manual, public.planta_personal_sjd.resolucion_manual),
             updated_at = NOW();
         `, [
           idPlaza, idSideap, idPerno, nivel, cargoNom, codigo, grado,
@@ -1271,7 +1292,9 @@ module.exports = function (pool) {
           personaMatch?.fondoCesantias || null,
           personaMatch?.telefono || null,
           personaMatch?.direccion || null,
-          personaMatch?.sexo || null
+          personaMatch?.sexo || null,
+          manualFuncionesRaw || null,
+          manualFuncionesRaw || null
         ]);
 
         procesados++;
@@ -1795,46 +1818,99 @@ module.exports = function (pool) {
           const idPlaza = parseInt(getVal(row.getCell(1)), 10);
           if (!idPlaza) continue;
 
-          const titularCedula = String(getVal(row.getCell(4)) || '').trim();
-          const titularNombre = String(getVal(row.getCell(5)) || '').trim();
-          const tipoVinculacion = String(getVal(row.getCell(6)) || '').trim();
-          const situacionAdmin = String(getVal(row.getCell(13)) || getVal(row.getCell(14)) || '').trim();
-          
-          const situacionTitular = String(getVal(row.getCell(14)) || '').trim();
+          // Columna 4 y 5: Ocupante actual
+          const ocupanteCedula = cleanDoc(getVal(row.getCell(4)));
+          const ocupanteNombre = cleanText(getVal(row.getCell(5)));
 
-          // Encargo y Escalera (Cols 15, 16, 17, 18)
-          const encargoCedula = String(getVal(row.getCell(15)) || '').trim() || null;
-          const encargoNombre = cleanText(getVal(row.getCell(16))) || null;
-          const idE = cleanText(getVal(row.getCell(17))) || null;
+          // Columna 6 y 7: Vinculación
+          const vincEntidad = cleanText(getVal(row.getCell(6)));
+          const tipoVinculacion = cleanText(getVal(row.getCell(7))) || vincEntidad;
+
+          // Columna 12 y 13: Situaciones administrativas
+          const situacionAdmin = cleanText(getVal(row.getCell(12)));
+          const situacionTitular = cleanText(getVal(row.getCell(13)));
+
+          // Columna 14 y 15: Titular propio de la plaza (o VACANTE DEFINITIVA)
+          const rawTitularCedula = cleanDoc(getVal(row.getCell(14)));
+          const rawTitularNombre = cleanText(getVal(row.getCell(15)));
+
+          // Columna 16 y 17: Escalera de Encargos
+          const idE = cleanText(getVal(row.getCell(16))) || null;
+          const n = parseInt(getVal(row.getCell(17)), 10) || null;
           const idEscalera = idE ? idE.toUpperCase() : null;
-          const peldanoEscalera = parseInt(getVal(row.getCell(18)), 10) || null;
-          const opec = cleanText(getVal(row.getCell(23))) || null;
+          const peldanoEscalera = n;
 
-          let estadoCargo = String(getVal(row.getCell(25)) || '').trim().toUpperCase();
-          if (!estadoCargo || estadoCargo.includes('IF(')) {
-            if (titularNombre.includes('VACANTE DEFINITIVA')) {
+          // Columna 22: OPEC
+          const opec = cleanText(getVal(row.getCell(22))) || null;
+
+          // Columna 23: Estado del cargo
+          let estadoCargo = cleanText(getVal(row.getCell(23))).toUpperCase();
+          if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
+            if (rawTitularNombre === 'VACANTE DEFINITIVA' || situacionTitular === 'VACANTE DEFINITIVA') {
               estadoCargo = 'VACANTE DEFINITIVA';
-            } else if (titularNombre.includes('VACANTE TEMPORAL')) {
+            } else if (ocupanteNombre === 'VACANTE TEMPORAL' || situacionAdmin === 'VACANTE TEMPORAL' || tipoVinculacion === 'VACANTE TEMPORAL') {
               estadoCargo = 'VACANTE TEMPORAL';
-            } else if (titularNombre) {
+            } else if (ocupanteNombre) {
               estadoCargo = 'OCUPADO';
             } else {
               estadoCargo = 'VACANTE DEFINITIVA';
             }
           }
 
-          const nivel = String(getVal(row.getCell(26)) || '').trim().toUpperCase();
-          const cargoNom = String(getVal(row.getCell(27)) || '').trim().toUpperCase();
-          const codigo = String(getVal(row.getCell(28)) || '').trim();
-          const grado = String(getVal(row.getCell(29)) || '').trim();
-          const depCargo = String(getVal(row.getCell(31)) || '').trim().toUpperCase();
-          const depFuncional = String(getVal(row.getCell(32)) || depCargo).trim().toUpperCase();
-          const proposito = String(getVal(row.getCell(33)) || '').trim();
-          const funcionesRaw = String(getVal(row.getCell(34)) || '').trim();
-          const requisitos = String(getVal(row.getCell(35)) || '').trim();
-          const asignacion = parseFloat(getVal(row.getCell(37))) || 0;
+          // Columna 24 a 27: Estructura del cargo
+          const nivel = cleanText(getVal(row.getCell(24))).toUpperCase();
+          const cargoNom = cleanText(getVal(row.getCell(25))).toUpperCase();
+          const codigo = cleanText(getVal(row.getCell(26)));
+          const grado = cleanText(getVal(row.getCell(27)));
 
-          const esEncargo = Boolean(idEscalera || encargoCedula || (encargoNombre && !encargoNombre.includes('VACANTE')) || situacionAdmin.includes('ENCARGO'));
+          // Columna 29 y 30: Dependencias
+          const depCargo = cleanDependencia(getVal(row.getCell(29)));
+          const depFuncional = cleanDependencia(getVal(row.getCell(30))) || depCargo;
+
+          // Columna 31: Propósito
+          const proposito = cleanText(getVal(row.getCell(31)));
+
+          // Columna 32: Funciones
+          const funcionesRaw = String(getVal(row.getCell(32)) || '');
+
+          // Columna 33: Requisitos
+          const requisitos = cleanText(getVal(row.getCell(33)));
+
+          // Columna 35: Asignación básica
+          const asignacion = cleanMoney(getVal(row.getCell(35)));
+
+          // Determinar Titular
+          let titularCedula = rawTitularCedula;
+          let titularNombre = rawTitularNombre;
+          if (!titularNombre || titularNombre === 'VACANTE DEFINITIVA' || situacionTitular === 'VACANTE DEFINITIVA') {
+            titularNombre = 'VACANTE DEFINITIVA';
+            titularCedula = null;
+          } else if (!titularNombre && ocupanteNombre && ocupanteNombre !== 'VACANTE TEMPORAL') {
+            titularNombre = ocupanteNombre;
+            titularCedula = ocupanteCedula;
+          }
+
+          // Encargo / Ocupante de la Plaza
+          const esEncargo = Boolean(
+            idEscalera ||
+            tipoVinculacion.toUpperCase().includes('ENCARGO') ||
+            situacionAdmin.toUpperCase().includes('ENCARGO') ||
+            situacionTitular.toUpperCase().includes('ENCARGO') ||
+            (ocupanteCedula && titularCedula && ocupanteCedula !== titularCedula) ||
+            (ocupanteNombre === 'VACANTE TEMPORAL')
+          );
+
+          let encargoCedula = null;
+          let encargoNombre = null;
+          if (esEncargo) {
+            if (ocupanteNombre === 'VACANTE TEMPORAL') {
+              encargoCedula = null;
+              encargoNombre = 'VACANTE TEMPORAL';
+            } else if (ocupanteNombre && ocupanteNombre !== 'VACANTE DEFINITIVA') {
+              encargoCedula = ocupanteCedula;
+              encargoNombre = ocupanteNombre;
+            }
+          }
 
           await pool.query(`
             INSERT INTO public.planta_personal_sjd (
@@ -1877,7 +1953,8 @@ module.exports = function (pool) {
             nivel, cargoNom, codigo, grado, depCargo, depFuncional, proposito,
             JSON.stringify(parseFunctions(funcionesRaw)), requisitos, asignacion,
             estadoCargo, titularCedula, titularNombre, tipoVinculacion, situacionAdmin,
-            situacionTitular, encargoCedula, encargoNombre, esEncargo,
+            situacionTitular || (titularNombre === 'VACANTE DEFINITIVA' ? 'VACANTE DEFINITIVA' : 'EN PROPIEDAD'),
+            encargoCedula, encargoNombre, esEncargo,
             opec, idEscalera, peldanoEscalera
           ]);
           countPlanta++;

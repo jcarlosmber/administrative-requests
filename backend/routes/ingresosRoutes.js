@@ -2008,7 +2008,9 @@ module.exports = function(pool) {
 
       const buffer = await excelReportService.generarReporteExcelValidacion(payloadData);
 
-      const filename = `Dictamen_${(val.candidato_nombre || 'Candidato').replace(/\s+/g, '_')}_${val.cargo_codigo || 'Cargo'}.xlsx`;
+      const nombreLimpio = (val.candidato_nombre || 'Candidato').replace(/\s+/g, '_');
+      const codCargo = (val.cargo_codigo || 'Cargo').replace(/\s+/g, '_');
+      const filename = `2311300-FT-318_Certificado_Cumplimiento_Requisitos_${nombreLimpio}_${codCargo}.xlsx`;
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

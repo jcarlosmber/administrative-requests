@@ -203,9 +203,24 @@ export default function NominaScreen() {
         nominaService.getEstadisticas(),
         nominaService.getPersonalPerno(),
       ]);
-      const rawPerno = Array.isArray(pernoList) && pernoList.length > 0
+      const rawPernoRaw = Array.isArray(pernoList) && pernoList.length > 0
         ? pernoList
         : ((mockPernoData as unknown as PersonaPerno[]) || []);
+
+      // Desduplicar defensivamente por cédula para que cada persona física cuente una única vez
+      const pernoVistos = new Set<string>();
+      const rawPerno: PersonaPerno[] = [];
+      rawPernoRaw.forEach((per) => {
+        const ced = String(per.cedula || '').trim();
+        if (ced) {
+          if (!pernoVistos.has(ced)) {
+            pernoVistos.add(ced);
+            rawPerno.push(per);
+          }
+        } else {
+          rawPerno.push(per);
+        }
+      });
 
       const pernoActivosPorPos = new Map<number, PersonaPerno>();
       const pernoRetirados = new Set<string>();
@@ -254,6 +269,8 @@ export default function NominaScreen() {
           es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
           opec: p.opec || m?.opec || null,
           situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+          manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
+          resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
         };
       });
       setPlazas(listadoEnriquecido);
@@ -287,9 +304,23 @@ export default function NominaScreen() {
     return (mockPlazasData as unknown as PlazaNomina[]) || [];
   }, []);
 
-  // Lista base de PERNO consolidada
+  // Lista base de PERNO consolidada (desduplicada por cédula para garantizar integridad)
   const todoElPerno = useMemo(() => {
-    return personalPerno.length > 0 ? personalPerno : (mockPernoData as unknown as PersonaPerno[]) || [];
+    const list = personalPerno.length > 0 ? personalPerno : (mockPernoData as unknown as PersonaPerno[]) || [];
+    const vistos = new Set<string>();
+    const res: PersonaPerno[] = [];
+    list.forEach((p) => {
+      const ced = String(p.cedula || '').trim();
+      if (ced) {
+        if (!vistos.has(ced)) {
+          vistos.add(ced);
+          res.push(p);
+        }
+      } else {
+        res.push(p);
+      }
+    });
+    return res;
   }, [personalPerno]);
 
   // Estadísticas consolidadas de PERNO (Activos vs Desvinculados/Retirados)
@@ -412,6 +443,8 @@ export default function NominaScreen() {
       plaza_opec: pernoModal.plaza_opec || matchPlaza.opec,
       plaza_id_escalera: pernoModal.plaza_id_escalera || matchPlaza.id_escalera,
       plaza_peldano_escalera: pernoModal.plaza_peldano_escalera || matchPlaza.peldano_escalera,
+      plaza_manual_funciones: pernoModal.plaza_manual_funciones || matchPlaza.manual_funciones || matchPlaza.resolucion_manual || null,
+      plaza_resolucion_manual: pernoModal.plaza_resolucion_manual || matchPlaza.resolucion_manual || matchPlaza.manual_funciones || null,
     };
   }, [pernoModal, plazas, todasLasPlazas]);
 
@@ -646,9 +679,9 @@ export default function NominaScreen() {
         (mockMatch?.total_devengado ? Number(mockMatch.total_devengado) : null) ||
         (plazaModal.asignacion_basica ? Number(plazaModal.asignacion_basica) : null),
       resolucion_manual:
-        plazaModal.resolucion_manual || mockMatch?.resolucion_manual || 'RES. 085 de 2020',
+        plazaModal.resolucion_manual || mockMatch?.resolucion_manual || plazaModal.manual_funciones || mockMatch?.manual_funciones || 'RES. 085 de 2020',
       manual_funciones:
-        plazaModal.manual_funciones || mockMatch?.manual_funciones || null,
+        plazaModal.manual_funciones || mockMatch?.manual_funciones || plazaModal.resolucion_manual || mockMatch?.resolucion_manual || 'RES. 085 de 2020',
       pv: plazaModal.pv || mockMatch?.pv || null,
       pp_oe: plazaModal.pp_oe || mockMatch?.pp_oe || null,
       vt_lm: plazaModal.vt_lm || mockMatch?.vt_lm || null,
@@ -3733,13 +3766,11 @@ export default function NominaScreen() {
                           { col: 'AA (27)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta de personal.', ej: 'JEFE DE OFICINA ASESORA' },
                           { col: 'AB (28)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
                           { col: 'AC (29)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
-                          { col: 'AE (31)', header: 'DEPENDENCIA DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Dependencia orgánica a la que pertenece la plaza.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
-                          { col: 'AF (32)', header: 'DEPENDENCIA FUNCIONAL', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Dependencia funcional o resoluciones de asignación funcional del cargo.', ej: 'SUBSECRETARÍA JURÍDICA DISTRITAL' },
-                          { col: 'AG (33)', header: 'PROPOSITO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Propósito principal según manual de funciones.', ej: 'Asesorar en el diseño de planes y estrategias...' },
-                          { col: 'AH (34)', header: 'FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Funciones esenciales del empleo (consolidadas con las resoluciones de Col. AF).', ej: '1. Formular proyectos... 2. Dirigir plan...' },
-                          { col: 'AI (35)', header: 'REQUISITOS', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Estudios académicos y experiencia laboral requerida.', ej: 'Título profesional en Administración. Posgrado.' },
-                          { col: 'AJ (36)', header: 'MANUAL DE FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Resolución oficial y folios del Manual Específico de Funciones y Competencias Laborales.', ej: 'RES. 085 de 2020' },
-                          { col: 'AK (37)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208469.82' },
+                          { col: 'AE (31)', header: 'PROPOSITO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Propósito principal según manual de funciones.', ej: 'Asesorar en el diseño de planes y estrategias...' },
+                          { col: 'AF (32)', header: 'FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Funciones esenciales del empleo en la planta oficial.', ej: '1. Asesorar y coordinar proyectos... 2. Dirigir...' },
+                          { col: 'AG (33)', header: 'REQUISITOS', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Estudios académicos y experiencia laboral requerida.', ej: 'Título profesional en Administración. Posgrado...' },
+                          { col: 'AH (34)', header: 'MANUAL DE FUNCIONES (PÁGINAS)', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Resolución oficial y folios del Manual Específico de Funciones (Columna AH).', ej: '34-37 RES. 085 de 2020' },
+                          { col: 'AI (35)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208470' },
                         ].map((row, idx) => (
                           <View
                             key={idx}
@@ -4915,7 +4946,7 @@ export default function NominaScreen() {
                 }}
               >
                 <View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <Text
                       style={{
                         color: 'rgba(214, 228, 244, 0.7)',
@@ -4931,6 +4962,13 @@ export default function NominaScreen() {
                       <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
                         <Text style={{ color: THEME.white, fontSize: 10, fontWeight: '700' }}>
                           SIEAP: #{plazaModal.id_sideap}
+                        </Text>
+                      </View>
+                    ) : null}
+                    {(plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual) ? (
+                      <View style={{ backgroundColor: 'rgba(254, 243, 199, 0.25)', borderColor: 'rgba(253, 230, 138, 0.4)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ color: '#FEF3C7', fontSize: 10, fontWeight: '700' }}>
+                          Manual Col. AH: {plazaModalEnriquecida.manual_funciones || plazaModalEnriquecida.resolucion_manual}
                         </Text>
                       </View>
                     ) : null}
@@ -5295,6 +5333,37 @@ export default function NominaScreen() {
                         </Text>
                       </View>
                     ) : null}
+
+                    {/* Manual de Funciones Oficial (Columna AH) */}
+                    <View
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#EFF6FF',
+                        padding: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#BFDBFE',
+                        marginTop: 4,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="bookmark-outline" size={15} color={THEME.marca700} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
+                            Manual de Funciones Oficial (Columna AH)
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1E40AF' }}>COLUMNA AH</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate900, marginTop: 4 }}>
+                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No especificado en Columna AH'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
+                        Rango de folios y resolución aprobatoria del Manual Específico de Funciones y de Competencias Laborales de la SJD.
+                      </Text>
+                    </View>
                   </View>
 
                   {/* SECCIÓN 2: SERVIDORES PÚBLICOS ASIGNADOS */}
@@ -5599,6 +5668,68 @@ export default function NominaScreen() {
                     ) : null}
                   </View>
 
+                  {/* Tarjeta Destacada: Manual de Funciones Textual (Columna AH) */}
+                  <View
+                    style={{
+                      backgroundColor: '#FEF3C7',
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: '#FDE68A',
+                      padding: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View
+                          style={{
+                            width: 30,
+                            height: 30,
+                            borderRadius: 15,
+                            backgroundColor: '#B45309',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons name="bookmark" size={16} color={THEME.white} />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#92400E', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            Manual de Funciones Textual (Columna AH)
+                          </Text>
+                          <Text style={{ fontSize: 11, color: '#B45309' }}>
+                            Folios y Acto Administrativo del Manual Específico
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={{ backgroundColor: '#FDE68A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#78350F' }}>COLUMNA AH OFICIAL</Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 8,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: '#FCD34D',
+                        marginTop: 4,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                        Texto Oficial en Planta (Columna AH - Páginas Manual de Funciones):
+                      </Text>
+                      <Text style={{ fontSize: 16, fontWeight: '800', color: '#78350F', marginTop: 4 }}>
+                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No registrado en Columna AH'}
+                      </Text>
+                    </View>
+
+                    <Text style={{ fontSize: 11.5, color: '#92400E', marginTop: 8, lineHeight: 17 }}>
+                      Identificación formal del manual de funciones y competencias laborales conforme a la Columna AH de la planta de personal de la Secretaría Jurídica Distrital.
+                    </Text>
+                  </View>
+
                   {/* Propósito Principal del Empleo */}
                   <View
                     style={{
@@ -5721,7 +5852,7 @@ export default function NominaScreen() {
                     }}
                   >
                     <Text style={{ fontSize: 11, color: THEME.slate600, lineHeight: 17 }}>
-                      <Text style={{ fontWeight: '700' }}>Marco Normativo y Manual:</Text> Funciones consolidadas a partir de las columnas AH (Funciones del cargo) y AF (Asignación y resoluciones funcionales de la SJD), bajo la {plazaModalEnriquecida?.resolucion_manual ? `Resolución ${plazaModalEnriquecida.resolucion_manual}` : 'Resolución de Manual de Funciones vigente en la Secretaría Jurídica Distrital'}, en concordancia con la Ley 909 de 2004 y el Decreto 1083 de 2015.
+                      <Text style={{ fontWeight: '700' }}>Marco Normativo y Manual:</Text> Manual de Funciones registrado textualmente en la Columna AH ({plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'Vigente'}), complementado con las resoluciones funcionales de la Columna AF ({plazaModalEnriquecida?.dependencia_funcional || 'SJD'}), bajo la {plazaModalEnriquecida?.resolucion_manual ? `Resolución ${plazaModalEnriquecida.resolucion_manual}` : 'Resolución de Manual de Funciones vigente en la Secretaría Jurídica Distrital'}, en concordancia con la Ley 909 de 2004 y el Decreto 1083 de 2015.
                     </Text>
                   </View>
                 </ScrollView>
@@ -5735,6 +5866,36 @@ export default function NominaScreen() {
                   <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
                     Perfil de Competencias y Requisitos del Cargo
                   </Text>
+
+                  {/* Referencia Textual al Manual de Funciones (Columna AH) */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: '#FEF3C7',
+                      borderColor: '#FDE68A',
+                      borderWidth: 1,
+                      padding: 10,
+                      borderRadius: 8,
+                      marginBottom: 14,
+                      flexWrap: 'wrap',
+                      gap: 6,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="bookmark" size={15} color="#92400E" />
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#92400E' }}>
+                        Requisitos según Manual de Funciones (Columna AH):
+                      </Text>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#78350F' }}>
+                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'Vigente'}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: '#FDE68A', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#78350F' }}>COL. AH</Text>
+                    </View>
+                  </View>
 
                   {/* Tarjeta de Formación Académica */}
                   <View
@@ -7054,6 +7215,20 @@ export default function NominaScreen() {
                                   <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#1E3A8A', marginTop: 2 }}>{pernoModalEnriquecida.plaza_dependencia_funcional || pernoModalEnriquecida.plaza_dependencia_cargo || pernoModalEnriquecida.dependencia}</Text>
                                 </View>
                               </View>
+
+                              <View style={{ height: 1, backgroundColor: '#DBEAFE', marginVertical: 10 }} />
+
+                              <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 6 }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Manual de Funciones Textual (Columna AH)</Text>
+                                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#1E3A8A', marginTop: 2 }}>
+                                    {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual || 'No registrado en Columna AH'}
+                                  </Text>
+                                </View>
+                                <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1D4ED8' }}>COLUMNA AH OFICIAL</Text>
+                                </View>
+                              </View>
                             </View>
 
                             {/* Propósito del Empleo */}
@@ -7083,9 +7258,18 @@ export default function NominaScreen() {
                             {/* Manual de Funciones Esenciales */}
                             {pernoModalEnriquecida.plaza_funciones ? (
                               <View style={{ backgroundColor: THEME.slate50, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900, marginBottom: 12 }}>
-                                  Manual de Funciones Esenciales del Cargo
-                                </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900 }}>
+                                    Manual de Funciones Esenciales del Cargo
+                                  </Text>
+                                  {(pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual) ? (
+                                    <View style={{ backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E' }}>
+                                        Columna AH: {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual}
+                                      </Text>
+                                    </View>
+                                  ) : null}
+                                </View>
                                 <View style={{ gap: 8 }}>
                                   {(Array.isArray(pernoModalEnriquecida.plaza_funciones)
                                     ? pernoModalEnriquecida.plaza_funciones

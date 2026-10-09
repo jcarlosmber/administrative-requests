@@ -4067,6 +4067,10 @@ app.use('/api/nomina', nominaRoutes);
 const secopRoutes = require('./routes/secopRoutes')(pool);
 app.use('/api/secop', secopRoutes);
 
+// Módulo 6: Formatos Institucionales y Procedimientos de Talento Humano
+const rrhhRoutes = require('./routes/rrhhRoutes');
+app.use('/api/rrhh', rrhhRoutes);
+
 // Fallback 404 para cualquier ruta /api para garantizar respuesta JSON y nunca HTML
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Ruta API no encontrada: ${req.method} ${req.originalUrl}` });

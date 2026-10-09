@@ -189,6 +189,8 @@ export const nominaService = {
               es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
               opec: p.opec || m?.opec || null,
               situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+              manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
+              resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
             };
 
             // Garantía: Si el titular reportado estuviera retirado en PERNO, sustituir por el activo actual o vacante

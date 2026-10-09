@@ -1673,7 +1673,7 @@ function DetalleValidacionScreen() {
           >
             <Ionicons name="download-outline" size={18} color="#FFFFFF" />
             <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>
-              Exportar Excel
+              Descargar 2311300-FT-318 (Excel)
             </Text>
           </TouchableOpacity>
 

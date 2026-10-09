@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -68,6 +69,19 @@ function IngresosDashboardScreen() {
     setModalTitle(titulo);
     setModalMessage(mensaje);
     setModalVisible(true);
+  };
+
+  const descargarExcelVal = (id: string) => {
+    try {
+      const url = ingresosService.getExcelDownloadUrl(id, configDirector);
+      if (Platform.OS === 'web') {
+        window.open(url, '_blank');
+      } else {
+        Linking.openURL(url);
+      }
+    } catch (e: any) {
+      mostrarMensaje('Error', 'No fue posible abrir el enlace de descarga: ' + e.message);
+    }
   };
 
   const pedirConfirmarEliminar = (id: string, nombre: string) => {
@@ -792,6 +806,28 @@ function IngresosDashboardScreen() {
                     >
                       <Ionicons name="refresh-outline" size={15} color="#4338CA" />
                       <Text style={{ fontSize: 12, fontWeight: '700', color: '#4338CA' }}>Rehacer</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        // @ts-ignore
+                        if (e?.stopPropagation) e.stopPropagation();
+                        descargarExcelVal(val.id);
+                      }}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 7,
+                        borderRadius: 8,
+                        backgroundColor: '#DCFCE7',
+                        borderWidth: 1,
+                        borderColor: '#86EFAC',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4
+                      }}
+                    >
+                      <Ionicons name="download-outline" size={15} color="#16A34A" />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#16A34A' }}>2311300-FT-318 (Excel)</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
