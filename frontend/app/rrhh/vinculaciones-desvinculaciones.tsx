@@ -1728,6 +1728,56 @@ export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[
   }));
 }
 
+export function sincronizarEtapasCaso(
+  etapasGuardadas: EtapaFlujo[] | undefined,
+  tipoProceso: TipoProceso,
+  modalidad: ModalidadPersonal
+): EtapaFlujo[] {
+  const etapasMaestras = generarEtapasParaCaso(tipoProceso, modalidad);
+  if (!etapasGuardadas || !Array.isArray(etapasGuardadas) || etapasGuardadas.length === 0) {
+    return etapasMaestras;
+  }
+
+  return etapasMaestras.map((etapaM) => {
+    const etapaG = etapasGuardadas.find(
+      (eg) => eg.id === etapaM.id || eg.numero === etapaM.numero
+    );
+
+    if (!etapaG) {
+      return etapaM;
+    }
+
+    const requisitosSincronizados = etapaM.requisitos.map((reqM) => {
+      let reqG = etapaG.requisitos?.find((rg) => rg.id === reqM.id);
+
+      // Reconciliación especial para requisitos unificados (ej: vp1_1)
+      if (reqM.id === 'vp1_1' && !reqG) {
+        reqG = etapaG.requisitos?.find((rg) => rg.id === 'vp1_1' || rg.id === 'vp1_2');
+      }
+
+      if (reqG) {
+        return {
+          ...reqM,
+          cumplido: reqG.cumplido,
+          fecha_cumplimiento: reqG.fecha_cumplimiento || reqM.fecha_cumplimiento,
+          observaciones: reqG.observaciones || reqM.observaciones,
+          radicadoSoporte: reqG.radicadoSoporte || reqM.radicadoSoporte,
+          usuarioRegistro: reqG.usuarioRegistro || reqM.usuarioRegistro,
+        };
+      }
+
+      return reqM;
+    });
+
+    return {
+      ...etapaM,
+      estado: etapaG.estado || etapaM.estado,
+      observacionesFase: etapaG.observacionesFase || etapaM.observacionesFase,
+      requisitos: requisitosSincronizados,
+    };
+  });
+}
+
 const CASOS_BASE: CasoFlujoFuncionario[] = [
   {
     id: 'TR-2026-001',
@@ -2008,7 +2058,10 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         if (guardados) {
           const parsed = JSON.parse(guardados);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
+            return parsed.map((c: CasoFlujoFuncionario) => ({
+              ...c,
+              etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad),
+            }));
           }
         }
       } catch (e) {
@@ -2031,6 +2084,16 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   // Casos con flujos inicializados con persistencia
   const [casos, setCasos] = useState<CasoFlujoFuncionario[]>(obtenerCasosIniciales);
   const [casoSeleccionadoId, setCasoSeleccionadoId] = useState<string>(obtenerCasoActivoInicial);
+
+  // Asegurar migración de cualquier trámite previamente persistido a las normas y textos maestros vigentes
+  useEffect(() => {
+    setCasos((prevCasos) =>
+      prevCasos.map((c) => ({
+        ...c,
+        etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad),
+      }))
+    );
+  }, []);
 
   // Guardar en localStorage de forma reactiva ante cualquier cambio en casos
   useEffect(() => {
@@ -3508,14 +3571,27 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     busquedaDesvinculaciones,
   ]);
 
-  // Caso actualmente seleccionado, adaptado al contexto de la pestaña activa
+  // Caso actualmente seleccionado, adaptado al contexto de la pestaña activa y sincronizado con las normas maestras
   const casoActivo = useMemo(() => {
+    let match: CasoFlujoFuncionario | undefined;
     if (tabActiva === 'desvinculaciones') {
-      const match = casos.find((c) => c.id === casoSeleccionadoId && c.tipo_proceso === 'DESVINCULACION');
-      return match || casos.find((c) => c.tipo_proceso === 'DESVINCULACION') || casos[0];
+      match =
+        casos.find((c) => c.id === casoSeleccionadoId && c.tipo_proceso === 'DESVINCULACION') ||
+        casos.find((c) => c.tipo_proceso === 'DESVINCULACION') ||
+        casos[0];
+    } else {
+      match =
+        casos.find((c) => c.id === casoSeleccionadoId && c.tipo_proceso === 'VINCULACION') ||
+        casos.find((c) => c.tipo_proceso === 'VINCULACION') ||
+        casos[0];
     }
-    const match = casos.find((c) => c.id === casoSeleccionadoId && c.tipo_proceso === 'VINCULACION');
-    return match || casos.find((c) => c.tipo_proceso === 'VINCULACION') || casos[0];
+
+    if (!match) return undefined;
+
+    return {
+      ...match,
+      etapas: sincronizarEtapasCaso(match.etapas, match.tipo_proceso, match.modalidad),
+    };
   }, [casos, casoSeleccionadoId, tabActiva]);
 
   // Alternar cumplimiento de requisito y recalcular estado
