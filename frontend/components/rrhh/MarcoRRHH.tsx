@@ -43,6 +43,7 @@ const ITEMS: Item[] = [
     activoSi: (p) => p.startsWith('/rrhh/vinculaciones') || p.startsWith('/rrhh/desvinculaciones'),
   },
   { ruta: '/rrhh/nomina', titulo: 'Gestión de Planta y Nómina', icono: 'briefcase-outline', activoSi: (p) => p.startsWith('/rrhh/nomina') },
+  { ruta: '/rrhh/peticiones-opec', titulo: 'Peticiones OPEC y Planta', icono: 'scale-outline', activoSi: (p) => p.startsWith('/rrhh/peticiones-opec') },
 ];
 
 const ROLES: Record<string, string> = {

@@ -281,6 +281,27 @@ export default function ModulosRRHHPagina() {
         'Módulo de alimentación y actualización por carga de archivos de Planta y Planta Perno.',
       ],
     },
+    {
+      id: 'peticiones_opec',
+      titulo: 'Derechos de Petición OPEC',
+      subtitulo: 'Asistente de Empleos Equivalentes y Planta',
+      icono: 'scale' as const,
+      colorIcono: '#BE1F2D',
+      fondoIcono: 'rgba(190, 31, 45, 0.15)',
+      badge: 'NUEVO • IA',
+      badgeColor: '#BE1F2D',
+      descripcion:
+        'Respuesta automática e instantánea a peticiones de aspirantes y CNSC: literales (a-i), empleos equivalentes, vacancias definitivas y borrador de oficio formal.',
+      tags: ['OPEC SIMO', 'Derechos de Petición', 'Vacancias Definitivas', 'Oficio Formal'],
+      ruta: '/rrhh/peticiones-opec',
+      activo: true,
+      detalles: [
+        'Cálculo automático de los literales a) al i) a partir del número de OPEC.',
+        'Identificación instantánea de empleos iguales o equivalentes en la planta global.',
+        'Generador de oficio de respuesta formal institucional listo para copiar.',
+        'Exportación de la matriz técnica a Excel con un solo clic.',
+      ],
+    },
   ];
 
   // Colores de cada módulo sobre fondo claro (misma paleta de la app de contratos)
@@ -289,6 +310,7 @@ export default function ModulosRRHHPagina() {
     teletrabajo: { color: '#0369A1', fondo: '#E0F2FE' },
     vinculaciones_desvinculaciones: { color: '#6D28D9', fondo: '#EDE9FE' },
     nomina: { color: '#047857', fondo: '#D1FAE5' },
+    peticiones_opec: { color: '#BE1F2D', fondo: '#FDECEE' },
   };
 
   return (

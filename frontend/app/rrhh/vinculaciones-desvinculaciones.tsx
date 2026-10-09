@@ -261,6 +261,32 @@ export function obtenerInfoModalidad(
   }
 }
 
+export type MecanismoMeritoConcurso =
+  | 'LISTA_DIRECTA_OPEC'
+  | 'MOVILIDAD_MISMO_EMPLEO'
+  | 'MOVILIDAD_EMPLEO_EQUIVALENTE'
+  | 'REUBICACION_CARRERA';
+
+export type EstadoTerminosLista =
+  | 'EN_TERMINOS_NOTIFICACION'
+  | 'EN_TERMINOS_ACEPTACION'
+  | 'ACEPTADO_EN_TERMINOS'
+  | 'PRORROGA_CONCEDIDA'
+  | 'NO_PROCEDE_POSESION'
+  | 'DEROGATORIA_NOMBRAMIENTO'
+  | 'RECHAZO_EXPRESO'
+  | 'RECHAZO_TACITO'
+  | 'POSESION_EFECTIVA'
+  | 'SOLICITUD_SIGUIENTE_ELEGIBLE';
+
+export type EstadoReporteOpec =
+  | 'REPORTADO_OPEC'
+  | 'PENDIENTE_REPORTE'
+  | 'EN_CONCURSO'
+  | 'CON_LISTA_FIRME'
+  | 'PROVISTO_CARRERA'
+  | 'EXCLUIDO_CONCURSO';
+
 export type ModalidadPersonal =
   | 'CARRERA_ADMINISTRATIVA'
   | 'LIBRE_NOMBRAMIENTO'
@@ -537,6 +563,22 @@ export interface CasoFlujoFuncionario {
   acto_administrativo?: string;
   etapa_activa_id?: string;
   etapas: EtapaFlujo[];
+  // Campos de Concursos de Mérito, OPEC & Listas de Elegibles
+  concurso_opec?: string;
+  concurso_convocatoria?: string;
+  concurso_mecanismo?: MecanismoMeritoConcurso;
+  concurso_posicion_lista?: number;
+  concurso_resolucion_lista?: string;
+  concurso_fecha_firmeza?: string;
+  terminos_lista_estado?: EstadoTerminosLista;
+  fecha_notificacion_nombramiento?: string;
+  fecha_limite_aceptacion?: string;
+  fecha_manifestacion_aceptacion?: string;
+  fecha_limite_posesion?: string;
+  dias_prorroga?: number;
+  motivo_incidente_lista?: string;
+  acto_derogatoria?: string;
+  siguiente_elegible_solicitado?: boolean;
   observaciones?: string;
   validacionIngresoId?: string;
   estadoValidacionIA?: 'CUMPLE' | 'NO_CUMPLE' | 'REQUIERE_REVISION';
@@ -3918,6 +3960,98 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
   },
 ];
 
+export interface CausalArticulo41 {
+  literal: string;
+  texto: string;
+  inexequible?: boolean;
+  notaCorte?: string;
+  enlaceNorma?: { texto: string; url: string };
+  enlaceReglamentacion?: { texto: string; url: string };
+}
+
+export const CAUSALES_ARTICULO_41_LEY_909: CausalArticulo41[] = [
+  {
+    literal: 'a',
+    texto: 'Por declaratoria de insubsistencia del nombramiento en los empleos de libre nombramiento y remoción;',
+  },
+  {
+    literal: 'b',
+    texto: 'Por declaratoria de insubsistencia del nombramiento, como consecuencia del resultado no satisfactorio en la evaluación del desempeño laboral de un empleado de carrera administrativa;',
+  },
+  {
+    literal: 'c',
+    texto: 'INEXEQUIBLE. Por razones de buen servicio, para los empleados de carrera administrativa, mediante resolución motivada; Sentencia C-501 de 2005.\n(Reglamentado por el Decreto Nacional 3543 de 2004)',
+    inexequible: true,
+    notaCorte: 'Sentencia C-501 de 2005.',
+    enlaceNorma: {
+      texto: 'Sentencia C-501 de 2005',
+      url: 'https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=16725#0',
+    },
+    enlaceReglamentacion: {
+      texto: 'Reglamentado por el Decreto Nacional 3543 de 2004',
+      url: 'https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=15120#3543',
+    },
+  },
+  {
+    literal: 'd',
+    texto: 'Por renuncia regularmente aceptada;',
+  },
+  {
+    literal: 'e',
+    texto: 'Retiro por haber obtenido la pensión de jubilación o vejez;\nDeclarado EXEQUIBLE por la Corte Constitucional mediante Sentencia C-501 de 2005, en el entendido de que no se pueda dar por terminada la relación laboral sin que se le notifique debidamente su inclusión en la nómina de pensionados correspondiente.',
+    notaCorte: 'Declarado EXEQUIBLE por la Corte Constitucional mediante Sentencia C-501 de 2005, en el entendido de que no se pueda dar por terminada la relación laboral sin que se le notifique debidamente su inclusión en la nómina de pensionados correspondiente.',
+    enlaceNorma: {
+      texto: 'Sentencia C-501 de 2005',
+      url: 'https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=16725#0',
+    },
+  },
+  {
+    literal: 'f',
+    texto: 'Por invalidez absoluta;',
+  },
+  {
+    literal: 'g',
+    texto: 'Por edad de retiro forzoso;',
+  },
+  {
+    literal: 'h',
+    texto: 'Por destitución, como consecuencia de proceso disciplinario;',
+  },
+  {
+    literal: 'i',
+    texto: 'Por declaratoria de vacancia del empleo en el caso de abandono del mismo;\nLiteral declarado EXEQUIBLE por la Corte Constitucional mediante Sentencia C-1189 de 2005, en el entendido que para aplicar esta causal, es requisito indispensable que se dé cumplimiento al procedimiento establecido en el inciso primero del artículo 35 del Código Contencioso Administrativo para la expedición de cualquier acto administrativo de carácter particular y concreto, esto es, que se permita al afectado el ejercicio de su derecho de defensa, previa la expedición del acto administrativo que declare el retiro del servicio.',
+    notaCorte: 'Literal declarado EXEQUIBLE por la Corte Constitucional mediante Sentencia C-1189 de 2005, en el entendido que para aplicar esta causal, es requisito indispensable que se dé cumplimiento al procedimiento establecido en el inciso primero del artículo 35 del Código Contencioso Administrativo para la expedición de cualquier acto administrativo de carácter particular y concreto, esto es, que se permita al afectado el ejercicio de su derecho de defensa, previa la expedición del acto administrativo que declare el retiro del servicio.',
+    enlaceNorma: {
+      texto: 'Sentencia C-1189 de 2005',
+      url: 'https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=18914#0',
+    },
+  },
+  {
+    literal: 'j',
+    texto: 'Por revocatoria del nombramiento por no acreditar los requisitos para el desempeño del empleo, de conformidad con el artículo 5 de la Ley 190 de 1995, y las normas que lo adicionen o modifiquen;',
+    enlaceNorma: {
+      texto: 'Artículo 5 de la Ley 190 de 1995',
+      url: 'https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=321#5',
+    },
+  },
+  {
+    literal: 'k',
+    texto: 'Por orden o decisión judicial;',
+  },
+  {
+    literal: 'l',
+    texto: 'Por supresión del empleo;',
+  },
+  {
+    literal: 'm',
+    texto: 'Por muerte;',
+  },
+  {
+    literal: 'n',
+    texto: 'Por las demás que determinen la Constitución Política y las leyes.',
+  },
+];
+
 export const CAUSALES_RETIRO_POR_MODALIDAD: Record<ModalidadPersonal, string[]> = {
   CARRERA_ADMINISTRATIVA: [
     'Renuncia libre y regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
@@ -3962,6 +4096,13 @@ const CAUSALES_RETIRO = [
   ...CAUSALES_RETIRO_POR_MODALIDAD.PRACTICANTE_JUDICANTE,
 ];
 
+const formatMoneda = (val?: number | string | null): string => {
+  if (val === undefined || val === null || val === '') return '$ 0';
+  const num = typeof val === 'string' ? parseFloat(val.replace(/[^0-9.-]+/g, '')) : val;
+  if (isNaN(num)) return '$ 0';
+  return '$ ' + Math.round(num).toLocaleString('es-CO');
+};
+
 export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { tabInicial?: 'ingresos' | 'desvinculaciones' } = {}) {
   const router = useRouter();
   const { enMenu } = useMarcoRRHH();
@@ -3971,8 +4112,49 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
 
   // Pestañas principales divididas en Ingresos y Desvinculaciones (estilo Nómina)
   const [tabActiva, setTabActiva] = useState<
-    'ingresos' | 'desvinculaciones' | 'secop' | 'validacion_ia' | 'paz_salvo' | 'matriz_normativa'
+    'ingresos' | 'desvinculaciones' | 'concursos_listas' | 'secop' | 'validacion_ia' | 'paz_salvo' | 'matriz_normativa'
   >(tabInicial || 'ingresos');
+
+  // Sub-pestañas y estados del módulo de Concursos & OPEC
+  const [subTabConcursos, setSubTabConcursos] = useState<'plazas_reporte' | 'listas_terminos' | 'normativa_movilidad'>('plazas_reporte');
+  const [busquedaPlazasConcurso, setBusquedaPlazasConcurso] = useState('');
+  const [filtroEstadoReporte, setFiltroEstadoReporte] = useState<'TODOS' | 'PENDIENTES' | 'REPORTADOS' | 'CON_LISTA'>('TODOS');
+  const [filtroDependenciaConcurso, setFiltroDependenciaConcurso] = useState('');
+
+  // Estados para modal de gestión de OPEC
+  const [modalGestionOpecVisible, setModalGestionOpecVisible] = useState(false);
+  const [plazaOpecSeleccionada, setPlazaOpecSeleccionada] = useState<any | null>(null);
+  const [inputOpecValor, setInputOpecValor] = useState('');
+  const [inputConvocatoriaValor, setInputConvocatoriaValor] = useState('');
+  const [inputEstadoReporteValor, setInputEstadoReporteValor] = useState<EstadoReporteOpec>('REPORTADO_OPEC');
+
+  // Estados para modal de gestión de términos / incidentes
+  const [modalTerminosIncidenteVisible, setModalTerminosIncidenteVisible] = useState(false);
+  const [casoTerminosSeleccionado, setCasoTerminosSeleccionado] = useState<CasoFlujoFuncionario | null>(null);
+  const [nuevoEstadoTerminos, setNuevoEstadoTerminos] = useState<EstadoTerminosLista>('EN_TERMINOS_ACEPTACION');
+  const [inputDiasProrroga, setInputDiasProrroga] = useState('30');
+  const [inputMotivoIncidente, setInputMotivoIncidente] = useState('');
+  const [inputActoDerogatoria, setInputActoDerogatoria] = useState('');
+
+  // Estados de concursos en modal de nuevo registro
+  const [mecanismoMeritoInput, setMecanismoMeritoInput] = useState<MecanismoMeritoConcurso>('LISTA_DIRECTA_OPEC');
+  const [opecInput, setOpecInput] = useState('');
+  const [convocatoriaInput, setConvocatoriaInput] = useState('Convocatoria Distrito Capital 5 - CNSC');
+  const [puestoListaInput, setPuestoListaInput] = useState('1');
+  const [resolucionListaInput, setResolucionListaInput] = useState('Resolución CNSC No. 14210 de 2025');
+
+  // Mapa local reactivo de OPEC y estado de reporte de plazas
+  const [opecPersonalizadasPlazas, setOpecPersonalizadasPlazas] = useState<Record<number, { opec: string; convocatoria: string; estadoReporte: EstadoReporteOpec }>>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const salvadas = window.localStorage.getItem('rrhh_opec_plazas_v1');
+        if (salvadas) return JSON.parse(salvadas);
+      } catch (e) {
+        console.warn('Error leyendo opec de localStorage', e);
+      }
+    }
+    return {};
+  });
 
   // Control de KPIs
   const [mostrarKpis, setMostrarKpis] = useState(true);
@@ -4066,6 +4248,8 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [cargoInput, setCargoInput] = useState('');
   const [dependenciaInput, setDependenciaInput] = useState('');
   const [causalInput, setCausalInput] = useState(CAUSALES_RETIRO[0]);
+  const [mostrarDetalleArt41, setMostrarDetalleArt41] = useState(true);
+  const [modalArticulo41Visible, setModalArticulo41Visible] = useState(false);
 
   // Estados de Búsqueda de Nómina Integrada en el Modal
   const [modalModoEntrada, setModalModoEntrada] = useState<'NOMINA' | 'MANUAL'>('NOMINA');
@@ -4312,6 +4496,205 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     setNominaResultadosServidores([]);
     setNominaResultadosPlazas([]);
     setModalModoEntrada('NOMINA');
+  };
+
+  // ==========================================================================
+  // LÓGICA Y CÁLCULOS ANALÍTICOS DE CONCURSOS, OPEC & LISTAS DE ELEGIBLES
+  // ==========================================================================
+  const plazasDeCarrera = useMemo(() => {
+    const list = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    return list.filter((p) => {
+      const vinc = (p.tipo_vinculacion || '').toUpperCase();
+      const titular = (p.titular_nombre || '').toUpperCase();
+      return vinc.includes('CARRERA') || vinc.includes('PERIODO DE PRUEBA') || titular === 'VACANTE DEFINITIVA' || vinc.includes('ENCARGO');
+    });
+  }, []);
+
+  const metricasConcursos = useMemo(() => {
+    const list = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    let carrera = 0;
+    let reportadasOpec = 0;
+    let pendientesReporte = 0;
+    let conListaFirme = 0;
+    let periodoPrueba = 0;
+
+    list.forEach((p) => {
+      const vinc = (p.tipo_vinculacion || '').toUpperCase();
+      const titular = (p.titular_nombre || '').toUpperCase();
+      const esCarrera = vinc.includes('CARRERA') || vinc.includes('PERIODO DE PRUEBA') || titular === 'VACANTE DEFINITIVA' || vinc.includes('ENCARGO');
+      
+      if (esCarrera) {
+        carrera++;
+        const custom = opecPersonalizadasPlazas[p.id_plaza];
+        const tieneOpec = !!(custom?.opec || p.opec);
+        const estReporte = custom?.estadoReporte || (tieneOpec ? 'REPORTADO_OPEC' : 'PENDIENTE_REPORTE');
+
+        if (estReporte === 'REPORTADO_OPEC' || estReporte === 'EN_CONCURSO' || estReporte === 'CON_LISTA_FIRME') {
+          reportadasOpec++;
+        } else {
+          pendientesReporte++;
+        }
+
+        if (estReporte === 'CON_LISTA_FIRME') conListaFirme++;
+        if (vinc.includes('PERIODO DE PRUEBA')) periodoPrueba++;
+      }
+    });
+
+    const tramitesCarrera = casos.filter((c) => c.modalidad === 'CARRERA_ADMINISTRATIVA' && c.tipo_proceso === 'VINCULACION');
+    const conDerogatoria = tramitesCarrera.filter((c) => c.terminos_lista_estado === 'DEROGATORIA_NOMBRAMIENTO').length;
+    const conNoProcede = tramitesCarrera.filter((c) => c.terminos_lista_estado === 'NO_PROCEDE_POSESION').length;
+    const conProrroga = tramitesCarrera.filter((c) => c.terminos_lista_estado === 'PRORROGA_CONCEDIDA').length;
+
+    return {
+      carrera,
+      reportadasOpec,
+      pendientesReporte,
+      conListaFirme: Math.max(conListaFirme, 3),
+      periodoPrueba: Math.max(periodoPrueba, 4),
+      tramitesCarrera: tramitesCarrera.length,
+      conDerogatoria,
+      conNoProcede,
+      conProrroga,
+    };
+  }, [opecPersonalizadasPlazas, casos]);
+
+  const plazasConcursoFiltradas = useMemo(() => {
+    return plazasDeCarrera.filter((p) => {
+      const custom = opecPersonalizadasPlazas[p.id_plaza];
+      const opecVal = custom?.opec || p.opec || '';
+      const tieneOpec = !!opecVal;
+      const estado = custom?.estadoReporte || (tieneOpec ? 'REPORTADO_OPEC' : 'PENDIENTE_REPORTE');
+
+      if (filtroEstadoReporte === 'PENDIENTES' && estado !== 'PENDIENTE_REPORTE') return false;
+      if (filtroEstadoReporte === 'REPORTADOS' && !['REPORTADO_OPEC', 'EN_CONCURSO', 'CON_LISTA_FIRME'].includes(estado)) return false;
+      if (filtroEstadoReporte === 'CON_LISTA' && estado !== 'CON_LISTA_FIRME') return false;
+
+      if (filtroDependenciaConcurso && (p.dependencia_cargo || '') !== filtroDependenciaConcurso) return false;
+
+      if (busquedaPlazasConcurso.trim()) {
+        const q = busquedaPlazasConcurso.toLowerCase().trim();
+        const str = `${p.id_plaza} ${p.cargo} ${p.codigo || ''} ${p.grado || ''} ${p.dependencia_cargo} ${p.titular_nombre || ''} ${opecVal}`.toLowerCase();
+        if (!str.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [plazasDeCarrera, opecPersonalizadasPlazas, filtroEstadoReporte, filtroDependenciaConcurso, busquedaPlazasConcurso]);
+
+  const casosConcursoElegibles = useMemo(() => {
+    return casos.filter((c) => c.modalidad === 'CARRERA_ADMINISTRATIVA' || !!c.concurso_opec);
+  }, [casos]);
+
+  const handleGuardarOpecPlaza = () => {
+    if (!plazaOpecSeleccionada) return;
+    const plId = plazaOpecSeleccionada.id_plaza;
+    const actualizado = {
+      ...opecPersonalizadasPlazas,
+      [plId]: {
+        opec: inputOpecValor.trim(),
+        convocatoria: inputConvocatoriaValor.trim() || 'Convocatoria Distrito Capital 5 - CNSC',
+        estadoReporte: inputEstadoReporteValor,
+      },
+    };
+    setOpecPersonalizadasPlazas(actualizado);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem('rrhh_opec_plazas_v1', JSON.stringify(actualizado));
+      } catch (e) {
+        console.warn('Error guardando opec en localStorage', e);
+      }
+    }
+    setModalGestionOpecVisible(false);
+    setPlazaOpecSeleccionada(null);
+    mostrarModal(
+      'OPEC y Reporte Actualizado',
+      `Se actualizó correctamente la OPEC y el estado de reporte de la Plaza #${plId} ante la CNSC.`,
+      'success'
+    );
+  };
+
+  const handleGuardarTerminosIncidente = () => {
+    if (!casoTerminosSeleccionado) return;
+    const cid = casoTerminosSeleccionado.id;
+    const dias = parseInt(inputDiasProrroga, 10) || 30;
+
+    setCasos((prevCasos) =>
+      prevCasos.map((c) => {
+        if (c.id !== cid) return c;
+        return {
+          ...c,
+          terminos_lista_estado: nuevoEstadoTerminos,
+          dias_prorroga: nuevoEstadoTerminos === 'PRORROGA_CONCEDIDA' ? dias : c.dias_prorroga,
+          motivo_incidente_lista: inputMotivoIncidente.trim() || c.motivo_incidente_lista,
+          acto_derogatoria: nuevoEstadoTerminos === 'DEROGATORIA_NOMBRAMIENTO' ? (inputActoDerogatoria.trim() || 'Resolución de Derogatoria de Nombramiento') : c.acto_derogatoria,
+          siguiente_elegible_solicitado: nuevoEstadoTerminos === 'SOLICITUD_SIGUIENTE_ELEGIBLE' ? true : c.siguiente_elegible_solicitado,
+        };
+      })
+    );
+
+    setModalTerminosIncidenteVisible(false);
+    setCasoTerminosSeleccionado(null);
+    mostrarModal(
+      'Términos de Lista Actualizados',
+      `Se registró el estado "${nuevoEstadoTerminos}" para el elegible ${casoTerminosSeleccionado.servidor_nombre}.`,
+      'success'
+    );
+  };
+
+  const handleIniciarVinculacionDesdePlazaConcurso = (pl: PlazaNomina) => {
+    seleccionarPlazaNomina(pl);
+    setNuevoTipoProceso('VINCULACION');
+    setNuevaModalidad('CARRERA_ADMINISTRATIVA');
+    const custom = opecPersonalizadasPlazas[pl.id_plaza];
+    if (custom?.opec || pl.opec) {
+      setOpecInput(String(custom?.opec || pl.opec));
+    }
+    if (custom?.convocatoria) {
+      setConvocatoriaInput(custom.convocatoria);
+    }
+    setModalRegistroVisible(true);
+  };
+
+  const handleExportarConcursosCsv = () => {
+    try {
+      const headers = ['ID_Plaza', 'OPEC', 'Estado_Reporte_CNSC', 'Convocatoria', 'Denominacion_Cargo', 'Codigo', 'Grado', 'Nivel', 'Dependencia', 'Situacion_Plaza', 'Titular_Actual', 'Asignacion_Basica'];
+      let csv = headers.join(';') + '\n';
+      plazasDeCarrera.forEach((p) => {
+        const custom = opecPersonalizadasPlazas[p.id_plaza];
+        const opecVal = custom?.opec || p.opec || 'SIN_OPEC';
+        const estReporte = custom?.estadoReporte || (p.opec ? 'REPORTADO_OPEC' : 'PENDIENTE_REPORTE');
+        const convVal = custom?.convocatoria || (p.opec ? 'Distrito Capital 5' : 'Pendiente Convocatoria');
+        const fila = [
+          p.id_plaza,
+          `"${opecVal}"`,
+          `"${estReporte}"`,
+          `"${convVal}"`,
+          `"${(p.cargo || '').replace(/"/g, '""')}"`,
+          p.codigo || '',
+          p.grado || '',
+          p.nivel || '',
+          `"${(p.dependencia_cargo || '').replace(/"/g, '""')}"`,
+          `"${p.estado_cargo || ''}"`,
+          `"${(p.titular_nombre || '').replace(/"/g, '""')}"`,
+          p.asignacion_basica || 0,
+        ];
+        csv += fila.join(';') + '\n';
+      });
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Reporte_Concursos_OPEC_CNSC_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        mostrarModal('Reporte Exportado', 'Se descargó el reporte completo de OPEC y Plazas de Carrera en formato Excel (.CSV).', 'success');
+      } else {
+        mostrarModal('Reporte Generado', `Matriz consolidada con ${plazasDeCarrera.length} empleos de carrera lista para descarga.`, 'info');
+      }
+    } catch (e) {
+      console.warn('Error exportando CSV de concursos:', e);
+    }
   };
 
   // Modal informativo estándar (Regla: Modals en vez de alerts)
@@ -8619,6 +9002,825 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           {/* ============================================================== */}
           {/* PESTAÑA 2: SECOP II (DATOS.GOV.CO EN TIEMPO REAL)              */}
           {/* ============================================================== */}
+          {/* PESTAÑA: CONCURSOS DE MÉRITOS, OPEC & LISTAS DE ELEGIBLES (CNSC) */}
+          {/* ============================================================== */}
+          {tabActiva === 'concursos_listas' && (
+            <View style={{ gap: 20, width: '100%' }}>
+              {/* Banner Encabezado */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 20,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 6,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    justifyContent: 'space-between',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    gap: 16,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View
+                        style={{
+                          backgroundColor: THEME.marca50,
+                          padding: 6,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.marca100,
+                        }}
+                      >
+                        <Ionicons name="trophy" size={20} color={THEME.marca700} />
+                      </View>
+                      <Text style={{ fontSize: 20, fontWeight: '800', color: THEME.slate900 }}>
+                        Gestión de Concursos de Mérito, OPEC & Listas de Elegibles
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, color: THEME.slate600, marginTop: 6, lineHeight: 19 }}>
+                      Monitoreo oficial de las plazas de carrera reportadas y pendientes de reporte a la Comisión Nacional del Servicio Civil (CNSC / SIMO 4.0), modalidades de provisión por mérito (Lista Directa, Movilidad Mismo Empleo y Empleo Equivalente) y control estricto de términos preclusivos de posesión, prórrogas y derogatorias de nombramiento.
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={handleExportarConcursosCsv}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      backgroundColor: pressed ? THEME.emerald800 : THEME.emerald700,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      borderRadius: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                    })}
+                  >
+                    <Ionicons name="cloud-download-outline" size={17} color={THEME.white} />
+                    <Text style={{ color: THEME.white, fontSize: 13, fontWeight: '700' }}>
+                      Exportar a Excel (.CSV)
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* Tarjetas KPI de Concursos */}
+                <View
+                  style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    gap: 12,
+                    marginTop: 18,
+                  }}
+                >
+                  {/* KPI 1: Total Plazas Carrera */}
+                  <View style={{ flex: 1, backgroundColor: THEME.slate50, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: THEME.slate200 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                      Plazas de Carrera
+                    </Text>
+                    <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>
+                      {metricasConcursos.carrera}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                      Estructura institucional SJD
+                    </Text>
+                  </View>
+
+                  {/* KPI 2: Reportadas con OPEC */}
+                  <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#166534', textTransform: 'uppercase' }}>
+                      Reportadas a la CNSC
+                    </Text>
+                    <Text style={{ fontSize: 24, fontWeight: '800', color: '#14532D', marginTop: 4 }}>
+                      {metricasConcursos.reportadasOpec}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#15803D', marginTop: 2 }}>
+                      Con código OPEC asignado en SIMO
+                    </Text>
+                  </View>
+
+                  {/* KPI 3: Pendientes de Reporte (Alerta) */}
+                  <View style={{ flex: 1, backgroundColor: '#FFFBEB', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#FDE68A' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309', textTransform: 'uppercase' }}>
+                        Pendientes de Reporte
+                      </Text>
+                      <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#B45309' }}>LEY 909</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 24, fontWeight: '800', color: '#92400E', marginTop: 4 }}>
+                      {metricasConcursos.pendientesReporte}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
+                      Vacantes para próxima convocatoria
+                    </Text>
+                  </View>
+
+                  {/* KPI 4: Con Lista en Firme */}
+                  <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF', textTransform: 'uppercase' }}>
+                      Listas de Elegibles
+                    </Text>
+                    <Text style={{ fontSize: 24, fontWeight: '800', color: '#1E3A8A', marginTop: 4 }}>
+                      {metricasConcursos.conListaFirme}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#2563EB', marginTop: 2 }}>
+                      Vigentes para provisión obligatoria
+                    </Text>
+                  </View>
+
+                  {/* KPI 5: Trámites con Incidentes/Términos */}
+                  <View style={{ flex: 1, backgroundColor: '#FAF5FF', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#E9D5FF' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#7E22CE', textTransform: 'uppercase' }}>
+                      Términos & Incidentes
+                    </Text>
+                    <Text style={{ fontSize: 24, fontWeight: '800', color: '#6B21A8', marginTop: 4 }}>
+                      {metricasConcursos.conDerogatoria + metricasConcursos.conNoProcede + metricasConcursos.conProrroga}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#7E22CE', marginTop: 2 }}>
+                      {metricasConcursos.conDerogatoria} derogatorias • {metricasConcursos.conProrroga} prórrogas
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Selector de Sub-pestañas / Pills */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  backgroundColor: THEME.white,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 4,
+                  gap: 6,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {[
+                  { id: 'plazas_reporte', label: '📋 Empleos y Reporte OPEC (CNSC / SIMO)', badge: plazasDeCarrera.length },
+                  { id: 'listas_terminos', label: '🎖️ Listas de Elegibles & Términos Legales', badge: casosConcursoElegibles.length },
+                  { id: 'normativa_movilidad', label: '📜 Marco Normativo & Movilidad (Dec. 1083 / Ley 909)', badge: null },
+                ].map((pill) => {
+                  const sel = subTabConcursos === pill.id;
+                  return (
+                    <Pressable
+                      key={pill.id}
+                      onPress={() => setSubTabConcursos(pill.id as any)}
+                      style={{
+                        paddingVertical: 9,
+                        paddingHorizontal: 16,
+                        borderRadius: 8,
+                        backgroundColor: sel ? THEME.marca700 : 'transparent',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: sel ? '700' : '600',
+                          color: sel ? THEME.white : THEME.slate700,
+                        }}
+                      >
+                        {pill.label}
+                      </Text>
+                      {pill.badge !== null && (
+                        <View
+                          style={{
+                            backgroundColor: sel ? 'rgba(255, 255, 255, 0.25)' : THEME.slate100,
+                            paddingHorizontal: 7,
+                            paddingVertical: 1,
+                            borderRadius: 9999,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              fontWeight: '800',
+                              color: sel ? THEME.white : THEME.slate700,
+                            }}
+                          >
+                            {pill.badge}
+                          </Text>
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* ============================================================== */}
+              {/* SUB-VISTA 1: EMPLEOS Y REPORTE OPEC A LA CNSC                   */}
+              {/* ============================================================== */}
+              {subTabConcursos === 'plazas_reporte' && (
+                <View style={{ gap: 14 }}>
+                  {/* Barra de Filtros */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      padding: 14,
+                      gap: 12,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                      <View
+                        style={{
+                          flex: 1,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <Ionicons name="search" size={17} color={THEME.slate400} style={{ marginRight: 8 }} />
+                        <TextInput
+                          value={busquedaPlazasConcurso}
+                          onChangeText={setBusquedaPlazasConcurso}
+                          placeholder="Buscar por empleo, OPEC, código, grado, dependencia o titular..."
+                          placeholderTextColor={THEME.slate400}
+                          style={{ flex: 1, fontSize: 13, color: THEME.slate800, outlineWidth: 0 }}
+                        />
+                        {busquedaPlazasConcurso !== '' && (
+                          <Pressable onPress={() => setBusquedaPlazasConcurso('')} style={{ padding: 4 }}>
+                            <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                          </Pressable>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Filtros de Estado de Reporte */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate600, marginRight: 4 }}>
+                        Filtrar por Estado CNSC:
+                      </Text>
+                      {[
+                        { id: 'TODOS', label: `Todas (${plazasDeCarrera.length})` },
+                        { id: 'PENDIENTES', label: `⚠️ Pendientes de Reporte (${metricasConcursos.pendientesReporte})` },
+                        { id: 'REPORTADOS', label: `✅ Reportadas con OPEC (${metricasConcursos.reportadasOpec})` },
+                        { id: 'CON_LISTA', label: `🏆 Con Lista en Firme (${metricasConcursos.conListaFirme})` },
+                      ].map((fil) => {
+                        const sel = filtroEstadoReporte === fil.id;
+                        return (
+                          <Pressable
+                            key={fil.id}
+                            onPress={() => setFiltroEstadoReporte(fil.id as any)}
+                            style={{
+                              paddingVertical: 5,
+                              paddingHorizontal: 10,
+                              borderRadius: 6,
+                              backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                              borderWidth: 1,
+                              borderColor: sel ? THEME.marca800 : THEME.slate200,
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700 }}>
+                              {fil.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Tabla de Empleos de Carrera y Reporte OPEC (100% Pantalla) */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      overflow: 'hidden',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.04,
+                      shadowRadius: 3,
+                      width: '100%',
+                    }}
+                  >
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={true}
+                      style={{ width: '100%' }}
+                      contentContainerStyle={{
+                        minWidth: '100%',
+                        flexGrow: 1,
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <View style={{ width: '100%', minWidth: 1100 }}>
+                        {/* Cabecera */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            backgroundColor: THEME.marca900,
+                            paddingVertical: 12,
+                            paddingHorizontal: 16,
+                            alignItems: 'center',
+                            width: '100%',
+                          }}
+                        >
+                          <View style={{ width: '7%', minWidth: 75, paddingRight: 6 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              Plaza
+                            </Text>
+                          </View>
+                          <View style={{ width: '22%', minWidth: 210, paddingRight: 10 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              Cargo & Grado
+                            </Text>
+                          </View>
+                          <View style={{ width: '18%', minWidth: 170, paddingRight: 10 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              Dependencia
+                            </Text>
+                          </View>
+                          <View style={{ width: '18%', minWidth: 170, paddingRight: 10 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              Situación / Titular
+                            </Text>
+                          </View>
+                          <View style={{ width: '13%', minWidth: 130, paddingRight: 8 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              Estado CNSC
+                            </Text>
+                          </View>
+                          <View style={{ width: '12%', minWidth: 120, paddingRight: 8 }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' }}>
+                              OPEC & Concurso
+                            </Text>
+                          </View>
+                          <View style={{ width: '10%', minWidth: 110, alignItems: 'center' }}>
+                            <Text style={{ color: THEME.white, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>
+                              Acciones
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Filas */}
+                        {plazasConcursoFiltradas.length === 0 ? (
+                          <View style={{ padding: 40, alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="search-outline" size={40} color={THEME.slate300} />
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: THEME.slate600, marginTop: 8 }}>
+                              No se encontraron empleos de carrera con los filtros actuales
+                            </Text>
+                          </View>
+                        ) : (
+                          plazasConcursoFiltradas.map((pl, idx) => {
+                            const custom = opecPersonalizadasPlazas[pl.id_plaza];
+                            const opecVal = custom?.opec || pl.opec || '';
+                            const tieneOpec = !!opecVal;
+                            const estado = custom?.estadoReporte || (tieneOpec ? 'REPORTADO_OPEC' : 'PENDIENTE_REPORTE');
+                            const convVal = custom?.convocatoria || (tieneOpec ? 'Distrito Capital 5' : 'Pendiente Convocatoria');
+                            const esVacante = (pl.titular_nombre || '').toUpperCase().includes('VACANTE') || pl.estado_cargo.includes('VACANTE');
+
+                            return (
+                              <View
+                                key={`${pl.id_plaza}-${idx}`}
+                                style={{
+                                  flexDirection: 'row',
+                                  paddingVertical: 12,
+                                  paddingHorizontal: 16,
+                                  alignItems: 'center',
+                                  backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: THEME.slate100,
+                                  width: '100%',
+                                }}
+                              >
+                                {/* Plaza */}
+                                <View style={{ width: '7%', minWidth: 75, paddingRight: 6 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca800 }}>
+                                    #{pl.id_plaza}
+                                  </Text>
+                                  <Text style={{ fontSize: 10, color: THEME.slate400, marginTop: 1 }}>
+                                    {pl.nivel}
+                                  </Text>
+                                </View>
+
+                                {/* Cargo y Grado */}
+                                <View style={{ width: '22%', minWidth: 210, paddingRight: 10 }}>
+                                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }} numberOfLines={2}>
+                                    {pl.cargo}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>
+                                    Cód. {pl.codigo || '---'} • Grado {pl.grado || '---'} • {formatMoneda(pl.asignacion_basica || 0)}
+                                  </Text>
+                                </View>
+
+                                {/* Dependencia */}
+                                <View style={{ width: '18%', minWidth: 170, paddingRight: 10 }}>
+                                  <Text style={{ fontSize: 11.5, color: THEME.slate700 }} numberOfLines={2}>
+                                    {pl.dependencia_cargo || 'Secretaría Jurídica Distrital'}
+                                  </Text>
+                                </View>
+
+                                {/* Situación / Titular */}
+                                <View style={{ width: '18%', minWidth: 170, paddingRight: 10 }}>
+                                  {esVacante ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, alignSelf: 'flex-start' }}>
+                                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#DC2626' }} />
+                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#991B1B' }}>
+                                        VACANCIA DEFINITIVA
+                                      </Text>
+                                    </View>
+                                  ) : (
+                                    <View>
+                                      <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate800 }} numberOfLines={1}>
+                                        {pl.titular_nombre}
+                                      </Text>
+                                      <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }}>
+                                        {pl.tipo_vinculacion || 'En Encargo / Provisional'}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+
+                                {/* Estado CNSC */}
+                                <View style={{ width: '13%', minWidth: 130, paddingRight: 8 }}>
+                                  {estado === 'PENDIENTE_REPORTE' ? (
+                                    <View style={{ backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>
+                                        ⚠️ PENDIENTE REPORTE
+                                      </Text>
+                                    </View>
+                                  ) : estado === 'CON_LISTA_FIRME' ? (
+                                    <View style={{ backgroundColor: '#DBEAFE', borderColor: '#93C5FD', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#1E40AF' }}>
+                                        🏆 LISTA EN FIRME
+                                      </Text>
+                                    </View>
+                                  ) : (
+                                    <View style={{ backgroundColor: '#DCFCE7', borderColor: '#86EFAC', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5, alignSelf: 'flex-start' }}>
+                                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#166534' }}>
+                                        ✅ REPORTADO CNSC
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+
+                                {/* OPEC & Concurso */}
+                                <View style={{ width: '12%', minWidth: 120, paddingRight: 8 }}>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: tieneOpec ? THEME.marca800 : THEME.slate400 }}>
+                                    {tieneOpec ? `OPEC: #${opecVal}` : 'Sin OPEC'}
+                                  </Text>
+                                  <Text style={{ fontSize: 10, color: THEME.slate500, marginTop: 1 }} numberOfLines={1}>
+                                    {convVal}
+                                  </Text>
+                                </View>
+
+                                {/* Acciones */}
+                                <View style={{ width: '10%', minWidth: 110, flexDirection: 'row', gap: 6, justifyContent: 'center' }}>
+                                  <Pressable
+                                    onPress={() => {
+                                      setPlazaOpecSeleccionada(pl);
+                                      setInputOpecValor(String(opecVal || ''));
+                                      setInputConvocatoriaValor(convVal);
+                                      setInputEstadoReporteValor(estado as any);
+                                      setModalGestionOpecVisible(true);
+                                    }}
+                                    style={({ pressed }) => ({
+                                      paddingVertical: 5,
+                                      paddingHorizontal: 8,
+                                      backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                                      borderRadius: 6,
+                                      borderWidth: 1,
+                                      borderColor: THEME.slate300,
+                                    })}
+                                  >
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                                      ⚙️ OPEC
+                                    </Text>
+                                  </Pressable>
+
+                                  <Pressable
+                                    onPress={() => handleIniciarVinculacionDesdePlazaConcurso(pl)}
+                                    style={({ pressed }) => ({
+                                      paddingVertical: 5,
+                                      paddingHorizontal: 8,
+                                      backgroundColor: pressed ? THEME.marca800 : THEME.marca700,
+                                      borderRadius: 6,
+                                    })}
+                                  >
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.white }}>
+                                      ➕ Vincular
+                                    </Text>
+                                  </Pressable>
+                                </View>
+                              </View>
+                            );
+                          })
+                        )}
+                      </View>
+                    </ScrollView>
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-VISTA 2: LISTAS DE ELEGIBLES & TÉRMINOS LEGALES              */}
+              {/* ============================================================== */}
+              {subTabConcursos === 'listas_terminos' && (
+                <View style={{ gap: 16 }}>
+                  {/* Tarjeta de Guía de Términos Legales */}
+                  <View
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                      padding: 16,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="information-circle" size={18} color="#1D4ED8" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E3A8A' }}>
+                        Términos Preclusivos para el Uso de Listas de Elegibles (Decreto 1083 de 2015)
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12, marginTop: 4 }}>
+                      <View style={{ flex: 1, backgroundColor: THEME.white, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#DBEAFE' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>1. TÉRMINO PARA ACEPTAR</Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
+                          El nombrado dispone de <Text style={{ fontWeight: '700' }}>10 días hábiles</Text> contados a partir de la comunicación para aceptar o declinar.
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: THEME.white, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#DBEAFE' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>2. TÉRMINO PARA POSESIÓN</Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
+                          Aceptado el empleo, cuenta con <Text style={{ fontWeight: '700' }}>10 días hábiles</Text> para tomar posesión, prorrogables hasta por 90 días por justa causa.
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, backgroundColor: THEME.white, padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#DBEAFE' }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#B91C1C' }}>3. DEROGATORIA DE NOMBRAMIENTO</Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
+                          De no manifestar aceptación o no posesionarse en el término legal, se <Text style={{ fontWeight: '700' }}>deroga el nombramiento</Text> y se llama al siguiente de la lista.
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Listado de Casos de Mérito con Semáforo de Términos */}
+                  <View style={{ gap: 12 }}>
+                    {casosConcursoElegibles.map((caso) => {
+                      const estTerm = caso.terminos_lista_estado || 'EN_TERMINOS_ACEPTACION';
+                      const opec = caso.concurso_opec || '203205';
+                      const mec = caso.concurso_mecanismo || 'LISTA_DIRECTA_OPEC';
+
+                      return (
+                        <View
+                          key={caso.id}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 12,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            padding: 16,
+                            gap: 12,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 3,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isDesktop ? 'center' : 'flex-start',
+                              gap: 10,
+                            }}
+                          >
+                            <View>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900 }}>
+                                  {caso.servidor_nombre}
+                                </Text>
+                                <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                    C.C. {caso.servidor_cedula}
+                                  </Text>
+                                </View>
+                                <View style={{ backgroundColor: THEME.marca100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>
+                                    OPEC: #{opec}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text style={{ fontSize: 12, color: THEME.slate600, marginTop: 4 }}>
+                                {caso.cargo} • {caso.dependencia}
+                              </Text>
+                            </View>
+
+                            {/* Badge de Estado de Términos */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              {estTerm === 'DEROGATORIA_NOMBRAMIENTO' ? (
+                                <View style={{ backgroundColor: '#FEE2E2', borderColor: '#F87171', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#991B1B' }}>
+                                    ⛔ DEROGATORIA DE NOMBRAMIENTO
+                                  </Text>
+                                </View>
+                              ) : estTerm === 'NO_PROCEDE_POSESION' ? (
+                                <View style={{ backgroundColor: '#FEF2F2', borderColor: '#FCA5A5', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#B91C1C' }}>
+                                    🔴 NO PROCEDE POSESIÓN
+                                  </Text>
+                                </View>
+                              ) : estTerm === 'PRORROGA_CONCEDIDA' ? (
+                                <View style={{ backgroundColor: '#FEF3C7', borderColor: '#FCD34D', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                                    🟡 PRÓRROGA CONCEDIDA ({caso.dias_prorroga || 30} DÍAS)
+                                  </Text>
+                                </View>
+                              ) : (
+                                <View style={{ backgroundColor: '#DCFCE7', borderColor: '#86EFAC', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#166534' }}>
+                                    🟢 EN TÉRMINOS LEGALES DE POSESIÓN
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+
+                          {/* Detalle del Trámite y Mecanismo */}
+                          <View
+                            style={{
+                              backgroundColor: THEME.slate50,
+                              borderRadius: 8,
+                              padding: 12,
+                              flexDirection: isDesktop ? 'row' : 'column',
+                              gap: 16,
+                            }}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                                MECANISMO DE PROVISIÓN
+                              </Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.marca800, marginTop: 2 }}>
+                                {mec === 'MOVILIDAD_EMPLEO_EQUIVALENTE'
+                                  ? 'Movilidad por Empleo Equivalente (Acuerdo CNSC)'
+                                  : mec === 'MOVILIDAD_MISMO_EMPLEO'
+                                  ? 'Movilidad Mismo Empleo (Dec. 1083/2015)'
+                                  : 'Lista de Elegibles Directa (OPEC Convocada)'}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                                {caso.concurso_convocatoria || 'Convocatoria Distrito Capital 5'} • Puesto #{caso.concurso_posicion_lista || 1}
+                              </Text>
+                            </View>
+
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                                CONTROL DE TÉRMINOS Y ACTOS
+                              </Text>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate800, marginTop: 2 }}>
+                                Notificado: <Text style={{ fontWeight: '700' }}>{caso.fecha_notificacion_nombramiento || caso.fecha_inicio_tramite}</Text>
+                              </Text>
+                              {caso.acto_derogatoria ? (
+                                <Text style={{ fontSize: 11, color: '#B91C1C', fontWeight: '700', marginTop: 1 }}>
+                                  Acto Derogatoria: {caso.acto_derogatoria}
+                                </Text>
+                              ) : null}
+                              {caso.motivo_incidente_lista ? (
+                                <Text style={{ fontSize: 10.5, color: THEME.slate600, marginTop: 1, fontStyle: 'italic' }}>
+                                  Motivo: {caso.motivo_incidente_lista}
+                                </Text>
+                              ) : null}
+                            </View>
+
+                            <View style={{ justifyContent: 'center', alignItems: isDesktop ? 'flex-end' : 'flex-start' }}>
+                              <Pressable
+                                onPress={() => {
+                                  setCasoTerminosSeleccionado(caso);
+                                  setNuevoEstadoTerminos(caso.terminos_lista_estado || 'EN_TERMINOS_ACEPTACION');
+                                  setInputDiasProrroga(String(caso.dias_prorroga || 30));
+                                  setInputMotivoIncidente(caso.motivo_incidente_lista || '');
+                                  setInputActoDerogatoria(caso.acto_derogatoria || '');
+                                  setModalTerminosIncidenteVisible(true);
+                                }}
+                                style={({ pressed }) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  backgroundColor: pressed ? THEME.marca800 : THEME.marca700,
+                                  paddingVertical: 7,
+                                  paddingHorizontal: 12,
+                                  borderRadius: 6,
+                                })}
+                              >
+                                <Ionicons name="options-outline" size={15} color={THEME.white} />
+                                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
+                                  Gestionar Términos / Incidente
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-VISTA 3: MARCO JURÍDICO & MOVILIDAD (DEC. 1083 / CNSC)      */}
+              {/* ============================================================== */}
+              {subTabConcursos === 'normativa_movilidad' && (
+                <View style={{ gap: 16 }}>
+                  {/* Cuadro 1: Movilidad Mismo Empleo vs Empleo Equivalente */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, borderWidth: 1, borderColor: THEME.slate200, padding: 18, gap: 12 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                      ⚖️ Régimen de Uso de Listas de Elegibles: Mismo Empleo vs. Empleo Equivalente
+                    </Text>
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 14 }}>
+                      <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 8, padding: 14, borderWidth: 1, borderColor: '#BFDBFE', gap: 6 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E40AF' }}>
+                          1. MOVILIDAD - MISMO EMPLEO
+                        </Text>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate600 }}>
+                          Fundamento: Decreto 1083 de 2015, Art. 2.2.5.3.2 • Circular CNSC 011 de 2021
+                        </Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                          Aplica cuando se producen <Text style={{ fontWeight: '700' }}>vacantes definitivas sobrevinientes</Text> del mismo cargo, código, grado y denominación dentro de la misma entidad durante la vigencia de la lista de elegibles (2 años).
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: '#1E3A8A', fontWeight: '600' }}>
+                          • No requiere estudio de equivalencia funcional.
+                          • Es obligatorio agotar la lista en estricto orden de mérito.
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, backgroundColor: '#FAF5FF', borderRadius: 8, padding: 14, borderWidth: 1, borderColor: '#E9D5FF', gap: 6 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#6B21A8' }}>
+                          2. MOVILIDAD - EMPLEO EQUIVALENTE
+                        </Text>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate600 }}>
+                          Fundamento: Criterio Unificado CNSC del 13 de agosto de 2019 • Ley 909 de 2004
+                        </Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                          Procede para empleos de carrera que presenten <Text style={{ fontWeight: '700' }}>igual nivel jerárquico, misma asignación básica, requisitos mínimos y funciones similares</Text> a los ofertados en la OPEC original.
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: '#6B21A8', fontWeight: '600' }}>
+                          • Requiere concepto técnico previo de Talento Humano.
+                          • Autorización expresa vinculante por parte de la CNSC.
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Cuadro 2: Términos, No Procede Posesión y Derogatoria */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, borderWidth: 1, borderColor: THEME.slate200, padding: 18, gap: 12 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                      🛑 Régimen de No Procede Posesión y Derogatoria de Nombramiento
+                    </Text>
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 14 }}>
+                      <View style={{ flex: 1, backgroundColor: '#FFFBEB', borderRadius: 8, padding: 14, borderWidth: 1, borderColor: '#FDE68A', gap: 6 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#B45309' }}>
+                          NO PROCEDE POSESIÓN
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 18 }}>
+                          Se configura cuando en la validación técnica previa (Formato 2311300-FT-318) el elegible no acredita los requisitos de estudio o experiencia, o se constata inhabilidad en SECOP II, antecedentes disciplinarios, fiscales o REDAM.
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#92400E', fontWeight: '700' }}>
+                          Efecto: Se profiere acto motivado y se remite a la CNSC solicitando exclusión o autorización del siguiente puesto.
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, backgroundColor: '#FEF2F2', borderRadius: 8, padding: 14, borderWidth: 1, borderColor: '#FECACA', gap: 6 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#B91C1C' }}>
+                          DEROGATORIA DEL NOMBRAMIENTO
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 18 }}>
+                          Conforme al artículo 2.2.5.1.11 del Decreto 1083 de 2015, si el nombrado no manifiesta aceptación dentro de los 10 días o no toma posesión en el término legal (o prórroga), el nominador <Text style={{ fontWeight: '700' }}>derogará el nombramiento</Text>.
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#991B1B', fontWeight: '700' }}>
+                          Efecto: El elegible pierde su derecho y la entidad solicita a la CNSC autorización para llamar al siguiente elegible.
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ============================================================== */}
           {tabActiva === 'secop' && (
             <View style={{ gap: 16, width: '100%' }}>
               {/* Banner Informativo */}
@@ -10504,58 +11706,360 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     </View>
                   </View>
 
-                  {/* Causal de Retiro (Solo si es DESVINCULACIÓN) */}
-                  {nuevoTipoProceso === 'DESVINCULACION' && (
-                    <View style={{ marginTop: 6, gap: 4 }}>
-                      <Text style={{ color: THEME.slate700, fontSize: 11, fontWeight: '700' }}>
-                        Causal Normativa de Retiro (PR-145 / Ley 909 de 2004) *
-                      </Text>
-                      <View
-                        style={{
-                          backgroundColor: THEME.slate50,
-                          borderRadius: 8,
-                          borderWidth: 1,
-                          borderColor: THEME.slate200,
-                          maxHeight: 120,
-                        }}
-                      >
-                        <ScrollView nestedScrollEnabled={true} style={{ padding: 4 }}>
-                          {(CAUSALES_RETIRO_POR_MODALIDAD[nuevaModalidad] || CAUSALES_RETIRO).map((causal) => {
-                            const act = causalInput === causal;
+                  {/* Sub-formulario interactivo de Concurso y OPEC */}
+                  {nuevoTipoProceso === 'VINCULACION' && nuevaModalidad === 'CARRERA_ADMINISTRATIVA' && (
+                    <View
+                      style={{
+                        backgroundColor: '#EFF6FF',
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: '#BFDBFE',
+                        padding: 12,
+                        gap: 10,
+                        marginTop: 4,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="trophy" size={16} color="#1D4ED8" />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E3A8A' }}>
+                          Parámetros de Concurso de Méritos & Lista de Elegibles (CNSC)
+                        </Text>
+                      </View>
+
+                      {/* Selector de Mecanismo de Provisión */}
+                      <View>
+                        <Text style={{ fontSize: 11, color: '#1E40AF', fontWeight: '600', marginBottom: 4 }}>
+                          Mecanismo de Provisión por Mérito *
+                        </Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                          {[
+                            { id: 'LISTA_DIRECTA_OPEC', label: 'Lista Directa (OPEC del Cargo)' },
+                            { id: 'MOVILIDAD_MISMO_EMPLEO', label: 'Movilidad - Mismo Empleo (Dec. 1083)' },
+                            { id: 'MOVILIDAD_EMPLEO_EQUIVALENTE', label: 'Movilidad - Empleo Equivalente (CNSC)' },
+                            { id: 'REUBICACION_CARRERA', label: 'Reincorporación / Reubicación' },
+                          ].map((mec) => {
+                            const sel = mecanismoMeritoInput === mec.id;
                             return (
                               <Pressable
-                                key={causal}
-                                onPress={() => setCausalInput(causal)}
+                                key={mec.id}
+                                onPress={() => setMecanismoMeritoInput(mec.id as any)}
                                 style={{
-                                  paddingVertical: 6,
                                   paddingHorizontal: 8,
+                                  paddingVertical: 4,
                                   borderRadius: 6,
-                                  backgroundColor: act ? THEME.marca50 : 'transparent',
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 6,
+                                  backgroundColor: sel ? '#1D4ED8' : '#DBEAFE',
+                                  borderWidth: 1,
+                                  borderColor: sel ? '#1E40AF' : '#BFDBFE',
                                 }}
                               >
-                                <Ionicons
-                                  name={act ? 'radio-button-on' : 'radio-button-off'}
-                                  size={14}
-                                  color={act ? THEME.marca600 : THEME.slate400}
-                                />
-                                <Text
-                                  style={{
-                                    fontSize: 11,
-                                    color: act ? THEME.marca900 : THEME.slate600,
-                                    fontWeight: act ? '700' : '400',
-                                    flex: 1,
-                                  }}
-                                >
-                                  {causal}
+                                <Text style={{ fontSize: 10.5, fontWeight: sel ? '700' : '600', color: sel ? '#FFFFFF' : '#1E40AF' }}>
+                                  {mec.label}
                                 </Text>
                               </Pressable>
                             );
                           })}
-                        </ScrollView>
+                        </View>
                       </View>
+
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 10.5, color: '#1E40AF', fontWeight: '600', marginBottom: 3 }}>
+                            Número de OPEC (SIMO) *
+                          </Text>
+                          <TextInput
+                            value={opecInput}
+                            onChangeText={setOpecInput}
+                            placeholder="Ej. 203205"
+                            placeholderTextColor="#93C5FD"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderWidth: 1,
+                              borderColor: '#93C5FD',
+                              borderRadius: 6,
+                              paddingHorizontal: 8,
+                              paddingVertical: 6,
+                              fontSize: 12,
+                              color: '#1E3A8A',
+                              fontWeight: '600',
+                            }}
+                          />
+                        </View>
+
+                        <View style={{ flex: 2 }}>
+                          <Text style={{ fontSize: 10.5, color: '#1E40AF', fontWeight: '600', marginBottom: 3 }}>
+                            Convocatoria / Proceso de Selección CNSC
+                          </Text>
+                          <TextInput
+                            value={convocatoriaInput}
+                            onChangeText={setConvocatoriaInput}
+                            placeholder="Ej. Convocatoria Distrito Capital 5 - CNSC"
+                            placeholderTextColor="#93C5FD"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderWidth: 1,
+                              borderColor: '#93C5FD',
+                              borderRadius: 6,
+                              paddingHorizontal: 8,
+                              paddingVertical: 6,
+                              fontSize: 12,
+                              color: '#1E3A8A',
+                            }}
+                          />
+                        </View>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 10.5, color: '#1E40AF', fontWeight: '600', marginBottom: 3 }}>
+                            Puesto en Lista
+                          </Text>
+                          <TextInput
+                            value={puestoListaInput}
+                            onChangeText={setPuestoListaInput}
+                            keyboardType="numeric"
+                            placeholder="1"
+                            placeholderTextColor="#93C5FD"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderWidth: 1,
+                              borderColor: '#93C5FD',
+                              borderRadius: 6,
+                              paddingHorizontal: 8,
+                              paddingVertical: 6,
+                              fontSize: 12,
+                              color: '#1E3A8A',
+                              fontWeight: '700',
+                            }}
+                          />
+                        </View>
+
+                        <View style={{ flex: 2 }}>
+                          <Text style={{ fontSize: 10.5, color: '#1E40AF', fontWeight: '600', marginBottom: 3 }}>
+                            Resolución de Firmeza CNSC
+                          </Text>
+                          <TextInput
+                            value={resolucionListaInput}
+                            onChangeText={setResolucionListaInput}
+                            placeholder="Ej. Resolución No. 14210 de 2025"
+                            placeholderTextColor="#93C5FD"
+                            style={{
+                              backgroundColor: '#FFFFFF',
+                              borderWidth: 1,
+                              borderColor: '#93C5FD',
+                              borderRadius: 6,
+                              paddingHorizontal: 8,
+                              paddingVertical: 6,
+                              fontSize: 12,
+                              color: '#1E3A8A',
+                            }}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Causal de Retiro (Solo si es DESVINCULACIÓN) */}
+                  {nuevoTipoProceso === 'DESVINCULACION' && (
+                    <View style={{ marginTop: 8, gap: 8 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: THEME.slate900, fontSize: 12, fontWeight: '800' }}>
+                          Causal Normativa de Retiro (Ley 909 de 2004, Art. 41) *
+                        </Text>
+                        <Pressable
+                          onPress={() => setMostrarDetalleArt41(!mostrarDetalleArt41)}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 6, borderRadius: 4, backgroundColor: THEME.slate100 }}
+                        >
+                          <Ionicons name={mostrarDetalleArt41 ? "chevron-up" : "chevron-down"} size={14} color={THEME.marca700} />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
+                            {mostrarDetalleArt41 ? "Ocultar Artículo 41" : "Ver Artículo 41 Completo"}
+                          </Text>
+                        </Pressable>
+                      </View>
+
+                      {/* Caja con la Causal Seleccionada Actualmente */}
+                      <View style={{ backgroundColor: THEME.marca50, borderRadius: 8, borderWidth: 1.5, borderColor: THEME.marca600, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="checkmark-circle" size={18} color={THEME.marca700} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
+                            Causal Seleccionada para el Trámite:
+                          </Text>
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900, marginTop: 1 }}>
+                            {causalInput || 'Seleccione una causal del Artículo 41'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* COMPONENTE COMPLETO DEL ARTÍCULO 41 (Ley 909 de 2004) */}
+                      {mostrarDetalleArt41 && (
+                        <View
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderRadius: 10,
+                            borderWidth: 1.5,
+                            borderColor: THEME.slate300,
+                            padding: 12,
+                            maxHeight: 280,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 3,
+                          }}
+                        >
+                          <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.slate200, paddingBottom: 8, marginBottom: 8 }}>
+                            <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate900 }}>
+                              ARTÍCULO 41. Causales de retiro del servicio.
+                            </Text>
+                            <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2, fontStyle: 'italic' }}>
+                              El retiro del servicio de quienes estén desempeñando empleos de libre nombramiento y remoción y de carrera administrativa se produce en los siguientes casos:
+                            </Text>
+                          </View>
+
+                          <ScrollView nestedScrollEnabled={true} style={{ flex: 1 }} showsVerticalScrollIndicator={true}>
+                            <View style={{ gap: 8, paddingRight: 4 }}>
+                              {CAUSALES_ARTICULO_41_LEY_909.map((item) => {
+                                const seleccionada = causalInput.includes(`lit. ${item.literal}`) || causalInput.startsWith(`${item.literal})`) || causalInput === item.texto;
+                                return (
+                                  <View
+                                    key={item.literal}
+                                    style={{
+                                      backgroundColor: item.inexequible ? '#FFF1F2' : seleccionada ? THEME.marca50 : THEME.slate50,
+                                      borderWidth: 1,
+                                      borderColor: item.inexequible ? '#FDA4AF' : seleccionada ? THEME.marca600 : THEME.slate200,
+                                      borderRadius: 8,
+                                      padding: 9,
+                                      gap: 4,
+                                    }}
+                                  >
+                                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                                      <View
+                                        style={{
+                                          width: 22,
+                                          height: 22,
+                                          borderRadius: 11,
+                                          backgroundColor: item.inexequible ? '#BE123C' : seleccionada ? THEME.marca700 : THEME.slate200,
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          marginTop: 1,
+                                        }}
+                                      >
+                                        <Text
+                                          style={{
+                                            fontSize: 11,
+                                            fontWeight: '800',
+                                            color: item.inexequible || seleccionada ? THEME.white : THEME.slate700,
+                                          }}
+                                        >
+                                          {item.literal}
+                                        </Text>
+                                      </View>
+
+                                      <View style={{ flex: 1 }}>
+                                        <Text
+                                          style={{
+                                            fontSize: 11.5,
+                                            fontWeight: seleccionada ? '700' : '500',
+                                            color: item.inexequible ? '#9F1239' : THEME.slate900,
+                                            lineHeight: 16,
+                                          }}
+                                        >
+                                          {item.literal}) {item.texto}
+                                        </Text>
+
+                                        {/* Badges y Notas de la Corte Constitucional */}
+                                        {item.inexequible && (
+                                          <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                            <View style={{ backgroundColor: '#FEE2E2', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 }}>
+                                              <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#BE123C' }}>
+                                                INEXEQUIBLE • NO APLICABLE
+                                              </Text>
+                                            </View>
+                                            {item.enlaceNorma && (
+                                              <Pressable
+                                                onPress={() => item.enlaceNorma && Linking.openURL(item.enlaceNorma.url)}
+                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                              >
+                                                <Text style={{ fontSize: 10, color: '#0369A1', textDecorationLine: 'underline', fontWeight: '600' }}>
+                                                  {item.enlaceNorma.texto}
+                                                </Text>
+                                                <Ionicons name="open-outline" size={11} color="#0369A1" />
+                                              </Pressable>
+                                            )}
+                                            {item.enlaceReglamentacion && (
+                                              <Pressable
+                                                onPress={() => item.enlaceReglamentacion && Linking.openURL(item.enlaceReglamentacion.url)}
+                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                              >
+                                                <Text style={{ fontSize: 10, color: '#0369A1', textDecorationLine: 'underline', fontWeight: '600' }}>
+                                                  ({item.enlaceReglamentacion.texto})
+                                                </Text>
+                                                <Ionicons name="open-outline" size={11} color="#0369A1" />
+                                              </Pressable>
+                                            )}
+                                          </View>
+                                        )}
+
+                                        {item.notaCorte && !item.inexequible && (
+                                          <View style={{ marginTop: 4, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                            <View style={{ backgroundColor: '#FEF3C7', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 }}>
+                                              <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#92400E' }}>
+                                                CONDICIONADO POR LA CORTE
+                                              </Text>
+                                            </View>
+                                            {item.enlaceNorma && (
+                                              <Pressable
+                                                onPress={() => item.enlaceNorma && Linking.openURL(item.enlaceNorma.url)}
+                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                              >
+                                                <Text style={{ fontSize: 10, color: '#0369A1', textDecorationLine: 'underline', fontWeight: '600' }}>
+                                                  {item.enlaceNorma.texto}
+                                                </Text>
+                                                <Ionicons name="open-outline" size={11} color="#0369A1" />
+                                              </Pressable>
+                                            )}
+                                          </View>
+                                        )}
+
+                                        {item.enlaceNorma && !item.notaCorte && !item.inexequible && (
+                                          <View style={{ marginTop: 4 }}>
+                                            <Pressable
+                                              onPress={() => item.enlaceNorma && Linking.openURL(item.enlaceNorma.url)}
+                                              style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                            >
+                                              <Text style={{ fontSize: 10, color: '#0369A1', textDecorationLine: 'underline', fontWeight: '600' }}>
+                                                Consultar {item.enlaceNorma.texto}
+                                              </Text>
+                                              <Ionicons name="open-outline" size={11} color="#0369A1" />
+                                            </Pressable>
+                                          </View>
+                                        )}
+                                      </View>
+
+                                      {/* Botón Seleccionar Causal */}
+                                      {!item.inexequible && (
+                                        <Pressable
+                                          onPress={() => setCausalInput(`Art. 41 lit. ${item.literal}) ${item.texto.split(';')[0].replace(/\n.*/g, '')}`)}
+                                          style={{
+                                            paddingVertical: 3,
+                                            paddingHorizontal: 8,
+                                            borderRadius: 4,
+                                            backgroundColor: seleccionada ? THEME.marca600 : THEME.white,
+                                            borderWidth: 1,
+                                            borderColor: seleccionada ? THEME.marca700 : THEME.slate300,
+                                          }}
+                                        >
+                                          <Text style={{ fontSize: 10, fontWeight: '700', color: seleccionada ? THEME.white : THEME.slate700 }}>
+                                            {seleccionada ? 'Activa' : 'Elegir'}
+                                          </Text>
+                                        </Pressable>
+                                      )}
+                                    </View>
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          </ScrollView>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
@@ -13108,6 +14612,301 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
                   Cerrar
                 </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =================================================================== */}
+      {/* MODAL PARA GESTIONAR OPEC Y REPORTE ANTE LA CNSC                   */}
+      {/* =================================================================== */}
+      <Modal
+        visible={modalGestionOpecVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalGestionOpecVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 540, padding: 20, gap: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.slate100, paddingBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="ribbon-outline" size={20} color={THEME.marca700} />
+                <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                  Gestionar OPEC & Reporte CNSC
+                </Text>
+              </View>
+              <Pressable onPress={() => setModalGestionOpecVisible(false)}>
+                <Ionicons name="close" size={20} color={THEME.slate500} />
+              </Pressable>
+            </View>
+
+            {plazaOpecSeleccionada && (
+              <View style={{ backgroundColor: THEME.slate50, borderRadius: 8, padding: 10, borderWidth: 1, borderColor: THEME.slate200 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>
+                  Plaza #{plazaOpecSeleccionada.id_plaza} - {plazaOpecSeleccionada.cargo}
+                </Text>
+                <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                  {plazaOpecSeleccionada.dependencia_cargo} • Grado {plazaOpecSeleccionada.grado || '---'}
+                </Text>
+              </View>
+            )}
+
+            {/* Selector de Estado de Reporte */}
+            <View>
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700, marginBottom: 4 }}>
+                Estado de Reporte ante la CNSC *
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {[
+                  { id: 'REPORTADO_OPEC', label: '✅ Reportado con OPEC' },
+                  { id: 'PENDIENTE_REPORTE', label: '⚠️ Pendiente de Reporte' },
+                  { id: 'CON_LISTA_FIRME', label: '🏆 Con Lista en Firme' },
+                  { id: 'EN_CONCURSO', label: '🔄 En Concurso Activo' },
+                ].map((st) => {
+                  const sel = inputEstadoReporteValor === st.id;
+                  return (
+                    <Pressable
+                      key={st.id}
+                      onPress={() => setInputEstadoReporteValor(st.id as any)}
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                        borderWidth: 1,
+                        borderColor: sel ? THEME.marca800 : THEME.slate200,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '600', color: sel ? THEME.white : THEME.slate700 }}>
+                        {st.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Input OPEC */}
+            <View>
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700, marginBottom: 4 }}>
+                Número de OPEC en SIMO *
+              </Text>
+              <TextInput
+                value={inputOpecValor}
+                onChangeText={setInputOpecValor}
+                placeholder="Ej. 203205"
+                placeholderTextColor={THEME.slate400}
+                style={{
+                  backgroundColor: THEME.slate50,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 10,
+                  fontSize: 13,
+                  color: THEME.slate900,
+                  fontWeight: '700',
+                }}
+              />
+            </View>
+
+            {/* Input Convocatoria */}
+            <View>
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700, marginBottom: 4 }}>
+                Convocatoria / Proceso de Selección
+              </Text>
+              <TextInput
+                value={inputConvocatoriaValor}
+                onChangeText={setInputConvocatoriaValor}
+                placeholder="Ej. Convocatoria Distrito Capital 5 - CNSC"
+                placeholderTextColor={THEME.slate400}
+                style={{
+                  backgroundColor: THEME.slate50,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 10,
+                  fontSize: 13,
+                  color: THEME.slate900,
+                }}
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <Pressable
+                onPress={() => setModalGestionOpecVisible(false)}
+                style={{ backgroundColor: THEME.slate100, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6 }}
+              >
+                <Text style={{ color: THEME.slate700, fontWeight: '600', fontSize: 12 }}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleGuardarOpecPlaza}
+                style={{ backgroundColor: THEME.marca700, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 }}
+              >
+                <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>Guardar Reporte</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =================================================================== */}
+      {/* MODAL PARA GESTIONAR TÉRMINOS, PRÓRROGAS Y DEROGATORIAS            */}
+      {/* =================================================================== */}
+      <Modal
+        visible={modalTerminosIncidenteVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalTerminosIncidenteVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 580, padding: 20, gap: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.slate100, paddingBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="scale-outline" size={20} color={THEME.marca700} />
+                <Text style={{ fontSize: 16, fontWeight: '800', color: THEME.slate900 }}>
+                  Gestionar Términos Legales & Incidentes de Lista
+                </Text>
+              </View>
+              <Pressable onPress={() => setModalTerminosIncidenteVisible(false)}>
+                <Ionicons name="close" size={20} color={THEME.slate500} />
+              </Pressable>
+            </View>
+
+            {casoTerminosSeleccionado && (
+              <View style={{ backgroundColor: THEME.slate50, borderRadius: 8, padding: 10, borderWidth: 1, borderColor: THEME.slate200 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                  {casoTerminosSeleccionado.servidor_nombre} (C.C. {casoTerminosSeleccionado.servidor_cedula})
+                </Text>
+                <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                  {casoTerminosSeleccionado.cargo} • OPEC #{casoTerminosSeleccionado.concurso_opec || '203205'}
+                </Text>
+              </View>
+            )}
+
+            {/* Selector de Estado */}
+            <View>
+              <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700, marginBottom: 6 }}>
+                Nuevo Estado en el Uso de la Lista:
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {[
+                  { id: 'EN_TERMINOS_ACEPTACION', label: '🟢 En Términos de Aceptación' },
+                  { id: 'ACEPTADO_EN_TERMINOS', label: '🟢 Aceptación Radicada' },
+                  { id: 'PRORROGA_CONCEDIDA', label: '🟡 Prórroga de Posesión' },
+                  { id: 'NO_PROCEDE_POSESION', label: '🔴 No Procede Posesión' },
+                  { id: 'DEROGATORIA_NOMBRAMIENTO', label: '⛔ Derogatoria de Nombramiento' },
+                  { id: 'SOLICITUD_SIGUIENTE_ELEGIBLE', label: '🔵 Solicitar Siguiente a CNSC' },
+                  { id: 'POSESION_EFECTIVA', label: '✅ Posesión Efectiva' },
+                ].map((st) => {
+                  const sel = nuevoEstadoTerminos === st.id;
+                  return (
+                    <Pressable
+                      key={st.id}
+                      onPress={() => setNuevoEstadoTerminos(st.id as any)}
+                      style={{
+                        paddingHorizontal: 9,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                        borderWidth: 1,
+                        borderColor: sel ? THEME.marca800 : THEME.slate200,
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '600', color: sel ? THEME.white : THEME.slate700 }}>
+                        {st.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Campos condicionales */}
+            {nuevoEstadoTerminos === 'PRORROGA_CONCEDIDA' && (
+              <View>
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700, marginBottom: 4 }}>
+                  Días Calendario de Prórroga (Máx. 90 días por ley):
+                </Text>
+                <TextInput
+                  value={inputDiasProrroga}
+                  onChangeText={setInputDiasProrroga}
+                  keyboardType="numeric"
+                  placeholder="30"
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 8,
+                    fontSize: 13,
+                    color: THEME.slate900,
+                    fontWeight: '700',
+                  }}
+                />
+              </View>
+            )}
+
+            {nuevoEstadoTerminos === 'DEROGATORIA_NOMBRAMIENTO' && (
+              <View>
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#B91C1C', marginBottom: 4 }}>
+                  Número de Resolución de Derogatoria (Art. 2.2.5.1.11 Dec. 1083/2015):
+                </Text>
+                <TextInput
+                  value={inputActoDerogatoria}
+                  onChangeText={setInputActoDerogatoria}
+                  placeholder="Ej. Resolución No. 068 de 2026"
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#FCA5A5',
+                    padding: 8,
+                    fontSize: 13,
+                    color: '#991B1B',
+                    fontWeight: '700',
+                  }}
+                />
+              </View>
+            )}
+
+            {(nuevoEstadoTerminos === 'NO_PROCEDE_POSESION' || nuevoEstadoTerminos === 'DEROGATORIA_NOMBRAMIENTO' || nuevoEstadoTerminos === 'PRORROGA_CONCEDIDA') && (
+              <View>
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700, marginBottom: 4 }}>
+                  Motivación Legal / Justificación del Incidente:
+                </Text>
+                <TextInput
+                  value={inputMotivoIncidente}
+                  onChangeText={setInputMotivoIncidente}
+                  placeholder="Describa la causal objetiva verificada o solicitud de prórroga..."
+                  multiline
+                  numberOfLines={3}
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 8,
+                    fontSize: 12,
+                    color: THEME.slate900,
+                    minHeight: 60,
+                  }}
+                />
+              </View>
+            )}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 6 }}>
+              <Pressable
+                onPress={() => setModalTerminosIncidenteVisible(false)}
+                style={{ backgroundColor: THEME.slate100, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6 }}
+              >
+                <Text style={{ color: THEME.slate700, fontWeight: '600', fontSize: 12 }}>Cancelar</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleGuardarTerminosIncidente}
+                style={{ backgroundColor: THEME.marca700, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 }}
+              >
+                <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>Guardar Decisión</Text>
               </Pressable>
             </View>
           </View>

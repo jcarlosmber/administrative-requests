@@ -16,11 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
-import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno } from '../../lib/nominaService';
+import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno, coincideCodigoGrado, aplicarFiltrosPlazas } from '../../lib/nominaService';
 import mockPlazasData from '../../lib/plantaMockData.json';
 import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
+import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
 type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno' | null;
@@ -82,9 +83,32 @@ export default function NominaScreen() {
   const isTablet = width >= 640;
 
   // Estados principales
-  const [tabActiva, setTabActiva] = useState<'plazas' | 'escaleras' | 'perno' | 'estructura' | 'archivos'>('plazas');
+  const [tabActiva, setTabActiva] = useState<'plazas' | 'peticiones' | 'escaleras' | 'perno' | 'estructura' | 'archivos' | 'reportes'>('plazas');
+
+  // ========================================================================
+  // ESTADOS Y SUB-REPORTES DE GESTIÓN DE PLANTA Y NÓMINA (SIDEAP / PERNO)
+  // ========================================================================
+  type SubReporteTipo =
+    | 'vinculacion_sideap'
+    | 'ocupacion_vacancias'
+    | 'dependencias_costo'
+    | 'paridad_demografia'
+    | 'conciliacion_perno'
+    | 'seguridad_social';
+
+  const [subReporteActivo, setSubReporteActivo] = useState<SubReporteTipo>('vinculacion_sideap');
+  const [busquedaReporte, setBusquedaReporte] = useState('');
+  const [filtroVinculacionReporte, setFiltroVinculacionReporte] = useState('TODAS');
+  const [filtroNivelReporte, setFiltroNivelReporte] = useState('TODOS');
+  const [filtroDependenciaReporte, setFiltroDependenciaReporte] = useState('TODAS');
+  const [filtroEstadoCargoReporte, setFiltroEstadoCargoReporte] = useState('TODOS');
+  const [paginaReporte, setPaginaReporte] = useState(1);
+  const filasPorPaginaReporte = 15;
+  const [plazaDetalleReporte, setPlazaDetalleReporte] = useState<PlazaNomina | null>(null);
+  const [modalDetallePlazaReporteVisible, setModalDetallePlazaReporteVisible] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [plazas, setPlazas] = useState<PlazaNomina[]>([]);
+  const [plazasTotales, setPlazasTotales] = useState<PlazaNomina[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasNomina | null>(null);
   const [mostrarKpis, setMostrarKpis] = useState(true);
 
@@ -273,7 +297,33 @@ export default function NominaScreen() {
           resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
         };
       });
-      setPlazas(listadoEnriquecido);
+      const listadoFiltrado = aplicarFiltrosPlazas(listadoEnriquecido, {
+        busqueda,
+        nivel: nivelSeleccionado,
+        estado: estadoSeleccionado,
+        dependencia: filtroDependencia,
+        cargo: filtroCargo,
+        codigo_grado: filtroCodigoGrado,
+        situacion: filtroSituacion,
+        id_sieap: filtroSideap,
+        id_perno: filtroPerno,
+        solo_encargo: soloEncargo,
+      });
+      setPlazas(listadoFiltrado);
+      if (
+        !busqueda &&
+        !filtroCargo &&
+        !filtroCodigoGrado &&
+        !filtroDependencia &&
+        !filtroSituacion &&
+        !filtroSideap &&
+        !filtroPerno &&
+        nivelSeleccionado === 'TODOS' &&
+        estadoSeleccionado === 'TODOS' &&
+        !soloEncargo
+      ) {
+        setPlazasTotales(listadoEnriquecido);
+      }
       setEstadisticas(stats);
       setPersonalPerno(rawPerno);
     } catch (e: any) {
@@ -299,10 +349,11 @@ export default function NominaScreen() {
     soloEncargo,
   ]);
 
-  // Lista base consolidada
+  // Lista base consolidada (usa los datos reales de BD si ya cargaron, o fallback mock)
   const todasLasPlazas = useMemo(() => {
+    if (plazasTotales.length > 0) return plazasTotales;
     return (mockPlazasData as unknown as PlazaNomina[]) || [];
-  }, []);
+  }, [plazasTotales]);
 
   // Lista base de PERNO consolidada (desduplicada por cédula para garantizar integridad)
   const todoElPerno = useMemo(() => {
@@ -349,6 +400,327 @@ export default function NominaScreen() {
 
     return { total, activos, retirados, conPlaza };
   }, [todoElPerno, plazas, todasLasPlazas]);
+
+  // ========================================================================
+  // CÁLCULOS ANALÍTICOS Y METRICAS PARA REPORTES DE PLANTA Y NÓMINA
+  // ========================================================================
+  const metricasReportes = useMemo(() => {
+    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    const totalPlazas = listPlazas.length;
+    const conSideap = listPlazas.filter((p) => p.id_sideap != null && Number(p.id_sideap) > 0).length;
+    const conPerno = listPlazas.filter((p) => p.id_perno != null && Number(p.id_perno) > 0).length;
+    const provistas = listPlazas.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
+    const vacantesDef = listPlazas.filter((p) => p.situacion_titular === 'VACANTE DEFINITIVA' || p.titular_nombre?.includes('VACANTE')).length;
+    const vacantesTemp = listPlazas.filter((p) => p.estado_cargo === 'VACANTE TEMPORAL').length;
+    const enEncargo = listPlazas.filter((p) => p.es_encargo === true || p.tipo_vinculacion === 'EN ENCARGO' || p.situacion_administrativa === 'ENCARGO').length;
+    
+    // Masa salarial total
+    const masaSalarialMensual = listPlazas.reduce((acc, p) => acc + (Number(p.asignacion_basica) || 0), 0);
+    const salarioPromedio = totalPlazas > 0 ? masaSalarialMensual / totalPlazas : 0;
+
+    // Distribución por Tipo de Vinculación
+    const porVinculacion: Record<string, { cantidad: number; masaSalarial: number; provistas: number; vacantes: number }> = {};
+    listPlazas.forEach((p) => {
+      const v = (p.tipo_vinculacion || 'SIN DEFINIR').toUpperCase().trim();
+      if (!porVinculacion[v]) {
+        porVinculacion[v] = { cantidad: 0, masaSalarial: 0, provistas: 0, vacantes: 0 };
+      }
+      porVinculacion[v].cantidad++;
+      porVinculacion[v].masaSalarial += Number(p.asignacion_basica) || 0;
+      if (p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')) {
+        porVinculacion[v].provistas++;
+      } else {
+        porVinculacion[v].vacantes++;
+      }
+    });
+
+    // Distribución por Nivel
+    const porNivel: Record<string, { cantidad: number; masaSalarial: number }> = {};
+    listPlazas.forEach((p) => {
+      const n = (p.nivel || 'SIN NIVEL').toUpperCase().trim();
+      if (!porNivel[n]) porNivel[n] = { cantidad: 0, masaSalarial: 0 };
+      porNivel[n].cantidad++;
+      porNivel[n].masaSalarial += Number(p.asignacion_basica) || 0;
+    });
+
+    // Distribución por Dependencia
+    const porDependencia: Record<string, { cantidad: number; masaSalarial: number; provistas: number; vacantes: number }> = {};
+    listPlazas.forEach((p) => {
+      const d = (p.dependencia_cargo || p.dependencia_funcional || 'SIN DEPENDENCIA').toUpperCase().trim();
+      if (!porDependencia[d]) {
+        porDependencia[d] = { cantidad: 0, masaSalarial: 0, provistas: 0, vacantes: 0 };
+      }
+      porDependencia[d].cantidad++;
+      porDependencia[d].masaSalarial += Number(p.asignacion_basica) || 0;
+      if (p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')) {
+        porDependencia[d].provistas++;
+      } else {
+        porDependencia[d].vacantes++;
+      }
+    });
+
+    // Paridad de Género (Ley 2424 / Ley 581)
+    const directivos = listPlazas.filter((p) => p.nivel === 'DIRECTIVO');
+    const mujeresDirectivas = directivos.filter((p) => p.sexo === 'MUJER').length;
+    const pctMujeresDirectivo = directivos.length > 0 ? (mujeresDirectivas / directivos.length) * 100 : 0;
+    const mujeresTotal = listPlazas.filter((p) => p.sexo === 'MUJER').length;
+    const hombresTotal = listPlazas.filter((p) => p.sexo === 'HOMBRE').length;
+
+    // Edad promedio
+    const edadesValidas = listPlazas.filter((p: any) => p.edad && Number(p.edad) > 0).map((p: any) => Number(p.edad));
+    const edadPromedio = edadesValidas.length > 0 ? edadesValidas.reduce((a, b) => a + b, 0) / edadesValidas.length : 0;
+
+    // EPS en PERNO
+    const porEps: Record<string, number> = {};
+    todoElPerno.forEach((p) => {
+      const e = (p.fondo_salud || 'SIN EPS').trim();
+      porEps[e] = (porEps[e] || 0) + 1;
+    });
+
+    // Fondos de Pensiones en PERNO
+    const porAfp: Record<string, number> = {};
+    todoElPerno.forEach((p) => {
+      const a = (p.fondo_pension || 'SIN AFP').trim();
+      porAfp[a] = (porAfp[a] || 0) + 1;
+    });
+
+    return {
+      totalPlazas,
+      conSideap,
+      conPerno,
+      provistas,
+      vacantesDef,
+      vacantesTemp,
+      enEncargo,
+      masaSalarialMensual,
+      salarioPromedio,
+      porVinculacion,
+      porNivel,
+      porDependencia,
+      directivosCount: directivos.length,
+      mujeresDirectivas,
+      pctMujeresDirectivo,
+      mujeresTotal,
+      hombresTotal,
+      edadPromedio,
+      porEps,
+      porAfp,
+    };
+  }, [plazas, todasLasPlazas, todoElPerno]);
+
+  // Plazas filtradas para la tabla del Reporte de Vinculación / SIDEAP
+  const plazasFiltradasReporte = useMemo(() => {
+    const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+    let res = listPlazas;
+    if (subReporteActivo === 'vinculacion_sideap') {
+      if (filtroVinculacionReporte !== 'TODAS') {
+        res = res.filter((p) => (p.tipo_vinculacion || '').toUpperCase().trim() === filtroVinculacionReporte);
+      }
+      if (filtroNivelReporte !== 'TODOS') {
+        res = res.filter((p) => p.nivel === filtroNivelReporte);
+      }
+      if (filtroDependenciaReporte !== 'TODAS') {
+        res = res.filter((p) => (p.dependencia_cargo || p.dependencia_funcional) === filtroDependenciaReporte);
+      }
+      if (filtroEstadoCargoReporte !== 'TODOS') {
+        res = res.filter((p) => p.estado_cargo === filtroEstadoCargoReporte);
+      }
+      if (busquedaReporte.trim()) {
+        const q = busquedaReporte.trim().toLowerCase();
+        res = res.filter((p) =>
+          String(p.id_plaza).includes(q) ||
+          String(p.id_sideap || '').includes(q) ||
+          String(p.id_perno || '').includes(q) ||
+          (p.codigo && String(p.codigo).toLowerCase().includes(q)) ||
+          (p.grado && String(p.grado).toLowerCase().includes(q)) ||
+          (`${p.codigo || ''}-${p.grado || ''}`.toLowerCase().includes(q)) ||
+          (p.cargo && p.cargo.toLowerCase().includes(q)) ||
+          (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
+          (p.titular_cedula && p.titular_cedula.includes(q)) ||
+          (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(q)) ||
+          (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q)) ||
+          (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(q))
+        );
+      }
+    }
+    return res;
+  }, [
+    plazas,
+    todasLasPlazas,
+    subReporteActivo,
+    filtroVinculacionReporte,
+    filtroNivelReporte,
+    filtroDependenciaReporte,
+    filtroEstadoCargoReporte,
+    busquedaReporte,
+  ]);
+
+  // Exportación del reporte activo a CSV (compatible con Excel con UTF-8 BOM y punto y coma)
+  const handleExportarReporteCsv = (tipo: SubReporteTipo) => {
+    try {
+      const listPlazas = plazas.length > 0 ? plazas : todasLasPlazas;
+      let csvContent = '';
+      let nombreArchivo = '';
+
+      if (tipo === 'vinculacion_sideap') {
+        nombreArchivo = 'Reporte_Tipo_Vinculacion_SIDEAP_Planta.csv';
+        const headers = [
+          'Plaza',
+          'ID_SIDEAP',
+          'ID_PERNO',
+          'Nivel',
+          'Cargo',
+          'Codigo',
+          'Grado',
+          'Dependencia_Cargo',
+          'Dependencia_Funcional',
+          'Tipo_Vinculacion',
+          'Situacion_Titular',
+          'Situacion_Administrativa',
+          'Estado_Cargo',
+          'Cedula_Titular',
+          'Nombre_Titular',
+          'Es_Encargo',
+          'Cedula_Encargo',
+          'Nombre_Encargo',
+          'Asignacion_Basica',
+          'Sexo',
+          'Edad',
+        ];
+        csvContent = headers.join(';') + '\n';
+        plazasFiltradasReporte.forEach((p) => {
+          const row = [
+            p.id_plaza,
+            p.id_sideap || '',
+            p.id_perno || '',
+            `"${p.nivel || ''}"`,
+            `"${(p.cargo || '').replace(/"/g, '""')}"`,
+            p.codigo || '',
+            p.grado || '',
+            `"${(p.dependencia_cargo || '').replace(/"/g, '""')}"`,
+            `"${(p.dependencia_funcional || '').replace(/"/g, '""')}"`,
+            `"${(p.tipo_vinculacion || '').replace(/"/g, '""')}"`,
+            `"${(p.situacion_titular || '').replace(/"/g, '""')}"`,
+            `"${(p.situacion_administrativa || '').replace(/"/g, '""')}"`,
+            `"${p.estado_cargo || ''}"`,
+            p.titular_cedula || '',
+            `"${(p.titular_nombre || '').replace(/"/g, '""')}"`,
+            p.es_encargo ? 'SI' : 'NO',
+            p.encargo_cedula || '',
+            `"${(p.encargo_nombre || '').replace(/"/g, '""')}"`,
+            p.asignacion_basica || 0,
+            p.sexo || '',
+            (p as any).edad || '',
+          ];
+          csvContent += row.join(';') + '\n';
+        });
+      } else if (tipo === 'ocupacion_vacancias') {
+        nombreArchivo = 'Reporte_Ocupacion_Vacancias_Planta.csv';
+        const headers = ['Plaza', 'ID_SIDEAP', 'Nivel', 'Cargo', 'Codigo', 'Grado', 'Dependencia', 'Estado_Cargo', 'Situacion_Titular', 'Situacion_Administrativa', 'Titular', 'Es_Encargo', 'Servidor_Encargado', 'Asignacion_Basica'];
+        csvContent = headers.join(';') + '\n';
+        listPlazas.forEach((p) => {
+          csvContent += [
+            p.id_plaza,
+            p.id_sideap || '',
+            `"${p.nivel || ''}"`,
+            `"${(p.cargo || '').replace(/"/g, '""')}"`,
+            p.codigo || '',
+            p.grado || '',
+            `"${(p.dependencia_cargo || '').replace(/"/g, '""')}"`,
+            `"${p.estado_cargo || ''}"`,
+            `"${(p.situacion_titular || '').replace(/"/g, '""')}"`,
+            `"${(p.situacion_administrativa || '').replace(/"/g, '""')}"`,
+            `"${(p.titular_nombre || '').replace(/"/g, '""')}"`,
+            p.es_encargo ? 'SI' : 'NO',
+            `"${(p.encargo_nombre || '').replace(/"/g, '""')}"`,
+            p.asignacion_basica || 0,
+          ].join(';') + '\n';
+        });
+      } else if (tipo === 'dependencias_costo') {
+        nombreArchivo = 'Reporte_Presupuesto_Dependencias_Planta.csv';
+        const headers = ['Dependencia', 'Total_Plazas', 'Plazas_Ocupadas', 'Plazas_Vacantes', 'Masa_Salarial_Mensual', 'Presupuesto_Anual_Estimado', 'Salario_Promedio'];
+        csvContent = headers.join(';') + '\n';
+        Object.entries(metricasReportes.porDependencia).forEach(([dep, d]) => {
+          const anual = d.masaSalarial * 12 * 1.5;
+          const prom = d.cantidad > 0 ? d.masaSalarial / d.cantidad : 0;
+          csvContent += [
+            `"${dep.replace(/"/g, '""')}"`,
+            d.cantidad,
+            d.provistas,
+            d.vacantes,
+            d.masaSalarial,
+            Math.round(anual),
+            Math.round(prom),
+          ].join(';') + '\n';
+        });
+      } else if (tipo === 'paridad_demografia') {
+        nombreArchivo = 'Reporte_Paridad_Genero_Demografia_Ley2424.csv';
+        const headers = ['Plaza', 'Nivel', 'Cargo', 'Dependencia', 'Sexo', 'Edad', 'Titular', 'Tipo_Vinculacion'];
+        csvContent = headers.join(';') + '\n';
+        listPlazas.forEach((p) => {
+          csvContent += [
+            p.id_plaza,
+            `"${p.nivel || ''}"`,
+            `"${(p.cargo || '').replace(/"/g, '""')}"`,
+            `"${(p.dependencia_cargo || '').replace(/"/g, '""')}"`,
+            p.sexo || '',
+            p.edad || '',
+            `"${(p.titular_nombre || '').replace(/"/g, '""')}"`,
+            `"${(p.tipo_vinculacion || '').replace(/"/g, '""')}"`,
+          ].join(';') + '\n';
+        });
+      } else if (tipo === 'conciliacion_perno') {
+        nombreArchivo = 'Reporte_Conciliacion_Planta_vs_PERNO.csv';
+        const headers = ['Cedula', 'Nombre_Completo', 'Cargo_PERNO', 'Grado', 'Dependencia_PERNO', 'Estado_Funcionario', 'Posicion_Planta', 'Total_Devengado', 'Fecha_Ingreso', 'Fondo_Salud', 'Fondo_Pension'];
+        csvContent = headers.join(';') + '\n';
+        todoElPerno.forEach((p) => {
+          csvContent += [
+            p.cedula,
+            `"${(p.nombre_completo || '').replace(/"/g, '""')}"`,
+            `"${(p.cargo || '').replace(/"/g, '""')}"`,
+            p.grado || '',
+            `"${(p.dependencia || '').replace(/"/g, '""')}"`,
+            `"${(p.estado_funcionario || '').replace(/"/g, '""')}"`,
+            p.posicion_planta != null ? String(p.posicion_planta) : '',
+            p.total_devengado || 0,
+            p.fecha_ingreso_entidad || '',
+            `"${(p.fondo_salud || '').replace(/"/g, '""')}"`,
+            `"${(p.fondo_pension || '').replace(/"/g, '""')}"`,
+          ].join(';') + '\n';
+        });
+      } else if (tipo === 'seguridad_social') {
+        nombreArchivo = 'Reporte_Seguridad_Social_EPS_AFP.csv';
+        const headers = ['Cedula', 'Servidor', 'Dependencia', 'EPS_Salud', 'Fondo_Pension', 'Fondo_Cesantias', 'Estado_Funcionario'];
+        csvContent = headers.join(';') + '\n';
+        todoElPerno.forEach((p) => {
+          csvContent += [
+            p.cedula,
+            `"${(p.nombre_completo || '').replace(/"/g, '""')}"`,
+            `"${(p.dependencia || '').replace(/"/g, '""')}"`,
+            `"${(p.fondo_salud || '').replace(/"/g, '""')}"`,
+            `"${(p.fondo_pension || '').replace(/"/g, '""')}"`,
+            `"${(p.fondo_cesantias || '').replace(/"/g, '""')}"`,
+            `"${(p.estado_funcionario || '').replace(/"/g, '""')}"`,
+          ].join(';') + '\n';
+        });
+      }
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.setAttribute('download', nombreArchivo);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else {
+        mostrarModal('Reporte Exportado', `El reporte ${nombreArchivo} se generó exitosamente con ${listPlazas.length} registros y codificación UTF-8 con punto y coma.`, 'success');
+      }
+    } catch (err: any) {
+      mostrarModal('Error de Exportación', 'No fue posible exportar el reporte: ' + err.message, 'error');
+    }
+  };
 
   // Filtrado de Personal de PERNO
   const pernoFiltrado = useMemo(() => {
@@ -462,7 +834,7 @@ export default function NominaScreen() {
       .sort((a, b) => a.valor.localeCompare(b.valor));
   }, [todasLasPlazas]);
 
-  // 2. Lista de Códigos y Grados (con conteo)
+  // 2. Lista de Códigos y Grados (con conteo unificado y normalizado)
   const listaCodigoGrado = useMemo(() => {
     const base = filtroCargo
       ? todasLasPlazas.filter((p) => (p.cargo || '').toLowerCase() === filtroCargo.toLowerCase())
@@ -470,25 +842,30 @@ export default function NominaScreen() {
 
     const map = new Map<string, { codigo: string; grado: string; count: number }>();
     base.forEach((p) => {
-      const cod = p.codigo ? String(p.codigo) : 'S/C';
-      const gr = p.grado ? String(p.grado) : 'S/G';
-      const key = `${p.codigo || ''}-${p.grado || ''}`;
-      if (!map.has(key)) {
-        map.set(key, { codigo: cod, grado: gr, count: 1 });
+      const rawCod = p.codigo ? String(p.codigo).trim() : '';
+      const rawGra = p.grado ? String(p.grado).trim() : '';
+      const cod = rawCod || 'S/C';
+      const gr = rawGra || 'S/G';
+      const grNorm = rawGra.replace(/^0+/, '') || rawGra;
+      const codNorm = rawCod.replace(/^0+/, '') || rawCod;
+      const keyGroup = `${codNorm}-${grNorm}`;
+
+      if (!map.has(keyGroup)) {
+        map.set(keyGroup, { codigo: cod, grado: gr, count: 1 });
       } else {
-        map.get(key)!.count += 1;
+        map.get(keyGroup)!.count += 1;
       }
     });
 
-    return Array.from(map.entries())
-      .map(([key, val]) => ({
-        valor: key,
+    return Array.from(map.values())
+      .map((val) => ({
+        valor: `${val.codigo}-${val.grado}`,
         codigo: val.codigo,
         grado: val.grado,
         etiqueta: `Cód. ${val.codigo} - Grado ${val.grado}`,
         count: val.count,
       }))
-      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta));
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, undefined, { numeric: true }));
   }, [todasLasPlazas, filtroCargo]);
 
   // 3. Lista de Dependencias (con conteo)
@@ -498,7 +875,7 @@ export default function NominaScreen() {
       base = base.filter((p) => (p.cargo || '').toLowerCase() === filtroCargo.toLowerCase());
     }
     if (filtroCodigoGrado) {
-      base = base.filter((p) => `${p.codigo || ''}-${p.grado || ''}` === filtroCodigoGrado);
+      base = base.filter((p) => coincideCodigoGrado(p, filtroCodigoGrado));
     }
     const map = new Map<string, number>();
     base.forEach((p) => {
@@ -798,7 +1175,8 @@ export default function NominaScreen() {
     return opcionesModal.filter(
       (op) =>
         op.etiquetaPrincipal.toLowerCase().includes(q) ||
-        (op.etiquetaSecundaria && op.etiquetaSecundaria.toLowerCase().includes(q))
+        (op.etiquetaSecundaria && op.etiquetaSecundaria.toLowerCase().includes(q)) ||
+        (op.valor && op.valor.toLowerCase().includes(q))
     );
   }, [opcionesModal, pickerBusqueda]);
 
@@ -1795,6 +2173,49 @@ export default function NominaScreen() {
               </View>
             </Pressable>
 
+            {/* Pestaña: Peticiones OPEC y Equivalentes */}
+            <Pressable
+              onPress={() => setTabActiva('peticiones')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 11,
+                paddingHorizontal: 16,
+                borderBottomWidth: 2,
+                borderBottomColor: tabActiva === 'peticiones' ? THEME.marca600 : 'transparent',
+                marginBottom: -1,
+              }}
+            >
+              <Ionicons
+                name="scale-outline"
+                size={16}
+                color={tabActiva === 'peticiones' ? THEME.marca700 : THEME.slate500}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: tabActiva === 'peticiones' ? '700' : '500',
+                  color: tabActiva === 'peticiones' ? THEME.marca700 : THEME.slate500,
+                }}
+              >
+                Peticiones OPEC
+              </Text>
+              <View
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: '#FDECEE',
+                  borderRadius: 9999,
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#BE1F2D' }}>
+                  IA • CNSC
+                </Text>
+              </View>
+            </Pressable>
+
             {/* Pestaña 2: Escaleras de Encargos */}
             <Pressable
               onPress={() => setTabActiva('escaleras')}
@@ -1960,11 +2381,66 @@ export default function NominaScreen() {
                 </View>
               )}
             </Pressable>
+
+            {/* Pestaña: Reportes & Analítica */}
+            <Pressable
+              onPress={() => setTabActiva('reportes')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 11,
+                paddingHorizontal: 16,
+                borderBottomWidth: 2,
+                borderBottomColor: tabActiva === 'reportes' ? THEME.marca600 : 'transparent',
+                marginBottom: -1,
+              }}
+            >
+              <Ionicons
+                name="bar-chart"
+                size={16}
+                color={tabActiva === 'reportes' ? THEME.marca700 : THEME.slate400}
+                style={{ marginRight: 6 }}
+              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '500',
+                  color: tabActiva === 'reportes' ? THEME.marca700 : THEME.slate500,
+                }}
+              >
+                Reportes & Analítica
+              </Text>
+              <View
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: tabActiva === 'reportes' ? THEME.marca100 : THEME.slate100,
+                  borderRadius: 9999,
+                  paddingHorizontal: 7,
+                  paddingVertical: 2,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: tabActiva === 'reportes' ? THEME.marca800 : THEME.slate600,
+                  }}
+                >
+                  6
+                </Text>
+              </View>
+            </Pressable>
           </View>
 
           {/* ============================================================== */}
           {/* CONTENIDO SEGÚN PESTAÑA ACTIVA                                */}
           {/* ============================================================== */}
+          {tabActiva === 'peticiones' && (
+            <View style={{ width: '100%', marginBottom: 20 }}>
+              <AsistentePeticionesOPEC />
+            </View>
+          )}
+
           {tabActiva === 'plazas' && (
             <View style={{ width: '100%' }}>
               {/* FILTROS AVANZADOS CON MODALES ESTILO /ingresos/nueva */}
@@ -4046,6 +4522,734 @@ export default function NominaScreen() {
           )}
 
           {/* ============================================================== */}
+          {/* PESTAÑA 5: REPORTES & ANALÍTICA DE PLANTA Y NÓMINA             */}
+          {/* ============================================================== */}
+          {tabActiva === 'reportes' && (
+            <View style={{ gap: 20 }}>
+              {/* Encabezado y Selector de Sub-reportes */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 12,
+                  padding: 20,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  gap: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 3,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: isDesktop ? 'row' : 'column',
+                    justifyContent: 'space-between',
+                    alignItems: isDesktop ? 'center' : 'flex-start',
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View
+                        style={{
+                          backgroundColor: THEME.marca100,
+                          padding: 8,
+                          borderRadius: 8,
+                        }}
+                      >
+                        <Ionicons name="stats-chart" size={22} color={THEME.marca800} />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 18, fontWeight: '800', color: THEME.slate900 }}>
+                          Centro de Reportes y Analítica de Planta
+                        </Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate500, marginTop: 1 }}>
+                          Secretaría Jurídica Distrital — Módulo Oficial de Talento Humano y Nómina
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Botón de Exportación a Excel */}
+                  <Pressable
+                    onPress={() => handleExportarReporteCsv(subReporteActivo)}
+                    style={({ pressed }) => ({
+                      backgroundColor: pressed ? '#166534' : '#15803d',
+                      paddingHorizontal: 16,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 3,
+                    })}
+                  >
+                    <Ionicons name="download-outline" size={16} color={THEME.white} />
+                    <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 13 }}>
+                      Exportar Reporte a Excel (.csv)
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* Sub-pestañas / Pills de Reportes */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {[
+                    { id: 'vinculacion_sideap', label: 'Tipo de Vinculación & SIDEAP', icono: 'business-outline' },
+                    { id: 'ocupacion_vacancias', label: 'Ocupación & Vacancias', icono: 'pie-chart-outline' },
+                    { id: 'dependencias_costo', label: 'Dependencias & Presupuesto', icono: 'cash-outline' },
+                    { id: 'paridad_demografia', label: 'Paridad & Demografía (Ley 2424)', icono: 'people-outline' },
+                    { id: 'conciliacion_perno', label: 'Conciliación Planta vs PERNO', icono: 'sync-outline' },
+                    { id: 'seguridad_social', label: 'Seguridad Social (PERNO)', icono: 'shield-checkmark-outline' },
+                  ].map((rep) => {
+                    const sel = subReporteActivo === rep.id;
+                    return (
+                      <Pressable
+                        key={rep.id}
+                        onPress={() => {
+                          setSubReporteActivo(rep.id as any);
+                          setPaginaReporte(1);
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          backgroundColor: sel ? THEME.marca800 : THEME.slate100,
+                          borderWidth: 1,
+                          borderColor: sel ? THEME.marca900 : THEME.slate200,
+                        }}
+                      >
+                        <Ionicons
+                          name={rep.icono as any}
+                          size={15}
+                          color={sel ? THEME.white : THEME.slate600}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: sel ? '700' : '500',
+                            color: sel ? THEME.white : THEME.slate700,
+                          }}
+                        >
+                          {rep.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* ============================================================== */}
+              {/* SUB-REPORTE 1: TIPO DE VINCULACIÓN AL CARGO / SIDEAP           */}
+              {/* ============================================================== */}
+              {subReporteActivo === 'vinculacion_sideap' && (
+                <View style={{ gap: 16 }}>
+                  {/* Tarjetas KPI de Vinculación y SIDEAP */}
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>TOTAL PLAZAS PLANTA</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{metricasReportes.totalPlazas}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Plazas autorizadas en estructura</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>HOMOLOGADAS SIDEAP</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.emeraldText, marginTop: 4 }}>{metricasReportes.conSideap}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                        {((metricasReportes.conSideap / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1)}% con ID único distrital
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.marca700, fontWeight: '700' }}>SINCRONIZADAS PERNO</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.marca800, marginTop: 4 }}>{metricasReportes.conPerno}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                        {((metricasReportes.conPerno / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1)}% vinculadas en nómina
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate600, fontWeight: '600' }}>PLAZAS PROVISTAS</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{metricasReportes.provistas}</Text>
+                      <Text style={{ fontSize: 11, color: '#b45309', marginTop: 2 }}>
+                        {metricasReportes.vacantesDef + metricasReportes.vacantesTemp} vacantes activas
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Resumen Gráfico de Distribución por Tipo de Vinculación */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                      Distribución por Tipo de Vinculación al Cargo
+                    </Text>
+                    <View style={{ gap: 8 }}>
+                      {Object.entries(metricasReportes.porVinculacion).map(([vinc, data]) => {
+                        const pct = ((data.cantidad / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1);
+                        const esCarrera = vinc.includes('CARRERA');
+                        const esEncargo = vinc.includes('ENCARGO');
+                        const esProv = vinc.includes('PROVISIONAL');
+                        const esOrd = vinc.includes('ORDINARIO');
+                        const colorBarra = esCarrera ? '#2563eb' : esEncargo ? '#d97706' : esProv ? '#7c3aed' : esOrd ? '#059669' : '#64748b';
+
+                        return (
+                          <View key={vinc} style={{ gap: 3 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
+                                {vinc}
+                              </Text>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
+                                {data.cantidad} plazas ({pct}%) • {formatMoneda(data.masaSalarial)}/mes
+                              </Text>
+                            </View>
+                            <View style={{ height: 8, backgroundColor: THEME.slate100, borderRadius: 4, overflow: 'hidden' }}>
+                              <View style={{ width: (`${pct}%` as any), height: '100%', backgroundColor: colorBarra, borderRadius: 4 }} />
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Barra de Filtros y Búsqueda de la Tabla */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.white,
+                      borderRadius: 10,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 10, alignItems: isDesktop ? 'center' : 'stretch' }}>
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: THEME.slate50, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: THEME.slate300, gap: 6 }}>
+                        <Ionicons name="search" size={16} color={THEME.slate400} />
+                        <TextInput
+                          value={busquedaReporte}
+                          onChangeText={(t) => {
+                            setBusquedaReporte(t);
+                            setPaginaReporte(1);
+                          }}
+                          placeholder="Buscar por cédula, titular, cargo, ID SIDEAP o ID PERNO..."
+                          placeholderTextColor={THEME.slate400}
+                          style={{ flex: 1, fontSize: 12.5, color: THEME.slate900 }}
+                        />
+                        {busquedaReporte ? (
+                          <Pressable onPress={() => setBusquedaReporte('')}>
+                            <Ionicons name="close-circle" size={16} color={THEME.slate400} />
+                          </Pressable>
+                        ) : null}
+                      </View>
+
+                      {/* Filtro Tipo Vinculación */}
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                        {['TODAS', 'CARRERA ADMINISTRATIVA', 'EN ENCARGO', 'EN PROVISIONALIDAD', 'EN PERIODO DE PRUEBA', 'NOMBRAMIENTO ORDINARIO'].map((tv) => {
+                          const sel = filtroVinculacionReporte === tv;
+                          return (
+                            <Pressable
+                              key={tv}
+                              onPress={() => {
+                                setFiltroVinculacionReporte(tv);
+                                setPaginaReporte(1);
+                              }}
+                              style={{
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                                backgroundColor: sel ? THEME.marca700 : THEME.slate100,
+                              }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700 }}>
+                                {tv === 'TODAS' ? 'Todos los Tipos' : tv}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <Text style={{ fontSize: 12, color: THEME.slate600, fontWeight: '600' }}>
+                        Mostrando {plazasFiltradasReporte.length} plazas coincidentes
+                      </Text>
+                      {/* Filtro Nivel */}
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {['TODOS', 'DIRECTIVO', 'ASESOR', 'PROFESIONAL', 'ASISTENCIAL'].map((nv) => {
+                          const sel = filtroNivelReporte === nv;
+                          return (
+                            <Pressable
+                              key={nv}
+                              onPress={() => {
+                                setFiltroNivelReporte(nv);
+                                setPaginaReporte(1);
+                              }}
+                              style={{
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 4,
+                                backgroundColor: sel ? THEME.marca600 : THEME.slate100,
+                              }}
+                            >
+                              <Text style={{ fontSize: 10.5, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate600 }}>
+                                {nv}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Tabla de Vinculación al Cargo / SIDEAP */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 10, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden' }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                      <View>
+                        {/* Cabecera Tabla */}
+                        <View style={{ flexDirection: 'row', backgroundColor: THEME.marca900, paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: THEME.slate200 }}>
+                          <Text style={{ width: 60, fontSize: 11, fontWeight: '700', color: THEME.white }}>PLAZA</Text>
+                          <Text style={{ width: 85, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID SIDEAP</Text>
+                          <Text style={{ width: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>ID PERNO</Text>
+                          <Text style={{ width: 95, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
+                          <Text style={{ width: 220, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
+                          <Text style={{ width: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
+                          <Text style={{ width: 200, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                          <Text style={{ width: 170, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VINCULACIÓN</Text>
+                          <Text style={{ width: 140, fontSize: 11, fontWeight: '700', color: THEME.white }}>SITUACIÓN TITULAR</Text>
+                          <Text style={{ width: 180, fontSize: 11, fontWeight: '700', color: THEME.white }}>TITULAR / SERVIDOR</Text>
+                          <Text style={{ width: 110, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
+                        </View>
+
+                        {/* Filas */}
+                        {plazasFiltradasReporte
+                          .slice((paginaReporte - 1) * filasPorPaginaReporte, paginaReporte * filasPorPaginaReporte)
+                          .map((p, idx) => {
+                            const esPar = idx % 2 === 0;
+                            const esOcupada = p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE');
+
+                            return (
+                              <Pressable
+                                key={p.id_plaza}
+                                onPress={() => {
+                                  setPlazaDetalleReporte(p);
+                                  setModalDetallePlazaReporteVisible(true);
+                                }}
+                                style={{
+                                  flexDirection: 'row',
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 12,
+                                  backgroundColor: esPar ? THEME.white : THEME.slate50,
+                                  borderBottomWidth: 1,
+                                  borderBottomColor: THEME.slate100,
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Text style={{ width: 60, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>#{p.id_plaza}</Text>
+                                <View style={{ width: 85 }}>
+                                  <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#3730A3' }}>{p.id_sideap || 'N/A'}</Text>
+                                  </View>
+                                </View>
+                                <View style={{ width: 80 }}>
+                                  <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#92400E' }}>{p.id_perno || 'N/A'}</Text>
+                                  </View>
+                                </View>
+                                <Text style={{ width: 95, fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>{p.nivel}</Text>
+                                <Text style={{ width: 220, fontSize: 11.5, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>{p.cargo}</Text>
+                                <Text style={{ width: 80, fontSize: 11, color: THEME.slate600 }}>{p.codigo} - {p.grado}</Text>
+                                <Text style={{ width: 200, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo || p.dependencia_funcional}</Text>
+                                <View style={{ width: 170 }}>
+                                  <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }}>{p.tipo_vinculacion || 'SIN DEFINIR'}</Text>
+                                  </View>
+                                </View>
+                                <Text style={{ width: 140, fontSize: 10.5, color: esOcupada ? THEME.emeraldText : '#b45309', fontWeight: '600' }} numberOfLines={1}>
+                                  {p.situacion_titular || p.estado_cargo}
+                                </Text>
+                                <Text style={{ width: 180, fontSize: 11, color: THEME.slate800, fontWeight: '600' }} numberOfLines={1}>
+                                  {p.titular_nombre || 'VACANTE'}
+                                </Text>
+                                <Text style={{ width: 110, fontSize: 11.5, fontWeight: '700', color: THEME.marca900, textAlign: 'right' }}>
+                                  {formatMoneda(p.asignacion_basica)}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                      </View>
+                    </ScrollView>
+
+                    {/* Paginador */}
+                    {plazasFiltradasReporte.length > filasPorPaginaReporte && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderTopWidth: 1, borderTopColor: THEME.slate200 }}>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                          Página {paginaReporte} de {Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte)}
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <Pressable
+                            disabled={paginaReporte <= 1}
+                            onPress={() => setPaginaReporte((prev) => Math.max(1, prev - 1))}
+                            style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6, backgroundColor: paginaReporte <= 1 ? THEME.slate100 : THEME.white, borderWidth: 1, borderColor: THEME.slate300 }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: paginaReporte <= 1 ? THEME.slate400 : THEME.slate800, fontWeight: '600' }}>Anterior</Text>
+                          </Pressable>
+                          <Pressable
+                            disabled={paginaReporte >= Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte)}
+                            onPress={() => setPaginaReporte((prev) => Math.min(Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte), prev + 1))}
+                            style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 6, backgroundColor: paginaReporte >= Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte) ? THEME.slate100 : THEME.white, borderWidth: 1, borderColor: THEME.slate300 }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: paginaReporte >= Math.ceil(plazasFiltradasReporte.length / filasPorPaginaReporte) ? THEME.slate400 : THEME.slate800, fontWeight: '600' }}>Siguiente</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-REPORTE 2: OCUPACIÓN & VACANCIAS                           */}
+              {/* ============================================================== */}
+              {subReporteActivo === 'ocupacion_vacancias' && (
+                <View style={{ gap: 16 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>PLAZAS OCUPADAS</Text>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.emeraldText, marginTop: 4 }}>{metricasReportes.provistas}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>{((metricasReportes.provistas / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1)}% de ocupación efectiva</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '700' }}>VACANTES DEFINITIVAS</Text>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: '#dc2626', marginTop: 4 }}>{metricasReportes.vacantesDef}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Requieren concurso o provisión transitoria</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: '#d97706', fontWeight: '700' }}>VACANTES TEMPORALES</Text>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: '#d97706', marginTop: 4 }}>{metricasReportes.vacantesTemp}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Por comisión, licencia o encargo</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.marca700, fontWeight: '700' }}>ENCARGOS PREFERENTES</Text>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca800, marginTop: 4 }}>{metricasReportes.enEncargo}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Ley 1960 de 2019 aplicada</Text>
+                    </View>
+                  </View>
+
+                  {/* Listado de Plazas Vacantes */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                      Inventario de Vacancias Definitivas y Temporales
+                    </Text>
+                    <View style={{ gap: 8 }}>
+                      {(plazas.length > 0 ? plazas : todasLasPlazas)
+                        .filter((p) => p.estado_cargo !== 'OCUPADO' || p.titular_nombre?.includes('VACANTE'))
+                        .map((p) => (
+                          <View key={p.id_plaza} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderRadius: 8, backgroundColor: THEME.slate50, borderWidth: 1, borderColor: THEME.slate200 }}>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.marca800 }}>PLAZA #{p.id_plaza}</Text>
+                                <View style={{ backgroundColor: p.estado_cargo === 'VACANTE DEFINITIVA' ? '#fee2e2' : '#fef3c7', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: p.estado_cargo === 'VACANTE DEFINITIVA' ? '#991b1b' : '#92400e' }}>
+                                    {p.estado_cargo}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>{p.cargo} ({p.codigo}-{p.grado})</Text>
+                              <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 1 }}>{p.dependencia_cargo} • Asignación: {formatMoneda(p.asignacion_basica)}</Text>
+                            </View>
+                            <Pressable
+                              onPress={() => {
+                                setPlazaDetalleReporte(p);
+                                setModalDetallePlazaReporteVisible(true);
+                              }}
+                              style={{ backgroundColor: THEME.marca50, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, borderWidth: 1, borderColor: THEME.marca100 }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>Ver Ficha</Text>
+                            </Pressable>
+                          </View>
+                        ))}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-REPORTE 3: DEPENDENCIAS & PRESUPUESTO                      */}
+              {/* ============================================================== */}
+              {subReporteActivo === 'dependencias_costo' && (
+                <View style={{ gap: 16 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>MASA SALARIAL MENSUAL</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.marca900, marginTop: 4 }}>{formatMoneda(metricasReportes.masaSalarialMensual)}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Sueldo básico mensual de planta</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>PRESUPUESTO ANUAL ESTIMADO</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{formatMoneda(metricasReportes.masaSalarialMensual * 12 * 1.5)}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Incluye prestaciones sociales y aportes patronales</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>SALARIO PROMEDIO / PLAZA</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{formatMoneda(metricasReportes.salarioPromedio)}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Promedio aritmético en la planta</Text>
+                    </View>
+                  </View>
+
+                  {/* Tabla de Dependencias y Costos */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                      Distribución de Personal y Costo Fiscal por Dependencia
+                    </Text>
+                    <View style={{ gap: 8 }}>
+                      {Object.entries(metricasReportes.porDependencia).map(([dep, data]) => {
+                        const pctMasa = ((data.masaSalarial / (metricasReportes.masaSalarialMensual || 1)) * 100).toFixed(1);
+                        return (
+                          <View key={dep} style={{ padding: 14, borderRadius: 8, backgroundColor: THEME.slate50, borderWidth: 1, borderColor: THEME.slate200, gap: 8 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, flex: 1 }}>{dep}</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca800 }}>{formatMoneda(data.masaSalarial)}/mes</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 11.5, color: THEME.slate600 }}>
+                                {data.cantidad} plazas ({data.provistas} provistas, {data.vacantes} vacantes)
+                              </Text>
+                              <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                                Representa el {pctMasa}% del costo salarial institucional
+                              </Text>
+                            </View>
+                            <View style={{ height: 6, backgroundColor: THEME.slate200, borderRadius: 3, overflow: 'hidden' }}>
+                              <View style={{ width: (`${pctMasa}%` as any), height: '100%', backgroundColor: THEME.marca600, borderRadius: 3 }} />
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-REPORTE 4: PARIDAD DE GÉNERO & DEMOGRAFÍA (LEY 2424)       */}
+              {/* ============================================================== */}
+              {subReporteActivo === 'paridad_demografia' && (
+                <View style={{ gap: 16 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '700' }}>PARIDAD NIVEL DIRECTIVO</Text>
+                        <View style={{ backgroundColor: metricasReportes.pctMujeresDirectivo >= 50 ? '#dcfce7' : '#fee2e2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: metricasReportes.pctMujeresDirectivo >= 50 ? '#166534' : '#991b1b' }}>
+                            {metricasReportes.pctMujeresDirectivo >= 50 ? 'CUMPLE LEY 2424' : 'POR DEBAJO DE META'}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca900, marginTop: 4 }}>
+                        {metricasReportes.pctMujeresDirectivo.toFixed(1)}% Mujeres
+                      </Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                        {metricasReportes.mujeresDirectivas} mujeres de {metricasReportes.directivosCount} cargos directivos (Meta: 50%)
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>DISTRIBUCIÓN TOTAL PLANTA</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>
+                        {metricasReportes.mujeresTotal} M / {metricasReportes.hombresTotal} H
+                      </Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                        {((metricasReportes.mujeresTotal / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1)}% Mujeres en planta general
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>EDAD PROMEDIO INSTITUCIONAL</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>
+                        {metricasReportes.edadPromedio.toFixed(1)} Años
+                      </Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Cálculo sobre servidores de planta provistos</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-REPORTE 5: CONCILIACIÓN PLANTA VS NÓMINA (PERNO)           */}
+              {/* ============================================================== */}
+              {subReporteActivo === 'conciliacion_perno' && (
+                <View style={{ gap: 16 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>TOTAL REGISTROS PERNO</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>{todoElPerno.length}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Historial de nómina distrital</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: THEME.emeraldText, fontWeight: '700' }}>SERVIDORES ACTIVOS EN NÓMINA</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.emeraldText, marginTop: 4 }}>{estadisticasPerno.activos}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Frente a {metricasReportes.totalPlazas} plazas de estructura</Text>
+                    </View>
+
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, color: '#dc2626', fontWeight: '700' }}>RETIRADOS / DESVINCULADOS</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: '#dc2626', marginTop: 4 }}>{estadisticasPerno.retirados}</Text>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Histórico de personal desvinculado</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* ============================================================== */}
+              {/* SUB-REPORTE 6: SEGURIDAD SOCIAL & FONDOS (PERNO)               */}
+              {/* ============================================================== */}
+              {subReporteActivo === 'seguridad_social' && (
+                <View style={{ gap: 16 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 16 }}>
+                    {/* EPS */}
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 10 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                        Distribución por Entidades Promotoras de Salud (EPS)
+                      </Text>
+                      <View style={{ gap: 8 }}>
+                        {Object.entries(metricasReportes.porEps).map(([eps, cant]) => (
+                          <View key={eps} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: THEME.slate100 }}>
+                            <Text style={{ fontSize: 12, color: THEME.slate800, fontWeight: '600', flex: 1 }}>{eps}</Text>
+                            <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800 }}>{cant} afiliados</Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Fondos de Pensiones */}
+                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 10 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                        Distribución por Administradoras de Fondos de Pensiones (AFP)
+                      </Text>
+                      <View style={{ gap: 8 }}>
+                        {Object.entries(metricasReportes.porAfp).map(([afp, cant]) => (
+                          <View key={afp} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: THEME.slate100 }}>
+                            <Text style={{ fontSize: 12, color: THEME.slate800, fontWeight: '600', flex: 1 }}>{afp}</Text>
+                            <View style={{ backgroundColor: afp === 'COLPENSIONES' ? '#dcfce7' : '#e0e7ff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: afp === 'COLPENSIONES' ? '#166534' : '#3730a3' }}>
+                                {cant} afiliados
+                              </Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Modal Ficha Técnica de la Plaza (Reportes) */}
+          <Modal
+            visible={modalDetallePlazaReporteVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setModalDetallePlazaReporteVisible(false)}
+          >
+            <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+              <View style={{ backgroundColor: THEME.white, borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '90%', overflow: 'hidden', borderWidth: 1, borderColor: THEME.slate200 }}>
+                {/* Cabecera */}
+                <View style={{ backgroundColor: THEME.marca900, paddingHorizontal: 18, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={{ color: THEME.white, fontSize: 14.5, fontWeight: '800' }}>
+                      Ficha Técnica de Plaza #{plazaDetalleReporte?.id_plaza}
+                    </Text>
+                    <Text style={{ color: THEME.marca100, fontSize: 11 }}>
+                      Identificador Oficial SIDEAP: #{plazaDetalleReporte?.id_sideap || 'N/A'} • PERNO: #{plazaDetalleReporte?.id_perno || 'N/A'}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setModalDetallePlazaReporteVisible(false)}>
+                    <Ionicons name="close" size={22} color={THEME.white} />
+                  </Pressable>
+                </View>
+
+                {/* Contenido */}
+                <ScrollView contentContainerStyle={{ padding: 18, gap: 12 }}>
+                  {plazaDetalleReporte && (
+                    <>
+                      <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>CARGO Y NIVEL</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>{plazaDetalleReporte.cargo}</Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate600 }}>Nivel: {plazaDetalleReporte.nivel} • Código: {plazaDetalleReporte.codigo} • Grado: {plazaDetalleReporte.grado}</Text>
+                        <Text style={{ fontSize: 12, color: THEME.marca800, fontWeight: '700', marginTop: 2 }}>
+                          Asignación Básica Mensual: {formatMoneda(plazaDetalleReporte.asignacion_basica)}
+                        </Text>
+                      </View>
+
+                      <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>VINCULACIÓN Y SITUACIÓN ADMINISTRATIVA</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>Tipo de Vinculación: {plazaDetalleReporte.tipo_vinculacion || 'N/A'}</Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate600 }}>Situación Titular: {plazaDetalleReporte.situacion_titular || plazaDetalleReporte.estado_cargo}</Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate600 }}>Situación Administrativa: {plazaDetalleReporte.situacion_administrativa || 'N/A'}</Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate800, fontWeight: '700', marginTop: 2 }}>
+                          Titular Actual: {plazaDetalleReporte.titular_nombre || 'VACANTE'} {plazaDetalleReporte.titular_cedula ? `(C.C. ${plazaDetalleReporte.titular_cedula})` : ''}
+                        </Text>
+                        {plazaDetalleReporte.es_encargo ? (
+                          <View style={{ backgroundColor: '#FEF3C7', padding: 8, borderRadius: 6, marginTop: 4 }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
+                              ⚡ Plaza Provista Mediante Encargo: {plazaDetalleReporte.encargo_nombre} (C.C. {plazaDetalleReporte.encargo_cedula})
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>DEPENDENCIA Y ADSCRIPCIÓN</Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate800 }}>Dependencia Cargo: {plazaDetalleReporte.dependencia_cargo}</Text>
+                        <Text style={{ fontSize: 12, color: THEME.slate800 }}>Dependencia Funcional: {plazaDetalleReporte.dependencia_funcional}</Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 2 }}>Resolución Manual: {plazaDetalleReporte.resolucion_manual || 'N/A'}</Text>
+                      </View>
+
+                      {plazaDetalleReporte.proposito ? (
+                        <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>PROPÓSITO PRINCIPAL DEL EMPLEO</Text>
+                          <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 17 }}>{plazaDetalleReporte.proposito}</Text>
+                        </View>
+                      ) : null}
+
+                      {plazaDetalleReporte.requisitos ? (
+                        <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>REQUISITOS MÍNIMOS (ESTUDIO Y EXPERIENCIA)</Text>
+                          <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>{plazaDetalleReporte.requisitos}</Text>
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                </ScrollView>
+
+                {/* Pie */}
+                <View style={{ backgroundColor: THEME.slate50, padding: 12, borderTopWidth: 1, borderTopColor: THEME.slate200, alignItems: 'flex-end' }}>
+                  <Pressable
+                    onPress={() => setModalDetallePlazaReporteVisible(false)}
+                    style={{ backgroundColor: THEME.marca800, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
+                  >
+                    <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>Cerrar Ficha</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+
+          {/* ============================================================== */}
           {/* PESTAÑA 4: PERSONAL INTEGRAL / PERNO (Activos y Desvinculados) */}
           {/* ============================================================== */}
           {tabActiva === 'perno' && (
@@ -4339,7 +5543,7 @@ export default function NominaScreen() {
                 </Text>
               </View>
 
-              {/* TABLA PRINCIPAL DE PERNO */}
+              {/* TABLA PRINCIPAL DE PERNO (ADAPTADA A 100% Y PORCENTAJES) */}
               <View
                 style={{
                   backgroundColor: THEME.white,
@@ -4351,11 +5555,21 @@ export default function NominaScreen() {
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.05,
                   shadowRadius: 4,
+                  width: '100%',
                 }}
               >
-                <ScrollView horizontal showsHorizontalScrollIndicator={true}>
-                  <View style={{ minWidth: 1100 }}>
-                    {/* Encabezado de la Tabla */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={true}
+                  style={{ width: '100%' }}
+                  contentContainerStyle={{
+                    minWidth: '100%',
+                    flexGrow: 1,
+                    flexDirection: 'column',
+                  }}
+                >
+                  <View style={{ width: '100%', minWidth: 1100 }}>
+                    {/* Encabezado de la Tabla con Porcentajes */}
                     <View
                       style={{
                         flexDirection: 'row',
@@ -4363,32 +5577,49 @@ export default function NominaScreen() {
                         paddingVertical: 12,
                         paddingHorizontal: 16,
                         alignItems: 'center',
+                        width: '100%',
                       }}
                     >
-                      <Text style={{ width: 130, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Identificación
-                      </Text>
-                      <Text style={{ width: 230, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Servidor(a) / Nombre
-                      </Text>
-                      <Text style={{ width: 170, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Estado & Retiro
-                      </Text>
-                      <Text style={{ width: 210, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Cargo & Grado (PERNO)
-                      </Text>
-                      <Text style={{ width: 210, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Dependencia
-                      </Text>
-                      <Text style={{ width: 150, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Cruce Planta
-                      </Text>
-                      <Text style={{ width: 120, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>
-                        Devengado ($)
-                      </Text>
-                      <Text style={{ width: 130, color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>
-                        Expediente
-                      </Text>
+                      <View style={{ width: '11%', minWidth: 110, paddingRight: 8 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Identificación
+                        </Text>
+                      </View>
+                      <View style={{ width: '21%', minWidth: 200, paddingRight: 10 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Servidor(a) / Nombre
+                        </Text>
+                      </View>
+                      <View style={{ width: '12%', minWidth: 130, paddingRight: 8 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Estado & Retiro
+                        </Text>
+                      </View>
+                      <View style={{ width: '17%', minWidth: 170, paddingRight: 10 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Cargo & Grado
+                        </Text>
+                      </View>
+                      <View style={{ width: '16%', minWidth: 160, paddingRight: 10 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Dependencia
+                        </Text>
+                      </View>
+                      <View style={{ width: '9%', minWidth: 100, paddingRight: 8 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase' }}>
+                          Cruce Planta
+                        </Text>
+                      </View>
+                      <View style={{ width: '8%', minWidth: 95, paddingRight: 10, alignItems: 'flex-end' }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'right' }}>
+                          Devengado ($)
+                        </Text>
+                      </View>
+                      <View style={{ width: '6%', minWidth: 80, alignItems: 'center' }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center' }}>
+                          Expediente
+                        </Text>
+                      </View>
                     </View>
 
                     {/* Filas de la Tabla */}
@@ -4424,10 +5655,11 @@ export default function NominaScreen() {
                               backgroundColor: idx % 2 === 0 ? THEME.white : THEME.slate50,
                               borderBottomWidth: 1,
                               borderBottomColor: THEME.slate100,
+                              width: '100%',
                             }}
                           >
                             {/* Cédula */}
-                            <View style={{ width: 130 }}>
+                            <View style={{ width: '11%', minWidth: 110, paddingRight: 8 }}>
                               <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca800 }}>
                                 {item.cedula}
                               </Text>
@@ -4439,7 +5671,7 @@ export default function NominaScreen() {
                             </View>
 
                             {/* Nombre completo */}
-                            <View style={{ width: 230, paddingRight: 10 }}>
+                            <View style={{ width: '21%', minWidth: 200, paddingRight: 10 }}>
                               <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800 }}>
                                 {item.nombre_completo || `${item.nombres} ${item.primer_apellido}`}
                               </Text>
@@ -4449,7 +5681,7 @@ export default function NominaScreen() {
                             </View>
 
                             {/* Estado y Fecha Retiro */}
-                            <View style={{ width: 170, paddingRight: 10 }}>
+                            <View style={{ width: '12%', minWidth: 130, paddingRight: 8 }}>
                               {esRetirado ? (
                                 <View>
                                   <View
@@ -4502,7 +5734,7 @@ export default function NominaScreen() {
                             </View>
 
                             {/* Cargo y Grado PERNO */}
-                            <View style={{ width: 210, paddingRight: 10 }}>
+                            <View style={{ width: '17%', minWidth: 170, paddingRight: 10 }}>
                               <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }} numberOfLines={2}>
                                 {item.cargo || 'Sin cargo'}
                               </Text>
@@ -4512,14 +5744,14 @@ export default function NominaScreen() {
                             </View>
 
                             {/* Dependencia */}
-                            <View style={{ width: 210, paddingRight: 10 }}>
+                            <View style={{ width: '16%', minWidth: 160, paddingRight: 10 }}>
                               <Text style={{ fontSize: 11.5, color: THEME.slate700 }} numberOfLines={2}>
                                 {item.dependencia || 'Sin dependencia'}
                               </Text>
                             </View>
 
                             {/* Cruce Planta */}
-                            <View style={{ width: 150, paddingRight: 10 }}>
+                            <View style={{ width: '9%', minWidth: 100, paddingRight: 8 }}>
                               {matchPlaza ? (
                                 <View
                                   style={{
@@ -4559,7 +5791,7 @@ export default function NominaScreen() {
                             </View>
 
                             {/* Total Devengado */}
-                            <View style={{ width: 120, paddingRight: 12, alignItems: 'flex-end' }}>
+                            <View style={{ width: '8%', minWidth: 95, paddingRight: 10, alignItems: 'flex-end' }}>
                               <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.marca800 }}>
                                 {formatMoneda(item.total_devengado || item.asignacion_basica)}
                               </Text>
@@ -4571,7 +5803,7 @@ export default function NominaScreen() {
                             </View>
 
                             {/* Botón Ver Expediente */}
-                            <View style={{ width: 130, alignItems: 'center' }}>
+                            <View style={{ width: '6%', minWidth: 80, alignItems: 'center' }}>
                               <Pressable
                                 onPress={() => {
                                   setPernoModal(item);

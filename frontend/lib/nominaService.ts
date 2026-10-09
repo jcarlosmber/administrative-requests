@@ -112,6 +112,7 @@ export interface PlazaNomina {
   // Campos complementarios de Planta Perno
   tipo_funcionario?: string;
   fecha_nacimiento?: string;
+  edad?: number;
   direccion?: string;
   telefono?: string;
   sexo?: string;
@@ -123,6 +124,74 @@ export interface PlazaNomina {
   numero_acto_nombramiento?: string;
   fecha_acto_nombramiento?: string;
   total_devengado?: number;
+  fecha_vacancia?: string;
+  fecha_reporte_simo?: string;
+  proceso_seleccion_simo?: string;
+  notas_peticion?: string;
+}
+
+export interface CatalogoOPEC {
+  opec: string;
+  cargo: string;
+  codigo: string;
+  grado: string;
+  nivel: string;
+  total_plazas: number;
+  vacantes_definitivas: number;
+  ocupadas: number;
+}
+
+export interface CargoPlanta {
+  cargo: string;
+  codigo: string;
+  grado: string;
+  nivel: string;
+  total_plazas: number;
+  vacantes_definitivas: number;
+  opecs_asociadas: string[];
+}
+
+export interface ResultadoPeticionOPEC {
+  success: boolean;
+  encontrado: boolean;
+  mensaje?: string;
+  opec_buscada?: string;
+  opec_encontrada_en_planta?: boolean;
+  identificacion?: {
+    cargo: string;
+    codigo: string;
+    grado: string;
+    nivel: string;
+  };
+  conteo?: {
+    total_empleos: number;
+    vacantes_definitivas: number;
+    vacantes_temporales: number;
+    carrera: number;
+    periodo_prueba: number;
+    encargo: number;
+    provisional: number;
+    libre_nombramiento: number;
+  };
+  literales?: {
+    a_denominacion: string;
+    b_codigo: string;
+    c_grado: string;
+    d_dependencias: string;
+    d_dependencias_array: Array<{ dependencia: string; cantidad: number }>;
+    e_numero_empleos: string;
+    f_vacantes_definitivas: string;
+    g_fecha_vacancia: string;
+    h_situacion_administrativa: string;
+    i_reporte_simo: string;
+  };
+  oficio_borrador?: string;
+  plazas?: Array<PlazaNomina & {
+    fecha_vacancia?: string;
+    fecha_reporte_simo?: string;
+    proceso_seleccion_simo?: string;
+    notas_peticion?: string;
+  }>;
 }
 
 export interface EscaleraEncargo {
@@ -140,20 +209,144 @@ export interface EstadisticasNomina {
   masa_salarial_mensual: number;
 }
 
+export interface FiltrosPlazasNomina {
+  busqueda?: string;
+  nivel?: string;
+  estado?: string;
+  dependencia?: string;
+  cargo?: string;
+  id_sieap?: string;
+  codigo_grado?: string;
+  situacion?: string;
+  id_perno?: string;
+  solo_encargo?: boolean;
+}
+
+// Helper para comprobar coincidencia flexible de Código y Grado (normalizando ceros a la izquierda)
+export function coincideCodigoGrado(
+  plaza: { codigo?: string | number | null; grado?: string | number | null },
+  filtro?: string | null
+): boolean {
+  if (!filtro || !filtro.trim() || filtro === 'TODOS') return true;
+  const fTrim = filtro.trim();
+  const codPlaza = String(plaza.codigo ?? '').trim();
+  const graPlaza = String(plaza.grado ?? '').trim();
+
+  // Si el filtro viene en formato COD-GRA con guión
+  if (fTrim.includes('-')) {
+    const parts = fTrim.split('-');
+    const fCod = parts[0].trim();
+    const fGra = parts[1].trim();
+
+    const codMatch =
+      codPlaza.toLowerCase() === fCod.toLowerCase() ||
+      codPlaza.replace(/^0+/, '') === fCod.replace(/^0+/, '');
+    const graMatch =
+      graPlaza.toLowerCase() === fGra.toLowerCase() ||
+      graPlaza.replace(/^0+/, '') === fGra.replace(/^0+/, '');
+
+    return codMatch && graMatch;
+  }
+
+  // Si viene solo un término (ej. "115" o "6" o "06")
+  const fLtrim = fTrim.replace(/^0+/, '');
+  const codMatch = codPlaza.toLowerCase() === fTrim.toLowerCase() || (fLtrim !== '' && codPlaza.replace(/^0+/, '') === fLtrim);
+  const graMatch = graPlaza.toLowerCase() === fTrim.toLowerCase() || (fLtrim !== '' && graPlaza.replace(/^0+/, '') === fLtrim);
+  const compMatch = `${codPlaza}-${graPlaza}`.toLowerCase().includes(fTrim.toLowerCase());
+
+  return codMatch || graMatch || compMatch;
+}
+
+// Función pura de filtrado defensivo aplicable a cualquier colección de plazas
+export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPlazasNomina): PlazaNomina[] {
+  if (!filtros) return plazas;
+  let result = plazas;
+
+  if (filtros.busqueda && filtros.busqueda.trim()) {
+    const q = filtros.busqueda.trim().toLowerCase();
+    result = result.filter(
+      (p) =>
+        (p.cargo && p.cargo.toLowerCase().includes(q)) ||
+        (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
+        (p.titular_cedula && p.titular_cedula.toString().includes(q)) ||
+        (p.encargo_nombre && p.encargo_nombre.toLowerCase().includes(q)) ||
+        (p.encargo_cedula && p.encargo_cedula.toString().includes(q)) ||
+        (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q)) ||
+        (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(q)) ||
+        (p.codigo && p.codigo.toString().toLowerCase().includes(q)) ||
+        (p.grado && p.grado.toString().toLowerCase().includes(q)) ||
+        (`${p.codigo || ''}-${p.grado || ''}`.toLowerCase().includes(q)) ||
+        (p.id_plaza && p.id_plaza.toString().includes(q)) ||
+        (p.id_sideap && p.id_sideap.toString().includes(q)) ||
+        (p.id_perno && p.id_perno.toString().includes(q)) ||
+        (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(q)) ||
+        (p.situacion_titular && p.situacion_titular.toLowerCase().includes(q)) ||
+        (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(q))
+    );
+  }
+
+  if (filtros.nivel && filtros.nivel !== 'TODOS') {
+    const nivFiltro = filtros.nivel.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    result = result.filter((p) => {
+      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return pNiv === nivFiltro;
+    });
+  }
+
+  if (filtros.estado && filtros.estado !== 'TODOS') {
+    result = result.filter((p) => (p.estado_cargo || '').toUpperCase() === filtros.estado?.toUpperCase());
+  }
+
+  if (filtros.dependencia && filtros.dependencia !== 'TODAS') {
+    const depQ = filtros.dependencia.trim().toLowerCase();
+    result = result.filter(
+      (p) =>
+        (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(depQ)) ||
+        (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(depQ))
+    );
+  }
+
+  if (filtros.cargo && filtros.cargo !== 'TODOS') {
+    const carQ = filtros.cargo.trim().toLowerCase();
+    result = result.filter((p) => (p.cargo || '').trim().toLowerCase() === carQ);
+  }
+
+  if (filtros.codigo_grado && filtros.codigo_grado.trim() && filtros.codigo_grado !== 'TODOS') {
+    result = result.filter((p) => coincideCodigoGrado(p, filtros.codigo_grado));
+  }
+
+  if (filtros.situacion && filtros.situacion.trim() && filtros.situacion !== 'TODAS') {
+    const sitQuery = filtros.situacion.trim().toLowerCase();
+    result = result.filter(
+      (p) =>
+        (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(sitQuery)) ||
+        (p.situacion_titular && p.situacion_titular.toLowerCase().includes(sitQuery)) ||
+        (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(sitQuery))
+    );
+  }
+
+  if (filtros.id_sieap && filtros.id_sieap.trim() && filtros.id_sieap !== 'TODOS') {
+    const sieapQuery = filtros.id_sieap.trim();
+    result = result.filter((p) => p.id_sideap != null && p.id_sideap.toString() === sieapQuery);
+  }
+
+  if (filtros.id_perno && filtros.id_perno.trim() && filtros.id_perno !== 'TODOS') {
+    const pernoQuery = filtros.id_perno.trim();
+    result = result.filter((p) => p.id_perno != null && p.id_perno.toString() === pernoQuery);
+  }
+
+  if (filtros.solo_encargo) {
+    result = result.filter(
+      (p) => p.es_encargo === true || (p.encargo_cedula && p.encargo_cedula.toString().trim() !== '')
+    );
+  }
+
+  return result;
+}
+
 export const nominaService = {
   // Obtener listado de plazas
-  async getPlazas(filtros?: {
-    busqueda?: string;
-    nivel?: string;
-    estado?: string;
-    dependencia?: string;
-    cargo?: string;
-    id_sieap?: string;
-    codigo_grado?: string;
-    situacion?: string;
-    id_perno?: string;
-    solo_encargo?: boolean;
-  }): Promise<PlazaNomina[]> {
+  async getPlazas(filtros?: FiltrosPlazasNomina): Promise<PlazaNomina[]> {
     try {
       const searchParams = new URLSearchParams();
       if (filtros?.busqueda) searchParams.append('busqueda', filtros.busqueda);
@@ -162,9 +355,9 @@ export const nominaService = {
       if (filtros?.dependencia && filtros.dependencia !== 'TODAS') searchParams.append('dependencia', filtros.dependencia);
       if (filtros?.cargo && filtros.cargo !== 'TODOS') searchParams.append('cargo', filtros.cargo);
       if (filtros?.id_sieap && filtros.id_sieap !== 'TODOS') searchParams.append('id_sieap', filtros.id_sieap);
-      if (filtros?.codigo_grado) searchParams.append('codigo_grado', filtros.codigo_grado);
-      if (filtros?.situacion) searchParams.append('situacion', filtros.situacion);
-      if (filtros?.id_perno) searchParams.append('id_perno', filtros.id_perno);
+      if (filtros?.codigo_grado && filtros.codigo_grado !== 'TODOS') searchParams.append('codigo_grado', filtros.codigo_grado);
+      if (filtros?.situacion && filtros.situacion !== 'TODAS') searchParams.append('situacion', filtros.situacion);
+      if (filtros?.id_perno && filtros.id_perno !== 'TODOS') searchParams.append('id_perno', filtros.id_perno);
       if (filtros?.solo_encargo) searchParams.append('solo_encargo', 'true');
 
       const url = `${API_URL}/api/nomina/plazas?${searchParams.toString()}`;
@@ -178,7 +371,7 @@ export const nominaService = {
         const data = await res.json();
         if (data.success && Array.isArray(data.plazas) && data.plazas.length > 0) {
           const listPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
-          return data.plazas.map((p: PlazaNomina) => {
+          const plazasProcesadas = data.plazas.map((p: PlazaNomina) => {
             const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
             let plazaActual: PlazaNomina = {
               ...p,
@@ -193,7 +386,6 @@ export const nominaService = {
               resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
             };
 
-            // Garantía: Si el titular reportado estuviera retirado en PERNO, sustituir por el activo actual o vacante
             const titularCed = plazaActual.titular_cedula ? String(plazaActual.titular_cedula).trim() : null;
             if (titularCed) {
               const perFunc = listPerno.find((per) => String(per.cedula).trim() === titularCed);
@@ -215,6 +407,8 @@ export const nominaService = {
 
             return plazaActual;
           });
+
+          return aplicarFiltrosPlazas(plazasProcesadas, filtros);
         }
       }
     } catch {
@@ -251,69 +445,7 @@ export const nominaService = {
       return p;
     });
 
-    if (filtros?.busqueda && filtros.busqueda.trim()) {
-      const q = filtros.busqueda.trim().toLowerCase();
-      result = result.filter(
-        (p) =>
-          (p.cargo && p.cargo.toLowerCase().includes(q)) ||
-          (p.titular_nombre && p.titular_nombre.toLowerCase().includes(q)) ||
-          (p.titular_cedula && p.titular_cedula.toString().includes(q)) ||
-          (p.encargo_nombre && p.encargo_nombre.toLowerCase().includes(q)) ||
-          (p.encargo_cedula && p.encargo_cedula.toString().includes(q)) ||
-          (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(q)) ||
-          (p.codigo && p.codigo.toString().includes(q)) ||
-          (p.id_plaza && p.id_plaza.toString().includes(q)) ||
-          (p.id_sideap && p.id_sideap.toString().includes(q))
-      );
-    }
-
-    if (filtros?.nivel && filtros.nivel !== 'TODOS') {
-      result = result.filter((p) => p.nivel?.toUpperCase() === filtros.nivel?.toUpperCase());
-    }
-
-    if (filtros?.estado && filtros.estado !== 'TODOS') {
-      result = result.filter((p) => p.estado_cargo?.toUpperCase() === filtros.estado?.toUpperCase());
-    }
-
-    if (filtros?.dependencia && filtros.dependencia !== 'TODAS') {
-      result = result.filter((p) => p.dependencia_cargo?.toUpperCase() === filtros.dependencia?.toUpperCase());
-    }
-
-    if (filtros?.cargo && filtros.cargo !== 'TODOS') {
-      result = result.filter((p) => p.cargo?.toUpperCase() === filtros.cargo?.toUpperCase());
-    }
-
-    if (filtros?.id_sieap && filtros.id_sieap.trim()) {
-      const sieapQuery = filtros.id_sieap.trim();
-      result = result.filter((p) => p.id_sideap && p.id_sideap.toString() === sieapQuery);
-    }
-
-    if (filtros?.codigo_grado && filtros.codigo_grado.trim()) {
-      result = result.filter(
-        (p) => `${p.codigo || ''}-${p.grado || ''}` === filtros.codigo_grado
-      );
-    }
-
-    if (filtros?.situacion && filtros.situacion.trim()) {
-      const sitQuery = filtros.situacion.trim().toLowerCase();
-      result = result.filter(
-        (p) =>
-          (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(sitQuery)) ||
-          (p.situacion_titular && p.situacion_titular.toLowerCase().includes(sitQuery)) ||
-          (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(sitQuery))
-      );
-    }
-
-    if (filtros?.id_perno && filtros.id_perno.trim()) {
-      const pernoQuery = filtros.id_perno.trim();
-      result = result.filter((p) => p.id_perno && p.id_perno.toString() === pernoQuery);
-    }
-
-    if (filtros?.solo_encargo) {
-      result = result.filter((p) => p.es_encargo === true);
-    }
-
-    return result;
+    return aplicarFiltrosPlazas(result, filtros);
   },
 
   // Obtener estadísticas consolidadas
@@ -654,6 +786,59 @@ export const nominaService = {
     }
 
     return result;
+  },
+
+  // =========================================================================
+  // MÓDULO: ASISTENTE DE DERECHOS DE PETICIÓN (OPEC Y EMPLEOS EQUIVALENTES)
+  // =========================================================================
+
+  async listarOpecsDisponibles(): Promise<{ opecs: CatalogoOPEC[]; cargos_planta: CargoPlanta[] }> {
+    try {
+      const res = await fetch(`${API_URL}/api/nomina/peticiones-opec/lista-opecs`);
+      const data = await res.json();
+      return { opecs: data.opecs || [], cargos_planta: data.cargos_planta || [] };
+    } catch (e) {
+      console.warn('Error al listar OPECs para peticiones:', e);
+      return { opecs: [], cargos_planta: [] };
+    }
+  },
+
+  async consultarPeticionOPEC(params: {
+    opec?: string;
+    codigo?: string;
+    grado?: string;
+    cargo?: string;
+    peticionario?: string;
+    radicado?: string;
+  }): Promise<ResultadoPeticionOPEC> {
+    const sp = new URLSearchParams();
+    if (params.opec) sp.append('opec', params.opec.trim());
+    if (params.codigo) sp.append('codigo', params.codigo.trim());
+    if (params.grado) sp.append('grado', params.grado.trim());
+    if (params.cargo) sp.append('cargo', params.cargo.trim());
+    if (params.peticionario) sp.append('peticionario', params.peticionario.trim());
+    if (params.radicado) sp.append('radicado', params.radicado.trim());
+
+    const res = await fetch(`${API_URL}/api/nomina/peticiones-opec/consultar?${sp.toString()}`);
+    return await res.json();
+  },
+
+  async actualizarPlazaPeticion(
+    id_plaza: number,
+    data: {
+      fecha_vacancia?: string;
+      fecha_reporte_simo?: string;
+      proceso_seleccion_simo?: string;
+      opec?: string;
+      notas_peticion?: string;
+    }
+  ): Promise<{ success: boolean; mensaje?: string; error?: string }> {
+    const res = await fetch(`${API_URL}/api/nomina/peticiones-opec/plaza/${id_plaza}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
   },
 };
 

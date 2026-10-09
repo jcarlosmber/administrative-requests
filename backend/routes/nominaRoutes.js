@@ -320,6 +320,10 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS peldano_escalera INT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS manual_funciones TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS resolucion_manual TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_vacancia DATE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_reporte_simo DATE;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS proceso_seleccion_simo TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS notas_peticion TEXT;
 
         CREATE TABLE IF NOT EXISTS public.nomina_import_logs (
             id SERIAL PRIMARY KEY,
@@ -444,7 +448,21 @@ module.exports = function (pool) {
   router.get('/plazas', async (req, res) => {
     try {
       await ensureTables();
-      const { busqueda, nivel, estado, dependencia, cargo, id_sieap, id_sideap, solo_encargo } = req.query;
+      const {
+        busqueda,
+        nivel,
+        estado,
+        dependencia,
+        cargo,
+        id_sieap,
+        id_sideap,
+        codigo_grado,
+        codigo,
+        grado,
+        situacion,
+        id_perno,
+        solo_encargo,
+      } = req.query;
 
       let query = 'SELECT * FROM public.planta_personal_sjd WHERE 1=1';
       const params = [];
@@ -459,32 +477,113 @@ module.exports = function (pool) {
           encargo_nombre ILIKE $${idx} OR 
           encargo_cedula ILIKE $${idx} OR 
           dependencia_cargo ILIKE $${idx} OR 
+          dependencia_funcional ILIKE $${idx} OR
           codigo ILIKE $${idx} OR
+          grado ILIKE $${idx} OR
+          (COALESCE(codigo, '') || '-' || COALESCE(grado, '')) ILIKE $${idx} OR
           id_plaza::text ILIKE $${idx} OR
-          id_sideap::text ILIKE $${idx}
+          id_sideap::text ILIKE $${idx} OR
+          id_perno::text ILIKE $${idx} OR
+          situacion_administrativa ILIKE $${idx} OR
+          situacion_titular ILIKE $${idx} OR
+          tipo_vinculacion ILIKE $${idx}
         )`;
       }
 
       if (nivel && nivel !== 'TODOS') {
-        params.push(nivel);
-        query += ` AND nivel = $${params.length}`;
+        params.push(nivel.trim());
+        const idx = params.length;
+        query += ` AND (
+          UPPER(nivel) = UPPER($${idx}) OR 
+          REPLACE(REPLACE(UPPER(nivel), 'É', 'E'), 'Í', 'I') = UPPER($${idx})
+        )`;
       }
 
       if (estado && estado !== 'TODOS') {
-        params.push(estado);
-        query += ` AND estado_cargo = $${params.length}`;
+        params.push(estado.trim());
+        const idx = params.length;
+        query += ` AND UPPER(estado_cargo) = UPPER($${idx})`;
       }
 
       if (dependencia && dependencia !== 'TODAS') {
-        params.push(dependencia);
-        query += ` AND dependencia_cargo = $${params.length}`;
+        params.push(`%${dependencia.trim()}%`);
+        const idx = params.length;
+        query += ` AND (
+          dependencia_cargo ILIKE $${idx} OR 
+          dependencia_funcional ILIKE $${idx}
+        )`;
       }
 
       if (cargo && cargo !== 'TODOS') {
-        params.push(cargo);
-        query += ` AND cargo = $${params.length}`;
+        params.push(cargo.trim());
+        const idx = params.length;
+        query += ` AND TRIM(cargo) ILIKE TRIM($${idx})`;
       }
 
+      // Filtro de Código y Grado (soporta 'COD-GRA', solo código o solo grado, con normalización de ceros)
+      if (codigo_grado && codigo_grado.trim() && codigo_grado !== 'TODOS') {
+        const cgVal = codigo_grado.trim();
+        if (cgVal.includes('-')) {
+          const parts = cgVal.split('-');
+          const codPart = parts[0].trim();
+          const graPart = parts[1].trim();
+          const codLtrim = codPart.replace(/^0+/, '') || '0';
+          const graLtrim = graPart.replace(/^0+/, '') || '0';
+
+          params.push(codPart, codLtrim, graPart, graLtrim);
+          const iCod = params.length - 3;
+          const iCodL = params.length - 2;
+          const iGra = params.length - 1;
+          const iGraL = params.length;
+
+          query += ` AND (
+            (TRIM(codigo) ILIKE TRIM($${iCod}) OR LTRIM(TRIM(codigo), '0') = $${iCodL})
+            AND
+            (TRIM(grado) ILIKE TRIM($${iGra}) OR LTRIM(TRIM(grado), '0') = $${iGraL})
+          )`;
+        } else {
+          const ltrimVal = cgVal.replace(/^0+/, '') || '0';
+          params.push(cgVal, ltrimVal);
+          const iVal = params.length - 1;
+          const iValL = params.length;
+          query += ` AND (
+            TRIM(codigo) ILIKE TRIM($${iVal}) OR LTRIM(TRIM(codigo), '0') = $${iValL} OR
+            TRIM(grado) ILIKE TRIM($${iVal}) OR LTRIM(TRIM(grado), '0') = $${iValL} OR
+            (COALESCE(codigo, '') || '-' || COALESCE(grado, '')) ILIKE $${iVal}
+          )`;
+        }
+      }
+
+      if (codigo && codigo.trim() && codigo !== 'TODOS') {
+        const codVal = codigo.trim();
+        const codLtrim = codVal.replace(/^0+/, '') || '0';
+        params.push(codVal, codLtrim);
+        const iCod = params.length - 1;
+        const iCodL = params.length;
+        query += ` AND (TRIM(codigo) ILIKE TRIM($${iCod}) OR LTRIM(TRIM(codigo), '0') = $${iCodL})`;
+      }
+
+      if (grado && grado.trim() && grado !== 'TODOS') {
+        const graVal = grado.trim();
+        const graLtrim = graVal.replace(/^0+/, '') || '0';
+        params.push(graVal, graLtrim);
+        const iGra = params.length - 1;
+        const iGraL = params.length;
+        query += ` AND (TRIM(grado) ILIKE TRIM($${iGra}) OR LTRIM(TRIM(grado), '0') = $${iGraL})`;
+      }
+
+      // Filtro de Situación Administrativa
+      if (situacion && situacion.trim() && situacion !== 'TODAS') {
+        params.push(`%${situacion.trim()}%`);
+        const idx = params.length;
+        query += ` AND (
+          situacion_administrativa ILIKE $${idx} OR 
+          situacion_titular ILIKE $${idx} OR 
+          tipo_vinculacion ILIKE $${idx}
+        )`;
+      }
+
+      // Filtro por ID SIDEAP
       const sieapVal = id_sieap || id_sideap;
       if (sieapVal && sieapVal !== 'TODOS') {
         const sieapNum = parseInt(sieapVal, 10);
@@ -494,8 +593,18 @@ module.exports = function (pool) {
         }
       }
 
+      // Filtro por ID PERNO
+      if (id_perno && id_perno !== 'TODOS') {
+        const pernoNum = parseInt(id_perno, 10);
+        if (!isNaN(pernoNum)) {
+          params.push(pernoNum);
+          query += ` AND id_perno = $${params.length}`;
+        }
+      }
+
+      // Filtro Solo Encargos
       if (solo_encargo === 'true' || solo_encargo === true) {
-        query += ` AND es_encargo = TRUE`;
+        query += ` AND (es_encargo = TRUE OR (encargo_cedula IS NOT NULL AND TRIM(encargo_cedula) <> ''))`;
       }
 
       query += ' ORDER BY id_plaza ASC';
@@ -547,6 +656,505 @@ module.exports = function (pool) {
       });
     } catch (error) {
       console.error('Error al obtener estadísticas de nómina:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // =========================================================================
+  // MÓDULO: ASISTENTE DE DERECHOS DE PETICIÓN - OPEC Y EMPLEOS EQUIVALENTES
+  // =========================================================================
+
+  // 2.A Listar OPECs registradas en la planta para autocompletado y catálogo
+  router.get('/peticiones-opec/lista-opecs', async (req, res) => {
+    try {
+      await ensureTables();
+      const result = await pool.query(`
+        SELECT 
+          opec,
+          cargo,
+          codigo,
+          grado,
+          nivel,
+          COUNT(*) as total_plazas,
+          COUNT(CASE WHEN estado_cargo = 'VACANTE DEFINITIVA' THEN 1 END) as vacantes_definitivas,
+          COUNT(CASE WHEN estado_cargo = 'OCUPADO' THEN 1 END) as ocupadas
+        FROM public.planta_personal_sjd
+        WHERE opec IS NOT NULL AND TRIM(opec) <> ''
+        GROUP BY opec, cargo, codigo, grado, nivel
+        ORDER BY opec ASC
+      `);
+
+      // También obtener lista única de combinaciones cargo/codigo/grado para búsquedas por cargo
+      const cargosResult = await pool.query(`
+        SELECT 
+          cargo,
+          codigo,
+          grado,
+          nivel,
+          COUNT(*) as total_plazas,
+          COUNT(CASE WHEN estado_cargo = 'VACANTE DEFINITIVA' THEN 1 END) as vacantes_definitivas,
+          ARRAY_REMOVE(ARRAY_AGG(DISTINCT opec), NULL) as opecs_asociadas
+        FROM public.planta_personal_sjd
+        GROUP BY cargo, codigo, grado, nivel
+        ORDER BY cargo ASC, codigo ASC, grado ASC
+      `);
+
+      res.json({
+        success: true,
+        opecs: result.rows,
+        cargos_planta: cargosResult.rows,
+      });
+    } catch (error) {
+      console.error('Error al listar OPECs para peticiones:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 2.B Consulta de empleos iguales/equivalentes y generación de literales (a-i) + Oficio formal
+  router.get('/peticiones-opec/consultar', async (req, res) => {
+    try {
+      await ensureTables();
+      const { opec, codigo, grado, cargo, peticionario = 'Peticionario(a)', radicado = 'Sin radicado registrado' } = req.query;
+
+      const opecQuery = opec ? String(opec).trim() : '';
+      const codigoQuery = codigo ? String(codigo).trim() : '';
+      const gradoQuery = grado ? String(grado).trim() : '';
+      const cargoQuery = cargo ? String(cargo).trim() : '';
+
+      if (!opecQuery && !codigoQuery && !cargoQuery) {
+        return res.status(400).json({
+          success: false,
+          error: 'Debe especificar al menos un número de OPEC, código de empleo o denominación del cargo.',
+        });
+      }
+
+      let cargoReferencia = null;
+      let codigoReferencia = null;
+      let gradoReferencia = null;
+      let nivelReferencia = null;
+      let opecEncontradaEnPlanta = false;
+
+      // 1. Si enviaron OPEC, buscarla primero en la planta
+      if (opecQuery) {
+        const opecPlaza = await pool.query(
+          `SELECT * FROM public.planta_personal_sjd WHERE opec = $1 ORDER BY id_plaza ASC LIMIT 1`,
+          [opecQuery]
+        );
+
+        if (opecPlaza.rows.length > 0) {
+          const p = opecPlaza.rows[0];
+          cargoReferencia = p.cargo;
+          codigoReferencia = p.codigo;
+          gradoReferencia = p.grado;
+          nivelReferencia = p.nivel;
+          opecEncontradaEnPlanta = true;
+        }
+      }
+
+      // 2. Si no se halló por OPEC directa, tomar los parámetros explícitos
+      if (!cargoReferencia && codigoQuery && gradoQuery) {
+        const porCodGra = await pool.query(
+          `SELECT cargo, nivel FROM public.planta_personal_sjd WHERE codigo = $1 AND grado = $2 LIMIT 1`,
+          [codigoQuery, gradoQuery]
+        );
+        codigoReferencia = codigoQuery;
+        gradoReferencia = gradoQuery;
+        if (porCodGra.rows.length > 0) {
+          cargoReferencia = porCodGra.rows[0].cargo;
+          nivelReferencia = porCodGra.rows[0].nivel;
+        } else if (cargoQuery) {
+          cargoReferencia = cargoQuery.toUpperCase();
+        }
+      } else if (!cargoReferencia && cargoQuery) {
+        const porCargo = await pool.query(
+          `SELECT cargo, codigo, grado, nivel FROM public.planta_personal_sjd WHERE cargo ILIKE $1 LIMIT 1`,
+          [`%${cargoQuery}%`]
+        );
+        if (porCargo.rows.length > 0) {
+          cargoReferencia = porCargo.rows[0].cargo;
+          codigoReferencia = porCargo.rows[0].codigo;
+          gradoReferencia = porCargo.rows[0].grado;
+          nivelReferencia = porCargo.rows[0].nivel;
+        }
+      }
+
+      // Si aún no encontramos referencia mínima
+      if (!cargoReferencia && !codigoReferencia) {
+        return res.json({
+          success: true,
+          encontrado: false,
+          mensaje: `No se encontraron empleos en la planta asociados a la búsqueda (OPEC: ${opecQuery || 'N/A'}).`,
+          opec_buscada: opecQuery,
+          plazas: [],
+        });
+      }
+
+      // 3. Consultar TODOS los empleos iguales o equivalentes (mismo cargo, código y grado)
+      let queryEquivalentes = `
+        SELECT * FROM public.planta_personal_sjd 
+        WHERE 1=1
+      `;
+      const paramsEquiv = [];
+
+      if (codigoReferencia && gradoReferencia) {
+        paramsEquiv.push(codigoReferencia, gradoReferencia);
+        queryEquivalentes += ` AND codigo = $1 AND grado = $2`;
+        if (cargoReferencia) {
+          paramsEquiv.push(cargoReferencia);
+          queryEquivalentes += ` AND cargo = $3`;
+        }
+      } else if (cargoReferencia) {
+        paramsEquiv.push(cargoReferencia);
+        queryEquivalentes += ` AND cargo = $1`;
+      }
+
+      queryEquivalentes += ` ORDER BY id_plaza ASC`;
+
+      const equivResult = await pool.query(queryEquivalentes, paramsEquiv);
+      const plazas = equivResult.rows;
+
+      if (plazas.length === 0) {
+        return res.json({
+          success: true,
+          encontrado: false,
+          mensaje: 'No se encontraron plazas existentes para la denominación solicitada en la planta de personal.',
+          opec_buscada: opecQuery,
+          plazas: [],
+        });
+      }
+
+      // Si no teníamos nivel, tomar del primer registro
+      if (!nivelReferencia && plazas.length > 0) {
+        nivelReferencia = plazas[0].nivel;
+      }
+      if (!cargoReferencia && plazas.length > 0) {
+        cargoReferencia = plazas[0].cargo;
+      }
+      if (!codigoReferencia && plazas.length > 0) {
+        codigoReferencia = plazas[0].codigo;
+      }
+      if (!gradoReferencia && plazas.length > 0) {
+        gradoReferencia = plazas[0].grado;
+      }
+
+      // 4. Analizar estadísticas y literales a-i
+      const totalEmpleos = plazas.length;
+
+      // Dependencias
+      const dependenciasMap = {};
+      plazas.forEach(p => {
+        const dep = p.dependencia_cargo || p.dependencia_funcional || 'Dependencia no especificada';
+        dependenciasMap[dep] = (dependenciasMap[dep] || 0) + 1;
+      });
+      const desgloseDependencias = Object.entries(dependenciasMap).map(([dep, cant]) => ({
+        dependencia: dep,
+        cantidad: cant,
+      }));
+
+      // Vacantes definitivas vs ocupadas
+      const plazasVacDefinitiva = plazas.filter(p => {
+        const est = (p.estado_cargo || '').toUpperCase();
+        const sit = (p.situacion_administrativa || '').toUpperCase();
+        const tit = (p.titular_nombre || '').toUpperCase();
+        return est === 'VACANTE DEFINITIVA' || sit === 'VACANTE DEFINITIVA' || tit === 'VACANTE DEFINITIVA';
+      });
+      const totalVacDefinitivas = plazasVacDefinitiva.length;
+
+      const plazasVacTemporal = plazas.filter(p => {
+        const est = (p.estado_cargo || '').toUpperCase();
+        const sit = (p.situacion_administrativa || '').toUpperCase();
+        const tit = (p.titular_nombre || '').toUpperCase();
+        return (est === 'VACANTE TEMPORAL' || sit === 'VACANTE TEMPORAL' || tit === 'VACANTE TEMPORAL') && !plazasVacDefinitiva.includes(p);
+      });
+      const totalVacTemporales = plazasVacTemporal.length;
+
+      // Situaciones administrativas / modalidades de vinculación
+      let conteoCarrera = 0;
+      let conteoPeriodoPrueba = 0;
+      let conteoEncargo = 0;
+      let conteoProvisional = 0;
+      let conteoLibreNombramiento = 0;
+
+      plazas.forEach(p => {
+        const vinc = (p.tipo_vinculacion || '').toUpperCase();
+        const sit = (p.situacion_administrativa || '').toUpperCase();
+        const esEnc = p.es_encargo === true || !!p.encargo_nombre;
+
+        if (vinc.includes('PERIODO DE PRUEBA') || sit.includes('PERIODO DE PRUEBA')) {
+          conteoPeriodoPrueba++;
+        } else if (vinc.includes('CARRERA') || sit.includes('PROPIEDAD') || vinc.includes('PROPIEDAD')) {
+          conteoCarrera++;
+        } else if (esEnc || vinc.includes('ENCARGO') || sit.includes('ENCARGO')) {
+          conteoEncargo++;
+        } else if (vinc.includes('PROVISIONAL') || sit.includes('PROVISIONAL')) {
+          conteoProvisional++;
+        } else if (vinc.includes('LIBRE') || sit.includes('LIBRE')) {
+          conteoLibreNombramiento++;
+        }
+      });
+
+      // Fechas de vacancia definitiva
+      const fechasVacancia = plazasVacDefinitiva.map(p => ({
+        id_plaza: p.id_plaza,
+        dependencia: p.dependencia_cargo,
+        fecha_vacancia: p.fecha_vacancia || p.fecha_acto_nombramiento || null,
+        acto: p.acto_nombramiento || p.numero_acto_nombramiento || 'En validación en archivo',
+      }));
+
+      // Reporte en SIMO
+      const plazasReportadasSIMO = plazas.filter(p => p.opec && String(p.opec).trim() !== '');
+
+      // Generar números en letras sencillos para redacción formal
+      const numeroALetras = (n) => {
+        const map = {
+          0: 'cero', 1: 'un', 2: 'dos', 3: 'tres', 4: 'cuatro', 5: 'cinco',
+          6: 'seis', 7: 'siete', 8: 'ocho', 9: 'nueve', 10: 'diez',
+          11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce', 15: 'quince',
+          16: 'dieciséis', 17: 'diecisiete', 18: 'dieciocho', 19: 'diecinueve', 20: 'veinte'
+        };
+        return map[n] || String(n);
+      };
+
+      // Estructuración de los Literales a - i
+      const literalA = cargoReferencia || 'No especificado';
+      const literalB = codigoReferencia || 'No especificado';
+      const literalC = gradoReferencia || 'No especificado';
+      
+      const literalD_texto = desgloseDependencias.map(d => `• ${d.dependencia}: ${d.cantidad} ${d.cantidad === 1 ? 'empleo' : 'empleos'}`).join('\n');
+      
+      const literalE_texto = `En la planta global de personal de la entidad existen actualmente un total de ${totalEmpleos} (${numeroALetras(totalEmpleos)}) empleos con dicha denominación, código y grado.`;
+
+      let literalF_texto = '';
+      if (totalVacDefinitivas === 0) {
+        literalF_texto = `Cero (0) vacantes definitivas. La totalidad de los ${totalEmpleos} empleos equivalentes se encuentran provistos formalmente en la planta de personal.`;
+      } else {
+        literalF_texto = `Se identifican actualmente ${totalVacDefinitivas} (${numeroALetras(totalVacDefinitivas)}) ${totalVacDefinitivas === 1 ? 'vacante definitiva' : 'vacantes definitivas'} en la planta de personal.`;
+      }
+
+      let literalG_texto = '';
+      if (totalVacDefinitivas === 0) {
+        literalG_texto = `No aplica a la fecha de expedición de la presente respuesta, habida cuenta de que no existen vacantes definitivas para el empleo consultado.`;
+      } else {
+        literalG_texto = fechasVacancia.map(f => {
+          const fStr = f.fecha_vacancia ? new Date(f.fecha_vacancia).toLocaleDateString('es-CO') : 'Fecha en proceso de verificación en hoja de vida / archivo';
+          return `• Plaza No. ${f.id_plaza} (${f.dependencia}): Vacancia producida el ${fStr} (Acto/Novedad: ${f.acto}).`;
+        }).join('\n');
+      }
+
+      const literalH_desglose = plazas.map(p => {
+        let situacionDesc = p.tipo_vinculacion || p.situacion_administrativa || 'Provisto';
+        if (p.estado_cargo === 'VACANTE DEFINITIVA') {
+          situacionDesc = 'VACANCIA DEFINITIVA';
+        } else if (p.es_encargo || (p.encargo_nombre && p.encargo_nombre.trim())) {
+          situacionDesc = `Encargo transitorio (Titular plaza: ${p.titular_nombre || 'N/A'}, Encargado: ${p.encargo_nombre})`;
+        } else if (p.tipo_vinculacion?.includes('PERIODO DE PRUEBA')) {
+          situacionDesc = `Nombramiento en Período de Prueba (Concurso de Méritos CNSC)`;
+        } else if (p.tipo_vinculacion?.includes('CARRERA') || p.situacion_administrativa?.includes('PROPIEDAD')) {
+          situacionDesc = `Titular con Derechos de Carrera Administrativa (En Propiedad)`;
+        } else if (p.tipo_vinculacion?.includes('PROVISIONAL')) {
+          situacionDesc = `Nombramiento Provisional`;
+        }
+        return `• Plaza No. ${p.id_plaza} - Dependencia: ${p.dependencia_cargo} | Titular/Ocupante: ${p.titular_nombre || 'Vacante'} | Situación: ${situacionDesc}`;
+      }).join('\n');
+
+      let literalI_texto = '';
+      if (plazasReportadasSIMO.length === 0) {
+        literalI_texto = `Ninguna de las plazas consultadas registra reporte activo directo en SIMO bajo la OPEC consultada, encontrándose provistas o con titular de carrera.`;
+      } else {
+        const reportesDetalle = plazasReportadasSIMO.map(p => {
+          const fRep = p.fecha_reporte_simo ? new Date(p.fecha_reporte_simo).toLocaleDateString('es-CO') : 'Reporte consolidado en oferta pública';
+          const conv = p.proceso_seleccion_simo || 'Proceso de Selección Distrito Capital';
+          return `• Plaza No. ${p.id_plaza}: Reportada en SIMO con OPEC No. ${p.opec} (${conv}). Fecha/Estado reporte: ${fRep}.`;
+        }).join('\n');
+        const noReportadas = plazas.filter(p => !p.opec);
+        let extraNoRep = '';
+        if (noReportadas.length > 0) {
+          extraNoRep = `\nLas restantes ${noReportadas.length} plaza(s) no fueron ofertadas en dicha OPEC por encontrarse provistas mediante nombramiento en propiedad con derechos de carrera o en trámite de provisión reglamentaria.`;
+        }
+        literalI_texto = reportesDetalle + extraNoRep;
+      }
+
+      // Borrador de oficio institucional formal
+      const fechaHoy = new Date().toLocaleDateString('es-CO', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      const oficioBorrador = `Bogotá D.C., ${fechaHoy}
+
+Señor(a):
+${peticionario}
+Ciudad
+
+Asunto: Respuesta a Derecho de Petición - Información sobre empleo OPEC No. ${opecQuery || 'S/N'} y empleos iguales o equivalentes en la Planta de Personal
+Radicado: ${radicado}
+
+Respetado(a) Señor(a):
+
+En atención a su derecho de petición formulado ante esta entidad, mediante el cual solicita información detallada sobre los empleos iguales o equivalentes al identificado con la OPEC No. ${opecQuery || '[OPEC]'}, nos permitimos dar respuesta formal, de conformidad con lo preceptuado en el artículo 23 de la Constitución Política, la Ley 1755 de 2015, la Ley 909 de 2004, el Decreto 1083 de 2015 y los Acuerdos de la Comisión Nacional del Servicio Civil (CNSC), en los siguientes términos:
+
+1. IDENTIFICACIÓN DEL EMPLEO BASE Y EQUIVALENCIAS:
+En la planta global de personal de la Secretaría Jurídica Distrital, el empleo base consultado corresponde a:
+- Denominación: ${literalA}
+- Código: ${literalB}
+- Grado: ${literalC}
+- Nivel Jerárquico: ${nivelReferencia || 'PROFESIONAL'}
+
+De conformidad con el manual de funciones y competencias laborales vigente y las normas de carrera administrativa, los empleos iguales o equivalentes corresponden a aquellos que ostentan la misma denominación, código y grado.
+
+2. RESPUESTA PUNTUAL A LOS INTERROGANTES FORMULADOS:
+
+a. Denominación:
+${literalA}
+
+b. Código:
+${literalB}
+
+c. Grado:
+${literalC}
+
+d. Dependencia(s):
+Los empleos iguales o equivalentes se encuentran asignados en las siguientes dependencias de la entidad:
+${literalD_texto}
+
+e. Número de empleos existentes:
+${literalE_texto}
+
+f. Número de vacantes definitivas:
+${literalF_texto}
+
+g. Fecha en que se produjo, si aplica, la vacancia definitiva:
+${literalG_texto}
+
+h. Situación administrativa actual de cada empleo:
+${literalH_desglose}
+
+i. Si la vacante fue reportada en SIMO y fecha del reporte:
+${literalI_texto}
+
+Se anexa a la presente comunicación la matriz técnica en la cual se detalla la situación jurídica y administrativa de cada una de las plazas identificadas.
+
+Cordialmente,
+
+DIRECCIÓN DE GESTIÓN CORPORATIVA
+Subdirección de Talento Humano
+Secretaría Jurídica Distrital
+`;
+
+      res.json({
+        success: true,
+        encontrado: true,
+        opec_buscada: opecQuery,
+        opec_encontrada_en_planta: opecEncontradaEnPlanta,
+        identificacion: {
+          cargo: cargoReferencia,
+          codigo: codigoReferencia,
+          grado: gradoReferencia,
+          nivel: nivelReferencia,
+        },
+        conteo: {
+          total_empleos: totalEmpleos,
+          vacantes_definitivas: totalVacDefinitivas,
+          vacantes_temporales: totalVacTemporales,
+          carrera: conteoCarrera,
+          periodo_prueba: conteoPeriodoPrueba,
+          encargo: conteoEncargo,
+          provisional: conteoProvisional,
+          libre_nombramiento: conteoLibreNombramiento,
+        },
+        literales: {
+          a_denominacion: literalA,
+          b_codigo: literalB,
+          c_grado: literalC,
+          d_dependencias: literalD_texto,
+          d_dependencias_array: desgloseDependencias,
+          e_numero_empleos: literalE_texto,
+          f_vacantes_definitivas: literalF_texto,
+          g_fecha_vacancia: literalG_texto,
+          h_situacion_administrativa: literalH_desglose,
+          i_reporte_simo: literalI_texto,
+        },
+        oficio_borrador: oficioBorrador,
+        plazas: plazas.map(p => ({
+          id_plaza: p.id_plaza,
+          id_sideap: p.id_sideap,
+          cargo: p.cargo,
+          codigo: p.codigo,
+          grado: p.grado,
+          nivel: p.nivel,
+          dependencia_cargo: p.dependencia_cargo,
+          dependencia_funcional: p.dependencia_funcional,
+          estado_cargo: p.estado_cargo,
+          titular_cedula: p.titular_cedula,
+          titular_nombre: p.titular_nombre,
+          tipo_vinculacion: p.tipo_vinculacion,
+          situacion_administrativa: p.situacion_administrativa,
+          es_encargo: p.es_encargo,
+          encargo_nombre: p.encargo_nombre,
+          encargo_cedula: p.encargo_cedula,
+          opec: p.opec,
+          fecha_vacancia: p.fecha_vacancia,
+          fecha_reporte_simo: p.fecha_reporte_simo,
+          proceso_seleccion_simo: p.proceso_seleccion_simo,
+          notas_peticion: p.notas_peticion,
+        })),
+      });
+    } catch (error) {
+      console.error('Error al consultar empleos para peticiones OPEC:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 2.C Actualizar datos complementarios de una plaza para peticiones / reporte SIMO
+  router.put('/peticiones-opec/plaza/:id_plaza', async (req, res) => {
+    try {
+      await ensureTables();
+      const idPlaza = parseInt(req.params.id_plaza, 10);
+      if (isNaN(idPlaza)) {
+        return res.status(400).json({ success: false, error: 'ID de plaza inválido' });
+      }
+
+      const {
+        fecha_vacancia,
+        fecha_reporte_simo,
+        proceso_seleccion_simo,
+        opec,
+        notas_peticion,
+      } = req.body;
+
+      const result = await pool.query(
+        `UPDATE public.planta_personal_sjd 
+         SET 
+           fecha_vacancia = COALESCE($1, fecha_vacancia),
+           fecha_reporte_simo = COALESCE($2, fecha_reporte_simo),
+           proceso_seleccion_simo = COALESCE($3, proceso_seleccion_simo),
+           opec = COALESCE($4, opec),
+           notas_peticion = COALESCE($5, notas_peticion),
+           updated_at = NOW()
+         WHERE id_plaza = $6
+         RETURNING id_plaza, cargo, codigo, grado, opec, fecha_vacancia, fecha_reporte_simo, proceso_seleccion_simo, notas_peticion`,
+        [
+          fecha_vacancia || null,
+          fecha_reporte_simo || null,
+          proceso_seleccion_simo || null,
+          opec || null,
+          notas_peticion || null,
+          idPlaza,
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ success: false, error: 'Plaza no encontrada' });
+      }
+
+      res.json({
+        success: true,
+        mensaje: 'Plaza actualizada exitosamente con información de vacancia / reporte SIMO',
+        plaza: result.rows[0],
+      });
+    } catch (error) {
+      console.error('Error al actualizar datos de plaza para peticiones:', error);
       res.status(500).json({ success: false, error: error.message });
     }
   });
