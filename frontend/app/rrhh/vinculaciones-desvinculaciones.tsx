@@ -220,6 +220,7 @@ export interface EtapaFlujo {
   procedimientoDetallado?: string;
   plazoLegal?: string;
   observacionesFase?: string;
+  radicadoFase?: string;
 }
 export interface CasoFlujoFuncionario {
   id: string;
@@ -1773,6 +1774,7 @@ export function sincronizarEtapasCaso(
       ...etapaM,
       estado: etapaG.estado || etapaM.estado,
       observacionesFase: etapaG.observacionesFase || etapaM.observacionesFase,
+      radicadoFase: etapaG.radicadoFase || etapaM.radicadoFase,
       requisitos: requisitosSincronizados,
     };
   });

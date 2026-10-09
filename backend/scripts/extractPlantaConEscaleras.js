@@ -52,35 +52,42 @@ function parseFunctions(funcionesText) {
 }
 
 async function run() {
-  const wb = new ExcelJS.Workbook();
-  const filePath = path.resolve(__dirname, '../../Scratch/PLANTA.xlsx');
-  await wb.xlsx.readFile(filePath);
-  const wsPlanta = wb.getWorksheet('PLANTA SJD (2)');
-  const wsPerno = wb.getWorksheet('PLANTA PERNO');
-  
-  // Mapear perno por cédula
+  const wbPlanta = new ExcelJS.Workbook();
+  const plantaPath = path.resolve(__dirname, '../../Scratch/Plantilla_Planta_Oficial_SJD.xlsx');
+  await wbPlanta.xlsx.readFile(plantaPath);
+  const wsPlanta = wbPlanta.getWorksheet('PLANTA SJD (2)');
+
+  // Mapear perno por cédula desde archivo PERNO oficial si existe
   const pernoMap = new Map();
-  for (let r = 10; r <= wsPerno.rowCount; r++) {
-    const row = wsPerno.getRow(r);
-    const ced = cleanDoc(getV(row.getCell(1)));
-    if (!ced) continue;
-    pernoMap.set(ced, {
-      tipo_funcionario: cleanText(getV(row.getCell(15))),
-      direccion: cleanText(getV(row.getCell(7))),
-      telefono: cleanText(getV(row.getCell(8))),
-      sexo: cleanText(getV(row.getCell(9))),
-      fondo_salud: cleanText(getV(row.getCell(20))),
-      fondo_pension: cleanText(getV(row.getCell(22))),
-      fondo_cesantias: cleanText(getV(row.getCell(24))),
-      tipo_nombramiento: cleanText(getV(row.getCell(34))),
-      acto_nombramiento: cleanText(getV(row.getCell(35))),
-      numero_acto_nombramiento: cleanText(getV(row.getCell(37))),
-      total_devengado: parseFloat(getV(row.getCell(43))) || null
-    });
+  const pernoPath = path.resolve(__dirname, '../../Scratch/Plantilla_Planta_Perno_SJD.xlsx');
+  if (fs.existsSync(pernoPath)) {
+    const wbPerno = new ExcelJS.Workbook();
+    await wbPerno.xlsx.readFile(pernoPath);
+    const wsPerno = wbPerno.getWorksheet('PLANTA PERNO');
+    if (wsPerno) {
+      for (let r = 10; r <= wsPerno.rowCount; r++) {
+        const row = wsPerno.getRow(r);
+        const ced = cleanDoc(getV(row.getCell(1)));
+        if (!ced) continue;
+        pernoMap.set(ced, {
+          tipo_funcionario: cleanText(getV(row.getCell(15))),
+          direccion: cleanText(getV(row.getCell(7))),
+          telefono: cleanText(getV(row.getCell(8))),
+          sexo: cleanText(getV(row.getCell(9))),
+          fondo_salud: cleanText(getV(row.getCell(20))),
+          fondo_pension: cleanText(getV(row.getCell(22))),
+          fondo_cesantias: cleanText(getV(row.getCell(24))),
+          tipo_nombramiento: cleanText(getV(row.getCell(34))),
+          acto_nombramiento: cleanText(getV(row.getCell(35))),
+          numero_acto_nombramiento: cleanText(getV(row.getCell(37))),
+          total_devengado: parseFloat(getV(row.getCell(43))) || null
+        });
+      }
+    }
   }
 
   const list = [];
-  for (let r = 5; r <= 174; r++) {
+  for (let r = 5; r <= wsPlanta.rowCount; r++) {
     const row = wsPlanta.getRow(r);
     const idPlaza = parseInt(getV(row.getCell(1)), 10);
     if (!idPlaza) continue;
@@ -92,40 +99,49 @@ async function run() {
     const ocupanteCedula = cleanDoc(getV(row.getCell(4)));
     const ocupanteNombre = cleanText(getV(row.getCell(5)));
 
-    // Columna 6: Vinculación a la entidad
-    const tipoVinculacion = cleanText(getV(row.getCell(6)));
+    // Columna 6 y 7: Vinculación a la entidad y al cargo
+    const vinculacionEntidad = cleanText(getV(row.getCell(6)));
+    const tipoVinculacion = cleanText(getV(row.getCell(7))) || vinculacionEntidad;
 
-    // Columna 13: Situación administrativa del ocupante actual
-    const situacionAdmin = cleanText(getV(row.getCell(13)));
+    // Columna 8 y 9: Fechas ingreso
+    const fechaIngresoEntidad = getV(row.getCell(8));
+    const fechaIngresoDistrito = getV(row.getCell(9));
 
-    // Columna 14: Situación administrativa del titular del cargo
-    const situacionTitular = cleanText(getV(row.getCell(14)));
+    // Columna 10 y 11: Sexo y edad
+    const sexo = cleanText(getV(row.getCell(10)));
+    const edad = parseInt(getV(row.getCell(11)), 10) || null;
 
-    // Columna 15 y 16: Titular propio de la plaza (en propiedad o VACANTE DEFINITIVA)
-    const rawTitularCedula = cleanDoc(getV(row.getCell(15)));
-    const rawTitularNombre = cleanText(getV(row.getCell(16)));
+    // Columna 12: Situación administrativa del ocupante actual
+    const situacionAdmin = cleanText(getV(row.getCell(12)));
 
-    // Columna 17 y 18: Escalera de Encargos
-    const idE = cleanText(getV(row.getCell(17))) || null;
-    const n = parseInt(getV(row.getCell(18)), 10) || null;
+    // Columna 13: Situación administrativa del titular del cargo
+    const situacionTitular = cleanText(getV(row.getCell(13)));
+
+    // Columna 14 y 15: Titular propio de la plaza (en propiedad o VACANTE DEFINITIVA)
+    const rawTitularCedula = cleanDoc(getV(row.getCell(14)));
+    const rawTitularNombre = cleanText(getV(row.getCell(15)));
+
+    // Columna 16 y 17: Escalera de Encargos (ID-E y N)
+    const idE = cleanText(getV(row.getCell(16))) || null;
+    const n = parseInt(getV(row.getCell(17)), 10) || null;
     const idEscalera = idE ? idE.toUpperCase() : null;
     const peldanoEscalera = n;
 
-    // Columnas 19 a 22: Situaciones especiales de vacancia / provisión
-    const pv = cleanText(getV(row.getCell(19))) || null; // Col S: Provisionalidad
-    const ppOe = cleanText(getV(row.getCell(20))) || null; // Col T: Periodo de prueba otra entidad
-    const vtLm = cleanText(getV(row.getCell(21))) || null; // Col U: Licencia maternidad
-    const vtLnr = cleanText(getV(row.getCell(22))) || null; // Col V: Licencia no remunerada
+    // Columnas 18 a 21: Situaciones especiales
+    const pv = cleanText(getV(row.getCell(18))) || null; // Col 18 (R): Provisionalidad
+    const ppOe = cleanText(getV(row.getCell(19))) || null; // Col 19 (S): Periodo de prueba otra entidad
+    const vtLm = cleanText(getV(row.getCell(20))) || null; // Col 20 (T): Licencia maternidad
+    const vtLnr = cleanText(getV(row.getCell(21))) || null; // Col 21 (U): Licencia no remunerada
 
-    // Columna 23: OPEC
-    const opec = cleanText(getV(row.getCell(23))) || null;
+    // Columna 22: OPEC
+    const opec = cleanText(getV(row.getCell(22))) || null;
 
-    // Columna 25: Estado del cargo
-    let estadoCargo = cleanText(getV(row.getCell(25))).toUpperCase();
+    // Columna 23: Estado del cargo
+    let estadoCargo = cleanText(getV(row.getCell(23))).toUpperCase();
     if (!estadoCargo || estadoCargo.includes('IF(') || estadoCargo.includes('[OBJECT')) {
       if (rawTitularNombre === 'VACANTE DEFINITIVA' || situacionTitular === 'VACANTE DEFINITIVA') {
         estadoCargo = 'VACANTE DEFINITIVA';
-      } else if (ocupanteNombre === 'VACANTE TEMPORAL' || situacionAdmin === 'VACANTE TEMPORAL') {
+      } else if (ocupanteNombre === 'VACANTE TEMPORAL' || situacionAdmin === 'VACANTE TEMPORAL' || tipoVinculacion === 'VACANTE TEMPORAL') {
         estadoCargo = 'VACANTE TEMPORAL';
       } else if (ocupanteNombre) {
         estadoCargo = 'OCUPADO';
@@ -134,57 +150,64 @@ async function run() {
       }
     }
 
-    // Columna 26 a 37: Estructura, Manual de Funciones y Resoluciones
-    const nivel = cleanText(getV(row.getCell(26))).toUpperCase();
-    const cargoNom = cleanText(getV(row.getCell(27))).toUpperCase();
-    const codigo = cleanText(getV(row.getCell(28)));
-    const grado = cleanText(getV(row.getCell(29)));
-    const depCargo = cleanText(getV(row.getCell(31))).toUpperCase();
-    const depFuncionalRaw = cleanText(getV(row.getCell(32))); // Col 32 (AF)
+    // Columna 24 a 27: Estructura del cargo
+    const nivel = cleanText(getV(row.getCell(24))).toUpperCase();
+    const cargoNom = cleanText(getV(row.getCell(25))).toUpperCase();
+    const codigo = cleanText(getV(row.getCell(26)));
+    const grado = cleanText(getV(row.getCell(27)));
+
+    // Columna 29 y 30: Dependencias
+    const depCargo = cleanText(getV(row.getCell(29))).toUpperCase();
+    const depFuncionalRaw = cleanText(getV(row.getCell(30)));
     const depFuncional = depFuncionalRaw ? depFuncionalRaw.toUpperCase() : depCargo;
-    const proposito = cleanText(getV(row.getCell(33)));
-    
-    // Funciones: Unificar Columna AH (34) y Columna AF (32) si contiene funciones o resoluciones
-    const funcionesRawAH = String(getV(row.getCell(34)) || ''); // Col 34 (AH)
-    const funcionesRawAF = String(getV(row.getCell(32)) || ''); // Col 32 (AF)
-    const funcsAH = parseFunctions(funcionesRawAH);
-    let funcionesFinales = funcsAH;
-    if (funcionesRawAF && (funcionesRawAF.length > 60 || /^\d+[\.\)]/.test(funcionesRawAF.trim()) || funcionesRawAF.toUpperCase().includes('RES.'))) {
-      const funcsAF = parseFunctions(funcionesRawAF);
-      funcionesFinales = Array.from(new Set([...funcsAH, ...funcsAF]));
-    }
 
-    const requisitos = cleanText(getV(row.getCell(35))); // Col 35 (AI)
-    const resolucionManual = cleanText(getV(row.getCell(36))) || null; // Col 36 (AJ): Páginas Manual de Funciones / Resolución (ej: 34-37 RES. 085 de 2020)
-    const asignacion = parseFloat(getV(row.getCell(37))) || 0; // Col 37 (AK)
+    // Columna 31: Propósito
+    const proposito = cleanText(getV(row.getCell(31)));
 
-    // Determinar con precisión Titular vs Ocupante / Encargo
+    // Columna 32: Funciones
+    const funcionesRaw = String(getV(row.getCell(32)) || '');
+    const funcionesFinales = parseFunctions(funcionesRaw);
+
+    // Columna 33: Requisitos
+    const requisitos = cleanText(getV(row.getCell(33)));
+
+    // Columna 34: Páginas Manual de Funciones / Resolución
+    const resolucionManual = cleanText(getV(row.getCell(34))) || null;
+
+    // Columna 35: Asignación básica
+    const asignacion = parseFloat(getV(row.getCell(35))) || 0;
+
+    // Determinar Titular del Empleo con máxima precisión
     let titularCedula = rawTitularCedula;
     let titularNombre = rawTitularNombre;
 
-    if (!titularNombre || titularNombre === 'VACANTE DEFINITIVA') {
-      if (rawTitularNombre === 'VACANTE DEFINITIVA' || situacionTitular === 'VACANTE DEFINITIVA') {
-        titularNombre = 'VACANTE DEFINITIVA';
-        titularCedula = null;
-      } else {
-        titularNombre = ocupanteNombre || 'VACANTE DEFINITIVA';
-        titularCedula = ocupanteCedula;
-      }
+    if (!titularNombre || titularNombre === 'VACANTE DEFINITIVA' || situacionTitular === 'VACANTE DEFINITIVA') {
+      titularNombre = 'VACANTE DEFINITIVA';
+      titularCedula = null;
+    } else if (!titularNombre && ocupanteNombre && ocupanteNombre !== 'VACANTE TEMPORAL') {
+      titularNombre = ocupanteNombre;
+      titularCedula = ocupanteCedula;
     }
 
-    // Encargo: ocurre si hay una escalera (id_escalera), o situación administrativa es ENCARGO o PROVISIONALIDAD
+    // Encargo / Ocupante de la Plaza:
+    // Ocurre si hay una escalera (id_escalera), situación es ENCARGO, o titular != ocupante
     const esEncargo = Boolean(
       idEscalera ||
-      situacionAdmin.includes('ENCARGO') ||
-      situacionTitular === 'EN ENCARGO' ||
-      (ocupanteCedula && titularCedula && ocupanteCedula !== titularCedula)
+      tipoVinculacion.toUpperCase().includes('ENCARGO') ||
+      situacionAdmin.toUpperCase().includes('ENCARGO') ||
+      situacionTitular.toUpperCase().includes('ENCARGO') ||
+      (ocupanteCedula && titularCedula && ocupanteCedula !== titularCedula) ||
+      (ocupanteNombre === 'VACANTE TEMPORAL')
     );
 
     let encargoCedula = null;
     let encargoNombre = null;
 
     if (esEncargo) {
-      if (ocupanteNombre && ocupanteNombre !== 'VACANTE TEMPORAL') {
+      if (ocupanteNombre === 'VACANTE TEMPORAL') {
+        encargoCedula = null;
+        encargoNombre = 'VACANTE TEMPORAL';
+      } else if (ocupanteNombre && ocupanteNombre !== 'VACANTE DEFINITIVA') {
         encargoCedula = ocupanteCedula;
         encargoNombre = ocupanteNombre;
       }
@@ -209,9 +232,9 @@ async function run() {
       estado_cargo: estadoCargo,
       titular_cedula: titularCedula || null,
       titular_nombre: titularNombre || null,
-      situacion_titular: situacionTitular || 'EN PROPIEDAD',
-      tipo_vinculacion: tipoVinculacion || null,
-      situacion_administrativa: situacionAdmin || 'EN PROPIEDAD',
+      situacion_titular: situacionTitular || (titularNombre === 'VACANTE DEFINITIVA' ? 'VACANTE DEFINITIVA' : 'EN PROPIEDAD'),
+      tipo_vinculacion: tipoVinculacion || vinculacionEntidad || null,
+      situacion_administrativa: situacionAdmin || (esEncargo ? 'ENCARGO' : 'EN PROPIEDAD'),
       encargo_cedula: encargoCedula,
       encargo_nombre: encargoNombre,
       es_encargo: esEncargo,
@@ -221,11 +244,13 @@ async function run() {
       pv: pv,
       pp_oe: ppOe,
       vt_lm: vtLm,
-      vt_lnr: vtLnr
+      vt_lnr: vtLnr,
+      sexo: sexo || null,
+      edad: edad || null
     };
 
     // Cruzar datos de PERNO si existe titular o encargado
-    const cedulaParaPerno = titularCedula || encargoCedula;
+    const cedulaParaPerno = encargoCedula || titularCedula;
     if (cedulaParaPerno && pernoMap.has(cedulaParaPerno)) {
       const pernoInfo = pernoMap.get(cedulaParaPerno);
       Object.assign(plazaObj, pernoInfo);
