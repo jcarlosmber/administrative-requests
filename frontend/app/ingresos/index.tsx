@@ -15,9 +15,11 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { ingresosService } from '../../lib/ingresosService';
+import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
-export default function IngresosDashboardScreen() {
+function IngresosDashboardScreen() {
   const router = useRouter();
+  const { enMenu } = useMarcoRRHH();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
   const [loading, setLoading] = useState(true);
@@ -227,7 +229,9 @@ export default function IngresosDashboardScreen() {
         >
           {/* Lado izquierdo: Regresar + Título con subtítulo */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <Pressable
+            {!enMenu && (
+                <>
+              <Pressable
               onPress={() => router.replace('/rrhh')}
               style={({ pressed }) => ({
                 flexDirection: 'row',
@@ -246,6 +250,8 @@ export default function IngresosDashboardScreen() {
             </Pressable>
 
             <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+                </>
+              )}
 
             <View>
               <Text
@@ -1207,3 +1213,5 @@ export default function IngresosDashboardScreen() {
     </View>
   );
 }
+
+export default conMarcoRRHH(IngresosDashboardScreen);

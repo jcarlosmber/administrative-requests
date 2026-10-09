@@ -25,8 +25,9 @@ import {
   VerificacionFormalTarjeta
 } from '../../lib/ingresosService';
 import PdfViewerModal from '../../components/PdfViewerModal';
+import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
-export default function DetalleValidacionScreen() {
+function DetalleValidacionScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -7883,3 +7884,5 @@ export default function DetalleValidacionScreen() {
     </View>
   );
 }
+
+export default conMarcoRRHH(DetalleValidacionScreen);

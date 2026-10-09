@@ -25,6 +25,7 @@ import {
   ResumenFinancieroSecop,
 } from '../../lib/secopService';
 import { ingresosService } from '../../lib/ingresosService';
+import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 // ============================================================================
 // SISTEMA DE DISEÑO INSTITUCIONAL NAVY + SLATE (IDÉNTICO A NÓMINA)
@@ -1975,6 +1976,7 @@ const CAUSALES_RETIRO = [
 
 export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { tabInicial?: 'ingresos' | 'desvinculaciones' } = {}) {
   const router = useRouter();
+  const { enMenu } = useMarcoRRHH();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
   const isTablet = width >= 640;
@@ -3864,6 +3866,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           >
             {/* Lado izquierdo: Regresar + Título con subtítulo */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {!enMenu && (
+                <>
               <Pressable
                 onPress={() => router.replace('/rrhh')}
                 style={({ pressed }) => ({
@@ -3883,6 +3887,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   Volver al Portal
                 </Text>
               </Pressable>
+                </>
+              )}
 
               <View
                 style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
@@ -4536,6 +4542,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <View
                   style={{
                     flex: 1,
+                    minWidth: 220,
                     flexDirection: 'row',
                     alignItems: 'center',
                     backgroundColor: THEME.slate50,
@@ -4577,7 +4584,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 </View>
 
                 {/* Filtro Modalidad y Diferenciación de Regímenes */}
-                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', flexShrink: 1, minWidth: 0 }}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700 }}>
                     Régimen:
                   </Text>
@@ -4933,7 +4940,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 </View>
 
                 {/* Columna Derecha: Pipeline y Detalle del Trámite */}
-                <View style={{ flex: 1, gap: 14 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
                   {casoActivo ? (
                     <View
                       style={{
@@ -4961,6 +4968,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           borderBottomColor: THEME.slate200,
                         }}
                       >
+<<<<<<< HEAD
                         <View style={{ flex: 1, gap: 5 }}>
                           <View
                             style={{
@@ -4970,6 +4978,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               gap: 8,
                             }}
                           >
+=======
+                        <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0, alignSelf: 'stretch' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+>>>>>>> 902098e1d5ed5c593ef40928d0067c9248fc8341
                             <Text
                               style={{
                                 color: THEME.slate900,
@@ -5013,6 +5025,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                           </View>
 
+<<<<<<< HEAD
                           <View
                             style={{
                               flexDirection: 'row',
@@ -5042,6 +5055,65 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
                           </View>
+=======
+                          {/* BANNER INFORMATIVO DEL RÉGIMEN Y SUS FASES */}
+                          {(() => {
+                            const infoModActivo = obtenerInfoModalidad(casoActivo.modalidad);
+                            return (
+                              <View
+                                style={{
+                                  marginTop: 8,
+                                  backgroundColor: infoModActivo.colorBg,
+                                  borderRadius: 8,
+                                  borderWidth: 1,
+                                  borderColor: infoModActivo.colorBorde,
+                                  padding: 10,
+                                  gap: 5,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, minWidth: 0 }}>
+                                    <Ionicons name={infoModActivo.icono} size={16} color={infoModActivo.colorTexto} />
+                                    <Text style={{ flexShrink: 1, fontSize: 12.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
+                                      Régimen: {infoModActivo.titulo} ({casoActivo.etapas.length} Fases Específicas)
+                                    </Text>
+                                  </View>
+
+                                  <Pressable
+                                    onPress={() => {
+                                      setTabGuiaModalidad(casoActivo.modalidad);
+                                      setModalGuiaModalidadesVisible(true);
+                                    }}
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 4,
+                                      paddingHorizontal: 8,
+                                      paddingVertical: 3,
+                                      borderRadius: 4,
+                                      backgroundColor: THEME.white,
+                                      borderWidth: 1,
+                                      borderColor: infoModActivo.colorBorde,
+                                    }}
+                                  >
+                                    <Ionicons name="information-circle-outline" size={13} color={infoModActivo.colorTexto} />
+                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: infoModActivo.colorTexto }}>
+                                      Ver Guía & Diferencias
+                                    </Text>
+                                  </Pressable>
+                                </View>
+
+                                <Text style={{ fontSize: 11, color: THEME.slate700, lineHeight: 15 }}>
+                                  {infoModActivo.descripcionFases}
+                                </Text>
+
+                                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                                  ⚖️ {infoModActivo.marcoLegal}
+                                </Text>
+                              </View>
+                            );
+                          })()}
+>>>>>>> 902098e1d5ed5c593ef40928d0067c9248fc8341
                         </View>
 
                         {/* Botones de acción del caso (alineados en la cabecera superior) */}
@@ -5323,7 +5395,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             borderColor: THEME.slate200,
                           }}
                         >
-                          <View>
+                          <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0 }}>
                             <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.slate900 }}>
                               Fases del Procedimiento Administrativo ({casoActivo.etapas.length} Fases)
                             </Text>

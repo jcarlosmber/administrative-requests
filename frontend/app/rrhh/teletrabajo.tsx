@@ -25,6 +25,7 @@ import {
   SeguimientoTeletrabajo,
   EstadisticasTeletrabajo,
 } from '../../lib/teletrabajoService';
+import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 // Sistema de diseño institucional versión clara basado en supervision-prueba (Marca Navy + Slate)
 const THEME = {
@@ -137,6 +138,7 @@ const limpiarFecha = (fecha?: string | null): string => {
 
 export default function TeletrabajoScreen() {
   const router = useRouter();
+  const { enMenu } = useMarcoRRHH();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
 
@@ -1049,6 +1051,8 @@ export default function TeletrabajoScreen() {
             }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              {!enMenu && (
+                <>
               <Pressable
                 onPress={() => router.replace('/rrhh')}
                 style={({ pressed }) => ({
@@ -1068,6 +1072,8 @@ export default function TeletrabajoScreen() {
               </Pressable>
 
               <View style={{ width: 1, height: 26, backgroundColor: 'rgba(255, 255, 255, 0.15)' }} />
+                </>
+              )}
 
               <View>
                 <Text

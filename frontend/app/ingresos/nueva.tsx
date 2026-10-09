@@ -15,8 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { ingresosService, CargoEvaluado, AnalisisCompleto, PlazaPlanta, FormacionAcademicaItem, CertificadoAnalizado, VerificacionFormalTitulo, VerificacionFormalTarjeta } from '../../lib/ingresosService';
 import PdfViewerModal from '../../components/PdfViewerModal';
+import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
-export default function NuevaValidacionScreen() {
+function NuevaValidacionScreen() {
   const router = useRouter();
   const { rehacerId } = useLocalSearchParams<{ rehacerId?: string }>();
 
@@ -4298,3 +4299,5 @@ export default function NuevaValidacionScreen() {
     </View>
   );
 }
+
+export default conMarcoRRHH(NuevaValidacionScreen);
