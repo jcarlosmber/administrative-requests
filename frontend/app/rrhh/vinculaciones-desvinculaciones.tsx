@@ -28,6 +28,8 @@ import {
 } from '../../lib/secopService';
 import { ingresosService } from '../../lib/ingresosService';
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
+import { CASOS_2026_RAW } from '../../lib/casos2026Data';
+import { ModalRequisitosPosesionFT095 } from '../../components/rrhh/ModalRequisitosPosesionFT095';
 
 // ============================================================================
 // SISTEMA DE DISEÑO INSTITUCIONAL NAVY + SLATE (IDÉNTICO A NÓMINA)
@@ -323,6 +325,7 @@ export interface RequisitoEtapa {
   radicadoSoporte?: string;
   usuarioRegistro?: string;
   posiblesEvidencias?: string[];
+  documentosAdjuntos?: DocumentoSoporteAdjunto[];
 }
 
 
@@ -3527,273 +3530,28 @@ export function sincronizarEtapasCaso(
   });
 }
 
-const CASOS_BASE: CasoFlujoFuncionario[] = [
-  {
-    id: 'TR-2026-001',
-    tipo_proceso: 'DESVINCULACION',
-    modalidad: 'CARRERA_ADMINISTRATIVA',
-    id_plaza: 14,
-    servidor_nombre: 'ZULMA ANDREA MORENO DIAZ',
-    servidor_cedula: '52899412',
-    cargo: 'PROFESIONAL ESPECIALIZADO',
-    codigo: '222',
-    grado: '24',
-    dependencia: 'DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA',
-    causal: 'Renuncia regularmente aceptada (Art. 41 lit. a)',
-    acto_administrativo: 'Resolución No. 042 de 2026',
-    fecha_inicio_tramite: '2026-03-20',
-    fecha_efectiva: '2026-03-31',
-    etapas: generarEtapasParaCaso('DESVINCULACION', 'CARRERA_ADMINISTRATIVA'),
-    etapa_activa_id: 'd_carr_3',
-    observaciones: 'Plaza de carrera en vacancia definitiva. Pendiente radicación en SIMO 4.4.',
-  },
-  {
-    id: 'TR-2026-002',
-    tipo_proceso: 'VINCULACION',
-    modalidad: 'LIBRE_NOMBRAMIENTO',
-    id_plaza: 5,
-    servidor_nombre: 'MARÍA FERNANDA ROCHA GUTIÉRREZ',
-    servidor_cedula: '52981442',
-    cargo: 'DIRECTOR TÉCNICO',
-    codigo: '009',
-    grado: '05',
-    dependencia: 'DIRECCIÓN DISTRITAL DE GESTIÓN JUDICIAL',
-    fecha_inicio_tramite: '2026-04-01',
-    fecha_efectiva: '2026-04-15',
-    etapas: generarEtapasParaCaso('VINCULACION', 'LIBRE_NOMBRAMIENTO'),
-    etapa_activa_id: 'v_lnr_2',
-    observaciones: 'Postulada a nivel directivo. Cumple cuota de género. Requiere verificación SECOP II.',
-    estadoValidacionIA: 'CUMPLE',
-  },
-  {
-    id: 'TR-2026-003',
-    tipo_proceso: 'VINCULACION',
-    modalidad: 'PRACTICANTE_JUDICANTE',
-    servidor_nombre: 'JUAN PABLO BARRAGÁN LONDOÑO',
-    servidor_cedula: '1018492011',
-    cargo: 'JUDICANTE AD-HONOREM',
-    dependencia: 'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS',
-    fecha_inicio_tramite: '2026-03-15',
-    fecha_efectiva: '2026-04-01',
-    etapas: generarEtapasParaCaso('VINCULACION', 'PRACTICANTE_JUDICANTE'),
-    etapa_activa_id: 'v_prac_3',
-    observaciones: 'Judicatura en derecho Universidad Nacional. Verificado CDP y antecedentes.',
-  },
-  {
-    id: 'TR-2026-004',
-    tipo_proceso: 'DESVINCULACION',
-    modalidad: 'PROVISIONALIDAD',
-    id_plaza: 58,
-    servidor_nombre: 'CARLOS ALBERTO GIRALDO VELEZ',
-    servidor_cedula: '79841203',
-    cargo: 'PROFESIONAL UNIVERSITARIO',
-    codigo: '219',
-    grado: '18',
-    dependencia: 'DIRECCIÓN DISTRITAL DE ESTUDIOS',
-    causal: 'Obtención de pensión de vejez o invalidez (Art. 41 lit. b)',
-    acto_administrativo: 'Resolución No. 051 de 2026',
-    fecha_inicio_tramite: '2026-04-02',
-    fecha_efectiva: '2026-04-18',
-    etapas: generarEtapasParaCaso('DESVINCULACION', 'PROVISIONALIDAD'),
-    etapa_activa_id: 'd_prov_3',
-    observaciones: 'Pensión concedida por Colpensiones. En trámite entrega de puesto.',
-  },
-  {
-    id: 'TR-2026-005',
-    tipo_proceso: 'VINCULACION',
-    modalidad: 'CARRERA_ADMINISTRATIVA',
-    id_plaza: 14,
-    servidor_nombre: 'DIEGO ALEJANDRO QUINTERO ROJAS',
-    servidor_cedula: '1014234567',
-    cargo: 'PROFESIONAL UNIVERSITARIO',
-    codigo: '219',
-    grado: '11',
-    dependencia: 'DIRECCIÓN DISTRITAL DE GESTIÓN JUDICIAL',
-    fecha_inicio_tramite: '2026-03-28',
-    fecha_efectiva: '2026-04-15',
-    etapas: generarEtapasParaCaso('VINCULACION', 'CARRERA_ADMINISTRATIVA'),
-    etapa_activa_id: 'v_carr_4',
-    observaciones: 'Elegible meritorio No. 1 en Lista SIMO 4.0 Convocatoria Distrito 2025. Período de prueba proyectado por 6 meses.',
-    resultadoSecop: {
-      totalActivos: 3,
-      totalHistoricos: 2,
-      tieneAlerta: true,
-      fechaConsulta: '07/10/2026',
-      fechaHoraConsulta: '07/10/2026, 08:35:12 p.m.',
-      dictamen: '¡ATENCIÓN! La persona registra 3 contrato(s) activo(s) o en ejecución en el Estado colombiano (Entidades: UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA, SECRETARIA JURIDICA DISTRITAL). De conformidad con el artículo 128 de la Constitución Política y las leyes 80 de 1993 y 1952 de 2019, un servidor público no puede desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público, salvo excepciones legales expresas.',
-      entidadesActivas: ['UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA', 'SECRETARIA JURIDICA DISTRITAL'],
-      valorTotalActivo: 147500000,
-      contratosActivos: [
-        {
-          id: 'CO1.PCONT.4829101',
-          idContrato: 'CO1.PCONT.4829101',
-          referencia: 'CTO-PREST-2026-089',
-          numeroContrato: 'CTO-PREST-2026-089',
-          procesoCompra: 'CD-UAEMC-2026-042',
-          entidad: 'UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA',
-          nitEntidad: '900482910-1',
-          ordenEntidad: 'Nacional Centralizado',
-          departamento: 'Bogotá D.C.',
-          ciudad: 'Bogotá',
-          proveedor: 'DIEGO ALEJANDRO QUINTERO ROJAS',
-          documentoProveedor: '1014234567',
-          tipoDocumento: 'Cédula de Ciudadanía',
-          tipoContrato: 'Prestación de Servicios Profesionales',
-          modalidad: 'Contratación Directa',
-          objeto: 'Prestación de servicios profesionales de asesoría jurídica especializada en formulación de actos administrativos y conceptos sobre control migratorio.',
-          estado: 'En Ejecución',
-          esActivo: true,
-          fechaFirma: '2026-01-15',
-          fechaInicio: '2026-01-16',
-          fechaFin: '2026-11-30',
-          diasRestantes: 54,
-          plazoEjecucion: '10 meses y 15 días',
-          duracion: '319 días',
-          valorTotal: 58500000,
-          valorPagado: 32500000,
-          valorPendiente: 26000000,
-          porcentajeEjecucion: 56,
-          urlSecop: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4829101',
-          urlProceso: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4829101',
-          supervisor: 'Subdirector de Gestión Jurídica / UAEMC',
-          ordenadorGasto: 'Director General / UAEMC',
+const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => ({
+  ...c,
+  etapas: generarEtapasParaCaso(c.tipo_proceso, c.modalidad),
+  ...(c.servidor_cedula === '1014234567'
+    ? {
+        resultadoSecop: {
+          totalActivos: 3,
+          totalHistoricos: 2,
+          tieneAlerta: true,
+          fechaConsulta: '07/10/2026',
+          fechaHoraConsulta: '07/10/2026, 08:35:12 p.m.',
+          dictamen:
+            '¡ATENCIÓN! La persona registra 3 contrato(s) activo(s) o en ejecución en el Estado colombiano (Entidades: UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA, SECRETARIA JURIDICA DISTRITAL). De conformidad con el artículo 128 de la Constitución Política y las leyes 80 de 1993 y 1952 de 2019, un servidor público no puede desempeñar simultáneamente más de un empleo público ni recibir más de una asignación del tesoro público, salvo excepciones legales expresas.',
+          entidadesActivas: [
+            'UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA',
+            'SECRETARIA JURIDICA DISTRITAL',
+          ],
+          valorTotalActivo: 147500000,
         },
-        {
-          id: 'CO1.PCONT.4871220',
-          idContrato: 'CO1.PCONT.4871220',
-          referencia: 'SJD-CPS-2026-114',
-          numeroContrato: 'SJD-CPS-2026-114',
-          procesoCompra: 'CD-SJD-2026-088',
-          entidad: 'SECRETARIA JURIDICA DISTRITAL',
-          nitEntidad: '899999061-9',
-          ordenEntidad: 'Distrital',
-          departamento: 'Bogotá D.C.',
-          ciudad: 'Bogotá',
-          proveedor: 'DIEGO ALEJANDRO QUINTERO ROJAS',
-          documentoProveedor: '1014234567',
-          tipoDocumento: 'Cédula de Ciudadanía',
-          tipoContrato: 'Prestación de Servicios de Apoyo a la Gestión',
-          modalidad: 'Contratación Directa',
-          objeto: 'Servicios profesionales de apoyo jurídico para la sustanciación de acciones de tutela y defensas en litigio contencioso administrativo.',
-          estado: 'En Ejecución',
-          esActivo: true,
-          fechaFirma: '2026-02-01',
-          fechaInicio: '2026-02-02',
-          fechaFin: '2026-12-15',
-          diasRestantes: 69,
-          plazoEjecucion: '10 meses y 13 días',
-          duracion: '317 días',
-          valorTotal: 49000000,
-          valorPagado: 24500000,
-          valorPendiente: 24500000,
-          porcentajeEjecucion: 50,
-          urlSecop: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4871220',
-          urlProceso: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4871220',
-          supervisor: 'Director Distrital de Doctrina y Asuntos Normativos',
-          ordenadorGasto: 'Secretario Jurídico Distrital',
-        },
-        {
-          id: 'CO1.PCONT.4910332',
-          idContrato: 'CO1.PCONT.4910332',
-          referencia: 'CTO-ASJ-2026-015',
-          numeroContrato: 'CTO-ASJ-2026-015',
-          procesoCompra: 'CD-UAEMC-2026-095',
-          entidad: 'UNIDAD ADMINISTRATIVA ESPECIAL MIGRACION COLOMBIA',
-          nitEntidad: '900482910-1',
-          ordenEntidad: 'Nacional Centralizado',
-          departamento: 'Bogotá D.C.',
-          ciudad: 'Bogotá',
-          proveedor: 'DIEGO ALEJANDRO QUINTERO ROJAS',
-          documentoProveedor: '1014234567',
-          tipoDocumento: 'Cédula de Ciudadanía',
-          tipoContrato: 'Prestación de Servicios Profesionales',
-          modalidad: 'Contratación Directa',
-          objeto: 'Acompañamiento especializado en la estructuración de respuestas a requerimientos judiciales y procesos sancionatorios migratorios.',
-          estado: 'En Ejecución',
-          esActivo: true,
-          fechaFirma: '2026-03-01',
-          fechaInicio: '2026-03-02',
-          fechaFin: '2026-10-31',
-          diasRestantes: 24,
-          plazoEjecucion: '8 meses',
-          duracion: '244 días',
-          valorTotal: 40000000,
-          valorPagado: 25000000,
-          valorPendiente: 15000000,
-          porcentajeEjecucion: 63,
-          urlSecop: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4910332',
-          urlProceso: 'https://community.secop.gov.co/Public/Tendering/OpportunityDetail/Index?noticeUID=CO1.NTC.4910332',
-          supervisor: 'Jefe Oficina Asesora Jurídica / UAEMC',
-          ordenadorGasto: 'Director General / UAEMC',
-        }
-      ]
-    },
-  },
-  {
-    id: 'TR-2026-006',
-    tipo_proceso: 'VINCULACION',
-    modalidad: 'PROVISIONALIDAD',
-    id_plaza: 29,
-    servidor_nombre: 'LILIANA PATRICIA VARGAS MEJÍA',
-    servidor_cedula: '53094812',
-    cargo: 'PROFESIONAL ESPECIALIZADO',
-    codigo: '222',
-    grado: '22',
-    dependencia: 'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS',
-    fecha_inicio_tramite: '2026-04-01',
-    fecha_efectiva: '2026-04-20',
-    etapas: generarEtapasParaCaso('VINCULACION', 'PROVISIONALIDAD'),
-    etapa_activa_id: 'vp3_1',
-    observaciones: 'Vacancia de empleo de carrera. Agotado trámite de encargo preferente declarado desierto por Circular Interna No. 004/2026. Requiere verificación técnica FT-318 IA.',
-    resultadoSecop: {
-      totalActivos: 0,
-      totalHistoricos: 3,
-      tieneAlerta: false,
-      fechaConsulta: '07/10/2026',
-      fechaHoraConsulta: '07/10/2026, 08:40:00 p.m.',
-      dictamen: 'Registro verificado: Se encontraron 3 contratos históricos en SECOP II, todos cerrados y liquidados con paz y salvo. No se evidencian contratos en ejecución actualmente. Apto preventivamente.',
-      entidadesActivas: [],
-      valorTotalActivo: 0,
-      contratosActivos: [],
-      todosContratos: [],
-    },
-  },
-  {
-    id: 'TR-2026-007',
-    tipo_proceso: 'DESVINCULACION',
-    modalidad: 'LIBRE_NOMBRAMIENTO',
-    id_plaza: 5,
-    servidor_nombre: 'DRA. ANDREA CAROLINA CAMARGO VILLAMIL',
-    servidor_cedula: '52912443',
-    cargo: 'SUBSECRETARIO DE DESPACHO',
-    codigo: '045',
-    grado: '06',
-    dependencia: 'SUBSECRETARÍA JURÍDICA DISTRITAL',
-    causal: 'Renuncia regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
-    acto_administrativo: 'Resolución No. 064 de 2026',
-    fecha_inicio_tramite: '2026-04-05',
-    fecha_efectiva: '2026-04-18',
-    etapas: generarEtapasParaCaso('DESVINCULACION', 'LIBRE_NOMBRAMIENTO'),
-    etapa_activa_id: 'd_lnr_3',
-    observaciones: 'Cargo directivo. Suscrita acta circunstanciada de informe y entrega de despacho. Pendiente remisión de copia a Control Interno dentro de 15 días hábiles (Ley 951 de 2005, Art. 8).',
-  },
-  {
-    id: 'TR-2026-008',
-    tipo_proceso: 'DESVINCULACION',
-    modalidad: 'PRACTICANTE_JUDICANTE',
-    servidor_nombre: 'VALENTINA GÓMEZ MARTÍNEZ',
-    servidor_cedula: '1019284712',
-    cargo: 'JUDICANTE AD-HONOREM',
-    dependencia: 'DIRECCIÓN DISTRITAL DE ESTUDIOS',
-    causal: 'Culminación regular del período formativo / judicatura acordada (Ley 2043 de 2020 • Res. 3546 de 2018)',
-    fecha_inicio_tramite: '2026-04-08',
-    fecha_efectiva: '2026-04-20',
-    etapas: generarEtapasParaCaso('DESVINCULACION', 'PRACTICANTE_JUDICANTE'),
-    etapa_activa_id: 'd_prac_4',
-    observaciones: 'Período formativo culminado con evaluación sobresaliente del tutor. Retiro de ARL tramitado. En proyección expedición de Certificación Final con validez de experiencia profesional (Ley 2043 de 2020).',
-  },
-];
-
+      }
+    : {}),
+}));
 
 // ============================================================================
 // CATÁLOGO DE FORMATOS OFICIALES Y PLANTILLAS DE TALENTO HUMANO
@@ -4168,8 +3926,8 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [busquedaDesvinculaciones, setBusquedaDesvinculaciones] = useState('');
 
   // Claves de persistencia en almacenamiento local (Web / App)
-  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v2';
-  const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v2';
+  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v4';
+  const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v4';
 
   const obtenerCasosIniciales = (): CasoFlujoFuncionario[] => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -4177,7 +3935,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         const guardados = window.localStorage.getItem(STORAGE_KEY_CASOS);
         if (guardados) {
           const parsed = JSON.parse(guardados);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed) && parsed.length >= CASOS_BASE.length) {
             return parsed.map((c: CasoFlujoFuncionario) => ({
               ...c,
               etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad),
@@ -5969,6 +5727,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [modalReporteAuditoriaVisible, setModalReporteAuditoriaVisible] = useState(false);
   const [reporteAuditoriaContenido, setReporteAuditoriaContenido] = useState<string>('');
   const [modalFormatosVisible, setModalFormatosVisible] = useState(false);
+  const [modalFT095Visible, setModalFT095Visible] = useState(false);
   const [filtroProcesoFormatos, setFiltroProcesoFormatos] = useState<'TODOS' | 'VINCULACION' | 'DESVINCULACION' | 'GUIA_NORMATIVA'>('TODOS');
   const [busquedaFormatos, setBusquedaFormatos] = useState('');
 
@@ -6032,6 +5791,179 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     etapa: EtapaFlujo;
   } | null>(null);
   const [obsFaseTexto, setObsFaseTexto] = useState('');
+
+    // ============================================================================
+  // GESTIÓN DINÁMICA DE DOCUMENTOS Y EXPEDIENTE DIGITAL ADJUNTO
+  // ============================================================================
+  const formatearTamanoArchivo = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const handleAdjuntarArchivoRequisito = async (
+    casoId: string,
+    etapaId: string,
+    requisitoId: string
+  ) => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ['*/*'],
+        copyToCacheDirectory: true,
+        multiple: true,
+      });
+
+      if (res.canceled || !res.assets || res.assets.length === 0) {
+        return;
+      }
+
+      const nuevosDocs: DocumentoSoporteAdjunto[] = res.assets.map((asset, idx) => ({
+        id: `doc_${Date.now()}_${idx}`,
+        nombre: asset.name,
+        uri: asset.uri,
+        size: asset.size,
+        mimeType: asset.mimeType,
+        fechaSubida: new Date().toISOString(),
+        usuario: 'Talento Humano',
+      }));
+
+      // Actualizar casos en memoria y reactividad
+      setCasos((prevCasos) =>
+        prevCasos.map((c) => {
+          if (c.id !== casoId) return c;
+          const nuevasEtapas = c.etapas.map((et) => {
+            if (et.id !== etapaId) return et;
+            const nuevosReqs = et.requisitos.map((r) => {
+              if (r.id !== requisitoId) return r;
+              const docsPrevios = r.documentosAdjuntos || [];
+              return {
+                ...r,
+                documentosAdjuntos: [...docsPrevios, ...nuevosDocs],
+              };
+            });
+            return { ...et, requisitos: nuevosReqs };
+          });
+          return { ...c, etapas: nuevasEtapas };
+        })
+      );
+
+      // Si el modal de requisito está abierto para este requisito, actualizarlo
+      if (modalReqContext && modalReqContext.req.id === requisitoId) {
+        setModalReqContext((prev) => {
+          if (!prev) return null;
+          const docsPrevios = prev.req.documentosAdjuntos || [];
+          return {
+            ...prev,
+            req: {
+              ...prev.req,
+              documentosAdjuntos: [...docsPrevios, ...nuevosDocs],
+            },
+          };
+        });
+      }
+
+      setModalMensajeDoc({
+        visible: true,
+        titulo: 'Documento Adjuntado Exitosamente',
+        mensaje: `Se ha incorporado ${nuevosDocs.length} archivo(s) de soporte al requisito. El documento queda archivado en el expediente digital del trámite.`,
+        tipo: 'exito',
+      });
+    } catch (error: any) {
+      console.error('Error al adjuntar archivo:', error);
+      setModalMensajeDoc({
+        visible: true,
+        titulo: 'Error al Adjuntar Documento',
+        mensaje: `No se pudo adjuntar el archivo: ${error.message || 'Error desconocido'}`,
+        tipo: 'error',
+      });
+    }
+  };
+
+  const confirmarEliminarArchivo = (
+    casoId: string,
+    etapaId: string,
+    requisitoId: string,
+    docId: string,
+    nombreDoc: string
+  ) => {
+    setModalEliminarDoc({
+      visible: true,
+      casoId,
+      etapaId,
+      requisitoId,
+      docId,
+      nombreDoc,
+    });
+  };
+
+  const ejecutarEliminacionArchivo = () => {
+    if (!modalEliminarDoc) return;
+    const { casoId, etapaId, requisitoId, docId } = modalEliminarDoc;
+
+    setCasos((prevCasos) =>
+      prevCasos.map((c) => {
+        if (c.id !== casoId) return c;
+        const nuevasEtapas = c.etapas.map((et) => {
+          if (etapaId && et.id !== etapaId) return et;
+          const nuevosReqs = et.requisitos.map((r) => {
+            if (requisitoId && r.id !== requisitoId) return r;
+            const docsFiltrados = (r.documentosAdjuntos || []).filter((d) => d.id !== docId);
+            return {
+              ...r,
+              documentosAdjuntos: docsFiltrados,
+            };
+          });
+          return { ...et, requisitos: nuevosReqs };
+        });
+        return { ...c, etapas: nuevasEtapas };
+      })
+    );
+
+    if (modalReqContext && (!requisitoId || modalReqContext.req.id === requisitoId)) {
+      setModalReqContext((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          req: {
+            ...prev.req,
+            documentosAdjuntos: (prev.req.documentosAdjuntos || []).filter((d) => d.id !== docId),
+          },
+        };
+      });
+    }
+
+    setModalEliminarDoc(null);
+    setModalMensajeDoc({
+      visible: true,
+      titulo: 'Documento Retirado',
+      mensaje: 'El documento de soporte fue retirado del expediente.',
+      tipo: 'info',
+    });
+  };
+
+  const handleAbrirArchivoAdjunto = (doc: DocumentoSoporteAdjunto) => {
+    try {
+      if (Platform.OS === 'web') {
+        window.open(doc.uri, '_blank');
+      } else {
+        Linking.openURL(doc.uri);
+      }
+    } catch (e: any) {
+      console.warn('Error al abrir documento:', e);
+    }
+  };
+
+  // Total de documentos adjuntos a lo largo de todas las etapas del caso activo
+  const totalDocumentosCasoActivo = useMemo(() => {
+    if (!casoActivo || !casoActivo.etapas) return 0;
+    return casoActivo.etapas.reduce((acc, et) => {
+      const sumEtapa = (et.requisitos || []).reduce((sumR, req) => {
+        return sumR + (req.documentosAdjuntos?.length || 0);
+      }, 0);
+      return acc + sumEtapa;
+    }, 0);
+  }, [casoActivo]);
 
   // Controladores de visibilidad / acordeones
   const toggleFaseExpandida = (etapaId: string) => {
@@ -8571,6 +8503,42 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   </Text>
                                                 </Pressable>
 
+                                                                                                {/* Botón Rápido para Adjuntar / Ver Documentos de Soporte */}
+                                                <Pressable
+                                                  onPress={(e) => {
+                                                    e.stopPropagation();
+                                                    handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id);
+                                                  }}
+                                                  style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 3,
+                                                    backgroundColor: (req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#ecfdf5' : '#f8fafc',
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                    borderWidth: 1,
+                                                    borderColor: (req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#a7f3d0' : '#cbd5e1',
+                                                  }}
+                                                >
+                                                  <Ionicons
+                                                    name="attach"
+                                                    size={11}
+                                                    color={(req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#059669' : '#475569'}
+                                                  />
+                                                  <Text
+                                                    style={{
+                                                      fontSize: 9.5,
+                                                      fontWeight: '700',
+                                                      color: (req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#059669' : '#475569',
+                                                    }}
+                                                  >
+                                                    {(req.documentosAdjuntos && req.documentosAdjuntos.length > 0)
+                                                      ? `📎 ${req.documentosAdjuntos.length} soporte${req.documentosAdjuntos.length > 1 ? 's' : ''}`
+                                                      : '+ Adjuntar Soporte'}
+                                                  </Text>
+                                                </Pressable>
+
                                                 {/* Botón de Modal para Observaciones y Cierre */}
                                                 <Pressable
                                                   onPress={() => abrirModalObservacionReq(casoActivo.id, etapa, req, false)}
@@ -10738,7 +10706,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 920,
+              maxWidth: 960,
               maxHeight: '90%',
               padding: 20,
               shadowColor: '#000',
@@ -12141,7 +12109,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 520,
+              maxWidth: 960,
               maxHeight: '85%',
               padding: 18,
               gap: 12,
@@ -12338,7 +12306,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 480,
+              maxWidth: 960,
               maxHeight: '80%',
               padding: 18,
               gap: 12,
@@ -12501,7 +12469,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 540,
+              maxWidth: 960,
               maxHeight: '85%',
               padding: 18,
               gap: 12,
@@ -12698,7 +12666,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 580,
+              maxWidth: 960,
               maxHeight: '90%',
               overflow: 'hidden',
               shadowColor: '#000',
@@ -12844,6 +12812,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   return false;
                 });
 
+                                const esFT095 =
+                  reqId.includes('ft095') ||
+                  reqCodigo.includes('FT-095') ||
+                  reqLabel.includes('ft-095') ||
+                  reqLabel.includes('requisitos para tomar posesión') ||
+                  (modalReqContext?.req as any)?.tipoAccionEspecial === 'FT095';
                 const esEvaluacionRetiro = reqLabel.includes('retiro') || reqId.includes('4_3') || reqId.includes('4_2');
 
                 return (
@@ -12873,6 +12847,73 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         </Text>
                       </Pressable>
                     </View>
+
+                    {/* Acción dinámica para FT-095 Requisitos para Tomar Posesión */}
+                    {esFT095 && (
+                      <View
+                        style={{
+                          backgroundColor: '#ecfdf5',
+                          borderRadius: 8,
+                          borderWidth: 1.5,
+                          borderColor: '#10b981',
+                          padding: 12,
+                          gap: 8,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="checkbox-outline" size={20} color="#059669" />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#065f46' }}>
+                              📋 Verificación Dinámica de 32 Requisitos (Formato 2311300-FT-095 V05)
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>
+                              Diligencie interactivamente las casillas de verificación (Cumple / Pendiente / N/A), observaciones y descargue el formato oficial generado para el expediente.
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                          <Pressable
+                            onPress={() => {
+                              setModalReqContext(null);
+                              setModalFT095Visible(true);
+                            }}
+                            style={{
+                              backgroundColor: '#059669',
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 6,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                            }}
+                          >
+                            <Ionicons name="open-outline" size={15} color="#ffffff" />
+                            <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ffffff' }}>
+                              Abrir Verificador Dinámico FT-095
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleDescargarFormatoOficial('Requisitos para tomar posesion del cargo_V5.doc')}
+                            style={{
+                              backgroundColor: '#ffffff',
+                              borderWidth: 1,
+                              borderColor: '#cbd5e1',
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 6,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                            }}
+                          >
+                            <Ionicons name="download-outline" size={14} color="#334155" />
+                            <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                              Descargar Plantilla Base (.doc)
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
 
                     {/* Si aplica Evaluación de Retiro, botón prominente para Google Forms */}
                     {esEvaluacionRetiro && (
@@ -13008,6 +13049,192 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   </View>
                 );
               })()}
+
+                            {/* ============================================================== */}
+              {/* SECCIÓN INTERACTIVA DE DOCUMENTOS DE SOPORTE ADJUNTOS         */}
+              {/* ============================================================== */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  padding: 12,
+                  gap: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="attach-outline" size={18} color={THEME.marca800} />
+                    <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate900 }}>
+                      Documentos y Evidencias de Soporte Adjuntos
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: (modalReqContext?.req.documentosAdjuntos?.length || 0) > 0 ? '#ecfdf5' : '#f1f5f9',
+                        paddingHorizontal: 7,
+                        paddingVertical: 1.5,
+                        borderRadius: 4,
+                        borderWidth: 1,
+                        borderColor: (modalReqContext?.req.documentosAdjuntos?.length || 0) > 0 ? '#a7f3d0' : '#e2e8f0',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: '800',
+                          color: (modalReqContext?.req.documentosAdjuntos?.length || 0) > 0 ? '#059669' : '#64748b',
+                        }}
+                      >
+                        {(modalReqContext?.req.documentosAdjuntos?.length || 0)} archivo(s)
+                      </Text>
+                    </View>
+                  </View>
+
+                  {modalReqContext && (
+                    <Pressable
+                      onPress={() =>
+                        handleAdjuntarArchivoRequisito(
+                          modalReqContext.casoId,
+                          modalReqContext.etapaId,
+                          modalReqContext.req.id
+                        )
+                      }
+                      style={{
+                        backgroundColor: '#0D2A48',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                      }}
+                    >
+                      <Ionicons name="cloud-upload-outline" size={13} color="#ffffff" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#ffffff' }}>
+                        + Adjuntar Archivo
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Lista de archivos adjuntos del requisito */}
+                {modalReqContext?.req.documentosAdjuntos && modalReqContext.req.documentosAdjuntos.length > 0 ? (
+                  <View style={{ gap: 6 }}>
+                    {modalReqContext.req.documentosAdjuntos.map((doc) => {
+                      const ext = (doc.nombre.split('.').pop() || '').toLowerCase();
+                      const esPdf = ext === 'pdf';
+                      const esExcel = ext === 'xls' || ext === 'xlsx';
+                      const esWord = ext === 'doc' || ext === 'docx';
+                      const colorIcono = esPdf ? '#dc2626' : esExcel ? '#16a34a' : esWord ? '#2563eb' : '#7c3aed';
+
+                      return (
+                        <View
+                          key={doc.id}
+                          style={{
+                            backgroundColor: '#f8fafc',
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: '#e2e8f0',
+                            padding: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 8,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                            <Ionicons
+                              name={esPdf ? 'document-text' : esExcel ? 'grid' : esWord ? 'document' : 'image'}
+                              size={18}
+                              color={colorIcono}
+                            />
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate800 }} numberOfLines={1}>
+                                {doc.nombre}
+                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
+                                {doc.size ? (
+                                  <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                                    {formatearTamanoArchivo(doc.size)}
+                                  </Text>
+                                ) : null}
+                                <Text style={{ fontSize: 10, color: THEME.slate400 }}>•</Text>
+                                <Text style={{ fontSize: 10, color: THEME.slate500 }}>
+                                  {new Date(doc.fechaSubida).toLocaleDateString()} {new Date(doc.fechaSubida).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                            <Pressable
+                              onPress={() => handleAbrirArchivoAdjunto(doc)}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                borderWidth: 1,
+                                borderColor: '#cbd5e1',
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 4,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 3,
+                              }}
+                            >
+                              <Ionicons name="eye-outline" size={12} color="#0D2A48" />
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#0D2A48' }}>
+                                Ver / Abrir
+                              </Text>
+                            </Pressable>
+
+                            <Pressable
+                              onPress={() =>
+                                confirmarEliminarArchivo(
+                                  modalReqContext.casoId,
+                                  modalReqContext.etapaId,
+                                  modalReqContext.req.id,
+                                  doc.id,
+                                  doc.nombre
+                                )
+                              }
+                              style={{
+                                backgroundColor: '#fee2e2',
+                                paddingHorizontal: 6,
+                                paddingVertical: 4,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={12} color="#b91c1c" />
+                            </Pressable>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderStyle: 'dashed',
+                      borderColor: '#cbd5e1',
+                      borderRadius: 6,
+                      padding: 14,
+                      alignItems: 'center',
+                      gap: 4,
+                      backgroundColor: '#f8fafc',
+                    }}
+                  >
+                    <Ionicons name="document-attach-outline" size={24} color="#94a3b8" />
+                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#64748b' }}>
+                      No hay archivos de soporte adjuntados a este requisito
+                    </Text>
+                    <Text style={{ fontSize: 10.5, color: '#94a3b8', textAlign: 'center' }}>
+                      Haga clic en "+ Adjuntar Archivo" para incorporar evidencias documentales en PDF, Word, Excel o imagen.
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               {/* Formulario de Observaciones y Soporte */}
               <View style={{ gap: 12 }}>
@@ -13203,7 +13430,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 520,
+              maxWidth: 960,
               overflow: 'hidden',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 4 },
@@ -13343,7 +13570,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 480,
+              maxWidth: 960,
               padding: 20,
               gap: 12,
             }}
@@ -14249,7 +14476,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               borderWidth: 1,
               borderColor: THEME.slate200,
               width: '100%',
-              maxWidth: 760,
+              maxWidth: 960,
               maxHeight: '92%',
               overflow: 'hidden',
               shadowColor: '#000',
@@ -14628,7 +14855,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         onRequestClose={() => setModalGestionOpecVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 540, padding: 20, gap: 14 }}>
+          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 960, padding: 20, gap: 14 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.slate100, paddingBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="ribbon-outline" size={20} color={THEME.marca700} />
@@ -14760,7 +14987,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         onRequestClose={() => setModalTerminosIncidenteVisible(false)}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 580, padding: 20, gap: 14 }}>
+          <View style={{ backgroundColor: THEME.white, borderRadius: 16, borderWidth: 1, borderColor: THEME.slate200, width: '100%', maxWidth: 960, padding: 20, gap: 14 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: THEME.slate100, paddingBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="scale-outline" size={20} color={THEME.marca700} />

@@ -493,11 +493,11 @@ module.exports = function (pool) {
         if (rawDeps.length > 0) {
           const depClauses = [];
           for (const depItem of rawDeps) {
-            params.push(%%);
+            params.push(`%${depItem}%`);
             const idx = params.length;
-            depClauses.push((dependencia_cargo ILIKE {idx} OR dependencia_funcional ILIKE {idx}));
+            depClauses.push(`(dependencia_cargo ILIKE $${idx} OR dependencia_funcional ILIKE $${idx})`);
           }
-          query +=  AND ();
+          query += ` AND (${depClauses.join(' OR ')})`;
         }
       }
 
@@ -510,11 +510,11 @@ module.exports = function (pool) {
           for (const carItem of rawCargos) {
             params.push(carItem);
             const idx = params.length;
-            cargoClauses.push(TRIM(cargo) ILIKE TRIM({idx}));
+            cargoClauses.push(`TRIM(cargo) ILIKE TRIM($${idx})`);
           }
-          query +=  AND ();
+          query += ` AND (${cargoClauses.join(' OR ')})`;
         }
-      }   }
+      }
 
       // Filtro de Código y Grado (soporta lista separada por comas '219-01, 222-24', 'COD-GRA', solo código o solo grado, con normalización de ceros)
       if (codigo_grado && codigo_grado.trim() && codigo_grado !== 'TODOS') {

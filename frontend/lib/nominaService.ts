@@ -112,10 +112,10 @@ export interface PlazaNomina {
   // Campos complementarios de Planta Perno
   tipo_funcionario?: string;
   fecha_nacimiento?: string;
-  edad?: number;
+  edad?: number | null;
   direccion?: string;
   telefono?: string;
-  sexo?: string;
+  sexo?: string | null;
   fondo_salud?: string;
   fondo_pension?: string;
   fondo_cesantias?: string;

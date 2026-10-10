@@ -307,6 +307,20 @@ export default function NominaScreen() {
           situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
           manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
           resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
+          sexo: (() => {
+            const rawS = p.sexo || m?.sexo || funcionarioActivo?.sexo || null;
+            if (!rawS) return null;
+            const sU = String(rawS).trim().toUpperCase();
+            if (sU === 'F' || sU === 'FEMENINO' || sU === 'MUJER') return 'MUJER';
+            if (sU === 'M' || sU === 'MASCULINO' || sU === 'HOMBRE') return 'HOMBRE';
+            return sU;
+          })(),
+          edad: (() => {
+            if (p.edad && Number(p.edad) > 0) return Number(p.edad);
+            if (m?.edad && Number(m.edad) > 0) return Number(m.edad);
+            if (funcionarioActivo?.fecha_nacimiento) return calcEdad(funcionarioActivo.fecha_nacimiento) || undefined;
+            return undefined;
+          })(),
         };
       });
       const listadoFiltrado = aplicarFiltrosPlazas(listadoEnriquecido, {
@@ -475,14 +489,78 @@ export default function NominaScreen() {
     });
 
     // Paridad de Género (Ley 2424 / Ley 581)
-    const directivos = listPlazas.filter((p) => p.nivel === 'DIRECTIVO');
-    const mujeresDirectivas = directivos.filter((p) => p.sexo === 'MUJER').length;
+    const pernoMapPorCed = new Map<string, PersonaPerno>();
+    todoElPerno.forEach((per) => {
+      if (per.cedula) pernoMapPorCed.set(String(per.cedula).trim(), per);
+    });
+
+    const obtenerSexoPlaza = (p: PlazaNomina) => {
+      const ced = p.encargo_cedula ? String(p.encargo_cedula).trim() : p.titular_cedula ? String(p.titular_cedula).trim() : null;
+      const per = ced ? pernoMapPorCed.get(ced) : null;
+      const raw = String(p.sexo || per?.sexo || '').trim().toUpperCase();
+      if (raw === 'F' || raw === 'FEMENINO' || raw === 'MUJER') return 'MUJER';
+      if (raw === 'M' || raw === 'MASCULINO' || raw === 'HOMBRE') return 'HOMBRE';
+      return 'SIN_DATO';
+    };
+
+    const obtenerEdadPlaza = (p: PlazaNomina) => {
+      if (p.edad && Number(p.edad) > 0) return Number(p.edad);
+      const ced = p.encargo_cedula ? String(p.encargo_cedula).trim() : p.titular_cedula ? String(p.titular_cedula).trim() : null;
+      const per = ced ? pernoMapPorCed.get(ced) : null;
+      if (per?.fecha_nacimiento) {
+        const ed = calcEdad(per.fecha_nacimiento);
+        if (ed && ed > 0) return ed;
+      }
+      return 0;
+    };
+
+    const directivos = listPlazas.filter((p) => (p.nivel || '').toUpperCase().trim() === 'DIRECTIVO');
+    const plazasDirectivas = directivos.map((p) => ({
+      ...p,
+      sexoEfectivo: obtenerSexoPlaza(p),
+      edadEfectiva: obtenerEdadPlaza(p),
+    }));
+
+    const mujeresDirectivas = plazasDirectivas.filter((p) => p.sexoEfectivo === 'MUJER').length;
+    const hombresDirectivos = plazasDirectivas.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
     const pctMujeresDirectivo = directivos.length > 0 ? (mujeresDirectivas / directivos.length) * 100 : 0;
-    const mujeresTotal = listPlazas.filter((p) => p.sexo === 'MUJER').length;
-    const hombresTotal = listPlazas.filter((p) => p.sexo === 'HOMBRE').length;
+
+    const plazasConSexo = listPlazas.map((p) => ({
+      ...p,
+      sexoEfectivo: obtenerSexoPlaza(p),
+      edadEfectiva: obtenerEdadPlaza(p),
+    }));
+
+    const mujeresTotal = plazasConSexo.filter((p) => p.sexoEfectivo === 'MUJER').length;
+    const hombresTotal = plazasConSexo.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
+    const totalServidoresConGenero = mujeresTotal + hombresTotal;
+    const pctMujeresPlanta = totalServidoresConGenero > 0 ? (mujeresTotal / totalServidoresConGenero) * 100 : 0;
+
+    // Distribución de Paridad por Nivel Jerárquico
+    const nivelesClave = ['DIRECTIVO', 'ASESOR', 'PROFESIONAL', 'TECNICO', 'ASISTENCIAL'];
+    const paridadPorNivel: Record<string, { total: number; mujeres: number; hombres: number; pctMujeres: number; label: string }> = {};
+
+    nivelesClave.forEach((nivKey) => {
+      const matchPlazas = plazasConSexo.filter((p) => {
+        const nNorm = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (nivKey === 'TECNICO') return nNorm.includes('TECNIC');
+        return nNorm === nivKey;
+      });
+      const mCount = matchPlazas.filter((p) => p.sexoEfectivo === 'MUJER').length;
+      const hCount = matchPlazas.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
+      const totalOcup = mCount + hCount;
+      const label = nivKey === 'TECNICO' ? 'TÉCNICO OPERATIVO' : nivKey;
+      paridadPorNivel[nivKey] = {
+        total: matchPlazas.length,
+        mujeres: mCount,
+        hombres: hCount,
+        pctMujeres: totalOcup > 0 ? (mCount / totalOcup) * 100 : 0,
+        label,
+      };
+    });
 
     // Edad promedio
-    const edadesValidas = listPlazas.filter((p: any) => p.edad && Number(p.edad) > 0).map((p: any) => Number(p.edad));
+    const edadesValidas = plazasConSexo.map((p) => p.edadEfectiva).filter((e) => e > 0);
     const edadPromedio = edadesValidas.length > 0 ? edadesValidas.reduce((a, b) => a + b, 0) / edadesValidas.length : 0;
 
     // EPS en PERNO
@@ -506,23 +584,19 @@ export default function NominaScreen() {
       porCesantias[c] = (porCesantias[c] || 0) + 1;
     });
 
-    // Grupos etarios para planeación y retiro pensional
+    // Grupos etarios para planeación y retiro pensional (Ley 1821 de 2017)
     const gruposEdad = {
       menor30: 0,
       de30a45: 0,
       de46a60: 0,
       mayor60: 0,
     };
-    listPlazas.forEach((p: any) => {
-      const ed = Number(p.edad) || 0;
-      if (ed > 0) {
-        if (ed < 30) gruposEdad.menor30++;
-        else if (ed <= 45) gruposEdad.de30a45++;
-        else if (ed <= 60) gruposEdad.de46a60++;
-        else gruposEdad.mayor60++;
-      }
+    edadesValidas.forEach((ed) => {
+      if (ed < 30) gruposEdad.menor30++;
+      else if (ed <= 45) gruposEdad.de30a45++;
+      else if (ed <= 60) gruposEdad.de46a60++;
+      else gruposEdad.mayor60++;
     });
-
     // Conciliación detallada
     const activosPerno = todoElPerno.filter((p) => p.estado_funcionario === 'A' && !p.fecha_retiro);
     const servidoresSinPlaza = activosPerno.filter(
@@ -544,9 +618,14 @@ export default function NominaScreen() {
       porDependencia,
       directivosCount: directivos.length,
       mujeresDirectivas,
+      hombresDirectivos,
       pctMujeresDirectivo,
+      plazasDirectivas,
       mujeresTotal,
       hombresTotal,
+      totalServidoresConGenero,
+      pctMujeresPlanta,
+      paridadPorNivel,
       edadPromedio,
       porEps,
       porAfp,
@@ -6175,55 +6254,219 @@ export default function NominaScreen() {
               {/* SUB-REPORTE 4: PARIDAD DE GÉNERO & DEMOGRAFÍA (LEY 2424)       */}
               {/* ============================================================== */}
               {subReporteActivo === 'paridad_demografia' && (
-                <View style={{ gap: 16 }}>
-                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12 }}>
-                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
+                <View style={{ gap: 18 }}>
+                  {/* Fila 1: 4 Tarjetas KPI Superiores */}
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12, flexWrap: 'wrap' }}>
+                    {/* KPI 1: Paridad Directiva */}
+                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '700' }}>PARIDAD NIVEL DIRECTIVO</Text>
-                        <View style={{ backgroundColor: metricasReportes.pctMujeresDirectivo >= 50 ? '#dcfce7' : '#fee2e2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: metricasReportes.pctMujeresDirectivo >= 50 ? '#166534' : '#991b1b' }}>
-                            {metricasReportes.pctMujeresDirectivo >= 50 ? 'CUMPLE LEY 2424' : 'POR DEBAJO DE META'}
+                        <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>PARIDAD NIVEL DIRECTIVO</Text>
+                        <View style={{ backgroundColor: metricasReportes.pctMujeresDirectivo >= 50 ? '#ECFDF5' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1, borderColor: metricasReportes.pctMujeresDirectivo >= 50 ? '#A7F3D0' : '#FDE68A' }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: metricasReportes.pctMujeresDirectivo >= 50 ? '#065F46' : '#92400E' }}>
+                            {metricasReportes.pctMujeresDirectivo >= 50 ? 'CUMPLE LEY 2424' : '40% (META: 50%)'}
                           </Text>
                         </View>
                       </View>
-                      <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca900, marginTop: 4 }}>
+                      <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca900, marginTop: 6 }}>
                         {metricasReportes.pctMujeresDirectivo.toFixed(1)}% Mujeres
                       </Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
-                        {metricasReportes.mujeresDirectivas} mujeres de {metricasReportes.directivosCount} cargos directivos (Meta: 50%)
+                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                        {metricasReportes.mujeresDirectivas} mujeres y {metricasReportes.hombresDirectivos} hombres ({metricasReportes.directivosCount} empleos directivos)
                       </Text>
                     </View>
 
-                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>DISTRIBUCIÓN TOTAL PLANTA</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>
-                        {metricasReportes.mujeresTotal} M / {metricasReportes.hombresTotal} H
+                    {/* KPI 2: Total Planta */}
+                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>DISTRIBUCIÓN TOTAL PLANTA</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 6 }}>
+                        {metricasReportes.mujeresTotal} M ({metricasReportes.pctMujeresPlanta.toFixed(1)}%) • {metricasReportes.hombresTotal} H
                       </Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
-                        {((metricasReportes.mujeresTotal / (metricasReportes.totalPlazas || 1)) * 100).toFixed(1)}% Mujeres en planta general
+                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                        Sobre {metricasReportes.totalServidoresConGenero} servidores provistos con género reportado
                       </Text>
                     </View>
 
-                    <View style={{ flex: 1, backgroundColor: THEME.white, borderRadius: 10, padding: 16, borderWidth: 1, borderColor: THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate500, fontWeight: '600' }}>EDAD PROMEDIO INSTITUCIONAL</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 4 }}>
+                    {/* KPI 3: Edad Promedio */}
+                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>EDAD PROMEDIO INSTITUCIONAL</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.marca800, marginTop: 6 }}>
                         {metricasReportes.edadPromedio.toFixed(1)} Años
                       </Text>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>Cálculo sobre servidores de planta provistos</Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                        Madurez profesional y memoria técnica institucional
+                      </Text>
+                    </View>
+
+                    {/* KPI 4: Relevo Pensional */}
+                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>RELEVO PENSIONAL (LEY 1821)</Text>
+                      <Text style={{ fontSize: 24, fontWeight: '800', color: '#B91C1C', marginTop: 6 }}>
+                        {metricasReportes.gruposEdad.mayor60} Servidores
+                      </Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                        Servidores mayores de 60 años en etapa previa a pensión
+                      </Text>
                     </View>
                   </View>
 
-                  {/* Pirámide de Edad y Planeación Pensional */}
+                  {/* Fila 2: Tabla Detallada de Paridad en Cargos del Nivel Directivo (Ley 2424 / Ley 581) */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 3 }}>
+                    <View style={{ backgroundColor: THEME.marca900, paddingHorizontal: 18, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name="ribbon-outline" size={17} color={THEME.white} />
+                          <Text style={{ color: THEME.white, fontSize: 14.5, fontWeight: '800' }}>
+                            Seguimiento Ley 2424 / Ley 581 en Empleos del Nivel Directivo
+                          </Text>
+                        </View>
+                        <Text style={{ color: 'rgba(214, 228, 244, 0.75)', fontSize: 11.5, marginTop: 2 }}>
+                          {metricasReportes.directivosCount} empleos directivos oficiales sujetos a la meta mínima del 50% de participación de mujeres
+                        </Text>
+                      </View>
+                      <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700' }}>
+                          {metricasReportes.mujeresDirectivas} M / {metricasReportes.hombresDirectivos} H ({metricasReportes.pctMujeresDirectivo.toFixed(0)}%)
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Tabla de Directivos */}
+                    <View style={{ overflow: 'hidden' }}>
+                      <View style={{ flexDirection: 'row', backgroundColor: THEME.slate100, paddingVertical: 9, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: THEME.slate200 }}>
+                        <Text style={{ width: 65, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>PLAZA</Text>
+                        <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>EMPLEO DIRECTIVO</Text>
+                        <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>TITULAR / ENCARGADO</Text>
+                        <Text style={{ flex: 1.8, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>DEPENDENCIA</Text>
+                        <Text style={{ width: 85, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>GÉNERO</Text>
+                        <Text style={{ width: 60, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>EDAD</Text>
+                      </View>
+
+                      {metricasReportes.plazasDirectivas.map((p, idx) => {
+                        const esMujer = p.sexoEfectivo === 'MUJER';
+                        const nombreFunc = p.encargo_nombre || p.titular_nombre || 'VACANTE DEFINITIVA';
+                        return (
+                          <Pressable
+                            key={p.id_plaza}
+                            onPress={() => {
+                              setPlazaDetalleReporte(p);
+                              setModalDetallePlazaReporteVisible(true);
+                            }}
+                            style={({ pressed }) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingVertical: 10,
+                              paddingHorizontal: 14,
+                              backgroundColor: pressed ? THEME.slate100 : idx % 2 === 0 ? THEME.white : THEME.slate50,
+                              borderBottomWidth: idx === metricasReportes.plazasDirectivas.length - 1 ? 0 : 1,
+                              borderBottomColor: THEME.slate100,
+                            })}
+                          >
+                            <Text style={{ width: 65, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>#{p.id_plaza}</Text>
+                            <View style={{ flex: 2, paddingRight: 6 }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>{p.cargo}</Text>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>Cód. {p.codigo} - Grado {p.grado}</Text>
+                            </View>
+                            <View style={{ flex: 2, paddingRight: 6 }}>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>{nombreFunc}</Text>
+                              <Text style={{ fontSize: 10.5, color: p.es_encargo ? '#B45309' : THEME.slate500 }}>
+                                {p.es_encargo ? 'En encargo' : (p.tipo_vinculacion || 'En propiedad')}
+                              </Text>
+                            </View>
+                            <Text numberOfLines={1} style={{ flex: 1.8, fontSize: 11, color: THEME.slate600, paddingRight: 6 }}>
+                              {p.dependencia_cargo}
+                            </Text>
+                            <View style={{ width: 85, alignItems: 'center' }}>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  backgroundColor: esMujer ? '#FCE7F3' : '#E0F2FE',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                  borderWidth: 1,
+                                  borderColor: esMujer ? '#FBCFE8' : '#BAE6FD',
+                                }}
+                              >
+                                <Ionicons name={esMujer ? 'woman-outline' : 'man-outline'} size={12} color={esMujer ? '#BE185D' : '#0369A1'} />
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: esMujer ? '#9D174D' : '#075985' }}>
+                                  {esMujer ? 'Mujer' : 'Hombre'}
+                                </Text>
+                              </View>
+                            </View>
+                            <Text style={{ width: 60, fontSize: 11.5, fontWeight: '600', color: THEME.slate700, textAlign: 'center' }}>
+                              {p.edadEfectiva > 0 ? `${p.edadEfectiva} a` : '---'}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Fila 3: Matriz de Paridad por Nivel Jerárquico */}
                   <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 14 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                      Distribución por Rangos de Edad (Planeación y Relevo Pensional)
-                    </Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                          Representación de Género por Niveles Jerárquicos
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                          Distribución de plazas provistas en la estructura organizacional de la SJD
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ gap: 12 }}>
+                      {Object.entries(metricasReportes.paridadPorNivel).map(([nivKey, nData]) => {
+                        const pctM = Math.round(nData.pctMujeres);
+                        const pctH = 100 - pctM;
+                        return (
+                          <View key={nivKey} style={{ backgroundColor: THEME.slate50, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: THEME.slate200, gap: 6 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate900 }}>{nData.label}</Text>
+                                <Text style={{ fontSize: 11, color: THEME.slate500 }}>({nData.total} plazas)</Text>
+                              </View>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#BE185D' }}>
+                                  {nData.mujeres} M ({pctM}%)
+                                </Text>
+                                <Text style={{ fontSize: 11.5, color: THEME.slate400 }}>•</Text>
+                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0369A1' }}>
+                                  {nData.hombres} H ({pctH}%)
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Barra bicolor de distribución de género */}
+                            <View style={{ height: 9, backgroundColor: THEME.slate200, borderRadius: 5, overflow: 'hidden', flexDirection: 'row' }}>
+                              <View style={{ width: (`${pctM}%` as any), height: '100%', backgroundColor: '#EC4899' }} />
+                              <View style={{ width: (`${pctH}%` as any), height: '100%', backgroundColor: '#38BDF8' }} />
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Fila 4: Pirámide de Edad y Planeación Pensional (Ley 1821 de 2017) */}
+                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 14 }}>
+                    <View>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                        Distribución Etaria y Relevo Generacional (Ley 1821 de 2017)
+                      </Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                        Planificación del talento humano, preparación pensional y memoria institucional
+                      </Text>
+                    </View>
+
                     <View style={{ gap: 10 }}>
                       {[
-                        { label: 'Jóvenes (< 30 años)', cant: metricasReportes.gruposEdad.menor30, color: '#3B82F6', desc: 'Iniciando carrera administrativa' },
-                        { label: 'Consolidación (30 - 45 años)', cant: metricasReportes.gruposEdad.de30a45, color: '#10B981', desc: 'Plena productividad institucional' },
-                        { label: 'Madurez Profesional (46 - 60 años)', cant: metricasReportes.gruposEdad.de46a60, color: '#F59E0B', desc: 'Experiencia y memoria técnica' },
-                        { label: 'Próximos a Pensión / Retiro (> 60 años)', cant: metricasReportes.gruposEdad.mayor60, color: '#EF4444', desc: 'Requieren plan de relevo generacional (Ley 1821)' },
+                        { label: 'Jóvenes (< 30 años)', cant: metricasReportes.gruposEdad.menor30, color: '#3B82F6', desc: 'Iniciando carrera administrativa y retención de talento joven' },
+                        { label: 'Consolidación (30 - 45 años)', cant: metricasReportes.gruposEdad.de30a45, color: '#10B981', desc: 'Plena productividad institucional y liderazgo operativo' },
+                        { label: 'Madurez Profesional (46 - 60 años)', cant: metricasReportes.gruposEdad.de46a60, color: '#F59E0B', desc: 'Experiencia acumulada y transferencia de conocimiento técnico' },
+                        { label: 'Próximos a Pensión / Retiro (> 60 años)', cant: metricasReportes.gruposEdad.mayor60, color: '#EF4444', desc: 'Sujetos a plan de relevo pensional y retiro forzoso (Ley 1821)' },
                       ].map((grp) => {
                         const totalEd = (metricasReportes.gruposEdad.menor30 + metricasReportes.gruposEdad.de30a45 + metricasReportes.gruposEdad.de46a60 + metricasReportes.gruposEdad.mayor60) || 1;
                         const pct = Math.round((grp.cant / totalEd) * 100);
@@ -6247,7 +6490,6 @@ export default function NominaScreen() {
                 </View>
               )}
 
-              {/* ============================================================== */}
               {/* SUB-REPORTE 5: CONCILIACIÓN PLANTA VS NÓMINA (PERNO)           */}
               {/* ============================================================== */}
               {subReporteActivo === 'conciliacion_perno' && (
