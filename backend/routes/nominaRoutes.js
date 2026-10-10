@@ -440,6 +440,7 @@ module.exports = function (pool) {
         codigo,
         grado,
         situacion,
+        situacion_titular,
         id_perno,
         solo_encargo,
       } = req.query;
@@ -486,19 +487,34 @@ module.exports = function (pool) {
       }
 
       if (dependencia && dependencia !== 'TODAS') {
-        params.push(`%${dependencia.trim()}%`);
-        const idx = params.length;
-        query += ` AND (
-          dependencia_cargo ILIKE $${idx} OR 
-          dependencia_funcional ILIKE $${idx}
-        )`;
+        const rawDeps = dependencia.includes(',')
+          ? dependencia.split(',').map((s) => s.trim()).filter(Boolean)
+          : [dependencia.trim()];
+        if (rawDeps.length > 0) {
+          const depClauses = [];
+          for (const depItem of rawDeps) {
+            params.push(%%);
+            const idx = params.length;
+            depClauses.push((dependencia_cargo ILIKE {idx} OR dependencia_funcional ILIKE {idx}));
+          }
+          query +=  AND ();
+        }
       }
 
       if (cargo && cargo !== 'TODOS') {
-        params.push(cargo.trim());
-        const idx = params.length;
-        query += ` AND TRIM(cargo) ILIKE TRIM($${idx})`;
-      }
+        const rawCargos = cargo.includes(',')
+          ? cargo.split(',').map((s) => s.trim()).filter(Boolean)
+          : [cargo.trim()];
+        if (rawCargos.length > 0) {
+          const cargoClauses = [];
+          for (const carItem of rawCargos) {
+            params.push(carItem);
+            const idx = params.length;
+            cargoClauses.push(TRIM(cargo) ILIKE TRIM({idx}));
+          }
+          query +=  AND ();
+        }
+      }   }
 
       // Filtro de Código y Grado (soporta lista separada por comas '219-01, 222-24', 'COD-GRA', solo código o solo grado, con normalización de ceros)
       if (codigo_grado && codigo_grado.trim() && codigo_grado !== 'TODOS') {
@@ -563,15 +579,47 @@ module.exports = function (pool) {
         query += ` AND (TRIM(grado) ILIKE TRIM($${iGra}) OR LTRIM(TRIM(grado), '0') = $${iGraL})`;
       }
 
-      // Filtro de Situación Administrativa
+      // Filtro de TIPO DE VINCULACIÓN AL CARGO/ SIDEAP (Columna 7)
       if (situacion && situacion.trim() && situacion !== 'TODAS') {
-        params.push(`%${situacion.trim()}%`);
-        const idx = params.length;
-        query += ` AND (
-          situacion_administrativa ILIKE $${idx} OR 
-          situacion_titular ILIKE $${idx} OR 
-          tipo_vinculacion ILIKE $${idx}
-        )`;
+        const rawSits = situacion.includes(',')
+          ? situacion.split(',').map((s) => s.trim()).filter(Boolean)
+          : [situacion.trim()];
+        if (rawSits.length > 0) {
+          const sitClauses = [];
+          for (const sitItem of rawSits) {
+            const upperSit = sitItem.toUpperCase();
+            if (upperSit === 'VACANTE DEFINITIVA') {
+              params.push('VACANTE DEFINITIVA');
+              const idx = params.length;
+              sitClauses.push(`(UPPER(tipo_vinculacion) = $${idx} OR UPPER(estado_cargo) = $${idx})`);
+            } else if (upperSit === 'VACANTE TEMPORAL') {
+              params.push('VACANTE TEMPORAL');
+              const idx = params.length;
+              sitClauses.push(`(UPPER(tipo_vinculacion) = $${idx} OR UPPER(estado_cargo) = $${idx})`);
+            } else {
+              params.push(`%${sitItem}%`);
+              const idx = params.length;
+              sitClauses.push(`(tipo_vinculacion ILIKE $${idx} OR situacion_administrativa ILIKE $${idx})`);
+            }
+          }
+          query += ` AND (${sitClauses.join(' OR ')})`;
+        }
+      }
+
+      // Filtro de SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO (Columna 13)
+      if (situacion_titular && situacion_titular.trim() && situacion_titular !== 'TODAS') {
+        const rawSitsTit = situacion_titular.includes(',')
+          ? situacion_titular.split(',').map((s) => s.trim()).filter(Boolean)
+          : [situacion_titular.trim()];
+        if (rawSitsTit.length > 0) {
+          const sitTitClauses = [];
+          for (const sitItem of rawSitsTit) {
+            params.push(`%${sitItem}%`);
+            const idx = params.length;
+            sitTitClauses.push(`situacion_titular ILIKE $${idx}`);
+          }
+          query += ` AND (${sitTitClauses.join(' OR ')})`;
+        }
       }
 
       // Filtro por ID SIDEAP

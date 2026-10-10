@@ -24,7 +24,7 @@ import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
-type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno' | null;
+type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | null;
 
 // Sistema de diseño institucional Navy + Slate
 const THEME = {
@@ -133,6 +133,7 @@ export default function NominaScreen() {
   const [filtroCodigoGrado, setFiltroCodigoGrado] = useState('');
   const [filtroDependencia, setFiltroDependencia] = useState('');
   const [filtroSituacion, setFiltroSituacion] = useState('');
+  const [filtroSituacionTitular, setFiltroSituacionTitular] = useState('');
   const [filtroSideap, setFiltroSideap] = useState('');
   const [filtroPerno, setFiltroPerno] = useState('');
   const [filtroEscalera, setFiltroEscalera] = useState('');
@@ -146,7 +147,9 @@ export default function NominaScreen() {
   const [pickerTipo, setPickerTipo] = useState<PickerTipo>(null);
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerBusqueda, setPickerBusqueda] = useState('');
-  const [codigosGradosSeleccionados, setCodigosGradosSeleccionados] = useState<string[]>([]);
+  const [itemsSeleccionadosPicker, setItemsSeleccionadosPicker] = useState<string[]>([]);
+  const codigosGradosSeleccionados = itemsSeleccionadosPicker;
+  const setCodigosGradosSeleccionados = setItemsSeleccionadosPicker;
   const [pickerOrigen, setPickerOrigen] = useState<'censo' | 'reporte'>('censo');
 
   // Modal de Detalle de Plaza y Pestañas de la Ficha Técnica Integral
@@ -229,6 +232,7 @@ export default function NominaScreen() {
           cargo: filtroCargo !== '' ? filtroCargo : undefined,
           codigo_grado: filtroCodigoGrado !== '' ? filtroCodigoGrado : undefined,
           situacion: filtroSituacion !== '' ? filtroSituacion : undefined,
+          situacion_titular: filtroSituacionTitular !== '' ? filtroSituacionTitular : undefined,
           id_perno: filtroPerno !== '' ? filtroPerno : undefined,
           solo_encargo: soloEncargo,
         }),
@@ -313,6 +317,7 @@ export default function NominaScreen() {
         cargo: filtroCargo,
         codigo_grado: filtroCodigoGrado,
         situacion: filtroSituacion,
+        situacion_titular: filtroSituacionTitular,
         id_sieap: filtroSideap,
         id_perno: filtroPerno,
         solo_encargo: soloEncargo,
@@ -324,6 +329,7 @@ export default function NominaScreen() {
         !filtroCodigoGrado &&
         !filtroDependencia &&
         !filtroSituacion &&
+        !filtroSituacionTitular &&
         !filtroSideap &&
         !filtroPerno &&
         nivelSeleccionado === 'TODOS' &&
@@ -350,6 +356,7 @@ export default function NominaScreen() {
     filtroCodigoGrado,
     filtroDependencia,
     filtroSituacion,
+    filtroSituacionTitular,
     filtroSideap,
     filtroPerno,
     nivelSeleccionado,
@@ -906,31 +913,64 @@ export default function NominaScreen() {
   // Helpers de comprobación en cascada para el Censo y para Reportes
   const coincideCriteriosCenso = (
     p: PlazaNomina,
-    omitir: 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno' | 'ninguno' = 'ninguno'
+    omitir: 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | 'ninguno' = 'ninguno'
   ) => {
     if (omitir !== 'cargo' && filtroCargo) {
-      if ((p.cargo || '').trim().toLowerCase() !== filtroCargo.trim().toLowerCase()) return false;
+      const cargosFiltro = filtroCargo.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean);
+      if (cargosFiltro.length > 0) {
+        const cargoP = (p.cargo || '').trim().toLowerCase();
+        if (!cargosFiltro.includes(cargoP)) return false;
+      }
     }
     if (omitir !== 'codigoGrado' && filtroCodigoGrado) {
       if (!coincideCodigoGrado(p, filtroCodigoGrado)) return false;
     }
     if (omitir !== 'dependencia' && filtroDependencia) {
-      const depQ = filtroDependencia.trim().toLowerCase();
-      const depC = (p.dependencia_cargo || '').toLowerCase();
-      const depF = (p.dependencia_funcional || '').toLowerCase();
-      if (!depC.includes(depQ) && !depF.includes(depQ)) return false;
+      const depsFiltro = filtroDependencia.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
+      if (depsFiltro.length > 0) {
+        const depC = (p.dependencia_cargo || '').toLowerCase();
+        const depF = (p.dependencia_funcional || '').toLowerCase();
+        if (!depsFiltro.some((df) => depC.includes(df) || depF.includes(df))) return false;
+      }
     }
     if (nivelSeleccionado !== 'TODOS') {
-      const nivFiltro = nivelSeleccionado.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const nivFiltro = nivelSeleccionado.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
       if (pNiv !== nivFiltro) return false;
     }
     if (estadoSeleccionado !== 'TODOS') {
       if ((p.estado_cargo || '').toUpperCase() !== estadoSeleccionado.toUpperCase()) return false;
     }
     if (omitir !== 'situacion' && filtroSituacion) {
-      const sitP = (p.situacion_administrativa || p.situacion_titular || p.tipo_vinculacion || '').trim().toLowerCase();
-      if (!sitP.includes(filtroSituacion.trim().toLowerCase())) return false;
+      const sitsFiltro = filtroSituacion.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+      if (sitsFiltro.length > 0) {
+        const vincP = (p.tipo_vinculacion || '').trim().toUpperCase();
+        const estadoP = (p.estado_cargo || '').trim().toUpperCase();
+        const sitAdminP = (p.situacion_administrativa || '').trim().toUpperCase();
+
+        const coincideSit = sitsFiltro.some((sf) => {
+          if (sf === 'VACANTE DEFINITIVA') {
+            return vincP === 'VACANTE DEFINITIVA' || estadoP === 'VACANTE DEFINITIVA';
+          }
+          if (sf === 'VACANTE TEMPORAL') {
+            return vincP === 'VACANTE TEMPORAL' || estadoP === 'VACANTE TEMPORAL';
+          }
+          return (
+            (vincP && vincP.includes(sf)) ||
+            (sitAdminP && sitAdminP.includes(sf))
+          );
+        });
+
+        if (!coincideSit) return false;
+      }
+    }
+    if (omitir !== 'situacionTitular' && filtroSituacionTitular) {
+      const sitsTitFiltro = filtroSituacionTitular.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+      if (sitsTitFiltro.length > 0) {
+        const sitTitP = (p.situacion_titular || '').trim().toUpperCase();
+        const coincide = sitsTitFiltro.some((st) => sitTitP === st || (sitTitP && sitTitP.includes(st)));
+        if (!coincide) return false;
+      }
     }
     if (omitir !== 'sideap' && filtroSideap) {
       if (String(p.id_sideap) !== String(filtroSideap).trim()) return false;
@@ -1002,6 +1042,7 @@ export default function NominaScreen() {
     nivelSeleccionado,
     estadoSeleccionado,
     filtroSituacion,
+    filtroSituacionTitular,
     filtroSideap,
     filtroPerno,
     soloEncargo,
@@ -1133,7 +1174,7 @@ export default function NominaScreen() {
     const base = todasLasPlazas.filter((p) => coincideCriteriosCenso(p, 'situacion'));
     const map = new Map<string, number>();
     base.forEach((p) => {
-      const sit = (p.tipo_vinculacion || p.situacion_titular || p.situacion_administrativa || '').trim() || 'EN PROPIEDAD';
+      const sit = (p.tipo_vinculacion || (p.estado_cargo === 'VACANTE DEFINITIVA' ? 'VACANTE DEFINITIVA' : '') || p.situacion_administrativa || '').trim() || 'EN PROPIEDAD';
       map.set(sit, (map.get(sit) || 0) + 1);
     });
     return Array.from(map.entries())
@@ -1146,6 +1187,30 @@ export default function NominaScreen() {
     filtroDependencia,
     nivelSeleccionado,
     estadoSeleccionado,
+    filtroSideap,
+    filtroPerno,
+    soloEncargo,
+  ]);
+
+  // 5. Lista de Situaciones Administrativas Titular del Cargo (en cascada)
+  const listaSituacionesTitular = useMemo(() => {
+    const base = todasLasPlazas.filter((p) => coincideCriteriosCenso(p, 'situacionTitular'));
+    const map = new Map<string, number>();
+    base.forEach((p) => {
+      const sit = (p.situacion_titular || '').trim() || 'SIN ESPECIFICAR';
+      map.set(sit, (map.get(sit) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([sit, count]) => ({ valor: sit, etiqueta: sit, count }))
+      .sort((a, b) => b.count - a.count || a.valor.localeCompare(b.valor));
+  }, [
+    todasLasPlazas,
+    filtroCargo,
+    filtroCodigoGrado,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
     filtroSideap,
     filtroPerno,
     soloEncargo,
@@ -1435,30 +1500,49 @@ export default function NominaScreen() {
   }, [plazaModal, todoElPerno]);
 
   // Funciones del Modal de Filtro
+  const esMultiPicker =
+    pickerTipo === 'codigoGrado' ||
+    pickerTipo === 'cargo' ||
+    pickerTipo === 'dependencia' ||
+    pickerTipo === 'situacion' ||
+    pickerTipo === 'situacionTitular';
+
   const abrirPicker = (tipo: PickerTipo, origen: 'censo' | 'reporte' = 'censo') => {
     setPickerTipo(tipo);
     setPickerOrigen(origen);
     setPickerBusqueda('');
+
+    let actuales: string[] = [];
     if (tipo === 'codigoGrado') {
       const valorActual = origen === 'reporte' ? filtroCodigoGradoReporte : filtroCodigoGrado;
-      const actuales = valorActual
-        ? valorActual.split(',').map((s) => s.trim()).filter(Boolean)
-        : [];
-      setCodigosGradosSeleccionados(actuales);
+      actuales = valorActual ? valorActual.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    } else if (tipo === 'cargo') {
+      actuales = filtroCargo ? filtroCargo.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    } else if (tipo === 'dependencia') {
+      const valorActual = origen === 'reporte' ? filtroDependenciaReporte : filtroDependencia;
+      actuales = (valorActual && valorActual !== 'TODAS') ? valorActual.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    } else if (tipo === 'situacion') {
+      const valorActual = origen === 'reporte' ? filtroVinculacionReporte : filtroSituacion;
+      actuales = (valorActual && valorActual !== 'TODAS') ? valorActual.split(',').map((s) => s.trim()).filter(Boolean) : [];
+    } else if (tipo === 'situacionTitular') {
+      actuales = filtroSituacionTitular ? filtroSituacionTitular.split(',').map((s) => s.trim()).filter(Boolean) : [];
     }
+    setItemsSeleccionadosPicker(actuales);
     setPickerVisible(true);
   };
 
   const getTituloPicker = () => {
     switch (pickerTipo) {
       case 'cargo':
-        return 'Seleccionar Denominación del Cargo';
+        return 'Seleccionar Denominaciones del Cargo (Multi-selección)';
       case 'codigoGrado':
         return 'Seleccionar Códigos y Grados (Multi-selección)';
       case 'dependencia':
-        return 'Seleccionar Dependencia';
+        return 'Seleccionar Dependencias (Multi-selección)';
       case 'situacion':
-        return 'Seleccionar Tipo de Vinculación al Cargo / SIDEAP';
+        return 'Seleccionar Tipo de Vinculación al Cargo / SIDEAP (Multi-selección)';
+      case 'situacionTitular':
+        return 'Seleccionar Situación Administrativa Titular del Cargo (Multi-selección)';
       case 'sideap':
         return 'Seleccionar por ID SIDEAP';
       case 'perno':
@@ -1476,7 +1560,7 @@ export default function NominaScreen() {
         etiquetaPrincipal: c.etiqueta,
         etiquetaSecundaria: `${c.count} plaza(s) registradas`,
         badge: undefined,
-        seleccionado: filtroCargo.toLowerCase() === c.valor.toLowerCase(),
+        seleccionado: itemsSeleccionadosPicker.includes(c.valor),
       }));
     }
     if (pickerTipo === 'codigoGrado') {
@@ -1486,7 +1570,7 @@ export default function NominaScreen() {
         denominacionCargo: cg.denominacionCargo,
         etiquetaSecundaria: `${cg.count} plaza(s) disponibles`,
         badge: cg.nivelesTexto || undefined,
-        seleccionado: codigosGradosSeleccionados.includes(cg.valor),
+        seleccionado: itemsSeleccionadosPicker.includes(cg.valor),
       }));
     }
     if (pickerTipo === 'dependencia') {
@@ -1495,7 +1579,7 @@ export default function NominaScreen() {
         etiquetaPrincipal: dep.etiqueta,
         etiquetaSecundaria: `${dep.count} plaza(s) en esta dependencia`,
         badge: undefined,
-        seleccionado: filtroDependencia.toLowerCase() === dep.valor.toLowerCase(),
+        seleccionado: itemsSeleccionadosPicker.includes(dep.valor),
       }));
     }
     if (pickerTipo === 'situacion') {
@@ -1507,7 +1591,20 @@ export default function NominaScreen() {
           etiquetaPrincipal: sit.etiqueta,
           etiquetaSecundaria: `${sit.count} plaza(s) vinculadas`,
           badge: isVacante ? 'VACANCIA' : isPropiedad ? 'EN PROPIEDAD' : 'ACTIVO',
-          seleccionado: filtroSituacion.toLowerCase() === sit.valor.toLowerCase(),
+          seleccionado: itemsSeleccionadosPicker.includes(sit.valor),
+        };
+      });
+    }
+    if (pickerTipo === 'situacionTitular') {
+      return listaSituacionesTitular.map((sit) => {
+        const isVacante = sit.valor.toUpperCase().includes('VACANTE');
+        const isPropiedad = sit.valor.toUpperCase().includes('PROPIEDAD') || sit.valor.toUpperCase().includes('CARRERA');
+        return {
+          valor: sit.valor,
+          etiquetaPrincipal: sit.etiqueta,
+          etiquetaSecundaria: `${sit.count} plaza(s) con esta situación titular`,
+          badge: isVacante ? 'VACANCIA' : isPropiedad ? 'EN PROPIEDAD' : 'SITUACIÓN',
+          seleccionado: itemsSeleccionadosPicker.includes(sit.valor),
         };
       });
     }
@@ -1536,12 +1633,10 @@ export default function NominaScreen() {
     listaCodigoGrado,
     listaDependencias,
     listaSituaciones,
+    listaSituacionesTitular,
     listaSideap,
     listaPerno,
-    filtroCargo,
-    codigosGradosSeleccionados,
-    filtroDependencia,
-    filtroSituacion,
+    itemsSeleccionadosPicker,
     filtroSideap,
     filtroPerno,
   ]);
@@ -1559,31 +1654,59 @@ export default function NominaScreen() {
     );
   }, [opcionesModal, pickerBusqueda]);
 
-  const toggleSeleccionCodigoGrado = (valor: string) => {
-    setCodigosGradosSeleccionados((prev) =>
+  const toggleSeleccionItem = (valor: string) => {
+    setItemsSeleccionadosPicker((prev) =>
       prev.includes(valor) ? prev.filter((v) => v !== valor) : [...prev, valor]
     );
   };
 
   const seleccionarOpcionModal = (item: { valor: string }) => {
-    if (pickerTipo === 'codigoGrado') {
-      toggleSeleccionCodigoGrado(item.valor);
+    if (esMultiPicker) {
+      toggleSeleccionItem(item.valor);
       return;
     }
-    if (pickerTipo === 'cargo') setFiltroCargo(item.valor);
-    else if (pickerTipo === 'dependencia') setFiltroDependencia(item.valor);
-    else if (pickerTipo === 'situacion') setFiltroSituacion(item.valor);
-    else if (pickerTipo === 'sideap') setFiltroSideap(item.valor);
+    if (pickerTipo === 'sideap') setFiltroSideap(item.valor);
     else if (pickerTipo === 'perno') setFiltroPerno(item.valor);
     setPickerVisible(false);
   };
 
+  const aplicarFiltroModal = () => {
+    const valorFinal = itemsSeleccionadosPicker.join(', ');
+    if (pickerTipo === 'codigoGrado') {
+      if (pickerOrigen === 'reporte') {
+        setFiltroCodigoGradoReporte(valorFinal);
+        setPaginaReporte(1);
+      } else {
+        setFiltroCodigoGrado(valorFinal);
+      }
+    } else if (pickerTipo === 'cargo') {
+      setFiltroCargo(valorFinal);
+    } else if (pickerTipo === 'dependencia') {
+      if (pickerOrigen === 'reporte') {
+        setFiltroDependenciaReporte(valorFinal || 'TODAS');
+        setPaginaReporte(1);
+      } else {
+        setFiltroDependencia(valorFinal);
+      }
+    } else if (pickerTipo === 'situacion') {
+      if (pickerOrigen === 'reporte') {
+        setFiltroVinculacionReporte(valorFinal || 'TODAS');
+        setPaginaReporte(1);
+      } else {
+        setFiltroSituacion(valorFinal);
+      }
+    } else if (pickerTipo === 'situacionTitular') {
+      setFiltroSituacionTitular(valorFinal);
+    }
+    setPickerVisible(false);
+  };
   const hayFiltrosActivos =
     busqueda.trim() !== '' ||
     filtroCargo !== '' ||
     filtroCodigoGrado !== '' ||
     filtroDependencia !== '' ||
     filtroSituacion !== '' ||
+    filtroSituacionTitular !== '' ||
     filtroSideap !== '' ||
     filtroPerno !== '' ||
     nivelSeleccionado !== 'TODOS' ||
@@ -1596,6 +1719,7 @@ export default function NominaScreen() {
     setFiltroCodigoGrado('');
     setFiltroDependencia('');
     setFiltroSituacion('');
+    setFiltroSituacionTitular('');
     setFiltroSideap('');
     setFiltroPerno('');
     setNivelSeleccionado('TODOS');
@@ -3083,7 +3207,11 @@ export default function NominaScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
                         <Ionicons name="briefcase-outline" size={14} color={filtroCargo ? THEME.marca700 : THEME.slate400} />
                         <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroCargo ? '600' : '400', color: filtroCargo ? THEME.marca900 : THEME.slate600 }}>
-                          {filtroCargo || 'Todos los cargos'}
+                          {filtroCargo
+                            ? filtroCargo.includes(',')
+                              ? `${filtroCargo.split(',').length} cargos seleccionados`
+                              : filtroCargo
+                            : 'Todos los cargos'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
@@ -3169,7 +3297,11 @@ export default function NominaScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
                         <Ionicons name="business-outline" size={14} color={filtroDependencia ? THEME.marca700 : THEME.slate400} />
                         <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroDependencia ? '600' : '400', color: filtroDependencia ? THEME.marca900 : THEME.slate600 }}>
-                          {filtroDependencia || 'Todas las dependencias'}
+                          {filtroDependencia
+                            ? filtroDependencia.includes(',')
+                              ? `${filtroDependencia.split(',').length} dependencias seleccionadas`
+                              : filtroDependencia
+                            : 'Todas las dependencias'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
@@ -3210,14 +3342,63 @@ export default function NominaScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
                         <Ionicons name="document-text-outline" size={14} color={filtroSituacion ? THEME.marca700 : THEME.slate400} />
                         <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroSituacion ? '600' : '400', color: filtroSituacion ? THEME.marca900 : THEME.slate600 }}>
-                          {filtroSituacion || 'Todas las vinculaciones'}
+                          {filtroSituacion
+                            ? filtroSituacion.includes(',')
+                              ? `${filtroSituacion.split(',').length} vinculaciones seleccionadas`
+                              : filtroSituacion
+                            : 'Todas las vinculaciones'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
                     </View>
                   </Pressable>
 
-                  {/* 5. Modal: ID SIDEAP */}
+                  {/* 5. Modal: SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO (Columna 13) */}
+                  <Pressable
+                    onPress={() => abrirPicker('situacionTitular')}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      minWidth: isTablet ? 240 : '100%',
+                      backgroundColor: filtroSituacionTitular ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
+                      borderWidth: 1,
+                      borderColor: filtroSituacionTitular ? THEME.marca600 : THEME.slate200,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                    })}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: filtroSituacionTitular ? THEME.marca700 : THEME.slate400, textTransform: 'uppercase' }}>
+                        SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO
+                      </Text>
+                      {filtroSituacionTitular ? (
+                        <Pressable
+                          hitSlop={8}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setFiltroSituacionTitular('');
+                          }}
+                        >
+                          <Ionicons name="close-circle" size={14} color={THEME.marca700} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
+                        <Ionicons name="person-circle-outline" size={14} color={filtroSituacionTitular ? THEME.marca700 : THEME.slate400} />
+                        <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroSituacionTitular ? '600' : '400', color: filtroSituacionTitular ? THEME.marca900 : THEME.slate600 }}>
+                          {filtroSituacionTitular
+                            ? filtroSituacionTitular.includes(',')
+                              ? `${filtroSituacionTitular.split(',').length} situaciones seleccionadas`
+                              : filtroSituacionTitular
+                            : 'Todas las situaciones titular'}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
+                    </View>
+                  </Pressable>
+
+                  {/* 6. Modal: ID SIDEAP */}
                   <Pressable
                     onPress={() => abrirPicker('sideap')}
                     style={({ pressed }) => ({
@@ -3381,6 +3562,88 @@ export default function NominaScreen() {
                     })}
                   </View>
                 </View>
+              </View>
+
+              {/* INDICADOR DE TOTAL DE ENCONTRADOS DE ACUERDO A LOS FILTROS */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: THEME.white,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  paddingHorizontal: 16,
+                  paddingVertical: 11,
+                  marginBottom: 16,
+                  flexWrap: 'wrap',
+                  gap: 10,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.02,
+                  shadowRadius: 2,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <View
+                    style={{
+                      backgroundColor: plazas.length > 0 ? THEME.marca50 : THEME.roseBg,
+                      paddingHorizontal: 10,
+                      paddingVertical: 4.5,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: plazas.length > 0 ? THEME.marca600 : THEME.roseRing,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Ionicons
+                      name={plazas.length > 0 ? 'checkmark-circle' : 'alert-circle'}
+                      size={15}
+                      color={plazas.length > 0 ? THEME.marca800 : THEME.roseText}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: '700',
+                        color: plazas.length > 0 ? THEME.marca800 : THEME.roseText,
+                      }}
+                    >
+                      {plazas.length} {plazas.length === 1 ? 'plaza encontrada' : 'plazas encontradas'}
+                    </Text>
+                  </View>
+
+                  <Text style={{ fontSize: 12, color: THEME.slate600 }}>
+                    de un total de{' '}
+                    <Text style={{ fontWeight: '700', color: THEME.slate900 }}>
+                      {todasLasPlazas.length} plazas
+                    </Text>{' '}
+                    en la planta oficial
+                    {hayFiltrosActivos ? ' (según los filtros aplicados)' : ''}
+                  </Text>
+                </View>
+
+                {hayFiltrosActivos && (
+                  <Pressable
+                    onPress={limpiarFiltros}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingVertical: 4,
+                      paddingHorizontal: 9,
+                      borderRadius: 6,
+                      backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                    })}
+                  >
+                    <Ionicons name="refresh-outline" size={13} color={THEME.slate600} />
+                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate700 }}>
+                      Restablecer Filtros
+                    </Text>
+                  </Pressable>
+                )}
               </View>
 
               {/* LISTADO / TABLA O TARJETAS */}
@@ -6903,8 +7166,8 @@ export default function NominaScreen() {
                     {getTituloPicker()}
                   </Text>
                   <Text style={{ color: 'rgba(214, 228, 244, 0.75)', fontSize: 11.5, marginTop: 2 }}>
-                    {pickerTipo === 'codigoGrado'
-                      ? `Mostrando ${opcionesModalFiltradas.length} opciones • ${codigosGradosSeleccionados.length} seleccionados`
+                    {esMultiPicker
+                      ? `Mostrando ${opcionesModalFiltradas.length} opciones • ${itemsSeleccionadosPicker.length} seleccionados`
                       : `Mostrando ${opcionesModalFiltradas.length} de ${opcionesModal.length} opciones disponibles`}
                   </Text>
                 </View>
@@ -6953,14 +7216,14 @@ export default function NominaScreen() {
                   ) : null}
                 </View>
 
-                {/* Acciones para selección múltiple en Código y Grado */}
-                {pickerTipo === 'codigoGrado' ? (
+                {/* Acciones para selección múltiple */}
+                {esMultiPicker ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, flexWrap: 'wrap', gap: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Pressable
                         onPress={() => {
                           const visibles = opcionesModalFiltradas.map((op) => op.valor);
-                          setCodigosGradosSeleccionados((prev) => Array.from(new Set([...prev, ...visibles])));
+                          setItemsSeleccionadosPicker((prev) => Array.from(new Set([...prev, ...visibles])));
                         }}
                         style={({ pressed }) => ({
                           paddingVertical: 5,
@@ -6975,7 +7238,7 @@ export default function NominaScreen() {
                       </Pressable>
 
                       <Pressable
-                        onPress={() => setCodigosGradosSeleccionados([])}
+                        onPress={() => setItemsSeleccionadosPicker([])}
                         style={({ pressed }) => ({
                           paddingVertical: 5,
                           paddingHorizontal: 10,
@@ -6989,9 +7252,9 @@ export default function NominaScreen() {
                       </Pressable>
                     </View>
 
-                    <View style={{ backgroundColor: codigosGradosSeleccionados.length > 0 ? THEME.marca50 : THEME.slate100, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: codigosGradosSeleccionados.length > 0 ? THEME.marca600 : THEME.slate200 }}>
-                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: codigosGradosSeleccionados.length > 0 ? THEME.marca800 : THEME.slate600 }}>
-                        {codigosGradosSeleccionados.length} seleccionado(s)
+                    <View style={{ backgroundColor: itemsSeleccionadosPicker.length > 0 ? THEME.marca50 : THEME.slate100, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: itemsSeleccionadosPicker.length > 0 ? THEME.marca600 : THEME.slate200 }}>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: itemsSeleccionadosPicker.length > 0 ? THEME.marca800 : THEME.slate600 }}>
+                        {itemsSeleccionadosPicker.length} seleccionado(s)
                       </Text>
                     </View>
                   </View>
@@ -6999,10 +7262,7 @@ export default function NominaScreen() {
                   /* Opción para limpiar la selección actual en otros tipos */
                   <Pressable
                     onPress={() => {
-                      if (pickerTipo === 'cargo') setFiltroCargo('');
-                      else if (pickerTipo === 'dependencia') setFiltroDependencia('');
-                      else if (pickerTipo === 'situacion') setFiltroSituacion('');
-                      else if (pickerTipo === 'sideap') setFiltroSideap('');
+                      if (pickerTipo === 'sideap') setFiltroSideap('');
                       else if (pickerTipo === 'perno') setFiltroPerno('');
                       setPickerVisible(false);
                     }}
@@ -7113,7 +7373,7 @@ export default function NominaScreen() {
               </ScrollView>
 
               {/* Pie de modal */}
-              {pickerTipo === 'codigoGrado' ? (
+              {esMultiPicker ? (
                 <View
                   style={{
                     padding: 14,
@@ -7143,16 +7403,7 @@ export default function NominaScreen() {
                   </Pressable>
 
                   <Pressable
-                    onPress={() => {
-                      const valorFinal = codigosGradosSeleccionados.join(', ');
-                      if (pickerOrigen === 'reporte') {
-                        setFiltroCodigoGradoReporte(valorFinal);
-                        setPaginaReporte(1);
-                      } else {
-                        setFiltroCodigoGrado(valorFinal);
-                      }
-                      setPickerVisible(false);
-                    }}
+                    onPress={aplicarFiltroModal}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -7165,7 +7416,7 @@ export default function NominaScreen() {
                   >
                     <Ionicons name="checkmark-done" size={16} color={THEME.white} />
                     <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.white }}>
-                      Aplicar Filtro ({codigosGradosSeleccionados.length})
+                      Aplicar Filtro ({itemsSeleccionadosPicker.length})
                     </Text>
                   </Pressable>
                 </View>

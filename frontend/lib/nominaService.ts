@@ -218,6 +218,7 @@ export interface FiltrosPlazasNomina {
   id_sieap?: string;
   codigo_grado?: string;
   situacion?: string;
+  situacion_titular?: string;
   id_perno?: string;
   solo_encargo?: boolean;
 }
@@ -311,17 +312,30 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
   }
 
   if (filtros.dependencia && filtros.dependencia !== 'TODAS') {
-    const depQ = filtros.dependencia.trim().toLowerCase();
-    result = result.filter(
-      (p) =>
-        (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(depQ)) ||
-        (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(depQ))
-    );
+    const depsList = filtros.dependencia
+      .split(',')
+      .map((d) => d.trim().toLowerCase())
+      .filter(Boolean);
+    if (depsList.length > 0) {
+      result = result.filter((p) => {
+        const depC = (p.dependencia_cargo || '').toLowerCase();
+        const depF = (p.dependencia_funcional || '').toLowerCase();
+        return depsList.some((df) => depC.includes(df) || depF.includes(df));
+      });
+    }
   }
 
   if (filtros.cargo && filtros.cargo !== 'TODOS') {
-    const carQ = filtros.cargo.trim().toLowerCase();
-    result = result.filter((p) => (p.cargo || '').trim().toLowerCase() === carQ);
+    const cargosList = filtros.cargo
+      .split(',')
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean);
+    if (cargosList.length > 0) {
+      result = result.filter((p) => {
+        const carP = (p.cargo || '').trim().toLowerCase();
+        return cargosList.includes(carP);
+      });
+    }
   }
 
   if (filtros.codigo_grado && filtros.codigo_grado.trim() && filtros.codigo_grado !== 'TODOS') {
@@ -329,13 +343,44 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
   }
 
   if (filtros.situacion && filtros.situacion.trim() && filtros.situacion !== 'TODAS') {
-    const sitQuery = filtros.situacion.trim().toLowerCase();
-    result = result.filter(
-      (p) =>
-        (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(sitQuery)) ||
-        (p.situacion_titular && p.situacion_titular.toLowerCase().includes(sitQuery)) ||
-        (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(sitQuery))
-    );
+    const sitsList = filtros.situacion
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+    if (sitsList.length > 0) {
+      result = result.filter((p) => {
+        const vincP = (p.tipo_vinculacion || '').trim().toUpperCase();
+        const estadoP = (p.estado_cargo || '').trim().toUpperCase();
+        const sitAdminP = (p.situacion_administrativa || '').trim().toUpperCase();
+
+        return sitsList.some((sf) => {
+          if (sf === 'VACANTE DEFINITIVA') {
+            return vincP === 'VACANTE DEFINITIVA' || estadoP === 'VACANTE DEFINITIVA';
+          }
+          if (sf === 'VACANTE TEMPORAL') {
+            return vincP === 'VACANTE TEMPORAL' || estadoP === 'VACANTE TEMPORAL';
+          }
+          return (
+            (vincP && vincP.includes(sf)) ||
+            (sitAdminP && sitAdminP.includes(sf))
+          );
+        });
+      });
+    }
+  }
+
+  // Filtro de SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO (Columna 13)
+  if (filtros.situacion_titular && filtros.situacion_titular.trim() && filtros.situacion_titular !== 'TODAS') {
+    const sitsTitList = filtros.situacion_titular
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+    if (sitsTitList.length > 0) {
+      result = result.filter((p) => {
+        const sitTitP = (p.situacion_titular || '').trim().toUpperCase();
+        return sitsTitList.some((st) => sitTitP === st || (sitTitP && sitTitP.includes(st)));
+      });
+    }
   }
 
   if (filtros.id_sieap && filtros.id_sieap.trim() && filtros.id_sieap !== 'TODOS') {
@@ -370,6 +415,7 @@ export const nominaService = {
       if (filtros?.id_sieap && filtros.id_sieap !== 'TODOS') searchParams.append('id_sieap', filtros.id_sieap);
       if (filtros?.codigo_grado && filtros.codigo_grado !== 'TODOS') searchParams.append('codigo_grado', filtros.codigo_grado);
       if (filtros?.situacion && filtros.situacion !== 'TODAS') searchParams.append('situacion', filtros.situacion);
+      if (filtros?.situacion_titular && filtros.situacion_titular !== 'TODAS') searchParams.append('situacion_titular', filtros.situacion_titular);
       if (filtros?.id_perno && filtros.id_perno !== 'TODOS') searchParams.append('id_perno', filtros.id_perno);
       if (filtros?.solo_encargo) searchParams.append('solo_encargo', 'true');
 
