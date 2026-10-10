@@ -3530,9 +3530,86 @@ export function sincronizarEtapasCaso(
   });
 }
 
+export function generarEtapasParaCasoConEstado(
+  tipo: TipoProceso,
+  modalidad: ModalidadPersonal,
+  esTerminado: boolean,
+  fechaEfectiva?: string
+): EtapaFlujo[] {
+  const etapas = generarEtapasParaCaso(tipo, modalidad);
+  if (esTerminado) {
+    return etapas.map((e) => ({
+      ...e,
+      estado: 'completed',
+      requisitos: e.requisitos.map((r) => ({
+        ...r,
+        cumplido: true,
+        fecha_cumplimiento: fechaEfectiva || '2026-03-15',
+        usuarioRegistro: 'Talento Humano SJD',
+        radicadoSoporte: 'RAD-2026-OF-' + Math.floor(1000 + Math.random() * 9000),
+      })),
+    }));
+  } else {
+    const total = etapas.length;
+    // Fases iniciales completadas, una en progreso y las restantes pendientes
+    const faseEnCursoIdx = Math.max(1, Math.min(total - 1, Math.floor(total * 0.6)));
+    return etapas.map((e, idx) => {
+      if (idx < faseEnCursoIdx) {
+        return {
+          ...e,
+          estado: 'completed',
+          requisitos: e.requisitos.map((r) => ({
+            ...r,
+            cumplido: true,
+            fecha_cumplimiento: fechaEfectiva || '2026-08-10',
+            usuarioRegistro: 'Talento Humano SJD',
+            radicadoSoporte: 'RAD-2026-OF-' + Math.floor(1000 + Math.random() * 9000),
+          })),
+        };
+      } else if (idx === faseEnCursoIdx) {
+        return {
+          ...e,
+          estado: 'in_progress',
+          requisitos: e.requisitos.map((r, rIdx) => ({
+            ...r,
+            cumplido: rIdx === 0,
+            fecha_cumplimiento: rIdx === 0 ? '2026-08-20' : undefined,
+            usuarioRegistro: rIdx === 0 ? 'Talento Humano SJD' : undefined,
+          })),
+        };
+      } else {
+        return {
+          ...e,
+          estado: 'pending',
+          requisitos: e.requisitos.map((r) => ({
+            ...r,
+            cumplido: false,
+          })),
+        };
+      }
+    });
+  }
+}
+
+export const esTerminadoDefault2026 = (id: string, tipo: string): boolean => {
+  const num = parseInt(id.split('-').pop() || '999', 10);
+  if (tipo === 'DESVINCULACION') {
+    // 17 terminados (enero a julio 2026), 5 en trámite (agosto/septiembre 2026)
+    return num <= 17;
+  } else {
+    // 19 terminados (enero a agosto 2026), 8 en trámite (septiembre 2026)
+    return num <= 19;
+  }
+};
+
 const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => ({
   ...c,
-  etapas: generarEtapasParaCaso(c.tipo_proceso, c.modalidad),
+  etapas: generarEtapasParaCasoConEstado(
+    c.tipo_proceso,
+    c.modalidad,
+    esTerminadoDefault2026(c.id, c.tipo_proceso),
+    c.fecha_efectiva
+  ),
   ...(c.servidor_cedula === '1014234567'
     ? {
         resultadoSecop: {
@@ -3861,6 +3938,31 @@ const formatMoneda = (val?: number | string | null): string => {
   return '$ ' + Math.round(num).toLocaleString('es-CO');
 };
 
+// Lista unificada de dependencias oficiales para filtros
+const DEPENDENCIAS_FILTRO: string[] = [
+  'TODAS',
+  'DESPACHO SECRETARIA JURIDICA',
+  'DIRECCIÓN DE GESTIÓN CORPORATIVA',
+  'DIRECCIÓN DISTRITAL DE ASUNTOS DISCIPLINARIOS',
+  'DIRECCIÓN DISTRITAL DE DEFENSA JUDICIAL',
+  'DIRECCIÓN DISTRITAL DE DOCTRINA Y ASUNTOS NORMATIVOS',
+  'DIRECCIÓN DISTRITAL DE INSPECCIÓN, VIGILANCIA Y CONTROL',
+  'DIRECCIÓN DISTRITAL DE POLÍTICA JURÍDICA',
+  'OFICINA ASESORA DE PLANEACIÓN',
+  'OFICINA DE CONTROL INTERNO',
+  'OFICINA DE TECNOLOGÍAS DE LA INFORMACIÓN Y LAS COMUNICACIONES',
+  'SUBSECRETARÍA JURÍDICA DISTRITAL',
+];
+
+const CAUSALES_FILTRO_DESVINCULACION: { key: string; label: string }[] = [
+  { key: 'TODAS', label: 'Todas las Causales' },
+  { key: 'provisión reglamentaria', label: 'Provisión reglamentaria (OPEC)' },
+  { key: 'Renuncia', label: 'Renuncia regularmente aceptada' },
+  { key: 'Pensión', label: 'Pensión de vejez / Jubilación' },
+  { key: 'insubsistencia', label: 'Insubsistencia / Remoción' },
+  { key: 'formativo', label: 'Período formativo (Judicatura)' },
+];
+
 export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { tabInicial?: 'ingresos' | 'desvinculaciones' } = {}) {
   const router = useRouter();
   const { enMenu } = useMarcoRRHH();
@@ -3920,13 +4022,18 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   // Filtros de búsqueda específicos para Ingresos
   const [filtroModalidadIngreso, setFiltroModalidadIngreso] = useState<'TODAS' | ModalidadPersonal>('TODAS');
   const [busquedaIngresos, setBusquedaIngresos] = useState('');
+  const [filtroEstadoIngreso, setFiltroEstadoIngreso] = useState<'TODOS' | 'EN_TRAMITE' | 'TERMINADOS'>('TODOS');
+  const [filtroDependenciaIngreso, setFiltroDependenciaIngreso] = useState<string>('TODAS');
 
   // Filtros de búsqueda específicos para Desvinculaciones
   const [filtroModalidadDesvinculacion, setFiltroModalidadDesvinculacion] = useState<'TODAS' | ModalidadPersonal>('TODAS');
   const [busquedaDesvinculaciones, setBusquedaDesvinculaciones] = useState('');
+  const [filtroEstadoDesvinculacion, setFiltroEstadoDesvinculacion] = useState<'TODOS' | 'EN_TRAMITE' | 'TERMINADOS'>('TODOS');
+  const [filtroCausalDesvinculacion, setFiltroCausalDesvinculacion] = useState<string>('TODAS');
+  const [filtroDependenciaDesvinculacion, setFiltroDependenciaDesvinculacion] = useState<string>('TODAS');
 
   // Claves de persistencia en almacenamiento local (Web / App)
-  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v4';
+  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v6';
   const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v4';
 
   const obtenerCasosIniciales = (): CasoFlujoFuncionario[] => {
@@ -5616,14 +5723,37 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   }, []);
 
-  // Filtrado de casos reactivo a la pestaña activa (Ingresos o Desvinculaciones)
+  // Filtrado de casos reactivo a la pestaña activa (Ingresos o Desvinculaciones) con soporte de Estado, Modalidad, Causal y Dependencia
   const casosFiltrados = useMemo(() => {
     let result = casos;
     if (tabActiva === 'desvinculaciones') {
       result = result.filter((c) => c.tipo_proceso === 'DESVINCULACION');
+
+      // Filtro por Estado (Todos / En Trámite / Terminados)
+      if (filtroEstadoDesvinculacion !== 'TODOS') {
+        result = result.filter((c) => {
+          const etapasComp = c.etapas.filter((e) => e.estado === 'completed').length;
+          const esTerm = etapasComp === c.etapas.length || c.etapas.every((e) => e.estado === 'completed');
+          return filtroEstadoDesvinculacion === 'TERMINADOS' ? esTerm : !esTerm;
+        });
+      }
+
+      // Filtro por Modalidad / Régimen
       if (filtroModalidadDesvinculacion !== 'TODAS') {
         result = result.filter((c) => c.modalidad === filtroModalidadDesvinculacion);
       }
+
+      // Filtro por Causal
+      if (filtroCausalDesvinculacion !== 'TODAS') {
+        result = result.filter((c) => c.causal && c.causal.toLowerCase().includes(filtroCausalDesvinculacion.toLowerCase()));
+      }
+
+      // Filtro por Dependencia
+      if (filtroDependenciaDesvinculacion !== 'TODAS') {
+        result = result.filter((c) => c.dependencia && c.dependencia.toLowerCase().includes(filtroDependenciaDesvinculacion.toLowerCase()));
+      }
+
+      // Búsqueda de texto
       if (busquedaDesvinculaciones.trim()) {
         const q = busquedaDesvinculaciones.trim().toLowerCase();
         result = result.filter(
@@ -5633,15 +5763,34 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             c.cargo.toLowerCase().includes(q) ||
             c.dependencia.toLowerCase().includes(q) ||
             (c.causal && c.causal.toLowerCase().includes(q)) ||
+            (c.acto_administrativo && c.acto_administrativo.toLowerCase().includes(q)) ||
             c.id.toLowerCase().includes(q)
         );
       }
     } else {
       // Pestaña de Ingresos (o por defecto)
       result = result.filter((c) => c.tipo_proceso === 'VINCULACION');
+
+      // Filtro por Estado (Todos / En Trámite / Terminados)
+      if (filtroEstadoIngreso !== 'TODOS') {
+        result = result.filter((c) => {
+          const etapasComp = c.etapas.filter((e) => e.estado === 'completed').length;
+          const esTerm = etapasComp === c.etapas.length || c.etapas.every((e) => e.estado === 'completed');
+          return filtroEstadoIngreso === 'TERMINADOS' ? esTerm : !esTerm;
+        });
+      }
+
+      // Filtro por Modalidad / Régimen
       if (filtroModalidadIngreso !== 'TODAS') {
         result = result.filter((c) => c.modalidad === filtroModalidadIngreso);
       }
+
+      // Filtro por Dependencia
+      if (filtroDependenciaIngreso !== 'TODAS') {
+        result = result.filter((c) => c.dependencia && c.dependencia.toLowerCase().includes(filtroDependenciaIngreso.toLowerCase()));
+      }
+
+      // Búsqueda de texto
       if (busquedaIngresos.trim()) {
         const q = busquedaIngresos.trim().toLowerCase();
         result = result.filter(
@@ -5650,6 +5799,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             c.servidor_cedula.includes(q) ||
             c.cargo.toLowerCase().includes(q) ||
             c.dependencia.toLowerCase().includes(q) ||
+            (c.acto_administrativo && c.acto_administrativo.toLowerCase().includes(q)) ||
             c.id.toLowerCase().includes(q)
         );
       }
@@ -5658,26 +5808,52 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   }, [
     casos,
     tabActiva,
-    filtroModalidadIngreso,
-    busquedaIngresos,
+    filtroEstadoDesvinculacion,
     filtroModalidadDesvinculacion,
+    filtroCausalDesvinculacion,
+    filtroDependenciaDesvinculacion,
     busquedaDesvinculaciones,
+    filtroEstadoIngreso,
+    filtroModalidadIngreso,
+    filtroDependenciaIngreso,
+    busquedaIngresos,
   ]);
+
+  // Función para marcar todo el trámite como terminado o reabrirlo
+  const alternarEstadoTramiteCompleto = (casoId: string, marcarTerminado: boolean) => {
+    setCasos((prev) =>
+      prev.map((c) => {
+        if (c.id !== casoId) return c;
+        const nuevasEtapas = c.etapas.map((e) => ({
+          ...e,
+          estado: marcarTerminado ? ('completed' as const) : ('in_progress' as const),
+          requisitos: e.requisitos.map((r) => ({
+            ...r,
+            cumplido: marcarTerminado,
+            fecha_cumplimiento: marcarTerminado
+              ? (r.fecha_cumplimiento || new Date().toISOString().split('T')[0])
+              : undefined,
+            usuarioRegistro: marcarTerminado ? (r.usuarioRegistro || 'Talento Humano SJD') : undefined,
+          })),
+        }));
+        return {
+          ...c,
+          etapas: nuevasEtapas,
+        };
+      })
+    );
+  };
 
   // Caso actualmente seleccionado, adaptado al contexto de la pestaña activa y sincronizado con las normas maestras
   const casoActivo = useMemo(() => {
     let match: CasoFlujoFuncionario | undefined;
-    if (tabActiva === 'desvinculaciones') {
-      match =
-        casos.find((c) => c.id === casoSeleccionadoId && c.tipo_proceso === 'DESVINCULACION') ||
-        casos.find((c) => c.tipo_proceso === 'DESVINCULACION') ||
-        casos[0];
-    } else {
-      match =
-        casos.find((c) => c.id === casoSeleccionadoId && c.tipo_proceso === 'VINCULACION') ||
-        casos.find((c) => c.tipo_proceso === 'VINCULACION') ||
-        casos[0];
-    }
+    match =
+      casosFiltrados.find((c) => c.id === casoSeleccionadoId) ||
+      casosFiltrados[0] ||
+      (tabActiva === 'desvinculaciones'
+        ? casos.find((c) => c.tipo_proceso === 'DESVINCULACION')
+        : casos.find((c) => c.tipo_proceso === 'VINCULACION')) ||
+      casos[0];
 
     if (!match) return undefined;
 
@@ -7142,230 +7318,609 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
               {/* Layout de Contenido Principal: Dos Columnas */}
               <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 18 }}>
-                {/* Columna Izquierda: Tarjetas de Trámites */}
-                <View style={{ width: isDesktop ? 360 : '100%', gap: 10 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate800 }}>
-                    {tabActiva === 'ingresos'
-                      ? `Trámites de Ingreso (${casosFiltrados.length})`
-                      : `Trámites de Desvinculación (${casosFiltrados.length})`}
-                  </Text>
+                {/* Columna Izquierda: Tarjetas de Trámites con Filtros Avanzados y Diferenciación de Terminados */}
+                <View style={{ width: isDesktop ? 370 : '100%', gap: 10 }}>
+                  {(() => {
+                    const casosTabActual = casos.filter((c) =>
+                      tabActiva === 'ingresos' ? c.tipo_proceso === 'VINCULACION' : c.tipo_proceso === 'DESVINCULACION'
+                    );
+                    const totalCasosTab = casosTabActual.length;
+                    const terminadosTabCount = casosTabActual.filter((c) => {
+                      const etapasComp = c.etapas.filter((e) => e.estado === 'completed').length;
+                      return etapasComp === c.etapas.length || c.etapas.every((e) => e.estado === 'completed');
+                    }).length;
+                    const enTramiteTabCount = totalCasosTab - terminadosTabCount;
 
-                  {casosFiltrados.map((c) => {
-                    const esActivo = c.id === casoActivo?.id;
-                    const esVinculacion = c.tipo_proceso === 'VINCULACION';
-                    const etapasCompletadas = c.etapas.filter((e) => e.estado === 'completed').length;
-                    const totalEtapas = c.etapas.length;
-                    const porcentaje = Math.round((etapasCompletadas / totalEtapas) * 100);
+                    const filtroEstadoActual = tabActiva === 'ingresos' ? filtroEstadoIngreso : filtroEstadoDesvinculacion;
+                    const setFiltroEstadoActual = tabActiva === 'ingresos' ? setFiltroEstadoIngreso : setFiltroEstadoDesvinculacion;
+                    const filtroDepActual = tabActiva === 'ingresos' ? filtroDependenciaIngreso : filtroDependenciaDesvinculacion;
+                    const setFiltroDepActual = tabActiva === 'ingresos' ? setFiltroDependenciaIngreso : setFiltroDependenciaDesvinculacion;
+                    const busquedaActual = tabActiva === 'ingresos' ? busquedaIngresos : busquedaDesvinculaciones;
+                    const setBusquedaActual = tabActiva === 'ingresos' ? setBusquedaIngresos : setBusquedaDesvinculaciones;
+
+                    const hayFiltrosActivos =
+                      filtroEstadoActual !== 'TODOS' ||
+                      filtroDepActual !== 'TODAS' ||
+                      (tabActiva === 'desvinculaciones' && filtroCausalDesvinculacion !== 'TODAS') ||
+                      (tabActiva === 'ingresos' && filtroModalidadIngreso !== 'TODAS') ||
+                      (tabActiva === 'desvinculaciones' && filtroModalidadDesvinculacion !== 'TODAS') ||
+                      Boolean(busquedaActual.trim());
+
+                    const limpiarFiltrosColumna = () => {
+                      setFiltroEstadoActual('TODOS');
+                      setFiltroDepActual('TODAS');
+                      if (tabActiva === 'desvinculaciones') {
+                        setFiltroCausalDesvinculacion('TODAS');
+                        setFiltroModalidadDesvinculacion('TODAS');
+                      } else {
+                        setFiltroModalidadIngreso('TODAS');
+                      }
+                      setBusquedaActual('');
+                    };
 
                     return (
-                      <Pressable
-                        key={c.id}
-                        onPress={() => setCasoSeleccionadoId(c.id)}
-                        style={({ pressed }) => ({
-                          backgroundColor: esActivo
-                            ? THEME.marca50
-                            : pressed
-                            ? THEME.slate50
-                            : THEME.white,
-                          borderRadius: 12,
-                          padding: 14,
-                          borderWidth: 1.5,
-                          borderColor: esActivo ? THEME.marca600 : THEME.slate200,
-                          gap: 8,
-                          shadowColor: '#000',
-                          shadowOffset: { width: 0, height: 1 },
-                          shadowOpacity: esActivo ? 0.06 : 0.02,
-                          shadowRadius: 2,
-                        })}
-                      >
+                      <View style={{ gap: 8 }}>
+                        {/* Cabecera y Contador */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate800 }}>
+                            {tabActiva === 'ingresos'
+                              ? `Trámites de Ingreso (${casosFiltrados.length})`
+                              : `Trámites de Desvinculación (${casosFiltrados.length})`}
+                          </Text>
+                          {hayFiltrosActivos && (
+                            <Pressable
+                              onPress={limpiarFiltrosColumna}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 3,
+                                paddingVertical: 2.5,
+                                paddingHorizontal: 7,
+                                borderRadius: 5,
+                                backgroundColor: THEME.roseBg,
+                                borderWidth: 1,
+                                borderColor: THEME.roseRing,
+                              }}
+                            >
+                              <Ionicons name="close-circle-outline" size={12} color={THEME.rose600} />
+                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.rose600 }}>Limpiar</Text>
+                            </Pressable>
+                          )}
+                        </View>
+
+                        {/* Píldoras de Filtro por Estado: [Todos] [⏳ En Trámite] [✓ Terminados] */}
                         <View
                           style={{
                             flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            gap: 8,
+                            backgroundColor: THEME.slate100,
+                            borderRadius: 8,
+                            padding: 3,
+                            gap: 3,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
                           }}
                         >
+                          <Pressable
+                            onPress={() => setFiltroEstadoActual('TODOS')}
+                            style={{
+                              flex: 1,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              paddingVertical: 5.5,
+                              borderRadius: 6,
+                              backgroundColor: filtroEstadoActual === 'TODOS' ? THEME.white : 'transparent',
+                              shadowColor: '#000',
+                              shadowOpacity: filtroEstadoActual === 'TODOS' ? 0.05 : 0,
+                              shadowRadius: 1,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 10.5,
+                                fontWeight: filtroEstadoActual === 'TODOS' ? '800' : '600',
+                                color: filtroEstadoActual === 'TODOS' ? THEME.slate800 : THEME.slate600,
+                              }}
+                            >
+                              Todos ({totalCasosTab})
+                            </Text>
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => setFiltroEstadoActual('EN_TRAMITE')}
+                            style={{
+                              flex: 1.15,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 3.5,
+                              paddingVertical: 5.5,
+                              borderRadius: 6,
+                              backgroundColor: filtroEstadoActual === 'EN_TRAMITE' ? '#fffbeb' : 'transparent',
+                              borderWidth: filtroEstadoActual === 'EN_TRAMITE' ? 1 : 0,
+                              borderColor: '#f59e0b',
+                              shadowColor: '#000',
+                              shadowOpacity: filtroEstadoActual === 'EN_TRAMITE' ? 0.05 : 0,
+                              shadowRadius: 1,
+                            }}
+                          >
+                            <Ionicons name="time" size={11} color="#b45309" />
+                            <Text
+                              style={{
+                                fontSize: 10.5,
+                                fontWeight: filtroEstadoActual === 'EN_TRAMITE' ? '800' : '600',
+                                color: filtroEstadoActual === 'EN_TRAMITE' ? '#92400e' : THEME.slate600,
+                              }}
+                            >
+                              En Trámite ({enTramiteTabCount})
+                            </Text>
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => setFiltroEstadoActual('TERMINADOS')}
+                            style={{
+                              flex: 1.15,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 3.5,
+                              paddingVertical: 5.5,
+                              borderRadius: 6,
+                              backgroundColor: filtroEstadoActual === 'TERMINADOS' ? '#ecfdf5' : 'transparent',
+                              borderWidth: filtroEstadoActual === 'TERMINADOS' ? 1 : 0,
+                              borderColor: '#10b981',
+                              shadowColor: '#000',
+                              shadowOpacity: filtroEstadoActual === 'TERMINADOS' ? 0.05 : 0,
+                              shadowRadius: 1,
+                            }}
+                          >
+                            <Ionicons name="checkmark-circle" size={11} color="#047857" />
+                            <Text
+                              style={{
+                                fontSize: 10.5,
+                                fontWeight: filtroEstadoActual === 'TERMINADOS' ? '800' : '600',
+                                color: filtroEstadoActual === 'TERMINADOS' ? '#047857' : THEME.slate600,
+                              }}
+                            >
+                              Terminados ({terminadosTabCount})
+                            </Text>
+                          </Pressable>
+                        </View>
+
+                        {/* Buscador Rápido Local en Columna */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: THEME.white,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            paddingHorizontal: 8,
+                            paddingVertical: 1,
+                            gap: 6,
+                          }}
+                        >
+                          <Ionicons name="search" size={13} color={THEME.slate400} />
+                          <TextInput
+                            value={busquedaActual}
+                            onChangeText={setBusquedaActual}
+                            placeholder="Buscar por funcionario, cédula, causal o cargo..."
+                            placeholderTextColor={THEME.slate400}
+                            style={{
+                              flex: 1,
+                              color: THEME.slate900,
+                              paddingVertical: 5,
+                              fontSize: 11.5,
+                            }}
+                          />
+                          {busquedaActual ? (
+                            <Pressable onPress={() => setBusquedaActual('')}>
+                              <Ionicons name="close-circle" size={14} color={THEME.slate400} />
+                            </Pressable>
+                          ) : null}
+                        </View>
+
+                        {/* Selectores Secundarios: Dependencia y Causal */}
+                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                          <View style={{ flex: 1 }}>
+                            <select
+                              value={filtroDepActual}
+                              onChange={(e: any) => setFiltroDepActual(e.target.value)}
+                              style={{
+                                width: '100%',
+                                backgroundColor: THEME.white,
+                                borderColor: filtroDepActual !== 'TODAS' ? THEME.marca600 : THEME.slate200,
+                                borderWidth: 1,
+                                borderRadius: 6,
+                                padding: '4px 6px',
+                                fontSize: 11,
+                                fontWeight: filtroDepActual !== 'TODAS' ? '700' : '500',
+                                color: filtroDepActual !== 'TODAS' ? THEME.marca700 : THEME.slate700,
+                                outline: 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <option value="TODAS">🏢 Dependencia (Todas)</option>
+                              {DEPENDENCIAS_FILTRO.filter((d: string) => d !== 'TODAS').map((dep: string) => (
+                                <option key={dep} value={dep}>
+                                  {dep}
+                                </option>
+                              ))}
+                            </select>
+                          </View>
+
+                          {tabActiva === 'desvinculaciones' ? (
+                            <View style={{ flex: 1 }}>
+                              <select
+                                value={filtroCausalDesvinculacion}
+                                onChange={(e: any) => setFiltroCausalDesvinculacion(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  backgroundColor: THEME.white,
+                                  borderColor: filtroCausalDesvinculacion !== 'TODAS' ? THEME.rose600 : THEME.slate200,
+                                  borderWidth: 1,
+                                  borderRadius: 6,
+                                  padding: '4px 6px',
+                                  fontSize: 11,
+                                  fontWeight: filtroCausalDesvinculacion !== 'TODAS' ? '700' : '500',
+                                  color: filtroCausalDesvinculacion !== 'TODAS' ? THEME.rose700 : THEME.slate700,
+                                  outline: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {CAUSALES_FILTRO_DESVINCULACION.map((c: { key: string; label: string }) => (
+                                  <option key={c.key} value={c.key}>
+                                    ⚖️ {c.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                    );
+                  })()}
+
+                  {/* Lista de Tarjetas de Trámites */}
+                  {casosFiltrados.length === 0 ? (
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        padding: 22,
+                        alignItems: 'center',
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        gap: 8,
+                      }}
+                    >
+                      <Ionicons name="search-outline" size={26} color={THEME.slate400} />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate700 }}>
+                        No se encontraron trámites
+                      </Text>
+                      <Text style={{ fontSize: 11.5, color: THEME.slate500, textAlign: 'center' }}>
+                        No hay trámites que coincidan con los filtros aplicados.
+                      </Text>
+                    </View>
+                  ) : (
+                    casosFiltrados.map((c) => {
+                      const esActivo = c.id === casoActivo?.id;
+                      const esVinculacion = c.tipo_proceso === 'VINCULACION';
+                      const etapasCompletadas = c.etapas.filter((e) => e.estado === 'completed').length;
+                      const totalEtapas = c.etapas.length;
+                      const porcentaje = Math.round((etapasCompletadas / totalEtapas) * 100);
+                      const esTerminado = porcentaje === 100 || c.etapas.every((e) => e.estado === 'completed');
+
+                      return (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setCasoSeleccionadoId(c.id)}
+                          style={({ pressed }) => ({
+                            backgroundColor: esActivo
+                              ? THEME.marca50
+                              : pressed
+                              ? THEME.slate50
+                              : esTerminado
+                              ? '#fafdfb'
+                              : THEME.white,
+                            borderRadius: 12,
+                            padding: 13,
+                            borderWidth: 1.5,
+                            borderColor: esActivo
+                              ? THEME.marca600
+                              : esTerminado
+                              ? '#bbf7d0'
+                              : '#fde68a',
+                            borderLeftWidth: 5,
+                            borderLeftColor: esTerminado ? '#10b981' : '#f59e0b',
+                            gap: 7,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: esActivo ? 0.08 : 0.03,
+                            shadowRadius: 2.5,
+                          })}
+                        >
+                          {/* Fila Superior: Badges de Estado Destacado, Tipo, Régimen y Porcentaje */}
                           <View
                             style={{
                               flexDirection: 'row',
-                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
                               gap: 6,
-                              flexWrap: 'wrap',
-                              flex: 1,
-                              minWidth: 0,
                             }}
                           >
                             <View
                               style={{
-                                paddingHorizontal: 7,
-                                paddingVertical: 2,
-                                borderRadius: 9999,
-                                backgroundColor: esVinculacion ? THEME.emeraldBg : THEME.roseBg,
-                                borderWidth: 1,
-                                borderColor: esVinculacion ? THEME.emeraldRing : THEME.roseRing,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 5,
+                                flexWrap: 'wrap',
+                                flex: 1,
+                                minWidth: 0,
                               }}
                             >
-                              <Text
-                                style={{
-                                  color: esVinculacion ? THEME.emeraldText : THEME.roseText,
-                                  fontSize: 9.5,
-                                  fontWeight: '700',
-                                }}
-                              >
-                                {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'}
-                              </Text>
-                            </View>
-
-                            {/* Badge Específico de Modalidad */}
-                            {(() => {
-                              const infoM = obtenerInfoModalidad(c.modalidad);
-                              return (
+                              {/* BADGE PROMINENTE DE ESTADO */}
+                              {esTerminado ? (
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 3,
-                                    paddingHorizontal: 6,
-                                    paddingVertical: 1.5,
-                                    borderRadius: 4,
-                                    backgroundColor: infoM.colorBg,
+                                    gap: 3.5,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
+                                    borderRadius: 9999,
+                                    backgroundColor: '#dcfce7',
                                     borderWidth: 1,
-                                    borderColor: infoM.colorBorde,
+                                    borderColor: '#10b981',
                                   }}
                                 >
-                                  <Ionicons name={infoM.icono} size={10} color={infoM.colorTexto} />
-                                  <Text
-                                    style={{
-                                      color: infoM.colorTexto,
-                                      fontSize: 9.5,
-                                      fontWeight: '800',
-                                    }}
-                                  >
-                                    {infoM.badgeTexto}
+                                  <Ionicons name="checkmark-circle" size={11} color="#047857" />
+                                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#047857' }}>
+                                    TERMINADO
                                   </Text>
                                 </View>
-                              );
-                            })()}
-                          </View>
+                              ) : (
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3.5,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
+                                    borderRadius: 9999,
+                                    backgroundColor: '#fef3c7',
+                                    borderWidth: 1,
+                                    borderColor: '#f59e0b',
+                                  }}
+                                >
+                                  <Ionicons name="time" size={11} color="#b45309" />
+                                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#b45309' }}>
+                                    EN TRÁMITE
+                                  </Text>
+                                </View>
+                              )}
 
-                          <View style={{ alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                            <Text
-                              style={{
-                                color: THEME.slate400,
-                                fontSize: 10,
-                                fontWeight: '700',
-                                letterSpacing: 0.2,
-                              }}
-                            >
-                              {c.id}
-                            </Text>
-                            <View
-                              style={{
-                                paddingHorizontal: 6,
-                                paddingVertical: 1,
-                                borderRadius: 9999,
-                                backgroundColor: THEME.emeraldBg,
-                                borderWidth: 1,
-                                borderColor: THEME.emeraldRing,
-                              }}
-                            >
-                              <Text
+                              {/* Badge de Tipo Proceso */}
+                              <View
                                 style={{
-                                  color: THEME.emeraldText,
-                                  fontSize: 10.5,
-                                  fontWeight: '700',
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1.5,
+                                  borderRadius: 4,
+                                  backgroundColor: esVinculacion ? THEME.emeraldBg : THEME.roseBg,
+                                  borderWidth: 1,
+                                  borderColor: esVinculacion ? THEME.emeraldRing : THEME.roseRing,
                                 }}
                               >
-                                {porcentaje}%
+                                <Text
+                                  style={{
+                                    color: esVinculacion ? THEME.emeraldText : THEME.roseText,
+                                    fontSize: 9,
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'}
+                                </Text>
+                              </View>
+
+                              {/* Badge Modalidad */}
+                              {(() => {
+                                const infoM = obtenerInfoModalidad(c.modalidad);
+                                return (
+                                  <View
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 3,
+                                      paddingHorizontal: 5,
+                                      paddingVertical: 1.5,
+                                      borderRadius: 4,
+                                      backgroundColor: infoM.colorBg,
+                                      borderWidth: 1,
+                                      borderColor: infoM.colorBorde,
+                                    }}
+                                  >
+                                    <Ionicons name={infoM.icono} size={9} color={infoM.colorTexto} />
+                                    <Text
+                                      style={{
+                                        color: infoM.colorTexto,
+                                        fontSize: 9,
+                                        fontWeight: '800',
+                                      }}
+                                    >
+                                      {infoM.badgeTexto}
+                                    </Text>
+                                  </View>
+                                );
+                              })()}
+                            </View>
+
+                            {/* Porcentaje y Código */}
+                            <View style={{ alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
+                              <Text
+                                style={{
+                                  color: THEME.slate400,
+                                  fontSize: 9.5,
+                                  fontWeight: '700',
+                                  letterSpacing: 0.2,
+                                }}
+                              >
+                                {c.id}
                               </Text>
+                              <View
+                                style={{
+                                  paddingHorizontal: 6,
+                                  paddingVertical: 1.5,
+                                  borderRadius: 9999,
+                                  backgroundColor: esTerminado ? '#dcfce7' : '#fef3c7',
+                                  borderWidth: 1,
+                                  borderColor: esTerminado ? '#10b981' : '#f59e0b',
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 2.5,
+                                }}
+                              >
+                                <Ionicons
+                                  name={esTerminado ? 'checkmark' : 'time-outline'}
+                                  size={10}
+                                  color={esTerminado ? '#047857' : '#b45309'}
+                                />
+                                <Text
+                                  style={{
+                                    color: esTerminado ? '#047857' : '#b45309',
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                  }}
+                                >
+                                  {porcentaje}%
+                                </Text>
+                              </View>
                             </View>
                           </View>
-                        </View>
 
-                        <View>
-                          <Text
+                          {/* Datos Principales del Funcionario */}
+                          <View>
+                            <Text
+                              style={{
+                                color: esActivo ? THEME.marca900 : THEME.slate900,
+                                fontSize: 13,
+                                fontWeight: '700',
+                              }}
+                            >
+                              {c.servidor_nombre}
+                            </Text>
+                            <Text style={{ color: THEME.slate600, fontSize: 11.5, marginTop: 1 }}>
+                              C.C. {c.servidor_cedula} • {c.cargo}
+                            </Text>
+                            <Text style={{ color: THEME.slate400, fontSize: 10.5, marginTop: 2 }}>
+                              {c.dependencia}
+                            </Text>
+                          </View>
+
+                          {/* Fila Inferior con Acto Administrativo y Fecha */}
+                          <View
                             style={{
-                              color: esActivo ? THEME.marca900 : THEME.slate900,
-                              fontSize: 13.5,
-                              fontWeight: '700',
+                              marginTop: 2,
+                              paddingTop: 5,
+                              borderTopWidth: 1,
+                              borderTopColor: THEME.slate100,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 6,
                             }}
                           >
-                            {c.servidor_nombre}
-                          </Text>
-                          <Text style={{ color: THEME.slate600, fontSize: 11.5, marginTop: 1 }}>
-                            C.C. {c.servidor_cedula} • {c.cargo}
-                          </Text>
-                          <Text style={{ color: THEME.slate400, fontSize: 10.5, marginTop: 2 }}>
-                            {c.dependencia}
-                          </Text>
-                        </View>
-
-                        {/* Accesos directos integrados */}
-                        {esVinculacion && (
-                          <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
-                            <Pressable
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                abrirConsultaSecopParaCandidato(
-                                  c.servidor_nombre,
-                                  c.servidor_cedula,
-                                  c.id
-                                );
-                              }}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                backgroundColor: THEME.skyBg,
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 6,
-                                borderWidth: 1,
-                                borderColor: THEME.skyRing,
-                              }}
-                            >
-                              <Ionicons name="search" size={11} color={THEME.skyText} />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
+                              <Ionicons
+                                name={esTerminado ? 'shield-checkmark' : 'document-text-outline'}
+                                size={12}
+                                color={esTerminado ? '#059669' : '#d97706'}
+                              />
                               <Text
-                                style={{ color: THEME.skyText, fontSize: 10.5, fontWeight: '600' }}
-                              >
-                                SECOP II
-                              </Text>
-                            </Pressable>
-
-                            <Pressable
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                router.push('/ingresos/nueva');
-                              }}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                backgroundColor: THEME.emeraldBg,
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 6,
-                                borderWidth: 1,
-                                borderColor: THEME.emeraldRing,
-                              }}
-                            >
-                              <Ionicons name="sparkles" size={11} color={THEME.emeraldText} />
-                              <Text
+                                numberOfLines={1}
                                 style={{
-                                  color: THEME.emeraldText,
                                   fontSize: 10.5,
-                                  fontWeight: '600',
+                                  fontWeight: '700',
+                                  color: esTerminado ? '#047857' : '#92400e',
                                 }}
                               >
-                                Cotejo IA
+                                {c.acto_administrativo
+                                  ? (esTerminado ? `Cerrado con ${c.acto_administrativo}` : c.acto_administrativo)
+                                  : (esTerminado ? 'Trámite finalizado' : 'Acto administrativo pendiente')}
                               </Text>
-                            </Pressable>
+                            </View>
+                            {c.fecha_efectiva ? (
+                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '600', flexShrink: 0 }}>
+                                {c.fecha_efectiva}
+                              </Text>
+                            ) : null}
                           </View>
-                        )}
-                      </Pressable>
-                    );
-                  })}
+
+                          {/* Accesos directos integrados para Vinculación */}
+                          {esVinculacion && (
+                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+                              <Pressable
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  abrirConsultaSecopParaCandidato(
+                                    c.servidor_nombre,
+                                    c.servidor_cedula,
+                                    c.id
+                                  );
+                                }}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  backgroundColor: THEME.skyBg,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3.5,
+                                  borderRadius: 5,
+                                  borderWidth: 1,
+                                  borderColor: THEME.skyRing,
+                                }}
+                              >
+                                <Ionicons name="search" size={11} color={THEME.skyText} />
+                                <Text
+                                  style={{ color: THEME.skyText, fontSize: 10, fontWeight: '600' }}
+                                >
+                                  SECOP II
+                                </Text>
+                              </Pressable>
+
+                              <Pressable
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  router.push('/ingresos/nueva');
+                                }}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  backgroundColor: THEME.emeraldBg,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3.5,
+                                  borderRadius: 5,
+                                  borderWidth: 1,
+                                  borderColor: THEME.emeraldRing,
+                                }}
+                              >
+                                <Ionicons name="sparkles" size={11} color={THEME.emeraldText} />
+                                <Text
+                                  style={{
+                                    color: THEME.emeraldText,
+                                    fontSize: 10,
+                                    fontWeight: '600',
+                                  }}
+                                >
+                                  Cotejo IA
+                                </Text>
+                              </Pressable>
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })
+                  )}
                 </View>
 
                 {/* Columna Derecha: Pipeline y Detalle del Trámite */}
@@ -7385,6 +7940,134 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         shadowRadius: 2,
                       }}
                     >
+                      {/* Banner Superior Prominente de Estado del Trámite (Terminado vs En Trámite) */}
+                      {(() => {
+                        const etapasCompActivo = casoActivo.etapas.filter((e) => e.estado === 'completed').length;
+                        const esTerminadoActivo =
+                          etapasCompActivo === casoActivo.etapas.length ||
+                          casoActivo.etapas.every((e) => e.estado === 'completed');
+                        const pctActivo = Math.round((etapasCompActivo / casoActivo.etapas.length) * 100);
+
+                        return esTerminadoActivo ? (
+                          <View
+                            style={{
+                              backgroundColor: '#ecfdf5',
+                              borderWidth: 1.5,
+                              borderColor: '#10b981',
+                              borderRadius: 10,
+                              padding: 12,
+                              flexDirection: isTablet ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isTablet ? 'center' : 'flex-start',
+                              gap: 10,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                              <Ionicons name="checkmark-circle" size={24} color="#059669" />
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#065f46' }}>
+                                    TRÁMITE OFICIALMENTE TERMINADO Y CERRADO (100%)
+                                  </Text>
+                                  <View
+                                    style={{
+                                      backgroundColor: '#059669',
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 1,
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    <Text style={{ color: THEME.white, fontSize: 9.5, fontWeight: '800' }}>
+                                      FINALIZADO
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Text style={{ fontSize: 11.5, color: '#047857', marginTop: 2 }}>
+                                  {casoActivo.tipo_proceso === 'DESVINCULACION' ? 'Desvinculación' : 'Vinculación'} protocolizada con{' '}
+                                  {casoActivo.acto_administrativo || 'documento oficial'}. Todas las fases normativas han sido concluidas y foliadas.
+                                </Text>
+                              </View>
+                            </View>
+                            <Pressable
+                              onPress={() => alternarEstadoTramiteCompleto(casoActivo.id, false)}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                backgroundColor: THEME.white,
+                                borderWidth: 1,
+                                borderColor: '#10b981',
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="refresh-outline" size={13} color="#047857" />
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>
+                                Reabrir para Modificar
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              backgroundColor: '#fffbeb',
+                              borderWidth: 1.5,
+                              borderColor: '#f59e0b',
+                              borderRadius: 10,
+                              padding: 12,
+                              flexDirection: isTablet ? 'row' : 'column',
+                              justifyContent: 'space-between',
+                              alignItems: isTablet ? 'center' : 'flex-start',
+                              gap: 10,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                              <Ionicons name="time" size={24} color="#d97706" />
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400e' }}>
+                                    TRÁMITE EN CURSO ({pctActivo}% COMPLETADO)
+                                  </Text>
+                                  <View
+                                    style={{
+                                      backgroundColor: '#d97706',
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 1,
+                                      borderRadius: 4,
+                                    }}
+                                  >
+                                    <Text style={{ color: THEME.white, fontSize: 9.5, fontWeight: '800' }}>
+                                      EN PROCESO
+                                    </Text>
+                                  </View>
+                                </View>
+                                <Text style={{ fontSize: 11.5, color: '#b45309', marginTop: 2 }}>
+                                  Fases concluidas: {etapasCompActivo} de {casoActivo.etapas.length}. Requisitos pendientes por verificar en la fase activa.
+                                </Text>
+                              </View>
+                            </View>
+                            <Pressable
+                              onPress={() => alternarEstadoTramiteCompleto(casoActivo.id, true)}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                backgroundColor: '#059669',
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="checkmark-done" size={13} color={THEME.white} />
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.white }}>
+                                Marcar Todo como Terminado
+                              </Text>
+                            </Pressable>
+                          </View>
+                        );
+                      })()}
+
                       {/* Cabecera Principal del Caso: Identidad y Acciones Rápidas */}
                       <View
                         style={{
