@@ -326,6 +326,7 @@ export interface RequisitoEtapa {
   usuarioRegistro?: string;
   posiblesEvidencias?: string[];
   documentosAdjuntos?: DocumentoSoporteAdjunto[];
+  noAplica?: boolean;
 }
 
 
@@ -648,7 +649,7 @@ export function generarEtapasParaCaso(
             },
               {
                 id: 'vc1_2',
-                label: 'Consulta en Banco Nacional de Listas de Elegibles (BNLE SIMO 4.0)',
+                label: 'Consulta en Banco Nacional de Listas de Elegibles (BNLE SIMO 4.0) y estado de firmeza de la lista de elegibles',
                 cumplido: true,
                 obligatorio: true,
                 norma: 'Decreto Ley 760 de 2005 • Circular Conjunta CNSC 011 de 2021',
@@ -663,15 +664,15 @@ export function generarEtapasParaCaso(
                 id: 'vc1_3',
                 label: 'Constatación de funciones y perfil equivalente en la OPEC',
                 cumplido: true,
-                obligatorio: true,
+                obligatorio: false,
+                noAplica: true,
                 norma: 'Decreto 1083 de 2015, Art. 2.2.6.2 • Criterio Unificado CNSC',
-                textoNormativo: 'Para aplicar una lista de elegibles, el empleo vacante debe ser coincidente o equivalente en denominación, código, nivel jerárquico, grado salarial, funciones y requisitos mínimos con los ofertados en la OPEC del concurso público.',
-                detalleProcedimiento: 'Comparar que los requisitos de estudio y experiencia requeridos en la vacante coincidan exactamente con la OPEC ofertada y no existan modificaciones reglamentarias sobrevinientes.',
-              
-              posiblesEvidencias: [
-                "Cuadro comparativo técnico entre el Manual de Funciones vigente y la OPEC del acuerdo de convocatoria del concurso de méritos",
-              ],
-            },
+                textoNormativo: 'Para la provisión por uso de lista de elegibles de la convocatoria propia de la entidad, las funciones y el perfil del empleo ya se encuentran definidos y evaluados en la OPEC institucional ofertada, por lo que este requisito NO APLICA. Solo procede excepcionalmente cuando se acude a listas generales de elegibles de otras entidades para empleos equivalentes.',
+                detalleProcedimiento: 'No aplica en provisión por uso de lista de la misma OPEC / convocatoria del empleo ofertado en mérito directo.',
+                posiblesEvidencias: [
+                  "No aplica para provisión directa por uso de lista de elegibles de la OPEC propia",
+                ],
+              },
             ],
           },
           {
@@ -702,47 +703,44 @@ export function generarEtapasParaCaso(
             },
               {
                 id: 'vc2_2',
-                label: 'Recepción de lista de elegibles con orden de mérito estricto',
+                label: 'Recepción de lista de elegibles con orden de mérito estricto (Aplica en Uso por Primera Vez - No Aplica en Uso de Listas)',
                 cumplido: true,
-                obligatorio: true,
+                obligatorio: false,
+                noAplica: true,
                 norma: 'Decreto Ley 760 de 2005, Art. 14 • Resolución CNSC en firme',
-                textoNormativo: 'La lista de elegibles queda en firme una vez decididas las reclamaciones. El orden de mérito es inmodificable y cualquier designación que altere la prelación numérica es nula de pleno derecho conforme a la jurisprudencia constitucional.',
-                detalleProcedimiento: 'Constatar la ejecutoria de la resolución que conformó la lista de elegibles y el orden inmodificable de mérito obtenido en las pruebas.',
-              
-              posiblesEvidencias: [
-                "Resolución de la CNSC en firme que conforma y adopta la lista de elegibles",
-          "Certificado de ejecutoria expedido por la CNSC",
-          "Listado oficial de elegibles con puntajes y puestos",
-              ],
-            },
+                textoNormativo: 'Aplica exclusivamente para la adopción y publicación inicial de la lista de elegibles (Uso por primera vez). Para el uso de listas en firme respecto de vacantes subsiguientes o posteriores, este requisito NO APLICA, dado que la lista ya cobró firmeza jurídica y ejecutoria en el Banco Nacional de Listas de Elegibles.',
+                detalleProcedimiento: 'No aplica para uso de listas en firme; la firmeza y ejecutoria ya se constató en SIMO 4.0 en la Fase 1.',
+                posiblesEvidencias: [
+                  "No aplica para uso de listas (requisito exclusivo de la adopción inicial por primera vez)",
+                ],
+              },
               {
                 id: 'vc2_3',
-                label: 'Revisión por Comisión de Personal y término preclusivo de exclusión (5 días)',
+                label: 'Revisión por Comisión de Personal y término preclusivo de exclusión (5 días) (Aplica en Uso por Primera Vez - No Aplica en Uso de Listas)',
                 cumplido: true,
-                obligatorio: true,
+                obligatorio: false,
+                noAplica: true,
                 norma: 'Ley 909 de 2004, Art. 16, Lit. a • Decreto Ley 760 de 2005, Art. 14 • Decreto 1083 de 2015, Art. 2.2.6.21',
-                textoNormativo: 'De conformidad con el artículo 14 del Decreto Ley 760 de 2005, dentro de los cinco (5) días hábiles siguientes a la publicación de la lista de elegibles, la Comisión de Personal podrá solicitar a la CNSC la exclusión de la persona o personas que no reúnan los requisitos o incurran en causales de exclusión legal.',
-                detalleProcedimiento: 'Verificar los soportes de los primeros elegibles en estricto orden de mérito dentro del término perentorio de cinco (5) días hábiles siguientes a la firmeza de la lista, y certificar la procedencia del nombramiento ante el nominador.',
+                textoNormativo: 'El término preclusivo de cinco (5) días hábiles otorgado a la Comisión de Personal por el artículo 14 del Decreto Ley 760 de 2005 opera únicamente a partir de la publicación inicial de la lista de elegibles (Uso por primera vez). Para el trámite de uso de listas en firme, este término ya feneció y precluyó, por lo que NO APLICA en esta instancia.',
+                detalleProcedimiento: 'No aplica para uso de listas; el término preclusivo de exclusión de 5 días hábiles ya feneció con la firmeza original de la lista adoptada por la CNSC.',
                 posiblesEvidencias: [
-                  'Acta de sesión de la Comisión de Personal revisando la lista de elegibles.',
-                  'Constancia de no haberse presentado solicitud de exclusión dentro de los 5 días hábiles.',
-                  'Comunicación formal suscrita remitida al nominador autorizando la provisión.',
+                  "No aplica para uso de listas (término preclusivo de 5 días ya fenecido tras la firmeza inicial)",
                 ],
               },
             ],
           },
           {
-            id: 'v_carr_3',
+            id: 'v_carr_4',
             numero: 3,
-            titulo: 'Aviso a Encargados / Provisionales',
-            subtitulo: 'Notificación a provisionales / encargados y entrega de puesto',
-            icono: 'notifications-outline',
-            estado: 'completed',
-            tiempoEstimadoDias: 1,
-            responsable: 'Profesional Universitario TH',
-            normaGeneral: 'Ley 1960 de 2019, Art. 1; Criterio Unificado CNSC del 13 de agosto de 2019',
-            plazoLegal: 'Aviso previo con mínimo 1 día hábil de antelación',
-            procedimientoDetallado: 'Notificar formalmente al servidor que ocupa la plaza en encargo o en provisionalidad sobre la llegada del titular de carrera con lista de elegibles, disponiendo el inicio del trámite de entrega de puesto y empalme.',
+            titulo: 'Acto de Nombramiento en Periodo de Prueba',
+            subtitulo: 'Resolución nominador (6 meses) y aceptación formal',
+            icono: 'document-text-outline',
+            estado: 'in_progress',
+            tiempoEstimadoDias: 2,
+            responsable: 'Nominador / Técnico Notificaciones',
+            normaGeneral: 'Decreto 1083 de 2015, Art. 2.2.5.1.4, 2.2.5.1.6 y 2.2.6.24; Ley 909 de 2004, Art. 31',
+            plazoLegal: '10 días hábiles para aceptar el nombramiento; 10 días para posesión (prorrogables hasta 90 días)',
+            procedimientoDetallado: 'Identificar previamente al servidor en provisionalidad o encargo a desvincular o reubicar (FT-018), proyectar y expedir la Resolución de Nombramiento en Periodo de Prueba por el término de seis (6) meses y notificar al elegible quien cuenta con 10 días hábiles para manifestar su aceptación.',
             requisitos: [
               {
                 id: 'vc3_1',
@@ -753,54 +751,11 @@ export function generarEtapasParaCaso(
                 norma: 'Ley 909 de 2004, Art. 24 • Ley 1960 de 2019, Art. 1',
                 textoNormativo: 'El encargo y la provisionalidad son figuras transitorias que cesan de pleno derecho cuando la plaza deba proveerse en forma definitiva por mérito. Los servidores en encargo retornan inmediatamente a sus empleos de carrera de origen.',
                 detalleProcedimiento: 'Cotejar en PERNO y la matriz de planta el estado actual del funcionario que ocupa la plaza para proceder a su reubicación o desvinculación formal según corresponda.',
-              
-              posiblesEvidencias: [
-                "Ficha de caracteri",
-              ],
-            },
-              {
-                id: 'vc3_2',
-                label: 'Memorando de comunicación sobre provisión por mérito de la plaza',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Decreto 1083 de 2015, Art. 2.2.5.3.4',
-                textoNormativo: 'La administración debe comunicar formalmente la terminación del encargo o nombramiento provisional, motivando el acto en la obligación legal de nombrar al elegible que superó el concurso de méritos.',
-                detalleProcedimiento: 'Remitir memorando oficial informando la provisión de la vacante por concurso de méritos, preservando garantías de especial protección si aplican (retén social, prepensionados, madres cabeza de familia).',
-              
-              posiblesEvidencias: [
-                "Memorando oficial remitido al funcionario en encargo o provisional",
-          "Constancia de radicación en CORDIS o SIGA con acuse de recibo",
-              ],
-            },
-              {
-                id: 'vc3_3',
-                label: 'Fijación de fecha límite de entrega de funciones e inventarios',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Circular Conjunta CNSC - DAFP 001 de 2020',
-                textoNormativo: 'La entidad otorgará un término prudencial no inferior a 5 días ni superior a 10 para la entrega formal del despacho, bienes, expedientes e inventarios, asegurando que no se interrumpa el servicio público.',
-                detalleProcedimiento: 'Establecer la fecha formal para la suscripción de las actas de entrega de cargo e inventario físico e informático.',
-              
-              posiblesEvidencias: [
-                "Cronograma de empalme suscrito por el jefe de la dependencia",
-          "Citación para entrega de archivos y bienes inventariados",
-              ],
-            },
-            ],
-          },
-          {
-            id: 'v_carr_4',
-            numero: 4,
-            titulo: 'Acto de Nombramiento en Periodo de Prueba',
-            subtitulo: 'Resolución nominador (6 meses) y aceptación formal',
-            icono: 'document-text-outline',
-            estado: 'in_progress',
-            tiempoEstimadoDias: 2,
-            responsable: 'Nominador / Técnico Notificaciones',
-            normaGeneral: 'Decreto 1083 de 2015, Art. 2.2.5.1.4, 2.2.5.1.6 y 2.2.6.24; Ley 909 de 2004, Art. 31',
-            plazoLegal: '10 días hábiles para aceptar el nombramiento; 10 días para posesión (prorrogables hasta 90 días)',
-            procedimientoDetallado: 'Proyectar y expedir la Resolución de Nombramiento en Periodo de Prueba por el término de seis (6) meses. Notificar al elegible quien cuenta con 10 días hábiles para manifestar su aceptación o declinación.',
-            requisitos: [
+                posiblesEvidencias: [
+                  "Ficha de caracterización del servidor en encargo o provisionalidad (Formato 2311520-FT-018)",
+                  "Certificación de planta institucional con la situación administrativa del empleo a proveer",
+                ],
+              },
               {
                 id: 'vc4_1',
                 label: 'Elaboración de Resolución de Nombramiento en Periodo de Prueba',
@@ -863,7 +818,7 @@ export function generarEtapasParaCaso(
           },
           {
             id: 'v_carr_5',
-            numero: 5,
+            numero: 4,
             titulo: 'Posesión, Exámenes & Verificación SECOP II',
             subtitulo: 'Examen médico, SECOP II, SIDEAP y Acta de Posesión',
             icono: 'ribbon-outline',
@@ -964,7 +919,7 @@ export function generarEtapasParaCaso(
           },
           {
             id: 'v_carr_6',
-            numero: 6,
+            numero: 5,
             titulo: 'Nómina, Afiliaciones & Reporte CNSC',
             subtitulo: 'Afiliaciones, nómina PERNO, SIDEAP y cierre OPEC',
             icono: 'checkmark-circle-outline',
@@ -3509,21 +3464,22 @@ export function sincronizarEtapasCaso(
       if (reqG) {
         return {
           ...reqM,
-          cumplido: reqG.cumplido,
+          cumplido: reqM.noAplica ? true : reqG.cumplido,
           fecha_cumplimiento: reqG.fecha_cumplimiento || reqM.fecha_cumplimiento,
           observaciones: reqG.observaciones || reqM.observaciones,
           radicadoSoporte: reqG.radicadoSoporte || reqM.radicadoSoporte,
           usuarioRegistro: reqG.usuarioRegistro || reqM.usuarioRegistro,
+          noAplica: reqM.noAplica,
         };
       }
 
       return reqM;
     });
 
-    const reqsObligatorios = requisitosSincronizados.filter((r) => r.obligatorio);
+    const reqsObligatorios = requisitosSincronizados.filter((r) => r.obligatorio && !r.noAplica);
     const todosObligatoriosCumplidos = reqsObligatorios.length > 0
       ? reqsObligatorios.every((r) => r.cumplido)
-      : requisitosSincronizados.every((r) => r.cumplido);
+      : requisitosSincronizados.filter((r) => !r.noAplica).every((r) => r.cumplido);
     const algunCumplido = requisitosSincronizados.some((r) => r.cumplido);
 
     let estadoFinal: EstadoEtapa = etapaG.estado || etapaM.estado;
@@ -5973,6 +5929,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [obsReqRadicado, setObsReqRadicado] = useState('');
   const [obsReqFecha, setObsReqFecha] = useState('');
   const [obsReqMarcarCumplido, setObsReqMarcarCumplido] = useState(true);
+  const [obsReqNoAplica, setObsReqNoAplica] = useState(false);
 
   // Modal para Observaciones a Nivel de Fase
   const [modalObsFaseVisible, setModalObsFaseVisible] = useState(false);
@@ -6197,15 +6154,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       req.fecha_cumplimiento || new Date().toISOString().split('T')[0]
     );
     setObsReqMarcarCumplido(intentaCerrar ? true : req.cumplido);
+    setObsReqNoAplica(req.noAplica ?? false);
     setModalObsReqVisible(true);
   };
 
   // Guardar datos desde el modal de requisito
-  const guardarObservacionRequisito = (forzarEstado?: boolean) => {
+  const guardarObservacionRequisito = (forzarEstado?: boolean, forzarNoAplica?: boolean) => {
     if (!modalReqContext) return;
     const { casoId, etapaId, req } = modalReqContext;
+    const nuevoNoAplica =
+      forzarNoAplica !== undefined ? forzarNoAplica : obsReqNoAplica;
     const nuevoCumplido =
-      forzarEstado !== undefined ? forzarEstado : obsReqMarcarCumplido;
+      forzarEstado !== undefined ? forzarEstado : (nuevoNoAplica ? true : obsReqMarcarCumplido);
 
     setCasos((prevCasos) =>
       prevCasos.map((caso) => {
@@ -6219,17 +6179,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             return {
               ...r,
               cumplido: nuevoCumplido,
+              noAplica: nuevoNoAplica,
               fecha_cumplimiento: nuevoCumplido
                 ? obsReqFecha.trim() || new Date().toISOString().split('T')[0]
                 : undefined,
-              observaciones: obsReqTexto.trim() || undefined,
+              observaciones: nuevoNoAplica && !obsReqTexto.trim()
+                ? 'Marcado como No Aplica para este trámite'
+                : (obsReqTexto.trim() || undefined),
               radicadoSoporte: obsReqRadicado.trim() || undefined,
               usuarioRegistro: 'Profesional TH (SJD)',
             };
           });
 
           const todosCumplidos = nuevosRequisitos
-            .filter((r) => r.obligatorio)
+            .filter((r) => r.obligatorio && !r.noAplica)
             .every((r) => r.cumplido);
           const algunCumplido = nuevosRequisitos.some((r) => r.cumplido);
 
@@ -6325,7 +6288,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           });
 
           const todosCumplidos = nuevosRequisitos
-            .filter((r) => r.obligatorio)
+            .filter((r) => r.obligatorio && !r.noAplica)
             .every((r) => r.cumplido);
           const algunCumplido = nuevosRequisitos.some((r) => r.cumplido);
 
@@ -7884,28 +7847,38 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
                               </View>
 
-                              {/* Metadata Group con los colores de los banners (Verde si terminado, Ámbar/Amarillo si en trámite) */}
+                              {/* Metadata Group: Colores de banner si la tarjeta está seleccionada (esActivo), o diseño limpio neutro si no está seleccionada */}
                               <View
                                 style={{
                                   marginTop: 10,
                                   padding: 11,
                                   borderRadius: 12,
-                                  backgroundColor: esTerminado ? 'rgb(29, 85, 78)' : '#b45309',
+                                  backgroundColor: esActivo
+                                    ? (esTerminado ? 'rgb(29, 85, 78)' : '#b45309')
+                                    : 'rgba(248, 250, 252, 0.85)',
                                   borderWidth: 1,
-                                  borderColor: esTerminado ? 'rgba(94, 234, 212, 0.4)' : 'rgba(254, 240, 138, 0.45)',
+                                  borderColor: esActivo
+                                    ? (esTerminado ? 'rgba(94, 234, 212, 0.4)' : 'rgba(254, 240, 138, 0.45)')
+                                    : '#f1f5f9',
                                   gap: 8,
-                                  shadowColor: '#000',
-                                  shadowOffset: { width: 0, height: 1 },
-                                  shadowOpacity: 0.1,
-                                  shadowRadius: 3,
-                                  elevation: 2,
+                                  ...(esActivo
+                                    ? {
+                                        shadowColor: '#000',
+                                        shadowOffset: { width: 0, height: 1 },
+                                        shadowOpacity: 0.1,
+                                        shadowRadius: 3,
+                                        elevation: 2,
+                                      }
+                                    : {}),
                                 }}
                               >
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                   <View style={{ flex: 1 }}>
                                     <Text
                                       style={{
-                                        color: esTerminado ? '#99f6e4' : '#fef08a',
+                                        color: esActivo
+                                          ? (esTerminado ? '#99f6e4' : '#fef08a')
+                                          : '#94a3b8',
                                         fontWeight: '700',
                                         fontSize: 9.5,
                                         textTransform: 'uppercase',
@@ -7918,7 +7891,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       style={{
                                         fontSize: 11.5,
                                         fontWeight: '700',
-                                        color: '#ffffff',
+                                        color: esActivo ? '#ffffff' : '#1e293b',
                                         marginTop: 2,
                                       }}
                                     >
@@ -7930,7 +7903,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     style={{
                                       width: 1,
                                       height: 26,
-                                      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                                      backgroundColor: esActivo
+                                        ? 'rgba(255, 255, 255, 0.25)'
+                                        : 'rgba(226, 232, 240, 0.7)',
                                       marginHorizontal: 10,
                                     }}
                                   />
@@ -7938,7 +7913,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <View style={{ flex: 1.2 }}>
                                     <Text
                                       style={{
-                                        color: esTerminado ? '#99f6e4' : '#fef08a',
+                                        color: esActivo
+                                          ? (esTerminado ? '#99f6e4' : '#fef08a')
+                                          : '#94a3b8',
                                         fontWeight: '700',
                                         fontSize: 9.5,
                                         textTransform: 'uppercase',
@@ -7951,8 +7928,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       numberOfLines={1}
                                       style={{
                                         fontSize: 11.5,
-                                        fontWeight: '700',
-                                        color: '#ffffff',
+                                        fontWeight: esActivo ? '700' : '600',
+                                        color: esActivo ? '#ffffff' : '#1e293b',
                                         marginTop: 2,
                                       }}
                                     >
@@ -7965,7 +7942,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   style={{
                                     paddingTop: 8,
                                     borderTopWidth: 1,
-                                    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderTopColor: esActivo
+                                      ? 'rgba(255, 255, 255, 0.2)'
+                                      : 'rgba(226, 232, 240, 0.7)',
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     justifyContent: 'space-between',
@@ -7973,7 +7952,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 >
                                   <Text
                                     style={{
-                                      color: esTerminado ? '#99f6e4' : '#fef08a',
+                                      color: esActivo
+                                        ? (esTerminado ? '#99f6e4' : '#fef08a')
+                                        : '#94a3b8',
                                       fontWeight: '700',
                                       fontSize: 9.5,
                                       textTransform: 'uppercase',
@@ -7986,8 +7967,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     numberOfLines={1}
                                     style={{
                                       fontSize: 10.5,
-                                      fontWeight: '600',
-                                      color: 'rgba(255, 255, 255, 0.95)',
+                                      fontWeight: esActivo ? '600' : '500',
+                                      color: esActivo ? 'rgba(255, 255, 255, 0.95)' : '#334155',
                                       flex: 1,
                                       textAlign: 'right',
                                       marginLeft: 8,
@@ -8435,147 +8416,154 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         </View>
 
-                        {/* Última Fila del Box: Botones de Acción uno junto al otro */}
-                        {(() => {
-                          const etapasCompActivo = casoActivo.etapas.filter((e) => e.estado === 'completed').length;
-                          const esTerminadoActivo =
-                            etapasCompActivo === casoActivo.etapas.length ||
-                            casoActivo.etapas.every((e) => e.estado === 'completed');
+                        {/* Última Fila del Box: Botones de Acción uno junto al otro con colores oscuros muted diferenciados */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 8,
+                            paddingTop: 2,
+                          }}
+                        >
+                          {/* 1. Consultar SECOP II: Azul Marino Oscuro Muted */}
+                          <Pressable
+                            onPress={() =>
+                              abrirConsultaSecopParaCandidato(
+                                casoActivo.servidor_nombre,
+                                casoActivo.servidor_cedula,
+                                casoActivo.id
+                              )
+                            }
+                            style={({ pressed }) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 6,
+                              backgroundColor: pressed ? '#152c48' : '#1e3a5f',
+                              paddingHorizontal: 13,
+                              paddingVertical: 7.5,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: 'rgba(255, 255, 255, 0.2)',
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.15,
+                              shadowRadius: 2,
+                              elevation: 2,
+                            })}
+                          >
+                            <Ionicons name="search" size={14} color="#93c5fd" />
+                            <Text
+                              style={{ color: '#ffffff', fontSize: 11.5, fontWeight: '700' }}
+                            >
+                              Consultar SECOP II
+                            </Text>
+                          </Pressable>
 
-                          // Paleta armonizada con el banner: Verde si terminado, Amarillo/Ámbar si en trámite
-                          const btnBg = esTerminadoActivo ? '#ecfdf5' : '#fffbeb';
-                          const btnBgHover = esTerminadoActivo ? '#d1fae5' : '#fef3c7';
-                          const btnBorde = esTerminadoActivo ? 'rgba(5, 150, 105, 0.3)' : '#fde68a';
-                          const btnTexto = esTerminadoActivo ? 'rgb(29, 85, 78)' : '#b45309';
-
-                          return (
-                            <View
-                              style={{
+                          {/* 2. Validación FT-318 IA: Verde Petróleo Oscuro Muted */}
+                          {casoActivo.tipo_proceso === 'VINCULACION' && (
+                            <Pressable
+                              onPress={() => router.push('/ingresos/nueva')}
+                              style={({ pressed }) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                flexWrap: 'wrap',
-                                gap: 8,
-                                paddingTop: 2,
+                                justifyContent: 'center',
+                                gap: 6,
+                                backgroundColor: pressed ? '#0d3834' : '#134e48',
+                                paddingHorizontal: 13,
+                                paddingVertical: 7.5,
+                                borderRadius: 8,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.15,
+                                shadowRadius: 2,
+                                elevation: 2,
+                              })}
+                            >
+                              <Ionicons name="sparkles" size={14} color="#5eead4" />
+                              <Text
+                                style={{
+                                  color: '#ffffff',
+                                  fontSize: 11.5,
+                                  fontWeight: '700',
+                                }}
+                              >
+                                Validación FT-318 IA
+                              </Text>
+                            </Pressable>
+                          )}
+
+                          {/* 3. Formatos Oficiales: Gris Pizarra / Grafito Oscuro Muted */}
+                          <Pressable
+                            onPress={() => setModalFormatosVisible(true)}
+                            style={({ pressed }) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 6,
+                              backgroundColor: pressed ? '#1e293b' : '#334155',
+                              paddingHorizontal: 13,
+                              paddingVertical: 7.5,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: 'rgba(255, 255, 255, 0.2)',
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.15,
+                              shadowRadius: 2,
+                              elevation: 2,
+                            })}
+                          >
+                            <Ionicons name="folder-open-outline" size={14} color="#cbd5e1" />
+                            <Text
+                              style={{
+                                color: '#ffffff',
+                                fontSize: 11.5,
+                                fontWeight: '700',
                               }}
                             >
-                              <Pressable
-                                onPress={() =>
-                                  abrirConsultaSecopParaCandidato(
-                                    casoActivo.servidor_nombre,
-                                    casoActivo.servidor_cedula,
-                                    casoActivo.id
-                                  )
-                                }
-                                style={({ pressed }) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: 6,
-                                  backgroundColor: pressed ? btnBgHover : btnBg,
-                                  paddingHorizontal: 13,
-                                  paddingVertical: 7.5,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: btnBorde,
-                                })}
+                              Formatos Oficiales
+                            </Text>
+                          </Pressable>
+
+                          {/* 4. Evaluación Retiro (Forms): Ciruela / Vino Oscuro Muted */}
+                          {casoActivo.tipo_proceso === 'DESVINCULACION' && (
+                            <Pressable
+                              onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                              style={({ pressed }) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                backgroundColor: pressed ? '#3b1d32' : '#4c1d3a',
+                                paddingHorizontal: 13,
+                                paddingVertical: 7.5,
+                                borderRadius: 8,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.15,
+                                shadowRadius: 2,
+                                elevation: 2,
+                              })}
+                            >
+                              <Ionicons name="clipboard-outline" size={14} color="#f472b6" />
+                              <Text
+                                style={{
+                                  color: '#ffffff',
+                                  fontSize: 11.5,
+                                  fontWeight: '700',
+                                }}
                               >
-                                <Ionicons name="search" size={14} color={btnTexto} />
-                                <Text
-                                  style={{ color: btnTexto, fontSize: 11.5, fontWeight: '700' }}
-                                >
-                                  Consultar SECOP II
-                                </Text>
-                              </Pressable>
-
-                              {casoActivo.tipo_proceso === 'VINCULACION' && (
-                                <Pressable
-                                  onPress={() => router.push('/ingresos/nueva')}
-                                  style={({ pressed }) => ({
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 6,
-                                    backgroundColor: pressed ? btnBgHover : btnBg,
-                                    paddingHorizontal: 13,
-                                    paddingVertical: 7.5,
-                                    borderRadius: 8,
-                                    borderWidth: 1,
-                                    borderColor: btnBorde,
-                                  })}
-                                >
-                                  <Ionicons name="sparkles" size={14} color={btnTexto} />
-                                  <Text
-                                    style={{
-                                      color: btnTexto,
-                                      fontSize: 11.5,
-                                      fontWeight: '700',
-                                    }}
-                                  >
-                                    Validación FT-318 IA
-                                  </Text>
-                                </Pressable>
-                              )}
-
-                              {/* Botón Formatos Oficiales del Proceso */}
-                              <Pressable
-                                onPress={() => setModalFormatosVisible(true)}
-                                style={({ pressed }) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: 6,
-                                  backgroundColor: pressed ? btnBgHover : btnBg,
-                                  paddingHorizontal: 13,
-                                  paddingVertical: 7.5,
-                                  borderRadius: 8,
-                                  borderWidth: 1,
-                                  borderColor: btnBorde,
-                                })}
-                              >
-                                <Ionicons name="folder-open-outline" size={14} color={btnTexto} />
-                                <Text
-                                  style={{
-                                    color: btnTexto,
-                                    fontSize: 11.5,
-                                    fontWeight: '700',
-                                  }}
-                                >
-                                  Formatos Oficiales
-                                </Text>
-                              </Pressable>
-
-                              {/* Enlace Directo a Evaluación de Retiro (Google Forms) si es Desvinculación */}
-                              {casoActivo.tipo_proceso === 'DESVINCULACION' && (
-                                <Pressable
-                                  onPress={handleAbrirEvaluacionRetiroGoogleForms}
-                                  style={({ pressed }) => ({
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 6,
-                                    backgroundColor: pressed ? btnBgHover : btnBg,
-                                    paddingHorizontal: 13,
-                                    paddingVertical: 7.5,
-                                    borderRadius: 8,
-                                    borderWidth: 1,
-                                    borderColor: btnBorde,
-                                  })}
-                                >
-                                  <Ionicons name="clipboard-outline" size={14} color={btnTexto} />
-                                  <Text
-                                    style={{
-                                      color: btnTexto,
-                                      fontSize: 11.5,
-                                      fontWeight: '700',
-                                    }}
-                                  >
-                                    📝 Evaluación Retiro (Forms)
-                                  </Text>
-                                </Pressable>
-                              )}
-                            </View>
-                          );
-                        })()}
+                                📝 Evaluación Retiro (Forms)
+                              </Text>
+                            </Pressable>
+                          )}
+                        </View>
                       </View>
 
                       {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
@@ -9179,10 +9167,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         <View
                                           key={req.id}
                                           style={{
-                                            backgroundColor: THEME.white,
+                                            backgroundColor: req.noAplica ? '#f8fafc' : THEME.white,
                                             borderRadius: 8,
                                             borderWidth: 1,
-                                            borderColor: req.cumplido ? THEME.emeraldRing : THEME.slate200,
+                                            borderColor: req.noAplica ? '#e2e8f0' : req.cumplido ? THEME.emeraldRing : THEME.slate200,
                                             padding: 10,
                                             gap: 8,
                                           }}
@@ -9195,9 +9183,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               style={{ marginTop: 2 }}
                                             >
                                               <Ionicons
-                                                name={req.cumplido ? 'checkbox' : 'square-outline'}
+                                                name={req.noAplica ? 'remove-circle-outline' : req.cumplido ? 'checkbox' : 'square-outline'}
                                                 size={20}
-                                                color={req.cumplido ? THEME.emeraldText : THEME.slate400}
+                                                color={req.noAplica ? '#94a3b8' : req.cumplido ? THEME.emeraldText : THEME.slate400}
                                               />
                                             </Pressable>
 
@@ -9205,15 +9193,35 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               <Pressable onPress={() => toggleRequisito(casoActivo.id, etapa.id, req.id)} style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                                                 <Text
                                                   style={{
-                                                    fontSize: 12.5,
-                                                    fontWeight: '600',
-                                                    color: req.cumplido ? THEME.slate500 : THEME.slate900,
-                                                    textDecorationLine: req.cumplido ? 'line-through' : 'none',
-                                                    lineHeight: 17,
+                                                    fontSize: 13.5,
+                                                    fontWeight: '700',
+                                                    color: req.noAplica ? THEME.slate600 : req.cumplido ? THEME.slate500 : THEME.slate900,
+                                                    textDecorationLine: req.noAplica ? 'none' : req.cumplido ? 'line-through' : 'none',
+                                                    lineHeight: 19,
                                                   }}
                                                 >
                                                   {req.label}
                                                 </Text>
+                                                {req.noAplica && (
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: '#f1f5f9',
+                                                      borderColor: '#cbd5e1',
+                                                      borderWidth: 1,
+                                                      paddingHorizontal: 7,
+                                                      paddingVertical: 2,
+                                                      borderRadius: 6,
+                                                      flexDirection: 'row',
+                                                      alignItems: 'center',
+                                                      gap: 4,
+                                                    }}
+                                                  >
+                                                    <Ionicons name="remove-circle" size={12} color="#64748b" />
+                                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569' }}>
+                                                      NO APLICA (USO DE LISTA)
+                                                    </Text>
+                                                  </View>
+                                                )}
                                                 {/* Resumen de activos junto al título si ya se consultó en SECOP II */}
                                                 {req.tipoAccionEspecial === 'SECOP' && casoActivo.resultadoSecop && (() => {
                                                   const sec = casoActivo.resultadoSecop;
@@ -9299,7 +9307,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       borderRadius: 4,
                                                     }}
                                                   >
-                                                    <Text style={{ fontSize: 9.5, fontWeight: '600', color: THEME.slate600 }}>
+                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
                                                       📄 {req.codigoFormato}
                                                     </Text>
                                                   </View>
@@ -9317,8 +9325,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       borderColor: THEME.slate200,
                                                     }}
                                                   >
-                                                    <Text style={{ fontSize: 9.5, fontWeight: '600', color: THEME.marca800 }}>
-                                                      ⚖️ {req.norma.length > 35 ? req.norma.substring(0, 35) + '...' : req.norma}
+                                                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>
+                                                      ⚖️ {req.norma}
                                                     </Text>
                                                   </View>
                                                 )}
@@ -9488,78 +9496,87 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     backgroundColor: estaReqDetalle ? THEME.marca50 : 'transparent',
                                                   }}
                                                 >
-                                                  <Text style={{ fontSize: 9.5, fontWeight: '600', color: THEME.marca700 }}>
-                                                    {estaReqDetalle ? '▲ Menos info' : '▼ Detalle y Norma'}
+                                                  <Ionicons name={estaReqDetalle ? 'chevron-up' : 'information-circle-outline'} size={13} color={THEME.marca700} />
+                                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca700 }}>
+                                                    {estaReqDetalle ? 'Ocultar info' : 'Más info y norma'}
                                                   </Text>
                                                 </Pressable>
 
-                                                                                                {/* Botón Rápido para Adjuntar / Ver Documentos de Soporte */}
-                                                <Pressable
-                                                  onPress={(e) => {
-                                                    e.stopPropagation();
-                                                    handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id);
-                                                  }}
-                                                  style={{
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 3,
-                                                    backgroundColor: (req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#ecfdf5' : '#f8fafc',
-                                                    paddingHorizontal: 7,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                    borderWidth: 1,
-                                                    borderColor: (req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#a7f3d0' : '#cbd5e1',
-                                                  }}
-                                                >
-                                                  <Ionicons
-                                                    name="attach"
-                                                    size={11}
-                                                    color={(req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#059669' : '#475569'}
-                                                  />
-                                                  <Text
-                                                    style={{
-                                                      fontSize: 9.5,
-                                                      fontWeight: '700',
-                                                      color: (req.documentosAdjuntos && req.documentosAdjuntos.length > 0) ? '#059669' : '#475569',
-                                                    }}
-                                                  >
-                                                    {(req.documentosAdjuntos && req.documentosAdjuntos.length > 0)
-                                                      ? `📎 ${req.documentosAdjuntos.length} soporte${req.documentosAdjuntos.length > 1 ? 's' : ''}`
-                                                      : '+ Adjuntar Soporte'}
-                                                  </Text>
-                                                </Pressable>
+                                                                                                </View>
 
-                                                {/* Botón de Modal para Observaciones y Cierre */}
-                                                <Pressable
-                                                  onPress={() => abrirModalObservacionReq(casoActivo.id, etapa, req, false)}
-                                                  style={{
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 3,
-                                                    backgroundColor: req.observaciones ? THEME.amberBg : THEME.slate100,
-                                                    paddingHorizontal: 7,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                    borderWidth: 1,
-                                                    borderColor: req.observaciones ? THEME.amberRing : THEME.slate300,
-                                                  }}
-                                                >
-                                                  <Ionicons
-                                                    name={req.observaciones ? 'chatbox-ellipses' : 'create-outline'}
-                                                    size={11}
-                                                    color={req.observaciones ? THEME.amberText : THEME.slate600}
-                                                  />
-                                                  <Text
-                                                    style={{
-                                                      fontSize: 9.5,
-                                                      fontWeight: '700',
-                                                      color: req.observaciones ? THEME.amberText : THEME.slate700,
-                                                    }}
-                                                  >
-                                                    {req.observaciones ? 'Ver Observación' : 'Observaciones'}
-                                                  </Text>
-                                                </Pressable>
-                                              </View>
+                                               {/* Visualización de los Anexos que se han agregado al requisito */}
+                                               {req.documentosAdjuntos && req.documentosAdjuntos.length > 0 && (
+                                                 <View
+                                                   style={{
+                                                     marginTop: 4,
+                                                     backgroundColor: '#f8fafc',
+                                                     borderRadius: 7,
+                                                     borderWidth: 1,
+                                                     borderColor: '#e2e8f0',
+                                                     padding: 8,
+                                                     gap: 6,
+                                                   }}
+                                                 >
+                                                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                     <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.slate700, textTransform: 'uppercase' }}>
+                                                       📎 Anexos del requisito ({req.documentosAdjuntos.length})
+                                                     </Text>
+                                                     <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                                       Clic para abrir documento
+                                                     </Text>
+                                                   </View>
+                                                   <View style={{ gap: 4 }}>
+                                                     {req.documentosAdjuntos.map((doc) => {
+                                                       const ext = (doc.nombre.split('.').pop() || '').toLowerCase();
+                                                       const esPdf = ext === 'pdf';
+                                                       const esExcel = ext === 'xls' || ext === 'xlsx';
+                                                       const esWord = ext === 'doc' || ext === 'docx';
+                                                       const colorIcono = esPdf ? '#dc2626' : esExcel ? '#16a34a' : esWord ? '#2563eb' : '#059669';
+
+                                                       return (
+                                                         <Pressable
+                                                           key={doc.id}
+                                                           onPress={(e) => {
+                                                             e.stopPropagation();
+                                                             handleAbrirArchivoAdjunto(doc);
+                                                           }}
+                                                           style={{
+                                                             backgroundColor: '#ffffff',
+                                                             borderRadius: 6,
+                                                             borderWidth: 1,
+                                                             borderColor: '#cbd5e1',
+                                                             paddingHorizontal: 9,
+                                                             paddingVertical: 5,
+                                                             flexDirection: 'row',
+                                                             alignItems: 'center',
+                                                             justifyContent: 'space-between',
+                                                             gap: 8,
+                                                           }}
+                                                         >
+                                                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 }}>
+                                                             <Ionicons
+                                                               name={esPdf ? 'document-text' : esExcel ? 'grid' : esWord ? 'document' : 'attach'}
+                                                               size={15}
+                                                               color={colorIcono}
+                                                             />
+                                                             <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate900, flex: 1 }} numberOfLines={1}>
+                                                               {doc.nombre}
+                                                             </Text>
+                                                           </View>
+                                                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                             {doc.size ? (
+                                                               <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                                                 {formatearTamanoArchivo(doc.size)}
+                                                               </Text>
+                                                             ) : null}
+                                                             <Ionicons name="open-outline" size={13} color={THEME.marca700} />
+                                                           </View>
+                                                         </Pressable>
+                                                       );
+                                                     })}
+                                                   </View>
+                                                 </View>
+                                               )}
 
                                               
                                               {/* RESUMEN EXPANSIBLE SECOP II: CUANDO YA FUE CONSULTADO */}
@@ -14308,27 +14325,67 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   />
                 </View>
 
-                {/* Checkbox selector de Cumplimiento */}
+                {/* Selector de NO APLICA */}
                 <Pressable
-                  onPress={() => setObsReqMarcarCumplido(!obsReqMarcarCumplido)}
+                  onPress={() => {
+                    const proxNoAplica = !obsReqNoAplica;
+                    setObsReqNoAplica(proxNoAplica);
+                    if (proxNoAplica) {
+                      setObsReqMarcarCumplido(true);
+                    }
+                  }}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 8,
-                    paddingVertical: 6,
+                    gap: 10,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderRadius: 8,
+                    backgroundColor: obsReqNoAplica ? '#F1F5F9' : THEME.slate50,
+                    borderWidth: 1,
+                    borderColor: obsReqNoAplica ? '#94A3B8' : THEME.slate200,
                   }}
                 >
                   <Ionicons
-                    name={obsReqMarcarCumplido ? 'checkbox' : 'square-outline'}
-                    size={20}
-                    color={obsReqMarcarCumplido ? THEME.emeraldText : THEME.slate400}
+                    name={obsReqNoAplica ? 'remove-circle' : 'ellipse-outline'}
+                    size={22}
+                    color={obsReqNoAplica ? '#475569' : THEME.slate400}
                   />
-                  <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }}>
-                    {obsReqMarcarCumplido
-                      ? 'Marcar requisito como CUMPLIDO al guardar'
-                      : 'Dejar requisito como PENDIENTE (solo registrar observación)'}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: obsReqNoAplica ? '#1E293B' : THEME.slate700 }}>
+                      {obsReqNoAplica ? 'Requisito marcado como NO APLICA' : 'Marcar requisito como NO APLICA'}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
+                      {obsReqNoAplica
+                        ? 'Este requisito no será exigido ni bloqueará la aprobación de la fase.'
+                        : 'Utilizar si el procedimiento o la causal eximen este trámite documental.'}
+                    </Text>
+                  </View>
                 </Pressable>
+
+                {/* Checkbox selector de Cumplimiento (visible si no es No Aplica) */}
+                {!obsReqNoAplica && (
+                  <Pressable
+                    onPress={() => setObsReqMarcarCumplido(!obsReqMarcarCumplido)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingVertical: 6,
+                    }}
+                  >
+                    <Ionicons
+                      name={obsReqMarcarCumplido ? 'checkbox' : 'square-outline'}
+                      size={20}
+                      color={obsReqMarcarCumplido ? THEME.emeraldText : THEME.slate400}
+                    />
+                    <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800 }}>
+                      {obsReqMarcarCumplido
+                        ? 'Marcar requisito como CUMPLIDO al guardar'
+                        : 'Dejar requisito como PENDIENTE (solo registrar observación)'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             </ScrollView>
 
@@ -14343,11 +14400,28 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 gap: 8,
+                flexWrap: 'wrap',
               }}
             >
-              {modalReqContext?.req.cumplido ? (
+              {modalReqContext?.req.noAplica ? (
                 <Pressable
-                  onPress={() => guardarObservacionRequisito(false)}
+                  onPress={() => guardarObservacionRequisito(false, false)}
+                  style={{
+                    backgroundColor: THEME.slate200,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: THEME.slate300,
+                  }}
+                >
+                  <Text style={{ color: THEME.slate800, fontSize: 11.5, fontWeight: '700' }}>
+                    Reactivar (Quitar No Aplica)
+                  </Text>
+                </Pressable>
+              ) : modalReqContext?.req.cumplido ? (
+                <Pressable
+                  onPress={() => guardarObservacionRequisito(false, false)}
                   style={{
                     backgroundColor: THEME.roseBg,
                     paddingHorizontal: 12,
@@ -14379,7 +14453,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 </Pressable>
               )}
 
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                {/* Botón directo de No Aplica en el footer */}
+                <Pressable
+                  onPress={() => guardarObservacionRequisito(true, !obsReqNoAplica)}
+                  style={{
+                    backgroundColor: obsReqNoAplica ? '#334155' : '#475569',
+                    paddingHorizontal: 13,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Ionicons
+                    name={obsReqNoAplica ? 'checkmark-circle-outline' : 'remove-circle-outline'}
+                    size={15}
+                    color={THEME.white}
+                  />
+                  <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
+                    {obsReqNoAplica ? 'Quitar No Aplica' : 'No Aplica'}
+                  </Text>
+                </Pressable>
+
                 <Pressable
                   onPress={() => guardarObservacionRequisito()}
                   style={{
@@ -15199,16 +15296,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     }}
                                   >
                                     <Ionicons
-                                      name={req.cumplido ? 'checkmark-circle' : 'ellipse-outline'}
+                                      name={req.noAplica ? 'remove-circle-outline' : req.cumplido ? 'checkmark-circle' : 'ellipse-outline'}
                                       size={14}
-                                      color={req.cumplido ? THEME.emerald600 : THEME.slate400}
+                                      color={req.noAplica ? '#94a3b8' : req.cumplido ? THEME.emerald600 : THEME.slate400}
                                       style={{ marginTop: 2 }}
                                     />
                                     <View style={{ flex: 1, gap: 2 }}>
                                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                        <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate800, flex: 1 }}>
+                                        <Text style={{ fontSize: 11.5, fontWeight: '600', color: req.noAplica ? THEME.slate500 : THEME.slate800, flex: 1 }}>
                                           {req.label}
                                         </Text>
+                                        {req.noAplica && (
+                                          <View
+                                            style={{
+                                              backgroundColor: '#f1f5f9',
+                                              paddingHorizontal: 5,
+                                              paddingVertical: 1.5,
+                                              borderRadius: 4,
+                                              borderWidth: 1,
+                                              borderColor: '#cbd5e1',
+                                            }}
+                                          >
+                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748b' }}>
+                                              NO APLICA (USO DE LISTA)
+                                            </Text>
+                                          </View>
+                                        )}
                                         {req.codigoFormato && (
                                           <View
                                             style={{

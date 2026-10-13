@@ -291,12 +291,13 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Requisito 1.1 (`vc1_1`)**: *Identificación de la vacante definitiva en la OPEC institucional*.  
   *⚖️ Norma*: Ley 909 de 2004, Art. 31 Num. 1 • Decreto 1083 de 2015, Art. 2.2.5.3.1.  
   *📁 Posibles Evidencias*: Ficha técnica de la OPEC institucional generada en SIMO; Certificado de vacancia definitiva expedido por Talento Humano; Manual específico de funciones del empleo correspondiente.
-* **Requisito 1.2 (`vc1_2`)**: *Consulta en Banco Nacional de Listas de Elegibles (BNLE SIMO 4.0)*.  
+* **Requisito 1.2 (`vc1_2`)**: *Consulta en Banco Nacional de Listas de Elegibles (BNLE SIMO 4.0) y estado de firmeza de la lista de elegibles*.  
   *⚖️ Norma*: Decreto Ley 760 de 2005 • Circular Conjunta CNSC 011 de 2021.  
   *📁 Posibles Evidencias*: Reporte oficial de consulta en SIMO 4.0 con el estado de firmeza de la lista; Captura de pantalla de la plataforma con fecha y hora de expedición; Constancia suscrita de verificación en el BNLE.
-* **Requisito 1.3 (`vc1_3`)**: *Constatación de funciones y perfil equivalente en la OPEC*.  
+* **Requisito 1.3 (`vc1_3`)**: *Constatación de funciones y perfil equivalente en la OPEC (No Aplica para Provisión Directa por Uso de Lista)*.  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.6.2 • Criterio Unificado CNSC.  
-  *📁 Posibles Evidencias*: Cuadro comparativo técnico entre el Manual de Funciones vigente y la OPEC del acuerdo de convocatoria del concurso de méritos.
+  *💡 Aplicabilidad*: **NO APLICA** para la provisión mediante lista de elegibles de la misma OPEC / concurso institucional, dado que las funciones y perfil ya fueron evaluados y adjudicados en mérito estricto. Solo opera excepcionalmente al solicitar listas generales de otras entidades para cargos equivalentes.  
+  *📁 Posibles Evidencias*: No aplica para uso directo de lista de elegibles de la OPEC institucional.
 
 ---
 
@@ -304,81 +305,73 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Requisito 2.1 (`vc2_1`)**: *Solicitud formal a la Dirección de Administración de Carrera CNSC*.  
   *⚖️ Norma*: Ley 909 de 2004, Art. 31 Num. 4.  
   *📁 Posibles Evidencias*: Oficio o comunicación oficial con radicado de salida institucional dirigido a la CNSC solicitando autorización de uso de lista en firme; Constancia de radicación en ventanilla única de la CNSC.
-* **Requisito 2.2 (`vc2_2`)**: *Recepción de lista de elegibles con orden de mérito estricto*.  
+* **Requisito 2.2 (`vc2_2`)**: *Recepción de lista de elegibles con orden de mérito estricto (Aplica en Uso por Primera Vez - No Aplica en Uso de Listas)*.  
   *⚖️ Norma*: Decreto Ley 760 de 2005, Art. 14 • Resolución CNSC en firme.  
-  *📁 Posibles Evidencias*: Resolución de la CNSC en firme que conforma y adopta la lista de elegibles; Certificado de ejecutoria expedido por la CNSC; Listado oficial de elegibles con puntajes y puestos.
-* **Requisito 2.3 (`vc2_3`)**: *Revisión de soportes de los 3 primeros elegibles por Comisión de Personal*.  
-  *⚖️ Norma*: Ley 909 de 2004, Art. 16 Lit. a • Decreto 1083 de 2015, Art. 2.2.6.21.  
-  *📁 Posibles Evidencias*: Acta oficial de sesión de la Comisión de Personal de la Secretaría Jurídica Distrital; Informe técnico de verificación de no configuración de causales de exclusión sobrevinientes; Certificaciones de antecedentes de los elegibles convocados.
+  *💡 Aplicabilidad*: **NO APLICA** para uso de listas en firme posteriores; aplica exclusivamente para la conformación y adopción inicial de la lista.  
+  *📁 Posibles Evidencias*: Resolución de la CNSC en firme que conforma y adopta la lista de elegibles; Certificado de ejecutoria expedido por la CNSC.
+* **Requisito 2.3 (`vc2_3`)**: *Revisión por Comisión de Personal y término preclusivo de exclusión (5 días) (Aplica en Uso por Primera Vez - No Aplica en Uso de Listas)*.  
+  *⚖️ Norma*: Ley 909 de 2004, Art. 16 Lit. a • Decreto Ley 760 de 2005, Art. 14 • Decreto 1083 de 2015, Art. 2.2.6.21.  
+  *💡 Aplicabilidad*: **NO APLICA** para trámites de uso de listas, dado que el término fatal de 5 días hábiles de la Comisión de Personal opera únicamente tras la publicación inicial de la lista y precluye con su firmeza.  
+  *📁 Posibles Evidencias*: Acta oficial de sesión de la Comisión de Personal de la Secretaría Jurídica Distrital; Informe técnico de verificación de no configuración de causales de exclusión sobrevinientes.
 
 ---
 
-### 🔹 Fase 3: Aviso a Encargados / Provisionales (`v_carr_3`)
+### 🔹 Fase 3: Acto de Nombramiento en Periodo de Prueba (`v_carr_4`)
 * **Requisito 3.1 (`vc3_1`)**: *Identificación de servidor en encargo preferente o provisional* (Formato `2311520-FT-018`).  
   *⚖️ Norma*: Ley 909 de 2004, Art. 24 • Ley 1960 de 2019, Art. 1.  
   *📁 Posibles Evidencias*: Ficha de caracterización del servidor que ocupa la plaza en provisionalidad o encargo; Formato 2311520-FT-018 diligenciado; Reporte de la situación administrativa del funcionario en PERNO/SIDEAP.
-* **Requisito 3.2 (`vc3_2`)**: *Memorando de comunicación sobre provisión por mérito de la plaza*.  
-  *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.3.4.  
-  *📁 Posibles Evidencias*: Memorando oficial con radicado formal notificando al servidor provisional o encargado sobre el nombramiento del elegible en periodo de prueba; Verificación de retén social o protección reforzada si aplica.
-* **Requisito 3.3 (`vc3_3`)**: *Fijación de fecha límite de entrega de funciones e inventarios*.  
-  *⚖️ Norma*: Circular Conjunta CNSC - DAFP 001 de 2020.  
-  *📁 Posibles Evidencias*: Cronograma de empalme suscrito por el jefe de la dependencia; Citación para entrega de archivos y bienes inventariados.
-
----
-
-### 🔹 Fase 4: Acto de Nombramiento en Periodo de Prueba (`v_carr_4`)
-* **Requisito 4.1 (`vc4_1`)**: *Elaboración de Resolución de Nombramiento en Periodo de Prueba* (Formato `2311520-FT-130`).  
+* **Requisito 3.2 (`vc4_1`)**: *Elaboración de Resolución de Nombramiento en Periodo de Prueba* (Formato `2311520-FT-130`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24.  
-  *📁 Posibles Evidencias*: Proyecto de resolución en formato FT-130 con visto bueno jurídico; Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva.
-* **Requisito 4.2 (`vc4_2`)**: *Firma por Secretario Jurídico Distrital y numeración oficial*.  
+  *📁 Posibles Evidencias*: Proyecto de resolución en formato FT-130 con visto bueno jurídico; Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva. Incluye la fijación de la entrega formal de cargo y bienes.
+* **Requisito 3.3 (`vc4_2`)**: *Firma por Secretario Jurídico Distrital y numeración oficial*.  
   *⚖️ Norma*: Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá.  
   *📁 Posibles Evidencias*: Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial.
-* **Requisito 4.3 (`vc4_3`)**: *Comunicación al candidato (10 días hábiles para manifestar aceptación)* (Formato `2311520-FT-019`).  
+* **Requisito 3.4 (`vc4_3`)**: *Comunicación al candidato (10 días hábiles para manifestar aceptación)* (Formato `2311520-FT-019`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.6.  
   *📁 Posibles Evidencias*: Oficio de notificación electrónica certificada en formato FT-019; Acuse de recibo del correo institucional; Memorial de aceptación expresa suscrito por el elegible dentro del término legal.
-* **Requisito 4.4 (`vc4_4`)**: *Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)*.  
+* **Requisito 3.5 (`vc4_4`)**: *Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)*.  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.7.  
   *📁 Posibles Evidencias*: Solicitud motivada del elegible con soportes de fuerza mayor o residencia en otra ciudad; Acto administrativo o comunicación formal del nominador autorizando la prórroga de posesión.
 
 ---
 
-### 🔹 Fase 5: Posesión, Exámenes & Verificación SECOP II (`v_carr_5`)
-* **Requisito 5.1 (`vc5_1`)**: *Examen médico ocupacional de ingreso con concepto de aptitud*.  
+### 🔹 Fase 4: Posesión, Exámenes & Verificación SECOP II (`v_carr_5`)
+* **Requisito 4.1 (`vc5_1`)**: *Examen médico ocupacional de ingreso con concepto de aptitud*.  
   *⚖️ Norma*: Resolución 2346 de 2007 • Decreto 1072 de 2015.  
   *📁 Posibles Evidencias*: Certificado de aptitud médica ocupacional emitido por la IPS de salud en el trabajo con concepto de apto.
-* **Requisito 5.2 (`vc5_secop`)**: *Consulta de contratos activos en SECOP II (Inhabilidades / Art. 128 C.P.)* (`SECOP`).  
+* **Requisito 4.2 (`vc5_secop`)**: *Consulta de contratos activos en SECOP II (Inhabilidades / Art. 128 C.P.)* (`SECOP`).  
   *⚖️ Norma*: Constitución Política, Art. 128 • Ley 80 de 1993, Art. 8 • Ley 1952 de 2019, Art. 38.  
   *📁 Posibles Evidencias*: Reporte en PDF de la consulta en la API de SECOP II de Datos Abiertos; Dictamen preventivo de cero contratos vigentes en ejecución; Captura de pantalla de la consulta en plataforma.
-* **Requisito 5.3 (`vc5_2`)**: *Declaración de Bienes y Rentas y Conflicto de Intereses en SIDEAP/SIGEP*.  
+* **Requisito 4.3 (`vc5_2`)**: *Declaración de Bienes y Rentas y Conflicto de Intereses en SIDEAP/SIGEP*.  
   *⚖️ Norma*: Ley 2013 de 2019, Arts. 2 y 3 • Decreto 830 de 2021.  
   *📁 Posibles Evidencias*: Certificado digital expedido por SIDEAP/SIGEP II con radicado de ingreso; Formulario de conflicto de intereses debidamente firmado electrónicamente.
-* **Requisito 5.4 (`vc5_3`)**: *Consulta de antecedentes (Policía, Procuraduría SIRI, Contraloría SIBOR, REDAM)*.  
+* **Requisito 4.4 (`vc5_3`)**: *Consulta de antecedentes (Policía, Procuraduría SIRI, Contraloría SIBOR, REDAM)*.  
   *⚖️ Norma*: Ley 1952 de 2019 • Ley 610 de 2000 • Ley 2097 de 2021, Art. 6.  
   *📁 Posibles Evidencias*: Certificados ordinarios de antecedentes expedidos en línea por Policía Nacional, Procuraduría, Contraloría, Personería y el certificado de no deudor alimentario del REDAM.
-* **Requisito 5.5 (`vc5_ft318`)**: *Certificado de Cumplimiento de Requisitos para Tomar Posesión (Formato Oficial 2311300-FT-318 en Excel)* (`INGRESOS_IA`).  
+* **Requisito 4.5 (`vc5_ft318`)**: *Certificado de Cumplimiento de Requisitos para Tomar Posesión (Formato Oficial 2311300-FT-318 en Excel)* (`INGRESOS_IA`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Acuerdo de Convocatoria CNSC.  
   *💡 Alcance*: Certificación formal en el archivo de Excel oficial 2311300-FT-318 generado desde el módulo de **Validación Técnica de Ingresos**, acreditando la verificación de requisitos de estudio y experiencia previa a tomar posesión en periodo de prueba.  
   *📁 Posibles Evidencias*: Archivo oficial 2311300-FT-318 en Excel descargado del módulo de Validación Técnica de Ingresos suscrito por Talento Humano; Dictamen técnico emitido con apoyo de IA.  
-* **Requisito 5.6 (`vc5_4`)**: *Suscripción formal del Acta de Posesión* (Formato `2311300-FT-127`).  
+* **Requisito 4.6 (`vc5_4`)**: *Suscripción formal del Acta de Posesión* (Formato `2311300-FT-127`).  
   *⚖️ Norma*: Constitución Política, Art. 122 • Decreto 1083 de 2015, Art. 2.2.5.1.8.  
   *📁 Posibles Evidencias*: Acta de Posesión original en formato 2311300-FT-127 con juramento constitucional, firmada por el servidor y el nominador.
 
 ---
 
-### 🔹 Fase 6: Nómina, Afiliaciones & Reporte CNSC (`v_carr_6`)
-* **Requisito 6.1 (`vc6_1`)**: *Afiliación a ARL, EPS, Fondo Pensiones, Cesantías y Caja Compensación*.  
+### 🔹 Fase 5: Nómina, Afiliaciones & Reporte CNSC (`v_carr_6`)
+* **Requisito 5.1 (`vc6_1`)**: *Afiliación a ARL, EPS, Fondo Pensiones, Cesantías y Caja Compensación*.  
   *⚖️ Norma*: Ley 100 de 1993 • Decreto 1295 de 1994.  
   *📁 Posibles Evidencias*: Formularios radicados ante Positiva ARL con fecha del día de posesión; Certificados de vinculación activa a EPS, AFP y Caja de Compensación (Compensar).
-* **Requisito 6.2 (`vc6_2`)**: *Inclusión en nómina institucional (Sistema PERNO)*.  
+* **Requisito 5.2 (`vc6_2`)**: *Inclusión en nómina institucional (Sistema PERNO)*.  
   *⚖️ Norma*: Decreto Distrital 101 de 2004.  
   *📁 Posibles Evidencias*: Reporte de novedades de alta en el sistema de nómina distrital PERNO; Certificación bancaria del servidor.
-* **Requisito 6.3 (`vc6_3`)**: *Activación del servidor en aplicativo SIDEAP Distrital*.  
+* **Requisito 5.3 (`vc6_3`)**: *Activación del servidor en aplicativo SIDEAP Distrital*.  
   *⚖️ Norma*: Decreto Distrital 083 de 2001 • Directiva Distrital 001 de 2018.  
   *📁 Posibles Evidencias*: Ficha de servicio activo generada en SIDEAP; Carné institucional digital activado.
-* **Requisito 6.4 (`vc6_4`)**: *Reporte de posesión en aplicativo BNLE SIMO 4.0 ante la CNSC*.  
+* **Requisito 5.4 (`vc6_4`)**: *Reporte de posesión en aplicativo BNLE SIMO 4.0 ante la CNSC*.  
   *⚖️ Norma*: Circular CNSC 011 de 2021, Num. 6 • Ley 909 de 2004, Art. 31.  
   *📁 Posibles Evidencias*: Comprobante de cargue del acta de posesión y resolución en SIMO 4.0; Constancia de retiro de la posición del BNLE emitida por la plataforma de la CNSC.
-* **Requisito 6.5 (`vc6_5`)**: *Inducción y concertación de compromisos periodo de prueba* (Formato `2311300-FT-106`).  
+* **Requisito 5.5 (`vc6_5`)**: *Inducción y concertación de compromisos periodo de prueba* (Formato `2311300-FT-106`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.6.25 • Acuerdo CNSC EDL.  
   *📁 Posibles Evidencias*: Acta de inducción institucional en formato FT-106; Formato oficial de concertación de compromisos funcionales y comportamentales del periodo de prueba en el aplicativo EDL de la CNSC.
 
