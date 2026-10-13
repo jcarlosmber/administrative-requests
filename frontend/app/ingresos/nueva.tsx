@@ -36,6 +36,7 @@ function NuevaValidacionScreen() {
     perno?: string;
     idPlaza?: string;
     mesesExigidos?: string;
+    tipoExperiencia?: string;
     formacionExigida?: string;
     modalidad?: string;
   }>();
@@ -70,6 +71,9 @@ function NuevaValidacionScreen() {
     params.dependencia ? String(params.dependencia) : 'Dirección Distrital de Doctrina y Asuntos Normativos'
   );
   const [mesesExigidos, setMesesExigidos] = useState(params.mesesExigidos ? String(params.mesesExigidos) : '54');
+  const [tipoExperienciaRequerida, setTipoExperienciaRequerida] = useState<'LABORAL' | 'RELACIONADA' | 'PROFESIONAL' | 'PROFESIONAL_RELACIONADA'>(
+    (params.tipoExperiencia as any) || 'PROFESIONAL_RELACIONADA'
+  );
   const [formacionExigida, setFormacionExigida] = useState(
     params.formacionExigida
       ? String(params.formacionExigida)
@@ -285,6 +289,9 @@ function NuevaValidacionScreen() {
           setGradoCargo(expediente.cargo_evaluado.grado || '');
           setDependenciaCargo(expediente.cargo_evaluado.dependencia || '');
           setMesesExigidos(String(expediente.cargo_evaluado.requisito_experiencia_meses || 0));
+          if (expediente.cargo_evaluado.tipo_experiencia_requerida || expediente.consolidado?.tipo_experiencia_requerida) {
+            setTipoExperienciaRequerida((expediente.cargo_evaluado.tipo_experiencia_requerida || expediente.consolidado?.tipo_experiencia_requerida) as any);
+          }
           if (expediente.cargo_evaluado.requisitos_formacion) {
             setFormacionExigida(expediente.cargo_evaluado.requisitos_formacion);
           }
@@ -497,6 +504,34 @@ function NuevaValidacionScreen() {
       if (matchMeses && matchMeses[1]) {
         setMesesExigidos(matchMeses[1]);
       }
+    }
+
+    // Detección automática del tipo de experiencia según naturaleza del cargo, nivel y requisitos:
+    const cargoLower = (p.cargo || '').toLowerCase();
+    const reqLower = (p.requisitos || '').toLowerCase();
+    const nivelLower = (p.nivel || '').toLowerCase();
+
+    if (
+      cargoLower.includes('conductor') ||
+      cargoLower.includes('operario') ||
+      cargoLower.includes('servicios generales') ||
+      cargoLower.includes('auxiliar') ||
+      nivelLower.includes('asistencial') ||
+      (reqLower.includes('experiencia laboral') && !reqLower.includes('relacionada') && !reqLower.includes('profesional'))
+    ) {
+      setTipoExperienciaRequerida('LABORAL');
+    } else if (
+      cargoLower.includes('tecnico') ||
+      nivelLower.includes('tecnico') ||
+      (reqLower.includes('experiencia relacionada') && !reqLower.includes('profesional'))
+    ) {
+      setTipoExperienciaRequerida('RELACIONADA');
+    } else if (
+      reqLower.includes('experiencia profesional') && !reqLower.includes('relacionada')
+    ) {
+      setTipoExperienciaRequerida('PROFESIONAL');
+    } else {
+      setTipoExperienciaRequerida('PROFESIONAL_RELACIONADA');
     }
   };
 
@@ -809,6 +844,7 @@ function NuevaValidacionScreen() {
         grado: gradoCargo,
         dependencia: dependenciaCargo,
         requisito_experiencia_meses: parseFloat(mesesExigidos) || 54,
+        tipo_experiencia_requerida: tipoExperienciaRequerida,
         requisitos_formacion: formacionExigida,
         funciones_cargo: funcionesArray
       };
@@ -849,6 +885,7 @@ function NuevaValidacionScreen() {
         },
         cargo_evaluado: {
           ...resultado.cargo_evaluado,
+          tipo_experiencia_requerida: tipoExperienciaRequerida,
           id_sideap: idSideap ? parseInt(String(idSideap), 10) : resultado.cargo_evaluado?.id_sideap,
           id_perno: idPerno ? parseInt(String(idPerno), 10) : resultado.cargo_evaluado?.id_perno,
           id_plaza: idPlaza ?? resultado.cargo_evaluado?.id_plaza,
@@ -886,6 +923,7 @@ function NuevaValidacionScreen() {
         },
         cargo_evaluado: {
           ...analisisResultado.cargo_evaluado,
+          tipo_experiencia_requerida: tipoExperienciaRequerida,
           id_sideap: idSideap ? parseInt(String(idSideap), 10) : analisisResultado.cargo_evaluado?.id_sideap,
           id_perno: idPerno ? parseInt(String(idPerno), 10) : analisisResultado.cargo_evaluado?.id_perno,
           id_plaza: idPlaza ?? analisisResultado.cargo_evaluado?.id_plaza,
@@ -1236,7 +1274,12 @@ function NuevaValidacionScreen() {
       const nuevosCerts = actual.filter((_, idx) => idx !== itemAEliminar.idx);
       try {
         const reqMeses = Number(mesesExigidos) || analisisResultado.consolidado.requisito_minimo_meses || 0;
-        const recalc = await ingresosService.recalcularTiempos(nuevosCerts, reqMeses);
+        const recalc = await ingresosService.recalcularTiempos(
+          nuevosCerts,
+          reqMeses,
+          analisisResultado.formacion_academica,
+          tipoExperienciaRequerida
+        );
         setAnalisisResultado({
           ...analisisResultado,
           certificados: recalc.certificados || nuevosCerts,
@@ -1993,6 +2036,277 @@ function NuevaValidacionScreen() {
                 </View>
               </View>
 
+              {/* Tipo de Experiencia Requerida (Laboral vs Relacionada vs Profesional) */}
+              <View
+                style={{
+                  marginBottom: 16,
+                  padding: 14,
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  gap: 10
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="briefcase-outline" size={17} color="#0D2A48" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                      Naturaleza de la Experiencia Requerida *
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                      backgroundColor:
+                        tipoExperienciaRequerida === 'LABORAL'
+                          ? '#FEF3C7'
+                          : tipoExperienciaRequerida === 'RELACIONADA'
+                          ? '#E0E7FF'
+                          : tipoExperienciaRequerida === 'PROFESIONAL'
+                          ? '#E0F2FE'
+                          : '#DCFCE7',
+                      borderWidth: 1,
+                      borderColor:
+                        tipoExperienciaRequerida === 'LABORAL'
+                          ? '#F59E0B'
+                          : tipoExperienciaRequerida === 'RELACIONADA'
+                          ? '#6366F1'
+                          : tipoExperienciaRequerida === 'PROFESIONAL'
+                          ? '#0284C7'
+                          : '#22C55E'
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color:
+                          tipoExperienciaRequerida === 'LABORAL'
+                            ? '#B45309'
+                            : tipoExperienciaRequerida === 'RELACIONADA'
+                            ? '#4338CA'
+                            : tipoExperienciaRequerida === 'PROFESIONAL'
+                            ? '#0369A1'
+                            : '#15803D'
+                      }}
+                    >
+                      {tipoExperienciaRequerida === 'LABORAL'
+                        ? '🚗 EXP. LABORAL GENERAL (CONDUCTORES / ASISTENCIAL)'
+                        : tipoExperienciaRequerida === 'RELACIONADA'
+                        ? '📑 EXP. RELACIONADA (FUNCIONES AFINES)'
+                        : tipoExperienciaRequerida === 'PROFESIONAL'
+                        ? '🏛️ EXP. PROFESIONAL GENERAL'
+                        : '🎓 EXP. PROFESIONAL RELACIONADA'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Botones Selectores */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setTipoExperienciaRequerida('LABORAL')}
+                    style={{
+                      flex: 1,
+                      minWidth: 160,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: tipoExperienciaRequerida === 'LABORAL' ? '#D97706' : '#CBD5E1',
+                      backgroundColor: tipoExperienciaRequerida === 'LABORAL' ? '#FFFBEB' : '#FFFFFF',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons
+                      name={tipoExperienciaRequerida === 'LABORAL' ? 'radio-button-on' : 'radio-button-off'}
+                      size={17}
+                      color={tipoExperienciaRequerida === 'LABORAL' ? '#D97706' : '#94A3B8'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: tipoExperienciaRequerida === 'LABORAL' ? '#B45309' : '#334155'
+                        }}
+                      >
+                        Laboral
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: '#64748B', marginTop: 1 }}>
+                        Conductores / Asistencial (cualquier empleo u oficio)
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setTipoExperienciaRequerida('RELACIONADA')}
+                    style={{
+                      flex: 1,
+                      minWidth: 160,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: tipoExperienciaRequerida === 'RELACIONADA' ? '#4F46E5' : '#CBD5E1',
+                      backgroundColor: tipoExperienciaRequerida === 'RELACIONADA' ? '#EEF2FF' : '#FFFFFF',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons
+                      name={tipoExperienciaRequerida === 'RELACIONADA' ? 'radio-button-on' : 'radio-button-off'}
+                      size={17}
+                      color={tipoExperienciaRequerida === 'RELACIONADA' ? '#4F46E5' : '#94A3B8'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: tipoExperienciaRequerida === 'RELACIONADA' ? '#3730A3' : '#334155'
+                        }}
+                      >
+                        Relacionada
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: '#64748B', marginTop: 1 }}>
+                        Funciones afines (sin requerir título profesional)
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setTipoExperienciaRequerida('PROFESIONAL_RELACIONADA')}
+                    style={{
+                      flex: 1,
+                      minWidth: 175,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: tipoExperienciaRequerida === 'PROFESIONAL_RELACIONADA' ? '#16A34A' : '#CBD5E1',
+                      backgroundColor: tipoExperienciaRequerida === 'PROFESIONAL_RELACIONADA' ? '#F0FDF4' : '#FFFFFF',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons
+                      name={tipoExperienciaRequerida === 'PROFESIONAL_RELACIONADA' ? 'radio-button-on' : 'radio-button-off'}
+                      size={17}
+                      color={tipoExperienciaRequerida === 'PROFESIONAL_RELACIONADA' ? '#16A34A' : '#94A3B8'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: tipoExperienciaRequerida === 'PROFESIONAL_RELACIONADA' ? '#15803D' : '#334155'
+                        }}
+                      >
+                        Profesional Relacionada
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: '#64748B', marginTop: 1 }}>
+                        Título profesional y funciones afines al empleo
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => setTipoExperienciaRequerida('PROFESIONAL')}
+                    style={{
+                      flex: 1,
+                      minWidth: 155,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: tipoExperienciaRequerida === 'PROFESIONAL' ? '#0284C7' : '#CBD5E1',
+                      backgroundColor: tipoExperienciaRequerida === 'PROFESIONAL' ? '#F0F9FF' : '#FFFFFF',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8
+                    }}
+                  >
+                    <Ionicons
+                      name={tipoExperienciaRequerida === 'PROFESIONAL' ? 'radio-button-on' : 'radio-button-off'}
+                      size={17}
+                      color={tipoExperienciaRequerida === 'PROFESIONAL' ? '#0284C7' : '#94A3B8'}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: tipoExperienciaRequerida === 'PROFESIONAL' ? '#0369A1' : '#334155'
+                        }}
+                      >
+                        Profesional General
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: '#64748B', marginTop: 1 }}>
+                        Título profesional en cualquier disciplina
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Explicación jurídica de la validación */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    backgroundColor:
+                      tipoExperienciaRequerida === 'LABORAL'
+                        ? '#FEF3C7'
+                        : tipoExperienciaRequerida === 'RELACIONADA'
+                        ? '#EEF2FF'
+                        : '#ECFDF5',
+                    padding: 10,
+                    borderRadius: 6
+                  }}
+                >
+                  <Ionicons
+                    name="information-circle"
+                    size={17}
+                    color={
+                      tipoExperienciaRequerida === 'LABORAL'
+                        ? '#D97706'
+                        : tipoExperienciaRequerida === 'RELACIONADA'
+                        ? '#4F46E5'
+                        : '#059669'
+                    }
+                    style={{ marginTop: 1 }}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color:
+                        tipoExperienciaRequerida === 'LABORAL'
+                          ? '#92400E'
+                          : tipoExperienciaRequerida === 'RELACIONADA'
+                          ? '#3730A3'
+                          : '#065F46',
+                      lineHeight: 17,
+                      flex: 1
+                    }}
+                  >
+                    {tipoExperienciaRequerida === 'LABORAL'
+                      ? 'Criterio Normativo (Decreto 1083 de 2015 Art. 2.2.2.3.7): Para cargos de Conductor, Operario, Servicios Generales o Auxiliar donde no se exige experiencia relacionada, computa cualquier empleo, ocupación, arte u oficio debidamente acreditado. No se exige afinidad de funciones con el empleo ni corte de grado universitario.'
+                      : tipoExperienciaRequerida === 'RELACIONADA'
+                      ? 'Criterio Normativo (Decreto 1083 de 2015): Computan aquellas actividades o empleos que tengan funciones afines a las del cargo a proveer. No exige corte de grado profesional universitario.'
+                      : tipoExperienciaRequerida === 'PROFESIONAL'
+                      ? 'Criterio Normativo (Decreto 1083 de 2015): Se computa la experiencia adquirida con posterioridad a la obtención del título profesional universitario en cualquier área.'
+                      : 'Criterio Normativo (Decreto 1083 de 2015): Exige tanto posterioridad al título profesional universitario (o terminación de materias) como afinidad funcional directa con el manual del empleo.'}
+                  </Text>
+                </View>
+              </View>
+
               {/* Nombre del Cargo */}
               <View style={{ marginBottom: 14 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>
@@ -2402,9 +2716,13 @@ function NuevaValidacionScreen() {
                   </Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 150, backgroundColor: '#F1F5F9', padding: 14, borderRadius: 8 }}>
-                  <Text style={{ fontSize: 12, color: '#64748B' }}>Exp. Relacionada Neta</Text>
+                  <Text style={{ fontSize: 12, color: '#64748B' }}>
+                    {tipoExperienciaRequerida === 'LABORAL' ? 'Exp. Laboral Neta' : 'Exp. Relacionada Neta'}
+                  </Text>
                   <Text style={{ fontSize: 20, fontWeight: '800', color: '#16A34A' }}>
-                    {analisisResultado.consolidado.experiencia_relacionada_meses} meses
+                    {tipoExperienciaRequerida === 'LABORAL'
+                      ? (analisisResultado.consolidado.experiencia_laboral_meses ?? analisisResultado.consolidado.meses_computables ?? analisisResultado.consolidado.experiencia_relacionada_meses)
+                      : analisisResultado.consolidado.experiencia_relacionada_meses} meses
                   </Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 150, backgroundColor: '#F1F5F9', padding: 14, borderRadius: 8 }}>

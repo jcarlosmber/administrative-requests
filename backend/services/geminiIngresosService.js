@@ -357,9 +357,14 @@ async function analizarDocumentosConGemini(pdfFiles, cargoData, candidatoData = 
   const promptUser = `
 DATOS DEL CARGO A EVALUAR:
 - Nombre: ${cargoData.nombre || 'Profesional Especializado'}
-- Código: ${cargoData.codigo || '222'} | Grado: ${cargoData.grado || '24'}
-- Dependencia: ${cargoData.dependencia || 'No especificada'}
-- Requisito mínimo de experiencia: ${cargoData.requisito_experiencia_meses || 54} meses de experiencia profesional relacionada.
+- Requisito mínimo de experiencia: ${cargoData.requisito_experiencia_meses || 54} meses de experiencia de tipo: ${cargoData.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'}.
+INSTRUCCIÓN SEGÚN TIPO DE EXPERIENCIA:
+${(cargoData.tipo_experiencia_requerida === 'LABORAL')
+  ? '¡ATENCIÓN! Para este cargo (ej. Conductor, Operario, Auxiliar, Asistencial) la experiencia exigida es LABORAL GENERAL (cualquier empleo, ocupación, arte u oficio legal). NO se requiere afinidad funcional ni título universitario previo para computar el tiempo. En "clasificacion_experiencia" clasifica como RELACIONADA o LABORAL_VALIDA si es una relación laboral válida, sin exigir funciones directas de abogado/profesional.'
+  : (cargoData.tipo_experiencia_requerida === 'RELACIONADA')
+  ? 'Para este cargo la experiencia exigida es RELACIONADA (funciones afines al empleo a proveer). No exige corte de grado profesional universitario si no es del nivel profesional.'
+  : 'Para este cargo la experiencia exigida es ' + (cargoData.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA') + ' (evaluar fechas y funciones afines al manual del cargo).'
+}
 - Requisitos de formación: ${cargoData.requisitos_formacion || 'Título profesional y posgrado afín.'}
 - Manual de Funciones del Cargo:
 ${JSON.stringify(cargoData.funciones_cargo || [], null, 2)}
@@ -852,7 +857,8 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
   const auditResult = timeCalculatorService.auditCertificatesAndCalculateTotals(
     parsedJson.certificados || [],
     cargoData.requisito_experiencia_meses || 54,
-    formacionAcademica
+    formacionAcademica,
+    cargoData.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'
   );
 
   // Deduplicación y saneamiento estricto: NUNCA permitir que certificados de experiencia

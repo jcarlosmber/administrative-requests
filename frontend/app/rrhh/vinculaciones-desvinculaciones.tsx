@@ -6423,6 +6423,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     if (plaza?.id_plaza) queryParams.idPlaza = String(plaza.id_plaza);
     if (plaza?.requisitos) queryParams.formacionExigida = String(plaza.requisitos);
 
+    const cargoNombre = (casoRef.cargo || plaza?.cargo || '').toLowerCase();
+    const reqText = (plaza?.requisitos || '').toLowerCase();
+    const nivelText = (plaza?.nivel || '').toLowerCase();
+    if (
+      cargoNombre.includes('conductor') ||
+      cargoNombre.includes('operario') ||
+      cargoNombre.includes('servicios generales') ||
+      cargoNombre.includes('auxiliar') ||
+      nivelText.includes('asistencial') ||
+      (reqText.includes('experiencia laboral') && !reqText.includes('relacionada') && !reqText.includes('profesional'))
+    ) {
+      queryParams.tipoExperiencia = 'LABORAL';
+    } else if (
+      cargoNombre.includes('tecnico') ||
+      nivelText.includes('tecnico') ||
+      (reqText.includes('experiencia relacionada') && !reqText.includes('profesional'))
+    ) {
+      queryParams.tipoExperiencia = 'RELACIONADA';
+    }
+
     router.push({
       pathname: '/ingresos/nueva',
       params: queryParams,

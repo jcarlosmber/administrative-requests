@@ -195,16 +195,29 @@ function obtenerFechaCorteProfesional(formacionAcademica) {
  * Audita traslapes entre todos los certificados y recalcula tiempos matemáticos
  * aplicando la regla del Decreto 1083 de 2015, Ley 2039 de 2020 y Decreto 952 de 2021.
  */
-function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses = 54, formacionAcademica = []) {
+function auditCertificatesAndCalculateTotals(
+  certificados,
+  requisitoMinimoMeses = 54,
+  formacionAcademica = [],
+  tipoExperienciaRequerida = 'PROFESIONAL_RELACIONADA'
+) {
   const processedCerts = [];
   const intervalsRelacionados = [];
+  const intervalsLaborales = [];
   let sumaBrutaMesesRelacionados = 0;
+  let sumaBrutaMesesLaborales = 0;
   let sumaMesesNoRelacionados = 0;
   let requiereRevisionGlobal = false;
   const razonesRevision = [];
 
-  // Obtener fecha de corte profesional
-  const infoCorte = obtenerFechaCorteProfesional(formacionAcademica);
+  const modoExp = String(tipoExperienciaRequerida || 'PROFESIONAL_RELACIONADA').toUpperCase().trim();
+  const esLaboralPura = modoExp === 'LABORAL';
+  const esRelacionadaSimple = modoExp === 'RELACIONADA';
+  const esProfesionalSimple = modoExp === 'PROFESIONAL';
+  const esProfesionalRelacionada = modoExp === 'PROFESIONAL_RELACIONADA';
+
+  // Obtener fecha de corte profesional (SOLO si el cargo exige título universitario)
+  const infoCorte = (esLaboralPura || esRelacionadaSimple) ? null : obtenerFechaCorteProfesional(formacionAcademica);
 
   // Paso 1: Parsear fechas, auditar corte profesional y calcular periodos individuales
   const usedCertIds = new Set();
@@ -353,6 +366,15 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
       fecha_inicio_computable: formatDate(fechaInicioEfectiva)
     };
 
+    // Siempre registramos el intervalo laboral general para auditoría completa y cargos asistenciales/conductores
+    intervalsLaborales.push({
+      certId,
+      start: startDate,
+      end: endDate,
+      meses: calc.meses_totales
+    });
+    sumaBrutaMesesLaborales += calc.meses_totales;
+
     // Calcular meses válidos y sumatorias
     if (decisionComputo === 'NO_COMPUTABLE_PREVIA_AL_GRADO') {
       sumaMesesNoRelacionados += calc.meses_totales;
@@ -390,7 +412,7 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
       razonesRevision.push(`Certificado ${certId}: Documento con firma no visible o ilegible.`);
     }
 
-    if (cert.experiencia_relacionada?.resultado === 'REQUIERE_REVISION') {
+    if (!esLaboralPura && cert.experiencia_relacionada?.resultado === 'REQUIERE_REVISION') {
       requiereRevisionGlobal = true;
       razonesRevision.push(`Certificado ${certId}: La clasificación funcional requiere revisión humana.`);
     }
@@ -445,20 +467,41 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
   }
 
   // Paso 3: Consolidación sin duplicar días (Interval Merging matemático)
-  const mergedIntervals = mergeIntervals(intervalsRelacionados.map(item => ({
+  // 3.1 Intervalos de experiencia relacionada
+  const mergedIntervalsRel = mergeIntervals(intervalsRelacionados.map(item => ({
     start: new Date(item.start.getTime()),
     end: new Date(item.end.getTime())
   })));
 
   let mesesNetosRelacionados = 0;
-  for (const interval of mergedIntervals) {
+  for (const interval of mergedIntervalsRel) {
     const p = calculatePeriod(interval.start, interval.end);
     mesesNetosRelacionados += p.meses_totales;
   }
   mesesNetosRelacionados = Number(mesesNetosRelacionados.toFixed(2));
 
-  const tiempoExcluidoPorTraslapes = Number(Math.max(0, sumaBrutaMesesRelacionados - mesesNetosRelacionados).toFixed(2));
-  const diferenciaMeses = Number((mesesNetosRelacionados - requisitoMinimoMeses).toFixed(2));
+  // 3.2 Intervalos de experiencia laboral completa (para conductores, operarios y asistenciales)
+  const mergedIntervalsLab = mergeIntervals(intervalsLaborales.map(item => ({
+    start: new Date(item.start.getTime()),
+    end: new Date(item.end.getTime())
+  })));
+
+  let mesesNetosLaborales = 0;
+  for (const interval of mergedIntervalsLab) {
+    const p = calculatePeriod(interval.start, interval.end);
+    mesesNetosLaborales += p.meses_totales;
+  }
+  mesesNetosLaborales = Number(mesesNetosLaborales.toFixed(2));
+
+  // Determinar meses computables según la exigencia del cargo
+  const mesesNetosComputables = esLaboralPura ? mesesNetosLaborales : mesesNetosRelacionados;
+  const sumaBrutaComputable = esLaboralPura ? sumaBrutaMesesLaborales : sumaBrutaMesesRelacionados;
+  const tiempoExcluidoPorTraslapes = Number(Math.max(0, sumaBrutaComputable - mesesNetosComputables).toFixed(2));
+  const diferenciaMeses = Number((mesesNetosComputables - requisitoMinimoMeses).toFixed(2));
+
+  const etiquetaTipo = esLaboralPura
+    ? 'experiencia laboral'
+    : (esRelacionadaSimple ? 'experiencia relacionada' : 'experiencia profesional relacionada');
 
   let resultadoFinal = 'REQUIERE_REVISION';
   let justificacion = '';
@@ -466,12 +509,16 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
   if (requiereRevisionGlobal) {
     resultadoFinal = 'REQUIERE_REVISION';
     justificacion = `El expediente requiere revisión humana debido a: ${razonesRevision.join('; ')}`;
-  } else if (mesesNetosRelacionados >= requisitoMinimoMeses) {
+  } else if (mesesNetosComputables >= requisitoMinimoMeses) {
     resultadoFinal = 'CUMPLE';
-    justificacion = `Acredita ${mesesNetosRelacionados} meses de experiencia profesional relacionada neta (superando los ${requisitoMinimoMeses} meses exigidos por una diferencia de +${diferenciaMeses} meses). Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.`;
+    justificacion = esLaboralPura
+      ? `Acredita ${mesesNetosComputables} meses de experiencia laboral neta (superando los ${requisitoMinimoMeses} meses exigidos para el cargo por una diferencia de +${diferenciaMeses} meses). Por la naturaleza del empleo (ej. Conductor / Nivel Asistencial), no se exige que sea relacionada ni corte de título profesional. Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.`
+      : `Acredita ${mesesNetosComputables} meses de ${etiquetaTipo} neta (superando los ${requisitoMinimoMeses} meses exigidos por una diferencia de +${diferenciaMeses} meses). Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.`;
   } else {
     resultadoFinal = 'NO_CUMPLE';
-    justificacion = `No acredita el tiempo requerido. Presenta ${mesesNetosRelacionados} meses de experiencia profesional relacionada neta frente a ${requisitoMinimoMeses} meses exigidos (faltan ${Math.abs(diferenciaMeses)} meses).`;
+    justificacion = esLaboralPura
+      ? `No acredita el tiempo requerido. Presenta ${mesesNetosComputables} meses de experiencia laboral neta frente a ${requisitoMinimoMeses} meses exigidos (faltan ${Math.abs(diferenciaMeses)} meses).`
+      : `No acredita el tiempo requerido. Presenta ${mesesNetosComputables} meses de ${etiquetaTipo} neta frente a ${requisitoMinimoMeses} meses exigidos (faltan ${Math.abs(diferenciaMeses)} meses).`;
   }
 
   // Limpiar propiedades temporales de Date
@@ -483,14 +530,17 @@ function auditCertificatesAndCalculateTotals(certificados, requisitoMinimoMeses 
   return {
     certificados: processedCerts,
     consolidado: {
+      tipo_experiencia_requerida: modoExp,
+      meses_computables: mesesNetosComputables,
+      experiencia_laboral_meses: mesesNetosLaborales,
       experiencia_relacionada_meses: mesesNetosRelacionados,
-      experiencia_no_relacionada_meses: Number(sumaMesesNoRelacionados.toFixed(2)),
+      experiencia_no_relacionada_meses: esLaboralPura ? 0 : Number(sumaMesesNoRelacionados.toFixed(2)),
       tiempo_excluido_por_traslapes_meses: tiempoExcluidoPorTraslapes,
       requisito_minimo_meses: requisitoMinimoMeses,
       diferencia_meses: diferenciaMeses,
       resultado_final: resultadoFinal,
       justificacion: justificacion,
-      faltantes: diferenciaMeses < 0 ? [`Faltan ${Math.abs(diferenciaMeses)} meses de experiencia profesional relacionada.`] : [],
+      faltantes: diferenciaMeses < 0 ? [`Faltan ${Math.abs(diferenciaMeses)} meses de ${etiquetaTipo}.`] : [],
       requiere_revision_humana: requiereRevisionGlobal
     }
   };

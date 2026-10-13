@@ -10,6 +10,7 @@ export interface CargoEvaluado {
   grado?: string;
   dependencia?: string;
   requisito_experiencia_meses: number;
+  tipo_experiencia_requerida?: 'LABORAL' | 'RELACIONADA' | 'PROFESIONAL' | 'PROFESIONAL_RELACIONADA' | string;
   requisitos_formacion?: string;
   funciones_cargo: string[];
 }
@@ -223,6 +224,9 @@ export interface DocumentoNoAplicaItem {
 }
 
 export interface ConsolidadoValidacion {
+  tipo_experiencia_requerida?: 'LABORAL' | 'RELACIONADA' | 'PROFESIONAL' | 'PROFESIONAL_RELACIONADA' | string;
+  meses_computables?: number;
+  experiencia_laboral_meses?: number;
   experiencia_relacionada_meses: number;
   experiencia_no_relacionada_meses: number;
   tiempo_excluido_por_traslapes_meses: number;
@@ -311,11 +315,21 @@ export const ingresosService = {
     return json.data;
   },
 
-  async recalcularTiempos(certificados: CertificadoAnalizado[], requisitoMeses: number) {
+  async recalcularTiempos(
+    certificados: CertificadoAnalizado[],
+    requisitoMeses: number,
+    formacionAcademica?: FormacionAcademicaItem[],
+    tipoExperienciaRequerida?: string
+  ) {
     const res = await fetch(`${API_URL}/api/ingresos/recalcular`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ certificados, requisito_minimo_meses: requisitoMeses })
+      body: JSON.stringify({
+        certificados,
+        requisito_minimo_meses: requisitoMeses,
+        formacion_academica: formacionAcademica || [],
+        tipo_experiencia_requerida: tipoExperienciaRequerida || 'PROFESIONAL_RELACIONADA'
+      })
     });
     if (!res.ok) throw new Error('Error al recalcular tiempos');
     return res.json();

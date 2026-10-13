@@ -166,13 +166,18 @@ module.exports = function(pool) {
         );
         CREATE INDEX IF NOT EXISTS idx_ingreso_archivos_val ON public.ingreso_archivos(validacion_id);
 
-        ALTER TABLE public.ingreso_cargos ADD COLUMN IF NOT EXISTS id_sideap INT, ADD COLUMN IF NOT EXISTS id_perno INT;
+        ALTER TABLE public.ingreso_cargos 
+          ADD COLUMN IF NOT EXISTS id_sideap INT, 
+          ADD COLUMN IF NOT EXISTS id_perno INT,
+          ADD COLUMN IF NOT EXISTS tipo_experiencia_requerida VARCHAR(50) DEFAULT 'PROFESIONAL_RELACIONADA';
         ALTER TABLE public.ingreso_validaciones
           ADD COLUMN IF NOT EXISTS id_sideap INT,
           ADD COLUMN IF NOT EXISTS id_perno INT,
           ADD COLUMN IF NOT EXISTS id_plaza INT,
           ADD COLUMN IF NOT EXISTS cargo_dependencia TEXT,
           ADD COLUMN IF NOT EXISTS requisitos_formacion TEXT,
+          ADD COLUMN IF NOT EXISTS tipo_experiencia_requerida VARCHAR(50) DEFAULT 'PROFESIONAL_RELACIONADA',
+          ADD COLUMN IF NOT EXISTS experiencia_laboral_meses NUMERIC(6, 2) DEFAULT 0,
           ADD COLUMN IF NOT EXISTS formacion_academica JSONB DEFAULT '[]'::jsonb,
           ADD COLUMN IF NOT EXISTS documentos_no_aplican JSONB DEFAULT '[]'::jsonb;
         ALTER TABLE public.ingreso_certificados ADD COLUMN IF NOT EXISTS verificacion_formal JSONB;
@@ -377,10 +382,12 @@ module.exports = function(pool) {
    */
   router.post('/recalcular', async (req, res) => {
     try {
-      const { certificados, requisito_minimo_meses } = req.body;
+      const { certificados, requisito_minimo_meses, formacion_academica, tipo_experiencia_requerida } = req.body;
       const result = timeCalculatorService.auditCertificatesAndCalculateTotals(
         certificados || [],
-        Number(requisito_minimo_meses) || 54
+        Number(requisito_minimo_meses) || 54,
+        formacion_academica || [],
+        tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'
       );
       res.json(result);
     } catch (err) {
@@ -423,8 +430,9 @@ module.exports = function(pool) {
           requisitos_formacion, requisito_minimo_meses, experiencia_relacionada_meses,
           experiencia_no_relacionada_meses, tiempo_excluido_traslapes_meses, diferencia_meses,
           resultado_final, justificacion_final, requiere_revision_humana, evaluador_email, estado,
-          id_sideap, id_perno, id_plaza, formacion_academica, documentos_no_aplican
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+          id_sideap, id_perno, id_plaza, formacion_academica, documentos_no_aplican,
+          tipo_experiencia_requerida, experiencia_laboral_meses
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
         RETURNING id;
       `;
       const valValues = [
@@ -449,7 +457,9 @@ module.exports = function(pool) {
         cargo_evaluado.id_perno || null,
         cargo_evaluado.id_plaza || null,
         JSON.stringify(formacion_academica || []),
-        JSON.stringify(documentos_no_aplican || [])
+        JSON.stringify(documentos_no_aplican || []),
+        cargo_evaluado.tipo_experiencia_requerida || consolidado.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA',
+        consolidado.experiencia_laboral_meses || 0
       ];
       const valRes = await client.query(valQuery, valValues);
       const validacionId = valRes.rows[0].id;
@@ -630,14 +640,18 @@ module.exports = function(pool) {
           grado: val.cargo_grado,
           dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
           requisito_experiencia_meses: Number(val.requisito_minimo_meses),
-          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || ''
+          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || '',
+          tipo_experiencia_requerida: val.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'
         },
         consolidado: {
+          tipo_experiencia_requerida: val.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA',
           requisito_minimo_meses: Number(val.requisito_minimo_meses),
-          experiencia_relacionada_meses: Number(val.experiencia_relacionada_meses),
-          experiencia_no_relacionada_meses: Number(val.experiencia_no_relacionada_meses),
-          tiempo_excluido_por_traslapes_meses: Number(val.tiempo_excluido_traslapes_meses),
-          diferencia_meses: Number(val.diferencia_meses),
+          meses_computables: (val.tipo_experiencia_requerida === 'LABORAL') ? Number(val.experiencia_laboral_meses || 0) : Number(val.experiencia_relacionada_meses || 0),
+          experiencia_laboral_meses: Number(val.experiencia_laboral_meses || 0),
+          experiencia_relacionada_meses: Number(val.experiencia_relacionada_meses || 0),
+          experiencia_no_relacionada_meses: Number(val.experiencia_no_relacionada_meses || 0),
+          tiempo_excluido_por_traslapes_meses: Number(val.tiempo_excluido_traslapes_meses || 0),
+          diferencia_meses: Number(val.diferencia_meses || 0),
           resultado_final: val.resultado_final,
           justificacion: val.justificacion_final,
           requiere_revision_humana: val.requiere_revision_humana
@@ -777,9 +791,21 @@ module.exports = function(pool) {
           updates.push(`requiere_revision_humana = $${pIdx++}`);
           values.push(Boolean(consolidado.requiere_revision_humana));
         }
+        if (consolidado.experiencia_laboral_meses !== undefined) {
+          updates.push(`experiencia_laboral_meses = $${pIdx++}`);
+          values.push(Number(consolidado.experiencia_laboral_meses) || 0);
+        }
+        if (consolidado.tipo_experiencia_requerida !== undefined) {
+          updates.push(`tipo_experiencia_requerida = $${pIdx++}`);
+          values.push(consolidado.tipo_experiencia_requerida);
+        }
       }
 
       if (cargo_evaluado) {
+        if (cargo_evaluado.tipo_experiencia_requerida && !updates.some(u => u.startsWith('tipo_experiencia_requerida'))) {
+          updates.push(`tipo_experiencia_requerida = $${pIdx++}`);
+          values.push(cargo_evaluado.tipo_experiencia_requerida);
+        }
         if (cargo_evaluado.nombre) {
           updates.push(`cargo_nombre = $${pIdx++}`);
           values.push(cargo_evaluado.nombre);

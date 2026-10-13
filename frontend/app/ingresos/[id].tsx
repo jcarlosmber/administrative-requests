@@ -1068,10 +1068,11 @@ function DetalleValidacionScreen() {
     const nuevaListaNoAplican = [...documentosNoAplican, nuevoNoAplica];
 
     const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+    const tipoExp = data?.cargo_evaluado?.tipo_experiencia_requerida || data?.consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA';
     let certsFinales = nuevaListaCerts;
     let nuevoConsolidado = data?.consolidado;
     try {
-      const recalc = await ingresosService.recalcularTiempos(nuevaListaCerts, reqMeses);
+      const recalc = await ingresosService.recalcularTiempos(nuevaListaCerts, reqMeses, titulos, tipoExp);
       if (recalc?.certificados) certsFinales = recalc.certificados;
       if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
     } catch (eRecalc) {
@@ -1164,10 +1165,11 @@ function DetalleValidacionScreen() {
     }
 
     const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+    const tipoExp = data?.cargo_evaluado?.tipo_experiencia_requerida || data?.consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA';
     let certsFinales = nuevaListaCerts;
     let nuevoConsolidado = data?.consolidado;
     try {
-      const recalc = await ingresosService.recalcularTiempos(nuevaListaCerts, reqMeses);
+      const recalc = await ingresosService.recalcularTiempos(nuevaListaCerts, reqMeses, titulos, tipoExp);
       if (recalc?.certificados) certsFinales = recalc.certificados;
       if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
     } catch (eRecalc) {
@@ -1376,10 +1378,11 @@ function DetalleValidacionScreen() {
 
         const nuevaLista = certificados.filter((_, idx) => idx !== itemAEliminar.idx);
         const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+        const tipoExp = data?.cargo_evaluado?.tipo_experiencia_requerida || data?.consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA';
         let certsFinales = nuevaLista;
         let nuevoConsolidado = data?.consolidado;
         try {
-          const recalc = await ingresosService.recalcularTiempos(nuevaLista, reqMeses);
+          const recalc = await ingresosService.recalcularTiempos(nuevaLista, reqMeses, titulos, tipoExp);
           if (recalc?.certificados) certsFinales = recalc.certificados;
           if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
         } catch (eRecalc) {
@@ -1424,10 +1427,11 @@ function DetalleValidacionScreen() {
     try {
       setGuardandoCambios(true);
       const reqMeses = Number(data?.cargo_evaluado?.requisito_experiencia_meses) || Number(data?.consolidado?.requisito_minimo_meses) || 0;
+      const tipoExp = data?.cargo_evaluado?.tipo_experiencia_requerida || data?.consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA';
       let certsFinales = certificados;
       let nuevoConsolidado = data.consolidado;
       try {
-        const recalc = await ingresosService.recalcularTiempos(certificados, reqMeses);
+        const recalc = await ingresosService.recalcularTiempos(certificados, reqMeses, titulos, tipoExp);
         if (recalc?.certificados) certsFinales = recalc.certificados;
         if (recalc?.consolidado) nuevoConsolidado = recalc.consolidado;
       } catch (eRecalc) {
@@ -4066,9 +4070,15 @@ function DetalleValidacionScreen() {
             </View>
 
             <View style={{ flex: 1, minWidth: 160, backgroundColor: '#F1F5F9', padding: 14, borderRadius: 8 }}>
-              <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>Exp. Relacionada Neta</Text>
+              <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>
+                {(cargo_evaluado?.tipo_experiencia_requerida === 'LABORAL' || consolidado?.tipo_experiencia_requerida === 'LABORAL')
+                  ? 'Exp. Laboral Neta'
+                  : 'Exp. Relacionada Neta'}
+              </Text>
               <Text style={{ fontSize: 22, fontWeight: '800', color: '#16A34A', marginTop: 4 }}>
-                {consolidado.experiencia_relacionada_meses} meses
+                {(cargo_evaluado?.tipo_experiencia_requerida === 'LABORAL' || consolidado?.tipo_experiencia_requerida === 'LABORAL')
+                  ? (consolidado.experiencia_laboral_meses ?? consolidado.meses_computables ?? consolidado.experiencia_relacionada_meses)
+                  : consolidado.experiencia_relacionada_meses} meses
               </Text>
             </View>
 
