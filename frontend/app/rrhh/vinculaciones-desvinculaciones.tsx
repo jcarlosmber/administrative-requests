@@ -7656,7 +7656,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               colorBg: '#ecfeff',
                               colorBorde: '#a5f3fc',
                             };
-                          case 'PRACTICANTE':
+                          case 'PRACTICANTE_JUDICANTE':
                             return {
                               etiqueta: 'Practicante',
                               colorTexto: '#c2410c', // Naranja formativo académico
