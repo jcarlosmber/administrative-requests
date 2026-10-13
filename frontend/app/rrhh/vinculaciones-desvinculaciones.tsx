@@ -8251,56 +8251,84 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         ) : (
                           <View
                             style={{
-                              backgroundColor: '#fffbeb',
+                              backgroundColor: '#b45309',
                               borderWidth: 1.5,
-                              borderColor: '#f59e0b',
-                              borderRadius: 10,
-                              padding: 12,
+                              borderColor: 'rgba(254, 240, 138, 0.45)',
+                              borderRadius: 12,
+                              padding: 14,
                               flexDirection: isTablet ? 'row' : 'column',
                               justifyContent: 'space-between',
                               alignItems: isTablet ? 'center' : 'flex-start',
-                              gap: 10,
+                              gap: 12,
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.15,
+                              shadowRadius: 6,
+                              elevation: 3,
                             }}
                           >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                              <Ionicons name="time" size={24} color="#d97706" />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                              <View
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 17,
+                                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(254, 240, 138, 0.55)',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Ionicons name="time" size={20} color="#fef08a" />
+                              </View>
                               <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400e' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#ffffff', letterSpacing: 0.2 }}>
                                     TRÁMITE EN CURSO ({pctActivo}% COMPLETADO)
                                   </Text>
                                   <View
                                     style={{
-                                      backgroundColor: '#d97706',
-                                      paddingHorizontal: 6,
-                                      paddingVertical: 1,
+                                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                      borderWidth: 1,
+                                      borderColor: 'rgba(255, 255, 255, 0.35)',
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 1.5,
                                       borderRadius: 4,
                                     }}
                                   >
-                                    <Text style={{ color: THEME.white, fontSize: 9.5, fontWeight: '800' }}>
+                                    <Text style={{ color: '#ffffff', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
                                       EN PROCESO
                                     </Text>
                                   </View>
                                 </View>
-                                <Text style={{ fontSize: 11.5, color: '#b45309', marginTop: 2 }}>
+                                <Text style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, 0.92)', marginTop: 3, lineHeight: 17 }}>
                                   Fases concluidas: {etapasCompActivo} de {casoActivo.etapas.length}. Requisitos pendientes por verificar en la fase activa.
                                 </Text>
                               </View>
                             </View>
                             <Pressable
                               onPress={() => alternarEstadoTramiteCompleto(casoActivo.id, true)}
-                              style={{
+                              style={({ pressed }) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 4,
-                                backgroundColor: '#059669',
+                                gap: 5,
+                                backgroundColor: pressed ? '#fffbeb' : '#ffffff',
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.9)',
                                 paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 6,
-                              }}
+                                paddingVertical: 7,
+                                borderRadius: 8,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.12,
+                                shadowRadius: 3,
+                                elevation: 2,
+                              })}
                             >
-                              <Ionicons name="checkmark-done" size={13} color={THEME.white} />
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.white }}>
+                              <Ionicons name="checkmark-done" size={14} color="#b45309" />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#b45309' }}>
                                 Marcar Todo como Terminado
                               </Text>
                             </Pressable>
@@ -8311,16 +8339,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       {/* Cabecera Principal del Caso: Identidad y Acciones Rápidas */}
                       <View
                         style={{
-                          flexDirection: isTablet ? 'row' : 'column',
-                          justifyContent: 'space-between',
-                          alignItems: isTablet ? 'center' : 'flex-start',
+                          flexDirection: 'column',
                           gap: 12,
                           paddingBottom: 14,
                           borderBottomWidth: 1,
                           borderBottomColor: THEME.slate200,
                         }}
                       >
-                        <View style={{ flex: isTablet ? 1 : undefined, minWidth: 0, alignSelf: 'stretch', gap: 5 }}>
+                        {/* Fila Superior: Identidad del Servidor y Datos del Cargo */}
+                        <View style={{ gap: 6 }}>
                           <View
                             style={{
                               flexDirection: 'row',
@@ -8403,13 +8430,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         </View>
 
-                        {/* Botones de acción del caso (apilados verticalmente: consulta encima de validación) */}
+                        {/* Última Fila del Box: Botones de Acción uno junto al otro */}
                         <View
                           style={{
-                            flexDirection: 'column',
-                            alignItems: isTablet ? 'flex-end' : 'stretch',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
                             gap: 8,
-                            flexShrink: 0,
+                            paddingTop: 2,
                           }}
                         >
                           <Pressable
@@ -8431,7 +8459,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               borderRadius: 8,
                               borderWidth: 1,
                               borderColor: THEME.skyRing,
-                              minWidth: isTablet ? 175 : undefined,
                             }}
                           >
                             <Ionicons name="search" size={14} color={THEME.skyText} />
@@ -8456,7 +8483,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 borderRadius: 8,
                                 borderWidth: 1,
                                 borderColor: THEME.emeraldRing,
-                                minWidth: isTablet ? 175 : undefined,
                               }}
                             >
                               <Ionicons name="sparkles" size={14} color={THEME.emeraldText} />
@@ -8486,7 +8512,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               borderRadius: 8,
                               borderWidth: 1,
                               borderColor: '#cbd5e1',
-                              minWidth: isTablet ? 175 : undefined,
                             }}
                           >
                             <Ionicons name="folder-open-outline" size={14} color="#334155" />
@@ -8516,7 +8541,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 borderRadius: 8,
                                 borderWidth: 1,
                                 borderColor: '#a7f3d0',
-                                minWidth: isTablet ? 175 : undefined,
                               }}
                             >
                               <Ionicons name="clipboard-outline" size={14} color="#047857" />
