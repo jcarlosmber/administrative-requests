@@ -110,6 +110,9 @@ export default function NominaScreen() {
   const filasPorPaginaReporte = 15;
   const [plazaDetalleReporte, setPlazaDetalleReporte] = useState<PlazaNomina | null>(null);
   const [modalDetallePlazaReporteVisible, setModalDetallePlazaReporteVisible] = useState(false);
+  const [filtroCuotasTab, setFiltroCuotasTab] = useState<'TODOS_DECISORIOS' | 'MND' | 'OND' | 'ASESOR' | 'TODA_PLANTA'>('TODOS_DECISORIOS');
+  const [bloqueNormativoActivo, setBloqueNormativoActivo] = useState<number | null>(null);
+  const [modalInstructivoSideapVisible, setModalInstructivoSideapVisible] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [plazas, setPlazas] = useState<PlazaNomina[]>([]);
   const [plazasTotales, setPlazasTotales] = useState<PlazaNomina[]>([]);
@@ -495,9 +498,34 @@ export default function NominaScreen() {
     });
 
     const obtenerSexoPlaza = (p: PlazaNomina) => {
+      // 1. Prioridad: salvaguarda de casos institucionales confirmados
       const ced = p.encargo_cedula ? String(p.encargo_cedula).trim() : p.titular_cedula ? String(p.titular_cedula).trim() : null;
-      const per = ced ? pernoMapPorCed.get(ced) : null;
-      const raw = String(p.sexo || per?.sexo || '').trim().toUpperCase();
+      const nom = String(p.encargo_nombre || p.titular_nombre || '').trim().toUpperCase();
+      if (nom.includes('LEIDY YULIETH PEREA') || nom.includes('LEIDY YULIETH PERA') || ced === '1075208323') {
+        return 'MUJER';
+      }
+
+      // 2. Revisar sexo asignado directamente en el objeto de plaza
+      let raw = String(p.sexo || '').trim().toUpperCase();
+
+      // 3. Buscar en PERNO por cédula
+      if ((!raw || raw === 'SIN_DATO' || raw === 'NULL') && ced) {
+        const per = pernoMapPorCed.get(ced);
+        if (per?.sexo) raw = String(per.sexo).trim().toUpperCase();
+      }
+
+      // 4. Buscar en PERNO por nombre completo
+      if ((!raw || raw === 'SIN_DATO' || raw === 'NULL') && nom && !nom.includes('VACANTE')) {
+        const perMatch = todoElPerno.find((x) => String(x.nombre_completo || '').trim().toUpperCase() === nom);
+        if (perMatch?.sexo) raw = String(perMatch.sexo).trim().toUpperCase();
+      }
+
+      // 5. Buscar en mock oficial de respaldo por ID de plaza
+      if (!raw || raw === 'SIN_DATO' || raw === 'NULL') {
+        const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
+        if (m?.sexo) raw = String(m.sexo).trim().toUpperCase();
+      }
+
       if (raw === 'F' || raw === 'FEMENINO' || raw === 'MUJER') return 'MUJER';
       if (raw === 'M' || raw === 'MASCULINO' || raw === 'HOMBRE') return 'HOMBRE';
       return 'SIN_DATO';
@@ -514,11 +542,37 @@ export default function NominaScreen() {
       return 0;
     };
 
+    // Helper de clasificación legal de niveles decisorios (Ley 581/2000, Ley 2424/2024, Decreto 859/2025)
+    const clasificarDecisorioPlaza = (p: PlazaNomina): 'MND' | 'OND' | 'ASESOR' | 'OTROS' => {
+      const cNorm = (p.cargo || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const nNorm = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (
+        cNorm.includes('SECRETARIO DE DESPACHO') ||
+        cNorm.includes('SUBSECRETARIO') ||
+        cNorm.includes('DIRECTOR TECNICO') ||
+        cNorm.includes('DIRECTOR GENERAL') ||
+        (nNorm === 'DIRECTIVO' && cNorm.includes('DIRECTOR'))
+      ) {
+        return 'MND';
+      }
+      if (
+        (cNorm.includes('JEFE DE OFICINA') || cNorm.includes('SUBDIRECTOR')) &&
+        !cNorm.includes('EJECUTIV')
+      ) {
+        return 'OND';
+      }
+      if (nNorm === 'ASESOR') {
+        return 'ASESOR';
+      }
+      return 'OTROS';
+    };
+
     const directivos = listPlazas.filter((p) => (p.nivel || '').toUpperCase().trim() === 'DIRECTIVO');
     const plazasDirectivas = directivos.map((p) => ({
       ...p,
       sexoEfectivo: obtenerSexoPlaza(p),
       edadEfectiva: obtenerEdadPlaza(p),
+      categoriaDecisoria: clasificarDecisorioPlaza(p),
     }));
 
     const mujeresDirectivas = plazasDirectivas.filter((p) => p.sexoEfectivo === 'MUJER').length;
@@ -529,7 +583,39 @@ export default function NominaScreen() {
       ...p,
       sexoEfectivo: obtenerSexoPlaza(p),
       edadEfectiva: obtenerEdadPlaza(p),
+      categoriaDecisoria: clasificarDecisorioPlaza(p),
     }));
+
+    // 1. MÁXIMO NIVEL DECISORIO (MND) - Ley 581 Art. 2 / Ley 2424 Art. 1 / D. 859 de 2025
+    const plazasMND = plazasConSexo.filter((p) => p.categoriaDecisoria === 'MND');
+    const mujeresMND = plazasMND.filter((p) => p.sexoEfectivo === 'MUJER').length;
+    const hombresMND = plazasMND.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
+    const totalMNDProvistos = mujeresMND + hombresMND;
+    const pctMujeresMND = totalMNDProvistos > 0 ? (mujeresMND / totalMNDProvistos) * 100 : 0;
+    const cumpleMND = pctMujeresMND >= 50;
+
+    // 2. OTROS NIVELES DECISORIOS (OND) - Ley 581 Art. 3 / Ley 2424 Art. 1 / D. 859 de 2025
+    const plazasOND = plazasConSexo.filter((p) => p.categoriaDecisoria === 'OND');
+    const mujeresOND = plazasOND.filter((p) => p.sexoEfectivo === 'MUJER').length;
+    const hombresOND = plazasOND.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
+    const totalONDProvistos = mujeresOND + hombresOND;
+    const pctMujeresOND = totalONDProvistos > 0 ? (mujeresOND / totalONDProvistos) * 100 : 0;
+    const cumpleOND = pctMujeresOND >= 50;
+
+    // 3. CONSOLIDADO DE CARGOS DECISORIOS SUJETOS A REPORTE OFICIAL (MND + OND)
+    const plazasDecisorias = [...plazasMND, ...plazasOND];
+    const mujeresDecisorias = mujeresMND + mujeresOND;
+    const hombresDecisorios = hombresMND + hombresOND;
+    const totalDecisoriosProvistos = totalMNDProvistos + totalONDProvistos;
+    const pctMujeresDecisorias = totalDecisoriosProvistos > 0 ? (mujeresDecisorias / totalDecisoriosProvistos) * 100 : 0;
+    const cumpleDecisoriasTotal = cumpleMND && cumpleOND;
+
+    // 4. NIVEL ASESOR (Análisis funcional según Decreto 859 de 2025)
+    const plazasAsesores = plazasConSexo.filter((p) => p.categoriaDecisoria === 'ASESOR');
+    const mujeresAsesores = plazasAsesores.filter((p) => p.sexoEfectivo === 'MUJER').length;
+    const hombresAsesores = plazasAsesores.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
+    const totalAsesoresProvistos = mujeresAsesores + hombresAsesores;
+    const pctMujeresAsesores = totalAsesoresProvistos > 0 ? (mujeresAsesores / totalAsesoresProvistos) * 100 : 0;
 
     const mujeresTotal = plazasConSexo.filter((p) => p.sexoEfectivo === 'MUJER').length;
     const hombresTotal = plazasConSexo.filter((p) => p.sexoEfectivo === 'HOMBRE').length;
@@ -621,6 +707,31 @@ export default function NominaScreen() {
       hombresDirectivos,
       pctMujeresDirectivo,
       plazasDirectivas,
+      // Métricas Ley de Cuotas (Ley 2424 / Decreto 859 / Ley 581)
+      plazasMND,
+      mujeresMND,
+      hombresMND,
+      mndCount: plazasMND.length,
+      pctMujeresMND,
+      cumpleMND,
+      plazasOND,
+      mujeresOND,
+      hombresOND,
+      ondCount: plazasOND.length,
+      pctMujeresOND,
+      cumpleOND,
+      plazasDecisorias,
+      mujeresDecisorias,
+      hombresDecisorios,
+      decisoriosCount: plazasDecisorias.length,
+      pctMujeresDecisorias,
+      cumpleDecisoriasTotal,
+      plazasAsesores,
+      mujeresAsesores,
+      hombresAsesores,
+      asesoresCount: plazasAsesores.length,
+      pctMujeresAsesores,
+      plazasConSexo,
       mujeresTotal,
       hombresTotal,
       totalServidoresConGenero,
@@ -801,19 +912,52 @@ export default function NominaScreen() {
           ].join(';') + '\n';
         });
       } else if (tipo === 'paridad_demografia') {
-        nombreArchivo = 'Reporte_Paridad_Genero_Demografia_Ley2424.csv';
-        const headers = ['Plaza', 'Nivel', 'Cargo', 'Dependencia', 'Sexo', 'Edad', 'Titular', 'Tipo_Vinculacion'];
+        nombreArchivo = 'Reporte_Ley_Cuotas_Ley2424_Decreto859.csv';
+        const headers = [
+          'Plaza',
+          'Clasificacion_Decisoria_Ley581',
+          'Nivel_Jerarquico',
+          'Cargo',
+          'Codigo',
+          'Grado',
+          'Dependencia',
+          'Genero_Reportado',
+          'Edad',
+          'Titular_Ocupante',
+          'Tipo_Vinculacion',
+          'Es_Encargo',
+          'Cumple_Paridad_50pct',
+          'Reporte_SIDEAP_SIGEP',
+        ];
         csvContent = headers.join(';') + '\n';
-        listPlazas.forEach((p) => {
+        listPlazas.forEach((p: any) => {
+          const cat = p.categoriaDecisoria || 'OTROS';
+          const catLabel =
+            cat === 'MND'
+              ? 'MAXIMO NIVEL DECISORIO (MND)'
+              : cat === 'OND'
+              ? 'OTROS NIVELES DECISORIOS (OND)'
+              : cat === 'ASESOR'
+              ? 'NIVEL ASESOR'
+              : 'NIVEL NO DECISORIO';
+          const sexo = p.sexoEfectivo || p.sexo || 'SIN DATO';
+          const titular = p.encargo_nombre || p.titular_nombre || 'VACANTE';
+          const cumple = sexo === 'MUJER' ? 'SI' : 'NO';
           csvContent += [
             p.id_plaza,
+            `"${catLabel}"`,
             `"${p.nivel || ''}"`,
             `"${(p.cargo || '').replace(/"/g, '""')}"`,
+            `"${p.codigo || ''}"`,
+            `"${p.grado || ''}"`,
             `"${(p.dependencia_cargo || '').replace(/"/g, '""')}"`,
-            p.sexo || '',
-            p.edad || '',
-            `"${(p.titular_nombre || '').replace(/"/g, '""')}"`,
+            `"${sexo}"`,
+            p.edadEfectiva || p.edad || '',
+            `"${titular.replace(/"/g, '""')}"`,
             `"${(p.tipo_vinculacion || '').replace(/"/g, '""')}"`,
+            p.es_encargo ? 'SI' : 'NO',
+            cumple,
+            cat === 'MND' || cat === 'OND' ? 'OBLIGATORIO_SIGEP_SIDEAP' : 'NO_APLICA_CUOTAS',
           ].join(';') + '\n';
         });
       } else if (tipo === 'conciliacion_perno') {
@@ -5384,7 +5528,7 @@ export default function NominaScreen() {
                     { id: 'estructura_niveles', label: 'Estructura por Niveles', icono: 'layers-outline' },
                     { id: 'ocupacion_vacancias', label: 'Ocupación & Vacancias', icono: 'pie-chart-outline' },
                     { id: 'dependencias_costo', label: 'Dependencias & Presupuesto', icono: 'cash-outline' },
-                    { id: 'paridad_demografia', label: 'Paridad & Demografía (Ley 2424)', icono: 'people-outline' },
+                    { id: 'paridad_demografia', label: 'Ley de Cuotas (Ley 2424)', icono: 'ribbon-outline' },
                     { id: 'conciliacion_perno', label: 'Conciliación Planta vs PERNO', icono: 'sync-outline' },
                     { id: 'seguridad_social', label: 'Seguridad Social (PERNO)', icono: 'shield-checkmark-outline' },
                   ].map((rep) => {
@@ -6251,244 +6395,1094 @@ export default function NominaScreen() {
               )}
 
               {/* ============================================================== */}
-              {/* SUB-REPORTE 4: PARIDAD DE GÉNERO & DEMOGRAFÍA (LEY 2424)       */}
+              {/* SUB-REPORTE 4: LEY DE CUOTAS (LEY 2424 DE 2024 / DECRETO 859) */}
               {/* ============================================================== */}
-              {subReporteActivo === 'paridad_demografia' && (
-                <View style={{ gap: 18 }}>
-                  {/* Fila 1: 4 Tarjetas KPI Superiores */}
-                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12, flexWrap: 'wrap' }}>
-                    {/* KPI 1: Paridad Directiva */}
-                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>PARIDAD NIVEL DIRECTIVO</Text>
-                        <View style={{ backgroundColor: metricasReportes.pctMujeresDirectivo >= 50 ? '#ECFDF5' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5, borderWidth: 1, borderColor: metricasReportes.pctMujeresDirectivo >= 50 ? '#A7F3D0' : '#FDE68A' }}>
-                          <Text style={{ fontSize: 9.5, fontWeight: '800', color: metricasReportes.pctMujeresDirectivo >= 50 ? '#065F46' : '#92400E' }}>
-                            {metricasReportes.pctMujeresDirectivo >= 50 ? 'CUMPLE LEY 2424' : '40% (META: 50%)'}
-                          </Text>
+              {subReporteActivo === 'paridad_demografia' && (() => {
+                const todasConSexo = metricasReportes.plazasConSexo || [];
+                let plazasFiltradasCuotas = todasConSexo;
+                if (filtroCuotasTab === 'MND') {
+                  plazasFiltradasCuotas = todasConSexo.filter((p: any) => p.categoriaDecisoria === 'MND');
+                } else if (filtroCuotasTab === 'OND') {
+                  plazasFiltradasCuotas = todasConSexo.filter((p: any) => p.categoriaDecisoria === 'OND');
+                } else if (filtroCuotasTab === 'TODOS_DECISORIOS') {
+                  plazasFiltradasCuotas = todasConSexo.filter(
+                    (p: any) => p.categoriaDecisoria === 'MND' || p.categoriaDecisoria === 'OND'
+                  );
+                } else if (filtroCuotasTab === 'ASESOR') {
+                  plazasFiltradasCuotas = todasConSexo.filter((p: any) => p.categoriaDecisoria === 'ASESOR');
+                }
+
+                if (busquedaReporte.trim()) {
+                  const q = busquedaReporte.toLowerCase().trim();
+                  plazasFiltradasCuotas = plazasFiltradasCuotas.filter((p: any) => {
+                    const nom = (p.encargo_nombre || p.titular_nombre || '').toLowerCase();
+                    const car = (p.cargo || '').toLowerCase();
+                    const dep = (p.dependencia_cargo || '').toLowerCase();
+                    const id = String(p.id_plaza);
+                    return nom.includes(q) || car.includes(q) || dep.includes(q) || id.includes(q);
+                  });
+                }
+
+                return (
+                  <View style={{ gap: 20 }}>
+                    {/* Banner Institucional Oficial Ley de Cuotas */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.marca900,
+                        borderRadius: 14,
+                        padding: isDesktop ? 22 : 16,
+                        borderWidth: 1,
+                        borderColor: THEME.marca700,
+                        gap: 12,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.08,
+                        shadowRadius: 4,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: isDesktop ? 'row' : 'column',
+                          justifyContent: 'space-between',
+                          alignItems: isDesktop ? 'center' : 'flex-start',
+                          gap: 12,
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View
+                              style={{
+                                backgroundColor: 'rgba(214, 228, 244, 0.15)',
+                                padding: 8,
+                                borderRadius: 8,
+                              }}
+                            >
+                              <Ionicons name="ribbon" size={22} color="#F472B6" />
+                            </View>
+                            <View>
+                              <Text style={{ fontSize: 18, fontWeight: '800', color: THEME.white }}>
+                                Ley de Cuotas (Ley 2424)
+                              </Text>
+                              <Text style={{ fontSize: 12, color: 'rgba(214, 228, 244, 0.85)', marginTop: 2 }}>
+                                Cumplimiento Paritario (mínimo 50 % de mujeres) y Reporte Oficial SIDEAP / SIGEP
+                              </Text>
+                            </View>
+                          </View>
                         </View>
-                      </View>
-                      <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca900, marginTop: 6 }}>
-                        {metricasReportes.pctMujeresDirectivo.toFixed(1)}% Mujeres
-                      </Text>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
-                        {metricasReportes.mujeresDirectivas} mujeres y {metricasReportes.hombresDirectivos} hombres ({metricasReportes.directivosCount} empleos directivos)
-                      </Text>
-                    </View>
 
-                    {/* KPI 2: Total Planta */}
-                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>DISTRIBUCIÓN TOTAL PLANTA</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 6 }}>
-                        {metricasReportes.mujeresTotal} M ({metricasReportes.pctMujeresPlanta.toFixed(1)}%) • {metricasReportes.hombresTotal} H
-                      </Text>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
-                        Sobre {metricasReportes.totalServidoresConGenero} servidores provistos con género reportado
-                      </Text>
-                    </View>
-
-                    {/* KPI 3: Edad Promedio */}
-                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>EDAD PROMEDIO INSTITUCIONAL</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.marca800, marginTop: 6 }}>
-                        {metricasReportes.edadPromedio.toFixed(1)} Años
-                      </Text>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
-                        Madurez profesional y memoria técnica institucional
-                      </Text>
-                    </View>
-
-                    {/* KPI 4: Relevo Pensional */}
-                    <View style={{ flex: 1, minWidth: isTablet ? 220 : '100%', backgroundColor: THEME.white, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: THEME.slate200, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2 }}>
-                      <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>RELEVO PENSIONAL (LEY 1821)</Text>
-                      <Text style={{ fontSize: 24, fontWeight: '800', color: '#B91C1C', marginTop: 6 }}>
-                        {metricasReportes.gruposEdad.mayor60} Servidores
-                      </Text>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
-                        Servidores mayores de 60 años en etapa previa a pensión
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Fila 2: Tabla Detallada de Paridad en Cargos del Nivel Directivo (Ley 2424 / Ley 581) */}
-                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, borderWidth: 1, borderColor: THEME.slate200, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 3 }}>
-                    <View style={{ backgroundColor: THEME.marca900, paddingHorizontal: 18, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="ribbon-outline" size={17} color={THEME.white} />
-                          <Text style={{ color: THEME.white, fontSize: 14.5, fontWeight: '800' }}>
-                            Seguimiento Ley 2424 / Ley 581 en Empleos del Nivel Directivo
-                          </Text>
-                        </View>
-                        <Text style={{ color: 'rgba(214, 228, 244, 0.75)', fontSize: 11.5, marginTop: 2 }}>
-                          {metricasReportes.directivosCount} empleos directivos oficiales sujetos a la meta mínima del 50% de participación de mujeres
-                        </Text>
-                      </View>
-                      <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700' }}>
-                          {metricasReportes.mujeresDirectivas} M / {metricasReportes.hombresDirectivos} H ({metricasReportes.pctMujeresDirectivo.toFixed(0)}%)
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Tabla de Directivos */}
-                    <View style={{ overflow: 'hidden' }}>
-                      <View style={{ flexDirection: 'row', backgroundColor: THEME.slate100, paddingVertical: 9, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: THEME.slate200 }}>
-                        <Text style={{ width: 65, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>PLAZA</Text>
-                        <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>EMPLEO DIRECTIVO</Text>
-                        <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>TITULAR / ENCARGADO</Text>
-                        <Text style={{ flex: 1.8, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>DEPENDENCIA</Text>
-                        <Text style={{ width: 85, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>GÉNERO</Text>
-                        <Text style={{ width: 60, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>EDAD</Text>
-                      </View>
-
-                      {metricasReportes.plazasDirectivas.map((p, idx) => {
-                        const esMujer = p.sexoEfectivo === 'MUJER';
-                        const nombreFunc = p.encargo_nombre || p.titular_nombre || 'VACANTE DEFINITIVA';
-                        return (
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                           <Pressable
-                            key={p.id_plaza}
-                            onPress={() => {
-                              setPlazaDetalleReporte(p);
-                              setModalDetallePlazaReporteVisible(true);
-                            }}
+                            onPress={() => setModalInstructivoSideapVisible(true)}
                             style={({ pressed }) => ({
+                              backgroundColor: pressed ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.12)',
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 8,
                               flexDirection: 'row',
                               alignItems: 'center',
-                              paddingVertical: 10,
-                              paddingHorizontal: 14,
-                              backgroundColor: pressed ? THEME.slate100 : idx % 2 === 0 ? THEME.white : THEME.slate50,
-                              borderBottomWidth: idx === metricasReportes.plazasDirectivas.length - 1 ? 0 : 1,
-                              borderBottomColor: THEME.slate100,
+                              gap: 6,
+                              borderWidth: 1,
+                              borderColor: 'rgba(255, 255, 255, 0.25)',
                             })}
                           >
-                            <Text style={{ width: 65, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>#{p.id_plaza}</Text>
-                            <View style={{ flex: 2, paddingRight: 6 }}>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>{p.cargo}</Text>
-                              <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>Cód. {p.codigo} - Grado {p.grado}</Text>
-                            </View>
-                            <View style={{ flex: 2, paddingRight: 6 }}>
-                              <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>{nombreFunc}</Text>
-                              <Text style={{ fontSize: 10.5, color: p.es_encargo ? '#B45309' : THEME.slate500 }}>
-                                {p.es_encargo ? 'En encargo' : (p.tipo_vinculacion || 'En propiedad')}
-                              </Text>
-                            </View>
-                            <Text numberOfLines={1} style={{ flex: 1.8, fontSize: 11, color: THEME.slate600, paddingRight: 6 }}>
-                              {p.dependencia_cargo}
-                            </Text>
-                            <View style={{ width: 85, alignItems: 'center' }}>
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  backgroundColor: esMujer ? '#FCE7F3' : '#E0F2FE',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 6,
-                                  borderWidth: 1,
-                                  borderColor: esMujer ? '#FBCFE8' : '#BAE6FD',
-                                }}
-                              >
-                                <Ionicons name={esMujer ? 'woman-outline' : 'man-outline'} size={12} color={esMujer ? '#BE185D' : '#0369A1'} />
-                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: esMujer ? '#9D174D' : '#075985' }}>
-                                  {esMujer ? 'Mujer' : 'Hombre'}
-                                </Text>
-                              </View>
-                            </View>
-                            <Text style={{ width: 60, fontSize: 11.5, fontWeight: '600', color: THEME.slate700, textAlign: 'center' }}>
-                              {p.edadEfectiva > 0 ? `${p.edadEfectiva} a` : '---'}
+                            <Ionicons name="book-outline" size={15} color={THEME.white} />
+                            <Text style={{ color: THEME.white, fontSize: 12.5, fontWeight: '700' }}>
+                              Instructivo SIDEAP / SIGEP
                             </Text>
                           </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
 
-                  {/* Fila 3: Matriz de Paridad por Nivel Jerárquico */}
-                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 14 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                          Representación de Género por Niveles Jerárquicos
-                        </Text>
-                        <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
-                          Distribución de plazas provistas en la estructura organizacional de la SJD
+                          <Pressable
+                            onPress={() => handleExportarReporteCsv('paridad_demografia')}
+                            style={({ pressed }) => ({
+                              backgroundColor: pressed ? '#047857' : '#059669',
+                              paddingHorizontal: 14,
+                              paddingVertical: 8,
+                              borderRadius: 8,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                            })}
+                          >
+                            <Ionicons name="download-outline" size={15} color={THEME.white} />
+                            <Text style={{ color: THEME.white, fontSize: 12.5, fontWeight: '700' }}>
+                              Exportar Reporte (.csv)
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <View
+                        style={{
+                          backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                          borderRadius: 8,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 10,
+                          borderLeftWidth: 3,
+                          borderLeftColor: '#F472B6',
+                        }}
+                      >
+                        <Ionicons name="information-circle-outline" size={20} color="#FBCFE8" />
+                        <Text style={{ color: '#F1F5F9', fontSize: 12, flex: 1, lineHeight: 17 }}>
+                          La <Text style={{ fontWeight: '700', color: '#FBCFE8' }}>Ley 2424 de 2024</Text> modificó la Ley 581 de 2000 exigiendo paridad del <Text style={{ fontWeight: '700', color: THEME.white }}>50 % como mínimo</Text> en el Máximo Nivel Decisorio (MND) y el 50 % en Otros Niveles Decisorios (OND). El cálculo no se efectúa sobre la totalidad de la planta, sino sobre los empleos incluidos en dichos niveles (Decreto 859 de 2025).
                         </Text>
                       </View>
                     </View>
 
-                    <View style={{ gap: 12 }}>
-                      {Object.entries(metricasReportes.paridadPorNivel).map(([nivKey, nData]) => {
-                        const pctM = Math.round(nData.pctMujeres);
-                        const pctH = 100 - pctM;
-                        return (
-                          <View key={nivKey} style={{ backgroundColor: THEME.slate50, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: THEME.slate200, gap: 6 }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate900 }}>{nData.label}</Text>
-                                <Text style={{ fontSize: 11, color: THEME.slate500 }}>({nData.total} plazas)</Text>
-                              </View>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#BE185D' }}>
-                                  {nData.mujeres} M ({pctM}%)
-                                </Text>
-                                <Text style={{ fontSize: 11.5, color: THEME.slate400 }}>•</Text>
-                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0369A1' }}>
-                                  {nData.hombres} H ({pctH}%)
-                                </Text>
-                              </View>
-                            </View>
-
-                            {/* Barra bicolor de distribución de género */}
-                            <View style={{ height: 9, backgroundColor: THEME.slate200, borderRadius: 5, overflow: 'hidden', flexDirection: 'row' }}>
-                              <View style={{ width: (`${pctM}%` as any), height: '100%', backgroundColor: '#EC4899' }} />
-                              <View style={{ width: (`${pctH}%` as any), height: '100%', backgroundColor: '#38BDF8' }} />
-                            </View>
+                    {/* ========================================================== */}
+                    {/* SECCIÓN NORMATIVA PRINCIPAL PARA CUMPLIMIENTO Y REPORTE    */}
+                    {/* ========================================================== */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 14,
+                        padding: 20,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        gap: 16,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 3,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <View
+                            style={{
+                              backgroundColor: '#EEF2FF',
+                              padding: 6,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              borderColor: '#C7D2FE',
+                            }}
+                          >
+                            <Ionicons name="shield-checkmark" size={18} color="#4338CA" />
                           </View>
-                        );
-                      })}
-                    </View>
-                  </View>
+                          <View>
+                            <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900 }}>
+                              Normativa principal para el cumplimiento y reporte de la Ley de Cuotas
+                            </Text>
+                            <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                              Fundamento jurídico y reglas de aplicación vinculantes para la gestión de Talento Humano
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
 
-                  {/* Fila 4: Pirámide de Edad y Planeación Pensional (Ley 1821 de 2017) */}
-                  <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 14 }}>
-                    <View>
-                      <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                        Distribución Etaria y Relevo Generacional (Ley 1821 de 2017)
-                      </Text>
-                      <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
-                        Planificación del talento humano, preparación pensional y memoria institucional
-                      </Text>
-                    </View>
-
-                    <View style={{ gap: 10 }}>
-                      {[
-                        { label: 'Jóvenes (< 30 años)', cant: metricasReportes.gruposEdad.menor30, color: '#3B82F6', desc: 'Iniciando carrera administrativa y retención de talento joven' },
-                        { label: 'Consolidación (30 - 45 años)', cant: metricasReportes.gruposEdad.de30a45, color: '#10B981', desc: 'Plena productividad institucional y liderazgo operativo' },
-                        { label: 'Madurez Profesional (46 - 60 años)', cant: metricasReportes.gruposEdad.de46a60, color: '#F59E0B', desc: 'Experiencia acumulada y transferencia de conocimiento técnico' },
-                        { label: 'Próximos a Pensión / Retiro (> 60 años)', cant: metricasReportes.gruposEdad.mayor60, color: '#EF4444', desc: 'Sujetos a plan de relevo pensional y retiro forzoso (Ley 1821)' },
-                      ].map((grp) => {
-                        const totalEd = (metricasReportes.gruposEdad.menor30 + metricasReportes.gruposEdad.de30a45 + metricasReportes.gruposEdad.de46a60 + metricasReportes.gruposEdad.mayor60) || 1;
-                        const pct = Math.round((grp.cant / totalEd) * 100);
-                        return (
-                          <View key={grp.label} style={{ gap: 4 }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>{grp.label}</Text>
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700 }}>
-                                {grp.cant} servidores ({pct}%)
+                      {/* 4 Bloques Normativos Solicitados */}
+                      <View style={{ gap: 14 }}>
+                        {/* Bloque 1: Ley 581 de 2000 */}
+                        <View
+                          style={{
+                            backgroundColor: THEME.slate50,
+                            borderRadius: 10,
+                            padding: 16,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            gap: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View
+                                style={{
+                                  backgroundColor: '#1E293B',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 12,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '800' }}>1</Text>
+                              </View>
+                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900 }}>
+                                Ley 581 de 2000, artículos 2 y 3. Identificación de los niveles decisorios
                               </Text>
                             </View>
-                            <View style={{ height: 8, backgroundColor: THEME.slate100, borderRadius: 4, overflow: 'hidden' }}>
-                              <View style={{ width: (`${pct}%` as any), height: '100%', backgroundColor: grp.color, borderRadius: 4 }} />
+                            <View
+                              style={{
+                                backgroundColor: '#E2E8F0',
+                                paddingHorizontal: 8,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate700 }}>
+                                CLASIFICACIÓN
+                              </Text>
                             </View>
-                            <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>{grp.desc}</Text>
                           </View>
-                        );
-                      })}
+
+                          <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                            Estos artículos definen los conceptos de <Text style={{ fontWeight: '700' }}>máximo nivel decisorio</Text> y <Text style={{ fontWeight: '700' }}>otros niveles decisorios</Text>. El primero comprende los cargos de mayor jerarquía en las entidades públicas; el segundo incluye los empleos con funciones de dirección, conducción y orientación institucional que implican la adopción, formulación, ejecución y control de políticas públicas.
+                          </Text>
+
+                          <View
+                            style={{
+                              backgroundColor: '#EFF6FF',
+                              borderRadius: 8,
+                              padding: 10,
+                              borderLeftWidth: 3,
+                              borderLeftColor: '#2563EB',
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: '#1E40AF', lineHeight: 17 }}>
+                              <Text style={{ fontWeight: '800' }}>Aplicación:</Text> constituyen el punto de partida para identificar cuáles empleos deben incluirse en el reporte. La clasificación debe realizarse conforme a las funciones y los criterios legales aplicables, sin asumir que todos los empleos de la planta de personal hacen parte de estos niveles.
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Bloque 2: Ley 2424 de 2024 */}
+                        <View
+                          style={{
+                            backgroundColor: '#FDF2F8',
+                            borderRadius: 10,
+                            padding: 16,
+                            borderWidth: 1,
+                            borderColor: '#FBCFE8',
+                            gap: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View
+                                style={{
+                                  backgroundColor: '#BE185D',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 12,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '800' }}>2</Text>
+                              </View>
+                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#831843' }}>
+                                Ley 2424 de 2024, artículo 1. Participación mínima del 50 %
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                backgroundColor: '#FCE7F3',
+                                paddingHorizontal: 8,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                                borderWidth: 1,
+                                borderColor: '#F472B6',
+                              }}
+                            >
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#9D174D' }}>
+                                META LEGAL 50%
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12, color: '#701A75', lineHeight: 18 }}>
+                            Esta disposición modificó el artículo 4 de la Ley 581 de 2000 y estableció que las mujeres deben ocupar, <Text style={{ fontWeight: '700' }}>como mínimo, el 50 %</Text> de los cargos de máximo nivel decisorio y el 50 % de los cargos de otros niveles decisorios comprendidos por la ley.
+                          </Text>
+
+                          <View
+                            style={{
+                              backgroundColor: '#FFF1F2',
+                              borderRadius: 8,
+                              padding: 10,
+                              borderLeftWidth: 3,
+                              borderLeftColor: '#E11D48',
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: '#9F1239', lineHeight: 17 }}>
+                              <Text style={{ fontWeight: '800' }}>Aplicación:</Text> la entidad debe verificar el cumplimiento de la participación mínima en cada uno de estos grupos de cargos. El cálculo no se efectúa sobre la totalidad de los servidores públicos, sino sobre los empleos incluidos en los niveles decisorios definidos por la normativa.
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Bloque 3: Decreto 859 de 2025 - Aplicación y Verificación */}
+                        <View
+                          style={{
+                            backgroundColor: THEME.slate50,
+                            borderRadius: 10,
+                            padding: 16,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            gap: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View
+                                style={{
+                                  backgroundColor: '#1E293B',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 12,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '800' }}>3</Text>
+                              </View>
+                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900 }}>
+                                Decreto 859 de 2025, artículos 2.2.12.3.2 a 2.2.12.3.10 del D. 1083 de 2015
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                backgroundColor: '#E0F2FE',
+                                paddingHorizontal: 8,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1' }}>
+                                APLICACIÓN & REGLAS
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                            Estas disposiciones reglamentan la aplicación de la participación paritaria en las entidades comprendidas por la norma, desarrollan los criterios para identificar los niveles decisorios y establecen reglas relacionadas con la provisión de los cargos y la verificación del cumplimiento.
+                          </Text>
+
+                          <View
+                            style={{
+                              backgroundColor: '#ECFDF5',
+                              borderRadius: 8,
+                              padding: 10,
+                              borderLeftWidth: 3,
+                              borderLeftColor: '#059669',
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: '#065F46', lineHeight: 17 }}>
+                              <Text style={{ fontWeight: '800' }}>Aplicación:</Text> Talento Humano debe revisar el ámbito de aplicación, clasificar correctamente los empleos, verificar las condiciones previstas para la provisión de los cargos y documentar el cumplimiento de los porcentajes exigidos. También debe considerar las excepciones y reglas particulares que resulten aplicables, sin extenderlas a situaciones no previstas en la normativa.
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Bloque 4: Decreto 859 de 2025 - Reporte y Actualización */}
+                        <View
+                          style={{
+                            backgroundColor: THEME.slate50,
+                            borderRadius: 10,
+                            padding: 16,
+                            borderWidth: 1,
+                            borderColor: THEME.slate200,
+                            gap: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View
+                                style={{
+                                  backgroundColor: '#1E293B',
+                                  width: 24,
+                                  height: 24,
+                                  borderRadius: 12,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '800' }}>4</Text>
+                              </View>
+                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900 }}>
+                                Decreto 859 de 2025, artículo 2.2.12.3.11 del D. 1083 de 2015. Reporte oficial
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                backgroundColor: '#FEF3C7',
+                                paddingHorizontal: 8,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#92400E' }}>
+                                SIDEAP / SIGEP
+                              </Text>
+                            </View>
+                          </View>
+
+                          <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                            Esta disposición contempla obligaciones relacionadas con la promoción del cumplimiento de la participación de las mujeres y el reporte de información sobre los cargos decisorios y las personas que los ocupan, a través de los sistemas de información correspondientes.
+                          </Text>
+
+                          <View
+                            style={{
+                              backgroundColor: '#FFFBEB',
+                              borderRadius: 8,
+                              padding: 10,
+                              borderLeftWidth: 3,
+                              borderLeftColor: '#D97706',
+                            }}
+                          >
+                            <Text style={{ fontSize: 11.5, color: '#92400E', lineHeight: 17 }}>
+                              <Text style={{ fontWeight: '800' }}>Aplicación:</Text> la entidad debe procurar que los datos de vinculación, los cargos reportados y la información de las personas que los desempeñan estén actualizados y sean consistentes con los registros oficiales. Para la gestión distrital, esto exige revisar la información disponible en SIDEAP y atender las obligaciones de reporte establecidas en la regulación nacional, incluido el SIGEP cuando corresponda.
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* ========================================================== */}
+                    {/* PANEL DE SEMÁFORO LEGAL: KPIs DE CUMPLIMIENTO PARITARIO    */}
+                    {/* ========================================================== */}
+                    <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 12, flexWrap: 'wrap' }}>
+                      {/* KPI 1: Máximo Nivel Decisorio (MND) */}
+                      <View
+                        style={{
+                          flex: 1,
+                          minWidth: isTablet ? 230 : '100%',
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                            MÁXIMO NIVEL DECISORIO (MND)
+                          </Text>
+                          <View
+                            style={{
+                              backgroundColor: metricasReportes.cumpleMND ? '#ECFDF5' : '#FEF3C7',
+                              paddingHorizontal: 7,
+                              paddingVertical: 2,
+                              borderRadius: 5,
+                              borderWidth: 1,
+                              borderColor: metricasReportes.cumpleMND ? '#A7F3D0' : '#FDE68A',
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 9.5,
+                                fontWeight: '800',
+                                color: metricasReportes.cumpleMND ? '#065F46' : '#92400E',
+                              }}
+                            >
+                              {metricasReportes.cumpleMND ? 'CUMPLE (≥50%)' : 'META: 50%'}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca900, marginTop: 6 }}>
+                          {metricasReportes.pctMujeresMND.toFixed(1)}% Mujeres
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                          {metricasReportes.mujeresMND} mujeres y {metricasReportes.hombresMND} hombres ({metricasReportes.mndCount} empleos MND)
+                        </Text>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 4 }}>
+                          Secretario de Despacho, Subsecretarios, Directores Técnicos
+                        </Text>
+                      </View>
+
+                      {/* KPI 2: Otros Niveles Decisorios (OND) */}
+                      <View
+                        style={{
+                          flex: 1,
+                          minWidth: isTablet ? 230 : '100%',
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                            OTROS NIVELES DECISORIOS (OND)
+                          </Text>
+                          <View
+                            style={{
+                              backgroundColor: metricasReportes.cumpleOND ? '#ECFDF5' : '#FEF3C7',
+                              paddingHorizontal: 7,
+                              paddingVertical: 2,
+                              borderRadius: 5,
+                              borderWidth: 1,
+                              borderColor: metricasReportes.cumpleOND ? '#A7F3D0' : '#FDE68A',
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 9.5,
+                                fontWeight: '800',
+                                color: metricasReportes.cumpleOND ? '#065F46' : '#92400E',
+                              }}
+                            >
+                              {metricasReportes.cumpleOND ? 'CUMPLE (≥50%)' : 'META: 50%'}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 26, fontWeight: '800', color: THEME.marca900, marginTop: 6 }}>
+                          {metricasReportes.pctMujeresOND.toFixed(1)}% Mujeres
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                          {metricasReportes.mujeresOND} mujeres y {metricasReportes.hombresOND} hombres ({metricasReportes.ondCount} empleos OND)
+                        </Text>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 4 }}>
+                          Jefes de Oficina, Jefes de Oficina Asesora
+                        </Text>
+                      </View>
+
+                      {/* KPI 3: Consolidado Total Cargos Sujetos a Reporte */}
+                      <View
+                        style={{
+                          flex: 1,
+                          minWidth: isTablet ? 230 : '100%',
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                          CONSOLIDADO DECISORIOS (MND + OND)
+                        </Text>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 6 }}>
+                          {metricasReportes.pctMujeresDecisorias.toFixed(1)}% Mujeres
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                          {metricasReportes.mujeresDecisorias} mujeres y {metricasReportes.hombresDecisorios} hombres ({metricasReportes.decisoriosCount} empleos)
+                        </Text>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 4 }}>
+                          Población legal sujeta a reporte SIDEAP / SIGEP
+                        </Text>
+                      </View>
+
+                      {/* KPI 4: Total Planta con Género */}
+                      <View
+                        style={{
+                          flex: 1,
+                          minWidth: isTablet ? 230 : '100%',
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          padding: 16,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10.5, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
+                          CONTEXTO TOTAL PLANTA
+                        </Text>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: THEME.slate900, marginTop: 6 }}>
+                          {metricasReportes.pctMujeresPlanta.toFixed(1)}% Mujeres
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate600, marginTop: 2 }}>
+                          {metricasReportes.mujeresTotal} M • {metricasReportes.hombresTotal} H ({metricasReportes.totalServidoresConGenero} provistos)
+                        </Text>
+                        <Text style={{ fontSize: 10.5, color: THEME.slate400, marginTop: 4 }}>
+                          Censo integral de servidores públicos en planta
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* ========================================================== */}
+                    {/* TABLA ANALÍTICA DE SEGUIMIENTO Y COTEJO SIDEAP / SIGEP     */}
+                    {/* ========================================================== */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.03,
+                        shadowRadius: 3,
+                      }}
+                    >
+                      {/* Cabecera y Segmentador de Pestañas */}
+                      <View style={{ backgroundColor: THEME.marca900, padding: 16, gap: 12 }}>
+                        <View
+                          style={{
+                            flexDirection: isDesktop ? 'row' : 'column',
+                            justifyContent: 'space-between',
+                            alignItems: isDesktop ? 'center' : 'flex-start',
+                            gap: 10,
+                          }}
+                        >
+                          <View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <Ionicons name="people-outline" size={18} color={THEME.white} />
+                              <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '800' }}>
+                                Censo y Clasificación Legal de Empleos para Reporte
+                              </Text>
+                            </View>
+                            <Text style={{ color: 'rgba(214, 228, 244, 0.75)', fontSize: 11.5, marginTop: 2 }}>
+                              Identificación conforme a funciones y provisión de cargos según Ley 581, Ley 2424 y Decreto 859 de 2025
+                            </Text>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <TextInput
+                              value={busquedaReporte}
+                              onChangeText={setBusquedaReporte}
+                              placeholder="Buscar por cargo, funcionario o dependencia..."
+                              placeholderTextColor="rgba(214, 228, 244, 0.6)"
+                              style={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                color: THEME.white,
+                                fontSize: 12,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                minWidth: isDesktop ? 280 : 200,
+                              }}
+                            />
+                            {busquedaReporte.length > 0 && (
+                              <Pressable onPress={() => setBusquedaReporte('')}>
+                                <Ionicons name="close-circle" size={18} color={THEME.white} />
+                              </Pressable>
+                            )}
+                          </View>
+                        </View>
+
+                        {/* Filtros Pills de Segmentación */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                          {[
+                            {
+                              id: 'TODOS_DECISORIOS',
+                              label: `Cargos Decisorios (${metricasReportes.decisoriosCount})`,
+                              desc: 'MND + OND',
+                            },
+                            {
+                              id: 'MND',
+                              label: `Máximo Nivel - MND (${metricasReportes.mndCount})`,
+                              desc: 'Ley 581 Art. 2',
+                            },
+                            {
+                              id: 'OND',
+                              label: `Otros Niveles - OND (${metricasReportes.ondCount})`,
+                              desc: 'Ley 581 Art. 3',
+                            },
+                            {
+                              id: 'ASESOR',
+                              label: `Nivel Asesor (${metricasReportes.asesoresCount})`,
+                              desc: 'Análisis funcional',
+                            },
+                            {
+                              id: 'TODA_PLANTA',
+                              label: `Toda la Planta (${todasConSexo.length})`,
+                              desc: 'Censo global',
+                            },
+                          ].map((pill) => {
+                            const sel = filtroCuotasTab === pill.id;
+                            return (
+                              <Pressable
+                                key={pill.id}
+                                onPress={() => setFiltroCuotasTab(pill.id as any)}
+                                style={{
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: sel ? THEME.white : 'rgba(255, 255, 255, 0.12)',
+                                  borderWidth: 1,
+                                  borderColor: sel ? THEME.white : 'rgba(255, 255, 255, 0.2)',
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    color: sel ? THEME.marca900 : THEME.white,
+                                    fontSize: 11.5,
+                                    fontWeight: sel ? '800' : '600',
+                                  }}
+                                >
+                                  {pill.label}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+
+                      {/* Encabezado de Columnas */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          backgroundColor: THEME.slate100,
+                          paddingVertical: 9,
+                          paddingHorizontal: 14,
+                          borderBottomWidth: 1,
+                          borderBottomColor: THEME.slate200,
+                        }}
+                      >
+                        <Text style={{ width: 55, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>PLAZA</Text>
+                        <Text style={{ width: 130, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>NIVEL LEGAL</Text>
+                        <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>EMPLEO PÚBLICO</Text>
+                        <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>TITULAR / ENCARGADO</Text>
+                        <Text style={{ flex: 1.8, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>DEPENDENCIA</Text>
+                        <Text style={{ width: 90, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>GÉNERO</Text>
+                        <Text style={{ width: 105, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>REPORTE</Text>
+                      </View>
+
+                      {/* Lista de Registros */}
+                      {plazasFiltradasCuotas.length === 0 ? (
+                        <View style={{ padding: 24, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12.5, color: THEME.slate500 }}>
+                            No se encontraron empleos para el criterio seleccionado.
+                          </Text>
+                        </View>
+                      ) : (
+                        plazasFiltradasCuotas.map((p: any, idx: number) => {
+                          const esMujer = p.sexoEfectivo === 'MUJER';
+                          const nombreFunc = p.encargo_nombre || p.titular_nombre || 'VACANTE DEFINITIVA';
+                          const cat = p.categoriaDecisoria;
+                          const esDecisorio = cat === 'MND' || cat === 'OND';
+
+                          return (
+                            <Pressable
+                              key={p.id_plaza}
+                              onPress={() => {
+                                setPlazaDetalleReporte(p);
+                                setModalDetallePlazaReporteVisible(true);
+                              }}
+                              style={({ pressed }) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 10,
+                                paddingHorizontal: 14,
+                                backgroundColor: pressed
+                                  ? THEME.slate100
+                                  : idx % 2 === 0
+                                  ? THEME.white
+                                  : THEME.slate50,
+                                borderBottomWidth: idx === plazasFiltradasCuotas.length - 1 ? 0 : 1,
+                                borderBottomColor: THEME.slate100,
+                              })}
+                            >
+                              <Text style={{ width: 55, fontSize: 11.5, fontWeight: '700', color: THEME.marca800 }}>
+                                #{p.id_plaza}
+                              </Text>
+
+                              {/* Badge Nivel Legal */}
+                              <View style={{ width: 130, paddingRight: 6 }}>
+                                <View
+                                  style={{
+                                    alignSelf: 'flex-start',
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                    backgroundColor:
+                                      cat === 'MND'
+                                        ? '#EDE9FE'
+                                        : cat === 'OND'
+                                        ? '#E0F2FE'
+                                        : cat === 'ASESOR'
+                                        ? '#FEF3C7'
+                                        : THEME.slate100,
+                                    borderWidth: 1,
+                                    borderColor:
+                                      cat === 'MND'
+                                        ? '#C4B5FD'
+                                        : cat === 'OND'
+                                        ? '#BAE6FD'
+                                        : cat === 'ASESOR'
+                                        ? '#FDE68A'
+                                        : THEME.slate300,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '800',
+                                      color:
+                                        cat === 'MND'
+                                          ? '#6D28D9'
+                                          : cat === 'OND'
+                                          ? '#0369A1'
+                                          : cat === 'ASESOR'
+                                          ? '#92400E'
+                                          : THEME.slate600,
+                                    }}
+                                  >
+                                    {cat === 'MND'
+                                      ? 'MÁXIMO (MND)'
+                                      : cat === 'OND'
+                                      ? 'OTROS (OND)'
+                                      : cat === 'ASESOR'
+                                      ? 'ASESOR (ART. 3)'
+                                      : 'NO DECISORIO'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Cargo */}
+                              <View style={{ flex: 2, paddingRight: 6 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate900 }}>
+                                  {p.cargo}
+                                </Text>
+                                <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                                  Cód. {p.codigo} - Grado {p.grado} • Nivel {p.nivel}
+                                </Text>
+                              </View>
+
+                              {/* Funcionario */}
+                              <View style={{ flex: 2, paddingRight: 6 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate800 }}>
+                                  {nombreFunc}
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: 10.5,
+                                    color: p.es_encargo ? '#B45309' : THEME.slate500,
+                                  }}
+                                >
+                                  {p.es_encargo ? 'En encargo' : p.tipo_vinculacion || 'En propiedad'}
+                                </Text>
+                              </View>
+
+                              {/* Dependencia */}
+                              <Text
+                                numberOfLines={1}
+                                style={{ flex: 1.8, fontSize: 11, color: THEME.slate600, paddingRight: 6 }}
+                              >
+                                {p.dependencia_cargo}
+                              </Text>
+
+                              {/* Género */}
+                              <View style={{ width: 90, alignItems: 'center' }}>
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    backgroundColor: esMujer ? '#FCE7F3' : p.sexoEfectivo === 'HOMBRE' ? '#E0F2FE' : '#F1F5F9',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: esMujer ? '#FBCFE8' : p.sexoEfectivo === 'HOMBRE' ? '#BAE6FD' : '#E2E8F0',
+                                  }}
+                                >
+                                  <Ionicons
+                                    name={esMujer ? 'woman-outline' : p.sexoEfectivo === 'HOMBRE' ? 'man-outline' : 'help-circle-outline'}
+                                    size={12}
+                                    color={esMujer ? '#BE185D' : p.sexoEfectivo === 'HOMBRE' ? '#0369A1' : THEME.slate500}
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: 10.5,
+                                      fontWeight: '700',
+                                      color: esMujer ? '#9D174D' : p.sexoEfectivo === 'HOMBRE' ? '#075985' : THEME.slate600,
+                                    }}
+                                  >
+                                    {esMujer ? 'Mujer' : p.sexoEfectivo === 'HOMBRE' ? 'Hombre' : 'Sin dato'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Reporte SIDEAP / SIGEP */}
+                              <View style={{ width: 105, alignItems: 'center' }}>
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    backgroundColor: esDecisorio ? '#ECFDF5' : THEME.slate100,
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 2,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name={esDecisorio ? 'checkmark-circle-outline' : 'remove-outline'}
+                                    size={12}
+                                    color={esDecisorio ? '#059669' : THEME.slate500}
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '700',
+                                      color: esDecisorio ? '#047857' : THEME.slate600,
+                                    }}
+                                  >
+                                    {esDecisorio ? 'SIGEP/SIDEAP' : 'Informativo'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </Pressable>
+                          );
+                        })
+                      )}
+                    </View>
+
+                    {/* ========================================================== */}
+                    {/* MATRIZ DE GÉNERO POR NIVELES Y PIRÁMIDE ETARIA LEY 1821   */}
+                    {/* ========================================================== */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        padding: 18,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        gap: 14,
+                      }}
+                    >
+                      <View>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                          Representación de Género por Niveles Jerárquicos en Planta
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                          Distribución comparativa de participación femenina y masculina en la estructura organizacional
+                        </Text>
+                      </View>
+
+                      <View style={{ gap: 12 }}>
+                        {Object.entries(metricasReportes.paridadPorNivel).map(([nivKey, nData]) => {
+                          const pctM = Math.round(nData.pctMujeres);
+                          const pctH = 100 - pctM;
+                          return (
+                            <View
+                              key={nivKey}
+                              style={{
+                                backgroundColor: THEME.slate50,
+                                borderRadius: 8,
+                                padding: 12,
+                                borderWidth: 1,
+                                borderColor: THEME.slate200,
+                                gap: 6,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: THEME.slate900 }}>
+                                    {nData.label}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                                    ({nData.total} plazas)
+                                  </Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#BE185D' }}>
+                                    {nData.mujeres} M ({pctM}%)
+                                  </Text>
+                                  <Text style={{ fontSize: 11.5, color: THEME.slate400 }}>•</Text>
+                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0369A1' }}>
+                                    {nData.hombres} H ({pctH}%)
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Barra bicolor de distribución de género */}
+                              <View
+                                style={{
+                                  height: 9,
+                                  backgroundColor: THEME.slate200,
+                                  borderRadius: 5,
+                                  overflow: 'hidden',
+                                  flexDirection: 'row',
+                                }}
+                              >
+                                <View style={{ width: (`${pctM}%` as any), height: '100%', backgroundColor: '#EC4899' }} />
+                                <View style={{ width: (`${pctH}%` as any), height: '100%', backgroundColor: '#38BDF8' }} />
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    {/* Pirámide de Edad y Planeación Pensional (Ley 1821 de 2017) */}
+                    <View
+                      style={{
+                        backgroundColor: THEME.white,
+                        borderRadius: 12,
+                        padding: 18,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        gap: 14,
+                      }}
+                    >
+                      <View>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
+                          Distribución Etaria y Relevo Generacional (Ley 1821 de 2017)
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 1 }}>
+                          Planificación del talento humano, preparación pensional y memoria institucional
+                        </Text>
+                      </View>
+
+                      <View style={{ gap: 10 }}>
+                        {[
+                          {
+                            label: 'Jóvenes (< 30 años)',
+                            cant: metricasReportes.gruposEdad.menor30,
+                            color: '#3B82F6',
+                            desc: 'Iniciando carrera administrativa y retención de talento joven',
+                          },
+                          {
+                            label: 'Consolidación (30 - 45 años)',
+                            cant: metricasReportes.gruposEdad.de30a45,
+                            color: '#10B981',
+                            desc: 'Plena productividad institucional y liderazgo operativo',
+                          },
+                          {
+                            label: 'Madurez Profesional (46 - 60 años)',
+                            cant: metricasReportes.gruposEdad.de46a60,
+                            color: '#F59E0B',
+                            desc: 'Experiencia acumulada y transferencia de conocimiento técnico',
+                          },
+                          {
+                            label: 'Próximos a Pensión / Retiro (> 60 años)',
+                            cant: metricasReportes.gruposEdad.mayor60,
+                            color: '#EF4444',
+                            desc: 'Sujetos a plan de relevo pensional y retiro forzoso (Ley 1821)',
+                          },
+                        ].map((grp) => {
+                          const totalEd =
+                            metricasReportes.gruposEdad.menor30 +
+                              metricasReportes.gruposEdad.de30a45 +
+                              metricasReportes.gruposEdad.de46a60 +
+                              metricasReportes.gruposEdad.mayor60 || 1;
+                          const pct = Math.round((grp.cant / totalEd) * 100);
+                          return (
+                            <View key={grp.label} style={{ gap: 4 }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                                  {grp.label}
+                                </Text>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate700 }}>
+                                  {grp.cant} servidores ({pct}%)
+                                </Text>
+                              </View>
+                              <View style={{ height: 8, backgroundColor: THEME.slate100, borderRadius: 4, overflow: 'hidden' }}>
+                                <View style={{ width: (`${pct}%` as any), height: '100%', backgroundColor: grp.color, borderRadius: 4 }} />
+                              </View>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>{grp.desc}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
                     </View>
                   </View>
-                </View>
-              )}
+                );
+              })()}
 
               {/* SUB-REPORTE 5: CONCILIACIÓN PLANTA VS NÓMINA (PERNO)           */}
               {/* ============================================================== */}
@@ -6709,9 +7703,206 @@ export default function NominaScreen() {
             </View>
           </Modal>
 
+          {/* Modal Instructivo Oficial SIDEAP y SIGEP (Decreto 859 de 2025) */}
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={modalInstructivoSideapVisible}
+            onRequestClose={() => setModalInstructivoSideapVisible(false)}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(15, 23, 42, 0.65)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 16,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 14,
+                  width: '100%',
+                  maxWidth: 680,
+                  maxHeight: '90%',
+                  overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 10,
+                }}
+              >
+                {/* Cabecera del Modal */}
+                <View
+                  style={{
+                    backgroundColor: THEME.marca900,
+                    paddingHorizontal: 20,
+                    paddingVertical: 16,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View
+                      style={{
+                        backgroundColor: 'rgba(214, 228, 244, 0.2)',
+                        padding: 7,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Ionicons name="book" size={20} color="#F472B6" />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.white }}>
+                        Instructivo Oficial de Cumplimiento & Reporte
+                      </Text>
+                      <Text style={{ fontSize: 11.5, color: 'rgba(214, 228, 244, 0.85)', marginTop: 2 }}>
+                        Ley de Cuotas (Ley 2424 / Ley 581) y Decreto 859 de 2025
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable onPress={() => setModalInstructivoSideapVisible(false)}>
+                    <Ionicons name="close" size={22} color={THEME.white} />
+                  </Pressable>
+                </View>
 
-          {/* ============================================================== */}
-          {/* PESTAÑA 4: PERSONAL INTEGRAL / PERNO (Activos y Desvinculados) */}
+                {/* Contenido del Modal */}
+                <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+                  {/* Resumen Ejecutivo */}
+                  <View
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      borderRadius: 10,
+                      padding: 14,
+                      borderLeftWidth: 4,
+                      borderLeftColor: '#2563EB',
+                      gap: 4,
+                    }}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E3A8A' }}>
+                      Obligación Legal de Paridad en Niveles Decisorios
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#1E40AF', lineHeight: 18 }}>
+                      El Decreto 859 de 2025 incorporó al Decreto 1083 de 2015 las directrices para garantizar que, como mínimo, el 50 % de los empleos del Máximo Nivel Decisorio (MND) y el 50 % de Otros Niveles Decisorios (OND) sean provistos con mujeres en todas las entidades del Estado.
+                    </Text>
+                  </View>
+
+                  {/* Paso 1: Identificación y Clasificación */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 10,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="layers-outline" size={16} color={THEME.marca800} />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        1. Identificación y Clasificación de Cargos (Ley 581 Arts. 2 y 3)
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '700' }}>Máximo Nivel Decisorio (MND):</Text> Cargos de mayor jerarquía institucional: Secretario de Despacho, Subsecretarios, Directores Técnicos.
+                    </Text>
+                    <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '700' }}>Otros Niveles Decisorios (OND):</Text> Empleos con funciones de dirección, orientación y adopción de políticas públicas: Jefes de Oficina, Jefes de Oficina Asesora.
+                    </Text>
+                    <Text style={{ fontSize: 11.5, color: THEME.slate500, fontStyle: 'italic', marginTop: 2 }}>
+                      * El cálculo no se efectúa sobre la totalidad de servidores de la planta, sino estrictamente sobre los empleos incluidos en dichos niveles decisorios.
+                    </Text>
+                  </View>
+
+                  {/* Paso 2: Reglas de Provisión */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 10,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="git-branch-outline" size={16} color="#059669" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        2. Reglas para Provisión de Vacantes (Decreto 859 de 2025)
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                      Al producirse una vacante definitiva o temporal en un cargo de MND u OND, Talento Humano debe constatar el porcentaje actual de mujeres. Si el porcentaje es inferior al 50 %, la entidad debe priorizar la designación o nombramiento de una mujer que cumpla los requisitos del perfil para restaurar el mandato paritario.
+                    </Text>
+                  </View>
+
+                  {/* Paso 3: Procedimiento de Reporte en SIDEAP y SIGEP */}
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 10,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="cloud-upload-outline" size={16} color="#D97706" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.slate900 }}>
+                        3. Reporte en SIDEAP y SIGEP (Art. 2.2.12.3.11 D. 1083/2015)
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '700' }}>SIDEAP (Distrito Capital):</Text> Verificar que cada servidor posesionado tenga registrado su género, cargo oficial, código, grado y tipo de vinculación (propiedad o encargo).
+                    </Text>
+                    <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '700' }}>SIGEP (Función Pública - DAFP):</Text> Remitir el reporte anual de la Ley de Cuotas con corte a la fecha establecida por la Circular del DAFP, anexando la matriz certificada de MND y OND.
+                    </Text>
+                    <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 18 }}>
+                      • <Text style={{ fontWeight: '700' }}>Consistencia de Datos:</Text> Las cédulas y nombres de los titulares y encargados deben coincidir con la nómina mensual y los actos administrativos de nombramiento.
+                    </Text>
+                  </View>
+                </ScrollView>
+
+                {/* Pie del Modal */}
+                <View
+                  style={{
+                    backgroundColor: THEME.slate50,
+                    paddingHorizontal: 20,
+                    paddingVertical: 12,
+                    borderTopWidth: 1,
+                    borderTopColor: THEME.slate200,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                    Secretaría Jurídica Distrital — Talento Humano
+                  </Text>
+                  <Pressable
+                    onPress={() => setModalInstructivoSideapVisible(false)}
+                    style={({ pressed }) => ({
+                      backgroundColor: pressed ? THEME.marca900 : THEME.marca800,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 6,
+                    })}
+                  >
+                    <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>
+                      Entendido / Cerrar
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
           {/* ============================================================== */}
           {tabActiva === 'perno' && (
             <View style={{ gap: 20 }}>

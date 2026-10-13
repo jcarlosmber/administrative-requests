@@ -395,6 +395,10 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       colMap.asignacion = colNum;
     } else if (raw.includes('TOTAL') && raw.includes('DEVENGAD')) {
       colMap.total_devengado = colNum;
+    } else if (!colMap.sexo && (raw === 'SEXO' || raw === 'GENERO' || raw === 'GÉNERO' || raw.includes('SEXO') || raw.includes('GÉNERO') || colNum === 10)) {
+      colMap.sexo = colNum;
+    } else if (!colMap.edad && (raw === 'EDAD' || colNum === 11)) {
+      colMap.edad = colNum;
     }
   });
 
@@ -577,6 +581,13 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
     const personaMatch = (titularCedula && mapaPernoPorCedula.get(titularCedula)) || 
                          (cedulaActual && mapaPernoPorCedula.get(cedulaActual)) || null;
 
+    let sexoPlanta = cleanText(getVal(row.getCell(colMap.sexo || 10)) || '').toUpperCase();
+    if (sexoPlanta === 'F' || sexoPlanta === 'FEMENINO' || sexoPlanta === 'MUJER') sexoPlanta = 'F';
+    else if (sexoPlanta === 'M' || sexoPlanta === 'MASCULINO' || sexoPlanta === 'HOMBRE') sexoPlanta = 'M';
+    else sexoPlanta = null;
+
+    const sexoFinal = sexoPlanta || personaMatch?.sexo || null;
+
     await pool.query(`
       INSERT INTO public.planta_personal_sjd (
         id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
@@ -631,7 +642,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         fondo_cesantias = COALESCE(EXCLUDED.fondo_cesantias, public.planta_personal_sjd.fondo_cesantias),
         telefono = COALESCE(EXCLUDED.telefono, public.planta_personal_sjd.telefono),
         direccion = COALESCE(EXCLUDED.direccion, public.planta_personal_sjd.direccion),
-        sexo = COALESCE(EXCLUDED.sexo, public.planta_personal_sjd.sexo),
+        sexo = COALESCE(NULLIF(EXCLUDED.sexo, ''), public.planta_personal_sjd.sexo),
         manual_funciones = COALESCE(EXCLUDED.manual_funciones, public.planta_personal_sjd.manual_funciones),
         resolucion_manual = COALESCE(EXCLUDED.resolucion_manual, public.planta_personal_sjd.resolucion_manual),
         total_devengado = COALESCE(EXCLUDED.total_devengado, public.planta_personal_sjd.total_devengado),
@@ -649,7 +660,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       personaMatch?.fondoCesantias || null,
       personaMatch?.telefono || null,
       personaMatch?.direccion || null,
-      personaMatch?.sexo || null,
+      sexoFinal,
       manualFuncionesRaw || null,
       manualFuncionesRaw || null,
       devengadoPlanta || personaMatch?.totalDevengado || null

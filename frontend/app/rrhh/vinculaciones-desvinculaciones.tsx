@@ -3520,9 +3520,24 @@ export function sincronizarEtapasCaso(
       return reqM;
     });
 
+    const reqsObligatorios = requisitosSincronizados.filter((r) => r.obligatorio);
+    const todosObligatoriosCumplidos = reqsObligatorios.length > 0
+      ? reqsObligatorios.every((r) => r.cumplido)
+      : requisitosSincronizados.every((r) => r.cumplido);
+    const algunCumplido = requisitosSincronizados.some((r) => r.cumplido);
+
+    let estadoFinal: EstadoEtapa = etapaG.estado || etapaM.estado;
+    if (todosObligatoriosCumplidos && requisitosSincronizados.length > 0) {
+      estadoFinal = 'completed';
+    } else if (algunCumplido) {
+      estadoFinal = 'in_progress';
+    } else {
+      estadoFinal = 'pending';
+    }
+
     return {
       ...etapaM,
-      estado: etapaG.estado || etapaM.estado,
+      estado: estadoFinal,
       observacionesFase: etapaG.observacionesFase || etapaM.observacionesFase,
       radicadoFase: etapaG.radicadoFase || etapaM.radicadoFase,
       requisitos: requisitosSincronizados,
@@ -3592,14 +3607,13 @@ export function generarEtapasParaCasoConEstado(
 }
 
 export const esTerminadoDefault2026 = (id: string, tipo: string): boolean => {
-  const num = parseInt(id.split('-').pop() || '999', 10);
-  if (tipo === 'DESVINCULACION') {
-    // 17 terminados (enero a julio 2026), 5 en trámite (agosto/septiembre 2026)
-    return num <= 17;
-  } else {
-    // 19 terminados (enero a agosto 2026), 8 en trámite (septiembre 2026)
-    return num <= 19;
+  // Solo se marca por defecto el trámite que el usuario culminó expresamente:
+  // Jorge Andrés Rojas Peña (TR-DESV-2026-006).
+  if (id === 'TR-DESV-2026-006') {
+    return true;
   }
+  // Todos los demás trámites permanecen activos en trámite con su avance correspondiente
+  return false;
 };
 
 const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => ({
@@ -4033,8 +4047,8 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [filtroDependenciaDesvinculacion, setFiltroDependenciaDesvinculacion] = useState<string>('TODAS');
 
   // Claves de persistencia en almacenamiento local (Web / App)
-  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v6';
-  const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v4';
+  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v7';
+  const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v5';
 
   const obtenerCasosIniciales = (): CasoFlujoFuncionario[] => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -6385,8 +6399,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     // Guardado inmediato en localStorage para blindar contra F5 o recargas instantáneas
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
-        window.localStorage.setItem('rrhh_vinculaciones_casos_v2', JSON.stringify(nuevosCasos));
-        window.localStorage.setItem('rrhh_vinculaciones_caso_activo_v2', nuevoId);
+        window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(nuevosCasos));
+        window.localStorage.setItem(STORAGE_KEY_CASO_ACTIVO, nuevoId);
       } catch (e) {
         console.warn('Error al guardar de inmediato en localStorage:', e);
       }
@@ -7603,323 +7617,566 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       </Text>
                     </View>
                   ) : (
-                    casosFiltrados.map((c) => {
-                      const esActivo = c.id === casoActivo?.id;
-                      const esVinculacion = c.tipo_proceso === 'VINCULACION';
-                      const etapasCompletadas = c.etapas.filter((e) => e.estado === 'completed').length;
-                      const totalEtapas = c.etapas.length;
-                      const porcentaje = Math.round((etapasCompletadas / totalEtapas) * 100);
-                      const esTerminado = porcentaje === 100 || c.etapas.every((e) => e.estado === 'completed');
+                    // Funciones auxiliares para la UI refinada de tarjetas
+                    (() => {
+                      const obtenerInicialesServidor = (nombre?: string): string => {
+                        if (!nombre) return 'TH';
+                        const partes = nombre.trim().split(/\s+/).filter(Boolean);
+                        if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+                        const primera = partes[0][0];
+                        const ultima = partes[partes.length - 1][0];
+                        return (primera + ultima).toUpperCase();
+                      };
 
-                      return (
-                        <Pressable
-                          key={c.id}
-                          onPress={() => setCasoSeleccionadoId(c.id)}
-                          style={({ pressed }) => ({
-                            backgroundColor: esActivo
-                              ? THEME.marca50
-                              : pressed
-                              ? THEME.slate50
-                              : esTerminado
-                              ? '#fafdfb'
-                              : THEME.white,
-                            borderRadius: 12,
-                            padding: 13,
-                            borderWidth: 1.5,
-                            borderColor: esActivo
-                              ? THEME.marca600
-                              : esTerminado
-                              ? '#bbf7d0'
-                              : '#fde68a',
-                            borderLeftWidth: 5,
-                            borderLeftColor: esTerminado ? '#10b981' : '#f59e0b',
-                            gap: 7,
-                            shadowColor: '#000',
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: esActivo ? 0.08 : 0.03,
-                            shadowRadius: 2.5,
-                          })}
-                        >
-                          {/* Fila Superior: Badges de Estado Destacado, Tipo, Régimen y Porcentaje */}
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              justifyContent: 'space-between',
-                              alignItems: 'flex-start',
-                              gap: 6,
-                            }}
+                      const obtenerEtiquetaModalidadCorta = (m: ModalidadPersonal): string => {
+                        switch (m) {
+                          case 'CARRERA_ADMINISTRATIVA':
+                            return 'Carrera Adm.';
+                          case 'LIBRE_NOMBRAMIENTO':
+                            return 'Libre Nomb.';
+                          case 'PROVISIONALIDAD':
+                            return 'Provisional';
+                          case 'PRACTICANTE':
+                            return 'Practicante';
+                          default:
+                            return 'Planta';
+                        }
+                      };
+
+                      return casosFiltrados.map((c) => {
+                        const esActivo = c.id === casoActivo?.id;
+                        const esVinculacion = c.tipo_proceso === 'VINCULACION';
+                        const etapasCompletadas = c.etapas.filter((e) => e.estado === 'completed').length;
+                        const totalEtapas = c.etapas.length;
+                        const porcentaje = Math.round((etapasCompletadas / totalEtapas) * 100);
+                        const esTerminado = porcentaje === 100 || c.etapas.every((e) => e.estado === 'completed');
+                        const iniciales = obtenerInicialesServidor(c.servidor_nombre);
+                        const modalidadCorta = obtenerEtiquetaModalidadCorta(c.modalidad);
+
+                        return (
+                          <Pressable
+                            key={c.id}
+                            onPress={() => setCasoSeleccionadoId(c.id)}
+                            style={({ pressed }) => ({
+                              backgroundColor: esActivo
+                                ? '#f0fdfa'
+                                : pressed
+                                ? '#f8fafc'
+                                : THEME.white,
+                              borderRadius: 16,
+                              padding: 16,
+                              borderWidth: esActivo ? 2 : 1,
+                              borderColor: esActivo ? '#0d9488' : '#e2e8f0',
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: esActivo ? 0.08 : 0.04,
+                              shadowRadius: 6,
+                              elevation: esActivo ? 3 : 1,
+                              overflow: 'hidden',
+                              position: 'relative',
+                            })}
                           >
+                            {/* Header: Status Chip & Radicado */}
                             <View
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 5,
-                                flexWrap: 'wrap',
-                                flex: 1,
-                                minWidth: 0,
+                                justifyContent: 'space-between',
+                                paddingBottom: 12,
+                                borderBottomWidth: 1,
+                                borderBottomColor: '#f1f5f9',
                               }}
                             >
-                              {/* BADGE PROMINENTE DE ESTADO */}
-                              {esTerminado ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                {/* Status Chip */}
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 3.5,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 2,
+                                    gap: 6,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 2.5,
                                     borderRadius: 9999,
-                                    backgroundColor: '#dcfce7',
+                                    backgroundColor: esTerminado ? 'rgb(29, 85, 78)' : 'rgb(180, 83, 9)',
                                     borderWidth: 1,
-                                    borderColor: '#10b981',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
                                   }}
                                 >
-                                  <Ionicons name="checkmark-circle" size={11} color="#047857" />
-                                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#047857' }}>
-                                    TERMINADO
-                                  </Text>
-                                </View>
-                              ) : (
-                                <View
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 3.5,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 2,
-                                    borderRadius: 9999,
-                                    backgroundColor: '#fef3c7',
-                                    borderWidth: 1,
-                                    borderColor: '#f59e0b',
-                                  }}
-                                >
-                                  <Ionicons name="time" size={11} color="#b45309" />
-                                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#b45309' }}>
-                                    EN TRÁMITE
-                                  </Text>
-                                </View>
-                              )}
-
-                              {/* Badge de Tipo Proceso */}
-                              <View
-                                style={{
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 1.5,
-                                  borderRadius: 4,
-                                  backgroundColor: esVinculacion ? THEME.emeraldBg : THEME.roseBg,
-                                  borderWidth: 1,
-                                  borderColor: esVinculacion ? THEME.emeraldRing : THEME.roseRing,
-                                }}
-                              >
-                                <Text
-                                  style={{
-                                    color: esVinculacion ? THEME.emeraldText : THEME.roseText,
-                                    fontSize: 9,
-                                    fontWeight: '700',
-                                  }}
-                                >
-                                  {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'}
-                                </Text>
-                              </View>
-
-                              {/* Badge Modalidad */}
-                              {(() => {
-                                const infoM = obtenerInfoModalidad(c.modalidad);
-                                return (
                                   <View
                                     style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 3,
-                                      paddingHorizontal: 5,
-                                      paddingVertical: 1.5,
-                                      borderRadius: 4,
-                                      backgroundColor: infoM.colorBg,
-                                      borderWidth: 1,
-                                      borderColor: infoM.colorBorde,
+                                      width: 6,
+                                      height: 6,
+                                      borderRadius: 3,
+                                      backgroundColor: esTerminado ? '#5eead4' : '#fde047',
+                                    }}
+                                  />
+                                  <Text
+                                    style={{
+                                      color: '#ffffff',
+                                      fontSize: 11,
+                                      fontWeight: '600',
                                     }}
                                   >
-                                    <Ionicons name={infoM.icono} size={9} color={infoM.colorTexto} />
-                                    <Text
-                                      style={{
-                                        color: infoM.colorTexto,
-                                        fontSize: 9,
-                                        fontWeight: '800',
-                                      }}
-                                    >
-                                      {infoM.badgeTexto}
-                                    </Text>
-                                  </View>
-                                );
-                              })()}
-                            </View>
+                                    {esTerminado ? 'Terminado' : 'En Trámite'}
+                                  </Text>
+                                </View>
 
-                            {/* Porcentaje y Código */}
-                            <View style={{ alignItems: 'flex-end', gap: 2, flexShrink: 0 }}>
-                              <Text
-                                style={{
-                                  color: THEME.slate400,
-                                  fontSize: 9.5,
-                                  fontWeight: '700',
-                                  letterSpacing: 0.2,
-                                }}
-                              >
-                                {c.id}
-                              </Text>
+                                {/* Tipo Proceso Chip */}
+                                <View
+                                  style={{
+                                    backgroundColor: esVinculacion ? 'rgb(30, 64, 175)' : 'rgb(139, 64, 73)',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2.5,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: '#ffffff',
+                                      fontSize: 10,
+                                      fontWeight: '700',
+                                      letterSpacing: 0.2,
+                                    }}
+                                  >
+                                    {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Radicado Chip */}
                               <View
                                 style={{
-                                  paddingHorizontal: 6,
-                                  paddingVertical: 1.5,
-                                  borderRadius: 9999,
-                                  backgroundColor: esTerminado ? '#dcfce7' : '#fef3c7',
+                                  backgroundColor: '#f8fafc',
                                   borderWidth: 1,
-                                  borderColor: esTerminado ? '#10b981' : '#f59e0b',
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 2.5,
+                                  borderColor: 'rgba(226, 232, 240, 0.8)',
+                                  borderRadius: 4,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 2.5,
                                 }}
                               >
-                                <Ionicons
-                                  name={esTerminado ? 'checkmark' : 'time-outline'}
-                                  size={10}
-                                  color={esTerminado ? '#047857' : '#b45309'}
-                                />
                                 <Text
                                   style={{
-                                    color: esTerminado ? '#047857' : '#b45309',
-                                    fontSize: 10,
-                                    fontWeight: '800',
+                                    fontSize: 11,
+                                    fontWeight: '700',
+                                    color: '#64748b',
+                                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                  }}
+                                >
+                                  {c.id}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Main Info: Identity with Avatar/Monogram Indicator & Type */}
+                            <View style={{ paddingTop: 12, paddingBottom: 6 }}>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 10,
+                                }}
+                              >
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    flex: 1,
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  {/* Avatar Monograma */}
+                                  <View
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 16,
+                                      backgroundColor: esTerminado ? '#ccfbf1' : '#fef3c7',
+                                      borderWidth: 2,
+                                      borderColor: esTerminado ? '#f0fdfa' : '#fffbeb',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: 11.5,
+                                        fontWeight: '700',
+                                        color: esTerminado ? '#115e59' : '#92400e',
+                                      }}
+                                    >
+                                      {iniciales}
+                                    </Text>
+                                  </View>
+
+                                  {/* Nombre */}
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 13.5,
+                                      fontWeight: '700',
+                                      color: esActivo ? '#0f766e' : '#0f172a',
+                                      flex: 1,
+                                    }}
+                                  >
+                                    {c.servidor_nombre}
+                                  </Text>
+                                </View>
+
+                                {/* Badge de Régimen */}
+                                <View
+                                  style={{
+                                    backgroundColor: '#f1f5f9',
+                                    borderWidth: 1,
+                                    borderColor: '#e2e8f0',
+                                    borderRadius: 4,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2.5,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: '600',
+                                      color: '#334155',
+                                    }}
+                                  >
+                                    {modalidadCorta}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Metadata Group with Clean Separators */}
+                              <View
+                                style={{
+                                  marginTop: 10,
+                                  padding: 11,
+                                  borderRadius: 12,
+                                  backgroundColor: 'rgba(248, 250, 252, 0.85)',
+                                  borderWidth: 1,
+                                  borderColor: '#f1f5f9',
+                                  gap: 8,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                  <View style={{ flex: 1 }}>
+                                    <Text
+                                      style={{
+                                        color: '#94a3b8',
+                                        fontWeight: '600',
+                                        fontSize: 9.5,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5,
+                                      }}
+                                    >
+                                      Identificación
+                                    </Text>
+                                    <Text
+                                      style={{
+                                        fontSize: 11,
+                                        fontWeight: '700',
+                                        color: '#1e293b',
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
+                                    </Text>
+                                  </View>
+
+                                  <View
+                                    style={{
+                                      width: 1,
+                                      height: 26,
+                                      backgroundColor: 'rgba(226, 232, 240, 0.7)',
+                                      marginHorizontal: 10,
+                                    }}
+                                  />
+
+                                  <View style={{ flex: 1.2 }}>
+                                    <Text
+                                      style={{
+                                        color: '#94a3b8',
+                                        fontWeight: '600',
+                                        fontSize: 9.5,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: 0.5,
+                                      }}
+                                    >
+                                      Cargo
+                                    </Text>
+                                    <Text
+                                      numberOfLines={1}
+                                      style={{
+                                        fontSize: 11,
+                                        fontWeight: '600',
+                                        color: '#1e293b',
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      {c.cargo || 'No asignado'}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={{
+                                    paddingTop: 8,
+                                    borderTopWidth: 1,
+                                    borderTopColor: 'rgba(226, 232, 240, 0.7)',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: '#94a3b8',
+                                      fontWeight: '600',
+                                      fontSize: 9.5,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.5,
+                                    }}
+                                  >
+                                    Dependencia
+                                  </Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 10.5,
+                                      fontWeight: '500',
+                                      color: '#334155',
+                                      flex: 1,
+                                      textAlign: 'right',
+                                      marginLeft: 8,
+                                    }}
+                                  >
+                                    {c.dependencia || 'Secretaría Jurídica Distrital'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+
+                            {/* Refined Progress Indicator */}
+                            <View style={{ marginTop: 6, marginBottom: 4 }}>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  marginBottom: 5,
+                                }}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <Ionicons
+                                    name={esTerminado ? 'checkmark-circle' : 'time'}
+                                    size={13}
+                                    color={esTerminado ? '#0f766e' : '#b45309'}
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: '500',
+                                      color: esTerminado ? '#134e4a' : '#92400e',
+                                    }}
+                                  >
+                                    {esTerminado
+                                      ? 'Expediente Completado'
+                                      : `Fases: ${etapasCompletadas} de ${totalEtapas} concluidas`}
+                                  </Text>
+                                </View>
+                                <Text
+                                  style={{
+                                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                    fontSize: 10.5,
+                                    fontWeight: '700',
+                                    color: esTerminado ? '#115e59' : '#b45309',
                                   }}
                                 >
                                   {porcentaje}%
                                 </Text>
                               </View>
+                              <View
+                                style={{
+                                  width: '100%',
+                                  height: 6,
+                                  borderRadius: 3,
+                                  backgroundColor: '#f1f5f9',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <View
+                                  style={{
+                                    height: 6,
+                                    borderRadius: 3,
+                                    width: `${Math.max(porcentaje, 4)}%`,
+                                    backgroundColor: esTerminado ? '#0f766e' : '#d97706',
+                                  }}
+                                />
+                              </View>
                             </View>
-                          </View>
 
-                          {/* Datos Principales del Funcionario */}
-                          <View>
-                            <Text
+                            {/* Legal Document Footer */}
+                            <View
                               style={{
-                                color: esActivo ? THEME.marca900 : THEME.slate900,
-                                fontSize: 13,
-                                fontWeight: '700',
+                                marginTop: 10,
+                                paddingTop: 10,
+                                borderTopWidth: 1,
+                                borderTopColor: '#f1f5f9',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 6,
                               }}
                             >
-                              {c.servidor_nombre}
-                            </Text>
-                            <Text style={{ color: THEME.slate600, fontSize: 11.5, marginTop: 1 }}>
-                              C.C. {c.servidor_cedula} • {c.cargo}
-                            </Text>
-                            <Text style={{ color: THEME.slate400, fontSize: 10.5, marginTop: 2 }}>
-                              {c.dependencia}
-                            </Text>
-                          </View>
-
-                          {/* Fila Inferior con Acto Administrativo y Fecha */}
-                          <View
-                            style={{
-                              marginTop: 2,
-                              paddingTop: 5,
-                              borderTopWidth: 1,
-                              borderTopColor: THEME.slate100,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: 6,
-                            }}
-                          >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 }}>
-                              <Ionicons
-                                name={esTerminado ? 'shield-checkmark' : 'document-text-outline'}
-                                size={12}
-                                color={esTerminado ? '#059669' : '#d97706'}
-                              />
-                              <Text
-                                numberOfLines={1}
-                                style={{
-                                  fontSize: 10.5,
-                                  fontWeight: '700',
-                                  color: esTerminado ? '#047857' : '#92400e',
-                                }}
-                              >
-                                {c.acto_administrativo
-                                  ? (esTerminado ? `Cerrado con ${c.acto_administrativo}` : c.acto_administrativo)
-                                  : (esTerminado ? 'Trámite finalizado' : 'Acto administrativo pendiente')}
-                              </Text>
-                            </View>
-                            {c.fecha_efectiva ? (
-                              <Text style={{ fontSize: 10, color: THEME.slate400, fontWeight: '600', flexShrink: 0 }}>
-                                {c.fecha_efectiva}
-                              </Text>
-                            ) : null}
-                          </View>
-
-                          {/* Accesos directos integrados para Vinculación */}
-                          {esVinculacion && (
-                            <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
-                              <Pressable
-                                onPress={(e) => {
-                                  e.stopPropagation();
-                                  abrirConsultaSecopParaCandidato(
-                                    c.servidor_nombre,
-                                    c.servidor_cedula,
-                                    c.id
-                                  );
-                                }}
+                              <View
                                 style={{
                                   flexDirection: 'row',
                                   alignItems: 'center',
-                                  gap: 4,
-                                  backgroundColor: THEME.skyBg,
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3.5,
-                                  borderRadius: 5,
-                                  borderWidth: 1,
-                                  borderColor: THEME.skyRing,
+                                  gap: 7,
+                                  flex: 1,
+                                  minWidth: 0,
                                 }}
                               >
-                                <Ionicons name="search" size={11} color={THEME.skyText} />
-                                <Text
-                                  style={{ color: THEME.skyText, fontSize: 10, fontWeight: '600' }}
-                                >
-                                  SECOP II
-                                </Text>
-                              </Pressable>
-
-                              <Pressable
-                                onPress={(e) => {
-                                  e.stopPropagation();
-                                  router.push('/ingresos/nueva');
-                                }}
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  backgroundColor: THEME.emeraldBg,
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3.5,
-                                  borderRadius: 5,
-                                  borderWidth: 1,
-                                  borderColor: THEME.emeraldRing,
-                                }}
-                              >
-                                <Ionicons name="sparkles" size={11} color={THEME.emeraldText} />
-                                <Text
+                                <View
                                   style={{
-                                    color: THEME.emeraldText,
-                                    fontSize: 10,
-                                    fontWeight: '600',
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 8,
+                                    backgroundColor: esTerminado ? '#f0fdfa' : '#fffbeb',
+                                    borderWidth: 1,
+                                    borderColor: esTerminado
+                                      ? 'rgba(153, 246, 228, 0.8)'
+                                      : 'rgba(253, 230, 138, 0.8)',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
                                   }}
                                 >
-                                  Cotejo IA
+                                  <Ionicons
+                                    name="document-text-outline"
+                                    size={14}
+                                    color={esTerminado ? '#0f766e' : '#b45309'}
+                                  />
+                                </View>
+                                <Text
+                                  numberOfLines={1}
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: '600',
+                                    color: '#0f172a',
+                                    flex: 1,
+                                  }}
+                                >
+                                  {c.acto_administrativo ||
+                                    (esTerminado
+                                      ? 'Resolución oficial expedida'
+                                      : 'Acto administrativo pendiente')}
                                 </Text>
-                              </Pressable>
+                              </View>
+
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 3.5,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Ionicons name="calendar-outline" size={11.5} color="#94a3b8" />
+                                <Text
+                                  style={{
+                                    fontSize: 10,
+                                    color: '#94a3b8',
+                                    fontWeight: '500',
+                                  }}
+                                >
+                                  {c.fecha_efectiva ? `Publicada: ${c.fecha_efectiva}` : 'Pendiente'}
+                                </Text>
+                              </View>
                             </View>
-                          )}
-                        </Pressable>
-                      );
-                    })
+
+                            {/* Accesos directos integrados para Vinculación */}
+                            {esVinculacion && (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  gap: 6,
+                                  marginTop: 8,
+                                  paddingTop: 8,
+                                  borderTopWidth: 1,
+                                  borderTopColor: '#f8fafc',
+                                }}
+                              >
+                                <Pressable
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    abrirConsultaSecopParaCandidato(
+                                      c.servidor_nombre,
+                                      c.servidor_cedula,
+                                      c.id
+                                    );
+                                  }}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    backgroundColor: THEME.skyBg,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3.5,
+                                    borderRadius: 5,
+                                    borderWidth: 1,
+                                    borderColor: THEME.skyRing,
+                                  }}
+                                >
+                                  <Ionicons name="search" size={11} color={THEME.skyText} />
+                                  <Text
+                                    style={{
+                                      color: THEME.skyText,
+                                      fontSize: 10,
+                                      fontWeight: '600',
+                                    }}
+                                  >
+                                    SECOP II
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  onPress={(e) => {
+                                    e.stopPropagation();
+                                    router.push('/ingresos/nueva');
+                                  }}
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    backgroundColor: THEME.emeraldBg,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3.5,
+                                    borderRadius: 5,
+                                    borderWidth: 1,
+                                    borderColor: THEME.emeraldRing,
+                                  }}
+                                >
+                                  <Ionicons name="sparkles" size={11} color={THEME.emeraldText} />
+                                  <Text
+                                    style={{
+                                      color: THEME.emeraldText,
+                                      fontSize: 10,
+                                      fontWeight: '600',
+                                    }}
+                                  >
+                                    Cotejo IA
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            )}
+                          </Pressable>
+                        );
+                      });
+                    })()
                   )}
                 </View>
 
@@ -7951,38 +8208,59 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         return esTerminadoActivo ? (
                           <View
                             style={{
-                              backgroundColor: '#ecfdf5',
+                              backgroundColor: 'rgb(29, 85, 78)',
                               borderWidth: 1.5,
-                              borderColor: '#10b981',
-                              borderRadius: 10,
-                              padding: 12,
+                              borderColor: 'rgba(94, 234, 212, 0.4)',
+                              borderRadius: 12,
+                              padding: 14,
                               flexDirection: isTablet ? 'row' : 'column',
                               justifyContent: 'space-between',
                               alignItems: isTablet ? 'center' : 'flex-start',
-                              gap: 10,
+                              gap: 12,
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.15,
+                              shadowRadius: 6,
+                              elevation: 3,
                             }}
                           >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                              <Ionicons name="checkmark-circle" size={24} color="#059669" />
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                              <View
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 17,
+                                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(94, 234, 212, 0.5)',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Ionicons name="checkmark-circle" size={22} color="#5eead4" />
+                              </View>
                               <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#065f46' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#ffffff', letterSpacing: 0.2 }}>
                                     TRÁMITE OFICIALMENTE TERMINADO Y CERRADO (100%)
                                   </Text>
                                   <View
                                     style={{
-                                      backgroundColor: '#059669',
-                                      paddingHorizontal: 6,
-                                      paddingVertical: 1,
+                                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                      borderWidth: 1,
+                                      borderColor: 'rgba(255, 255, 255, 0.35)',
+                                      paddingHorizontal: 7,
+                                      paddingVertical: 1.5,
                                       borderRadius: 4,
                                     }}
                                   >
-                                    <Text style={{ color: THEME.white, fontSize: 9.5, fontWeight: '800' }}>
+                                    <Text style={{ color: '#ffffff', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
                                       FINALIZADO
                                     </Text>
                                   </View>
                                 </View>
-                                <Text style={{ fontSize: 11.5, color: '#047857', marginTop: 2 }}>
+                                <Text style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, 0.88)', marginTop: 3, lineHeight: 17 }}>
                                   {casoActivo.tipo_proceso === 'DESVINCULACION' ? 'Desvinculación' : 'Vinculación'} protocolizada con{' '}
                                   {casoActivo.acto_administrativo || 'documento oficial'}. Todas las fases normativas han sido concluidas y foliadas.
                                 </Text>
@@ -7990,20 +8268,25 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                             <Pressable
                               onPress={() => alternarEstadoTramiteCompleto(casoActivo.id, false)}
-                              style={{
+                              style={({ pressed }) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 4,
-                                backgroundColor: THEME.white,
+                                gap: 5,
+                                backgroundColor: pressed ? '#f0fdfa' : '#ffffff',
                                 borderWidth: 1,
-                                borderColor: '#10b981',
-                                paddingHorizontal: 10,
-                                paddingVertical: 6,
-                                borderRadius: 6,
-                              }}
+                                borderColor: 'rgba(255, 255, 255, 0.9)',
+                                paddingHorizontal: 12,
+                                paddingVertical: 7,
+                                borderRadius: 8,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.12,
+                                shadowRadius: 3,
+                                elevation: 2,
+                              })}
                             >
-                              <Ionicons name="refresh-outline" size={13} color="#047857" />
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>
+                              <Ionicons name="refresh-outline" size={13.5} color="rgb(29, 85, 78)" />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgb(29, 85, 78)' }}>
                                 Reabrir para Modificar
                               </Text>
                             </Pressable>
