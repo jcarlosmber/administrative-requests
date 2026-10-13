@@ -19,7 +19,27 @@ import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 function NuevaValidacionScreen() {
   const router = useRouter();
-  const { rehacerId } = useLocalSearchParams<{ rehacerId?: string }>();
+  const params = useLocalSearchParams<{
+    rehacerId?: string;
+    casoId?: string;
+    origen?: string;
+    nombre?: string;
+    documento?: string;
+    cedula?: string;
+    email?: string;
+    telefono?: string;
+    cargo?: string;
+    codigo?: string;
+    grado?: string;
+    dependencia?: string;
+    sideap?: string;
+    perno?: string;
+    idPlaza?: string;
+    mesesExigidos?: string;
+    formacionExigida?: string;
+    modalidad?: string;
+  }>();
+  const { rehacerId } = params;
 
   // Estados de Planta Oficial y Cargos del Manual
   const [cargos, setCargos] = useState<CargoEvaluado[]>([]);
@@ -30,23 +50,31 @@ function NuevaValidacionScreen() {
   const [plazaSeleccionada, setPlazaSeleccionada] = useState<PlazaPlanta | null>(null);
 
   // Filtros de los Desplegables
-  const [filtroCargo, setFiltroCargo] = useState('');
-  const [filtroCodigoGrado, setFiltroCodigoGrado] = useState('');
-  const [filtroDependencia, setFiltroDependencia] = useState('');
+  const [filtroCargo, setFiltroCargo] = useState(params.cargo ? String(params.cargo) : '');
+  const [filtroCodigoGrado, setFiltroCodigoGrado] = useState(
+    params.codigo && params.grado ? `${params.codigo}-${params.grado}` : ''
+  );
+  const [filtroDependencia, setFiltroDependencia] = useState(params.dependencia ? String(params.dependencia) : '');
   const [filtroSituacion, setFiltroSituacion] = useState('');
-  const [filtroSideap, setFiltroSideap] = useState('');
-  const [filtroPerno, setFiltroPerno] = useState('');
+  const [filtroSideap, setFiltroSideap] = useState(params.sideap ? String(params.sideap) : '');
+  const [filtroPerno, setFiltroPerno] = useState(params.perno ? String(params.perno) : '');
 
   // Estados del Formulario del Cargo
-  const [idSideap, setIdSideap] = useState('');
-  const [idPerno, setIdPerno] = useState('');
-  const [idPlaza, setIdPlaza] = useState<number | null>(null);
-  const [nombreCargo, setNombreCargo] = useState('Profesional Especializado');
-  const [codigoCargo, setCodigoCargo] = useState('222');
-  const [gradoCargo, setGradoCargo] = useState('24');
-  const [dependenciaCargo, setDependenciaCargo] = useState('Dirección Distrital de Doctrina y Asuntos Normativos');
-  const [mesesExigidos, setMesesExigidos] = useState('54');
-  const [formacionExigida, setFormacionExigida] = useState('Título profesional en Derecho o afines. Título de posgrado relacionado.');
+  const [idSideap, setIdSideap] = useState(params.sideap ? String(params.sideap) : '');
+  const [idPerno, setIdPerno] = useState(params.perno ? String(params.perno) : '');
+  const [idPlaza, setIdPlaza] = useState<number | null>(params.idPlaza ? Number(params.idPlaza) : null);
+  const [nombreCargo, setNombreCargo] = useState(params.cargo ? String(params.cargo) : 'Profesional Especializado');
+  const [codigoCargo, setCodigoCargo] = useState(params.codigo ? String(params.codigo) : '222');
+  const [gradoCargo, setGradoCargo] = useState(params.grado ? String(params.grado) : '24');
+  const [dependenciaCargo, setDependenciaCargo] = useState(
+    params.dependencia ? String(params.dependencia) : 'Dirección Distrital de Doctrina y Asuntos Normativos'
+  );
+  const [mesesExigidos, setMesesExigidos] = useState(params.mesesExigidos ? String(params.mesesExigidos) : '54');
+  const [formacionExigida, setFormacionExigida] = useState(
+    params.formacionExigida
+      ? String(params.formacionExigida)
+      : 'Título profesional en Derecho o afines. Título de posgrado relacionado.'
+  );
   const [funcionesTexto, setFuncionesTexto] = useState(
     '1. Proyectar conceptos jurídicos sobre temas de doctrina distrital y asuntos normativos de competencia de la entidad.\n2. Analizar y revisar proyectos de actos administrativos, decretos, resoluciones y proyectos de acuerdo distritales.\n3. Sustanciar respuestas a consultas y derechos de petición formulados por entidades públicas o ciudadanos en materia jurídica.\n4. Participar en la formulación, seguimiento y evaluación de políticas jurídicas de alcance distrital.\n5. Asistir técnicamente a los organismos distritales en la correcta aplicación e interpretación de la normatividad vigente.'
   );
@@ -58,10 +86,12 @@ function NuevaValidacionScreen() {
   const [pickerBusqueda, setPickerBusqueda] = useState('');
 
   // Estados de Candidato
-  const [candidatoNombre, setCandidatoNombre] = useState('');
-  const [candidatoDoc, setCandidatoDoc] = useState('');
-  const [candidatoEmail, setCandidatoEmail] = useState('');
-  const [candidatoTel, setCandidatoTel] = useState('');
+  const [candidatoNombre, setCandidatoNombre] = useState(params.nombre ? String(params.nombre) : '');
+  const [candidatoDoc, setCandidatoDoc] = useState(
+    params.documento || params.cedula ? String(params.documento || params.cedula) : ''
+  );
+  const [candidatoEmail, setCandidatoEmail] = useState(params.email ? String(params.email) : '');
+  const [candidatoTel, setCandidatoTel] = useState(params.telefono ? String(params.telefono) : '');
 
   // Estados de Archivos PDF
   const [archivosPdf, setArchivosPdf] = useState<Array<{ name: string; base64: string; size?: number }>>([]);
@@ -479,6 +509,56 @@ function NuevaValidacionScreen() {
     setFiltroPerno('');
     setPlazaSeleccionada(null);
   };
+
+  // Sincronización automática de plaza y funciones cuando cargan planta/cargos y vienen params de Vinculación
+  useEffect(() => {
+    if (rehacerId) return;
+    if (planta.length === 0 && cargos.length === 0) return;
+
+    let plazaEncontrada: PlazaPlanta | undefined;
+
+    if (params.idPlaza) {
+      const numPlaza = Number(params.idPlaza);
+      plazaEncontrada = planta.find((p) => p.id_plaza === numPlaza);
+    }
+    if (!plazaEncontrada && params.perno) {
+      plazaEncontrada = planta.find((p) => String(p.id_perno) === String(params.perno));
+    }
+    if (!plazaEncontrada && params.sideap) {
+      plazaEncontrada = planta.find((p) => String(p.id_sideap) === String(params.sideap));
+    }
+    if (!plazaEncontrada && params.cargo) {
+      const cleanCargo = String(params.cargo).toLowerCase().trim();
+      plazaEncontrada = planta.find(
+        (p) =>
+          p.cargo?.toLowerCase().trim() === cleanCargo &&
+          (!params.codigo || String(p.codigo) === String(params.codigo))
+      ) || planta.find((p) => p.cargo?.toLowerCase().trim() === cleanCargo);
+    }
+
+    if (plazaEncontrada) {
+      aplicarPlazaCompleta(plazaEncontrada);
+      // Garantizar que los datos del aspirante/candidato permanezcan
+      if (params.nombre) setCandidatoNombre(String(params.nombre));
+      if (params.documento || params.cedula) setCandidatoDoc(String(params.documento || params.cedula));
+      if (params.email) setCandidatoEmail(String(params.email));
+      if (params.telefono) setCandidatoTel(String(params.telefono));
+    } else if (params.cargo) {
+      const cleanCargo = String(params.cargo).toLowerCase().trim();
+      const cargoMatch = cargos.find((c) => c.nombre?.toLowerCase().trim() === cleanCargo);
+      if (cargoMatch) {
+        if (Array.isArray(cargoMatch.funciones_cargo) && cargoMatch.funciones_cargo.length > 0) {
+          setFuncionesTexto(cargoMatch.funciones_cargo.join('\n'));
+        }
+        if (cargoMatch.requisitos_formacion) {
+          setFormacionExigida(cargoMatch.requisitos_formacion);
+        }
+        if (cargoMatch.requisito_experiencia_meses) {
+          setMesesExigidos(String(cargoMatch.requisito_experiencia_meses));
+        }
+      }
+    }
+  }, [planta, cargos, params.idPlaza, params.perno, params.sideap, params.cargo, params.codigo, rehacerId]);
 
   const abrirPicker = (tipo: PickerTipo) => {
     setPickerTipo(tipo);
@@ -1199,7 +1279,13 @@ function NuevaValidacionScreen() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
           <Pressable
-            onPress={() => router.replace('/ingresos')}
+            onPress={() => {
+              if (params.casoId || params.origen === 'vinculaciones') {
+                router.replace('/rrhh/vinculaciones-desvinculaciones');
+              } else {
+                router.replace('/ingresos');
+              }
+            }}
             style={({ pressed }) => ({
               flexDirection: 'row',
               alignItems: 'center',
@@ -1212,7 +1298,7 @@ function NuevaValidacionScreen() {
           >
             <Ionicons name="arrow-back" size={16} color="#D6E4F4" />
             <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '500' }}>
-              Volver a Ingresos
+              {params.casoId || params.origen === 'vinculaciones' ? 'Volver a Vinculaciones' : 'Volver a Ingresos'}
             </Text>
           </Pressable>
 
@@ -1231,11 +1317,43 @@ function NuevaValidacionScreen() {
               Secretaría Jurídica Distrital • Talento Humano
             </Text>
             <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '600', letterSpacing: 0.2, marginTop: 1 }}>
-              {rehacerId ? 'Rehacer Validación de Ingreso' : 'Nueva Validación de Ingreso (IA Gemini)'}
+              {rehacerId
+                ? 'Rehacer Validación de Ingreso'
+                : params.casoId
+                ? 'Validación Técnica FT-318 (Vinculación en Trámite)'
+                : 'Nueva Validación de Ingreso (IA Gemini)'}
             </Text>
           </View>
         </View>
       </View>
+
+      {/* Banner de Vinculación Activa si proviene del módulo de Vinculaciones */}
+      {(params.casoId || params.origen === 'vinculaciones') && (
+        <View
+          style={{
+            backgroundColor: '#064e3b',
+            borderBottomWidth: 1,
+            borderBottomColor: '#059669',
+            paddingHorizontal: 24,
+            paddingVertical: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            width: '100%',
+          }}
+        >
+          <Ionicons name="link" size={20} color="#6ee7b7" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#ecfdf5', fontSize: 12.5, fontWeight: '700' }}>
+              Vinculación Activa: {candidatoNombre || params.nombre || 'Aspirante'} — C.C. {candidatoDoc || params.documento || params.cedula || 'Pendiente'}
+            </Text>
+            <Text style={{ color: '#a7f3d0', fontSize: 11.5, marginTop: 1 }}>
+              Cargo a Proveer: {nombreCargo || params.cargo} (Cód. {codigoCargo || params.codigo || 'N/A'}-Gr. {gradoCargo || params.grado || 'N/A'}) • Dependencia: {dependenciaCargo || params.dependencia}.
+              Los datos oficiales se han precargado para emitir el Certificado FT-318.
+            </Text>
+          </View>
+        </View>
+      )}
 
       <ScrollView contentContainerStyle={{ padding: 24, width: '100%' }}>
         {rehacerId && (

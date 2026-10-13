@@ -6384,6 +6384,51 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   };
 
+  // Navegación hacia Validación Técnica de Ingresos FT-318 llevando todos los datos del cargo y candidato
+  const irAValidacionIngresosNueva = (caso?: CasoFlujoFuncionario | null) => {
+    const casoRef = caso || casoActivo;
+    if (!casoRef) {
+      router.push('/ingresos/nueva');
+      return;
+    }
+
+    // Buscar información de la plaza en planta oficial
+    const plazas = (mockPlazasData as any[]) || [];
+    let plaza = casoRef.id_plaza ? plazas.find((p) => p.id_plaza === casoRef.id_plaza) : null;
+    if (!plaza && casoRef.cargo) {
+      plaza = plazas.find(
+        (p) =>
+          p.cargo?.toLowerCase().trim() === casoRef.cargo?.toLowerCase().trim() &&
+          (!casoRef.codigo || String(p.codigo) === String(casoRef.codigo))
+      ) || plazas.find(
+        (p) => p.cargo?.toLowerCase().trim() === casoRef.cargo?.toLowerCase().trim()
+      );
+    }
+
+    const queryParams: Record<string, string> = {
+      origen: 'vinculaciones',
+      casoId: casoRef.id || '',
+      nombre: casoRef.servidor_nombre || '',
+      documento: casoRef.servidor_cedula || '',
+      cedula: casoRef.servidor_cedula || '',
+      cargo: casoRef.cargo || (plaza?.cargo ?? ''),
+      codigo: casoRef.codigo || (plaza?.codigo ? String(plaza.codigo) : ''),
+      grado: casoRef.grado || (plaza?.grado ? String(plaza.grado) : ''),
+      dependencia: casoRef.dependencia || (plaza?.dependencia_cargo ?? ''),
+      modalidad: casoRef.modalidad || '',
+    };
+
+    if (plaza?.id_sideap) queryParams.sideap = String(plaza.id_sideap);
+    if (plaza?.id_perno) queryParams.perno = String(plaza.id_perno);
+    if (plaza?.id_plaza) queryParams.idPlaza = String(plaza.id_plaza);
+    if (plaza?.requisitos) queryParams.formacionExigida = String(plaza.requisitos);
+
+    router.push({
+      pathname: '/ingresos/nueva',
+      params: queryParams,
+    });
+  };
+
   // Métricas para los KPIs
   const totalVinculaciones = casos.filter((c) => c.tipo_proceso === 'VINCULACION').length;
   const totalDesvinculaciones = casos.filter((c) => c.tipo_proceso === 'DESVINCULACION').length;
@@ -8464,7 +8509,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           {/* 2. Validación FT-318 IA: Verde Petróleo Oscuro Muted */}
                           {casoActivo.tipo_proceso === 'VINCULACION' && (
                             <Pressable
-                              onPress={() => router.push('/ingresos/nueva')}
+                              onPress={() => irAValidacionIngresosNueva(casoActivo)}
                               style={({ pressed }) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
@@ -9454,12 +9499,34 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                               Ver Dictamen
                                                             </Text>
                                                           </Pressable>
+                                                          <Pressable
+                                                            onPress={(e) => {
+                                                              e.stopPropagation();
+                                                              irAValidacionIngresosNueva(casoActivo);
+                                                            }}
+                                                            style={{
+                                                              backgroundColor: '#f0fdf4',
+                                                              paddingHorizontal: 6,
+                                                              paddingVertical: 2,
+                                                              borderRadius: 4,
+                                                              borderColor: '#86efac',
+                                                              borderWidth: 1,
+                                                              flexDirection: 'row',
+                                                              alignItems: 'center',
+                                                              gap: 2,
+                                                            }}
+                                                          >
+                                                            <Ionicons name="sparkles" size={10} color="#15803d" />
+                                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#15803d' }}>
+                                                              Nueva FT-318
+                                                            </Text>
+                                                          </Pressable>
                                                         </>
                                                       ) : (
                                                         <Pressable
                                                           onPress={(e) => {
                                                             e.stopPropagation();
-                                                            router.push('/ingresos/nueva');
+                                                            irAValidacionIngresosNueva(casoActivo);
                                                           }}
                                                           style={{
                                                             backgroundColor: THEME.emeraldBg,
@@ -11031,7 +11098,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 </View>
 
                 <Pressable
-                  onPress={() => router.push('/ingresos/nueva')}
+                  onPress={() => irAValidacionIngresosNueva(casoActivo)}
                   style={{
                     backgroundColor: THEME.emeraldText,
                     paddingHorizontal: 14,
