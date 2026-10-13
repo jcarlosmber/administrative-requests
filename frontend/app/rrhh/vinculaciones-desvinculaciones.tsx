@@ -7628,18 +7628,48 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         return (primera + ultima).toUpperCase();
                       };
 
-                      const obtenerEtiquetaModalidadCorta = (m: ModalidadPersonal): string => {
+                      const obtenerEstilosModalidad = (m: ModalidadPersonal): {
+                        etiqueta: string;
+                        colorTexto: string;
+                        colorBg: string;
+                        colorBorde: string;
+                      } => {
                         switch (m) {
                           case 'CARRERA_ADMINISTRATIVA':
-                            return 'Carrera Adm.';
+                            return {
+                              etiqueta: 'Carrera Adm.',
+                              colorTexto: '#1e40af', // Azul Índigo institucional
+                              colorBg: '#eff6ff',
+                              colorBorde: '#bfdbfe',
+                            };
                           case 'LIBRE_NOMBRAMIENTO':
-                            return 'Libre Nomb.';
+                            return {
+                              etiqueta: 'Libre Nomb.',
+                              colorTexto: '#6b21a8', // Púrpura / Violeta directivo
+                              colorBg: '#faf5ff',
+                              colorBorde: '#e9d5ff',
+                            };
                           case 'PROVISIONALIDAD':
-                            return 'Provisional';
+                            return {
+                              etiqueta: 'Provisional',
+                              colorTexto: '#0e7490', // Cyan / Azul petróleo
+                              colorBg: '#ecfeff',
+                              colorBorde: '#a5f3fc',
+                            };
                           case 'PRACTICANTE':
-                            return 'Practicante';
+                            return {
+                              etiqueta: 'Practicante',
+                              colorTexto: '#c2410c', // Naranja formativo académico
+                              colorBg: '#fff7ed',
+                              colorBorde: '#fed7aa',
+                            };
                           default:
-                            return 'Planta';
+                            return {
+                              etiqueta: 'Planta',
+                              colorTexto: '#475569',
+                              colorBg: '#f8fafc',
+                              colorBorde: '#e2e8f0',
+                            };
                         }
                       };
 
@@ -7651,7 +7681,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         const porcentaje = Math.round((etapasCompletadas / totalEtapas) * 100);
                         const esTerminado = porcentaje === 100 || c.etapas.every((e) => e.estado === 'completed');
                         const iniciales = obtenerInicialesServidor(c.servidor_nombre);
-                        const modalidadCorta = obtenerEtiquetaModalidadCorta(c.modalidad);
+                        const estiloModalidad = obtenerEstilosModalidad(c.modalidad);
+
+                        // Paleta visual: Amarillo/Ámbar si es en trámite, Verde si es terminado
+                        const colorBordeActivo = esTerminado ? 'rgb(29, 85, 78)' : '#f59e0b';
+                        const colorBgActivo = esTerminado ? '#f0fdf4' : '#fffbeb';
+                        const colorNombreActivo = esTerminado ? '#065f46' : '#b45309';
 
                         return (
                           <Pressable
@@ -7659,14 +7694,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             onPress={() => setCasoSeleccionadoId(c.id)}
                             style={({ pressed }) => ({
                               backgroundColor: esActivo
-                                ? '#f0fdfa'
+                                ? colorBgActivo
                                 : pressed
                                 ? '#f8fafc'
                                 : THEME.white,
                               borderRadius: 16,
                               padding: 16,
                               borderWidth: esActivo ? 2 : 1,
-                              borderColor: esActivo ? '#0d9488' : '#e2e8f0',
+                              borderColor: esActivo ? colorBordeActivo : '#e2e8f0',
                               shadowColor: '#000',
                               shadowOffset: { width: 0, height: 2 },
                               shadowOpacity: esActivo ? 0.08 : 0.04,
@@ -7688,7 +7723,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               }}
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                {/* Status Chip */}
+                                {/* Status Chip: Verde si terminado, Amarillo/Ámbar si en trámite */}
                                 <View
                                   style={{
                                     flexDirection: 'row',
@@ -7697,7 +7732,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     paddingHorizontal: 10,
                                     paddingVertical: 2.5,
                                     borderRadius: 9999,
-                                    backgroundColor: esTerminado ? 'rgb(29, 85, 78)' : 'rgb(180, 83, 9)',
+                                    backgroundColor: esTerminado ? 'rgb(29, 85, 78)' : '#b45309',
                                     borderWidth: 1,
                                     borderColor: 'rgba(255, 255, 255, 0.2)',
                                   }}
@@ -7707,7 +7742,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       width: 6,
                                       height: 6,
                                       borderRadius: 3,
-                                      backgroundColor: esTerminado ? '#5eead4' : '#fde047',
+                                      backgroundColor: esTerminado ? '#5eead4' : '#fef08a',
                                     }}
                                   />
                                   <Text
@@ -7786,15 +7821,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     minWidth: 0,
                                   }}
                                 >
-                                  {/* Avatar Monograma */}
+                                  {/* Avatar Monograma: Verde si terminado, Amarillo si en trámite */}
                                   <View
                                     style={{
                                       width: 32,
                                       height: 32,
                                       borderRadius: 16,
-                                      backgroundColor: esTerminado ? '#ccfbf1' : '#fef3c7',
+                                      backgroundColor: esTerminado ? '#d1fae5' : '#fef3c7',
                                       borderWidth: 2,
-                                      borderColor: esTerminado ? '#f0fdfa' : '#fffbeb',
+                                      borderColor: esTerminado ? '#a7f3d0' : '#fde68a',
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       flexShrink: 0,
@@ -7804,7 +7839,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       style={{
                                         fontSize: 11.5,
                                         fontWeight: '700',
-                                        color: esTerminado ? '#115e59' : '#92400e',
+                                        color: esTerminado ? '#065f46' : '#b45309',
                                       }}
                                     >
                                       {iniciales}
@@ -7817,7 +7852,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     style={{
                                       fontSize: 13.5,
                                       fontWeight: '700',
-                                      color: esActivo ? '#0f766e' : '#0f172a',
+                                      color: esActivo ? colorNombreActivo : '#0f172a',
                                       flex: 1,
                                     }}
                                   >
@@ -7825,12 +7860,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   </Text>
                                 </View>
 
-                                {/* Badge de Régimen */}
+                                {/* Badge de Régimen con colores distintivos por modalidad */}
                                 <View
                                   style={{
-                                    backgroundColor: '#f1f5f9',
+                                    backgroundColor: estiloModalidad.colorBg,
                                     borderWidth: 1,
-                                    borderColor: '#e2e8f0',
+                                    borderColor: estiloModalidad.colorBorde,
                                     borderRadius: 4,
                                     paddingHorizontal: 8,
                                     paddingVertical: 2.5,
@@ -7840,11 +7875,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Text
                                     style={{
                                       fontSize: 10,
-                                      fontWeight: '600',
-                                      color: '#334155',
+                                      fontWeight: '700',
+                                      color: estiloModalidad.colorTexto,
                                     }}
                                   >
-                                    {modalidadCorta}
+                                    {estiloModalidad.etiqueta}
                                   </Text>
                                 </View>
                               </View>
@@ -7959,7 +7994,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </View>
                             </View>
 
-                            {/* Refined Progress Indicator */}
+                            {/* Refined Progress Indicator: Verde si terminado, Amarillo/Ámbar si en trámite */}
                             <View style={{ marginTop: 6, marginBottom: 4 }}>
                               <View
                                 style={{
@@ -7973,13 +8008,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Ionicons
                                     name={esTerminado ? 'checkmark-circle' : 'time'}
                                     size={13}
-                                    color={esTerminado ? '#0f766e' : '#b45309'}
+                                    color={esTerminado ? '#059669' : '#d97706'}
                                   />
                                   <Text
                                     style={{
                                       fontSize: 11,
                                       fontWeight: '500',
-                                      color: esTerminado ? '#134e4a' : '#92400e',
+                                      color: esTerminado ? '#065f46' : '#b45309',
                                     }}
                                   >
                                     {esTerminado
@@ -7992,7 +8027,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
                                     fontSize: 10.5,
                                     fontWeight: '700',
-                                    color: esTerminado ? '#115e59' : '#b45309',
+                                    color: esTerminado ? '#065f46' : '#b45309',
                                   }}
                                 >
                                   {porcentaje}%
@@ -8012,13 +8047,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     height: 6,
                                     borderRadius: 3,
                                     width: `${Math.max(porcentaje, 4)}%`,
-                                    backgroundColor: esTerminado ? '#0f766e' : '#d97706',
+                                    backgroundColor: esTerminado ? '#059669' : '#f59e0b',
                                   }}
                                 />
                               </View>
                             </View>
 
-                            {/* Legal Document Footer */}
+                            {/* Legal Document Footer: Verde si terminado, Amarillo/Ámbar si en trámite */}
                             <View
                               style={{
                                 marginTop: 10,
@@ -8045,11 +8080,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     width: 28,
                                     height: 28,
                                     borderRadius: 8,
-                                    backgroundColor: esTerminado ? '#f0fdfa' : '#fffbeb',
+                                    backgroundColor: esTerminado ? '#ecfdf5' : '#fffbeb',
                                     borderWidth: 1,
-                                    borderColor: esTerminado
-                                      ? 'rgba(153, 246, 228, 0.8)'
-                                      : 'rgba(253, 230, 138, 0.8)',
+                                    borderColor: esTerminado ? '#a7f3d0' : '#fde68a',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     flexShrink: 0,
@@ -8058,7 +8091,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Ionicons
                                     name="document-text-outline"
                                     size={14}
-                                    color={esTerminado ? '#0f766e' : '#b45309'}
+                                    color={esTerminado ? '#059669' : '#d97706'}
                                   />
                                 </View>
                                 <Text
@@ -8097,82 +8130,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </Text>
                               </View>
                             </View>
-
-                            {/* Accesos directos integrados para Vinculación */}
-                            {esVinculacion && (
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  gap: 6,
-                                  marginTop: 8,
-                                  paddingTop: 8,
-                                  borderTopWidth: 1,
-                                  borderTopColor: '#f8fafc',
-                                }}
-                              >
-                                <Pressable
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    abrirConsultaSecopParaCandidato(
-                                      c.servidor_nombre,
-                                      c.servidor_cedula,
-                                      c.id
-                                    );
-                                  }}
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                    backgroundColor: THEME.skyBg,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 3.5,
-                                    borderRadius: 5,
-                                    borderWidth: 1,
-                                    borderColor: THEME.skyRing,
-                                  }}
-                                >
-                                  <Ionicons name="search" size={11} color={THEME.skyText} />
-                                  <Text
-                                    style={{
-                                      color: THEME.skyText,
-                                      fontSize: 10,
-                                      fontWeight: '600',
-                                    }}
-                                  >
-                                    SECOP II
-                                  </Text>
-                                </Pressable>
-
-                                <Pressable
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    router.push('/ingresos/nueva');
-                                  }}
-                                  style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                    backgroundColor: THEME.emeraldBg,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 3.5,
-                                    borderRadius: 5,
-                                    borderWidth: 1,
-                                    borderColor: THEME.emeraldRing,
-                                  }}
-                                >
-                                  <Ionicons name="sparkles" size={11} color={THEME.emeraldText} />
-                                  <Text
-                                    style={{
-                                      color: THEME.emeraldText,
-                                      fontSize: 10,
-                                      fontWeight: '600',
-                                    }}
-                                  >
-                                    Cotejo IA
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            )}
                           </Pressable>
                         );
                       });
