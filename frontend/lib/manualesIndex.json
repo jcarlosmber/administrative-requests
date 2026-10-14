@@ -1,0 +1,1192 @@
+[
+  {
+    "id_sideap": 4998,
+    "cargo": "JEFE DE OFICINA ASESORA",
+    "codigo": "115",
+    "grado": "6",
+    "archivo": "4998 - JEFE DE OFICINA ASESORA - 115 - 6.pdf"
+  },
+  {
+    "id_sideap": 4999,
+    "cargo": "JEFE DE OFICINA",
+    "codigo": "6",
+    "grado": "6",
+    "archivo": "4999 - JEFE DE OFICINA - 6 - 6.pdf"
+  },
+  {
+    "id_sideap": 5000,
+    "cargo": "ASESOR",
+    "codigo": "105",
+    "grado": "5",
+    "archivo": "5000 - ASESOR - 105 - 5.pdf"
+  },
+  {
+    "id_sideap": 5001,
+    "cargo": "ASESOR",
+    "codigo": "105",
+    "grado": "5",
+    "archivo": "5001 - ASESOR - 105 - 5.pdf"
+  },
+  {
+    "id_sideap": 5002,
+    "cargo": "ASESOR",
+    "codigo": "105",
+    "grado": "5",
+    "archivo": "5002 - ASESOR - 105 - 5.pdf"
+  },
+  {
+    "id_sideap": 5003,
+    "cargo": "ASESOR",
+    "codigo": "105",
+    "grado": "5",
+    "archivo": "5003 - ASESOR - 105 - 5.pdf"
+  },
+  {
+    "id_sideap": 5004,
+    "cargo": "ASESOR",
+    "codigo": "105",
+    "grado": "5",
+    "archivo": "5004 - ASESOR - 105 - 5.pdf"
+  },
+  {
+    "id_sideap": 5005,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "27",
+    "archivo": "5005 - AUXILIAR ADMINISTRATIVO - 407 - 27.pdf"
+  },
+  {
+    "id_sideap": 5006,
+    "cargo": "SECRETARIO EJECUTIVO",
+    "codigo": "425",
+    "grado": "27",
+    "archivo": "5006 - SECRETARIO EJECUTIVO - 425 - 27.pdf"
+  },
+  {
+    "id_sideap": 5007,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "26",
+    "archivo": "5007 - AUXILIAR ADMINISTRATIVO - 407 - 26.pdf"
+  },
+  {
+    "id_sideap": 5008,
+    "cargo": "SECRETARIO EJECUTIVO",
+    "codigo": "425",
+    "grado": "24",
+    "archivo": "5008 - SECRETARIO EJECUTIVO - 425 - 24.pdf"
+  },
+  {
+    "id_sideap": 5009,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "24",
+    "archivo": "5009 - AUXILIAR ADMINISTRATIVO - 407 - 24.pdf"
+  },
+  {
+    "id_sideap": 5010,
+    "cargo": "SECRETARIO EJECUTIVO",
+    "codigo": "425",
+    "grado": "21",
+    "archivo": "5010 - SECRETARIO EJECUTIVO - 425 - 21.pdf"
+  },
+  {
+    "id_sideap": 5011,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "20",
+    "archivo": "5011 - AUXILIAR ADMINISTRATIVO - 407 - 20.pdf"
+  },
+  {
+    "id_sideap": 5012,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "20",
+    "archivo": "5012 - AUXILIAR ADMINISTRATIVO - 407 - 20.pdf"
+  },
+  {
+    "id_sideap": 5013,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "20",
+    "archivo": "5013 - AUXILIAR ADMINISTRATIVO - 407 - 20.pdf"
+  },
+  {
+    "id_sideap": 5014,
+    "cargo": "SECRETARIO EJECUTIVO",
+    "codigo": "425",
+    "grado": "20",
+    "archivo": "5014 - SECRETARIO EJECUTIVO - 425 - 20.pdf"
+  },
+  {
+    "id_sideap": 5015,
+    "cargo": "SECRETARIO",
+    "codigo": "440",
+    "grado": "19",
+    "archivo": "5015 - SECRETARIO - 440 - 19.pdf"
+  },
+  {
+    "id_sideap": 5016,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "17",
+    "archivo": "5016 - AUXILIAR ADMINISTRATIVO - 407 - 17.pdf"
+  },
+  {
+    "id_sideap": 5017,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "16",
+    "archivo": "5017 - AUXILIAR ADMINISTRATIVO - 407 - 16.pdf"
+  },
+  {
+    "id_sideap": 5018,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "16",
+    "archivo": "5018 - AUXILIAR ADMINISTRATIVO - 407 - 16.pdf"
+  },
+  {
+    "id_sideap": 5019,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "15",
+    "archivo": "5019 - AUXILIAR ADMINISTRATIVO - 407 - 15.pdf"
+  },
+  {
+    "id_sideap": 5020,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "15",
+    "archivo": "5020 - AUXILIAR ADMINISTRATIVO - 407 - 15.pdf"
+  },
+  {
+    "id_sideap": 5021,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "15",
+    "archivo": "5021 - AUXILIAR ADMINISTRATIVO - 407 - 15.pdf"
+  },
+  {
+    "id_sideap": 5022,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "15",
+    "archivo": "5022 - AUXILIAR ADMINISTRATIVO - 407 - 15.pdf"
+  },
+  {
+    "id_sideap": 5023,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "15",
+    "archivo": "5023 - AUXILIAR ADMINISTRATIVO - 407 - 15.pdf"
+  },
+  {
+    "id_sideap": 5024,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "14",
+    "archivo": "5024 - AUXILIAR ADMINISTRATIVO - 407 - 14.pdf"
+  },
+  {
+    "id_sideap": 5025,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "13",
+    "archivo": "5025 - AUXILIAR ADMINISTRATIVO - 407 - 13.pdf"
+  },
+  {
+    "id_sideap": 5026,
+    "cargo": "CONDUCTOR",
+    "codigo": "480",
+    "grado": "13",
+    "archivo": "5026 - CONDUCTOR - 480 - 13.pdf"
+  },
+  {
+    "id_sideap": 5027,
+    "cargo": "CONDUCTOR",
+    "codigo": "480",
+    "grado": "13",
+    "archivo": "5027 - CONDUCTOR - 480 - 13.pdf"
+  },
+  {
+    "id_sideap": 5028,
+    "cargo": "CONDUCTOR",
+    "codigo": "480",
+    "grado": "13",
+    "archivo": "5028 - CONDUCTOR - 480 - 13.pdf"
+  },
+  {
+    "id_sideap": 5029,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "11",
+    "archivo": "5029 - AUXILIAR ADMINISTRATIVO - 407 - 11.pdf"
+  },
+  {
+    "id_sideap": 5030,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "11",
+    "archivo": "5030 - AUXILIAR ADMINISTRATIVO - 407 - 11.pdf"
+  },
+  {
+    "id_sideap": 5031,
+    "cargo": "SECRETARIO",
+    "codigo": "440",
+    "grado": "11",
+    "archivo": "5031 - SECRETARIO - 440 - 11.pdf"
+  },
+  {
+    "id_sideap": 5032,
+    "cargo": "SECRETARIO",
+    "codigo": "440",
+    "grado": "9",
+    "archivo": "5032 - SECRETARIO - 440 - 9.pdf"
+  },
+  {
+    "id_sideap": 5033,
+    "cargo": "SECRETARIO",
+    "codigo": "440",
+    "grado": "9",
+    "archivo": "5033 - SECRETARIO - 440 - 9.pdf"
+  },
+  {
+    "id_sideap": 5034,
+    "cargo": "SECRETARIO",
+    "codigo": "440",
+    "grado": "9",
+    "archivo": "5034 - SECRETARIO - 440 - 9.pdf"
+  },
+  {
+    "id_sideap": 5035,
+    "cargo": "AUXILIAR ADMINISTRATIVO",
+    "codigo": "407",
+    "grado": "9",
+    "archivo": "5035 - AUXILIAR ADMINISTRATIVO - 407 - 9.pdf"
+  },
+  {
+    "id_sideap": 5036,
+    "cargo": "SECRETARIO",
+    "codigo": "440",
+    "grado": "9",
+    "archivo": "5036 - SECRETARIO - 440 - 9.pdf"
+  },
+  {
+    "id_sideap": 5037,
+    "cargo": "AUXILIAR SERVICIOS GENERALES",
+    "codigo": "470",
+    "grado": "7",
+    "archivo": "5037 - AUXILIAR SERVICIOS GENERALES - 470 - 7.pdf"
+  },
+  {
+    "id_sideap": 5038,
+    "cargo": "AUXILIAR SERVICIOS GENERALES",
+    "codigo": "470",
+    "grado": "7",
+    "archivo": "5038 - AUXILIAR SERVICIOS GENERALES - 470 - 7.pdf"
+  },
+  {
+    "id_sideap": 5039,
+    "cargo": "AUXILIAR SERVICIOS GENERALES",
+    "codigo": "470",
+    "grado": "3",
+    "archivo": "5039 - AUXILIAR SERVICIOS GENERALES - 470 - 3.pdf"
+  },
+  {
+    "id_sideap": 5040,
+    "cargo": "SECRETARIO DE DESPACHO",
+    "codigo": "20",
+    "grado": "9",
+    "archivo": "5040 - SECRETARIO DE DESPACHO - 20 - 9.pdf"
+  },
+  {
+    "id_sideap": 5041,
+    "cargo": "SUBSECRETARIO",
+    "codigo": "45",
+    "grado": "8",
+    "archivo": "5041 - SUBSECRETARIO - 45 - 8.pdf"
+  },
+  {
+    "id_sideap": 5042,
+    "cargo": "DIRECTOR TÉCNICO",
+    "codigo": "9",
+    "grado": "7",
+    "archivo": "5042 - DIRECTOR TÉCNICO - 9 - 7.pdf"
+  },
+  {
+    "id_sideap": 5043,
+    "cargo": "DIRECTOR TÉCNICO",
+    "codigo": "9",
+    "grado": "7",
+    "archivo": "5043 - DIRECTOR TÉCNICO - 9 - 7.pdf"
+  },
+  {
+    "id_sideap": 5044,
+    "cargo": "DIRECTOR TÉCNICO",
+    "codigo": "9",
+    "grado": "7",
+    "archivo": "5044 - DIRECTOR TÉCNICO - 9 - 7.pdf"
+  },
+  {
+    "id_sideap": 5045,
+    "cargo": "DIRECTOR TÉCNICO",
+    "codigo": "9",
+    "grado": "7",
+    "archivo": "5045 - DIRECTOR TÉCNICO - 9 - 7.pdf"
+  },
+  {
+    "id_sideap": 5046,
+    "cargo": "DIRECTOR TÉCNICO",
+    "codigo": "9",
+    "grado": "7",
+    "archivo": "5046 - DIRECTOR TÉCNICO - 9 - 7.pdf"
+  },
+  {
+    "id_sideap": 5047,
+    "cargo": "DIRECTOR TÉCNICO",
+    "codigo": "9",
+    "grado": "7",
+    "archivo": "5047 - DIRECTOR TÉCNICO - 9 - 7.pdf"
+  },
+  {
+    "id_sideap": 5048,
+    "cargo": "JEFE DE OFICINA",
+    "codigo": "6",
+    "grado": "6",
+    "archivo": "5048 - JEFE DE OFICINA - 6 - 6.pdf"
+  },
+  {
+    "id_sideap": 5049,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5049 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5050,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5050 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5051,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5051 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5052,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5052 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5053,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5053 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5054,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5054 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5055,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5055 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5056,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5056 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5057,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5057 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5058,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5058 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5059,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5059 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5060,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5060 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5061,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5061 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5062,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5062 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5063,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5063 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5064,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5064 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5065,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5065 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5066,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5066 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5067,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5067 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5068,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5068 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5069,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5069 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5070,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5070 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5071,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5071 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5072,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "27",
+    "archivo": "5072 - PROFESIONAL ESPECIALIZADO - 222 - 27.pdf"
+  },
+  {
+    "id_sideap": 5073,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "26",
+    "archivo": "5073 - PROFESIONAL ESPECIALIZADO - 222 - 26.pdf"
+  },
+  {
+    "id_sideap": 5074,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "26",
+    "archivo": "5074 - PROFESIONAL ESPECIALIZADO - 222 - 26.pdf"
+  },
+  {
+    "id_sideap": 5075,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "25",
+    "archivo": "5075 - PROFESIONAL ESPECIALIZADO - 222 - 25.pdf"
+  },
+  {
+    "id_sideap": 5076,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5076 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5077,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5077 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5078,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5078 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5079,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5079 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5080,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5080 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5081,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5081 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5082,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5082 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5083,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5083 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5084,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "24",
+    "archivo": "5084 - PROFESIONAL ESPECIALIZADO - 222 - 24.pdf"
+  },
+  {
+    "id_sideap": 5085,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "22",
+    "archivo": "5085 - PROFESIONAL ESPECIALIZADO - 222 - 22.pdf"
+  },
+  {
+    "id_sideap": 5086,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5086 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5087,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5087 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5088,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5088 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5089,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5089 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5090,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5090 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5091,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5091 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5092,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5092 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5093,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5093 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5094,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "21",
+    "archivo": "5094 - PROFESIONAL ESPECIALIZADO - 222 - 21.pdf"
+  },
+  {
+    "id_sideap": 5095,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "20",
+    "archivo": "5095 - PROFESIONAL ESPECIALIZADO - 222 - 20.pdf"
+  },
+  {
+    "id_sideap": 5096,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "20",
+    "archivo": "5096 - PROFESIONAL ESPECIALIZADO - 222 - 20.pdf"
+  },
+  {
+    "id_sideap": 5097,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "19",
+    "archivo": "5097 - PROFESIONAL ESPECIALIZADO - 222 - 19.pdf"
+  },
+  {
+    "id_sideap": 5098,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "19",
+    "archivo": "5098 - PROFESIONAL ESPECIALIZADO - 222 - 19.pdf"
+  },
+  {
+    "id_sideap": 5099,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "19",
+    "archivo": "5099 - PROFESIONAL ESPECIALIZADO - 222 - 19.pdf"
+  },
+  {
+    "id_sideap": 5100,
+    "cargo": "PROFESIONAL ESPECIALIZADO",
+    "codigo": "222",
+    "grado": "19",
+    "archivo": "5100 - PROFESIONAL ESPECIALIZADO - 222 - 19.pdf"
+  },
+  {
+    "id_sideap": 5101,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5101 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5102,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5102 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5103,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5103 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5104,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5104 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5105,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5105 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5106,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5106 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5107,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5107 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5108,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5108 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5109,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5109 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5110,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5110 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5111,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5111 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5112,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5112 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5113,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5113 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5114,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5114 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5115,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5115 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5116,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5116 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5117,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5117 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5118,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5118 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5119,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5119 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5120,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5120 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5121,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5121 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5122,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5122 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5123,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5123 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5124,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5124 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5125,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "18",
+    "archivo": "5125 - PROFESIONAL UNIVERSITARIO - 219 - 18.pdf"
+  },
+  {
+    "id_sideap": 5126,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "15",
+    "archivo": "5126 - PROFESIONAL UNIVERSITARIO - 219 - 15.pdf"
+  },
+  {
+    "id_sideap": 5127,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "15",
+    "archivo": "5127 - PROFESIONAL UNIVERSITARIO - 219 - 15.pdf"
+  },
+  {
+    "id_sideap": 5128,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "15",
+    "archivo": "5128 - PROFESIONAL UNIVERSITARIO - 219 - 15.pdf"
+  },
+  {
+    "id_sideap": 5129,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "15",
+    "archivo": "5129 - PROFESIONAL UNIVERSITARIO - 219 - 15.pdf"
+  },
+  {
+    "id_sideap": 5130,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "15",
+    "archivo": "5130 - PROFESIONAL UNIVERSITARIO - 219 - 15.pdf"
+  },
+  {
+    "id_sideap": 5131,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "13",
+    "archivo": "5131 - PROFESIONAL UNIVERSITARIO - 219 - 13.pdf"
+  },
+  {
+    "id_sideap": 5132,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "13",
+    "archivo": "5132 - PROFESIONAL UNIVERSITARIO - 219 - 13.pdf"
+  },
+  {
+    "id_sideap": 5133,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "13",
+    "archivo": "5133 - PROFESIONAL UNIVERSITARIO - 219 - 13.pdf"
+  },
+  {
+    "id_sideap": 5134,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "10",
+    "archivo": "5134 - PROFESIONAL UNIVERSITARIO - 219 - 10.pdf"
+  },
+  {
+    "id_sideap": 5135,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "10",
+    "archivo": "5135 - PROFESIONAL UNIVERSITARIO - 219 - 10.pdf"
+  },
+  {
+    "id_sideap": 5136,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "10",
+    "archivo": "5136 - PROFESIONAL UNIVERSITARIO - 219 - 10.pdf"
+  },
+  {
+    "id_sideap": 5137,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "9",
+    "archivo": "5137 - PROFESIONAL UNIVERSITARIO - 219 - 9.pdf"
+  },
+  {
+    "id_sideap": 5138,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "8",
+    "archivo": "5138 - PROFESIONAL UNIVERSITARIO - 219 - 8.pdf"
+  },
+  {
+    "id_sideap": 5139,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "8",
+    "archivo": "5139 - PROFESIONAL UNIVERSITARIO - 219 - 8.pdf"
+  },
+  {
+    "id_sideap": 5140,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "3",
+    "archivo": "5140 - PROFESIONAL UNIVERSITARIO - 219 - 3.pdf"
+  },
+  {
+    "id_sideap": 5141,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5141 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5142,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5142 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5143,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5143 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5144,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5144 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5145,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5145 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5146,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5146 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5147,
+    "cargo": "PROFESIONAL UNIVERSITARIO",
+    "codigo": "219",
+    "grado": "1",
+    "archivo": "5147 - PROFESIONAL UNIVERSITARIO - 219 - 1.pdf"
+  },
+  {
+    "id_sideap": 5148,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "21",
+    "archivo": "5148 - TÉCNICO OPERATIVO - 314 - 21.pdf"
+  },
+  {
+    "id_sideap": 5149,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5149 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5150,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5150 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5151,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5151 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5152,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5152 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5153,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5153 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5154,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5154 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5155,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5155 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5156,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5156 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5157,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "20",
+    "archivo": "5157 - TÉCNICO OPERATIVO - 314 - 20.pdf"
+  },
+  {
+    "id_sideap": 5158,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5158 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5159,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5159 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5160,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5160 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5161,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5161 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5162,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5162 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5163,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5163 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5164,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5164 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5165,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "15",
+    "archivo": "5165 - TÉCNICO OPERATIVO - 314 - 15.pdf"
+  },
+  {
+    "id_sideap": 5166,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "9",
+    "archivo": "5166 - TÉCNICO OPERATIVO - 314 - 9.pdf"
+  },
+  {
+    "id_sideap": 5167,
+    "cargo": "TÉCNICO OPERATIVO",
+    "codigo": "314",
+    "grado": "9",
+    "archivo": "5167 - TÉCNICO OPERATIVO - 314 - 9.pdf"
+  }
+]

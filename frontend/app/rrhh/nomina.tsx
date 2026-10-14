@@ -22,6 +22,7 @@ import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
+import BotonManualFunciones from '../../components/BotonManualFunciones';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
 type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | null;
@@ -7647,6 +7648,15 @@ export default function NominaScreen() {
                         <Text style={{ fontSize: 12, color: THEME.marca800, fontWeight: '700', marginTop: 2 }}>
                           Asignación Básica Mensual: {formatMoneda(plazaDetalleReporte.asignacion_basica)}
                         </Text>
+                        <View style={{ marginTop: 6 }}>
+                          <BotonManualFunciones
+                            id_sideap={plazaDetalleReporte.id_sideap}
+                            cargo={plazaDetalleReporte.cargo}
+                            codigo={plazaDetalleReporte.codigo}
+                            grado={plazaDetalleReporte.grado}
+                            variante="boton"
+                          />
+                        </View>
                       </View>
 
                       <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
@@ -8952,6 +8962,14 @@ export default function NominaScreen() {
                         </Text>
                       </View>
                     ) : null}
+                    <BotonManualFunciones
+                      id_sideap={plazaModal?.id_sideap}
+                      cargo={plazaModal?.cargo}
+                      codigo={plazaModal?.codigo}
+                      grado={plazaModal?.grado}
+                      variante="chip"
+                      etiqueta="Manual Funciones (PDF)"
+                    />
                     {plazaModalEnriquecida?.edad_activa ? (
                       <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(110, 231, 183, 0.4)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                         <Ionicons name="person-outline" size={11} color="#A7F3D0" />
@@ -9769,6 +9787,16 @@ export default function NominaScreen() {
                     <Text style={{ fontSize: 11.5, color: '#92400E', marginTop: 8, lineHeight: 17 }}>
                       Páginas y acto administrativo formal del Manual Específico de Funciones y de Competencias Laborales conforme al Archivo Oficial de Planta de Personal de la Secretaría Jurídica Distrital.
                     </Text>
+
+                    <View style={{ marginTop: 12 }}>
+                      <BotonManualFunciones
+                        id_sideap={plazaModal?.id_sideap}
+                        cargo={plazaModal?.cargo}
+                        codigo={plazaModal?.codigo}
+                        grado={plazaModal?.grado}
+                        variante="banner"
+                      />
+                    </View>
                   </View>
 
                   {/* Propósito Principal del Empleo (Columna AE) */}

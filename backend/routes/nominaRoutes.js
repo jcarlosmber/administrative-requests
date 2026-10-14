@@ -2273,5 +2273,141 @@ Secretaría Jurídica Distrital
     }
   });
 
+
+  // =========================================================================
+  // MÓDULO: MANUALES DE FUNCIONES POR CARGO (ID SIDEAP)
+  // =========================================================================
+  const MANUALES_DIR = path.join(__dirname, '../uploads/manuales_funciones');
+
+  function getCatalogoManuales() {
+    if (!fs.existsSync(MANUALES_DIR)) {
+      return [];
+    }
+    const files = fs.readdirSync(MANUALES_DIR).filter(f => f.toLowerCase().endsWith('.pdf'));
+    return files.map(file => {
+      const match = file.match(/^(\d+)\s*-\s*(.+?)\s*-\s*(\d+)\s*-\s*(\d+)\.pdf$/i);
+      let id_sideap = null;
+      let cargo = '';
+      let codigo = '';
+      let grado = '';
+      if (match) {
+        id_sideap = parseInt(match[1], 10);
+        cargo = match[2].trim();
+        codigo = match[3].trim();
+        grado = match[4].trim();
+      } else {
+        const fallback = file.match(/^(\d+)/);
+        if (fallback) id_sideap = parseInt(fallback[1], 10);
+      }
+
+      let sizeBytes = 0;
+      try {
+        const stat = fs.statSync(path.join(MANUALES_DIR, file));
+        sizeBytes = stat.size;
+      } catch (err) {}
+
+      return {
+        id_sideap,
+        cargo,
+        codigo,
+        grado,
+        archivo: file,
+        sizeBytes,
+        urlVer: `/api/nomina/manuales/${id_sideap || encodeURIComponent(file)}`,
+        urlDescarga: `/api/nomina/manuales/archivo/${encodeURIComponent(file)}`
+      };
+    });
+  }
+
+  router.get('/manuales', (req, res) => {
+    try {
+      const catalogo = getCatalogoManuales();
+      const { id_sideap, cargo, codigo, grado } = req.query;
+
+      let resultados = catalogo;
+      if (id_sideap) {
+        const idNum = parseInt(id_sideap, 10);
+        resultados = resultados.filter(m => m.id_sideap === idNum);
+      }
+      if (cargo) {
+        const q = String(cargo).toLowerCase().trim();
+        resultados = resultados.filter(m => m.cargo.toLowerCase().includes(q));
+      }
+      if (codigo) {
+        resultados = resultados.filter(m => m.codigo === String(codigo).trim());
+      }
+      if (grado) {
+        resultados = resultados.filter(m => m.grado === String(grado).trim());
+      }
+
+      res.json({
+        success: true,
+        total: resultados.length,
+        manuales: resultados
+      });
+    } catch (err) {
+      console.error('[Manuales] Error al listar manuales:', err);
+      res.status(500).json({ success: false, error: 'Error al listar manuales: ' + err.message });
+    }
+  });
+
+  router.get('/manuales/:id_sideap', (req, res) => {
+    try {
+      const idParam = req.params.id_sideap.trim();
+      const idNum = parseInt(idParam, 10);
+
+      if (!fs.existsSync(MANUALES_DIR)) {
+        return res.status(404).json({ error: 'Directorio de manuales no disponible.' });
+      }
+
+      const files = fs.readdirSync(MANUALES_DIR).filter(f => f.toLowerCase().endsWith('.pdf'));
+      let targetFile = null;
+
+      if (!isNaN(idNum)) {
+        targetFile = files.find(f => {
+          const m = f.match(/^(\d+)/);
+          return m && parseInt(m[1], 10) === idNum;
+        });
+      }
+
+      if (!targetFile) {
+        targetFile = files.find(f => f.toLowerCase() === idParam.toLowerCase());
+      }
+
+      if (!targetFile) {
+        return res.status(404).json({
+          error: `No se encontró manual de funciones para el cargo con ID SIDEAP #${idParam}`
+        });
+      }
+
+      const filePath = path.join(MANUALES_DIR, targetFile);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(targetFile)}"`);
+      return res.sendFile(filePath);
+    } catch (err) {
+      console.error('[Manuales] Error al servir manual:', err);
+      res.status(500).json({ error: 'Error al servir manual: ' + err.message });
+    }
+  });
+
+  router.get('/manuales/archivo/:filename', (req, res) => {
+    try {
+      const filename = decodeURIComponent(req.params.filename);
+      const safeName = path.basename(filename);
+      const filePath = path.join(MANUALES_DIR, safeName);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Archivo de manual no encontrado.' });
+      }
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(safeName)}"`);
+      return res.sendFile(filePath);
+    } catch (err) {
+      console.error('[Manuales] Error al descargar manual:', err);
+      res.status(500).json({ error: 'Error al procesar descarga: ' + err.message });
+    }
+  });
+
   return router;
 };

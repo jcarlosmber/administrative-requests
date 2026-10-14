@@ -16,6 +16,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { ingresosService, CargoEvaluado, AnalisisCompleto, PlazaPlanta, FormacionAcademicaItem, CertificadoAnalizado, VerificacionFormalTitulo, VerificacionFormalTarjeta } from '../../lib/ingresosService';
 import PdfViewerModal from '../../components/PdfViewerModal';
 import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
+import BotonManualFunciones from '../../components/BotonManualFunciones';
 
 function NuevaValidacionScreen() {
   const router = useRouter();
@@ -1840,6 +1841,16 @@ function NuevaValidacionScreen() {
                           Titular en nómina: {plazaSeleccionada.titular_nombre} ({plazaSeleccionada.tipo_vinculacion || 'N/A'})
                         </Text>
                       ) : null}
+                      <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <BotonManualFunciones
+                          id_sideap={plazaSeleccionada.id_sideap}
+                          cargo={plazaSeleccionada.cargo}
+                          codigo={plazaSeleccionada.codigo}
+                          grado={plazaSeleccionada.grado}
+                          variante="boton"
+                          etiqueta="Ver Manual de Funciones (PDF)"
+                        />
+                      </View>
                     </View>
                   </View>
                 ) : null}
@@ -1900,6 +1911,14 @@ function NuevaValidacionScreen() {
                                   <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>PERNO #{pl.id_perno}</Text>
                                 </View>
                               )}
+                              <BotonManualFunciones
+                                id_sideap={pl.id_sideap}
+                                cargo={pl.cargo}
+                                codigo={pl.codigo}
+                                grado={pl.grado}
+                                variante="chip"
+                                etiqueta="Manual PDF"
+                              />
                             </View>
                             <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }} numberOfLines={1}>
                               {pl.dependencia_cargo}
@@ -1917,9 +1936,21 @@ function NuevaValidacionScreen() {
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
                 {/* ID SIDEAP */}
                 <View style={{ flex: 1, minWidth: 110 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
-                    ID SIDEAP
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155' }}>
+                      ID SIDEAP
+                    </Text>
+                    {(!!idSideap || !!nombreCargo) && (
+                      <BotonManualFunciones
+                        id_sideap={idSideap}
+                        cargo={nombreCargo}
+                        codigo={codigoCargo}
+                        grado={gradoCargo}
+                        variante="chip"
+                        etiqueta="Manual PDF"
+                      />
+                    )}
+                  </View>
                   <TextInput
                     keyboardType="numeric"
                     placeholder="Ej: 4998"
