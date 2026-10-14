@@ -110,8 +110,6 @@ export default function NominaScreen() {
   const [filtroSoloVacantesReporte, setFiltroSoloVacantesReporte] = useState(false);
   const [paginaReporte, setPaginaReporte] = useState(1);
   const filasPorPaginaReporte = 15;
-  const [plazaDetalleReporte, setPlazaDetalleReporte] = useState<PlazaNomina | null>(null);
-  const [modalDetallePlazaReporteVisible, setModalDetallePlazaReporteVisible] = useState(false);
   const [filtroCuotasTab, setFiltroCuotasTab] = useState<'TODOS_DECISORIOS' | 'MND' | 'OND' | 'ASESOR' | 'TODA_PLANTA'>('TODOS_DECISORIOS');
   const [bloqueNormativoActivo, setBloqueNormativoActivo] = useState<number | null>(null);
   const [modalInstructivoSideapVisible, setModalInstructivoSideapVisible] = useState(false);
@@ -6100,8 +6098,8 @@ export default function NominaScreen() {
                                 <Pressable
                                   key={p.id_plaza}
                                   onPress={() => {
-                                    setPlazaDetalleReporte(p);
-                                    setModalDetallePlazaReporteVisible(true);
+                                    setModalTab('general');
+                                    setPlazaModal(p);
                                   }}
                                   style={{
                                     flexDirection: 'row',
@@ -6392,8 +6390,8 @@ export default function NominaScreen() {
                                 <Pressable
                                   key={p.id_plaza}
                                   onPress={() => {
-                                    setPlazaDetalleReporte(p);
-                                    setModalDetallePlazaReporteVisible(true);
+                                    setModalTab('general');
+                                    setPlazaModal(p);
                                   }}
                                   style={{
                                     flexDirection: 'row',
@@ -7256,8 +7254,8 @@ export default function NominaScreen() {
                             <Pressable
                               key={p.id_plaza}
                               onPress={() => {
-                                setPlazaDetalleReporte(p);
-                                setModalDetallePlazaReporteVisible(true);
+                                setModalTab('general');
+                                    setPlazaModal(p);
                               }}
                               style={({ pressed }) => ({
                                 flexDirection: 'row',
@@ -7709,106 +7707,6 @@ export default function NominaScreen() {
               )}
             </View>
           )}
-
-          {/* Modal Ficha Técnica de la Plaza (Reportes) */}
-          <Modal
-            visible={modalDetallePlazaReporteVisible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setModalDetallePlazaReporteVisible(false)}
-          >
-            <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.65)', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-              <View style={{ backgroundColor: THEME.white, borderRadius: 14, width: '100%', maxWidth: 640, maxHeight: '90%', overflow: 'hidden', borderWidth: 1, borderColor: THEME.slate200 }}>
-                {/* Cabecera */}
-                <View style={{ backgroundColor: THEME.marca900, paddingHorizontal: 18, paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <View>
-                    <Text style={{ color: THEME.white, fontSize: 14.5, fontWeight: '800' }}>
-                      Ficha Técnica de Plaza #{plazaDetalleReporte?.id_plaza}
-                    </Text>
-                    <Text style={{ color: THEME.marca100, fontSize: 11 }}>
-                      Identificador Oficial SIDEAP: #{plazaDetalleReporte?.id_sideap || 'N/A'} • PERNO: #{plazaDetalleReporte?.id_perno || 'N/A'}
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => setModalDetallePlazaReporteVisible(false)}>
-                    <Ionicons name="close" size={22} color={THEME.white} />
-                  </Pressable>
-                </View>
-
-                {/* Contenido */}
-                <ScrollView contentContainerStyle={{ padding: 18, gap: 12 }}>
-                  {plazaDetalleReporte && (
-                    <>
-                      <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>CARGO Y NIVEL</Text>
-                        <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>{plazaDetalleReporte.cargo}</Text>
-                        <Text style={{ fontSize: 12, color: THEME.slate600 }}>Nivel: {plazaDetalleReporte.nivel} • Código: {plazaDetalleReporte.codigo} • Grado: {plazaDetalleReporte.grado}</Text>
-                        <Text style={{ fontSize: 12, color: THEME.marca800, fontWeight: '700', marginTop: 2 }}>
-                          Asignación Básica Mensual: {formatMoneda(plazaDetalleReporte.asignacion_basica)}
-                        </Text>
-                        <View style={{ marginTop: 6 }}>
-                          <BotonManualFunciones
-                            id_sideap={plazaDetalleReporte.id_sideap}
-                            cargo={plazaDetalleReporte.cargo}
-                            codigo={plazaDetalleReporte.codigo}
-                            grado={plazaDetalleReporte.grado}
-                            variante="boton"
-                          />
-                        </View>
-                      </View>
-
-                      <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>VINCULACIÓN Y SITUACIÓN ADMINISTRATIVA</Text>
-                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>Tipo de Vinculación: {plazaDetalleReporte.tipo_vinculacion || 'N/A'}</Text>
-                        <Text style={{ fontSize: 12, color: THEME.slate600 }}>Situación Titular: {plazaDetalleReporte.situacion_titular || plazaDetalleReporte.estado_cargo}</Text>
-                        <Text style={{ fontSize: 12, color: THEME.slate600 }}>Situación Administrativa: {plazaDetalleReporte.situacion_administrativa || 'N/A'}</Text>
-                        <Text style={{ fontSize: 12, color: THEME.slate800, fontWeight: '700', marginTop: 2 }}>
-                          Titular Actual: {plazaDetalleReporte.titular_nombre || 'VACANTE'} {plazaDetalleReporte.titular_cedula ? `(C.C. ${plazaDetalleReporte.titular_cedula})` : ''}
-                        </Text>
-                        {plazaDetalleReporte.es_encargo ? (
-                          <View style={{ backgroundColor: '#FEF3C7', padding: 8, borderRadius: 6, marginTop: 4 }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
-                              ⚡ Plaza Provista Mediante Encargo: {plazaDetalleReporte.encargo_nombre} (C.C. {plazaDetalleReporte.encargo_cedula})
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-
-                      <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>DEPENDENCIA Y ADSCRIPCIÓN</Text>
-                        <Text style={{ fontSize: 12, color: THEME.slate800 }}>Dependencia Cargo: {plazaDetalleReporte.dependencia_cargo}</Text>
-                        <Text style={{ fontSize: 12, color: THEME.slate800 }}>Dependencia Funcional: {plazaDetalleReporte.dependencia_funcional}</Text>
-                        <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 2 }}>Resolución Manual: {plazaDetalleReporte.resolucion_manual || 'N/A'}</Text>
-                      </View>
-
-                      {plazaDetalleReporte.proposito ? (
-                        <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>PROPÓSITO PRINCIPAL DEL EMPLEO</Text>
-                          <Text style={{ fontSize: 12, color: THEME.slate700, lineHeight: 17 }}>{plazaDetalleReporte.proposito}</Text>
-                        </View>
-                      ) : null}
-
-                      {plazaDetalleReporte.requisitos ? (
-                        <View style={{ backgroundColor: THEME.slate50, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: THEME.slate200, gap: 4 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500 }}>REQUISITOS MÍNIMOS (ESTUDIO Y EXPERIENCIA)</Text>
-                          <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>{plazaDetalleReporte.requisitos}</Text>
-                        </View>
-                      ) : null}
-                    </>
-                  )}
-                </ScrollView>
-
-                {/* Pie */}
-                <View style={{ backgroundColor: THEME.slate50, padding: 12, borderTopWidth: 1, borderTopColor: THEME.slate200, alignItems: 'flex-end' }}>
-                  <Pressable
-                    onPress={() => setModalDetallePlazaReporteVisible(false)}
-                    style={{ backgroundColor: THEME.marca800, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
-                  >
-                    <Text style={{ color: THEME.white, fontWeight: '700', fontSize: 12 }}>Cerrar Ficha</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          </Modal>
 
           {/* Modal Instructivo Oficial SIDEAP y SIGEP (Decreto 859 de 2025) */}
           <Modal

@@ -31,6 +31,7 @@ import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import { CASOS_2026_RAW } from '../../lib/casos2026Data';
 import { ModalRequisitosPosesionFT095 } from '../../components/rrhh/ModalRequisitosPosesionFT095';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
+import ModalFichaPlazaNomina from '../../components/rrhh/ModalFichaPlazaNomina';
 
 // ============================================================================
 // SISTEMA DE DISEÑO INSTITUCIONAL NAVY + SLATE (IDÉNTICO A NÓMINA)
@@ -3961,6 +3962,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
 
   // Estados para modal de gestión de términos / incidentes
   const [modalTerminosIncidenteVisible, setModalTerminosIncidenteVisible] = useState(false);
+  const [fichaPlazaModal, setFichaPlazaModal] = useState<PlazaNomina | null>(null);
   const [casoTerminosSeleccionado, setCasoTerminosSeleccionado] = useState<CasoFlujoFuncionario | null>(null);
   const [nuevoEstadoTerminos, setNuevoEstadoTerminos] = useState<EstadoTerminosLista>('EN_TERMINOS_ACEPTACION');
   const [inputDiasProrroga, setInputDiasProrroga] = useState('30');
@@ -6480,6 +6482,62 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     });
   };
 
+  // Función para formatear el texto del cargo evitando duplicidad de códigos/grados
+  const formatearTextoCargo = (cargo?: string, codigo?: string, grado?: string) => {
+    if (!cargo) return 'Cargo no especificado';
+    const tieneCod = /c[óo]d/i.test(cargo);
+    const tieneGrado = /gr/i.test(cargo);
+    if (tieneCod || tieneGrado) {
+      return cargo.replace(/\s*\(\s*c[óo]d:\s*gr:\s*\)/gi, '').trim();
+    }
+    const partes: string[] = [];
+    if (codigo && codigo.trim()) partes.push(`Cód: ${codigo.trim()}`);
+    if (grado && grado.trim()) partes.push(`Gr: ${grado.trim()}`);
+    if (partes.length > 0) {
+      return `${cargo.trim()} (${partes.join(' ')})`;
+    }
+    return cargo.trim();
+  };
+
+  // Abre la misma ficha integral del cargo y plaza que sale en /rrhh/nomina
+  const abrirFichaCargo = (caso: CasoFlujoFuncionario) => {
+    const plazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
+    let plaza = caso.id_plaza ? plazas.find((p) => p.id_plaza === caso.id_plaza) : null;
+    if (!plaza && caso.servidor_cedula) {
+      const ced = String(caso.servidor_cedula).trim();
+      plaza = plazas.find(
+        (p) => String(p.titular_cedula).trim() === ced || String(p.encargo_cedula).trim() === ced
+      ) || null;
+    }
+    if (!plaza && caso.cargo) {
+      const cargoLimpio = caso.cargo.replace(/\(Cód.*?\)/i, '').trim().toUpperCase();
+      plaza = plazas.find(
+        (p) =>
+          p.cargo?.toUpperCase().trim() === cargoLimpio &&
+          (!caso.codigo || String(p.codigo).trim() === String(caso.codigo).trim()) &&
+          (!caso.grado || String(p.grado).trim() === String(caso.grado).trim())
+      ) || plazas.find(
+        (p) => p.cargo?.toUpperCase().trim() === cargoLimpio
+      ) || null;
+    }
+
+    const plazaFinal: PlazaNomina = plaza || {
+      id_plaza: caso.id_plaza || 999,
+      cargo: caso.cargo.replace(/\s*\(\s*c[óo]d:\s*gr:\s*\)/gi, '').trim(),
+      codigo: caso.codigo || '---',
+      grado: caso.grado || '---',
+      nivel: 'PROFESIONAL',
+      dependencia_cargo: caso.dependencia,
+      estado_cargo: caso.tipo_proceso === 'DESVINCULACION' ? 'EN RETIRO' : 'OCUPADO',
+      situacion_administrativa: caso.tipo_proceso === 'DESVINCULACION' ? 'EN PROCESO DE RETIRO' : 'EN VINCULACIÓN',
+      titular_nombre: caso.servidor_nombre,
+      titular_cedula: caso.servidor_cedula,
+      id_sideap: (caso as any).id_sideap,
+    };
+
+    setFichaPlazaModal(plazaFinal);
+  };
+
   // Métricas para los KPIs
   const totalVinculaciones = casos.filter((c) => c.tipo_proceso === 'VINCULACION').length;
   const totalDesvinculaciones = casos.filter((c) => c.tipo_proceso === 'DESVINCULACION').length;
@@ -8263,24 +8321,27 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
 
-                            <View
-                              style={{
+                            <Pressable
+                              onPress={() => abrirFichaCargo(casoActivo)}
+                              style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 5,
-                                backgroundColor: THEME.slate50,
+                                backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : THEME.slate50,
                                 borderWidth: 1,
-                                borderColor: THEME.slate200,
+                                borderColor: hovered ? THEME.marca600 : THEME.slate200,
                                 paddingHorizontal: 9,
                                 paddingVertical: 4.5,
                                 borderRadius: 6,
-                              }}
+                                cursor: 'pointer',
+                              })}
                             >
-                              <Ionicons name="briefcase-outline" size={13} color={THEME.slate500} />
-                              <Text style={{ color: THEME.slate800, fontSize: 11.5, fontWeight: '700' }}>
-                                {casoActivo.cargo} (Cód: {casoActivo.codigo} Gr: {casoActivo.grado})
+                              <Ionicons name="briefcase-outline" size={13} color={THEME.marca700} />
+                              <Text style={{ color: THEME.slate900, fontSize: 11.5, fontWeight: '700' }}>
+                                {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
                               </Text>
-                            </View>
+                              <Ionicons name="open-outline" size={12} color={THEME.marca700} style={{ marginLeft: 2 }} />
+                            </Pressable>
 
                             <BotonManualFunciones
                               id_sideap={(casoActivo as any).id_sideap}
@@ -16634,6 +16695,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           </View>
         </View>
       </Modal>
+
+      {/* Modal con la Ficha Técnica Integral del Cargo y Plaza (Idéntico a Nómina) */}
+      <ModalFichaPlazaNomina
+        visible={!!fichaPlazaModal}
+        onClose={() => setFichaPlazaModal(null)}
+        plaza={fichaPlazaModal}
+      />
 
     </View>
   );
