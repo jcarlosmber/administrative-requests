@@ -324,6 +324,7 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS peldano_escalera INT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS manual_funciones TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS resolucion_manual TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS archivo_pdf TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS edad INT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_vacancia DATE;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS fecha_reporte_simo DATE;

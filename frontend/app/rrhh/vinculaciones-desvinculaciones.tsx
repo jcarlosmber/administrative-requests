@@ -8082,7 +8082,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         const esTerminadoActivo =
                           etapasCompActivo === casoActivo.etapas.length ||
                           casoActivo.etapas.every((e) => e.estado === 'completed');
-                        const pctActivo = Math.round((etapasCompActivo / casoActivo.etapas.length) * 100);
 
                         return esTerminadoActivo ? (
                           <View
@@ -8170,115 +8169,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </Pressable>
                           </View>
-                        ) : (
-                          <View
-                            style={{
-                              backgroundColor: THEME.white,
-                              borderWidth: 1,
-                              borderColor: THEME.slate200,
-                              borderRadius: 12,
-                              padding: 14,
-                              flexDirection: isTablet ? 'row' : 'column',
-                              justifyContent: 'space-between',
-                              alignItems: isTablet ? 'center' : 'stretch',
-                              gap: 14,
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.05,
-                              shadowRadius: 4,
-                              elevation: 2,
-                            }}
-                          >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                              <View
-                                style={{
-                                  width: 36,
-                                  height: 36,
-                                  borderRadius: 18,
-                                  backgroundColor: '#fffbeb',
-                                  borderWidth: 1,
-                                  borderColor: '#fde68a',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <Ionicons name="hourglass-outline" size={18} color="#d97706" />
-                              </View>
-                              <View style={{ flex: 1, minWidth: 0 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900, letterSpacing: -0.1 }}>
-                                    TRÁMITE EN CURSO
-                                  </Text>
-                                  <View
-                                    style={{
-                                      backgroundColor: '#fffbeb',
-                                      borderWidth: 1,
-                                      borderColor: '#fde68a',
-                                      paddingHorizontal: 7,
-                                      paddingVertical: 1.5,
-                                      borderRadius: 4,
-                                    }}
-                                  >
-                                    <Text style={{ color: '#b45309', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
-                                      EN PROCESO
-                                    </Text>
-                                  </View>
-                                </View>
-                                <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 2, lineHeight: 16 }}>
-                                  Fases concluidas: {etapasCompActivo} de {casoActivo.etapas.length} • Requisitos pendientes por verificar en la fase activa.
-                                </Text>
-                              </View>
-                            </View>
-
-                            {/* Barra de Progreso Gráfica y Porcentaje */}
-                            <View
-                              style={{
-                                width: isTablet ? 210 : '100%',
-                                backgroundColor: THEME.slate50,
-                                borderWidth: 1,
-                                borderColor: THEME.slate200,
-                                borderRadius: 8,
-                                paddingHorizontal: 12,
-                                paddingVertical: 8,
-                                gap: 6,
-                              }}
-                            >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate600 }}>
-                                  Avance del Trámite
-                                </Text>
-                                <Text
-                                  style={{
-                                    fontSize: 12.5,
-                                    fontWeight: '800',
-                                    color: pctActivo > 0 ? '#059669' : '#d97706',
-                                  }}
-                                >
-                                  {pctActivo}%
-                                </Text>
-                              </View>
-                              <View
-                                style={{
-                                  width: '100%',
-                                  height: 6,
-                                  borderRadius: 9999,
-                                  backgroundColor: THEME.slate200,
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                <View
-                                  style={{
-                                    width: `${Math.max(pctActivo, 4)}%`,
-                                    height: '100%',
-                                    borderRadius: 9999,
-                                    backgroundColor: pctActivo > 0 ? '#059669' : '#d97706',
-                                  }}
-                                />
-                              </View>
-                            </View>
-                          </View>
-                        );
+                        ) : null;
                       })()}
 
                       {/* Cabecera Principal del Caso: Identidad y Acciones Rápidas */}
@@ -9567,79 +9458,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                                                                                 </View>
 
-                                               {/* Visualización de los Anexos que se han agregado al requisito */}
-                                               {req.documentosAdjuntos && req.documentosAdjuntos.length > 0 && (
-                                                 <View
-                                                   style={{
-                                                     marginTop: 4,
-                                                     backgroundColor: '#f8fafc',
-                                                     borderRadius: 7,
-                                                     borderWidth: 1,
-                                                     borderColor: '#e2e8f0',
-                                                     padding: 8,
-                                                     gap: 6,
-                                                   }}
-                                                 >
-                                                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                     <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.slate700, textTransform: 'uppercase' }}>
-                                                       📎 Anexos del requisito ({req.documentosAdjuntos.length})
-                                                     </Text>
-                                                     <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
-                                                       Clic para abrir documento
-                                                     </Text>
-                                                   </View>
-                                                   <View style={{ gap: 4 }}>
-                                                     {req.documentosAdjuntos.map((doc) => {
-                                                       const ext = (doc.nombre.split('.').pop() || '').toLowerCase();
-                                                       const esPdf = ext === 'pdf';
-                                                       const esExcel = ext === 'xls' || ext === 'xlsx';
-                                                       const esWord = ext === 'doc' || ext === 'docx';
-                                                       const colorIcono = esPdf ? '#dc2626' : esExcel ? '#16a34a' : esWord ? '#2563eb' : '#059669';
 
-                                                       return (
-                                                         <Pressable
-                                                           key={doc.id}
-                                                           onPress={(e) => {
-                                                             e.stopPropagation();
-                                                             handleAbrirArchivoAdjunto(doc);
-                                                           }}
-                                                           style={{
-                                                             backgroundColor: '#ffffff',
-                                                             borderRadius: 6,
-                                                             borderWidth: 1,
-                                                             borderColor: '#cbd5e1',
-                                                             paddingHorizontal: 9,
-                                                             paddingVertical: 5,
-                                                             flexDirection: 'row',
-                                                             alignItems: 'center',
-                                                             justifyContent: 'space-between',
-                                                             gap: 8,
-                                                           }}
-                                                         >
-                                                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 }}>
-                                                             <Ionicons
-                                                               name={esPdf ? 'document-text' : esExcel ? 'grid' : esWord ? 'document' : 'attach'}
-                                                               size={15}
-                                                               color={colorIcono}
-                                                             />
-                                                             <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate900, flex: 1 }} numberOfLines={1}>
-                                                               {doc.nombre}
-                                                             </Text>
-                                                           </View>
-                                                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                                             {doc.size ? (
-                                                               <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
-                                                                 {formatearTamanoArchivo(doc.size)}
-                                                               </Text>
-                                                             ) : null}
-                                                             <Ionicons name="open-outline" size={13} color={THEME.marca700} />
-                                                           </View>
-                                                         </Pressable>
-                                                       );
-                                                     })}
-                                                   </View>
-                                                 </View>
-                                               )}
 
                                               
                                               {/* RESUMEN EXPANSIBLE SECOP II: CUANDO YA FUE CONSULTADO */}
@@ -10018,6 +9837,192 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   )}
                                                 </View>
                                               )}
+
+                                              {/* Documentos y Evidencias de Soporte Adjuntos (Acceso Rápido) */}
+                                              {req.documentosAdjuntos && req.documentosAdjuntos.length > 0 ? (
+                                                <View
+                                                  style={{
+                                                    marginTop: 5,
+                                                    backgroundColor: '#f8fafc',
+                                                    borderRadius: 7,
+                                                    borderWidth: 1,
+                                                    borderColor: '#cbd5e1',
+                                                    padding: 8,
+                                                    gap: 6,
+                                                  }}
+                                                >
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                      <Ionicons name="attach" size={15} color={THEME.marca700} />
+                                                      <Text style={{ fontSize: 11, fontWeight: '800', color: THEME.slate800, textTransform: 'uppercase' }}>
+                                                        Documentos y Evidencias de Soporte ({req.documentosAdjuntos.length})
+                                                      </Text>
+                                                    </View>
+                                                    <Pressable
+                                                      onPress={(e) => {
+                                                        e.stopPropagation();
+                                                        handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id);
+                                                      }}
+                                                      style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 4,
+                                                        backgroundColor: '#ffffff',
+                                                        borderRadius: 5,
+                                                        borderWidth: 1,
+                                                        borderColor: THEME.marca100,
+                                                        paddingHorizontal: 7,
+                                                        paddingVertical: 3,
+                                                      }}
+                                                    >
+                                                      <Ionicons name="cloud-upload-outline" size={12} color={THEME.marca700} />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca700 }}>
+                                                        + Adjuntar Soporte
+                                                      </Text>
+                                                    </Pressable>
+                                                  </View>
+
+                                                  <View style={{ gap: 4 }}>
+                                                    {req.documentosAdjuntos.map((doc) => {
+                                                      const ext = (doc.nombre.split('.').pop() || '').toLowerCase();
+                                                      const esPdf = ext === 'pdf';
+                                                      const esExcel = ext === 'xls' || ext === 'xlsx';
+                                                      const esWord = ext === 'doc' || ext === 'docx';
+                                                      const colorIcono = esPdf ? '#dc2626' : esExcel ? '#16a34a' : esWord ? '#2563eb' : '#059669';
+
+                                                      return (
+                                                        <View
+                                                          key={doc.id}
+                                                          style={{
+                                                            backgroundColor: '#ffffff',
+                                                            borderRadius: 6,
+                                                            borderWidth: 1,
+                                                            borderColor: '#e2e8f0',
+                                                            paddingHorizontal: 8,
+                                                            paddingVertical: 5,
+                                                            flexDirection: 'row',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            gap: 6,
+                                                          }}
+                                                        >
+                                                          <Pressable
+                                                            onPress={(e) => {
+                                                              e.stopPropagation();
+                                                              handleAbrirArchivoAdjunto(doc);
+                                                            }}
+                                                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}
+                                                          >
+                                                            <Ionicons
+                                                              name={esPdf ? 'document-text' : esExcel ? 'grid' : esWord ? 'document' : 'attach'}
+                                                              size={15}
+                                                              color={colorIcono}
+                                                            />
+                                                            <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate900, flex: 1 }} numberOfLines={1}>
+                                                              {doc.nombre}
+                                                            </Text>
+                                                            {doc.size ? (
+                                                              <Text style={{ fontSize: 10, color: THEME.slate500, marginRight: 4 }}>
+                                                                {formatearTamanoArchivo(doc.size)}
+                                                              </Text>
+                                                            ) : null}
+                                                          </Pressable>
+
+                                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                            <Pressable
+                                                              onPress={(e) => {
+                                                                e.stopPropagation();
+                                                                handleAbrirArchivoAdjunto(doc);
+                                                              }}
+                                                              style={{
+                                                                flexDirection: 'row',
+                                                                alignItems: 'center',
+                                                                gap: 3,
+                                                                backgroundColor: '#eff6ff',
+                                                                borderColor: '#bfdbfe',
+                                                                borderWidth: 1,
+                                                                borderRadius: 4,
+                                                                paddingHorizontal: 6,
+                                                                paddingVertical: 2.5,
+                                                              }}
+                                                            >
+                                                              <Ionicons name="open-outline" size={11} color={THEME.marca700} />
+                                                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca700 }}>
+                                                                Abrir
+                                                              </Text>
+                                                            </Pressable>
+
+                                                            <Pressable
+                                                              onPress={(e) => {
+                                                                e.stopPropagation();
+                                                                confirmarEliminarArchivo(casoActivo.id, etapa.id, req.id, doc.id, doc.nombre);
+                                                              }}
+                                                              style={{
+                                                                backgroundColor: '#fef2f2',
+                                                                borderColor: '#fecaca',
+                                                                borderWidth: 1,
+                                                                borderRadius: 4,
+                                                                paddingHorizontal: 5,
+                                                                paddingVertical: 2.5,
+                                                              }}
+                                                            >
+                                                              <Ionicons name="trash-outline" size={12} color="#dc2626" />
+                                                            </Pressable>
+                                                          </View>
+                                                        </View>
+                                                      );
+                                                    })}
+                                                  </View>
+                                                </View>
+                                              ) : (req.observaciones || req.cumplido || estaReqDetalle) ? (
+                                                <View
+                                                  style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    backgroundColor: '#f8fafc',
+                                                    borderRadius: 6,
+                                                    borderWidth: 1,
+                                                    borderStyle: 'dashed',
+                                                    borderColor: '#cbd5e1',
+                                                    paddingVertical: 4.5,
+                                                    paddingHorizontal: 8,
+                                                    marginTop: 4,
+                                                  }}
+                                                >
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                    <Ionicons name="attach-outline" size={13} color={THEME.slate500} />
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '600', color: THEME.slate600 }}>
+                                                      Documentos y Evidencias de Soporte:
+                                                    </Text>
+                                                    <Text style={{ fontSize: 10, color: THEME.slate400, fontStyle: 'italic' }}>
+                                                      Sin archivos adjuntos
+                                                    </Text>
+                                                  </View>
+                                                  <Pressable
+                                                    onPress={(e) => {
+                                                      e.stopPropagation();
+                                                      handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id);
+                                                    }}
+                                                    style={{
+                                                      flexDirection: 'row',
+                                                      alignItems: 'center',
+                                                      gap: 3,
+                                                      backgroundColor: '#ffffff',
+                                                      borderWidth: 1,
+                                                      borderColor: THEME.marca100,
+                                                      borderRadius: 4,
+                                                      paddingHorizontal: 7,
+                                                      paddingVertical: 2.5,
+                                                    }}
+                                                  >
+                                                    <Ionicons name="cloud-upload-outline" size={11} color={THEME.marca700} />
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.marca700 }}>
+                                                      + Adjuntar Soporte
+                                                    </Text>
+                                                  </Pressable>
+                                                </View>
+                                              ) : null}
                                             </View>
                                           </View>
                                         </View>
