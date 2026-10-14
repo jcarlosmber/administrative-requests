@@ -6158,6 +6158,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     setFasesExpandidas(nuevoMap);
   };
 
+  const toggleTodasLasFases = () => {
+    if (!casoActivo) return;
+    const todasExpandidas =
+      casoActivo.etapas.length > 0 && casoActivo.etapas.every((et) => Boolean(fasesExpandidas[et.id]));
+    expandirTodasLasFases(!todasExpandidas);
+  };
+
   // Abrir modal de observaciones al cerrar o inspeccionar un requisito
   const abrirModalObservacionReq = (
     casoId: string,
@@ -8080,9 +8087,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         return esTerminadoActivo ? (
                           <View
                             style={{
-                              backgroundColor: 'rgb(29, 85, 78)',
+                              backgroundColor: '#f0fdf4',
                               borderWidth: 1.5,
-                              borderColor: 'rgba(94, 234, 212, 0.4)',
+                              borderColor: '#bbf7d0',
                               borderRadius: 12,
                               padding: 14,
                               flexDirection: isTablet ? 'row' : 'column',
@@ -8090,49 +8097,49 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               alignItems: isTablet ? 'center' : 'flex-start',
                               gap: 12,
                               shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.15,
-                              shadowRadius: 6,
-                              elevation: 3,
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.06,
+                              shadowRadius: 4,
+                              elevation: 2,
                             }}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                               <View
                                 style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 17,
-                                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                                  width: 36,
+                                  height: 36,
+                                  borderRadius: 18,
+                                  backgroundColor: '#dcfce7',
                                   borderWidth: 1,
-                                  borderColor: 'rgba(94, 234, 212, 0.5)',
+                                  borderColor: '#86efac',
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   flexShrink: 0,
                                 }}
                               >
-                                <Ionicons name="checkmark-circle" size={22} color="#5eead4" />
+                                <Ionicons name="checkmark-circle" size={22} color="#059669" />
                               </View>
                               <View style={{ flex: 1 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#ffffff', letterSpacing: 0.2 }}>
-                                    TRÁMITE OFICIALMENTE TERMINADO Y CERRADO (100%)
+                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#065f46', letterSpacing: 0.2 }}>
+                                    TRÁMITE OFICIALMENTE CONCLUIDO (100%)
                                   </Text>
                                   <View
                                     style={{
-                                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                      backgroundColor: '#dcfce7',
                                       borderWidth: 1,
-                                      borderColor: 'rgba(255, 255, 255, 0.35)',
+                                      borderColor: '#86efac',
                                       paddingHorizontal: 7,
                                       paddingVertical: 1.5,
                                       borderRadius: 4,
                                     }}
                                   >
-                                    <Text style={{ color: '#ffffff', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
+                                    <Text style={{ color: '#047857', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
                                       FINALIZADO
                                     </Text>
                                   </View>
                                 </View>
-                                <Text style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, 0.88)', marginTop: 3, lineHeight: 17 }}>
+                                <Text style={{ fontSize: 11.5, color: '#047857', marginTop: 3, lineHeight: 17 }}>
                                   {casoActivo.tipo_proceso === 'DESVINCULACION' ? 'Desvinculación' : 'Vinculación'} protocolizada con{' '}
                                   {casoActivo.acto_administrativo || 'documento oficial'}. Todas las fases normativas han sido concluidas y foliadas.
                                 </Text>
@@ -8144,21 +8151,21 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 5,
-                                backgroundColor: pressed ? '#f0fdfa' : '#ffffff',
+                                backgroundColor: pressed ? '#ecfdf5' : '#ffffff',
                                 borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.9)',
+                                borderColor: '#a7f3d0',
                                 paddingHorizontal: 12,
                                 paddingVertical: 7,
                                 borderRadius: 8,
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.12,
-                                shadowRadius: 3,
-                                elevation: 2,
+                                shadowOpacity: 0.08,
+                                shadowRadius: 2,
+                                elevation: 1,
                               })}
                             >
-                              <Ionicons name="refresh-outline" size={13.5} color="rgb(29, 85, 78)" />
-                              <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgb(29, 85, 78)' }}>
+                              <Ionicons name="refresh-outline" size={13.5} color="#047857" />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#047857' }}>
                                 Reabrir para Modificar
                               </Text>
                             </Pressable>
@@ -8166,87 +8173,110 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         ) : (
                           <View
                             style={{
-                              backgroundColor: '#b45309',
-                              borderWidth: 1.5,
-                              borderColor: 'rgba(254, 240, 138, 0.45)',
+                              backgroundColor: THEME.white,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
                               borderRadius: 12,
                               padding: 14,
                               flexDirection: isTablet ? 'row' : 'column',
                               justifyContent: 'space-between',
-                              alignItems: isTablet ? 'center' : 'flex-start',
-                              gap: 12,
+                              alignItems: isTablet ? 'center' : 'stretch',
+                              gap: 14,
                               shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: 0.15,
-                              shadowRadius: 6,
-                              elevation: 3,
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.05,
+                              shadowRadius: 4,
+                              elevation: 2,
                             }}
                           >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
                               <View
                                 style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 17,
-                                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                  width: 36,
+                                  height: 36,
+                                  borderRadius: 18,
+                                  backgroundColor: '#fffbeb',
                                   borderWidth: 1,
-                                  borderColor: 'rgba(254, 240, 138, 0.55)',
+                                  borderColor: '#fde68a',
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   flexShrink: 0,
                                 }}
                               >
-                                <Ionicons name="time" size={20} color="#fef08a" />
+                                <Ionicons name="hourglass-outline" size={18} color="#d97706" />
                               </View>
-                              <View style={{ flex: 1 }}>
+                              <View style={{ flex: 1, minWidth: 0 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#ffffff', letterSpacing: 0.2 }}>
-                                    TRÁMITE EN CURSO ({pctActivo}% COMPLETADO)
+                                  <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate900, letterSpacing: -0.1 }}>
+                                    TRÁMITE EN CURSO
                                   </Text>
                                   <View
                                     style={{
-                                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                      backgroundColor: '#fffbeb',
                                       borderWidth: 1,
-                                      borderColor: 'rgba(255, 255, 255, 0.35)',
+                                      borderColor: '#fde68a',
                                       paddingHorizontal: 7,
                                       paddingVertical: 1.5,
                                       borderRadius: 4,
                                     }}
                                   >
-                                    <Text style={{ color: '#ffffff', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
+                                    <Text style={{ color: '#b45309', fontSize: 9.5, fontWeight: '800', letterSpacing: 0.4 }}>
                                       EN PROCESO
                                     </Text>
                                   </View>
                                 </View>
-                                <Text style={{ fontSize: 11.5, color: 'rgba(255, 255, 255, 0.92)', marginTop: 3, lineHeight: 17 }}>
-                                  Fases concluidas: {etapasCompActivo} de {casoActivo.etapas.length}. Requisitos pendientes por verificar en la fase activa.
+                                <Text style={{ fontSize: 11.5, color: THEME.slate500, marginTop: 2, lineHeight: 16 }}>
+                                  Fases concluidas: {etapasCompActivo} de {casoActivo.etapas.length} • Requisitos pendientes por verificar en la fase activa.
                                 </Text>
                               </View>
                             </View>
-                            <Pressable
-                              onPress={() => solicitarConfirmarTerminado(casoActivo)}
-                              style={({ pressed }) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 5,
-                                backgroundColor: pressed ? '#fffbeb' : '#ffffff',
+
+                            {/* Barra de Progreso Gráfica y Porcentaje */}
+                            <View
+                              style={{
+                                width: isTablet ? 210 : '100%',
+                                backgroundColor: THEME.slate50,
                                 borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.9)',
-                                paddingHorizontal: 12,
-                                paddingVertical: 7,
+                                borderColor: THEME.slate200,
                                 borderRadius: 8,
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.12,
-                                shadowRadius: 3,
-                                elevation: 2,
-                              })}
+                                paddingHorizontal: 12,
+                                paddingVertical: 8,
+                                gap: 6,
+                              }}
                             >
-                              <Ionicons name="checkmark-done" size={14} color="#b45309" />
-                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#b45309' }}>
-                                Marcar Todo como Terminado
-                              </Text>
-                            </Pressable>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate600 }}>
+                                  Avance del Trámite
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: 12.5,
+                                    fontWeight: '800',
+                                    color: pctActivo > 0 ? '#059669' : '#d97706',
+                                  }}
+                                >
+                                  {pctActivo}%
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  width: '100%',
+                                  height: 6,
+                                  borderRadius: 9999,
+                                  backgroundColor: THEME.slate200,
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                <View
+                                  style={{
+                                    width: `${Math.max(pctActivo, 4)}%`,
+                                    height: '100%',
+                                    borderRadius: 9999,
+                                    backgroundColor: pctActivo > 0 ? '#059669' : '#d97706',
+                                  }}
+                                />
+                              </View>
+                            </View>
                           </View>
                         );
                       })()}
@@ -8262,7 +8292,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         }}
                       >
                         {/* Fila Superior: Identidad del Servidor y Datos del Cargo */}
-                        <View style={{ gap: 6 }}>
+                        <View style={{ gap: 8 }}>
                           <View
                             style={{
                               flexDirection: 'row',
@@ -8274,7 +8304,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             <Text
                               style={{
                                 color: THEME.slate900,
-                                fontSize: 17,
+                                fontSize: 18,
                                 fontWeight: '800',
                                 letterSpacing: -0.2,
                               }}
@@ -8284,8 +8314,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                             <View
                               style={{
-                                paddingHorizontal: 9,
-                                paddingVertical: 2.5,
+                                paddingHorizontal: 10,
+                                paddingVertical: 3,
                                 borderRadius: 9999,
                                 backgroundColor:
                                   casoActivo.tipo_proceso === 'VINCULACION'
@@ -8314,58 +8344,94 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
                           </View>
 
+                          {/* Chips Estructurados de Metadatos */}
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
                               flexWrap: 'wrap',
-                              gap: 6,
+                              gap: 8,
                             }}
                           >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <Ionicons name="card-outline" size={13} color={THEME.slate400} />
-                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '600' }}>
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 5,
+                                backgroundColor: THEME.slate50,
+                                borderWidth: 1,
+                                borderColor: THEME.slate200,
+                                paddingHorizontal: 9,
+                                paddingVertical: 4.5,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="card-outline" size={13} color={THEME.slate500} />
+                              <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '600' }}>
                                 Cédula: {casoActivo.servidor_cedula}
                               </Text>
                             </View>
-                            <Text style={{ color: THEME.slate300, fontSize: 12 }}>•</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Ionicons name="briefcase-outline" size={13} color={THEME.slate400} />
-                                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '600' }}>
-                                  {casoActivo.cargo}
-                                </Text>
-                              </View>
-                              <BotonManualFunciones
-                                id_sideap={(casoActivo as any).id_sideap}
-                                cargo={casoActivo.cargo}
-                                codigo={casoActivo.codigo}
-                                grado={casoActivo.grado}
-                                variante="chip"
-                                etiqueta="Manual de Funciones"
-                              />
+
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 5,
+                                backgroundColor: THEME.slate50,
+                                borderWidth: 1,
+                                borderColor: THEME.slate200,
+                                paddingHorizontal: 9,
+                                paddingVertical: 4.5,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="briefcase-outline" size={13} color={THEME.slate500} />
+                              <Text style={{ color: THEME.slate800, fontSize: 11.5, fontWeight: '700' }}>
+                                {casoActivo.cargo} (Cód: {casoActivo.codigo} Gr: {casoActivo.grado})
+                              </Text>
                             </View>
-                            <Text style={{ color: THEME.slate300, fontSize: 12 }}>•</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <Ionicons name="business-outline" size={13} color={THEME.slate400} />
-                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '500' }}>
+
+                            <BotonManualFunciones
+                              id_sideap={(casoActivo as any).id_sideap}
+                              cargo={casoActivo.cargo}
+                              codigo={casoActivo.codigo}
+                              grado={casoActivo.grado}
+                              variante="chip"
+                              etiqueta="Manual de Funciones"
+                            />
+
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 5,
+                                backgroundColor: THEME.slate50,
+                                borderWidth: 1,
+                                borderColor: THEME.slate200,
+                                paddingHorizontal: 9,
+                                paddingVertical: 4.5,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="business-outline" size={13} color={THEME.slate500} />
+                              <Text style={{ color: THEME.slate600, fontSize: 11.5, fontWeight: '500' }}>
                                 {casoActivo.dependencia}
                               </Text>
                             </View>
                           </View>
                         </View>
 
-                        {/* Última Fila del Box: Botones de Acción uno junto al otro con colores oscuros muted diferenciados */}
+                        {/* Botones de Acción: Modernizados y pulidos */}
                         <View
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',
                             flexWrap: 'wrap',
                             gap: 8,
-                            paddingTop: 2,
+                            paddingTop: 4,
                           }}
                         >
-                          {/* 1. Consultar SECOP II: Azul Marino Oscuro Muted */}
+                          {/* 1. Consultar SECOP II: Azul Marino Institucional */}
                           <Pressable
                             onPress={() =>
                               abrirConsultaSecopParaCandidato(
@@ -8379,15 +8445,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               alignItems: 'center',
                               justifyContent: 'center',
                               gap: 6,
-                              backgroundColor: pressed ? '#152c48' : '#1e3a5f',
+                              backgroundColor: pressed ? '#17406d' : '#1e3a5f',
                               paddingHorizontal: 13,
                               paddingVertical: 7.5,
                               borderRadius: 8,
                               borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.2)',
+                              borderColor: 'rgba(147, 197, 253, 0.35)',
                               shadowColor: '#000',
                               shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.15,
+                              shadowOpacity: 0.12,
                               shadowRadius: 2,
                               elevation: 2,
                             })}
@@ -8400,7 +8466,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </Text>
                           </Pressable>
 
-                          {/* 2. Validación FT-318 IA: Verde Petróleo Oscuro Muted */}
+                          {/* 2. Validación FT-318 IA: Verde Petróleo Inteligente */}
                           {casoActivo.tipo_proceso === 'VINCULACION' && (
                             <Pressable
                               onPress={() => irAValidacionIngresosNueva(casoActivo)}
@@ -8409,15 +8475,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: 6,
-                                backgroundColor: pressed ? '#0d3834' : '#134e48',
+                                backgroundColor: pressed ? '#0b3f3b' : '#0f766e',
                                 paddingHorizontal: 13,
                                 paddingVertical: 7.5,
                                 borderRadius: 8,
                                 borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderColor: 'rgba(94, 234, 212, 0.45)',
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.15,
+                                shadowOpacity: 0.12,
                                 shadowRadius: 2,
                                 elevation: 2,
                               })}
@@ -8435,7 +8501,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </Pressable>
                           )}
 
-                          {/* 3. Formatos Oficiales: Gris Pizarra / Grafito Oscuro Muted */}
+                          {/* 3. Formatos Oficiales: Gris Pizarra Sofisticado */}
                           <Pressable
                             onPress={() => setModalFormatosVisible(true)}
                             style={({ pressed }) => ({
@@ -8443,15 +8509,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               alignItems: 'center',
                               justifyContent: 'center',
                               gap: 6,
-                              backgroundColor: pressed ? '#1e293b' : '#334155',
+                              backgroundColor: pressed ? '#242f42' : '#334155',
                               paddingHorizontal: 13,
                               paddingVertical: 7.5,
                               borderRadius: 8,
                               borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.2)',
+                              borderColor: 'rgba(203, 213, 225, 0.3)',
                               shadowColor: '#000',
                               shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.15,
+                              shadowOpacity: 0.12,
                               shadowRadius: 2,
                               elevation: 2,
                             })}
@@ -8468,7 +8534,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </Text>
                           </Pressable>
 
-                          {/* 4. Evaluación Retiro (Forms): Ciruela / Vino Oscuro Muted */}
+                          {/* 4. Evaluación Retiro (Forms): Ciruela Suave */}
                           {casoActivo.tipo_proceso === 'DESVINCULACION' && (
                             <Pressable
                               onPress={handleAbrirEvaluacionRetiroGoogleForms}
@@ -8477,15 +8543,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: 6,
-                                backgroundColor: pressed ? '#3b1d32' : '#4c1d3a',
+                                backgroundColor: pressed ? '#581c45' : '#701a75',
                                 paddingHorizontal: 13,
                                 paddingVertical: 7.5,
                                 borderRadius: 8,
                                 borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderColor: 'rgba(244, 114, 182, 0.35)',
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.15,
+                                shadowOpacity: 0.12,
                                 shadowRadius: 2,
                                 elevation: 2,
                               })}
@@ -8512,11 +8578,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           <View
                             style={{
                               backgroundColor: infoModActivo.colorBg,
-                              borderRadius: 10,
+                              borderRadius: 12,
                               borderWidth: 1,
                               borderColor: infoModActivo.colorBorde,
-                              padding: 12,
-                              gap: 8,
+                              padding: 14,
+                              gap: 10,
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.04,
+                              shadowRadius: 3,
+                              elevation: 1,
                             }}
                           >
                             {/* Fila Superior del Banner: Título, Subtítulo y Botón Ver Guía */}
@@ -8528,30 +8599,35 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 gap: 8,
                               }}
                             >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', flex: 1 }}>
                                 <View
                                   style={{
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: 7,
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 8,
                                     backgroundColor: infoModActivo.colorTexto,
                                     alignItems: 'center',
                                     justifyContent: 'center',
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 2,
+                                    elevation: 1,
                                   }}
                                 >
-                                  <Ionicons name={infoModActivo.icono as any} size={16} color={THEME.white} />
+                                  <Ionicons name={infoModActivo.icono as any} size={17} color={THEME.white} />
                                 </View>
 
-                                <View>
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    <Text style={{ fontSize: 13, fontWeight: '800', color: infoModActivo.colorTexto }}>
+                                <View style={{ flex: 1, minWidth: 200 }}>
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    <Text style={{ fontSize: 13.5, fontWeight: '800', color: infoModActivo.colorTexto }}>
                                       Régimen: {infoModActivo.titulo}
                                     </Text>
                                     <View
                                       style={{
                                         backgroundColor: THEME.white,
-                                        paddingHorizontal: 7,
-                                        paddingVertical: 1.5,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 2,
                                         borderRadius: 9999,
                                         borderWidth: 1,
                                         borderColor: infoModActivo.colorBorde,
@@ -8562,7 +8638,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       </Text>
                                     </View>
                                   </View>
-                                  <Text style={{ fontSize: 11, color: THEME.slate600 }}>
+                                  <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 1 }}>
                                     {infoModActivo.subtitulo}
                                   </Text>
                                 </View>
@@ -8574,19 +8650,24 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   setTabGuiaModalidad(casoActivo.modalidad);
                                   setModalGuiaModalidadesVisible(true);
                                 }}
-                                style={{
+                                style={({ pressed }) => ({
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   gap: 5,
-                                  paddingHorizontal: 11,
-                                  paddingVertical: 5,
-                                  borderRadius: 6,
-                                  backgroundColor: THEME.white,
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 6,
+                                  borderRadius: 7,
+                                  backgroundColor: pressed ? THEME.slate50 : THEME.white,
                                   borderWidth: 1,
                                   borderColor: infoModActivo.colorBorde,
-                                }}
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 1 },
+                                  shadowOpacity: 0.05,
+                                  shadowRadius: 2,
+                                  elevation: 1,
+                                })}
                               >
-                                <Ionicons name="information-circle-outline" size={14} color={infoModActivo.colorTexto} />
+                                <Ionicons name="information-circle-outline" size={15} color={infoModActivo.colorTexto} />
                                 <Text style={{ fontSize: 11, fontWeight: '700', color: infoModActivo.colorTexto }}>
                                   Ver Guía & Diferencias
                                 </Text>
@@ -8594,7 +8675,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
 
                             {/* Descripción del Régimen */}
-                            <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 16 }}>
+                            <Text style={{ fontSize: 11.5, color: THEME.slate700, lineHeight: 17 }}>
                               {infoModActivo.descripcionFases}
                             </Text>
 
@@ -8604,13 +8685,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 6,
-                                paddingTop: 4,
-                                borderTopWidth: 1,
-                                borderTopColor: 'rgba(0, 0, 0, 0.05)',
+                                backgroundColor: 'rgba(255, 255, 255, 0.75)',
+                                borderWidth: 1,
+                                borderColor: 'rgba(0, 0, 0, 0.06)',
+                                borderRadius: 6,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5.5,
                               }}
                             >
-                              <Text style={{ fontSize: 11 }}>⚖️</Text>
-                              <Text style={{ fontSize: 10.5, color: THEME.slate600, flex: 1 }}>
+                              <Text style={{ fontSize: 12 }}>⚖️</Text>
+                              <Text style={{ fontSize: 10.5, color: THEME.slate700, flex: 1, fontWeight: '500' }}>
                                 {infoModActivo.marcoLegal}
                               </Text>
                             </View>
@@ -8624,10 +8708,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           const esCompletada = etapa.estado === 'completed';
                           const esEnProgreso = etapa.estado === 'in_progress';
 
-                          const colorBg = esCompletada ? THEME.emeraldBg : esEnProgreso ? '#fffbeb' : THEME.slate100;
-                          const colorBorde = esCompletada ? THEME.emeraldRing : esEnProgreso ? '#f59e0b' : THEME.slate200;
-                          const colorIcono = esCompletada ? THEME.emeraldText : esEnProgreso ? '#b45309' : THEME.slate400;
-                          const colorTexto = esCompletada ? THEME.emeraldText : esEnProgreso ? '#b45309' : THEME.slate600;
+                          const colorBg = esCompletada ? '#ecfdf5' : esEnProgreso ? '#fffbeb' : '#f8fafc';
+                          const colorBorde = esCompletada ? '#a7f3d0' : esEnProgreso ? '#fcd34d' : THEME.slate200;
+                          const colorIcono = esCompletada ? '#059669' : esEnProgreso ? '#d97706' : THEME.slate400;
+                          const colorTexto = esCompletada ? '#065f46' : esEnProgreso ? '#92400e' : THEME.slate600;
 
                           return (
                             <View
@@ -8642,15 +8726,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 style={{
                                   backgroundColor: colorBg,
                                   borderRadius: 8,
-                                  paddingHorizontal: !isTablet ? 7 : 10,
-                                  paddingVertical: !isTablet ? 6 : 7,
-                                  borderWidth: 1,
+                                  paddingHorizontal: !isTablet ? 8 : 11,
+                                  paddingVertical: !isTablet ? 6 : 7.5,
+                                  borderWidth: esEnProgreso ? 1.5 : 1,
                                   borderColor: colorBorde,
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   justifyContent: !isTablet ? 'center' : 'flex-start',
-                                  gap: 5,
+                                  gap: 6,
                                   flex: !isTablet ? 1 : undefined,
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 1 },
+                                  shadowOpacity: esEnProgreso ? 0.08 : 0.03,
+                                  shadowRadius: 2,
+                                  elevation: esEnProgreso ? 2 : 1,
                                 }}
                               >
                                 <Ionicons
@@ -8681,7 +8770,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     width: 14,
                                     height: 2,
                                     backgroundColor: esCompletada
-                                      ? THEME.emeraldText
+                                      ? '#10b981'
                                       : esEnProgreso
                                       ? '#f59e0b'
                                       : THEME.slate200,
@@ -8757,45 +8846,36 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
 
                           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                            <Pressable
-                              onPress={() => expandirTodasLasFases(true)}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingHorizontal: 10,
-                                paddingVertical: 6,
-                                borderRadius: 6,
-                                backgroundColor: THEME.slate100,
-                                borderWidth: 1,
-                                borderColor: THEME.slate300,
-                              }}
-                            >
-                              <Ionicons name="chevron-down-circle-outline" size={14} color={THEME.slate700} />
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
-                                Expandir todas
-                              </Text>
-                            </Pressable>
-
-                            <Pressable
-                              onPress={() => expandirTodasLasFases(false)}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingHorizontal: 10,
-                                paddingVertical: 6,
-                                borderRadius: 6,
-                                backgroundColor: THEME.slate100,
-                                borderWidth: 1,
-                                borderColor: THEME.slate300,
-                              }}
-                            >
-                              <Ionicons name="chevron-up-circle-outline" size={14} color={THEME.slate700} />
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
-                                Colapsar todas
-                              </Text>
-                            </Pressable>
+                            {(() => {
+                              const todasFasesExpandidas =
+                                casoActivo.etapas.length > 0 &&
+                                casoActivo.etapas.every((et) => Boolean(fasesExpandidas[et.id]));
+                              return (
+                                <Pressable
+                                  onPress={toggleTodasLasFases}
+                                  style={({ pressed }) => ({
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 6,
+                                    borderRadius: 6,
+                                    backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                                    borderWidth: 1,
+                                    borderColor: THEME.slate300,
+                                  })}
+                                >
+                                  <Ionicons
+                                    name={todasFasesExpandidas ? 'chevron-up-circle-outline' : 'chevron-down-circle-outline'}
+                                    size={14}
+                                    color={THEME.slate700}
+                                  />
+                                  <Text style={{ fontSize: 11, fontWeight: '600', color: THEME.slate700 }}>
+                                    {todasFasesExpandidas ? 'Colapsar todas' : 'Expandir todas'}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })()}
 
                             {casoActivo.etapas.some((e) => e.estado !== 'completed') && (
                               <Pressable

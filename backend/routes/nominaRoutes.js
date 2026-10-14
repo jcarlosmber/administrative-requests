@@ -315,6 +315,9 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS proposito TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS funciones JSONB DEFAULT '[]'::jsonb;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS requisitos TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS requisitos_formacion TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS requisitos_experiencia TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS meses_experiencia INT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS asignacion_basica NUMERIC(14, 2) DEFAULT 0;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS estado_cargo TEXT DEFAULT 'OCUPADO';
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS id_escalera TEXT;
@@ -2423,6 +2426,9 @@ Secretaría Jurídica Distrital
           MAX(proposito) AS proposito,
           MAX(funciones::text) AS funciones,
           MAX(requisitos) AS requisitos,
+          MAX(requisitos_formacion) AS requisitos_formacion,
+          MAX(requisitos_experiencia) AS requisitos_experiencia,
+          MAX(meses_experiencia) AS meses_experiencia,
           MAX(manual_funciones) AS manual_funciones,
           MAX(resolucion_manual) AS resolucion_manual,
           COUNT(id_plaza) AS total_plazas,
@@ -2452,6 +2458,9 @@ Secretaría Jurídica Distrital
           proposito: row.proposito || '',
           funciones: Array.isArray(parsedFunciones) ? parsedFunciones : [],
           requisitos: row.requisitos || '',
+          requisitos_formacion: row.requisitos_formacion || '',
+          requisitos_experiencia: row.requisitos_experiencia || '',
+          meses_experiencia: row.meses_experiencia !== null ? parseInt(row.meses_experiencia, 10) : null,
           manual_funciones: row.manual_funciones || '',
           resolucion_manual: row.resolucion_manual || '',
           total_plazas: parseInt(row.total_plazas, 10) || 0,
@@ -2466,7 +2475,7 @@ Secretaría Jurídica Distrital
     }
   });
 
-  // 13. Actualizar o crear perfil de cargo manualmente (propósito, funciones, requisitos, manual)
+  // 13. Actualizar o crear perfil de cargo manualmente (propósito, funciones, requisitos de formación y experiencia, manual)
   router.put('/cargos/perfil', async (req, res) => {
     try {
       await ensureTables();
@@ -2479,6 +2488,9 @@ Secretaría Jurídica Distrital
         proposito,
         funciones,
         requisitos,
+        requisitos_formacion,
+        requisitos_experiencia,
+        meses_experiencia,
         manual_funciones,
         resolucion_manual,
         aplicar_a_todas_las_plazas,
@@ -2497,16 +2509,36 @@ Secretaría Jurídica Distrital
       }
       const funcionesJson = JSON.stringify(funcionesArray);
 
+      // Consolidar texto general de requisitos si vienen separados o se actualizan
+      let reqFinal = requisitos;
+      if (!reqFinal && (requisitos_formacion || requisitos_experiencia)) {
+        const partes = [];
+        if (requisitos_formacion && requisitos_formacion.trim()) {
+          partes.push(`Formación: ${requisitos_formacion.trim()}`);
+        }
+        if (requisitos_experiencia && requisitos_experiencia.trim()) {
+          partes.push(`Experiencia: ${requisitos_experiencia.trim()}`);
+        }
+        reqFinal = partes.join('\n\n');
+      }
+
+      const numMeses = meses_experiencia !== undefined && meses_experiencia !== null && String(meses_experiencia).trim() !== ''
+        ? parseInt(String(meses_experiencia), 10) || null
+        : null;
+
       let query = '';
       let params = [];
       let mensaje = '';
 
       if (aplicar_a_todas_las_plazas || (!id_plaza && cargo)) {
-        let whereClause = 'TRIM(cargo) ILIKE TRIM($6)';
+        let whereClause = 'TRIM(cargo) ILIKE TRIM($9)';
         params = [
           proposito || null,
           funcionesJson,
-          requisitos || null,
+          reqFinal || null,
+          requisitos_formacion || null,
+          requisitos_experiencia || null,
+          numMeses,
           manual_funciones || null,
           resolucion_manual || null,
           cargo.trim(),
@@ -2527,18 +2559,24 @@ Secretaría Jurídica Distrital
             proposito = $1,
             funciones = $2::jsonb,
             requisitos = $3,
-            manual_funciones = $4,
-            resolucion_manual = $5,
+            requisitos_formacion = $4,
+            requisitos_experiencia = $5,
+            meses_experiencia = $6,
+            manual_funciones = $7,
+            resolucion_manual = $8,
             updated_at = NOW()
           WHERE ${whereClause}
-          RETURNING id_plaza, cargo, codigo, grado, proposito, funciones, requisitos, manual_funciones, resolucion_manual
+          RETURNING id_plaza, cargo, codigo, grado, proposito, funciones, requisitos, requisitos_formacion, requisitos_experiencia, meses_experiencia, manual_funciones, resolucion_manual
         `;
         mensaje = 'Perfil del cargo actualizado en todas las plazas correspondientes';
       } else if (id_plaza) {
         params = [
           proposito || null,
           funcionesJson,
-          requisitos || null,
+          reqFinal || null,
+          requisitos_formacion || null,
+          requisitos_experiencia || null,
+          numMeses,
           manual_funciones || null,
           resolucion_manual || null,
           parseInt(id_plaza, 10),
@@ -2550,11 +2588,14 @@ Secretaría Jurídica Distrital
             proposito = $1,
             funciones = $2::jsonb,
             requisitos = $3,
-            manual_funciones = $4,
-            resolucion_manual = $5,
+            requisitos_formacion = $4,
+            requisitos_experiencia = $5,
+            meses_experiencia = $6,
+            manual_funciones = $7,
+            resolucion_manual = $8,
             updated_at = NOW()
-          WHERE id_plaza = $6
-          RETURNING id_plaza, cargo, codigo, grado, proposito, funciones, requisitos, manual_funciones, resolucion_manual
+          WHERE id_plaza = $9
+          RETURNING id_plaza, cargo, codigo, grado, proposito, funciones, requisitos, requisitos_formacion, requisitos_experiencia, meses_experiencia, manual_funciones, resolucion_manual
         `;
         mensaje = `Perfil actualizado para la plaza #${id_plaza}`;
       } else {

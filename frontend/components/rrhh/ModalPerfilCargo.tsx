@@ -43,12 +43,19 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
   const [proposito, setProposito] = useState('');
   const [funciones, setFunciones] = useState<string[]>([]);
   const [nuevaFuncionTexto, setNuevaFuncionTexto] = useState('');
-  const [requisitos, setRequisitos] = useState('');
+
+  // Requisitos separados de Formación y de Experiencia
+  const [requisitosFormacion, setRequisitosFormacion] = useState('');
+  const [requisitosExperiencia, setRequisitosExperiencia] = useState('');
+  const [mesesExperiencia, setMesesExperiencia] = useState('');
+  const [tipoExperiencia, setTipoExperiencia] = useState('Profesional Relacionada');
+  const [requiereTarjetaProf, setRequiereTarjetaProf] = useState(false);
+
   const [manualFunciones, setManualFunciones] = useState('');
   const [resolucionManual, setResolucionManual] = useState('');
   const [aplicarATodas, setAplicarATodas] = useState(true);
 
-  const [tabActivo, setTabActivo] = useState<'proposito' | 'funciones' | 'requisitos' | 'manual'>('proposito');
+  const [tabActivo, setTabActivo] = useState<'proposito' | 'funciones' | 'formacion' | 'experiencia' | 'manual'>('proposito');
   const [guardando, setGuardando] = useState(false);
   const [modalFeedback, setModalFeedback] = useState<{ tipo: 'exito' | 'error'; mensaje: string } | null>(null);
 
@@ -73,7 +80,48 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
         }
       }
       setFunciones(funcs);
-      setRequisitos(cargoInicial.requisitos || '');
+
+      // Desglose inteligente de requisitos: Formación y Experiencia
+      const reqRaw = cargoInicial.requisitos || '';
+      let formacionIni = (cargoInicial as any).requisitos_formacion || '';
+      let experienciaIni = (cargoInicial as any).requisitos_experiencia || '';
+      let mesesIni = (cargoInicial as any).meses_experiencia ? String((cargoInicial as any).meses_experiencia) : '';
+
+      if (!formacionIni && !experienciaIni && reqRaw) {
+        const expMatch = reqRaw.match(/(?:experiencia(?:\s*(?:laboral|profesional|requerida|exigida))?\s*[:\-])\s*(.+)/is);
+        if (expMatch) {
+          experienciaIni = expMatch[1].trim();
+          formacionIni = reqRaw.substring(0, expMatch.index).replace(/(?:estudios?|formaci[oó]n(?:\s*acad[eé]mica)?)\s*[:\-]\s*/i, '').trim();
+        } else {
+          formacionIni = reqRaw.replace(/(?:estudios?|formaci[oó]n(?:\s*acad[eé]mica)?)\s*[:\-]\s*/i, '').trim();
+        }
+      }
+
+      // Detectar meses si existen en el texto
+      if (!mesesIni && experienciaIni) {
+        const mesesMatch = experienciaIni.match(/(\d{1,2})\s*(?:meses)/i);
+        if (mesesMatch) {
+          mesesIni = mesesMatch[1];
+        }
+      }
+
+      setRequisitosFormacion(formacionIni);
+      setRequisitosExperiencia(experienciaIni);
+      setMesesExperiencia(mesesIni);
+      setRequiereTarjetaProf(
+        Boolean(formacionIni && (formacionIni.toLowerCase().includes('tarjeta') || formacionIni.toLowerCase().includes('matrícula')))
+      );
+
+      // Determinar tipo de experiencia inicial
+      const niv = ((cargoInicial as any).nivel || '').toUpperCase();
+      if (niv === 'DIRECTIVO' || niv === 'ASESOR' || niv === 'PROFESIONAL') {
+        setTipoExperiencia('Profesional Relacionada');
+      } else if (niv === 'TECNICO') {
+        setTipoExperiencia('Laboral o Relacionada');
+      } else {
+        setTipoExperiencia('Laboral');
+      }
+
       setManualFunciones((cargoInicial as any).manual_funciones || '');
       setResolucionManual((cargoInicial as any).resolucion_manual || '');
       setNuevaFuncionTexto('');
@@ -102,6 +150,22 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
     setFunciones(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleAplicarPlantillaNBC = (textoPlantilla: string) => {
+    setRequisitosFormacion(prev => {
+      if (!prev.trim()) return textoPlantilla;
+      return `${prev.trim()}\n• ${textoPlantilla}`;
+    });
+  };
+
+  const handleSeleccionarMeses = (numMeses: number) => {
+    setMesesExperiencia(String(numMeses));
+    const descActual = requisitosExperiencia.trim();
+    const textoSugerido = `${numMeses} meses de experiencia ${tipoExperiencia.toLowerCase()} con las funciones del empleo.`;
+    if (!descActual || descActual.match(/^\d+\s*meses/i)) {
+      setRequisitosExperiencia(textoSugerido);
+    }
+  };
+
   const handleGuardar = async () => {
     if (!cargo.trim()) {
       setModalFeedback({
@@ -115,6 +179,16 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
     setModalFeedback(null);
 
     try {
+      // Consolidar texto general para compatibilidad
+      const partesReq: string[] = [];
+      if (requisitosFormacion.trim()) {
+        partesReq.push(`Estudio: ${requisitosFormacion.trim()}`);
+      }
+      if (requisitosExperiencia.trim()) {
+        partesReq.push(`Experiencia: ${requisitosExperiencia.trim()}`);
+      }
+      const reqConsolidado = partesReq.join('\n\n');
+
       const payload: ActualizarPerfilCargoPayload = {
         id_plaza: idPlaza || undefined,
         cargo: cargo.trim(),
@@ -123,7 +197,10 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
         id_sideap: idSideap ? parseInt(idSideap, 10) : undefined,
         proposito: proposito.trim(),
         funciones: funciones.filter(f => f.trim().length > 0),
-        requisitos: requisitos.trim(),
+        requisitos: reqConsolidado,
+        requisitos_formacion: requisitosFormacion.trim(),
+        requisitos_experiencia: requisitosExperiencia.trim(),
+        meses_experiencia: mesesExperiencia ? parseInt(mesesExperiencia, 10) : null,
         manual_funciones: manualFunciones.trim(),
         resolucion_manual: resolucionManual.trim(),
         aplicar_a_todas_las_plazas: idPlaza ? aplicarATodas : true,
@@ -182,8 +259,8 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
             backgroundColor: '#FFFFFF',
             borderRadius: 16,
             width: '100%',
-            maxWidth: 860,
-            maxHeight: '92%',
+            maxWidth: 900,
+            maxHeight: '94%',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -336,7 +413,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
             </View>
           )}
 
-          {/* Barra de Pestañas del Perfil */}
+          {/* Barra de Pestañas del Perfil con Formación y Experiencia Aparte */}
           <View
             style={{
               flexDirection: 'row',
@@ -351,8 +428,9 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
             {[
               { id: 'proposito', label: '1. Propósito', icon: 'compass-outline' },
               { id: 'funciones', label: `2. Funciones (${funciones.length})`, icon: 'list-outline' },
-              { id: 'requisitos', label: '3. Requisitos', icon: 'school-outline' },
-              { id: 'manual', label: '4. Manual PDF', icon: 'document-text-outline' },
+              { id: 'formacion', label: '3. Formación', icon: 'school-outline' },
+              { id: 'experiencia', label: '4. Experiencia', icon: 'briefcase-outline' },
+              { id: 'manual', label: '5. Manual PDF', icon: 'document-text-outline' },
             ].map(tab => {
               const activo = tabActivo === tab.id;
               return (
@@ -364,7 +442,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                     alignItems: 'center',
                     gap: 6,
                     paddingVertical: 10,
-                    paddingHorizontal: 14,
+                    paddingHorizontal: 13,
                     borderBottomWidth: activo ? 3 : 0,
                     borderBottomColor: '#1E40AF',
                     backgroundColor: activo ? '#FFFFFF' : 'transparent',
@@ -379,7 +457,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                   />
                   <Text
                     style={{
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight: activo ? '700' : '500',
                       color: activo ? '#1E40AF' : '#64748B',
                     }}
@@ -391,7 +469,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
             })}
           </View>
 
-          {/* Feedback Banner (en lugar de alert) */}
+          {/* Feedback Banner (Regla: No alerts) */}
           {modalFeedback && (
             <View
               style={{
@@ -454,7 +532,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                   </Text>
                 </View>
 
-                {/* Campos identificadores básicos si se necesita editarlos */}
+                {/* Identificadores básicos */}
                 <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
                   <View style={{ flex: 2, minWidth: 200 }}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
@@ -579,7 +657,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                   </View>
                 </View>
 
-                {/* Formulario para añadir nueva función */}
+                {/* Añadir nueva función */}
                 <View
                   style={{
                     backgroundColor: '#F1F5F9',
@@ -632,7 +710,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                   </Pressable>
                 </View>
 
-                {/* Listado de funciones añadidas */}
+                {/* Lista de funciones */}
                 {funciones.length === 0 ? (
                   <View
                     style={{
@@ -718,13 +796,13 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
               </View>
             )}
 
-            {/* PESTAÑA 3: REQUISITOS (EXPERIENCIA O TÍTULOS) */}
-            {tabActivo === 'requisitos' && (
+            {/* PESTAÑA 3: REQUISITOS DE FORMACIÓN ACADÉMICA (TÍTULOS / NBC) */}
+            {tabActivo === 'formacion' && (
               <View style={{ gap: 16 }}>
                 <View
                   style={{
-                    backgroundColor: '#FEF3C7',
-                    borderColor: '#FDE68A',
+                    backgroundColor: '#EFF6FF',
+                    borderColor: '#BFDBFE',
                     borderWidth: 1,
                     borderRadius: 8,
                     padding: 12,
@@ -732,20 +810,54 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                     gap: 10,
                   }}
                 >
-                  <Ionicons name="school-outline" size={20} color="#D97706" />
-                  <Text style={{ flex: 1, fontSize: 12.5, color: '#92400E', lineHeight: 18 }}>
-                    Especifica los requisitos exigidos para el desempeño del empleo en cuanto a títulos de educación superior, núcleo básico de conocimiento y meses de experiencia laboral o profesional relacionada.
+                  <Ionicons name="school-outline" size={20} color="#1D4ED8" />
+                  <Text style={{ flex: 1, fontSize: 12.5, color: '#1E3A8A', lineHeight: 18 }}>
+                    Define los títulos profesionales, técnicos o de bachillerato exigidos, núcleos básicos del conocimiento (NBC), posgrados afines y matrícula profesional reglamentaria.
                   </Text>
                 </View>
 
+                {/* Atajos Rápidos de NBC */}
+                <View style={{ backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', gap: 8 }}>
+                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#475569', textTransform: 'uppercase' }}>
+                    Plantillas Rápidas de Núcleos Básicos de Conocimiento (NBC):
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {[
+                      { label: '+ Derecho y afines', texto: 'Título profesional en disciplina académica del núcleo básico de conocimiento (NBC) en Derecho y afines. Título de posgrado en modalidad de especialización en áreas afines a las funciones del cargo.' },
+                      { label: '+ Administración', texto: 'Título profesional en Administración de Empresas, Administración Pública o Finanzas del NBC en Administración. Título de posgrado en áreas afines.' },
+                      { label: '+ Economía / Contaduría', texto: 'Título profesional en Economía, Contaduría Pública o Finanzas. Tarjeta o matrícula profesional vigente.' },
+                      { label: '+ Ingeniería de Sistemas', texto: 'Título profesional en Ingeniería de Sistemas, Telemática, Computación o afines del NBC respectivo. Posgrado afín.' },
+                      { label: '+ Bachiller / Asistencial', texto: 'Diploma de bachiller en cualquier modalidad o educación media concluida.' },
+                    ].map((item, idx) => (
+                      <Pressable
+                        key={idx}
+                        onPress={() => handleAplicarPlantillaNBC(item.texto)}
+                        style={({ pressed }) => ({
+                          backgroundColor: pressed ? '#E2E8F0' : '#FFFFFF',
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          borderRadius: 6,
+                          paddingHorizontal: 9,
+                          paddingVertical: 4.5,
+                        })}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: '#1E40AF' }}>
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Requisito de Formación */}
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 6 }}>
-                    Requisitos Consolidados de Formación y Experiencia
+                    Requisitos Específicos de Formación Académica (Títulos / Estudios)
                   </Text>
                   <TextInput
-                    value={requisitos}
-                    onChangeText={setRequisitos}
-                    placeholder="Ej. Título profesional en Derecho o Ciencias Políticas. Título de postgrado en modalidad de especialización en áreas afines. Treinta y seis (36) meses de experiencia profesional relacionada."
+                    value={requisitosFormacion}
+                    onChangeText={setRequisitosFormacion}
+                    placeholder="Ej. Título profesional en: Derecho, Jurisprudencia o Ciencias Políticas; del núcleo básico de conocimiento en Derecho y afines. Título de posgrado en modalidad de especialización en áreas relacionadas con las funciones del cargo..."
                     multiline={true}
                     numberOfLines={6}
                     textAlignVertical="top"
@@ -762,13 +874,200 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                     }}
                   />
                   <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 4, textAlign: 'right' }}>
-                    {requisitos.length} caracteres
+                    {requisitosFormacion.length} caracteres
+                  </Text>
+                </View>
+
+                {/* Tarjeta Profesional Checkbox */}
+                <Pressable
+                  onPress={() => {
+                    const nuevo = !requiereTarjetaProf;
+                    setRequiereTarjetaProf(nuevo);
+                    const fraseTP = 'Tarjeta o matrícula profesional en los casos reglamentados por la ley.';
+                    if (nuevo && !requisitosFormacion.toLowerCase().includes('tarjeta')) {
+                      setRequisitosFormacion(prev => (prev.trim() ? `${prev.trim()}\n${fraseTP}` : fraseTP));
+                    }
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    backgroundColor: requiereTarjetaProf ? '#ECFDF5' : '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: requiereTarjetaProf ? '#A7F3D0' : '#E2E8F0',
+                    padding: 12,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Ionicons
+                    name={requiereTarjetaProf ? 'checkbox' : 'square-outline'}
+                    size={18}
+                    color={requiereTarjetaProf ? '#059669' : '#64748B'}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 12.5, fontWeight: '700', color: requiereTarjetaProf ? '#065F46' : '#334155' }}>
+                      Exige Tarjeta o Matrícula Profesional
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>
+                      Aplica en profesiones reglamentadas (Derecho, Contaduría, Ingeniería, etc.)
+                    </Text>
+                  </View>
+                </Pressable>
+              </View>
+            )}
+
+            {/* PESTAÑA 4: REQUISITOS DE EXPERIENCIA LABORAL / PROFESIONAL */}
+            {tabActivo === 'experiencia' && (
+              <View style={{ gap: 16 }}>
+                <View
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderColor: '#FDE68A',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    padding: 12,
+                    flexDirection: 'row',
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons name="briefcase-outline" size={20} color="#D97706" />
+                  <Text style={{ flex: 1, fontSize: 12.5, color: '#92400E', lineHeight: 18 }}>
+                    Define la experiencia exigida para el empleo: número de meses y modalidad de experiencia (profesional relacionada, profesional o laboral asistencial).
+                  </Text>
+                </View>
+
+                {/* Selector rápido de Meses de Experiencia */}
+                <View style={{ backgroundColor: '#FFFFFF', padding: 14, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#1E293B' }}>
+                    Meses de Experiencia Exigidos:
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                    {[
+                      { meses: 0, label: 'Sin Experiencia' },
+                      { meses: 12, label: '12 meses (1 año)' },
+                      { meses: 24, label: '24 meses (2 años)' },
+                      { meses: 36, label: '36 meses (3 años)' },
+                      { meses: 48, label: '48 meses (4 años)' },
+                      { meses: 60, label: '60 meses (5 años)' },
+                    ].map((m) => {
+                      const sel = String(m.meses) === String(mesesExperiencia);
+                      return (
+                        <Pressable
+                          key={m.meses}
+                          onPress={() => handleSeleccionarMeses(m.meses)}
+                          style={{
+                            paddingHorizontal: 11,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            backgroundColor: sel ? '#B45309' : '#FEF3C7',
+                            borderWidth: 1,
+                            borderColor: sel ? '#92400E' : '#FDE68A',
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: sel ? '#FFFFFF' : '#92400E' }}>
+                            {m.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                    <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>
+                      O especifica los meses exactos:
+                    </Text>
+                    <TextInput
+                      value={mesesExperiencia}
+                      onChangeText={setMesesExperiencia}
+                      placeholder="Ej. 36"
+                      keyboardType="numeric"
+                      style={{
+                        width: 80,
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 6,
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        fontSize: 13,
+                        fontWeight: '700',
+                        textAlign: 'center',
+                        color: '#0F172A',
+                      }}
+                    />
+                    <Text style={{ fontSize: 12, color: '#64748B' }}>meses</Text>
+                  </View>
+                </View>
+
+                {/* Tipo de Experiencia */}
+                <View style={{ backgroundColor: '#F8FAFC', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0', gap: 6 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>
+                    Tipo / Modalidad de Experiencia:
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {[
+                      'Profesional Relacionada',
+                      'Profesional',
+                      'Laboral o Relacionada',
+                      'Laboral Asistencial',
+                      'No Requiere',
+                    ].map(tipo => {
+                      const sel = tipoExperiencia === tipo;
+                      return (
+                        <Pressable
+                          key={tipo}
+                          onPress={() => setTipoExperiencia(tipo)}
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            backgroundColor: sel ? '#1E40AF' : '#FFFFFF',
+                            borderWidth: 1,
+                            borderColor: sel ? '#1D4ED8' : '#CBD5E1',
+                          }}
+                        >
+                          <Text style={{ fontSize: 11.5, fontWeight: '700', color: sel ? '#FFFFFF' : '#334155' }}>
+                            {tipo}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Textarea Experiencia */}
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E293B', marginBottom: 6 }}>
+                    Redacción Oficial de los Requisitos de Experiencia
+                  </Text>
+                  <TextInput
+                    value={requisitosExperiencia}
+                    onChangeText={setRequisitosExperiencia}
+                    placeholder="Ej. Treinta y seis (36) meses de experiencia profesional relacionada con las funciones del empleo en entidades del sector público o privado..."
+                    multiline={true}
+                    numberOfLines={5}
+                    textAlignVertical="top"
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      padding: 12,
+                      fontSize: 13.5,
+                      color: '#0F172A',
+                      minHeight: 120,
+                      lineHeight: 20,
+                    }}
+                  />
+                  <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 4, textAlign: 'right' }}>
+                    {requisitosExperiencia.length} caracteres
                   </Text>
                 </View>
               </View>
             )}
 
-            {/* PESTAÑA 4: MANUAL DE FUNCIONES Y RESOLUCIÓN */}
+            {/* PESTAÑA 5: MANUAL DE FUNCIONES Y RESOLUCIÓN */}
             {tabActivo === 'manual' && (
               <View style={{ gap: 16 }}>
                 <View

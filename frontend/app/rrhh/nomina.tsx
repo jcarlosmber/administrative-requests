@@ -194,6 +194,9 @@ export default function NominaScreen() {
           proposito: datos.proposito !== undefined ? datos.proposito : p.proposito,
           funciones: datos.funciones !== undefined ? datos.funciones : p.funciones,
           requisitos: datos.requisitos !== undefined ? datos.requisitos : p.requisitos,
+          requisitos_formacion: datos.requisitos_formacion !== undefined ? datos.requisitos_formacion : (p as any).requisitos_formacion,
+          requisitos_experiencia: datos.requisitos_experiencia !== undefined ? datos.requisitos_experiencia : (p as any).requisitos_experiencia,
+          meses_experiencia: datos.meses_experiencia !== undefined ? datos.meses_experiencia : (p as any).meses_experiencia,
           manual_funciones: datos.manual_funciones !== undefined ? datos.manual_funciones : p.manual_funciones,
           resolucion_manual: datos.resolucion_manual !== undefined ? datos.resolucion_manual : p.resolucion_manual,
           id_sideap: datos.id_sideap !== undefined ? datos.id_sideap : p.id_sideap,
@@ -218,6 +221,9 @@ export default function NominaScreen() {
           proposito: datos.proposito !== undefined ? datos.proposito : prev.proposito,
           funciones: datos.funciones !== undefined ? datos.funciones : prev.funciones,
           requisitos: datos.requisitos !== undefined ? datos.requisitos : prev.requisitos,
+          requisitos_formacion: datos.requisitos_formacion !== undefined ? datos.requisitos_formacion : (prev as any).requisitos_formacion,
+          requisitos_experiencia: datos.requisitos_experiencia !== undefined ? datos.requisitos_experiencia : (prev as any).requisitos_experiencia,
+          meses_experiencia: datos.meses_experiencia !== undefined ? datos.meses_experiencia : (prev as any).meses_experiencia,
           manual_funciones: datos.manual_funciones !== undefined ? datos.manual_funciones : prev.manual_funciones,
           resolucion_manual: datos.resolucion_manual !== undefined ? datos.resolucion_manual : prev.resolucion_manual,
           id_sideap: datos.id_sideap !== undefined ? datos.id_sideap : prev.id_sideap,
@@ -10144,10 +10150,10 @@ export default function NominaScreen() {
                       }}
                     >
                       <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase', marginBottom: 4 }}>
-                        Requisito Académico Oficial:
+                        Formación Académica y Títulos Exigidos:
                       </Text>
                       <Text style={{ fontSize: 13, color: THEME.slate800, lineHeight: 19 }}>
-                        {plazaModalEnriquecida?.requisitos}
+                        {(plazaModalEnriquecida as any)?.requisitos_formacion || plazaModalEnriquecida?.requisitos || 'No especificado'}
                       </Text>
                     </View>
 
@@ -10185,28 +10191,68 @@ export default function NominaScreen() {
                       marginBottom: 16,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            backgroundColor: '#FEF3C7',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons name="briefcase" size={17} color="#B45309" />
+                        </View>
+                        <View>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                            Experiencia Laboral y Profesional Exigida
+                          </Text>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                            Acreditación de experiencia según el nivel y grado
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Pressable
+                        onPress={() => abrirModalEditarPerfilCargo(plazaModalEnriquecida || plazaModal!)}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: pressed ? '#1E40AF' : '#2563EB',
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                        })}
+                      >
+                        <Ionicons name="create-outline" size={13} color={THEME.white} />
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700' }}>
+                          Editar Formación / Experiencia
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {(plazaModalEnriquecida as any)?.requisitos_experiencia ? (
                       <View
                         style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 16,
-                          backgroundColor: '#FEF3C7',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          backgroundColor: '#FFFBEB',
+                          borderRadius: 8,
+                          padding: 12,
+                          marginBottom: 12,
+                          borderWidth: 1,
+                          borderColor: '#FDE68A',
                         }}
                       >
-                        <Ionicons name="briefcase" size={17} color="#B45309" />
-                      </View>
-                      <View>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
-                          Experiencia Laboral y Profesional Exigida
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', marginBottom: 4 }}>
+                          Experiencia Requerida Oficial:
                         </Text>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                          Acreditación de experiencia según el nivel y grado
+                        <Text style={{ fontSize: 13, color: '#78350F', lineHeight: 19 }}>
+                          {(plazaModalEnriquecida as any).requisitos_experiencia}
                         </Text>
                       </View>
-                    </View>
+                    ) : null}
 
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
                       <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 10, borderRadius: 6 }}>
@@ -10225,7 +10271,9 @@ export default function NominaScreen() {
                           Tiempo Estándar de Experiencia
                         </Text>
                         <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 2 }}>
-                          {plazaModal?.nivel === 'DIRECTIVO'
+                          {(plazaModalEnriquecida as any)?.meses_experiencia
+                            ? `${(plazaModalEnriquecida as any).meses_experiencia} meses`
+                            : plazaModal?.nivel === 'DIRECTIVO'
                             ? '48 a 72 meses'
                             : plazaModal?.nivel === 'ASESOR'
                             ? '36 a 60 meses'

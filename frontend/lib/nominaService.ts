@@ -971,6 +971,9 @@ export interface PerfilCargoItem {
   proposito: string;
   funciones: string[];
   requisitos: string;
+  requisitos_formacion?: string;
+  requisitos_experiencia?: string;
+  meses_experiencia?: number | null;
   manual_funciones: string;
   resolucion_manual: string;
   total_plazas: number;
@@ -986,6 +989,9 @@ export interface ActualizarPerfilCargoPayload {
   proposito?: string;
   funciones?: string[] | string;
   requisitos?: string;
+  requisitos_formacion?: string;
+  requisitos_experiencia?: string;
+  meses_experiencia?: number | null;
   manual_funciones?: string;
   resolucion_manual?: string;
   aplicar_a_todas_las_plazas?: boolean;
