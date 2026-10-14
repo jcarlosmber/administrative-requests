@@ -2044,9 +2044,9 @@ Secretaría Jurídica Distrital
               grado = EXCLUDED.grado,
               dependencia_cargo = EXCLUDED.dependencia_cargo,
               dependencia_funcional = EXCLUDED.dependencia_funcional,
-              proposito = EXCLUDED.proposito,
-              funciones = EXCLUDED.funciones,
-              requisitos = EXCLUDED.requisitos,
+              proposito = COALESCE(public.planta_personal_sjd.proposito, NULLIF(EXCLUDED.proposito, '')),
+              funciones = CASE WHEN public.planta_personal_sjd.funciones IS NOT NULL AND jsonb_array_length(CASE WHEN jsonb_typeof(public.planta_personal_sjd.funciones) = 'array' THEN public.planta_personal_sjd.funciones ELSE '[]'::jsonb END) > 0 THEN public.planta_personal_sjd.funciones ELSE EXCLUDED.funciones END,
+              requisitos = COALESCE(public.planta_personal_sjd.requisitos, NULLIF(EXCLUDED.requisitos, '')),
               asignacion_basica = EXCLUDED.asignacion_basica,
               estado_cargo = EXCLUDED.estado_cargo,
               titular_cedula = EXCLUDED.titular_cedula,
@@ -2060,8 +2060,8 @@ Secretaría Jurídica Distrital
               opec = EXCLUDED.opec,
               id_escalera = EXCLUDED.id_escalera,
               peldano_escalera = EXCLUDED.peldano_escalera,
-              manual_funciones = EXCLUDED.manual_funciones,
-              resolucion_manual = EXCLUDED.resolucion_manual,
+              manual_funciones = COALESCE(public.planta_personal_sjd.manual_funciones, NULLIF(EXCLUDED.manual_funciones, '')),
+              resolucion_manual = COALESCE(public.planta_personal_sjd.resolucion_manual, NULLIF(EXCLUDED.resolucion_manual, '')),
               edad = COALESCE(EXCLUDED.edad, public.planta_personal_sjd.edad),
               sexo = COALESCE(EXCLUDED.sexo, public.planta_personal_sjd.sexo),
               updated_at = NOW();
@@ -2406,6 +2406,172 @@ Secretaría Jurídica Distrital
     } catch (err) {
       console.error('[Manuales] Error al descargar manual:', err);
       res.status(500).json({ error: 'Error al procesar descarga: ' + err.message });
+    }
+  });
+
+  // 12. Catálogo de cargos consolidados para gestión de perfiles
+  router.get('/cargos/catalogo', async (req, res) => {
+    try {
+      await ensureTables();
+      const result = await pool.query(`
+        SELECT 
+          TRIM(cargo) AS cargo,
+          TRIM(COALESCE(codigo, '')) AS codigo,
+          TRIM(COALESCE(grado, '')) AS grado,
+          MAX(nivel) AS nivel,
+          MAX(id_sideap) AS id_sideap,
+          MAX(proposito) AS proposito,
+          MAX(funciones::text) AS funciones,
+          MAX(requisitos) AS requisitos,
+          MAX(manual_funciones) AS manual_funciones,
+          MAX(resolucion_manual) AS resolucion_manual,
+          COUNT(id_plaza) AS total_plazas,
+          ARRAY_AGG(id_plaza ORDER BY id_plaza ASC) AS ids_plazas
+        FROM public.planta_personal_sjd
+        WHERE cargo IS NOT NULL AND TRIM(cargo) <> ''
+        GROUP BY TRIM(cargo), TRIM(COALESCE(codigo, '')), TRIM(COALESCE(grado, ''))
+        ORDER BY MAX(nivel) ASC, TRIM(cargo) ASC, TRIM(COALESCE(codigo, '')) ASC, TRIM(COALESCE(grado, '')) ASC
+      `);
+
+      const catalogo = result.rows.map(row => {
+        let parsedFunciones = [];
+        try {
+          if (row.funciones) {
+            parsedFunciones = typeof row.funciones === 'string' ? JSON.parse(row.funciones) : row.funciones;
+          }
+        } catch {
+          parsedFunciones = typeof row.funciones === 'string' ? row.funciones.split('\n').filter(Boolean) : [];
+        }
+
+        return {
+          cargo: row.cargo,
+          codigo: row.codigo,
+          grado: row.grado,
+          nivel: row.nivel || 'PROFESIONAL',
+          id_sideap: row.id_sideap,
+          proposito: row.proposito || '',
+          funciones: Array.isArray(parsedFunciones) ? parsedFunciones : [],
+          requisitos: row.requisitos || '',
+          manual_funciones: row.manual_funciones || '',
+          resolucion_manual: row.resolucion_manual || '',
+          total_plazas: parseInt(row.total_plazas, 10) || 0,
+          ids_plazas: row.ids_plazas || [],
+        };
+      });
+
+      res.json({ success: true, catalogo });
+    } catch (error) {
+      console.error('Error al obtener catálogo de cargos:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 13. Actualizar o crear perfil de cargo manualmente (propósito, funciones, requisitos, manual)
+  router.put('/cargos/perfil', async (req, res) => {
+    try {
+      await ensureTables();
+      const {
+        id_plaza,
+        cargo,
+        codigo,
+        grado,
+        id_sideap,
+        proposito,
+        funciones,
+        requisitos,
+        manual_funciones,
+        resolucion_manual,
+        aplicar_a_todas_las_plazas,
+      } = req.body;
+
+      let funcionesArray = [];
+      if (Array.isArray(funciones)) {
+        funcionesArray = funciones.map(f => String(f).trim()).filter(Boolean);
+      } else if (typeof funciones === 'string' && funciones.trim()) {
+        try {
+          const parsed = JSON.parse(funciones);
+          funcionesArray = Array.isArray(parsed) ? parsed : [funciones.trim()];
+        } catch {
+          funcionesArray = funciones.split('\n').map(f => f.trim()).filter(Boolean);
+        }
+      }
+      const funcionesJson = JSON.stringify(funcionesArray);
+
+      let query = '';
+      let params = [];
+      let mensaje = '';
+
+      if (aplicar_a_todas_las_plazas || (!id_plaza && cargo)) {
+        let whereClause = 'TRIM(cargo) ILIKE TRIM($6)';
+        params = [
+          proposito || null,
+          funcionesJson,
+          requisitos || null,
+          manual_funciones || null,
+          resolucion_manual || null,
+          cargo.trim(),
+        ];
+
+        if (codigo !== undefined && codigo !== null && String(codigo).trim()) {
+          params.push(String(codigo).trim());
+          whereClause += ` AND TRIM(codigo) = TRIM($${params.length})`;
+        }
+        if (grado !== undefined && grado !== null && String(grado).trim()) {
+          params.push(String(grado).trim());
+          whereClause += ` AND TRIM(grado) = TRIM($${params.length})`;
+        }
+
+        query = `
+          UPDATE public.planta_personal_sjd
+          SET
+            proposito = $1,
+            funciones = $2::jsonb,
+            requisitos = $3,
+            manual_funciones = $4,
+            resolucion_manual = $5,
+            updated_at = NOW()
+          WHERE ${whereClause}
+          RETURNING id_plaza, cargo, codigo, grado, proposito, funciones, requisitos, manual_funciones, resolucion_manual
+        `;
+        mensaje = 'Perfil del cargo actualizado en todas las plazas correspondientes';
+      } else if (id_plaza) {
+        params = [
+          proposito || null,
+          funcionesJson,
+          requisitos || null,
+          manual_funciones || null,
+          resolucion_manual || null,
+          parseInt(id_plaza, 10),
+        ];
+
+        query = `
+          UPDATE public.planta_personal_sjd
+          SET
+            proposito = $1,
+            funciones = $2::jsonb,
+            requisitos = $3,
+            manual_funciones = $4,
+            resolucion_manual = $5,
+            updated_at = NOW()
+          WHERE id_plaza = $6
+          RETURNING id_plaza, cargo, codigo, grado, proposito, funciones, requisitos, manual_funciones, resolucion_manual
+        `;
+        mensaje = `Perfil actualizado para la plaza #${id_plaza}`;
+      } else {
+        return res.status(400).json({ success: false, error: 'Debe especificar id_plaza o el nombre del cargo' });
+      }
+
+      const result = await pool.query(query, params);
+
+      res.json({
+        success: true,
+        mensaje,
+        plazasActualizadas: result.rows.length,
+        datos: result.rows,
+      });
+    } catch (error) {
+      console.error('Error al actualizar perfil de cargo:', error);
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 

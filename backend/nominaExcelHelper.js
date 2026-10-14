@@ -555,10 +555,10 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
     const opec = cleanText(getVal(row.getCell(colMap.opec || 22)) || '');
     const depCargo = cleanDependencia(getVal(row.getCell(colMap.dep_cargo || 29)) || '');
     const depFuncional = cleanDependencia(getVal(row.getCell(colMap.dep_funcional || 30)) || depCargo);
-    const proposito = cleanText(getVal(row.getCell(colMap.proposito || 31)) || '');
-    const funcionesRaw = cleanText(getVal(row.getCell(colMap.funciones || 32)) || '');
-    const requisitos = cleanText(getVal(row.getCell(colMap.requisitos || 33)) || '');
-    const manualFuncionesRaw = cleanText(getVal(row.getCell(colMap.manual_funciones || 34)) || '');
+    const proposito = colMap.proposito ? cleanText(getVal(row.getCell(colMap.proposito)) || '') : null;
+    const funcionesRaw = colMap.funciones ? cleanText(getVal(row.getCell(colMap.funciones)) || '') : '';
+    const requisitos = colMap.requisitos ? cleanText(getVal(row.getCell(colMap.requisitos)) || '') : null;
+    const manualFuncionesRaw = colMap.manual_funciones ? cleanText(getVal(row.getCell(colMap.manual_funciones)) || '') : null;
     const asignacion = cleanMoney(getVal(row.getCell(colMap.asignacion || 35)));
     const devengadoPlanta = cleanMoney(getVal(row.getCell(colMap.total_devengado || 42)));
 
@@ -621,9 +621,13 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         grado = EXCLUDED.grado,
         dependencia_cargo = EXCLUDED.dependencia_cargo,
         dependencia_funcional = EXCLUDED.dependencia_funcional,
-        proposito = EXCLUDED.proposito,
-        funciones = EXCLUDED.funciones,
-        requisitos = EXCLUDED.requisitos,
+        proposito = COALESCE(public.planta_personal_sjd.proposito, NULLIF(EXCLUDED.proposito, '')),
+        funciones = CASE 
+          WHEN public.planta_personal_sjd.funciones IS NOT NULL AND jsonb_array_length(CASE WHEN jsonb_typeof(public.planta_personal_sjd.funciones) = 'array' THEN public.planta_personal_sjd.funciones ELSE '[]'::jsonb END) > 0 
+          THEN public.planta_personal_sjd.funciones 
+          ELSE EXCLUDED.funciones 
+        END,
+        requisitos = COALESCE(public.planta_personal_sjd.requisitos, NULLIF(EXCLUDED.requisitos, '')),
         asignacion_basica = EXCLUDED.asignacion_basica,
         estado_cargo = EXCLUDED.estado_cargo,
         titular_cedula = EXCLUDED.titular_cedula,
@@ -643,8 +647,8 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         telefono = COALESCE(EXCLUDED.telefono, public.planta_personal_sjd.telefono),
         direccion = COALESCE(EXCLUDED.direccion, public.planta_personal_sjd.direccion),
         sexo = COALESCE(NULLIF(EXCLUDED.sexo, ''), public.planta_personal_sjd.sexo),
-        manual_funciones = COALESCE(EXCLUDED.manual_funciones, public.planta_personal_sjd.manual_funciones),
-        resolucion_manual = COALESCE(EXCLUDED.resolucion_manual, public.planta_personal_sjd.resolucion_manual),
+        manual_funciones = COALESCE(public.planta_personal_sjd.manual_funciones, NULLIF(EXCLUDED.manual_funciones, '')),
+        resolucion_manual = COALESCE(public.planta_personal_sjd.resolucion_manual, NULLIF(EXCLUDED.resolucion_manual, '')),
         total_devengado = COALESCE(EXCLUDED.total_devengado, public.planta_personal_sjd.total_devengado),
         updated_at = NOW();
     `, [

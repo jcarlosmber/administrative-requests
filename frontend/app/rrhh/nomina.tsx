@@ -23,6 +23,7 @@ import { DataTable, ColumnConfig } from '../../components/DataTable';
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
+import { ModalPerfilCargo } from '../../components/rrhh/ModalPerfilCargo';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
 type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | null;
@@ -159,6 +160,71 @@ export default function NominaScreen() {
   // Modal de Detalle de Plaza y Pestañas de la Ficha Técnica Integral
   const [plazaModal, setPlazaModal] = useState<PlazaNomina | null>(null);
   const [modalTab, setModalTab] = useState<'general' | 'funciones' | 'requisitos' | 'perno' | 'escalera'>('general');
+
+  // Modal de Gestión Manual de Perfil de Cargo
+  const [modalPerfilCargoVisible, setModalPerfilCargoVisible] = useState(false);
+  const [cargoSeleccionadoParaPerfil, setCargoSeleccionadoParaPerfil] = useState<any>(null);
+  const [idPlazaParaPerfil, setIdPlazaParaPerfil] = useState<number | null>(null);
+  const [totalPlazasMismoCargo, setTotalPlazasMismoCargo] = useState(1);
+
+  const abrirModalEditarPerfilCargo = (plaza: any) => {
+    if (!plaza) return;
+    setCargoSeleccionadoParaPerfil(plaza);
+    setIdPlazaParaPerfil(plaza.id_plaza || null);
+    const conteo = todasLasPlazas.filter(
+      p => p.cargo === plaza.cargo &&
+      String(p.codigo || '') === String(plaza.codigo || '') &&
+      String(p.grado || '') === String(plaza.grado || '')
+    ).length;
+    setTotalPlazasMismoCargo(conteo || 1);
+    setModalPerfilCargoVisible(true);
+  };
+
+  const handlePerfilCargoGuardado = (datos: any) => {
+    const updater = (p: PlazaNomina) => {
+      const coincide = datos.aplicar_a_todas_las_plazas
+        ? (p.cargo === datos.cargo &&
+           (!datos.codigo || String(p.codigo) === String(datos.codigo)) &&
+           (!datos.grado || String(p.grado) === String(datos.grado)))
+        : (p.id_plaza === datos.id_plaza);
+
+      if (coincide) {
+        return {
+          ...p,
+          proposito: datos.proposito !== undefined ? datos.proposito : p.proposito,
+          funciones: datos.funciones !== undefined ? datos.funciones : p.funciones,
+          requisitos: datos.requisitos !== undefined ? datos.requisitos : p.requisitos,
+          manual_funciones: datos.manual_funciones !== undefined ? datos.manual_funciones : p.manual_funciones,
+          resolucion_manual: datos.resolucion_manual !== undefined ? datos.resolucion_manual : p.resolucion_manual,
+          id_sideap: datos.id_sideap !== undefined ? datos.id_sideap : p.id_sideap,
+        };
+      }
+      return p;
+    };
+
+    setPlazasTotales(prev => prev.map(updater));
+    setPlazas(prev => prev.map(updater));
+
+    if (plazaModal) {
+      const coincideModal = datos.aplicar_a_todas_las_plazas
+        ? (plazaModal.cargo === datos.cargo &&
+           (!datos.codigo || String(plazaModal.codigo) === String(datos.codigo)) &&
+           (!datos.grado || String(plazaModal.grado) === String(datos.grado)))
+        : (plazaModal.id_plaza === datos.id_plaza);
+
+      if (coincideModal) {
+        setPlazaModal(prev => prev ? ({
+          ...prev,
+          proposito: datos.proposito !== undefined ? datos.proposito : prev.proposito,
+          funciones: datos.funciones !== undefined ? datos.funciones : prev.funciones,
+          requisitos: datos.requisitos !== undefined ? datos.requisitos : prev.requisitos,
+          manual_funciones: datos.manual_funciones !== undefined ? datos.manual_funciones : prev.manual_funciones,
+          resolucion_manual: datos.resolucion_manual !== undefined ? datos.resolucion_manual : prev.resolucion_manual,
+          id_sideap: datos.id_sideap !== undefined ? datos.id_sideap : prev.id_sideap,
+        }) : null);
+      }
+    }
+  };
 
   // Modal de Notificaciones (Regla: no alerts)
   const [infoModalVisible, setInfoModalVisible] = useState(false);
@@ -3849,25 +3915,50 @@ export default function NominaScreen() {
                   </Text>
                 </View>
 
-                {hayFiltrosActivos && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Pressable
-                    onPress={limpiarFiltros}
+                    onPress={() => {
+                      setCargoSeleccionadoParaPerfil(plazas[0] || todasLasPlazas[0] || null);
+                      setIdPlazaParaPerfil(null);
+                      setTotalPlazasMismoCargo(1);
+                      setModalPerfilCargoVisible(true);
+                    }}
                     style={({ pressed }) => ({
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 5,
-                      paddingVertical: 4,
-                      paddingHorizontal: 9,
+                      gap: 6,
+                      paddingVertical: 5,
+                      paddingHorizontal: 11,
                       borderRadius: 6,
-                      backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                      backgroundColor: pressed ? THEME.marca800 : THEME.marca700,
                     })}
                   >
-                    <Ionicons name="refresh-outline" size={13} color={THEME.slate600} />
-                    <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate700 }}>
-                      Restablecer Filtros
+                    <Ionicons name="briefcase-outline" size={14} color={THEME.white} />
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.white }}>
+                      Gestor Perfiles de Cargo
                     </Text>
                   </Pressable>
-                )}
+
+                  {hayFiltrosActivos && (
+                    <Pressable
+                      onPress={limpiarFiltros}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        paddingVertical: 4,
+                        paddingHorizontal: 9,
+                        borderRadius: 6,
+                        backgroundColor: pressed ? THEME.slate200 : THEME.slate100,
+                      })}
+                    >
+                      <Ionicons name="refresh-outline" size={13} color={THEME.slate600} />
+                      <Text style={{ fontSize: 11.5, fontWeight: '600', color: THEME.slate700 }}>
+                        Restablecer Filtros
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
               </View>
 
               {/* LISTADO / TABLA O TARJETAS */}
@@ -5169,10 +5260,10 @@ export default function NominaScreen() {
                           { col: 'AA (27)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta de personal.', ej: 'JEFE DE OFICINA ASESORA' },
                           { col: 'AB (28)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
                           { col: 'AC (29)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
-                          { col: 'AE (31)', header: 'PROPOSITO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Propósito principal según manual de funciones.', ej: 'Asesorar en el diseño de planes y estrategias...' },
-                          { col: 'AF (32)', header: 'FUNCIONES', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Funciones esenciales del empleo en la planta oficial.', ej: '1. Asesorar y coordinar proyectos... 2. Dirigir...' },
-                          { col: 'AG (33)', header: 'REQUISITOS', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto Largo', desc: 'Estudios académicos y experiencia laboral requerida.', ej: 'Título profesional en Administración. Posgrado...' },
-                          { col: 'AH (34)', header: 'MANUAL DE FUNCIONES (PÁGINAS)', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Resolución oficial y folios del Manual Específico de Funciones (Columna AH).', ej: '34-37 RES. 085 de 2020' },
+                          { col: 'AE (31)', header: 'PROPOSITO', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto', desc: 'No requerido en Excel. Se administra manualmente en el sistema para evitar sobreescrituras en las cargas mensuales.', ej: 'Asesorar en el diseño de planes y estrategias...' },
+                          { col: 'AF (32)', header: 'FUNCIONES', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Lista JSON', desc: 'No requerido en Excel. Se gestiona individualmente desde el modal interactivo de cargos.', ej: '1. Asesorar y coordinar proyectos... 2. Dirigir...' },
+                          { col: 'AG (33)', header: 'REQUISITOS', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto Largo', desc: 'No requerido en Excel. Estudios y experiencia laboral administrados desde el modal de cargos.', ej: 'Título profesional en Administración. Posgrado...' },
+                          { col: 'AH (34)', header: 'MANUAL DE FUNCIONES (PÁGINAS)', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto', desc: 'No requerido en Excel. Resolución, folios y enlace al PDF indexado por SIDEAP gestionados en el sistema.', ej: '34-37 RES. 085 de 2020' },
                           { col: 'AI (35)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208470' },
                         ].map((row, idx) => (
                           <View
@@ -8984,16 +9075,38 @@ export default function NominaScreen() {
                   </Text>
                 </View>
 
-                <Pressable
-                  onPress={() => setPlazaModal(null)}
-                  style={({ pressed }) => ({
-                    padding: 6,
-                    borderRadius: 6,
-                    backgroundColor: pressed ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                  })}
-                >
-                  <Ionicons name="close" size={20} color={THEME.white} />
-                </Pressable>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Pressable
+                    onPress={() => abrirModalEditarPerfilCargo(plazaModalEnriquecida || plazaModal!)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: pressed ? '#1D4ED8' : '#2563EB',
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(255, 255, 255, 0.25)',
+                    })}
+                  >
+                    <Ionicons name="create-outline" size={15} color={THEME.white} />
+                    <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
+                      Editar Perfil / Manual
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setPlazaModal(null)}
+                    style={({ pressed }) => ({
+                      padding: 6,
+                      borderRadius: 6,
+                      backgroundColor: pressed ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                    })}
+                  >
+                    <Ionicons name="close" size={20} color={THEME.white} />
+                  </Pressable>
+                </View>
               </View>
 
               {/* Barra de Tabs del Modal con Scroll Horizontal */}
@@ -9810,22 +9923,42 @@ export default function NominaScreen() {
                       marginBottom: 20,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <View
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: 14,
-                          backgroundColor: THEME.marca700,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Ionicons name="compass-outline" size={16} color={THEME.white} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View
+                          style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 14,
+                            backgroundColor: THEME.marca700,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons name="compass-outline" size={16} color={THEME.white} />
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca900, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          Propósito Principal del Empleo
+                        </Text>
                       </View>
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: THEME.marca900, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        Propósito Principal del Empleo (Archivo de Planta Oficial - Col. AE)
-                      </Text>
+
+                      <Pressable
+                        onPress={() => abrirModalEditarPerfilCargo(plazaModalEnriquecida || plazaModal!)}
+                        style={({ pressed }) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: pressed ? THEME.marca800 : THEME.marca700,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 6,
+                        })}
+                      >
+                        <Ionicons name="create-outline" size={13} color={THEME.white} />
+                        <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700' }}>
+                          Editar Perfil
+                        </Text>
+                      </Pressable>
                     </View>
                     <Text
                       style={{
@@ -11707,6 +11840,16 @@ export default function NominaScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Modal de Gestión Manual de Perfil de Cargo */}
+        <ModalPerfilCargo
+          visible={modalPerfilCargoVisible}
+          onClose={() => setModalPerfilCargoVisible(false)}
+          cargoInicial={cargoSeleccionadoParaPerfil}
+          idPlaza={idPlazaParaPerfil}
+          totalPlazasMismoCargo={totalPlazasMismoCargo}
+          onGuardadoExitoso={handlePerfilCargoGuardado}
+        />
       </SafeAreaView>
     </View>
   );

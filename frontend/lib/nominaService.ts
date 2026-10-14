@@ -912,5 +912,83 @@ export const nominaService = {
     });
     return await res.json();
   },
+
+  async obtenerCatalogoCargos(): Promise<{ success: boolean; catalogo: PerfilCargoItem[] }> {
+    try {
+      const res = await fetch(`${API_URL}/api/nomina/cargos/catalogo`);
+      if (!res.ok) throw new Error('Error al consultar catálogo de cargos');
+      return await res.json();
+    } catch (e: any) {
+      console.warn('[NominaService] Fallback catálogo de cargos local:', e.message);
+      const map = new Map<string, PerfilCargoItem>();
+      for (const p of mockPlazasData as any[]) {
+        const key = `${p.cargo}_${p.codigo}_${p.grado}`.trim().toUpperCase();
+        if (!map.has(key)) {
+          let funcs: string[] = [];
+          if (Array.isArray(p.funciones)) funcs = p.funciones;
+          else if (typeof p.funciones === 'string') funcs = p.funciones.split('\n').filter(Boolean);
+          map.set(key, {
+            cargo: p.cargo,
+            codigo: String(p.codigo || ''),
+            grado: String(p.grado || ''),
+            nivel: p.nivel || 'PROFESIONAL',
+            id_sideap: p.id_sideap || null,
+            proposito: p.proposito || '',
+            funciones: funcs,
+            requisitos: p.requisitos || '',
+            manual_funciones: p.manual_funciones || '',
+            resolucion_manual: p.resolucion_manual || '',
+            total_plazas: 0,
+            ids_plazas: [],
+          });
+        }
+        const item = map.get(key)!;
+        item.total_plazas++;
+        item.ids_plazas.push(p.id_plaza);
+      }
+      return { success: true, catalogo: Array.from(map.values()) };
+    }
+  },
+
+  async actualizarPerfilCargo(
+    payload: ActualizarPerfilCargoPayload
+  ): Promise<{ success: boolean; mensaje?: string; error?: string; plazasActualizadas?: number }> {
+    const res = await fetch(`${API_URL}/api/nomina/cargos/perfil`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  },
 };
+
+export interface PerfilCargoItem {
+  cargo: string;
+  codigo: string;
+  grado: string;
+  nivel: string;
+  id_sideap?: number | null;
+  proposito: string;
+  funciones: string[];
+  requisitos: string;
+  manual_funciones: string;
+  resolucion_manual: string;
+  total_plazas: number;
+  ids_plazas: number[];
+}
+
+export interface ActualizarPerfilCargoPayload {
+  id_plaza?: number;
+  cargo: string;
+  codigo?: string;
+  grado?: string;
+  id_sideap?: number | null;
+  proposito?: string;
+  funciones?: string[] | string;
+  requisitos?: string;
+  manual_funciones?: string;
+  resolucion_manual?: string;
+  aplicar_a_todas_las_plazas?: boolean;
+}
+
 
