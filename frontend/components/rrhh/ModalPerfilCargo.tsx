@@ -259,7 +259,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
             backgroundColor: '#FFFFFF',
             borderRadius: 16,
             width: '100%',
-            maxWidth: 900,
+            maxWidth: 980,
             maxHeight: '94%',
             display: 'flex',
             flexDirection: 'column',
@@ -644,14 +644,14 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                     justifyContent: 'space-between',
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Ionicons name="layers-outline" size={18} color="#475569" />
-                    <Text style={{ fontSize: 12.5, color: '#334155', fontWeight: '500' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <Ionicons name="layers-outline" size={20} color="#334155" />
+                    <Text style={{ fontSize: 13.5, color: '#334155', fontWeight: '500', lineHeight: 20 }}>
                       Agrega o edita cada función esencial individualmente. El sistema las ordenará y enumerará automáticamente.
                     </Text>
                   </View>
-                  <View style={{ backgroundColor: '#E0E7FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                    <Text style={{ color: '#4338CA', fontSize: 11.5, fontWeight: '700' }}>
+                  <View style={{ backgroundColor: '#E0E7FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                    <Text style={{ color: '#4338CA', fontSize: 12.5, fontWeight: '700' }}>
                       {funciones.length} funciones
                     </Text>
                   </View>
@@ -661,14 +661,14 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                 <View
                   style={{
                     backgroundColor: '#F1F5F9',
-                    borderRadius: 10,
-                    padding: 14,
+                    borderRadius: 12,
+                    padding: 16,
                     borderWidth: 1,
                     borderColor: '#CBD5E1',
-                    gap: 10,
+                    gap: 12,
                   }}
                 >
-                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#1E293B' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>
                     Añadir Nueva Función
                   </Text>
                   <TextInput
@@ -683,10 +683,11 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                       borderWidth: 1,
                       borderColor: '#CBD5E1',
                       borderRadius: 8,
-                      padding: 10,
-                      fontSize: 13,
+                      padding: 12,
+                      fontSize: 14.5,
+                      lineHeight: 22,
                       color: '#0F172A',
-                      minHeight: 70,
+                      minHeight: 85,
                     }}
                   />
                   <Pressable
@@ -696,15 +697,15 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                       alignSelf: 'flex-end',
                       flexDirection: 'row',
                       alignItems: 'center',
-                      gap: 6,
+                      gap: 8,
                       backgroundColor: !nuevaFuncionTexto.trim() ? '#94A3B8' : pressed ? '#1D4ED8' : '#2563EB',
-                      paddingHorizontal: 14,
-                      paddingVertical: 7,
-                      borderRadius: 6,
+                      paddingHorizontal: 16,
+                      paddingVertical: 9,
+                      borderRadius: 8,
                     })}
                   >
-                    <Ionicons name="add-circle" size={16} color="#FFFFFF" />
-                    <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '700' }}>
+                    <Ionicons name="add-circle" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' }}>
                       Agregar a la Lista
                     </Text>
                   </Pressable>
@@ -714,7 +715,7 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                 {funciones.length === 0 ? (
                   <View
                     style={{
-                      padding: 30,
+                      padding: 36,
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor: '#F8FAFC',
@@ -724,44 +725,50 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                       borderStyle: 'dashed',
                     }}
                   >
-                    <Ionicons name="clipboard-outline" size={32} color="#94A3B8" />
-                    <Text style={{ color: '#64748B', fontSize: 13, fontWeight: '600', marginTop: 8 }}>
+                    <Ionicons name="clipboard-outline" size={36} color="#94A3B8" />
+                    <Text style={{ color: '#64748B', fontSize: 14, fontWeight: '600', marginTop: 10 }}>
                       No hay funciones registradas para este cargo.
                     </Text>
-                    <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>
+                    <Text style={{ color: '#94A3B8', fontSize: 13, marginTop: 4 }}>
                       Utiliza el formulario superior para incorporar las funciones esenciales.
                     </Text>
                   </View>
                 ) : (
-                  <View style={{ gap: 10 }}>
+                  <View style={{ gap: 12 }}>
                     {funciones.map((func, index) => (
                       <View
                         key={index}
                         style={{
                           backgroundColor: '#FFFFFF',
-                          borderRadius: 8,
+                          borderRadius: 10,
                           borderWidth: 1,
-                          borderColor: '#E2E8F0',
-                          padding: 12,
+                          borderColor: '#CBD5E1',
+                          padding: 14,
                           flexDirection: 'row',
                           alignItems: 'flex-start',
-                          gap: 12,
+                          gap: 14,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 3,
+                          elevation: 1,
                         }}
                       >
                         <View
                           style={{
-                            width: 28,
-                            height: 28,
-                            borderRadius: 14,
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
                             backgroundColor: '#EFF6FF',
-                            borderWidth: 1,
+                            borderWidth: 1.5,
                             borderColor: '#BFDBFE',
                             alignItems: 'center',
                             justifyContent: 'center',
                             marginTop: 2,
+                            flexShrink: 0,
                           }}
                         >
-                          <Text style={{ color: '#1E40AF', fontSize: 12, fontWeight: '800' }}>
+                          <Text style={{ color: '#1E40AF', fontSize: 14, fontWeight: '800' }}>
                             {index + 1}
                           </Text>
                         </View>
@@ -772,22 +779,32 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                           multiline={true}
                           style={{
                             flex: 1,
-                            fontSize: 13,
-                            color: '#1E293B',
-                            lineHeight: 19,
-                            padding: 0,
+                            fontSize: 14.5,
+                            color: '#0F172A',
+                            lineHeight: 23,
+                            padding: 10,
+                            backgroundColor: '#F8FAFC',
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            minHeight: 56,
                           }}
                         />
 
                         <Pressable
                           onPress={() => handleEliminarFuncion(index)}
                           style={({ pressed }) => ({
-                            padding: 6,
-                            borderRadius: 6,
-                            backgroundColor: pressed ? '#FEE2E2' : 'transparent',
+                            padding: 8,
+                            borderRadius: 8,
+                            backgroundColor: pressed ? '#FEE2E2' : '#F8FAFC',
+                            borderWidth: 1,
+                            borderColor: pressed ? '#FECACA' : '#E2E8F0',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginTop: 2,
                           })}
                         >
-                          <Ionicons name="trash-outline" size={17} color="#DC2626" />
+                          <Ionicons name="trash-outline" size={19} color="#DC2626" />
                         </Pressable>
                       </View>
                     ))}

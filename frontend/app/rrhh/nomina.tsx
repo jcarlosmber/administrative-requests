@@ -9059,29 +9059,22 @@ export default function NominaScreen() {
                         </Text>
                       </View>
                     ) : null}
-                    <BotonManualFunciones
-                      id_sideap={plazaModal?.id_sideap}
-                      cargo={plazaModal?.cargo}
-                      codigo={plazaModal?.codigo}
-                      grado={plazaModal?.grado}
-                      variante="chip"
-                      etiqueta="Manual Funciones (PDF)"
-                    />
-                    {plazaModalEnriquecida?.edad_activa ? (
-                      <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.25)', borderColor: 'rgba(110, 231, 183, 0.4)', borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="person-outline" size={11} color="#A7F3D0" />
-                        <Text style={{ color: '#D1FAE5', fontSize: 10, fontWeight: '700' }}>
-                          {plazaModalEnriquecida.edad_activa} años (PERNO)
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
                   <Text style={{ color: THEME.white, fontSize: 17, fontWeight: '600', marginTop: 3 }}>
                     {plazaModal?.cargo}
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <BotonManualFunciones
+                    id_sideap={plazaModal?.id_sideap}
+                    cargo={plazaModal?.cargo}
+                    codigo={plazaModal?.codigo}
+                    grado={plazaModal?.grado}
+                    variante="header"
+                    etiqueta="Manual Funciones (PDF)"
+                  />
+
                   <Pressable
                     onPress={() => abrirModalEditarPerfilCargo(plazaModalEnriquecida || plazaModal!)}
                     style={({ pressed }) => ({
@@ -9475,18 +9468,18 @@ export default function NominaScreen() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Ionicons name="bookmark-outline" size={15} color={THEME.marca700} />
                           <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca800, textTransform: 'uppercase' }}>
-                            Manual de Funciones en Archivo de Planta Oficial (Columna AH)
+                            Manual Específico de Funciones y Competencias
                           </Text>
                         </View>
                         <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1E40AF' }}>PLANTA OFICIAL · COL. AH</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1E40AF' }}>PERFIL OFICIAL</Text>
                         </View>
                       </View>
                       <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate900, marginTop: 4 }}>
-                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No especificado en Columna AH'}
+                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No especificado en el perfil'}
                       </Text>
                       <Text style={{ fontSize: 11, color: THEME.slate600, marginTop: 2 }}>
-                        Páginas del Manual Específico de Funciones y de Competencias Laborales de la SJD registradas textualmente en la Columna AH del Archivo de Planta Oficial.
+                        Páginas y especificación oficial del Manual Específico de Funciones y de Competencias Laborales de la Secretaría Jurídica Distrital.
                       </Text>
                     </View>
                   </View>
@@ -9817,36 +9810,14 @@ export default function NominaScreen() {
                         ) : null}
                         <View style={{ backgroundColor: THEME.marca50, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                           <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>
-                            {plazaModalEnriquecida?.funciones?.length || 0} Funciones Oficiales (Cols. AH y AF)
+                            {plazaModalEnriquecida?.funciones?.length || 0} Funciones Oficiales del Cargo
                           </Text>
                         </View>
                       </View>
                     </View>
-
-                    {/* Especificación de resolución y asignación funcional de la Columna AF */}
-                    {plazaModalEnriquecida?.dependencia_funcional ? (
-                      <View
-                        style={{
-                          marginTop: 10,
-                          paddingTop: 10,
-                          borderTopWidth: 1,
-                          borderTopColor: THEME.slate200,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <Ionicons name="git-branch-outline" size={14} color={THEME.marca700} />
-                        <Text style={{ fontSize: 11.5, color: THEME.slate700 }}>
-                          <Text style={{ fontWeight: '700', color: THEME.marca800 }}>Columna AF (Resolución / Asignación Funcional):</Text>{' '}
-                          {plazaModalEnriquecida.dependencia_funcional}
-                        </Text>
-                      </View>
-                    ) : null}
                   </View>
 
-                  {/* Tarjeta Destacada: Manual de Funciones en Archivo de Planta Oficial (Columna AH) */}
+                  {/* Tarjeta Destacada: Manual Específico de Funciones y Competencias */}
                   <View
                     style={{
                       backgroundColor: '#FEF3C7',
@@ -9873,15 +9844,15 @@ export default function NominaScreen() {
                         </View>
                         <View>
                           <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#92400E', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            Manual de Funciones en Archivo de Planta Oficial (Columna AH)
+                            Manual Específico de Funciones y Competencias
                           </Text>
                           <Text style={{ fontSize: 11, color: '#B45309' }}>
-                            Páginas del Manual Específico registradas en la Planta Oficial
+                            Páginas del Manual Específico registradas para el cargo
                           </Text>
                         </View>
                       </View>
                       <View style={{ backgroundColor: '#FDE68A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#78350F' }}>PLANTA OFICIAL · COL. AH</Text>
+                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#78350F' }}>MANUAL OFICIAL</Text>
                       </View>
                     </View>
 
@@ -9896,15 +9867,15 @@ export default function NominaScreen() {
                       }}
                     >
                       <Text style={{ fontSize: 11, color: THEME.slate500, fontWeight: '700', textTransform: 'uppercase' }}>
-                        Texto Oficial en Archivo de Planta (Columna AH - Páginas Manual de Funciones):
+                        Páginas Oficiales del Manual de Funciones:
                       </Text>
                       <Text style={{ fontSize: 16, fontWeight: '800', color: '#78350F', marginTop: 4 }}>
-                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No registrado en Columna AH'}
+                        {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'No registrado'}
                       </Text>
                     </View>
 
                     <Text style={{ fontSize: 11.5, color: '#92400E', marginTop: 8, lineHeight: 17 }}>
-                      Páginas y acto administrativo formal del Manual Específico de Funciones y de Competencias Laborales conforme al Archivo Oficial de Planta de Personal de la Secretaría Jurídica Distrital.
+                      Páginas y acto administrativo formal del Manual Específico de Funciones y de Competencias Laborales de la Secretaría Jurídica Distrital.
                     </Text>
 
                     <View style={{ marginTop: 12 }}>
@@ -9978,74 +9949,96 @@ export default function NominaScreen() {
                     </Text>
                   </View>
 
-                  {/* Funciones Esenciales Asignadas (Columna AF) */}
-                  <View style={{ marginBottom: 12 }}>
+                  {/* Funciones Esenciales Asignadas */}
+                  <View style={{ marginBottom: 16 }}>
                     <Text
                       style={{
-                        fontSize: 12,
-                        fontWeight: '700',
+                        fontSize: 13,
+                        fontWeight: '800',
                         color: THEME.marca700,
                         textTransform: 'uppercase',
                         letterSpacing: 0.5,
-                        marginBottom: 10,
+                        marginBottom: 12,
                       }}
                     >
-                      Funciones Esenciales del Cargo (Archivo de Planta Oficial - Col. AF)
+                      Funciones Esenciales del Cargo ({plazaModalEnriquecida?.funciones?.length || 0} registradas)
                     </Text>
 
-                    <View style={{ gap: 10 }}>
-                      {plazaModalEnriquecida?.funciones?.map((funcStr, fIndex) => {
-                        const textoLimpio = funcStr.replace(/^\d+[\.\)]\s*/, '');
-                        return (
-                          <View
-                            key={`func-${fIndex}`}
-                            style={{
-                              backgroundColor: THEME.white,
-                              borderRadius: 8,
-                              borderWidth: 1,
-                              borderColor: THEME.slate200,
-                              padding: 12,
-                              flexDirection: 'row',
-                              alignItems: 'flex-start',
-                              gap: 12,
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.03,
-                              shadowRadius: 2,
-                              elevation: 1,
-                            }}
-                          >
+                    {(!plazaModalEnriquecida?.funciones || plazaModalEnriquecida.funciones.length === 0) ? (
+                      <View
+                        style={{
+                          padding: 24,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: THEME.slate50,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          borderStyle: 'dashed',
+                        }}
+                      >
+                        <Ionicons name="clipboard-outline" size={32} color={THEME.slate400} />
+                        <Text style={{ color: THEME.slate600, fontSize: 13.5, fontWeight: '600', marginTop: 8 }}>
+                          No hay funciones asignadas actualmente a este cargo.
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={{ gap: 12 }}>
+                        {plazaModalEnriquecida?.funciones?.map((funcStr, fIndex) => {
+                          const textoLimpio = funcStr.replace(/^\d+[\.\)]\s*/, '');
+                          return (
                             <View
+                              key={`func-${fIndex}`}
                               style={{
-                                width: 26,
-                                height: 26,
-                                borderRadius: 13,
-                                backgroundColor: '#EEF2FF',
+                                backgroundColor: THEME.white,
+                                borderRadius: 10,
                                 borderWidth: 1,
-                                borderColor: '#C7D2FE',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginTop: 1,
+                                borderColor: THEME.slate200,
+                                padding: 15,
+                                flexDirection: 'row',
+                                alignItems: 'flex-start',
+                                gap: 14,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.04,
+                                shadowRadius: 3,
+                                elevation: 1,
                               }}
                             >
-                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#4338CA' }}>
-                                {fIndex + 1}
+                              <View
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 17,
+                                  backgroundColor: '#EEF2FF',
+                                  borderWidth: 1.5,
+                                  borderColor: '#C7D2FE',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  marginTop: 1,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#3730A3' }}>
+                                  {fIndex + 1}
+                                </Text>
+                              </View>
+                              <Text
+                                style={{
+                                  flex: 1,
+                                  fontSize: 14.5,
+                                  color: THEME.slate900,
+                                  lineHeight: 23,
+                                  fontWeight: '400',
+                                }}
+                              >
+                                {textoLimpio}
                               </Text>
                             </View>
-                            <Text
-                              style={{
-                                flex: 1,
-                                fontSize: 13,
-                                color: THEME.slate800,
-                                lineHeight: 19,
-                              }}
-                            >
-                              {textoLimpio}
-                            </Text>
-                          </View>
-                        );
-                      })}
-                    </View>
+                          );
+                        })}
+                      </View>
+                    )}
                   </View>
 
                   {/* Marco Normativo al pie */}
@@ -10060,7 +10053,7 @@ export default function NominaScreen() {
                     }}
                   >
                     <Text style={{ fontSize: 11, color: THEME.slate600, lineHeight: 17 }}>
-                      <Text style={{ fontWeight: '700' }}>Marco Normativo y Manual:</Text> Manual de Funciones registrado textualmente en la Columna AH ({plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'Vigente'}), complementado con las resoluciones funcionales de la Columna AF ({plazaModalEnriquecida?.dependencia_funcional || 'SJD'}), bajo la {plazaModalEnriquecida?.resolucion_manual ? `Resolución ${plazaModalEnriquecida.resolucion_manual}` : 'Resolución de Manual de Funciones vigente en la Secretaría Jurídica Distrital'}, en concordancia con la Ley 909 de 2004 y el Decreto 1083 de 2015.
+                      <Text style={{ fontWeight: '700' }}>Marco Normativo y Manual:</Text> Manual Específico de Funciones y de Competencias Laborales ({plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'Vigente'}), bajo la {plazaModalEnriquecida?.resolucion_manual ? `Resolución ${plazaModalEnriquecida.resolucion_manual}` : 'Resolución de Manual de Funciones vigente en la Secretaría Jurídica Distrital'}, en concordancia con la Ley 909 de 2004 y el Decreto 1083 de 2015.
                     </Text>
                   </View>
                 </ScrollView>
@@ -10075,7 +10068,7 @@ export default function NominaScreen() {
                     Perfil de Competencias y Requisitos del Cargo
                   </Text>
 
-                  {/* Referencia Textual al Manual de Funciones (Columna AH) */}
+                  {/* Referencia al Manual de Funciones */}
                   <View
                     style={{
                       flexDirection: 'row',
@@ -10094,14 +10087,14 @@ export default function NominaScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Ionicons name="bookmark" size={15} color="#92400E" />
                       <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#92400E' }}>
-                        Requisitos según Manual de Funciones (Columna AH):
+                        Requisitos según Manual de Funciones:
                       </Text>
                       <Text style={{ fontSize: 12, fontWeight: '800', color: '#78350F' }}>
                         {plazaModalEnriquecida?.manual_funciones || plazaModalEnriquecida?.resolucion_manual || 'Vigente'}
                       </Text>
                     </View>
                     <View style={{ backgroundColor: '#FDE68A', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#78350F' }}>COL. AH</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#78350F' }}>PERFIL OFICIAL</Text>
                     </View>
                   </View>
 
@@ -11511,13 +11504,13 @@ export default function NominaScreen() {
 
                               <View style={{ flexDirection: isDesktop ? 'row' : 'column', justifyContent: 'space-between', alignItems: isDesktop ? 'center' : 'flex-start', gap: 6 }}>
                                 <View style={{ flex: 1 }}>
-                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Manual de Funciones Textual (Columna AH)</Text>
+                                  <Text style={{ fontSize: 11, color: '#3B82F6', fontWeight: '600', textTransform: 'uppercase' }}>Manual Específico de Funciones</Text>
                                   <Text style={{ fontSize: 13.5, fontWeight: '700', color: '#1E3A8A', marginTop: 2 }}>
-                                    {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual || 'No registrado en Columna AH'}
+                                    {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual || 'No registrado'}
                                   </Text>
                                 </View>
                                 <View style={{ backgroundColor: '#DBEAFE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1D4ED8' }}>COLUMNA AH OFICIAL</Text>
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1D4ED8' }}>MANUAL OFICIAL</Text>
                                 </View>
                               </View>
                             </View>
@@ -11556,7 +11549,7 @@ export default function NominaScreen() {
                                   {(pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual) ? (
                                     <View style={{ backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
                                       <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E' }}>
-                                        Columna AH: {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual}
+                                        Manual: {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual}
                                       </Text>
                                     </View>
                                   ) : null}

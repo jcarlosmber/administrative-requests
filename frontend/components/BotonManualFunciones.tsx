@@ -9,7 +9,7 @@ interface BotonManualFuncionesProps {
   cargo?: string | null;
   codigo?: string | null;
   grado?: string | null;
-  variante?: 'chip' | 'boton' | 'banner' | 'icono';
+  variante?: 'chip' | 'boton' | 'banner' | 'icono' | 'header';
   etiqueta?: string;
   estiloContenedor?: any;
 }
@@ -44,6 +44,32 @@ export default function BotonManualFunciones({
 
   return (
     <>
+      {variante === 'header' && (
+        <TouchableOpacity
+          onPress={abrirManual}
+          activeOpacity={0.75}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            backgroundColor: '#B91C1C',
+            paddingHorizontal: 12,
+            paddingVertical: 7,
+            borderRadius: 6,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.25)',
+            cursor: 'pointer',
+            ...estiloContenedor,
+          }}
+          accessibilityLabel={`Ver manual de funciones en PDF del cargo ${manual.cargo}`}
+        >
+          <Ionicons name="document-text" size={15} color="#FFFFFF" />
+          <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+            {tituloVisual}
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {variante === 'chip' && (
         <TouchableOpacity
           onPress={abrirManual}
