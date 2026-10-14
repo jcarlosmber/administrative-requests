@@ -14,6 +14,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { ingresosService, CargoEvaluado, AnalisisCompleto, PlazaPlanta, FormacionAcademicaItem, CertificadoAnalizado, VerificacionFormalTitulo, VerificacionFormalTarjeta } from '../../lib/ingresosService';
+import mockPlazasData from '../../lib/plantaMockData.json';
 import PdfViewerModal from '../../components/PdfViewerModal';
 import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
@@ -41,6 +42,8 @@ function NuevaValidacionScreen() {
     tipoExperiencia?: string;
     formacionExigida?: string;
     modalidad?: string;
+    opec?: string;
+    concurso_opec?: string;
   }>();
   const { rehacerId } = params;
 
@@ -66,6 +69,9 @@ function NuevaValidacionScreen() {
   const [idSideap, setIdSideap] = useState(params.sideap ? String(params.sideap) : '');
   const [idPerno, setIdPerno] = useState(params.perno ? String(params.perno) : '');
   const [idPlaza, setIdPlaza] = useState<number | null>(params.idPlaza ? Number(params.idPlaza) : null);
+  const [opecCargo, setOpecCargo] = useState(
+    params.opec || params.concurso_opec ? String(params.opec || params.concurso_opec) : ''
+  );
   const [nombreCargo, setNombreCargo] = useState(params.cargo ? String(params.cargo) : 'Profesional Especializado');
   const [codigoCargo, setCodigoCargo] = useState(params.codigo ? String(params.codigo) : '222');
   const [gradoCargo, setGradoCargo] = useState(params.grado ? String(params.grado) : '24');
@@ -117,6 +123,54 @@ function NuevaValidacionScreen() {
   // Resultado del análisis previo a guardar
   const [analisisResultado, setAnalisisResultado] = useState<AnalisisCompleto | null>(null);
   const [guardando, setGuardando] = useState(false);
+
+  const redaccionOficialExperiencia = useMemo(() => {
+    // 1. Si está en el estado de requisitosExperiencia del formulario
+    if (requisitosExperiencia && requisitosExperiencia.trim()) {
+      return requisitosExperiencia.trim();
+    }
+    // 2. Si viene en analisisResultado?.cargo_evaluado
+    if (analisisResultado?.cargo_evaluado?.requisitos_experiencia && analisisResultado.cargo_evaluado.requisitos_experiencia.trim()) {
+      return analisisResultado.cargo_evaluado.requisitos_experiencia.trim();
+    }
+    // 3. Si coincide con una plaza de la planta oficial
+    const plazaEncontrada = (mockPlazasData as any[]).find((p: any) => {
+      if (idSideap && p.id_sideap === parseInt(String(idSideap), 10)) return true;
+      if (idPerno && p.id_perno === parseInt(String(idPerno), 10)) return true;
+      if (idPlaza && p.id_plaza === idPlaza) return true;
+      if (
+        codigoCargo &&
+        gradoCargo &&
+        String(p.codigo).trim() === String(codigoCargo).trim() &&
+        String(p.grado).trim() === String(gradoCargo).trim()
+      ) {
+        return true;
+      }
+      if (
+        nombreCargo &&
+        p.cargo &&
+        p.cargo.toLowerCase().trim() === nombreCargo.toLowerCase().trim()
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (plazaEncontrada?.requisitos_experiencia && plazaEncontrada.requisitos_experiencia.trim()) {
+      return plazaEncontrada.requisitos_experiencia.trim();
+    }
+    // 4. Si en formacionExigida hay "Experiencia:"
+    if (formacionExigida && formacionExigida.includes('Experiencia:')) {
+      const expPart = formacionExigida.split(/Experiencia:\s*/i)[1]?.trim();
+      if (expPart) return expPart;
+    }
+    // 5. Fallback estructurado formal
+    const reqM = parseFloat(mesesExigidos) || analisisResultado?.consolidado?.requisito_minimo_meses || 0;
+    const tipo = String(tipoExperienciaRequerida || 'PROFESIONAL_RELACIONADA').toUpperCase();
+    if (reqM === 0) return 'No requiere experiencia.';
+    if (tipo === 'LABORAL') return `${reqM} meses de experiencia laboral.`;
+    if (tipo === 'PROFESIONAL') return `${reqM} meses de experiencia profesional.`;
+    return `${reqM} meses de experiencia profesional relacionada con las funciones del cargo.`;
+  }, [requisitosExperiencia, analisisResultado, idSideap, idPerno, idPlaza, codigoCargo, gradoCargo, nombreCargo, formacionExigida, mesesExigidos, tipoExperienciaRequerida]);
 
   // Estados para Modal de Título Académico
   const [modalTituloVisible, setModalTituloVisible] = useState(false);
@@ -319,6 +373,9 @@ function NuevaValidacionScreen() {
           if (expediente.cargo_evaluado.id_plaza) {
             setIdPlaza(expediente.cargo_evaluado.id_plaza);
           }
+          if (expediente.cargo_evaluado.opec) {
+            setOpecCargo(String(expediente.cargo_evaluado.opec));
+          }
         }
       }
     } catch (err: any) {
@@ -497,6 +554,26 @@ function NuevaValidacionScreen() {
     setCodigoCargo(p.codigo || '');
     setGradoCargo(p.grado || '');
     setDependenciaCargo(p.dependencia_cargo || '');
+
+    // Precargar OPEC si la plaza la contiene o si está guardada en rrhh_opec_plazas_v1
+    let opecEncontrada = p.opec || '';
+    if (!opecEncontrada && typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('rrhh_opec_plazas_v1');
+        if (stored) {
+          const map = JSON.parse(stored);
+          const key = `${p.id_sideap || ''}_${p.id_perno || ''}`;
+          if (map[key]?.opec) {
+            opecEncontrada = map[key].opec;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (opecEncontrada) {
+      setOpecCargo(String(opecEncontrada));
+    }
 
     setFiltroCargo(p.cargo || '');
     setFiltroCodigoGrado(p.codigo && p.grado ? `${p.codigo}-${p.grado}` : '');
@@ -690,7 +767,7 @@ function NuevaValidacionScreen() {
     switch (pickerTipo) {
       case 'cargo': return 'Seleccionar Denominación del Cargo';
       case 'codigoGrado': return 'Seleccionar Código y Grado';
-      case 'dependencia': return 'Seleccionar Dependencia';
+      case 'dependencia': return 'Seleccionar Dependencia del Cargo';
       case 'situacion': return 'Seleccionar Situación Administrativa Titular del Cargo';
       case 'sideap': return 'Seleccionar por ID SIDEAP';
       case 'perno': return 'Seleccionar por ID PERNO';
@@ -937,6 +1014,7 @@ function NuevaValidacionScreen() {
         id_sideap: idSideap ? parseInt(String(idSideap), 10) : undefined,
         id_perno: idPerno ? parseInt(String(idPerno), 10) : undefined,
         id_plaza: idPlaza ?? undefined,
+        opec: opecCargo ? String(opecCargo).trim() : undefined,
         nombre: nombreCargo,
         codigo: codigoCargo,
         grado: gradoCargo,
@@ -944,6 +1022,7 @@ function NuevaValidacionScreen() {
         requisito_experiencia_meses: parseFloat(mesesExigidos) || 54,
         tipo_experiencia_requerida: tipoExperienciaRequerida,
         requisitos_formacion: formacionExigida,
+        requisitos_experiencia: requisitosExperiencia,
         funciones_cargo: funcionesArray
       };
 
@@ -987,6 +1066,7 @@ function NuevaValidacionScreen() {
           id_sideap: idSideap ? parseInt(String(idSideap), 10) : resultado.cargo_evaluado?.id_sideap,
           id_perno: idPerno ? parseInt(String(idPerno), 10) : resultado.cargo_evaluado?.id_perno,
           id_plaza: idPlaza ?? resultado.cargo_evaluado?.id_plaza,
+          opec: opecCargo ? String(opecCargo).trim() : resultado.cargo_evaluado?.opec,
           requisitos_formacion: formacionExigida || resultado.cargo_evaluado?.requisitos_formacion,
           dependencia: dependenciaCargo || resultado.cargo_evaluado?.dependencia
         }
@@ -1025,7 +1105,9 @@ function NuevaValidacionScreen() {
           id_sideap: idSideap ? parseInt(String(idSideap), 10) : analisisResultado.cargo_evaluado?.id_sideap,
           id_perno: idPerno ? parseInt(String(idPerno), 10) : analisisResultado.cargo_evaluado?.id_perno,
           id_plaza: idPlaza ?? analisisResultado.cargo_evaluado?.id_plaza,
+          opec: opecCargo ? String(opecCargo).trim() : analisisResultado.cargo_evaluado?.opec,
           requisitos_formacion: formacionExigida || analisisResultado.cargo_evaluado?.requisitos_formacion,
+          requisitos_experiencia: requisitosExperiencia || analisisResultado.cargo_evaluado?.requisitos_experiencia,
           dependencia: dependenciaCargo || analisisResultado.cargo_evaluado?.dependencia
         }
       };
@@ -1489,9 +1571,18 @@ function NuevaValidacionScreen() {
               Vinculación Activa: {candidatoNombre || params.nombre || 'Aspirante'} — C.C. {candidatoDoc || params.documento || params.cedula || 'Pendiente'}
             </Text>
             <Text style={{ color: '#a7f3d0', fontSize: 11.5, marginTop: 1 }}>
-              Cargo a Proveer: {nombreCargo || params.cargo} (Cód. {codigoCargo || params.codigo || 'N/A'}-Gr. {gradoCargo || params.grado || 'N/A'}) • Dependencia: {dependenciaCargo || params.dependencia}.
+              Cargo a Proveer: {nombreCargo || params.cargo} (Cód. {codigoCargo || params.codigo || 'N/A'}-Gr. {gradoCargo || params.grado || 'N/A'}) • Dependencia del Cargo: {dependenciaCargo || params.dependencia}.
               Los datos oficiales se han precargado para emitir el Certificado FT-318.
             </Text>
+            {opecCargo ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                <View style={{ backgroundColor: '#047857', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 5, borderWidth: 1, borderColor: '#059669' }}>
+                  <Text style={{ color: '#ecfdf5', fontSize: 11, fontWeight: '800' }}>
+                    OPEC (CNSC): #{opecCargo}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </View>
         </View>
       )}
@@ -1689,10 +1780,10 @@ function NuevaValidacionScreen() {
                     </TouchableOpacity>
                   </View>
 
-                  {/* Desplegable 3: Dependencia */}
+                  {/* Desplegable 3: Dependencia del Cargo */}
                   <View style={{ flex: 2, minWidth: 220 }}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569', marginBottom: 5 }}>
-                      Dependencia
+                      Dependencia del Cargo
                     </Text>
                     <TouchableOpacity
                       onPress={() => abrirPicker('dependencia')}
@@ -1719,7 +1810,7 @@ function NuevaValidacionScreen() {
                           }}
                           numberOfLines={1}
                         >
-                          {filtroDependencia || 'Todas las dependencias...'}
+                          {filtroDependencia || 'Todas las dependencias del cargo...'}
                         </Text>
                       </View>
                       <Ionicons name="chevron-down" size={16} color="#64748B" />
@@ -2121,6 +2212,37 @@ function NuevaValidacionScreen() {
                       borderRadius: 8,
                       padding: 10,
                       backgroundColor: '#FFFFFF',
+                      fontSize: 14,
+                      color: '#0F172A',
+                      fontWeight: '700'
+                    }}
+                  />
+                </View>
+
+                {/* OPEC (CNSC) */}
+                <View style={{ flex: 1, minWidth: 120 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F766E' }}>
+                      OPEC (CNSC)
+                    </Text>
+                    {opecCargo ? (
+                      <View style={{ backgroundColor: '#CCFBF1', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#99F6E4' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#0F766E' }}>VINCULADA</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <TextInput
+                    keyboardType="numeric"
+                    placeholder="Ej: 205634"
+                    placeholderTextColor="#94A3B8"
+                    value={opecCargo}
+                    onChangeText={setOpecCargo}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: opecCargo ? '#0D9488' : '#CBD5E1',
+                      borderRadius: 8,
+                      padding: 10,
+                      backgroundColor: opecCargo ? '#F0FDFA' : '#FFFFFF',
                       fontSize: 14,
                       color: '#0F172A',
                       fontWeight: '700'
@@ -2586,7 +2708,7 @@ function NuevaValidacionScreen() {
                 <View style={{ flex: 1, minWidth: 280 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
                     <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155' }}>
-                      Requisitos de Experiencia Exigida (Manual de Funciones)
+                      Redacción Oficial de los Requisitos de Experiencia (Manual de Funciones)
                     </Text>
                     <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FECACA' }}>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#991B1B' }}>
@@ -3471,6 +3593,53 @@ function NuevaValidacionScreen() {
                   ))}
                 </View>
               )}
+            </View>
+
+            {/* SECCIÓN: 2. EXPERIENCIA LABORAL */}
+            <View
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
+                padding: 18,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 12
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#F0FDFA', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="briefcase" size={18} color="#0D9488" />
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                    2. Experiencia Laboral
+                  </Text>
+                </View>
+
+                {analisisResultado.consolidado.diferencia_meses >= 0 ? (
+                  <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#86EFAC' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#15803D' }}>
+                      ✓ CUMPLE TIEMPO
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#FECACA' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#B91C1C' }}>
+                      ❌ DÉFICIT DE TIEMPO
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Box de Redacción Oficial de los Requisitos de Experiencia */}
+              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4, textTransform: 'uppercase' }}>
+                  Redacción Oficial de los Requisitos de Experiencia
+                </Text>
+                <Text style={{ fontSize: 13, color: '#1E293B', fontWeight: '600', lineHeight: 18 }}>
+                  {redaccionOficialExperiencia}
+                </Text>
+              </View>
             </View>
 
             {/* Resumen de Certificados Laborales Computados */}

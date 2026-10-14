@@ -6,6 +6,7 @@ export interface CargoEvaluado {
   id_sideap?: number;
   id_perno?: number;
   id_plaza?: number;
+  opec?: string;
   nombre: string;
   codigo?: string;
   grado?: string;
@@ -13,6 +14,7 @@ export interface CargoEvaluado {
   requisito_experiencia_meses: number;
   tipo_experiencia_requerida?: 'LABORAL' | 'RELACIONADA' | 'PROFESIONAL' | 'PROFESIONAL_RELACIONADA' | string;
   requisitos_formacion?: string;
+  requisitos_experiencia?: string;
   funciones_cargo: string[];
 }
 
@@ -20,6 +22,7 @@ export interface PlazaPlanta {
   id_plaza: number;
   id_sideap?: number;
   id_perno?: number;
+  opec?: string;
   nivel?: string;
   cargo: string;
   codigo?: string;
@@ -131,7 +134,7 @@ export interface CertificadoAnalizado {
   vinculo_vigente?: boolean;
   funciones_certificadas?: Array<{ funcion: string; evidencia_textual?: string }>;
   experiencia_profesional?: boolean;
-  clasificacion_experiencia?: 'RELACIONADA' | 'NO_RELACIONADA' | 'PROFESIONAL_NO_RELACIONADA' | 'NO_PROFESIONAL' | 'NO_DETERMINABLE';
+  clasificacion_experiencia?: 'PROFESIONAL_RELACIONADA' | 'PROFESIONAL' | 'RELACIONADA' | 'LABORAL' | 'NO_RELACIONADA' | 'PROFESIONAL_NO_RELACIONADA' | 'NO_PROFESIONAL' | 'NO_DETERMINABLE' | string;
   experiencia_relacionada?: {
     resultado: 'RELACIONADA' | 'NO_RELACIONADA' | 'REQUIERE_REVISION';
     nivel_confianza?: 'ALTO' | 'MEDIO' | 'BAJO';

@@ -365,8 +365,14 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       colMap.id_escalera = colNum;
     } else if ((raw === 'N' || raw.includes('PELDANO') || raw.includes('PELDAÑO')) && !colMap.peldano_escalera) {
       colMap.peldano_escalera = colNum;
-    } else if (raw.includes('VINCULACION A LA ENTIDAD') || raw.includes('TIPO DE VINCULACION')) {
+    } else if (raw.includes('VINCULACION A LA ENTIDAD') || raw.includes('VINCULACIÓN A LA ENTIDAD')) {
       colMap.tipo_vinculacion = colNum;
+    } else if (raw.includes('VINCULACION AL CARGO') || raw.includes('VINCULACIÓN AL CARGO')) {
+      colMap.tipo_vinculacion_cargo = colNum;
+    } else if (raw.includes('INGRESO A LA ENTIDAD') || raw.includes('INGRESO ENTIDAD')) {
+      colMap.fecha_ingreso_entidad = colNum;
+    } else if (raw.includes('INGRESO AL DISTRITO') || raw.includes('INGRESO DISTRITO')) {
+      colMap.fecha_ingreso_distrito = colNum;
     } else if (raw.includes('OPEC')) {
       colMap.opec = colNum;
     } else if (raw.includes('ESTADO DEL CARGO') || raw.includes('ESTADO CARGO')) {
@@ -379,10 +385,14 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       colMap.codigo = colNum;
     } else if (raw.includes('GRADO')) {
       colMap.grado = colNum;
-    } else if (raw.includes('DEPENDENCIA DEL CARGO') || raw === 'DEPENDENCIA') {
+    } else if (raw === 'U' || raw.includes('CODIGO-GRADO') || raw.includes('CÓDIGO-GRADO')) {
+      colMap.u_codigo_grado = colNum;
+    } else if (raw === 'DEPENDENCIA DEL CARGO' || (raw.includes('DEPENDENCIA') && raw.includes('CARGO'))) {
       colMap.dep_cargo = colNum;
-    } else if (raw.includes('DEPENDENCIA FUNCIONAL')) {
+    } else if (raw === 'DEPENDENCIA FUNCIONAL' || (raw.includes('DEPENDENCIA') && raw.includes('FUNCIONAL'))) {
       colMap.dep_funcional = colNum;
+    } else if (raw === 'DEPENDENCIA' && !colMap.dep_cargo) {
+      colMap.dep_cargo = colNum;
     } else if (raw.includes('PROPOSITO') || raw.includes('PROPÓSITO')) {
       colMap.proposito = colNum;
     } else if (raw === 'FUNCIONES' || raw === 'FUNCIONES ESENCIALES' || raw.includes('FUNCIONES ESENCIALES') || (raw.includes('FUNCIONES') && !raw.includes('RES') && !raw.includes('RESOLUC') && !raw.includes('MANUAL') && !raw.includes('PAGINA') && !raw.includes('PÁGINA'))) {
@@ -391,7 +401,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       colMap.requisitos = colNum;
     } else if (raw.includes('MANUAL') || raw.includes('PAGINA') || raw.includes('PÁGINA') || raw.includes('RESOLUCION') || raw.includes('RESOLUCIÓN')) {
       colMap.manual_funciones = colNum;
-    } else if (raw.includes('ASIGNACION BASICA') || raw.includes('ASIGNACIÓN BÁSICA') || raw.includes('SUELDO BASICO') || raw.includes('ASIGNACION')) {
+    } else if (raw.includes('ASIGNACION BASICA') || raw.includes('ASIGNACIÓN BÁSICA') || raw.includes('SUELDO BASICO') || raw.includes('2026') || raw.includes('ASIGNACION')) {
       colMap.asignacion = colNum;
     } else if (raw.includes('TOTAL') && raw.includes('DEVENGAD')) {
       colMap.total_devengado = colNum;

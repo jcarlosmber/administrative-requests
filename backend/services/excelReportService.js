@@ -292,8 +292,21 @@ async function generarReporteExcelValidacion(data) {
   // ----------------------------------------------------
   // 3. REQUISITOS DEL CARGO (Fila 8)
   // ----------------------------------------------------
-  const reqMeses = consolidado.requisito_minimo_meses || cargo.requisito_experiencia_meses || 0;
-  ws.getCell('A8').value = `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
+  let reqExpTexto = (cargo.requisitos_experiencia || consolidado.requisitos_experiencia || data.requisitos_experiencia || '').trim();
+  if (!reqExpTexto) {
+    const reqMeses = consolidado.requisito_minimo_meses || cargo.requisito_experiencia_meses || 0;
+    const tipoExp = String(cargo.tipo_experiencia_requerida || consolidado.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA').toUpperCase();
+    if (reqMeses === 0) {
+      reqExpTexto = 'No requiere experiencia.';
+    } else if (tipoExp === 'LABORAL') {
+      reqExpTexto = `${reqMeses} meses de experiencia laboral.`;
+    } else if (tipoExp === 'PROFESIONAL') {
+      reqExpTexto = `${reqMeses} meses de experiencia profesional.`;
+    } else {
+      reqExpTexto = `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
+    }
+  }
+  ws.getCell('A8').value = reqExpTexto;
   ws.getCell('A8').alignment = { wrapText: true, vertical: 'top' };
 
   const reqFormacion = cargo.requisitos_formacion || cargo.requisitos || '';

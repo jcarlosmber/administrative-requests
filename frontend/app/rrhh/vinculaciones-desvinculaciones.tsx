@@ -339,6 +339,7 @@ export interface RequisitoEtapa {
   noAplica?: boolean;
   tipoCobroUsoLista?: 'sin_cobro' | 'con_cobro';
   numeroResolucionPago?: string;
+  idValidacionIngresos?: string;
 }
 
 
@@ -3563,6 +3564,7 @@ export function sincronizarEtapasCaso(
           documentosAdjuntos: Array.isArray(reqG.documentosAdjuntos) ? reqG.documentosAdjuntos : (reqM.documentosAdjuntos || []),
           tipoCobroUsoLista: reqG.tipoCobroUsoLista !== undefined ? reqG.tipoCobroUsoLista : reqM.tipoCobroUsoLista,
           numeroResolucionPago: reqG.numeroResolucionPago !== undefined ? reqG.numeroResolucionPago : reqM.numeroResolucionPago,
+          idValidacionIngresos: reqG.idValidacionIngresos !== undefined ? reqG.idValidacionIngresos : reqM.idValidacionIngresos,
         };
       }
 
@@ -3785,6 +3787,30 @@ export const LISTA_FORMATOS_OFICIALES: FormatoInstitucionalOficial[] = [
     fasesRecomendadas: ['Comunicación del Nombramiento', 'Posesión'],
     descripcion: 'Guía institucional con el listado exhaustivo de documentos que el aspirante debe recopilar y allegar antes de la posesión.',
     requisitosAsociados: ['vp4_3', 'vl4_2', 'vc4_3', 'vp5_1', 'vc5_1', 'vl5_1'],
+  },
+  {
+    id: 'FT-318',
+    codigo: '2311300-FT-318',
+    nombre: 'Validación Técnica y Certificado de Cumplimiento de Requisitos',
+    version: 'V1',
+    archivo: '2311300-FT-318 Certificado de Cumplimiento de Requisitos.xlsx',
+    tipo: 'XLSX',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Validación Técnica & Certificado FT-318', 'Verificación de Requisitos'],
+    descripcion: 'Certificado de verificación formal de calidades académicas y experiencia laboral generado desde el módulo de Validación Técnica con IA.',
+    requisitosAsociados: ['vc3_ft318', 'vp3_3', 'vl2_2', 've3_2'],
+  },
+  {
+    id: 'FT-095',
+    codigo: '2311300-FT-095',
+    nombre: 'Certificado de Cumplimiento de Requisitos para Tomar Posesión (32 Requisitos)',
+    version: 'V05',
+    archivo: 'Requisitos para tomar posesion del cargo_V5.doc',
+    tipo: 'DOC',
+    proceso: 'VINCULACION',
+    fasesRecomendadas: ['Posesión, Exámenes & Verificación SECOP II'],
+    descripcion: 'Lista oficial exhaustiva de verificación documental de 32 requisitos normativos previos al acto de posesión.',
+    requisitosAsociados: ['vc5_ft095'],
   },
   {
     id: 'FT-219',
@@ -4238,7 +4264,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     const plazas = (mockPlazasData as unknown as PlazaNomina[]) || [];
     const map = new Map<string, number>();
     plazas.forEach((p) => {
-      const dep = (p.dependencia_cargo || p.dependencia_funcional || '').trim().toUpperCase();
+      const dep = (p.dependencia_cargo || '').trim().toUpperCase();
       if (dep) map.set(dep, (map.get(dep) || 0) + 1);
     });
     return Array.from(map.entries())
@@ -4276,7 +4302,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         if (filtroDepVal) {
           const depUpper = filtroDepVal.toUpperCase();
           personas = personas.filter((p) => {
-            const dep = (p.dependencia || p.plaza_dependencia_cargo || '').toUpperCase();
+            const dep = (p.plaza_dependencia_cargo || p.dependencia || '').toUpperCase();
             return dep.includes(depUpper);
           });
         }
@@ -4300,7 +4326,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         if (filtroDepVal) {
           const depUpper = filtroDepVal.toUpperCase();
           plazas = plazas.filter((pl) => {
-            const dep = (pl.dependencia_cargo || pl.dependencia_funcional || '').toUpperCase();
+            const dep = (pl.dependencia_cargo || '').toUpperCase();
             return dep.includes(depUpper);
           });
         }
@@ -4350,7 +4376,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     setNombreInput(nombreCompleto);
     setCedulaInput(String(p.cedula || ''));
     setCargoInput(p.cargo || p.plaza_cargo || 'PROFESIONAL ESPECIALIZADO');
-    setDependenciaInput(p.dependencia || p.plaza_dependencia_cargo || 'SECRETARÍA JURÍDICA DISTRITAL');
+    setDependenciaInput(p.plaza_dependencia_cargo || p.dependencia || 'SECRETARÍA JURÍDICA DISTRITAL');
 
     if (p.plaza_id_plaza) {
       setPlazaSeleccionadaId(p.plaza_id_plaza);
@@ -4369,7 +4395,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     setNominaItemSeleccionado({
       tipo: 'SERVIDOR',
       titulo: nombreCompleto,
-      detalle: `C.C. ${p.cedula} • ${p.cargo || p.plaza_cargo || 'Sin cargo'} • ${p.dependencia || 'Entidad'}`,
+      detalle: `C.C. ${p.cedula} • ${p.cargo || p.plaza_cargo || 'Sin cargo'} • ${p.plaza_dependencia_cargo || p.dependencia || 'Entidad'}`,
       id: p.cedula,
     });
   };
@@ -6260,6 +6286,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [obsReqFecha, setObsReqFecha] = useState('');
   const [obsReqMarcarCumplido, setObsReqMarcarCumplido] = useState(true);
   const [obsReqNoAplica, setObsReqNoAplica] = useState(false);
+  const [obsReqIdValidacionIngresos, setObsReqIdValidacionIngresos] = useState('');
+  const [mostrarSelectorValidacionFT318, setMostrarSelectorValidacionFT318] = useState(false);
+  const [busquedaValidacionFT318, setBusquedaValidacionFT318] = useState('');
 
   // Modal para Observaciones a Nivel de Fase
   const [modalObsFaseVisible, setModalObsFaseVisible] = useState(false);
@@ -6578,7 +6607,60 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     setObsReqNoAplica(req.noAplica ?? false);
     setObsReqTipoCobro(req.tipoCobroUsoLista || 'sin_cobro');
     setObsReqNumResolucion(req.numeroResolucionPago || '');
+    setObsReqIdValidacionIngresos(req.idValidacionIngresos || '');
+    setMostrarSelectorValidacionFT318(false);
+    setBusquedaValidacionFT318('');
     setModalObsReqVisible(true);
+  };
+
+  // Vinculación dinámica de una Validación Técnica de Ingresos FT-318 a un requisito del caso
+  const vincularValidacionFT318ARequisito = (valId: string, valObj?: any) => {
+    setObsReqIdValidacionIngresos(valId);
+    if (!obsReqRadicado.trim()) {
+      setObsReqRadicado(valId);
+    }
+    const concepto = valObj?.resultado_final || 'CUMPLE';
+    const cargoNombre = valObj?.cargo_nombre || '';
+    const textoObs = `Validación técnica FT-318 vinculada (Expediente: ${valId} • Concepto: ${concepto}${cargoNombre ? ` • Cargo: ${cargoNombre}` : ''}).`;
+    if (!obsReqTexto.trim() || obsReqTexto.includes('Validación técnica FT-318 vinculada')) {
+      setObsReqTexto(textoObs);
+    }
+    if (concepto === 'CUMPLE') {
+      setObsReqMarcarCumplido(true);
+    }
+    setMostrarSelectorValidacionFT318(false);
+
+    // Persistir reactivamente en el caso
+    if (modalReqContext) {
+      setCasos((prevCasos) => {
+        const actualizados = prevCasos.map((caso) => {
+          if (caso.id !== modalReqContext.casoId) return caso;
+          const nuevasEtapas = caso.etapas.map((etapa) => {
+            if (etapa.id !== modalReqContext.etapaId) return etapa;
+            const nuevosRequisitos = etapa.requisitos.map((r) => {
+              if (r.id !== modalReqContext.req.id) return r;
+              return {
+                ...r,
+                idValidacionIngresos: valId,
+                radicadoSoporte: r.radicadoSoporte || valId,
+                cumplido: concepto === 'CUMPLE' ? true : r.cumplido,
+                fecha_cumplimiento: concepto === 'CUMPLE' && !r.fecha_cumplimiento ? new Date().toISOString().split('T')[0] : r.fecha_cumplimiento,
+                observaciones: r.observaciones || textoObs,
+              };
+            });
+            return { ...etapa, requisitos: nuevosRequisitos };
+          });
+          return { ...caso, etapas: nuevasEtapas };
+        });
+
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try {
+            window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+          } catch (e) {}
+        }
+        return actualizados;
+      });
+    }
   };
 
   // Guardar datos desde el modal de requisito
@@ -6615,6 +6697,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               numeroResolucionPago: req.id === 'vc6_pago_cnsc' || req.tipoAccionEspecial === 'PAGO_CNSC'
                 ? (obsReqNumResolucion.trim() || undefined)
                 : r.numeroResolucionPago,
+              idValidacionIngresos: obsReqIdValidacionIngresos || r.idValidacionIngresos,
             };
           });
 
@@ -6899,6 +6982,21 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     if (plaza?.id_perno) queryParams.perno = String(plaza.id_perno);
     if (plaza?.id_plaza) queryParams.idPlaza = String(plaza.id_plaza);
     if (plaza?.requisitos) queryParams.formacionExigida = String(plaza.requisitos);
+
+    // Obtener la OPEC asociada al trámite de vinculación o a la plaza oficial
+    let opecEncontrada = casoRef.concurso_opec || '';
+    if (!opecEncontrada && plaza?.id_plaza) {
+      const customOpec = opecPersonalizadasPlazas[plaza.id_plaza];
+      if (customOpec?.opec) {
+        opecEncontrada = customOpec.opec;
+      } else if ((plaza as any).opec) {
+        opecEncontrada = (plaza as any).opec;
+      }
+    }
+    if (opecEncontrada) {
+      queryParams.opec = String(opecEncontrada);
+      queryParams.concurso_opec = String(opecEncontrada);
+    }
 
     const cargoNombre = (casoRef.cargo || plaza?.cargo || '').toLowerCase();
     const reqText = (plaza?.requisitos || '').toLowerCase();
@@ -13618,7 +13716,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                   <View>
                     <Text style={{ color: THEME.slate600, fontSize: 11, marginBottom: 4 }}>
-                      Dependencia Institucional
+                      Dependencia del Cargo
                     </Text>
                     <TextInput
                       value={dependenciaInput}
@@ -14834,6 +14932,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   reqLabel.includes('ft-095') ||
                   reqLabel.includes('requisitos para tomar posesión') ||
                   (modalReqContext?.req as any)?.tipoAccionEspecial === 'FT095';
+
+                const esFT318 =
+                  reqId.includes('ft318') ||
+                  reqCodigo.includes('FT-318') ||
+                  reqLabel.includes('ft-318') ||
+                  reqLabel.includes('validación técnica') ||
+                  (modalReqContext?.req as any)?.tipoAccionEspecial === 'INGRESOS_IA';
                 const esEvaluacionRetiro = reqLabel.includes('retiro') || reqId.includes('4_3') || reqId.includes('4_2');
 
                 return (
@@ -14863,6 +14968,429 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         </Text>
                       </Pressable>
                     </View>
+
+                    {/* Acción dinámica para FT-318 Validación Técnica y Certificado de Cumplimiento */}
+                    {esFT318 && (() => {
+                      const cedulaCaso = casoActivo?.servidor_cedula?.trim() || '';
+                      const nombreCaso = casoActivo?.servidor_nombre?.trim().toLowerCase() || '';
+
+                      // Validación vinculada explícitamente o coincidente por documento o nombre
+                      const valVinculadaDirecta = obsReqIdValidacionIngresos
+                        ? validacionesIngresos.find((v) => v.id === obsReqIdValidacionIngresos)
+                        : null;
+
+                      const valPorCandidato = !valVinculadaDirecta
+                        ? validacionesIngresos.find((v) => {
+                            if (cedulaCaso && v.candidato_documento && String(v.candidato_documento).trim() === cedulaCaso) return true;
+                            if (nombreCaso && v.candidato_nombre && v.candidato_nombre.toLowerCase().trim() === nombreCaso) return true;
+                            if (nombreCaso && v.candidato_nombre && v.candidato_nombre.toLowerCase().includes(nombreCaso.split(' ')[0])) return true;
+                            return false;
+                          })
+                        : null;
+
+                      const valActiva = valVinculadaDirecta || valPorCandidato;
+                      const esCumple = valActiva?.resultado_final === 'CUMPLE';
+                      const esRevision = valActiva?.resultado_final === 'REQUIERE_REVISION';
+
+                      // Filtrado de validaciones para el selector interactivo
+                      const validacionesFiltradas = validacionesIngresos.filter((v) => {
+                        if (!busquedaValidacionFT318.trim()) return true;
+                        const q = busquedaValidacionFT318.toLowerCase();
+                        return (
+                          (v.candidato_nombre && v.candidato_nombre.toLowerCase().includes(q)) ||
+                          (v.candidato_documento && String(v.candidato_documento).includes(q)) ||
+                          (v.cargo_nombre && v.cargo_nombre.toLowerCase().includes(q)) ||
+                          (v.id && v.id.toLowerCase().includes(q))
+                        );
+                      });
+
+                      return (
+                        <View
+                          style={{
+                            backgroundColor: '#f0fdf4',
+                            borderRadius: 8,
+                            borderWidth: 1.5,
+                            borderColor: '#10b981',
+                            padding: 12,
+                            gap: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                              <View
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 8,
+                                  backgroundColor: '#dcfce7',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderWidth: 1,
+                                  borderColor: '#86efac',
+                                }}
+                              >
+                                <Ionicons name="sparkles" size={17} color="#15803d" />
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#065f46' }}>
+                                  Validación Técnica FT-318 (Inteligencia Artificial)
+                                </Text>
+                                <Text style={{ fontSize: 11, color: '#047857', marginTop: 1 }}>
+                                  Certificado oficial de cumplimiento de requisitos (Formato 2311300-FT-318 en Excel)
+                                </Text>
+                              </View>
+                            </View>
+
+                            {valActiva && (
+                              <View
+                                style={{
+                                  backgroundColor: esCumple ? '#dcfce7' : esRevision ? '#fef3c7' : '#fee2e2',
+                                  borderColor: esCumple ? '#86efac' : esRevision ? '#fde68a' : '#fca5a5',
+                                  borderWidth: 1,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: '800',
+                                    color: esCumple ? '#15803d' : esRevision ? '#b45309' : '#b91c1c',
+                                  }}
+                                >
+                                  {valActiva.resultado_final || 'CUMPLE'}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+
+                          {/* Caso 1: Hay validación vinculada o coincidente por documento/nombre */}
+                          {valActiva ? (
+                            <View
+                              style={{
+                                backgroundColor: '#ffffff',
+                                borderRadius: 8,
+                                padding: 10,
+                                borderWidth: 1,
+                                borderColor: '#bbf7d0',
+                                gap: 8,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0f172a' }}>
+                                    👤 {valActiva.candidato_nombre || casoActivo?.servidor_nombre || 'Aspirante'}
+                                  </Text>
+                                  <Text style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>
+                                    Cédula: {valActiva.candidato_documento || casoActivo?.servidor_cedula || 'N/A'} • Cargo:{' '}
+                                    {valActiva.cargo_nombre || casoActivo?.cargo || 'Sin cargo'}
+                                    {valActiva.cargo_codigo ? ` (Cód. ${valActiva.cargo_codigo} Gr. ${valActiva.cargo_grado})` : ''}
+                                  </Text>
+                                  <Text style={{ fontSize: 10.5, color: '#64748b', marginTop: 2 }}>
+                                    📁 Expediente ID: {valActiva.id}
+                                    {obsReqIdValidacionIngresos === valActiva.id ? (
+                                      <Text style={{ color: '#059669', fontWeight: '700' }}> • ✅ Vinculado al trámite</Text>
+                                    ) : (
+                                      <Text style={{ color: '#d97706', fontWeight: '700' }}> • 🔍 Coincidencia automática detectada</Text>
+                                    )}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Botones de Acción de FT-318 */}
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                                <Pressable
+                                  onPress={() => {
+                                    setModalReqContext(null);
+                                    setModalObsReqVisible(false);
+                                    router.push(`/ingresos/${valActiva.id}`);
+                                  }}
+                                  style={{
+                                    backgroundColor: '#059669',
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 7,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                  }}
+                                >
+                                  <Ionicons name="open-outline" size={14} color="#ffffff" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#ffffff' }}>
+                                    Abrir Validación Técnica FT-318
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  onPress={() => handleDescargarExcelFT318(valActiva.id)}
+                                  style={{
+                                    backgroundColor: '#ecfdf5',
+                                    borderWidth: 1,
+                                    borderColor: '#a7f3d0',
+                                    paddingHorizontal: 11,
+                                    paddingVertical: 7,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                  }}
+                                >
+                                  <Ionicons name="download-outline" size={14} color="#065f46" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#065f46' }}>
+                                    Descargar Excel FT-318
+                                  </Text>
+                                </Pressable>
+
+                                {(!modalReqContext?.req.cumplido || obsReqIdValidacionIngresos !== valActiva.id) && (
+                                  <Pressable
+                                    onPress={() => vincularValidacionFT318ARequisito(valActiva.id, valActiva)}
+                                    style={{
+                                      backgroundColor: '#0284c7',
+                                      paddingHorizontal: 11,
+                                      paddingVertical: 7,
+                                      borderRadius: 6,
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 5,
+                                    }}
+                                  >
+                                    <Ionicons name="link-outline" size={14} color="#ffffff" />
+                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#ffffff' }}>
+                                      Vincular y Marcar Cumplido
+                                    </Text>
+                                  </Pressable>
+                                )}
+
+                                <Pressable
+                                  onPress={() => {
+                                    setModalReqContext(null);
+                                    setModalObsReqVisible(false);
+                                    irAValidacionIngresosNueva(casoActivo);
+                                  }}
+                                  style={{
+                                    backgroundColor: '#f8fafc',
+                                    borderWidth: 1,
+                                    borderColor: '#cbd5e1',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 7,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <Ionicons name="add-circle-outline" size={14} color="#475569" />
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
+                                    Nueva FT-318
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  onPress={() => setMostrarSelectorValidacionFT318(!mostrarSelectorValidacionFT318)}
+                                  style={{
+                                    backgroundColor: '#ffffff',
+                                    borderWidth: 1,
+                                    borderColor: '#e2e8f0',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 7,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                  }}
+                                >
+                                  <Ionicons name="swap-horizontal-outline" size={14} color="#64748b" />
+                                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748b' }}>
+                                    {mostrarSelectorValidacionFT318 ? 'Ocultar Selector' : 'Cambiar Expediente'}
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          ) : (
+                            /* Caso 2: Aún no existe o no se vinculó una validación */
+                            <View
+                              style={{
+                                backgroundColor: '#ffffff',
+                                borderRadius: 8,
+                                padding: 10,
+                                borderWidth: 1,
+                                borderColor: '#fed7aa',
+                                gap: 8,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Ionicons name="information-circle-outline" size={18} color="#ea580c" />
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#9a3412' }}>
+                                  No hay validación técnica vinculada para este aspirante
+                                </Text>
+                              </View>
+                              <Text style={{ fontSize: 11, color: '#7c2d12', lineHeight: 16 }}>
+                                Inicie el cotejo inteligente de hoja de vida asistido por IA para generar el archivo Excel oficial 2311300-FT-318 con todos los datos precargados, o vincule un expediente existente.
+                              </Text>
+
+                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                                <Pressable
+                                  onPress={() => {
+                                    setModalReqContext(null);
+                                    setModalObsReqVisible(false);
+                                    irAValidacionIngresosNueva(casoActivo);
+                                  }}
+                                  style={{
+                                    backgroundColor: '#059669',
+                                    paddingHorizontal: 14,
+                                    paddingVertical: 8,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                  }}
+                                >
+                                  <Ionicons name="open-outline" size={15} color="#ffffff" />
+                                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ffffff' }}>
+                                    Abrir Validación Técnica FT-318
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  onPress={() => setMostrarSelectorValidacionFT318(!mostrarSelectorValidacionFT318)}
+                                  style={{
+                                    backgroundColor: '#ffffff',
+                                    borderWidth: 1,
+                                    borderColor: '#cbd5e1',
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 8,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                  }}
+                                >
+                                  <Ionicons name="link-outline" size={14} color="#334155" />
+                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                                    {mostrarSelectorValidacionFT318 ? 'Ocultar Selector' : 'Vincular Expediente Existente'}
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          )}
+
+                          {/* Selector interactivo de expedientes existentes de Validación Técnica */}
+                          {mostrarSelectorValidacionFT318 && (
+                            <View
+                              style={{
+                                backgroundColor: '#ffffff',
+                                borderRadius: 8,
+                                borderWidth: 1,
+                                borderColor: '#94a3b8',
+                                padding: 10,
+                                gap: 8,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#1e293b' }}>
+                                  Expedientes de Validación Técnica ({validacionesIngresos.length} disponibles)
+                                </Text>
+                                <Pressable onPress={() => cargarValidacionesIngresos()} style={{ padding: 2 }}>
+                                  <Ionicons name="refresh" size={15} color="#64748b" />
+                                </Pressable>
+                              </View>
+
+                              <TextInput
+                                value={busquedaValidacionFT318}
+                                onChangeText={setBusquedaValidacionFT318}
+                                placeholder="Filtrar por nombre, cédula o cargo..."
+                                placeholderTextColor="#94a3b8"
+                                style={{
+                                  backgroundColor: '#f8fafc',
+                                  borderWidth: 1,
+                                  borderColor: '#e2e8f0',
+                                  borderRadius: 6,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 5,
+                                  fontSize: 11,
+                                  color: '#0f172a',
+                                }}
+                              />
+
+                              <View style={{ maxHeight: 180 }}>
+                                <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
+                                  {validacionesFiltradas.length > 0 ? (
+                                    validacionesFiltradas.map((v) => {
+                                      const esValCumple = v.resultado_final === 'CUMPLE';
+                                      const esSeleccionado = obsReqIdValidacionIngresos === v.id;
+                                      return (
+                                        <View
+                                          key={v.id}
+                                          style={{
+                                            paddingVertical: 7,
+                                            paddingHorizontal: 8,
+                                            borderBottomWidth: 1,
+                                            borderBottomColor: '#f1f5f9',
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            backgroundColor: esSeleccionado ? '#f0fdf4' : '#ffffff',
+                                            borderRadius: 4,
+                                            marginBottom: 2,
+                                          }}
+                                        >
+                                          <View style={{ flex: 1, marginRight: 8 }}>
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1e293b' }}>
+                                              {v.candidato_nombre || 'Sin nombre'} • C.C. {v.candidato_documento || 'S/D'}
+                                            </Text>
+                                            <Text style={{ fontSize: 10, color: '#64748b' }}>
+                                              {v.cargo_nombre} (Cód. {v.cargo_codigo} Gr. {v.cargo_grado})
+                                            </Text>
+                                          </View>
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                            <View
+                                              style={{
+                                                paddingHorizontal: 5,
+                                                paddingVertical: 1.5,
+                                                borderRadius: 4,
+                                                backgroundColor: esValCumple ? '#dcfce7' : '#fee2e2',
+                                              }}
+                                            >
+                                              <Text
+                                                style={{
+                                                  fontSize: 9.5,
+                                                  fontWeight: '700',
+                                                  color: esValCumple ? '#15803d' : '#b91c1c',
+                                                }}
+                                              >
+                                                {v.resultado_final || 'CUMPLE'}
+                                              </Text>
+                                            </View>
+                                            <Pressable
+                                              onPress={() => vincularValidacionFT318ARequisito(v.id, v)}
+                                              style={{
+                                                backgroundColor: esSeleccionado ? '#15803d' : '#0284c7',
+                                                paddingHorizontal: 8,
+                                                paddingVertical: 4,
+                                                borderRadius: 4,
+                                              }}
+                                            >
+                                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#ffffff' }}>
+                                                {esSeleccionado ? 'Vinculado' : 'Vincular'}
+                                              </Text>
+                                            </Pressable>
+                                          </View>
+                                        </View>
+                                      );
+                                    })
+                                  ) : (
+                                    <Text style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', paddingVertical: 10 }}>
+                                      No se encontraron validaciones coincidentes.
+                                    </Text>
+                                  )}
+                                </ScrollView>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })()}
 
                     {/* Acción dinámica para FT-095 Requisitos para Tomar Posesión */}
                     {esFT095 && (

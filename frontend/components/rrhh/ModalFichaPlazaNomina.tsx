@@ -828,9 +828,9 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                   </View>
 
                   <View style={{ width: '100%' }}>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>Dependencia Orgánica Oficial</Text>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                      {plazaActiva?.dependencia_cargo || (plazaActiva as any)?.dependencia_empleo || 'Secretaría Jurídica Distrital'}
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.marca700 }}>Dependencia del Cargo (Planta)</Text>
+                    <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate900, marginTop: 2 }}>
+                      {plazaActiva?.dependencia_cargo || 'Secretaría Jurídica Distrital'}
                     </Text>
                   </View>
 

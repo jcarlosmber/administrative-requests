@@ -358,12 +358,19 @@ async function analizarDocumentosConGemini(pdfFiles, cargoData, candidatoData = 
 DATOS DEL CARGO A EVALUAR:
 - Nombre: ${cargoData.nombre || 'Profesional Especializado'}
 - Requisito mínimo de experiencia: ${cargoData.requisito_experiencia_meses || 54} meses de experiencia de tipo: ${cargoData.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'}.
-INSTRUCCIÓN SEGÚN TIPO DE EXPERIENCIA:
+INSTRUCCIÓN OFICIAL PARA CLASIFICACIÓN DE CADA CERTIFICADO DE EXPERIENCIA (Decreto 1083 de 2015, Art. 2.2.2.3.7):
+Para CADA certificado o contrato analizado, debes clasificarlo en el campo "clasificacion_experiencia" asignando OBLIGATORIAMENTE una de las siguientes 4 categorías oficiales (o NO_RELACIONADA):
+1. "PROFESIONAL_RELACIONADA": Experiencia profesional adquirida a partir de la terminación y aprobación del pensum académico o grado profesional, cuyas funciones son similares o afines a las del Manual del Cargo evaluado.
+2. "PROFESIONAL": Experiencia profesional general adquirida con posterioridad al grado o terminación del pensum, en empleos del nivel profesional cuyas funciones NO tienen afinidad directa con el cargo evaluado.
+3. "RELACIONADA": Experiencia cuyas funciones son similares o afines a las del empleo a proveer, adquirida en cualquier nivel jerárquico (técnico, asistencial u operativo).
+4. "LABORAL": Experiencia adquirida en el ejercicio de cualquier empleo, ocupación, arte u oficio (asistencial, operativo, general o previa a culminar materias y que no clasifique en Ley 2039).
+5. "NO_RELACIONADA": Sin afinidad funcional ni técnica con el cargo evaluado, o no computable.
+INSTRUCCIÓN ESPECÍFICA SEGÚN EL EMPLEO:
 ${(cargoData.tipo_experiencia_requerida === 'LABORAL')
-  ? '¡ATENCIÓN! Para este cargo (ej. Conductor, Operario, Auxiliar, Asistencial) la experiencia exigida es LABORAL GENERAL (cualquier empleo, ocupación, arte u oficio legal). NO se requiere afinidad funcional ni título universitario previo para computar el tiempo. En "clasificacion_experiencia" clasifica como RELACIONADA o LABORAL_VALIDA si es una relación laboral válida, sin exigir funciones directas de abogado/profesional.'
+  ? '¡ATENCIÓN! Para este cargo (ej. Conductor, Operario, Auxiliar, Asistencial) la experiencia exigida es LABORAL GENERAL (cualquier empleo u ocupación formal). En "clasificacion_experiencia" clasifica como LABORAL o RELACIONADA si es una relación laboral válida, sin exigir funciones profesionales.'
   : (cargoData.tipo_experiencia_requerida === 'RELACIONADA')
-  ? 'Para este cargo la experiencia exigida es RELACIONADA (funciones afines al empleo a proveer). No exige corte de grado profesional universitario si no es del nivel profesional.'
-  : 'Para este cargo la experiencia exigida es ' + (cargoData.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA') + ' (evaluar fechas y funciones afines al manual del cargo).'
+  ? 'Para este cargo la experiencia exigida es RELACIONADA (funciones afines al empleo a proveer en cualquier nivel jerárquico).'
+  : 'Para este cargo la experiencia exigida es ' + (cargoData.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA') + ' (evaluar fechas posteriores al grado/pensum y afinidad funcional estricta con el manual del cargo).'
 }
 - Requisitos de formación: ${cargoData.requisitos_formacion || 'Título profesional y posgrado afín.'}
 - Manual de Funciones del Cargo:
@@ -460,7 +467,7 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
       "funciones_certificadas": [
         { "funcion": "Texto íntegro", "evidencia_textual": "Cita textual entre comillas" }
       ],
-      "clasificacion_experiencia": "RELACIONADA | NO_RELACIONADA | PROFESIONAL_NO_RELACIONADA | NO_PROFESIONAL | NO_DETERMINABLE",
+      "clasificacion_experiencia": "PROFESIONAL_RELACIONADA | PROFESIONAL | RELACIONADA | LABORAL | NO_RELACIONADA",
       "experiencia_relacionada": {
         "resultado": "RELACIONADA | NO_RELACIONADA | REQUIERE_REVISION",
         "nivel_confianza": "ALTO | MEDIO | BAJO",
@@ -706,6 +713,24 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
           mecanismos_contacto_cuales: 'Consta en membrete institucional'
         };
       }
+
+      // Normalizar clasificacion_experiencia a los 4 tipos oficiales de /ingresos/nueva
+      let clasif = String(cert.clasificacion_experiencia || '').toUpperCase().trim();
+      if (clasif === 'RELACIONADA') {
+        // Si el cargo es profesional, es profesional relacionada; si es técnico/asistencial, relacionada
+        clasif = (cargoData.tipo_experiencia_requerida === 'RELACIONADA') ? 'RELACIONADA' : 'PROFESIONAL_RELACIONADA';
+      } else if (clasif === 'PROFESIONAL_NO_RELACIONADA') {
+        clasif = 'PROFESIONAL';
+      } else if (clasif === 'NO_PROFESIONAL') {
+        clasif = 'LABORAL';
+      } else if (clasif === 'NO_DETERMINABLE') {
+        clasif = 'NO_RELACIONADA';
+      }
+
+      if (!['PROFESIONAL_RELACIONADA', 'PROFESIONAL', 'RELACIONADA', 'LABORAL', 'NO_RELACIONADA'].includes(clasif)) {
+        clasif = cert.experiencia_relacionada?.resultado === 'RELACIONADA' ? 'PROFESIONAL_RELACIONADA' : 'NO_RELACIONADA';
+      }
+      cert.clasificacion_experiencia = clasif;
     });
   }
 
@@ -913,6 +938,7 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
     cargo_evaluado: {
       ...cargoData,
       ...(parsedJson.cargo_evaluado || {}),
+      requisitos_experiencia: cargoData.requisitos_experiencia || parsedJson.cargo_evaluado?.requisitos_experiencia || '',
       id_sideap: cargoData.id_sideap || parsedJson.cargo_evaluado?.id_sideap || null,
       id_perno: cargoData.id_perno || parsedJson.cargo_evaluado?.id_perno || null,
       id_plaza: cargoData.id_plaza || parsedJson.cargo_evaluado?.id_plaza || null
@@ -1010,7 +1036,7 @@ RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA:
   "funciones_certificadas": [
     { "funcion": "Texto completo", "evidencia_textual": "Cita textual" }
   ],
-  "clasificacion_experiencia": "RELACIONADA | NO_RELACIONADA",
+  "clasificacion_experiencia": "PROFESIONAL_RELACIONADA | PROFESIONAL | RELACIONADA | LABORAL | NO_RELACIONADA",
   "experiencia_relacionada": {
     "resultado": "RELACIONADA | NO_RELACIONADA",
     "nivel_confianza": "ALTO | MEDIO",
@@ -1108,6 +1134,16 @@ RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON VÁLIDO CON LA SIGUIENTE ESTRUCTURA:
   parsed.nombre_archivo = certActual.nombre_archivo || listaFinalAnexos[0];
   parsed.id = certActual.id;
   parsed.id_certificado = certActual.id_certificado || parsed.id_certificado;
+
+  let clasifCompl = String(parsed.clasificacion_experiencia || '').toUpperCase().trim();
+  if (clasifCompl === 'RELACIONADA') clasifCompl = 'PROFESIONAL_RELACIONADA';
+  else if (clasifCompl === 'PROFESIONAL_NO_RELACIONADA') clasifCompl = 'PROFESIONAL';
+  else if (clasifCompl === 'NO_PROFESIONAL') clasifCompl = 'LABORAL';
+  else if (clasifCompl === 'NO_DETERMINABLE') clasifCompl = 'NO_RELACIONADA';
+  if (!['PROFESIONAL_RELACIONADA', 'PROFESIONAL', 'RELACIONADA', 'LABORAL', 'NO_RELACIONADA'].includes(clasifCompl)) {
+    clasifCompl = parsed.experiencia_relacionada?.resultado === 'RELACIONADA' ? 'PROFESIONAL_RELACIONADA' : 'NO_RELACIONADA';
+  }
+  parsed.clasificacion_experiencia = clasifCompl;
 
   return parsed;
 }

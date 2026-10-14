@@ -169,13 +169,15 @@ module.exports = function(pool) {
         ALTER TABLE public.ingreso_cargos 
           ADD COLUMN IF NOT EXISTS id_sideap INT, 
           ADD COLUMN IF NOT EXISTS id_perno INT,
-          ADD COLUMN IF NOT EXISTS tipo_experiencia_requerida VARCHAR(50) DEFAULT 'PROFESIONAL_RELACIONADA';
+          ADD COLUMN IF NOT EXISTS tipo_experiencia_requerida VARCHAR(50) DEFAULT 'PROFESIONAL_RELACIONADA',
+          ADD COLUMN IF NOT EXISTS requisitos_experiencia TEXT;
         ALTER TABLE public.ingreso_validaciones
           ADD COLUMN IF NOT EXISTS id_sideap INT,
           ADD COLUMN IF NOT EXISTS id_perno INT,
           ADD COLUMN IF NOT EXISTS id_plaza INT,
           ADD COLUMN IF NOT EXISTS cargo_dependencia TEXT,
           ADD COLUMN IF NOT EXISTS requisitos_formacion TEXT,
+          ADD COLUMN IF NOT EXISTS requisitos_experiencia TEXT,
           ADD COLUMN IF NOT EXISTS tipo_experiencia_requerida VARCHAR(50) DEFAULT 'PROFESIONAL_RELACIONADA',
           ADD COLUMN IF NOT EXISTS experiencia_laboral_meses NUMERIC(6, 2) DEFAULT 0,
           ADD COLUMN IF NOT EXISTS formacion_academica JSONB DEFAULT '[]'::jsonb,
@@ -504,12 +506,12 @@ module.exports = function(pool) {
       const valQuery = `
         INSERT INTO ingreso_validaciones (
           candidato_id, cargo_id, cargo_nombre, cargo_codigo, cargo_grado, cargo_dependencia,
-          requisitos_formacion, requisito_minimo_meses, experiencia_relacionada_meses,
+          requisitos_formacion, requisitos_experiencia, requisito_minimo_meses, experiencia_relacionada_meses,
           experiencia_no_relacionada_meses, tiempo_excluido_traslapes_meses, diferencia_meses,
           resultado_final, justificacion_final, requiere_revision_humana, evaluador_email, estado,
           id_sideap, id_perno, id_plaza, formacion_academica, documentos_no_aplican,
           tipo_experiencia_requerida, experiencia_laboral_meses
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
         RETURNING id;
       `;
       const valValues = [
@@ -520,6 +522,7 @@ module.exports = function(pool) {
         cargo_evaluado.grado || '',
         cargo_evaluado.dependencia || 'Secretaría Jurídica Distrital',
         cargo_evaluado.requisitos_formacion || cargo_evaluado.requisitos || '',
+        cargo_evaluado.requisitos_experiencia || '',
         consolidado.requisito_minimo_meses || 0,
         consolidado.experiencia_relacionada_meses || 0,
         consolidado.experiencia_no_relacionada_meses || 0,
@@ -660,11 +663,12 @@ module.exports = function(pool) {
       const valQuery = `
         SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento, c.email as candidato_email, c.telefono as candidato_telefono,
                COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(v.requisitos_experiencia, p.requisitos_experiencia, ic.requisitos_experiencia, '') as requisitos_experiencia_resuelto,
                COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
         LEFT JOIN LATERAL (
-          SELECT p.dependencia_cargo, p.requisitos
+          SELECT p.dependencia_cargo, p.requisitos, p.requisitos_formacion, p.requisitos_experiencia
           FROM planta_personal_sjd p
           WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
              OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
@@ -678,7 +682,7 @@ module.exports = function(pool) {
           LIMIT 1
         ) p ON true
         LEFT JOIN LATERAL (
-          SELECT ic.dependencia, ic.requisitos_formacion
+          SELECT ic.dependencia, ic.requisitos_formacion, ic.requisitos_experiencia
           FROM ingreso_cargos ic
           WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
              OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
@@ -699,6 +703,13 @@ module.exports = function(pool) {
       const certsRes = await pool.query(certsQuery, [id]);
 
       const val = valRes.rows[0];
+
+      let reqExpOficial = (val.requisitos_experiencia_resuelto || val.requisitos_experiencia || '').trim();
+      if (!reqExpOficial && val.requisitos_formacion_resuelto && val.requisitos_formacion_resuelto.includes('Experiencia:')) {
+        const expMatch = val.requisitos_formacion_resuelto.match(/Experiencia:\s*([^]+)/i);
+        if (expMatch) reqExpOficial = expMatch[1].trim();
+      }
+
       const responseData = {
         id: val.id,
         candidato: {
@@ -718,6 +729,7 @@ module.exports = function(pool) {
           dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
           requisito_experiencia_meses: Number(val.requisito_minimo_meses),
           requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || '',
+          requisitos_experiencia: reqExpOficial,
           tipo_experiencia_requerida: val.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'
         },
         consolidado: {
@@ -2011,12 +2023,13 @@ module.exports = function(pool) {
         SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento,
                c.email as candidato_email, c.telefono as candidato_telefono,
                COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(v.requisitos_experiencia, p.requisitos_experiencia, ic.requisitos_experiencia, '') as requisitos_experiencia_resuelto,
                COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto,
                COALESCE(p.funciones, ic.funciones_cargo, '[]'::jsonb) as funciones_cargo_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
         LEFT JOIN LATERAL (
-          SELECT p.dependencia_cargo, p.requisitos, p.funciones
+          SELECT p.dependencia_cargo, p.requisitos, p.requisitos_formacion, p.requisitos_experiencia, p.funciones
           FROM planta_personal_sjd p
           WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
              OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
@@ -2030,7 +2043,7 @@ module.exports = function(pool) {
           LIMIT 1
         ) p ON true
         LEFT JOIN LATERAL (
-          SELECT ic.dependencia, ic.requisitos_formacion, ic.funciones_cargo
+          SELECT ic.dependencia, ic.requisitos_formacion, ic.requisitos_experiencia, ic.funciones_cargo
           FROM ingreso_cargos ic
           WHERE (v.cargo_id IS NOT NULL AND ic.id = v.cargo_id)
              OR (v.cargo_nombre IS NOT NULL AND ic.nombre ILIKE v.cargo_nombre)
@@ -2047,6 +2060,12 @@ module.exports = function(pool) {
       const certsRes = await pool.query(certsQuery, [id]);
 
       const val = valRes.rows[0];
+
+      let reqExpOficial = (val.requisitos_experiencia_resuelto || val.requisitos_experiencia || '').trim();
+      if (!reqExpOficial && val.requisitos_formacion_resuelto && val.requisitos_formacion_resuelto.includes('Experiencia:')) {
+        const expMatch = val.requisitos_formacion_resuelto.match(/Experiencia:\s*([^]+)/i);
+        if (expMatch) reqExpOficial = expMatch[1].trim();
+      }
 
       let funcionesCargo = [];
       if (Array.isArray(val.funciones_cargo_resuelto)) {
@@ -2077,7 +2096,9 @@ module.exports = function(pool) {
           grado: val.cargo_grado,
           dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
           requisito_experiencia_meses: Number(val.requisito_minimo_meses),
+          tipo_experiencia_requerida: val.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA',
           requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || '',
+          requisitos_experiencia: reqExpOficial,
           funciones_cargo: funcionesCargo
         },
         consolidado: {

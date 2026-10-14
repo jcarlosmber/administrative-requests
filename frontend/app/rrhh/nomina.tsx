@@ -549,7 +549,7 @@ export default function NominaScreen() {
     // Distribución por Dependencia
     const porDependencia: Record<string, { cantidad: number; masaSalarial: number; provistas: number; vacantes: number }> = {};
     listPlazas.forEach((p) => {
-      const d = (p.dependencia_cargo || p.dependencia_funcional || 'SIN DEPENDENCIA').toUpperCase().trim();
+      const d = (p.dependencia_cargo || 'SIN DEPENDENCIA').toUpperCase().trim();
       if (!porDependencia[d]) {
         porDependencia[d] = { cantidad: 0, masaSalarial: 0, provistas: 0, vacantes: 0 };
       }
@@ -833,8 +833,7 @@ export default function NominaScreen() {
       const depQ = filtroDependenciaReporte.trim().toLowerCase();
       res = res.filter(
         (p) =>
-          (p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(depQ)) ||
-          (p.dependencia_funcional && p.dependencia_funcional.toLowerCase().includes(depQ))
+          p.dependencia_cargo && p.dependencia_cargo.toLowerCase().includes(depQ)
       );
     }
     if (filtroEstadoCargoReporte !== 'TODOS') {
@@ -945,7 +944,7 @@ export default function NominaScreen() {
         });
       } else if (tipo === 'ocupacion_vacancias') {
         nombreArchivo = 'Reporte_Ocupacion_Vacancias_Planta.csv';
-        const headers = ['Plaza', 'ID_SIDEAP', 'Nivel', 'Cargo', 'Codigo', 'Grado', 'Dependencia', 'Estado_Cargo', 'Situacion_Titular', 'Situacion_Administrativa', 'Titular', 'Es_Encargo', 'Servidor_Encargado', 'Asignacion_Basica'];
+        const headers = ['Plaza', 'ID_SIDEAP', 'Nivel', 'Cargo', 'Codigo', 'Grado', 'Dependencia_Cargo', 'Estado_Cargo', 'Situacion_Titular', 'Situacion_Administrativa', 'Titular', 'Es_Encargo', 'Servidor_Encargado', 'Asignacion_Basica'];
         csvContent = headers.join(';') + '\n';
         listPlazas.forEach((p) => {
           csvContent += [
@@ -967,7 +966,7 @@ export default function NominaScreen() {
         });
       } else if (tipo === 'dependencias_costo') {
         nombreArchivo = 'Reporte_Presupuesto_Dependencias_Planta.csv';
-        const headers = ['Dependencia', 'Total_Plazas', 'Plazas_Ocupadas', 'Plazas_Vacantes', 'Masa_Salarial_Mensual', 'Presupuesto_Anual_Estimado', 'Salario_Promedio'];
+        const headers = ['Dependencia_Cargo', 'Total_Plazas', 'Plazas_Ocupadas', 'Plazas_Vacantes', 'Masa_Salarial_Mensual', 'Presupuesto_Anual_Estimado', 'Salario_Promedio'];
         csvContent = headers.join(';') + '\n';
         Object.entries(metricasReportes.porDependencia).forEach(([dep, d]) => {
           const anual = d.masaSalarial * 12 * 1.5;
@@ -991,7 +990,7 @@ export default function NominaScreen() {
           'Cargo',
           'Codigo',
           'Grado',
-          'Dependencia',
+          'Dependencia_Cargo',
           'Genero_Reportado',
           'Edad',
           'Titular_Ocupante',
@@ -1223,8 +1222,7 @@ export default function NominaScreen() {
       const depsFiltro = filtroDependencia.split(',').map((d) => d.trim().toLowerCase()).filter(Boolean);
       if (depsFiltro.length > 0) {
         const depC = (p.dependencia_cargo || '').toLowerCase();
-        const depF = (p.dependencia_funcional || '').toLowerCase();
-        if (!depsFiltro.some((df) => depC.includes(df) || depF.includes(df))) return false;
+        if (!depsFiltro.some((df) => depC.includes(df))) return false;
       }
     }
     if (nivelSeleccionado !== 'TODOS') {
@@ -1286,8 +1284,7 @@ export default function NominaScreen() {
     if (omitir !== 'dependencia' && filtroDependenciaReporte !== 'TODAS') {
       const depQ = filtroDependenciaReporte.trim().toLowerCase();
       const depC = (p.dependencia_cargo || '').toLowerCase();
-      const depF = (p.dependencia_funcional || '').toLowerCase();
-      if (!depC.includes(depQ) && !depF.includes(depQ)) return false;
+      if (!depC.includes(depQ)) return false;
     }
     if (filtroNivelReporte !== 'TODOS') {
       const nivFiltro = filtroNivelReporte.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1890,7 +1887,7 @@ export default function NominaScreen() {
       case 'codigoGrado':
         return 'Seleccionar Códigos y Grados (Multi-selección)';
       case 'dependencia':
-        return 'Seleccionar Dependencias (Multi-selección)';
+        return 'Seleccionar Dependencias del Cargo (Multi-selección)';
       case 'situacion':
         return 'Seleccionar Tipo de Vinculación al Cargo / SIDEAP (Multi-selección)';
       case 'situacionTitular':
@@ -3631,7 +3628,7 @@ export default function NominaScreen() {
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                       <Text style={{ fontSize: 9.5, fontWeight: '700', color: filtroDependencia ? THEME.marca700 : THEME.slate400, textTransform: 'uppercase' }}>
-                        Dependencia
+                        Dependencia del Cargo
                       </Text>
                       {filtroDependencia ? (
                         <Pressable
@@ -5307,26 +5304,29 @@ export default function NominaScreen() {
                           { col: 'J (10)', header: 'SEXO', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Género del servidor (MUJER / HOMBRE).', ej: 'MUJER' },
                           { col: 'K (11)', header: 'EDAD', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Entero', desc: 'Edad en años.', ej: '45' },
                           { col: 'L (12)', header: 'SITUACIÓN ADMINISTRATIVA', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación administrativa activa: ENCARGO, EN PROPIEDAD, VACANCIA.', ej: 'EN PROPIEDAD' },
-                          { col: 'M (13)', header: 'SITUACIÓN ADMINISTRATIVA TITULAR', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación del titular con derechos sobre la plaza.', ej: 'EN PROPIEDAD' },
-                          { col: 'N (14)', header: 'CEDULA (TITULAR)', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto/Número', desc: 'Cédula del titular si la plaza está ocupada o en encargo.', ej: '36697863' },
+                          { col: 'M (13)', header: 'SITUACIÓN ADMINISTRATIVA TITULAR DEL CARGO', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Situación del titular con derechos sobre la plaza.', ej: 'EN PROPIEDAD' },
+                          { col: 'N (14)', header: 'CEDULA', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto/Número', desc: 'Cédula del titular si la plaza está ocupada o en encargo.', ej: '36697863' },
                           { col: 'O (15)', header: 'TITULAR CARGO', req: 'Requerido*', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Nombre del servidor titular con derechos de carrera.', ej: 'ANA MARTA MIRANDA CORRALES' },
-                          { col: 'Q (17)', header: 'ID-E', req: 'Recomendado', reqColor: '#4338CA', reqBg: '#EEF2FF', tipo: 'Texto', desc: 'Escalera encargo: Código identificador de la cadena sucesoria de relevo (ej. E01 a E28).', ej: 'E04' },
-                          { col: 'R (18)', header: 'N', req: 'Recomendado', reqColor: '#4338CA', reqBg: '#EEF2FF', tipo: 'Entero', desc: 'numero de escalon de escalra encargo: Posición del escalón en la cadena sucesoria (1 = vacante raíz, 2 = relevo inmediato, etc.).', ej: '1' },
-                          { col: 'S (19)', header: 'PV', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'provisionalidad: Provisión transitoria del empleo bajo nombramiento en provisionalidad.', ej: 'PV' },
-                          { col: 'T (20)', header: 'PP OE', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'periodo de prueba otra entidad: Servidor de carrera en periodo de prueba en otra entidad pública.', ej: 'PP OE' },
-                          { col: 'U (21)', header: 'VT LM', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'licencia maternidad: Vacancia temporal originada por licencia de maternidad.', ej: 'VT LM' },
-                          { col: 'V (22)', header: 'VT LNR', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'Licencia no remunerada: Vacancia temporal originada por licencia no remunerada.', ej: 'VT LNR' },
-                          { col: 'W (23)', header: 'OPEC', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto/Número', desc: 'Código OPEC de la convocatoria de la Comisión Nacional del Servicio Civil (CNSC).', ej: '201940' },
-                          { col: 'Y (25)', header: 'ESTADO DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Estado oficial: OCUPADO, VACANTE DEFINITIVA o VACANTE TEMPORAL.', ej: 'OCUPADO' },
-                          { col: 'Z (26)', header: 'NIVEL', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nivel jerárquico: DIRECTIVO, ASESOR, PROFESIONAL, TECNICO, ASISTENCIAL.', ej: 'ASESOR' },
-                          { col: 'AA (27)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta de personal.', ej: 'JEFE DE OFICINA ASESORA' },
-                          { col: 'AB (28)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
-                          { col: 'AC (29)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
-                          { col: 'AE (31)', header: 'PROPOSITO', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto', desc: 'No requerido en Excel. Se administra manualmente en el sistema para evitar sobreescrituras en las cargas mensuales.', ej: 'Asesorar en el diseño de planes y estrategias...' },
-                          { col: 'AF (32)', header: 'FUNCIONES', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Lista JSON', desc: 'No requerido en Excel. Se gestiona individualmente desde el modal interactivo de cargos.', ej: '1. Asesorar y coordinar proyectos... 2. Dirigir...' },
-                          { col: 'AG (33)', header: 'REQUISITOS', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto Largo', desc: 'No requerido en Excel. Estudios y experiencia laboral administrados desde el modal de cargos.', ej: 'Título profesional en Administración. Posgrado...' },
-                          { col: 'AH (34)', header: 'MANUAL DE FUNCIONES (PÁGINAS)', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto', desc: 'No requerido en Excel. Resolución, folios y enlace al PDF indexado por SIDEAP gestionados en el sistema.', ej: '34-37 RES. 085 de 2020' },
-                          { col: 'AI (35)', header: 'ASIGNACIÓN BÁSICA', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos.', ej: '10208470' },
+                          { col: 'P (16)', header: 'ID-E', req: 'Recomendado', reqColor: '#4338CA', reqBg: '#EEF2FF', tipo: 'Texto', desc: 'Escalera encargo: Código identificador de la cadena sucesoria de relevo (ej. E01 a E28).', ej: 'E04' },
+                          { col: 'Q (17)', header: 'N', req: 'Recomendado', reqColor: '#4338CA', reqBg: '#EEF2FF', tipo: 'Entero', desc: 'Número de escalón de escalera encargo (1 = vacante raíz, 2 = relevo inmediato, etc.).', ej: '1' },
+                          { col: 'R (18)', header: 'PV', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'Provisionalidad: Provisión transitoria del empleo bajo nombramiento en provisionalidad.', ej: 'PV' },
+                          { col: 'S (19)', header: 'PP OE', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'Periodo de prueba en otra entidad: Servidor de carrera en periodo de prueba en otra entidad pública.', ej: 'PP OE' },
+                          { col: 'T (20)', header: 'VT LM', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'Licencia maternidad: Vacancia temporal originada por licencia de maternidad.', ej: 'VT LM' },
+                          { col: 'U (21)', header: 'VT LNR', req: 'Opcional', reqColor: THEME.amberText, reqBg: THEME.amberBg, tipo: 'Texto', desc: 'Licencia no remunerada: Vacancia temporal originada por licencia no remunerada.', ej: 'VT LNR' },
+                          { col: 'V (22)', header: 'OPEC', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto/Número', desc: 'Código OPEC de la convocatoria de la Comisión Nacional del Servicio Civil (CNSC).', ej: '201940' },
+                          { col: 'W (23)', header: 'ESTADO DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Estado oficial: OCUPADO, VACANTE DEFINITIVA o VACANTE TEMPORAL.', ej: 'OCUPADO' },
+                          { col: 'X (24)', header: 'NIVEL', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Nivel jerárquico: DIRECTIVO, ASESOR, PROFESIONAL, TECNICO, ASISTENCIAL.', ej: 'ASESOR' },
+                          { col: 'Y (25)', header: 'NOMENCLATURA_ADMIN', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Denominación oficial del empleo en la planta de personal.', ej: 'JEFE DE OFICINA ASESORA' },
+                          { col: 'Z (26)', header: 'CÓDIGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Código del cargo según nomenclatura distrital.', ej: '115' },
+                          { col: 'AA (27)', header: 'GRADO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Grado salarial del empleo.', ej: '6' },
+                          { col: 'AB (28)', header: 'U (Codigo-Grado)', req: 'Recomendado', reqColor: THEME.skyText, reqBg: THEME.skyBg, tipo: 'Texto', desc: 'Identificador unificado de Nomenclatura Código-Grado distrital.', ej: '115-6' },
+                          { col: 'AC (29)', header: 'DEPENDENCIA DEL CARGO', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Texto', desc: 'Dependencia del Cargo a la que pertenece la plaza según estructura oficial (Columna AC principal).', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
+                          { col: 'AD (30)', header: 'DEPENDENCIA FUNCIONAL', req: 'Opcional', reqColor: THEME.slate500, reqBg: THEME.slate100, tipo: 'Texto', desc: 'Dependencia funcional o de apoyo asignada en la labor diaria.', ej: 'OFICINA ASESORA DE PLANEACIÓN' },
+                          { col: 'AE (31)', header: 'PROPOSITO', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto', desc: 'Propósito principal del cargo administrado en el sistema.', ej: 'Asesorar en el diseño de planes y estrategias...' },
+                          { col: 'AF (32)', header: 'FUNCIONES', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Lista JSON', desc: 'Funciones esenciales del cargo administradas desde el perfil interactivo.', ej: '1. Asesorar y coordinar proyectos... 2. Dirigir...' },
+                          { col: 'AG (33)', header: 'REQUISITOS', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto Largo', desc: 'Estudios y experiencia laboral requeridos para el empleo.', ej: 'Título profesional en Administración. Posgrado...' },
+                          { col: 'AH (34)', header: 'Páginas Manual de Funciones', req: 'Gestión Manual', reqColor: THEME.emeraldText, reqBg: THEME.emeraldBg, tipo: 'Texto', desc: 'Resolución y páginas del Manual Específico de Funciones indexado.', ej: '34-37 RES. 085 de 2020' },
+                          { col: 'AI (35)', header: 'ASIGNACIÓN BÁSICA 2026', req: 'Obligatorio', reqColor: THEME.roseText, reqBg: THEME.roseBg, tipo: 'Moneda (Num)', desc: 'Asignación básica mensual en pesos colombianos fijada para la vigencia 2026.', ej: '10208470' },
                         ].map((row, idx) => (
                           <View
                             key={idx}
@@ -6059,7 +6059,7 @@ export default function NominaScreen() {
                     {/* Fila 4: Filtro de Dependencias */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate400, textTransform: 'uppercase' }}>
-                        Dependencia:
+                        Dependencia del Cargo:
                       </Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                         <Pressable
@@ -6077,7 +6077,7 @@ export default function NominaScreen() {
                           }}
                         >
                           <Text style={{ fontSize: 11, fontWeight: filtroDependenciaReporte === 'TODAS' ? '700' : '500', color: filtroDependenciaReporte === 'TODAS' ? THEME.white : THEME.slate700 }}>
-                            Todas las Dependencias
+                            Todas las Dependencias del Cargo
                           </Text>
                         </Pressable>
                         {listaDependencias.map((dep) => {
@@ -6130,7 +6130,7 @@ export default function NominaScreen() {
                           <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
                           <Text style={{ width: '18%', minWidth: 160, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
                           <Text style={{ width: '6%', minWidth: 60, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
-                          <Text style={{ width: '16%', minWidth: 140, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                          <Text style={{ width: '16%', minWidth: 140, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA DEL CARGO</Text>
                           <Text style={{ width: '12%', minWidth: 110, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VINCULACIÓN</Text>
                           <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>SITUACIÓN</Text>
                           <Text style={{ width: '14%', minWidth: 130, fontSize: 11, fontWeight: '700', color: THEME.white }}>TITULAR / SERVIDOR</Text>
@@ -6184,7 +6184,7 @@ export default function NominaScreen() {
                                   <Text style={{ width: '8%', minWidth: 80, fontSize: 11, fontWeight: '600', color: THEME.slate700 }} numberOfLines={1}>{p.nivel}</Text>
                                   <Text style={{ width: '18%', minWidth: 160, fontSize: 11.5, fontWeight: '700', color: THEME.slate900 }} numberOfLines={1}>{p.cargo}</Text>
                                   <Text style={{ width: '6%', minWidth: 60, fontSize: 11, color: THEME.slate600 }}>{p.codigo} - {p.grado}</Text>
-                                  <Text style={{ width: '16%', minWidth: 140, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo || p.dependencia_funcional}</Text>
+                                  <Text style={{ width: '16%', minWidth: 140, fontSize: 11, color: THEME.slate600 }} numberOfLines={1}>{p.dependencia_cargo || 'Secretaría Jurídica Distrital'}</Text>
                                   <View style={{ width: '12%', minWidth: 110 }}>
                                     <View style={{ backgroundColor: THEME.slate100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }}>
                                       <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.slate800 }} numberOfLines={1}>{p.tipo_vinculacion || 'SIN DEFINIR'}</Text>
@@ -6435,7 +6435,7 @@ export default function NominaScreen() {
                             <Text style={{ width: '10%', minWidth: 80, fontSize: 11, fontWeight: '700', color: THEME.white }}>NIVEL</Text>
                             <Text style={{ width: '25%', minWidth: 180, fontSize: 11, fontWeight: '700', color: THEME.white }}>CARGO / DENOMINACIÓN</Text>
                             <Text style={{ width: '8%', minWidth: 65, fontSize: 11, fontWeight: '700', color: THEME.white }}>CÓD/GR</Text>
-                            <Text style={{ width: '20%', minWidth: 150, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA</Text>
+                            <Text style={{ width: '20%', minWidth: 150, fontSize: 11, fontWeight: '700', color: THEME.white }}>DEPENDENCIA DEL CARGO</Text>
                             <Text style={{ width: '12%', minWidth: 100, fontSize: 11, fontWeight: '700', color: THEME.white }}>TIPO VACANCIA</Text>
                             <Text style={{ width: '10%', minWidth: 90, fontSize: 11, fontWeight: '700', color: THEME.white, textAlign: 'right' }}>ASIGNACIÓN</Text>
                           </View>
@@ -6516,7 +6516,7 @@ export default function NominaScreen() {
                   {/* Tabla de Dependencias y Costos */}
                   <View style={{ backgroundColor: THEME.white, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: THEME.slate200, gap: 12 }}>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: THEME.slate900 }}>
-                      Distribución de Personal y Costo Fiscal por Dependencia
+                      Distribución de Personal y Costo Fiscal por Dependencia del Cargo
                     </Text>
                     <View style={{ gap: 8 }}>
                       {Object.entries(metricasReportes.porDependencia)
@@ -7289,7 +7289,7 @@ export default function NominaScreen() {
                         <Text style={{ width: 130, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>NIVEL LEGAL</Text>
                         <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>EMPLEO PÚBLICO</Text>
                         <Text style={{ flex: 2, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>TITULAR / ENCARGADO</Text>
-                        <Text style={{ flex: 1.8, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>DEPENDENCIA</Text>
+                        <Text style={{ flex: 1.8, fontSize: 10.5, fontWeight: '700', color: THEME.slate600 }}>DEPENDENCIA DEL CARGO</Text>
                         <Text style={{ width: 90, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>GÉNERO</Text>
                         <Text style={{ width: 105, fontSize: 10.5, fontWeight: '700', color: THEME.slate600, textAlign: 'center' }}>REPORTE</Text>
                       </View>

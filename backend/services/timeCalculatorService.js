@@ -269,7 +269,10 @@ function auditCertificatesAndCalculateTotals(
       metodo_calculo: 'DIAS_EXACTOS_DIVIDIDO_30'
     };
 
-    const esRelacionada = cert.experiencia_relacionada?.resultado === 'RELACIONADA' || cert.clasificacion_experiencia === 'RELACIONADA';
+    const clasifUpper = String(cert.clasificacion_experiencia || '').toUpperCase().trim();
+    const esRelacionada = cert.experiencia_relacionada?.resultado === 'RELACIONADA' ||
+                          clasifUpper === 'RELACIONADA' ||
+                          clasifUpper === 'PROFESIONAL_RELACIONADA';
 
     // -------------------------------------------------------------------------
     // VALIDACIÓN DE EXPERIENCIA PROFESIONAL PREVIA AL GRADO (D. 1083/15 y L. 2039/20)

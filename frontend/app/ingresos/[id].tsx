@@ -24,6 +24,7 @@ import {
   VerificacionFormalTitulo,
   VerificacionFormalTarjeta
 } from '../../lib/ingresosService';
+import mockPlazasData from '../../lib/plantaMockData.json';
 import PdfViewerModal from '../../components/PdfViewerModal';
 import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
@@ -63,7 +64,8 @@ function DetalleValidacionScreen() {
   const [formCertFechaInicio, setFormCertFechaInicio] = useState('');
   const [formCertFechaFin, setFormCertFechaFin] = useState('');
   const [formCertVinculoVigente, setFormCertVinculoVigente] = useState(false);
-  const [formCertClasificacion, setFormCertClasificacion] = useState<'RELACIONADA' | 'NO_RELACIONADA'>('RELACIONADA');
+  type TipoClasificacionCert = 'PROFESIONAL_RELACIONADA' | 'PROFESIONAL' | 'RELACIONADA' | 'LABORAL' | 'NO_RELACIONADA';
+  const [formCertClasificacion, setFormCertClasificacion] = useState<TipoClasificacionCert>('PROFESIONAL_RELACIONADA');
   const [formCertTipoVinculo, setFormCertTipoVinculo] = useState('');
   const [formCertFunciones, setFormCertFunciones] = useState('');
   const [formCertArchivoAsociado, setFormCertArchivoAsociado] = useState('');
@@ -917,7 +919,16 @@ function DetalleValidacionScreen() {
     setFormCertFechaInicio(cert.fecha_inicio || '');
     setFormCertFechaFin(cert.fecha_fin || '');
     setFormCertVinculoVigente(Boolean(cert.vinculo_vigente));
-    setFormCertClasificacion(cert.clasificacion_experiencia === 'RELACIONADA' ? 'RELACIONADA' : 'NO_RELACIONADA');
+    const rawClasif = (cert.clasificacion_experiencia || 'PROFESIONAL_RELACIONADA').toUpperCase();
+    if (rawClasif === 'PROFESIONAL_RELACIONADA' || rawClasif === 'PROFESIONAL' || rawClasif === 'RELACIONADA' || rawClasif === 'LABORAL' || rawClasif === 'NO_RELACIONADA') {
+      setFormCertClasificacion(rawClasif as TipoClasificacionCert);
+    } else if (rawClasif === 'PROFESIONAL_NO_RELACIONADA') {
+      setFormCertClasificacion('PROFESIONAL');
+    } else if (rawClasif === 'NO_PROFESIONAL') {
+      setFormCertClasificacion('LABORAL');
+    } else {
+      setFormCertClasificacion('PROFESIONAL_RELACIONADA');
+    }
     setFormCertTipoVinculo(cert.tipo_vinculo || 'Laboral');
     const fnTexto = (cert.funciones_certificadas || []).map((f: any) => typeof f === 'string' ? f : f.funcion).filter(Boolean).join('\n\n');
     setFormCertFunciones(fnTexto);
@@ -932,7 +943,7 @@ function DetalleValidacionScreen() {
     setFormCertFechaInicio('');
     setFormCertFechaFin('');
     setFormCertVinculoVigente(false);
-    setFormCertClasificacion('RELACIONADA');
+    setFormCertClasificacion('PROFESIONAL_RELACIONADA');
     setFormCertTipoVinculo(certBase?.tipo_vinculo || 'CONTRATO INDEFINIDO');
     setFormCertArchivoAsociado(certBase?.nombre_archivo || certBase?.anexos?.[0] || '');
     setFormCertFunciones('');
@@ -946,7 +957,7 @@ function DetalleValidacionScreen() {
     setFormCertFechaInicio('2017-09-01');
     setFormCertFechaFin('2022-11-15');
     setFormCertVinculoVigente(true);
-    setFormCertClasificacion('RELACIONADA');
+    setFormCertClasificacion('PROFESIONAL_RELACIONADA');
     const certEnel = certificados.find(c => (c.entidad || '').toUpperCase().includes('ENEL') || (c.entidad || '').toUpperCase().includes('CODENSA'));
     if (certEnel) {
       setFormCertArchivoAsociado(certEnel.nombre_archivo || certEnel.anexos?.[0] || '');
@@ -976,7 +987,7 @@ function DetalleValidacionScreen() {
     setFormCertFechaInicio('2006-01-17');
     setFormCertFechaFin('2010-03-02');
     setFormCertVinculoVigente(false);
-    setFormCertClasificacion('RELACIONADA');
+    setFormCertClasificacion('PROFESIONAL_RELACIONADA');
     const certIdu = certificados.find(c => (c.entidad || '').toUpperCase().includes('IDU') || (c.entidad || '').toUpperCase().includes('DESARROLLO URBANO'));
     if (certIdu) {
       setFormCertArchivoAsociado(certIdu.nombre_archivo || certIdu.anexos?.[0] || '');
@@ -1006,7 +1017,7 @@ function DetalleValidacionScreen() {
     setFormCertFechaInicio('2010-03-03');
     setFormCertFechaFin('2012-06-14');
     setFormCertVinculoVigente(false);
-    setFormCertClasificacion('RELACIONADA');
+    setFormCertClasificacion('PROFESIONAL_RELACIONADA');
     const certIdu = certificados.find(c => (c.entidad || '').toUpperCase().includes('IDU') || (c.entidad || '').toUpperCase().includes('DESARROLLO URBANO'));
     if (certIdu) {
       setFormCertArchivoAsociado(certIdu.nombre_archivo || certIdu.anexos?.[0] || '');
@@ -1032,7 +1043,7 @@ function DetalleValidacionScreen() {
     setFormCertFechaInicio('2012-02-21');
     setFormCertFechaFin('2012-04-15');
     setFormCertVinculoVigente(false);
-    setFormCertClasificacion('RELACIONADA');
+    setFormCertClasificacion('PROFESIONAL_RELACIONADA');
     const certIdu = certificados.find(c => (c.entidad || '').toUpperCase().includes('IDU') || (c.entidad || '').toUpperCase().includes('DESARROLLO URBANO'));
     if (certIdu) {
       setFormCertArchivoAsociado(certIdu.nombre_archivo || certIdu.anexos?.[0] || '');
@@ -1508,6 +1519,52 @@ function DetalleValidacionScreen() {
   }
 
   const { candidato, cargo_evaluado, consolidado } = data;
+
+  const redaccionOficialExperiencia = useMemo(() => {
+    // 1. Si viene en cargo_evaluado
+    if (cargo_evaluado?.requisitos_experiencia && cargo_evaluado.requisitos_experiencia.trim()) {
+      return cargo_evaluado.requisitos_experiencia.trim();
+    }
+    // 2. Si está en mockPlazasData (170 plazas oficiales de la planta SJD)
+    const plazaEncontrada = (mockPlazasData as any[]).find((p: any) => {
+      if (cargo_evaluado?.id_sideap && p.id_sideap === cargo_evaluado.id_sideap) return true;
+      if (cargo_evaluado?.id_perno && p.id_perno === cargo_evaluado.id_perno) return true;
+      if (cargo_evaluado?.id_plaza && p.id_plaza === cargo_evaluado.id_plaza) return true;
+      if (
+        cargo_evaluado?.codigo &&
+        cargo_evaluado?.grado &&
+        String(p.codigo).trim() === String(cargo_evaluado.codigo).trim() &&
+        String(p.grado).trim() === String(cargo_evaluado.grado).trim()
+      ) {
+        return true;
+      }
+      if (
+        cargo_evaluado?.nombre &&
+        p.cargo &&
+        p.cargo.toLowerCase().trim() === cargo_evaluado.nombre.toLowerCase().trim()
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (plazaEncontrada?.requisitos_experiencia && plazaEncontrada.requisitos_experiencia.trim()) {
+      return plazaEncontrada.requisitos_experiencia.trim();
+    }
+    // 3. Si en requisitos o requisitos_formacion viene "Experiencia:"
+    const reqGeneral = (cargo_evaluado as any)?.requisitos || cargo_evaluado?.requisitos_formacion || '';
+    if (reqGeneral.includes('Experiencia:')) {
+      const expPart = reqGeneral.split(/Experiencia:\s*/i)[1]?.trim();
+      if (expPart) return expPart;
+    }
+    // 4. Fallback estructurado formal según meses y tipo
+    const reqMeses = Number(cargo_evaluado?.requisito_experiencia_meses) || Number(consolidado?.requisito_minimo_meses) || 0;
+    const tipo = String(cargo_evaluado?.tipo_experiencia_requerida || consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA').toUpperCase();
+    if (reqMeses === 0) return 'No requiere experiencia.';
+    if (tipo === 'LABORAL') return `${reqMeses} meses de experiencia laboral.`;
+    if (tipo === 'PROFESIONAL') return `${reqMeses} meses de experiencia profesional.`;
+    return `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
+  }, [cargo_evaluado, consolidado]);
+
   const esCumple = consolidado.resultado_final === 'CUMPLE';
   const esNoCumple = consolidado.resultado_final === 'NO_CUMPLE';
   const esRequiereRevision = consolidado.resultado_final === 'REQUIERE_REVISION' || consolidado.resultado_final === 'REQUIERE REVISION' || Boolean(consolidado.requiere_revision_humana);
@@ -2016,8 +2073,8 @@ function DetalleValidacionScreen() {
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 12, color: '#475569' }}>
-                    {cargo_evaluado.dependencia || 'Secretaría Jurídica Distrital'}
+                  <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>
+                    Dependencia del Cargo: {cargo_evaluado.dependencia || 'Secretaría Jurídica Distrital'}
                   </Text>
                   {cargo_evaluado.id_sideap ? (
                     <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#C7D2FE' }}>
@@ -2027,6 +2084,11 @@ function DetalleValidacionScreen() {
                   {cargo_evaluado.id_perno ? (
                     <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>PERNO #{cargo_evaluado.id_perno}</Text>
+                    </View>
+                  ) : null}
+                  {cargo_evaluado.opec ? (
+                    <View style={{ backgroundColor: '#CCFBF1', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#99F6E4' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#0F766E' }}>OPEC #{cargo_evaluado.opec}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -2376,6 +2438,16 @@ function DetalleValidacionScreen() {
                 )}
               </View>
 
+              {/* Redacción Oficial de los Requisitos de Experiencia */}
+              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 4, textTransform: 'uppercase' }}>
+                  Redacción Oficial de los Requisitos de Experiencia
+                </Text>
+                <Text style={{ fontSize: 13, color: '#1E293B', fontWeight: '600', lineHeight: 18 }}>
+                  {redaccionOficialExperiencia}
+                </Text>
+              </View>
+
               {/* 3 Métricas en Tarjetas Limpias */}
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                 <View style={{ flex: 1, minWidth: 90, backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
@@ -2551,7 +2623,7 @@ function DetalleValidacionScreen() {
 
                     return (
                       <View key={titKey} style={{ borderBottomWidth: idx < titulos.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}>
-                        {/* Fila Principal Cliqueable */}
+                        {/* Fila Principal Cliqueable con Alto Contraste en Seleccionada */}
                         <TouchableOpacity
                           activeOpacity={0.75}
                           onPress={() => toggleExpandirTitulo(titKey)}
@@ -2560,7 +2632,9 @@ function DetalleValidacionScreen() {
                             alignItems: 'center',
                             paddingVertical: 12,
                             paddingHorizontal: 14,
-                            backgroundColor: estaExpandido ? '#F0F9FF' : (idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC')
+                            backgroundColor: estaExpandido ? '#0F2744' : (idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC'),
+                            borderLeftWidth: estaExpandido ? 5 : 0,
+                            borderLeftColor: '#38BDF8'
                           }}
                         >
                           {/* REF */}
@@ -2568,17 +2642,17 @@ function DetalleValidacionScreen() {
                             <Ionicons
                               name={estaExpandido ? 'chevron-up-circle' : 'chevron-down-circle-outline'}
                               size={17}
-                              color={estaExpandido ? '#2563EB' : '#94A3B8'}
+                              color={estaExpandido ? '#38BDF8' : '#94A3B8'}
                             />
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: estaExpandido ? '#2563EB' : '#64748B' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: estaExpandido ? '#38BDF8' : '#64748B' }}>
                               TIT-0{idx + 1}
                             </Text>
                           </View>
 
                           {/* NIVEL / TIPO */}
                           <View style={{ width: '14%', paddingRight: 8 }}>
-                            <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#3730A3' }}>
+                            <View style={{ backgroundColor: estaExpandido ? '#1E3A8A' : '#EEF2FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: estaExpandido ? '#93C5FD' : '#3730A3' }}>
                                 {t.tipo.replace('_', ' ')}
                               </Text>
                             </View>
@@ -2586,11 +2660,11 @@ function DetalleValidacionScreen() {
 
                           {/* TÍTULO */}
                           <View style={{ width: '28%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }} numberOfLines={2}>
                               {t.titulo_obtenido}
                             </Text>
                             {!esBach && t.numero_tarjeta_o_registro ? (
-                              <Text style={{ fontSize: 10, color: '#2563EB', fontWeight: '700' }}>
+                              <Text style={{ fontSize: 10, color: estaExpandido ? '#93C5FD' : '#2563EB', fontWeight: '700' }}>
                                 Tarjeta: {t.numero_tarjeta_o_registro}
                               </Text>
                             ) : null}
@@ -2598,18 +2672,18 @@ function DetalleValidacionScreen() {
 
                           {/* INSTITUCIÓN */}
                           <View style={{ width: '26%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 12, color: '#334155' }} numberOfLines={2}>
+                            <Text style={{ fontSize: 12, color: estaExpandido ? '#CBD5E1' : '#334155' }} numberOfLines={2}>
                               {t.institucion}
                             </Text>
                           </View>
 
                           {/* FECHA DE GRADO */}
                           <View style={{ width: '12%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }}>
                               {t.fecha_grado || 'NO CONSTA'}
                             </Text>
                             {t.certifica_terminacion_materias && t.fecha_terminacion_materias ? (
-                              <Text style={{ fontSize: 10, color: '#059669', fontWeight: '700' }}>
+                              <Text style={{ fontSize: 10, color: estaExpandido ? '#6EE7B7' : '#059669', fontWeight: '700' }}>
                                 Mat: {t.fecha_terminacion_materias}
                               </Text>
                             ) : null}
@@ -2618,12 +2692,12 @@ function DetalleValidacionScreen() {
                           {/* ESTADO */}
                           <View style={{ width: '12%', paddingRight: 8 }}>
                             {cumple ? (
-                              <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Cumple Requisito</Text>
+                              <View style={{ backgroundColor: estaExpandido ? '#064E3B' : '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', borderWidth: estaExpandido ? 1 : 0, borderColor: '#059669' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: estaExpandido ? '#6EE7B7' : '#15803D' }}>✓ Cumple Requisito</Text>
                               </View>
                             ) : (
-                              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>Doc. Adicional</Text>
+                              <View style={{ backgroundColor: estaExpandido ? '#334155' : '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', borderWidth: estaExpandido ? 1 : 0, borderColor: '#475569' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: estaExpandido ? '#E2E8F0' : '#64748B' }}>Doc. Adicional</Text>
                               </View>
                             )}
                           </View>
@@ -3034,7 +3108,7 @@ function DetalleValidacionScreen() {
 
                     return (
                       <View key={certKey} style={{ borderBottomWidth: idx < certificados.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}>
-                        {/* FILA PRINCIPAL CLIQUEABLE */}
+                        {/* FILA PRINCIPAL CLIQUEABLE CON ALTO CONTRASTE EN SELECCIONADA */}
                         <TouchableOpacity
                           activeOpacity={0.75}
                           onPress={() => toggleExpandirCertificado(certKey)}
@@ -3043,7 +3117,9 @@ function DetalleValidacionScreen() {
                             alignItems: 'center',
                             paddingVertical: 12,
                             paddingHorizontal: 14,
-                            backgroundColor: estaExpandido ? '#F0F9FF' : (idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC')
+                            backgroundColor: estaExpandido ? '#0F2744' : (idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC'),
+                            borderLeftWidth: estaExpandido ? 5 : 0,
+                            borderLeftColor: '#38BDF8'
                           }}
                         >
                           {/* REF con icono de expansión */}
@@ -3051,36 +3127,36 @@ function DetalleValidacionScreen() {
                             <Ionicons
                               name={estaExpandido ? 'chevron-up-circle' : 'chevron-down-circle-outline'}
                               size={17}
-                              color={estaExpandido ? '#2563EB' : '#94A3B8'}
+                              color={estaExpandido ? '#38BDF8' : '#94A3B8'}
                             />
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: estaExpandido ? '#2563EB' : '#64748B' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '800', color: estaExpandido ? '#38BDF8' : '#64748B' }}>
                               EXP-0{idx + 1}
                             </Text>
                           </View>
 
                           {/* ENTIDAD */}
                           <View style={{ width: '25%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }} numberOfLines={2}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }} numberOfLines={2}>
                               {c.entidad}
                             </Text>
                             {c.nit_entidad ? (
-                              <Text style={{ fontSize: 10, color: '#64748B' }}>NIT: {c.nit_entidad}</Text>
+                              <Text style={{ fontSize: 10, color: estaExpandido ? '#94A3B8' : '#64748B' }}>NIT: {c.nit_entidad}</Text>
                             ) : null}
                           </View>
 
                           {/* CARGO */}
                           <View style={{ width: '25%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }} numberOfLines={2}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: estaExpandido ? '#F1F5F9' : '#1E293B' }} numberOfLines={2}>
                               {c.cargo_certificado}
                               {c.numero_contrato_o_acto && c.numero_contrato_o_acto !== 'NO CONSTA' && !c.cargo_certificado?.toUpperCase().includes(c.numero_contrato_o_acto.toUpperCase()) ? ` - ${/contrato/i.test(c.numero_contrato_o_acto) ? c.numero_contrato_o_acto : `Contrato No. ${c.numero_contrato_o_acto}`}` : ''}
                             </Text>
                             {c.tipo_vinculo ? (
-                              <Text style={{ fontSize: 10, color: '#64748B' }}>{c.tipo_vinculo}</Text>
+                              <Text style={{ fontSize: 10, color: estaExpandido ? '#94A3B8' : '#64748B' }}>{c.tipo_vinculo}</Text>
                             ) : null}
                             {c.anexos && c.anexos.length > 1 ? (
-                              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                                <Ionicons name="documents-outline" size={11} color="#B45309" />
-                                <Text style={{ fontSize: 9, fontWeight: '800', color: '#B45309' }}>
+                              <View style={{ backgroundColor: estaExpandido ? '#78350F' : '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: estaExpandido ? 1 : 0, borderColor: '#B45309' }}>
+                                <Ionicons name="documents-outline" size={11} color={estaExpandido ? '#FDE68A' : '#B45309'} />
+                                <Text style={{ fontSize: 9, fontWeight: '800', color: estaExpandido ? '#FDE68A' : '#B45309' }}>
                                   {c.anexos.length} Anexos Complementarios
                                 </Text>
                               </View>
@@ -3089,18 +3165,18 @@ function DetalleValidacionScreen() {
 
                           {/* PERIODO */}
                           <View style={{ width: '18%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 11, color: '#334155' }}>
+                            <Text style={{ fontSize: 11, color: estaExpandido ? '#CBD5E1' : '#334155' }}>
                               {c.fecha_inicio} al {c.fecha_fin || (c.vinculo_vigente ? 'Vigente' : 'N/A')}
                             </Text>
                           </View>
 
                           {/* TIEMPO VÁLIDO */}
                           <View style={{ width: '12%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 12, fontWeight: '800', color: mesesVal > 0 ? '#15803D' : '#94A3B8' }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: estaExpandido ? '#34D399' : (mesesVal > 0 ? '#15803D' : '#94A3B8') }}>
                               {mesesVal} meses
                             </Text>
                             {c.tiempo_valido ? (
-                              <Text style={{ fontSize: 10, color: '#64748B' }}>
+                              <Text style={{ fontSize: 10, color: estaExpandido ? '#94A3B8' : '#64748B' }}>
                                 {c.tiempo_valido.anios || 0}a {c.tiempo_valido.meses || 0}m {c.tiempo_valido.dias || 0}d
                               </Text>
                             ) : null}
@@ -3109,16 +3185,16 @@ function DetalleValidacionScreen() {
                           {/* CALIFICACIÓN Y ACCIONES */}
                           <View style={{ width: '12%', paddingRight: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                             {esRel ? (
-                              <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>✓ Relacionada</Text>
+                              <View style={{ backgroundColor: estaExpandido ? '#064E3B' : '#DCFCE7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', borderWidth: estaExpandido ? 1 : 0, borderColor: '#059669' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: estaExpandido ? '#6EE7B7' : '#15803D' }}>✓ Relacionada</Text>
                               </View>
                             ) : esPrevia ? (
-                              <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#B45309' }}>Previa a Grado</Text>
+                              <View style={{ backgroundColor: estaExpandido ? '#78350F' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', borderWidth: estaExpandido ? 1 : 0, borderColor: '#B45309' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '800', color: estaExpandido ? '#FDE68A' : '#B45309' }}>Previa a Grado</Text>
                               </View>
                             ) : (
-                              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>No Relacionada</Text>
+                              <View style={{ backgroundColor: estaExpandido ? '#334155' : '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', borderWidth: estaExpandido ? 1 : 0, borderColor: '#475569' }}>
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: estaExpandido ? '#E2E8F0' : '#64748B' }}>No Relacionada</Text>
                               </View>
                             )}
 
@@ -3130,13 +3206,13 @@ function DetalleValidacionScreen() {
                               style={{
                                 padding: 4,
                                 borderRadius: 5,
-                                backgroundColor: '#FEF2F2',
+                                backgroundColor: estaExpandido ? '#450A0A' : '#FEF2F2',
                                 borderWidth: 1,
-                                borderColor: '#FECACA'
+                                borderColor: estaExpandido ? '#7F1D1D' : '#FECACA'
                               }}
                               accessibilityLabel="Eliminar experiencia laboral"
                             >
-                              <Ionicons name="trash-outline" size={13} color="#DC2626" />
+                              <Ionicons name="trash-outline" size={13} color={estaExpandido ? '#F87171' : '#DC2626'} />
                             </TouchableOpacity>
                           </View>
                         </TouchableOpacity>
@@ -6941,8 +7017,8 @@ function DetalleValidacionScreen() {
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: 16,
-              width: '100%',
-              maxWidth: 620,
+              width: '95%',
+              maxWidth: 960,
               maxHeight: '90%',
               padding: 24,
               borderWidth: 1,
@@ -7280,59 +7356,175 @@ function DetalleValidacionScreen() {
                 />
               </View>
 
-              {/* Clasificación de Experiencia */}
+              {/* Clasificación de Experiencia - 4 Tipos Oficiales + No Relacionada */}
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
-                  Clasificación de la Experiencia
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 4 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                    Clasificación Oficial de la Experiencia (Decreto 1083 / Manual de Funciones)
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#64748B' }}>
+                    Seleccione la tipología aplicable
+                  </Text>
+                </View>
+
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                  {/* 1. PROFESIONAL_RELACIONADA */}
+                  <TouchableOpacity
+                    onPress={() => setFormCertClasificacion('PROFESIONAL_RELACIONADA')}
+                    style={{
+                      flex: 1,
+                      minWidth: 260,
+                      backgroundColor: formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? '#ECFDF5' : '#F8FAFC',
+                      borderWidth: formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? 2 : 1,
+                      borderColor: formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? '#059669' : '#CBD5E1',
+                      borderRadius: 10,
+                      padding: 12,
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="ribbon-outline" size={16} color={formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? '#059669' : '#64748B'} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? '#065F46' : '#1E293B' }}>
+                          Profesional Relacionada
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={17}
+                        color={formCertClasificacion === 'PROFESIONAL_RELACIONADA' ? '#059669' : '#94A3B8'}
+                      />
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#475569', lineHeight: 15 }}>
+                      Exige título profesional y funciones afines al empleo evaluado.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* 2. PROFESIONAL */}
+                  <TouchableOpacity
+                    onPress={() => setFormCertClasificacion('PROFESIONAL')}
+                    style={{
+                      flex: 1,
+                      minWidth: 260,
+                      backgroundColor: formCertClasificacion === 'PROFESIONAL' ? '#EFF6FF' : '#F8FAFC',
+                      borderWidth: formCertClasificacion === 'PROFESIONAL' ? 2 : 1,
+                      borderColor: formCertClasificacion === 'PROFESIONAL' ? '#2563EB' : '#CBD5E1',
+                      borderRadius: 10,
+                      padding: 12,
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="school-outline" size={16} color={formCertClasificacion === 'PROFESIONAL' ? '#2563EB' : '#64748B'} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: formCertClasificacion === 'PROFESIONAL' ? '#1E40AF' : '#1E293B' }}>
+                          Profesional General
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={formCertClasificacion === 'PROFESIONAL' ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={17}
+                        color={formCertClasificacion === 'PROFESIONAL' ? '#2563EB' : '#94A3B8'}
+                      />
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#475569', lineHeight: 15 }}>
+                      Posterior al grado/aprobación de pensum, funciones del nivel profesional sin afinidad específica.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* 3. RELACIONADA */}
                   <TouchableOpacity
                     onPress={() => setFormCertClasificacion('RELACIONADA')}
                     style={{
                       flex: 1,
-                      backgroundColor: formCertClasificacion === 'RELACIONADA' ? '#DCFCE7' : '#F8FAFC',
-                      borderWidth: 1,
-                      borderColor: formCertClasificacion === 'RELACIONADA' ? '#16A34A' : '#CBD5E1',
-                      paddingVertical: 9,
-                      borderRadius: 8,
-                      alignItems: 'center',
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      gap: 6
+                      minWidth: 260,
+                      backgroundColor: formCertClasificacion === 'RELACIONADA' ? '#F0FDFA' : '#F8FAFC',
+                      borderWidth: formCertClasificacion === 'RELACIONADA' ? 2 : 1,
+                      borderColor: formCertClasificacion === 'RELACIONADA' ? '#0D9488' : '#CBD5E1',
+                      borderRadius: 10,
+                      padding: 12,
+                      gap: 4
                     }}
                   >
-                    <Ionicons
-                      name={formCertClasificacion === 'RELACIONADA' ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={16}
-                      color={formCertClasificacion === 'RELACIONADA' ? '#15803D' : '#64748B'}
-                    />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: formCertClasificacion === 'RELACIONADA' ? '#15803D' : '#64748B' }}>
-                      Experiencia Relacionada
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="git-compare-outline" size={16} color={formCertClasificacion === 'RELACIONADA' ? '#0D9488' : '#64748B'} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: formCertClasificacion === 'RELACIONADA' ? '#0F766E' : '#1E293B' }}>
+                          Experiencia Relacionada
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={formCertClasificacion === 'RELACIONADA' ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={17}
+                        color={formCertClasificacion === 'RELACIONADA' ? '#0D9488' : '#94A3B8'}
+                      />
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#475569', lineHeight: 15 }}>
+                      Funciones afines al cargo a proveer, independiente del nivel profesional o técnico.
                     </Text>
                   </TouchableOpacity>
 
+                  {/* 4. LABORAL */}
+                  <TouchableOpacity
+                    onPress={() => setFormCertClasificacion('LABORAL')}
+                    style={{
+                      flex: 1,
+                      minWidth: 260,
+                      backgroundColor: formCertClasificacion === 'LABORAL' ? '#F5F3FF' : '#F8FAFC',
+                      borderWidth: formCertClasificacion === 'LABORAL' ? 2 : 1,
+                      borderColor: formCertClasificacion === 'LABORAL' ? '#7C3AED' : '#CBD5E1',
+                      borderRadius: 10,
+                      padding: 12,
+                      gap: 4
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="briefcase-outline" size={16} color={formCertClasificacion === 'LABORAL' ? '#7C3AED' : '#64748B'} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: formCertClasificacion === 'LABORAL' ? '#6D28D9' : '#1E293B' }}>
+                          Laboral General / Asistencial
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={formCertClasificacion === 'LABORAL' ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={17}
+                        color={formCertClasificacion === 'LABORAL' ? '#7C3AED' : '#94A3B8'}
+                      />
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#475569', lineHeight: 15 }}>
+                      Cualquier empleo o contrato formal previo o del nivel asistencial / operativo.
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* 5. NO_RELACIONADA */}
                   <TouchableOpacity
                     onPress={() => setFormCertClasificacion('NO_RELACIONADA')}
                     style={{
                       flex: 1,
-                      backgroundColor: formCertClasificacion === 'NO_RELACIONADA' ? '#FEF3C7' : '#F8FAFC',
-                      borderWidth: 1,
+                      minWidth: 260,
+                      backgroundColor: formCertClasificacion === 'NO_RELACIONADA' ? '#FFFBEB' : '#F8FAFC',
+                      borderWidth: formCertClasificacion === 'NO_RELACIONADA' ? 2 : 1,
                       borderColor: formCertClasificacion === 'NO_RELACIONADA' ? '#D97706' : '#CBD5E1',
-                      paddingVertical: 9,
-                      borderRadius: 8,
-                      alignItems: 'center',
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                      gap: 6
+                      borderRadius: 10,
+                      padding: 12,
+                      gap: 4
                     }}
                   >
-                    <Ionicons
-                      name={formCertClasificacion === 'NO_RELACIONADA' ? 'alert-circle' : 'ellipse-outline'}
-                      size={16}
-                      color={formCertClasificacion === 'NO_RELACIONADA' ? '#B45309' : '#64748B'}
-                    />
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: formCertClasificacion === 'NO_RELACIONADA' ? '#B45309' : '#64748B' }}>
-                      No Relacionada
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="close-circle-outline" size={16} color={formCertClasificacion === 'NO_RELACIONADA' ? '#D97706' : '#64748B'} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: formCertClasificacion === 'NO_RELACIONADA' ? '#92400E' : '#1E293B' }}>
+                          No Relacionada / No Computable
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={formCertClasificacion === 'NO_RELACIONADA' ? 'alert-circle' : 'ellipse-outline'}
+                        size={17}
+                        color={formCertClasificacion === 'NO_RELACIONADA' ? '#D97706' : '#94A3B8'}
+                      />
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#475569', lineHeight: 15 }}>
+                      Sin afinidad funcional con el empleo o no computable según requisitos del manual.
                     </Text>
                   </TouchableOpacity>
                 </View>
