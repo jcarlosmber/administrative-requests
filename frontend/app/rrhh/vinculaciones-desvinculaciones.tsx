@@ -6130,7 +6130,21 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               }
               return req;
             });
-            return { ...etapa, requisitos: nuevosRequisitos };
+
+            const reqsObligatorios = nuevosRequisitos.filter((r) => r.obligatorio && !r.noAplica);
+            const todosCumplidos = reqsObligatorios.length > 0
+              ? reqsObligatorios.every((r) => r.cumplido)
+              : nuevosRequisitos.filter((r) => !r.noAplica).every((r) => r.cumplido);
+            const algunCumplido = nuevosRequisitos.some((r) => r.cumplido);
+
+            let nuevoEstado: EstadoEtapa = 'pending';
+            if (todosCumplidos && nuevosRequisitos.length > 0) {
+              nuevoEstado = 'completed';
+            } else if (algunCumplido) {
+              nuevoEstado = 'in_progress';
+            }
+
+            return { ...etapa, requisitos: nuevosRequisitos, estado: nuevoEstado };
           }
           return etapa;
         });
@@ -6600,9 +6614,49 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           };
         });
 
+        // Si se guardó vc2_4 desde el modal, sincronizar inmediatamente la Fase 5
+        let etapasFinales = nuevasEtapas;
+        if (req.id === 'vc2_4') {
+          const esSinCobroModal = obsReqTipoCobro === 'sin_cobro';
+          etapasFinales = nuevasEtapas.map((et) => {
+            if (et.id === 'v_carr_6' || et.numero === 5) {
+              const reqsFase5 = et.requisitos.map((r5) => {
+                if (r5.id === 'vc6_pago_cnsc' || r5.tipoAccionEspecial === 'PAGO_CNSC') {
+                  return {
+                    ...r5,
+                    noAplica: esSinCobroModal,
+                    obligatorio: !esSinCobroModal,
+                    cumplido: esSinCobroModal ? true : Boolean(r5.numeroResolucionPago),
+                    observaciones: esSinCobroModal
+                      ? 'No Aplica: Uso de lista a título gratuito avalado en Fase 2'
+                      : (r5.observaciones === 'No Aplica: Uso de lista a título gratuito avalado en Fase 2' ? undefined : r5.observaciones),
+                  };
+                }
+                return r5;
+              });
+
+              const reqsOblig = reqsFase5.filter((r) => r.obligatorio && !r.noAplica);
+              const allDone = reqsOblig.length > 0
+                ? reqsOblig.every((r) => r.cumplido)
+                : reqsFase5.filter((r) => !r.noAplica).every((r) => r.cumplido);
+              const anyDone = reqsFase5.some((r) => r.cumplido);
+
+              let estadoFase5: EstadoEtapa = 'pending';
+              if (allDone && reqsFase5.length > 0) {
+                estadoFase5 = 'completed';
+              } else if (anyDone) {
+                estadoFase5 = 'in_progress';
+              }
+
+              return { ...et, requisitos: reqsFase5, estado: estadoFase5 };
+            }
+            return et;
+          });
+        }
+
         return {
           ...caso,
-          etapas: nuevasEtapas,
+          etapas: etapasFinales,
         };
       });
 
@@ -10075,7 +10129,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                           </Text>
                                                         </View>
 
-                                                        {/* Selector interactivo Sin Cobro vs Con Cobro */}
+                                                        {/* Selector interactivo Sin Cobro vs Con Cobro (como estaba antes) */}
                                                         <View style={{ flexDirection: 'row', gap: 6 }}>
                                                           <Pressable
                                                             onPress={(e) => {
@@ -10121,22 +10175,22 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                           >
                                                             <Ionicons name={esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={esConCobro ? '#ffffff' : '#64748b'} />
                                                             <Text style={{ fontSize: 11, fontWeight: '700', color: esConCobro ? '#ffffff' : '#475569' }}>
-                                                              Con Cobro (Genera Pago)
+                                                              Con Cobro (Requiere Resolución)
                                                             </Text>
                                                           </Pressable>
                                                         </View>
                                                       </View>
 
                                                       {esConCobro ? (
-                                                        <View style={{ gap: 4, backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#fde68a' }}>
+                                                        <View style={{ gap: 5, backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#fde68a' }}>
                                                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                                            <Ionicons name="information-circle" size={14} color="#d97706" />
+                                                            <Ionicons name="warning" size={13} color="#d97706" />
                                                             <Text style={{ fontSize: 11, fontWeight: '700', color: '#b45309' }}>
-                                                              ⚠️ Trámite Con Cobro: Se tramita en la Fase 5
+                                                              ⚠️ Obligatorio: Expedición de Resolución de Pago a la CNSC
                                                             </Text>
                                                           </View>
                                                           <Text style={{ fontSize: 10.5, color: '#92400e', lineHeight: 15 }}>
-                                                            Al generar costo de pruebas, la expedición y registro del <Text style={{ fontWeight: '700' }}>Número de Resolución de Ordenación del Gasto y Pago a la CNSC</Text> queda habilitado como requisito obligatorio en la <Text style={{ fontWeight: '700' }}>Fase 5 (Nómina, Afiliaciones & Reporte CNSC)</Text>.
+                                                            Al ser con cobro, la Secretaría Jurídica Distrital debe proyectar y expedir el acto administrativo de ordenación del gasto y pago a la CNSC con cargo al rubro institucional (habilitado en la Fase 5).
                                                           </Text>
                                                         </View>
                                                       ) : (
@@ -10154,15 +10208,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 {/* PANEL ESPECIAL: RESOLUCIÓN DE ORDENACIÓN DEL GASTO Y PAGO A LA CNSC (FASE 5) */}
                                                 {(req.id === 'vc6_pago_cnsc' || req.tipoAccionEspecial === 'PAGO_CNSC') && (() => {
                                                   const reqVc24 = casoActivo.etapas.flatMap((e) => e.requisitos || []).find((r) => r.id === 'vc2_4');
-                                                  const esConCobroFase2 = reqVc24?.tipoCobroUsoLista === 'con_cobro' || !req.noAplica;
+                                                  const esConCobroFase2 = reqVc24 ? reqVc24.tipoCobroUsoLista === 'con_cobro' : !req.noAplica;
 
                                                   return (
                                                     <View
                                                       style={{
                                                         width: '100%',
-                                                        backgroundColor: esConCobroFase2 ? '#fffbeb' : '#f0fdf4',
+                                                        backgroundColor: esConCobroFase2 ? '#fffbeb' : '#f8fafc',
                                                         borderWidth: 1.2,
-                                                        borderColor: esConCobroFase2 ? '#fcd34d' : '#86efac',
+                                                        borderColor: esConCobroFase2 ? '#fcd34d' : '#cbd5e1',
                                                         borderRadius: 8,
                                                         padding: 10,
                                                         gap: 8,
@@ -10171,9 +10225,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     >
                                                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                          <Ionicons name={esConCobroFase2 ? 'receipt-outline' : 'shield-checkmark-outline'} size={16} color={esConCobroFase2 ? '#b45309' : '#15803d'} />
-                                                          <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobroFase2 ? '#92400e' : '#166534' }}>
-                                                            {esConCobroFase2 ? '📜 Resolución de Ordenación del Gasto y Pago CNSC:' : '✅ Trámite Sin Cobro (A título gratuito):'}
+                                                          <Ionicons name={esConCobroFase2 ? 'receipt-outline' : 'lock-closed-outline'} size={16} color={esConCobroFase2 ? '#b45309' : '#64748b'} />
+                                                          <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobroFase2 ? '#92400e' : '#475569' }}>
+                                                            {esConCobroFase2 ? '📜 Resolución de Ordenación del Gasto y Pago CNSC:' : '⚪ Requisito Deshabilitado (No Aplica):'}
                                                           </Text>
                                                         </View>
                                                         <View
@@ -10181,13 +10235,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                             paddingHorizontal: 8,
                                                             paddingVertical: 2,
                                                             borderRadius: 4,
-                                                            backgroundColor: esConCobroFase2 ? '#fef3c7' : '#dcfce7',
+                                                            backgroundColor: esConCobroFase2 ? '#fef3c7' : '#f1f5f9',
                                                             borderWidth: 1,
-                                                            borderColor: esConCobroFase2 ? '#f59e0b' : '#16a34a',
+                                                            borderColor: esConCobroFase2 ? '#f59e0b' : '#cbd5e1',
                                                           }}
                                                         >
-                                                          <Text style={{ fontSize: 10, fontWeight: '800', color: esConCobroFase2 ? '#b45309' : '#166534' }}>
-                                                            {esConCobroFase2 ? 'CON COBRO - OBLIGATORIO' : 'NO APLICA (GRATUITO)'}
+                                                          <Text style={{ fontSize: 10, fontWeight: '800', color: esConCobroFase2 ? '#b45309' : '#64748b' }}>
+                                                            {esConCobroFase2 ? 'HABILITADO - CON COBRO' : 'DESHABILITADO - SIN COBRO EN FASE 2'}
                                                           </Text>
                                                         </View>
                                                       </View>
@@ -10195,7 +10249,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                       {esConCobroFase2 ? (
                                                         <View style={{ gap: 6, backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#fde68a' }}>
                                                           <Text style={{ fontSize: 10.5, color: '#92400e', lineHeight: 15 }}>
-                                                            Ingrese el número y fecha del acto administrativo distrital mediante el cual se ordena el gasto y pago de pruebas a favor de la CNSC:
+                                                            Requisito habilitado debido a la determinación "Con Cobro" en la Fase 2. Ingrese el número y fecha del acto administrativo de ordenación del gasto y pago:
                                                           </Text>
 
                                                           <View style={{ flexDirection: isTablet ? 'row' : 'column', alignItems: isTablet ? 'center' : 'stretch', gap: 8, marginTop: 2 }}>
@@ -10224,9 +10278,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                         </View>
                                                       ) : (
                                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                                          <Ionicons name="checkmark-done-circle" size={13} color="#16a34a" />
-                                                          <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '600' }}>
-                                                            En la Fase 2 este trámite fue avalado como "Sin Cobro" por la Comisión de Personal. No se requiere expedición de resolución presupuestal de pago.
+                                                          <Ionicons name="information-circle-outline" size={14} color="#64748b" />
+                                                          <Text style={{ fontSize: 10.5, color: '#64748b', fontWeight: '500' }}>
+                                                            Este requisito no está habilitado porque en la Fase 2 se avaló el trámite como "Sin Cobro" (a título gratuito). Si el uso de lista genera cobro, active la opción "Con Cobro" en la Fase 2.
                                                           </Text>
                                                         </View>
                                                       )}
@@ -15125,7 +15179,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
               {/* Formulario de Observaciones y Soporte */}
               <View style={{ gap: 12 }}>
-                {/* SECCIÓN ESPECIAL: MODALIDAD DE COBRO EN FASE 2 */}
+                {/* SECCIÓN ESPECIAL: MODALIDAD DE COBRO EN FASE 2 (como estaba antes) */}
                 {(modalReqContext?.req.id === 'vc2_4' || (modalReqContext?.req.tipoCobroUsoLista !== undefined && modalReqContext?.req.id !== 'vc6_pago_cnsc')) && (
                   <View
                     style={{
@@ -15178,24 +15232,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       >
                         <Ionicons name={obsReqTipoCobro === 'con_cobro' ? 'checkmark-circle' : 'ellipse-outline'} size={14} color={obsReqTipoCobro === 'con_cobro' ? '#ffffff' : '#64748b'} />
                         <Text style={{ fontSize: 11.5, fontWeight: '700', color: obsReqTipoCobro === 'con_cobro' ? '#ffffff' : '#475569' }}>
-                          Con Cobro (Genera Pago)
+                          Con Cobro (Requiere Resolución de Pago)
                         </Text>
                       </Pressable>
                     </View>
 
                     {obsReqTipoCobro === 'con_cobro' ? (
-                      <View style={{ backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#fde68a', gap: 3 }}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#b45309' }}>
-                          ℹ️ La Resolución de Ordenación del Gasto y Pago a la CNSC se registra en la Fase 5
-                        </Text>
-                        <Text style={{ fontSize: 10.5, color: '#92400e', lineHeight: 14 }}>
-                          Al guardar como "Con Cobro", el requisito de pago se activará automáticamente como obligatorio en la Fase 5 para el ingreso del acto administrativo y sus soportes presupuestales.
+                      <View style={{ gap: 4, backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#fde68a' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Ionicons name="warning" size={13} color="#d97706" />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#b45309' }}>
+                            ⚠️ Obligatorio: Expedición de Resolución de Pago a la CNSC
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 10.5, color: '#92400e', lineHeight: 15 }}>
+                          Al ser con cobro, la Secretaría Jurídica Distrital debe proyectar y expedir el acto administrativo de ordenación del gasto y pago a la CNSC con cargo al rubro presupuestal institucional (habilitado en la Fase 5).
                         </Text>
                       </View>
                     ) : (
-                      <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '600' }}>
-                        Trámite a título gratuito avalado en Acta de Comisión de Personal. No genera cobro ni requiere resolución presupuestal de pago.
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Ionicons name="checkmark-done-circle" size={13} color="#16a34a" />
+                        <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '600' }}>
+                          Trámite a título gratuito avalado en Acta de Comisión de Personal. No genera cobro ni requiere resolución presupuestal de pago.
+                        </Text>
+                      </View>
                     )}
                   </View>
                 )}
