@@ -629,8 +629,8 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         cargo = EXCLUDED.cargo,
         codigo = EXCLUDED.codigo,
         grado = EXCLUDED.grado,
-        dependencia_cargo = EXCLUDED.dependencia_cargo,
-        dependencia_funcional = EXCLUDED.dependencia_funcional,
+        dependencia_cargo = COALESCE(NULLIF(public.planta_personal_sjd.dependencia_cargo, ''), EXCLUDED.dependencia_cargo),
+        dependencia_funcional = COALESCE(NULLIF(public.planta_personal_sjd.dependencia_funcional, ''), EXCLUDED.dependencia_funcional),
         proposito = COALESCE(public.planta_personal_sjd.proposito, NULLIF(EXCLUDED.proposito, '')),
         funciones = CASE 
           WHEN public.planta_personal_sjd.funciones IS NOT NULL AND jsonb_array_length(CASE WHEN jsonb_typeof(public.planta_personal_sjd.funciones) = 'array' THEN public.planta_personal_sjd.funciones ELSE '[]'::jsonb END) > 0 

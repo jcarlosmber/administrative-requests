@@ -661,6 +661,53 @@ function DetalleValidacionScreen() {
     return lista;
   }, [data?.consolidado, certificados, titulos]);
 
+  const redaccionOficialExperiencia = useMemo(() => {
+    const cargo_evaluado = data?.cargo_evaluado;
+    const consolidado = data?.consolidado;
+    // 1. Si viene en cargo_evaluado
+    if (cargo_evaluado?.requisitos_experiencia && cargo_evaluado.requisitos_experiencia.trim()) {
+      return cargo_evaluado.requisitos_experiencia.trim();
+    }
+    // 2. Si está en mockPlazasData (170 plazas oficiales de la planta SJD)
+    const plazaEncontrada = (mockPlazasData as any[]).find((p: any) => {
+      if (cargo_evaluado?.id_sideap && p.id_sideap === cargo_evaluado.id_sideap) return true;
+      if (cargo_evaluado?.id_perno && p.id_perno === cargo_evaluado.id_perno) return true;
+      if (cargo_evaluado?.id_plaza && p.id_plaza === cargo_evaluado.id_plaza) return true;
+      if (
+        cargo_evaluado?.codigo &&
+        cargo_evaluado?.grado &&
+        String(p.codigo).trim() === String(cargo_evaluado.codigo).trim() &&
+        String(p.grado).trim() === String(cargo_evaluado.grado).trim()
+      ) {
+        return true;
+      }
+      if (
+        cargo_evaluado?.nombre &&
+        p.cargo &&
+        p.cargo.toLowerCase().trim() === cargo_evaluado.nombre.toLowerCase().trim()
+      ) {
+        return true;
+      }
+      return false;
+    });
+    if (plazaEncontrada?.requisitos_experiencia && plazaEncontrada.requisitos_experiencia.trim()) {
+      return plazaEncontrada.requisitos_experiencia.trim();
+    }
+    // 3. Si en requisitos o requisitos_formacion viene "Experiencia:"
+    const reqGeneral = (cargo_evaluado as any)?.requisitos || cargo_evaluado?.requisitos_formacion || '';
+    if (reqGeneral.includes('Experiencia:')) {
+      const expPart = reqGeneral.split(/Experiencia:\s*/i)[1]?.trim();
+      if (expPart) return expPart;
+    }
+    // 4. Fallback estructurado formal según meses y tipo
+    const reqMeses = Number(cargo_evaluado?.requisito_experiencia_meses) || Number(consolidado?.requisito_minimo_meses) || 0;
+    const tipo = String(cargo_evaluado?.tipo_experiencia_requerida || consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA').toUpperCase();
+    if (reqMeses === 0) return 'No requiere experiencia.';
+    if (tipo === 'LABORAL') return `${reqMeses} meses de experiencia laboral.`;
+    if (tipo === 'PROFESIONAL') return `${reqMeses} meses de experiencia profesional.`;
+    return `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
+  }, [data?.cargo_evaluado, data?.consolidado]);
+
   const toggleCheckItemRevision = async (itemId: string) => {
     const nuevoEstado = {
       ...itemsRevisados,
@@ -1519,51 +1566,6 @@ function DetalleValidacionScreen() {
   }
 
   const { candidato, cargo_evaluado, consolidado } = data;
-
-  const redaccionOficialExperiencia = useMemo(() => {
-    // 1. Si viene en cargo_evaluado
-    if (cargo_evaluado?.requisitos_experiencia && cargo_evaluado.requisitos_experiencia.trim()) {
-      return cargo_evaluado.requisitos_experiencia.trim();
-    }
-    // 2. Si está en mockPlazasData (170 plazas oficiales de la planta SJD)
-    const plazaEncontrada = (mockPlazasData as any[]).find((p: any) => {
-      if (cargo_evaluado?.id_sideap && p.id_sideap === cargo_evaluado.id_sideap) return true;
-      if (cargo_evaluado?.id_perno && p.id_perno === cargo_evaluado.id_perno) return true;
-      if (cargo_evaluado?.id_plaza && p.id_plaza === cargo_evaluado.id_plaza) return true;
-      if (
-        cargo_evaluado?.codigo &&
-        cargo_evaluado?.grado &&
-        String(p.codigo).trim() === String(cargo_evaluado.codigo).trim() &&
-        String(p.grado).trim() === String(cargo_evaluado.grado).trim()
-      ) {
-        return true;
-      }
-      if (
-        cargo_evaluado?.nombre &&
-        p.cargo &&
-        p.cargo.toLowerCase().trim() === cargo_evaluado.nombre.toLowerCase().trim()
-      ) {
-        return true;
-      }
-      return false;
-    });
-    if (plazaEncontrada?.requisitos_experiencia && plazaEncontrada.requisitos_experiencia.trim()) {
-      return plazaEncontrada.requisitos_experiencia.trim();
-    }
-    // 3. Si en requisitos o requisitos_formacion viene "Experiencia:"
-    const reqGeneral = (cargo_evaluado as any)?.requisitos || cargo_evaluado?.requisitos_formacion || '';
-    if (reqGeneral.includes('Experiencia:')) {
-      const expPart = reqGeneral.split(/Experiencia:\s*/i)[1]?.trim();
-      if (expPart) return expPart;
-    }
-    // 4. Fallback estructurado formal según meses y tipo
-    const reqMeses = Number(cargo_evaluado?.requisito_experiencia_meses) || Number(consolidado?.requisito_minimo_meses) || 0;
-    const tipo = String(cargo_evaluado?.tipo_experiencia_requerida || consolidado?.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA').toUpperCase();
-    if (reqMeses === 0) return 'No requiere experiencia.';
-    if (tipo === 'LABORAL') return `${reqMeses} meses de experiencia laboral.`;
-    if (tipo === 'PROFESIONAL') return `${reqMeses} meses de experiencia profesional.`;
-    return `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
-  }, [cargo_evaluado, consolidado]);
 
   const esCumple = consolidado.resultado_final === 'CUMPLE';
   const esNoCumple = consolidado.resultado_final === 'NO_CUMPLE';

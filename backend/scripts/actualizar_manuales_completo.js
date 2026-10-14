@@ -180,9 +180,10 @@ async function main() {
         meses_experiencia = $6,
         manual_funciones = $7,
         resolucion_manual = $8,
+        dependencia_cargo = $10,
         archivo_pdf = $9,
         updated_at = NOW()
-      WHERE id_sideap = $10
+      WHERE id_sideap = $11
       RETURNING id_plaza
     `, [
       d.proposito || null,
@@ -194,6 +195,7 @@ async function main() {
       d.manual_funciones || null,
       d.resolucion_manual || null,
       d.archivo_pdf || null,
+      d.dependencia || null,
       id_sideap
     ]);
     if (res.rowCount > 0) actualizadosBD += res.rowCount;
