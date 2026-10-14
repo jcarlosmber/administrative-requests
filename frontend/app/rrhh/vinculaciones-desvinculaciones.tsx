@@ -32,6 +32,12 @@ import { CASOS_2026_RAW } from '../../lib/casos2026Data';
 import { ModalRequisitosPosesionFT095 } from '../../components/rrhh/ModalRequisitosPosesionFT095';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
 import ModalFichaPlazaNomina from '../../components/rrhh/ModalFichaPlazaNomina';
+import {
+  assetADataUrl,
+  guardarArchivoEnIndexedDB,
+  eliminarArchivoDeIndexedDB,
+  abrirODescargarArchivoAdjunto,
+} from '../../lib/storageAdjuntosIndexedDB';
 
 // ============================================================================
 // SISTEMA DE DISEÑO INSTITUCIONAL NAVY + SLATE (IDÉNTICO A NÓMINA)
@@ -3464,14 +3470,17 @@ export function sincronizarEtapasCaso(
       }
 
       if (reqG) {
+        const noAplicaFinal = reqG.noAplica !== undefined ? reqG.noAplica : Boolean(reqM.noAplica);
+        const cumplidoFinal = noAplicaFinal ? true : (reqG.cumplido !== undefined ? reqG.cumplido : reqM.cumplido);
         return {
           ...reqM,
-          cumplido: reqM.noAplica ? true : reqG.cumplido,
+          cumplido: cumplidoFinal,
           fecha_cumplimiento: reqG.fecha_cumplimiento || reqM.fecha_cumplimiento,
-          observaciones: reqG.observaciones || reqM.observaciones,
-          radicadoSoporte: reqG.radicadoSoporte || reqM.radicadoSoporte,
+          observaciones: reqG.observaciones !== undefined ? reqG.observaciones : reqM.observaciones,
+          radicadoSoporte: reqG.radicadoSoporte !== undefined ? reqG.radicadoSoporte : reqM.radicadoSoporte,
           usuarioRegistro: reqG.usuarioRegistro || reqM.usuarioRegistro,
-          noAplica: reqM.noAplica,
+          noAplica: noAplicaFinal,
+          documentosAdjuntos: Array.isArray(reqG.documentosAdjuntos) ? reqG.documentosAdjuntos : (reqM.documentosAdjuntos || []),
         };
       }
 
@@ -5991,19 +6000,36 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         return;
       }
 
-      const nuevosDocs: DocumentoSoporteAdjunto[] = res.assets.map((asset, idx) => ({
-        id: `doc_${Date.now()}_${idx}`,
-        nombre: asset.name,
-        uri: asset.uri,
-        size: asset.size,
-        mimeType: asset.mimeType,
-        fechaSubida: new Date().toISOString(),
-        usuario: 'Talento Humano',
-      }));
+      // Procesar cada archivo convirtiéndolo a Data URL y persistiendo en IndexedDB
+      const nuevosDocs: DocumentoSoporteAdjunto[] = [];
+      for (let idx = 0; idx < res.assets.length; idx++) {
+        const asset = res.assets[idx];
+        const docId = `doc_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 7)}`;
+        let dataUrl = '';
+        try {
+          dataUrl = await assetADataUrl(asset);
+          if (dataUrl) {
+            await guardarArchivoEnIndexedDB(docId, asset.name, asset.mimeType, asset.size, dataUrl);
+          }
+        } catch (e) {
+          console.warn('Error convirtiendo archivo a dataUrl:', e);
+        }
 
-      // Actualizar casos en memoria y reactividad
-      setCasos((prevCasos) =>
-        prevCasos.map((c) => {
+        nuevosDocs.push({
+          id: docId,
+          nombre: asset.name,
+          uri: dataUrl && dataUrl.length < 500000 ? dataUrl : asset.uri,
+          size: asset.size,
+          mimeType: asset.mimeType,
+          fechaSubida: new Date().toISOString(),
+          usuario: 'Talento Humano',
+        });
+      }
+
+      // Actualizar casos en memoria y sincronizar con localStorage de inmediato
+      let casosActualizados: CasoFlujoFuncionario[] = [];
+      setCasos((prevCasos) => {
+        casosActualizados = prevCasos.map((c) => {
           if (c.id !== casoId) return c;
           const nuevasEtapas = c.etapas.map((et) => {
             if (et.id !== etapaId) return et;
@@ -6018,8 +6044,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             return { ...et, requisitos: nuevosReqs };
           });
           return { ...c, etapas: nuevasEtapas };
-        })
-      );
+        });
+
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try {
+            window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosActualizados));
+          } catch (e) {
+            console.warn('Error en localStorage.setItem directo:', e);
+          }
+        }
+
+        return casosActualizados;
+      });
 
       // Si el modal de requisito está abierto para este requisito, actualizarlo
       if (modalReqContext && modalReqContext.req.id === requisitoId) {
@@ -6039,7 +6075,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       setModalMensajeDoc({
         visible: true,
         titulo: 'Documento Adjuntado Exitosamente',
-        mensaje: `Se ha incorporado ${nuevosDocs.length} archivo(s) de soporte al requisito. El documento queda archivado en el expediente digital del trámite.`,
+        mensaje: `Se ha incorporado ${nuevosDocs.length} archivo(s) de soporte al requisito. El documento queda archivado permanentemente en el expediente digital del trámite (incluso tras recargar).`,
         tipo: 'exito',
       });
     } catch (error: any) {
@@ -6070,12 +6106,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     });
   };
 
-  const ejecutarEliminacionArchivo = () => {
+  const ejecutarEliminacionArchivo = async () => {
     if (!modalEliminarDoc) return;
     const { casoId, etapaId, requisitoId, docId } = modalEliminarDoc;
 
-    setCasos((prevCasos) =>
-      prevCasos.map((c) => {
+    // Eliminar de IndexedDB
+    try {
+      await eliminarArchivoDeIndexedDB(docId);
+    } catch (e) {
+      console.warn('Error borrando de IndexedDB:', e);
+    }
+
+    setCasos((prevCasos) => {
+      const casosActualizados = prevCasos.map((c) => {
         if (c.id !== casoId) return c;
         const nuevasEtapas = c.etapas.map((et) => {
           if (etapaId && et.id !== etapaId) return et;
@@ -6090,8 +6133,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           return { ...et, requisitos: nuevosReqs };
         });
         return { ...c, etapas: nuevasEtapas };
-      })
-    );
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosActualizados));
+        } catch (e) {}
+      }
+
+      return casosActualizados;
+    });
 
     if (modalReqContext && (!requisitoId || modalReqContext.req.id === requisitoId)) {
       setModalReqContext((prev) => {
@@ -6115,15 +6166,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     });
   };
 
-  const handleAbrirArchivoAdjunto = (doc: DocumentoSoporteAdjunto) => {
+  const handleAbrirArchivoAdjunto = async (doc: DocumentoSoporteAdjunto) => {
     try {
       if (Platform.OS === 'web') {
-        window.open(doc.uri, '_blank');
+        await abrirODescargarArchivoAdjunto(doc, (msg) => {
+          setModalMensajeDoc({
+            visible: true,
+            titulo: 'Información de Archivo',
+            mensaje: msg,
+            tipo: 'info',
+          });
+        });
       } else {
-        Linking.openURL(doc.uri);
+        if (doc.uri) {
+          Linking.openURL(doc.uri);
+        }
       }
     } catch (e: any) {
       console.warn('Error al abrir documento:', e);
+      setModalMensajeDoc({
+        visible: true,
+        titulo: 'No se pudo abrir el archivo',
+        mensaje: `Ocurrió un error al intentar abrir el documento: ${e.message || 'Error'}`,
+        tipo: 'error',
+      });
     }
   };
 
@@ -6200,8 +6266,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const nuevoCumplido =
       forzarEstado !== undefined ? forzarEstado : (nuevoNoAplica ? true : obsReqMarcarCumplido);
 
-    setCasos((prevCasos) =>
-      prevCasos.map((caso) => {
+    setCasos((prevCasos) => {
+      const casosActualizados = prevCasos.map((caso) => {
         if (caso.id !== casoId) return caso;
 
         const nuevasEtapas = caso.etapas.map((etapa) => {
@@ -6247,8 +6313,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           ...caso,
           etapas: nuevasEtapas,
         };
-      })
-    );
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosActualizados));
+        } catch (e) {
+          console.warn('Error guardando en localStorage:', e);
+        }
+      }
+
+      return casosActualizados;
+    });
 
     setModalObsReqVisible(false);
     setModalReqContext(null);
