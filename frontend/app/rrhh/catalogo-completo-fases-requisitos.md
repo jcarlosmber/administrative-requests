@@ -324,16 +324,20 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Requisito 3.1 (`vc3_1`)**: *Identificación de servidor en encargo preferente o provisional* (Formato `2311520-FT-018`).  
   *⚖️ Norma*: Ley 909 de 2004, Art. 24 • Ley 1960 de 2019, Art. 1.  
   *📁 Posibles Evidencias*: Ficha de caracterización del servidor que ocupa la plaza en provisionalidad o encargo; Formato 2311520-FT-018 diligenciado; Reporte de la situación administrativa del funcionario en PERNO/SIDEAP.
-* **Requisito 3.2 (`vc4_1`)**: *Elaboración de Resolución de Nombramiento en Periodo de Prueba* (Formato `2311520-FT-130`).  
+* **Requisito 3.2 (`vc3_ft318`)**: *Validación Técnica y Certificado de Cumplimiento de Requisitos (Formato Oficial 2311300-FT-318 en Excel)* (`INGRESOS_IA`).  
+  *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Manual Específico de Funciones y Competencias Laborales.  
+  *💡 Alcance*: Estudio riguroso y certificación formal previa a la resolución de nombramiento mediante el archivo oficial de Excel 2311300-FT-318 generado desde el módulo de **Validación Técnica de Ingresos**, acreditando el cumplimiento de calidades académicas y experiencia laboral requerida en la OPEC.  
+  *📁 Posibles Evidencias*: Archivo oficial 2311300-FT-318 en Excel descargado del módulo de Validación Técnica de Ingresos con concepto CUMPLE; Dictamen técnico con IA; Títulos y certificaciones laborales cotejadas.
+* **Requisito 3.3 (`vc4_1`)**: *Elaboración de Resolución de Nombramiento en Periodo de Prueba* (Formato `2311520-FT-130`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24.  
   *📁 Posibles Evidencias*: Proyecto de resolución en formato FT-130 con visto bueno jurídico; Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva. Incluye la fijación de la entrega formal de cargo y bienes.
-* **Requisito 3.3 (`vc4_2`)**: *Firma por Secretario Jurídico Distrital y numeración oficial*.  
+* **Requisito 3.4 (`vc4_2`)**: *Firma por Secretario Jurídico Distrital y numeración oficial*.  
   *⚖️ Norma*: Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá.  
   *📁 Posibles Evidencias*: Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial.
-* **Requisito 3.4 (`vc4_3`)**: *Comunicación al candidato (10 días hábiles para manifestar aceptación)* (Formato `2311520-FT-019`).  
+* **Requisito 3.5 (`vc4_3`)**: *Comunicación al candidato (10 días hábiles para manifestar aceptación)* (Formato `2311520-FT-019`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.6.  
   *📁 Posibles Evidencias*: Oficio de notificación electrónica certificada en formato FT-019; Acuse de recibo del correo institucional; Memorial de aceptación expresa suscrito por el elegible dentro del término legal.
-* **Requisito 3.5 (`vc4_4`)**: *Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)*.  
+* **Requisito 3.6 (`vc4_4`)**: *Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)*.  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.7.  
   *📁 Posibles Evidencias*: Solicitud motivada del elegible con soportes de fuerza mayor o residencia en otra ciudad; Acto administrativo o comunicación formal del nominador autorizando la prórroga de posesión.
 
@@ -352,10 +356,10 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Requisito 4.4 (`vc5_3`)**: *Consulta de antecedentes (Policía, Procuraduría SIRI, Contraloría SIBOR, REDAM)*.  
   *⚖️ Norma*: Ley 1952 de 2019 • Ley 610 de 2000 • Ley 2097 de 2021, Art. 6.  
   *📁 Posibles Evidencias*: Certificados ordinarios de antecedentes expedidos en línea por Policía Nacional, Procuraduría, Contraloría, Personería y el certificado de no deudor alimentario del REDAM.
-* **Requisito 4.5 (`vc5_ft318`)**: *Certificado de Cumplimiento de Requisitos para Tomar Posesión (Formato Oficial 2311300-FT-318 en Excel)* (`INGRESOS_IA`).  
-  *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Acuerdo de Convocatoria CNSC.  
-  *💡 Alcance*: Certificación formal en el archivo de Excel oficial 2311300-FT-318 generado desde el módulo de **Validación Técnica de Ingresos**, acreditando la verificación de requisitos de estudio y experiencia previa a tomar posesión en periodo de prueba.  
-  *📁 Posibles Evidencias*: Archivo oficial 2311300-FT-318 en Excel descargado del módulo de Validación Técnica de Ingresos suscrito por Talento Humano; Dictamen técnico emitido con apoyo de IA.  
+* **Requisito 4.5 (`vc5_ft095`)**: *Certificado de Cumplimiento de Requisitos para Tomar Posesión (Formato 2311300-FT-095 - 32 Requisitos)* (`FT095`).  
+  *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.8 • Circular DASCD 004 de 2019 • Sistema Integrado de Gestión SJD.  
+  *💡 Alcance*: Verificación interactiva de los 32 ítems de posesión mediante el **Verificador Dinámico FT-095** (documentos de identidad, antecedentes, libreta militar, títulos, inhabilidades, declaraciones y REDAM) para habilitar formalmente el juramento y posesión del empleo.  
+  *📁 Posibles Evidencias*: Formato institucional 2311300-FT-095 diligenciado con el concepto favorable; Constancia de cumplimiento expedida por Talento Humano.  
 * **Requisito 4.6 (`vc5_4`)**: *Suscripción formal del Acta de Posesión* (Formato `2311300-FT-127`).  
   *⚖️ Norma*: Constitución Política, Art. 122 • Decreto 1083 de 2015, Art. 2.2.5.1.8.  
   *📁 Posibles Evidencias*: Acta de Posesión original en formato 2311300-FT-127 con juramento constitucional, firmada por el servidor y el nominador.

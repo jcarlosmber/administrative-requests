@@ -327,7 +327,7 @@ export interface RequisitoEtapa {
   codigoFormato?: string;
   obligatorio: boolean;
   notaNormativa?: string;
-  tipoAccionEspecial?: 'SECOP' | 'INGRESOS_IA' | 'PAGO_CNSC';
+  tipoAccionEspecial?: 'SECOP' | 'INGRESOS_IA' | 'PAGO_CNSC' | 'FT095';
   norma?: string;
   textoNormativo?: string;
   detalleProcedimiento?: string;
@@ -783,6 +783,22 @@ export function generarEtapasParaCaso(
                 ],
               },
               {
+                id: 'vc3_ft318',
+                label: 'Validación Técnica y Certificado de Cumplimiento de Requisitos (Formato 2311300-FT-318)',
+                cumplido: true,
+                obligatorio: true,
+                codigoFormato: '2311300-FT-318',
+                tipoAccionEspecial: 'INGRESOS_IA',
+                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Manual Específico de Funciones y Competencias Laborales',
+                textoNormativo: 'Antes de elaborar y expedir el acto administrativo de nombramiento en período de prueba, la entidad debe comprobar rigurosamente las calidades del aspirante y emitir el Certificado de Cumplimiento de Requisitos en el formato oficial 2311300-FT-318.',
+                detalleProcedimiento: 'Efectuar la validación técnica documental asistida por IA en el módulo de Ingresos, verificar que el elegible cumple los requisitos de estudio y experiencia del empleo ofertado en la OPEC y descargar el archivo Excel oficial 2311300-FT-318 debidamente firmado.',
+                posiblesEvidencias: [
+                  'Certificado institucional 2311300-FT-318 en Excel oficial firmado con concepto favorable CUMPLE',
+                  'Dictamen técnico de verificación de cumplimiento asistido por IA',
+                  'Certificaciones laborales y actas de grado cotejadas frente al manual de funciones',
+                ],
+              },
+              {
                 id: 'vc4_1',
                 label: 'Elaboración de Resolución de Nombramiento en Periodo de Prueba',
                 cumplido: true,
@@ -912,19 +928,18 @@ export function generarEtapasParaCaso(
               ],
             },
               {
-                id: 'vc5_ft318',
-                label: 'Certificado de Cumplimiento de Requisitos para Tomar Posesión (2311300-FT-318)',
+                id: 'vc5_ft095',
+                label: 'Certificado de Cumplimiento de Requisitos para Tomar Posesión (Formato 2311300-FT-095)',
                 cumplido: false,
                 obligatorio: true,
-                codigoFormato: '2311300-FT-318',
-                tipoAccionEspecial: 'INGRESOS_IA',
-                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Acuerdo de Convocatoria CNSC',
-                textoNormativo: 'Antes de dar posesión, la entidad comprobará el cumplimiento de las calidades y requisitos del aspirante seleccionado en concurso de méritos mediante el formato oficial 2311300-FT-318 expedido por Talento Humano.',
-                detalleProcedimiento: 'Generar y validar el archivo Excel oficial 2311300-FT-318 (Certificado de Cumplimiento de Requisitos para Tomar Posesión) en el módulo de Validación Técnica de Ingresos para certificar la idoneidad documental previa al juramento y posesión.',
+                codigoFormato: '2311300-FT-095',
+                tipoAccionEspecial: 'FT095',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.1.8 • Circular DASCD 004 de 2019 • Sistema Integrado de Gestión SJD',
+                textoNormativo: 'Para autorizar y formalizar la posesión, la Dirección de Talento Humano debe constatar y certificar bajo la lista de chequeo oficial del formato 2311300-FT-095 el cumplimiento de los 32 requisitos e inhabilidades documentales previas exigidas para la investidura del empleo público.',
+                detalleProcedimiento: 'Diligenciar el Verificador Dinámico FT-095 evaluando los 32 requisitos de posesión (documentos personales, antecedentes, REDAM, inhabilidades y declaraciones), registrar observaciones y emitir la constancia institucional.',
                 posiblesEvidencias: [
-                  'Certificado institucional 2311300-FT-318 (Certificado de Cumplimiento de Requisitos para Tomar Posesión) en Excel oficial generado y suscrito.',
-                  'Dictamen técnico de verificación de cumplimiento de requisitos asistido por IA.',
-                  'Certificaciones laborales y títulos académicos cotejados frente al manual de funciones.',
+                  'Formato institucional oficial 2311300-FT-095 diligenciado con la verificación de los 32 requisitos de posesión',
+                  'Constancia documental de cumplimiento de requisitos para tomar posesión expedida por Talento Humano',
                 ],
               },
               {
@@ -3501,6 +3516,14 @@ export function sincronizarEtapasCaso(
         if (!reqG && etapaG.requisitos[reqIdx]) {
           reqG = etapaG.requisitos[reqIdx];
         }
+      }
+
+      if (reqM.id === 'vc3_ft318' && !reqG) {
+        reqG = etapasGuardadas.flatMap((e) => e.requisitos || []).find((r) => r.id === 'vc3_ft318' || r.id === 'vc5_ft318');
+      }
+
+      if (reqM.id === 'vc5_ft095' && !reqG) {
+        reqG = etapaG.requisitos?.find((r) => r.id === 'vc5_ft095' || r.id === 'vc5_ft318');
       }
 
       if (reqM.id === 'vc6_pago_cnsc') {
@@ -10081,6 +10104,58 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     </View>
                                                   );
                                                 })()}
+
+                                                 {/* Botón interactivo directo para FT-095 Requisitos para Tomar Posesión */}
+                                                 {(req.tipoAccionEspecial === 'FT095' || req.id === 'vc5_ft095' || req.codigoFormato?.includes('FT-095')) && (
+                                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                     <Pressable
+                                                       onPress={(e) => {
+                                                         e.stopPropagation();
+                                                         setModalFT095Visible(true);
+                                                       }}
+                                                       style={{
+                                                         backgroundColor: '#ecfdf5',
+                                                         paddingHorizontal: 8,
+                                                         paddingVertical: 2.5,
+                                                         borderRadius: 4,
+                                                         borderColor: '#10b981',
+                                                         borderWidth: 1,
+                                                         flexDirection: 'row',
+                                                         alignItems: 'center',
+                                                         gap: 3,
+                                                         cursor: 'pointer',
+                                                       }}
+                                                     >
+                                                       <Ionicons name="checkbox-outline" size={11} color="#059669" />
+                                                       <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#065f46' }}>
+                                                         Verificador Dinámico FT-095 (32 Reqs)
+                                                       </Text>
+                                                     </Pressable>
+                                                     <Pressable
+                                                       onPress={(e) => {
+                                                         e.stopPropagation();
+                                                         handleDescargarFormatoOficial('Requisitos para tomar posesion del cargo_V5.doc');
+                                                       }}
+                                                       style={{
+                                                         backgroundColor: '#ffffff',
+                                                         paddingHorizontal: 6,
+                                                         paddingVertical: 2.5,
+                                                         borderRadius: 4,
+                                                         borderColor: '#cbd5e1',
+                                                         borderWidth: 1,
+                                                         flexDirection: 'row',
+                                                         alignItems: 'center',
+                                                         gap: 2,
+                                                         cursor: 'pointer',
+                                                       }}
+                                                     >
+                                                       <Ionicons name="download-outline" size={10} color="#475569" />
+                                                       <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#475569' }}>
+                                                         .DOC
+                                                       </Text>
+                                                     </Pressable>
+                                                   </View>
+                                                 )}
 
                                                 {/* Botón Desplegable para ver detalle inline */}
                                                 <Pressable
@@ -17805,6 +17880,25 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         pdfUrl={modalVisorDoc?.url}
         mimeType={modalVisorDoc?.mimeType}
       />
+
+      {/* Modal Verificador Dinámico de Requisitos de Posesión (Formato 2311300-FT-095 V05) */}
+      {modalFT095Visible && casoActivo && (
+        <ModalRequisitosPosesionFT095
+          visible={modalFT095Visible}
+          onClose={() => setModalFT095Visible(false)}
+          servidorInicial={{
+            nombre: casoActivo.servidor_nombre,
+            cedula: casoActivo.servidor_cedula,
+            cargo: casoActivo.cargo,
+            codigo: casoActivo.codigo,
+            grado: casoActivo.grado,
+            dependencia: casoActivo.dependencia,
+            modalidad: casoActivo.modalidad,
+            fecha: casoActivo.fecha_inicio_tramite || new Date().toISOString().split('T')[0],
+          }}
+          onDescargarPlantillaBase={handleDescargarFormatoOficial}
+        />
+      )}
 
     </View>
   );
