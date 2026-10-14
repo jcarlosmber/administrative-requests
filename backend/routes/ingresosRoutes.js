@@ -190,19 +190,96 @@ module.exports = function(pool) {
   initTables();
 
   /**
-   * 0. GET /api/ingresos/planta - Lista las 170 plazas de la planta oficial SJD
+   * 0. GET /api/ingresos/planta - Lista las 170 plazas de la planta oficial SJD con toda la información técnica, manuales y requisitos
    */
   router.get('/planta', async (req, res) => {
     try {
-      const result = await pool.query(`
-        SELECT id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
-               dependencia_cargo, dependencia_funcional, proposito, funciones,
-               requisitos, asignacion_basica, titular_cedula, titular_nombre,
-               tipo_vinculacion, situacion_administrativa
-        FROM planta_personal_sjd
-        ORDER BY id_plaza ASC;
-      `);
-      res.json(result.rows);
+      let rows = [];
+      try {
+        const result = await pool.query(`
+          SELECT id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
+                 dependencia_cargo, dependencia_funcional, proposito, funciones,
+                 requisitos,
+                 COALESCE(requisitos_formacion, '') as requisitos_formacion,
+                 COALESCE(requisitos_experiencia, '') as requisitos_experiencia,
+                 meses_experiencia,
+                 COALESCE(manual_funciones, '') as manual_funciones,
+                 COALESCE(resolucion_manual, '') as resolucion_manual,
+                 COALESCE(archivo_pdf, '') as archivo_pdf,
+                 asignacion_basica, titular_cedula, titular_nombre,
+                 tipo_vinculacion, situacion_administrativa
+          FROM planta_personal_sjd
+          ORDER BY id_plaza ASC;
+        `);
+        rows = result.rows;
+      } catch (dbErr) {
+        console.warn('Advertencia en consulta extendida de planta_personal_sjd, intentando consulta base:', dbErr.message);
+        try {
+          const fallbackDb = await pool.query(`
+            SELECT id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
+                   dependencia_cargo, dependencia_funcional, proposito, funciones,
+                   requisitos, asignacion_basica, titular_cedula, titular_nombre,
+                   tipo_vinculacion, situacion_administrativa
+            FROM planta_personal_sjd
+            ORDER BY id_plaza ASC;
+          `);
+          rows = fallbackDb.rows;
+        } catch (dbErr2) {
+          console.warn('Error en consulta base de base de datos:', dbErr2.message);
+        }
+      }
+
+      // Enriquecer con plantaMockData.json para asegurar que funciones, requisitos y manuales estén 100% completos
+      const mockPlazasPath = path.resolve(__dirname, '../../frontend/lib/plantaMockData.json');
+      if (fs.existsSync(mockPlazasPath)) {
+        try {
+          const mockPlazas = JSON.parse(fs.readFileSync(mockPlazasPath, 'utf8'));
+          const mockMap = new Map();
+          const mockMapSideap = new Map();
+          mockPlazas.forEach(m => {
+            if (m.id_plaza) mockMap.set(m.id_plaza, m);
+            if (m.id_sideap) mockMapSideap.set(Number(m.id_sideap), m);
+          });
+
+          if (!rows || rows.length === 0) {
+            rows = mockPlazas;
+          } else {
+            rows = rows.map(r => {
+              const mock = (r.id_plaza && mockMap.get(r.id_plaza)) ||
+                           (r.id_sideap && mockMapSideap.get(Number(r.id_sideap))) ||
+                           mockPlazas.find(m => m.cargo?.toLowerCase().trim() === r.cargo?.toLowerCase().trim() && String(m.codigo) === String(r.codigo) && String(m.grado) === String(r.grado));
+              return {
+                ...r,
+                proposito: r.proposito || mock?.proposito || '',
+                funciones: (Array.isArray(r.funciones) && r.funciones.length > 0)
+                  ? r.funciones
+                  : (mock?.funciones && Array.isArray(mock.funciones) && mock.funciones.length > 0)
+                  ? mock.funciones
+                  : (typeof r.funciones === 'string' && r.funciones.trim())
+                  ? r.funciones.split('\n').filter(Boolean)
+                  : (typeof mock?.funciones === 'string' && mock.funciones.trim())
+                  ? mock.funciones.split('\n').filter(Boolean)
+                  : [],
+                requisitos: r.requisitos || mock?.requisitos || '',
+                requisitos_formacion: r.requisitos_formacion || mock?.requisitos_formacion || '',
+                requisitos_experiencia: r.requisitos_experiencia || mock?.requisitos_experiencia || '',
+                meses_experiencia: r.meses_experiencia !== undefined && r.meses_experiencia !== null
+                  ? r.meses_experiencia
+                  : (mock?.meses_experiencia !== undefined && mock?.meses_experiencia !== null)
+                  ? mock.meses_experiencia
+                  : null,
+                manual_funciones: r.manual_funciones || mock?.manual_funciones || '',
+                resolucion_manual: r.resolucion_manual || mock?.resolucion_manual || '',
+                archivo_pdf: r.archivo_pdf || mock?.archivo_pdf || ''
+              };
+            });
+          }
+        } catch (mErr) {
+          console.warn('Error leyendo mock de planta en backend:', mErr.message);
+        }
+      }
+
+      res.json(rows);
     } catch (err) {
       res.status(500).json({ error: 'Error al consultar planta de personal: ' + err.message });
     }

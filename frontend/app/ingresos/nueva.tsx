@@ -17,6 +17,7 @@ import { ingresosService, CargoEvaluado, AnalisisCompleto, PlazaPlanta, Formacio
 import PdfViewerModal from '../../components/PdfViewerModal';
 import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
+import { ModalFichaPlazaNomina } from '../../components/rrhh/ModalFichaPlazaNomina';
 
 function NuevaValidacionScreen() {
   const router = useRouter();
@@ -61,7 +62,7 @@ function NuevaValidacionScreen() {
   const [filtroSideap, setFiltroSideap] = useState(params.sideap ? String(params.sideap) : '');
   const [filtroPerno, setFiltroPerno] = useState(params.perno ? String(params.perno) : '');
 
-  // Estados del Formulario del Cargo
+  // Estados del Formulario del Cargo y Ficha Técnica Oficial
   const [idSideap, setIdSideap] = useState(params.sideap ? String(params.sideap) : '');
   const [idPerno, setIdPerno] = useState(params.perno ? String(params.perno) : '');
   const [idPlaza, setIdPlaza] = useState<number | null>(params.idPlaza ? Number(params.idPlaza) : null);
@@ -78,11 +79,19 @@ function NuevaValidacionScreen() {
   const [formacionExigida, setFormacionExigida] = useState(
     params.formacionExigida
       ? String(params.formacionExigida)
-      : 'Título profesional en Derecho o afines. Título de posgrado relacionado.'
+      : 'Título profesional en disciplina académica del NBC afín. Título de posgrado en áreas relacionadas.'
   );
-  const [funcionesTexto, setFuncionesTexto] = useState(
-    '1. Proyectar conceptos jurídicos sobre temas de doctrina distrital y asuntos normativos de competencia de la entidad.\n2. Analizar y revisar proyectos de actos administrativos, decretos, resoluciones y proyectos de acuerdo distritales.\n3. Sustanciar respuestas a consultas y derechos de petición formulados por entidades públicas o ciudadanos en materia jurídica.\n4. Participar en la formulación, seguimiento y evaluación de políticas jurídicas de alcance distrital.\n5. Asistir técnicamente a los organismos distritales en la correcta aplicación e interpretación de la normatividad vigente.'
+  const [requisitosExperiencia, setRequisitosExperiencia] = useState(
+    'Cincuenta y cuatro (54) meses de experiencia profesional relacionada.'
   );
+  const [propositoCargo, setPropositoCargo] = useState(
+    'Asesorar y ejecutar las actividades técnicas, jurídicas y operativas del empleo conforme al Plan Estratégico Institucional.'
+  );
+  const [manualResolucion, setManualResolucion] = useState(
+    'Resolución 104 de 2024 / Planta SJD'
+  );
+  const [modalFichaPlazaVisible, setModalFichaPlazaVisible] = useState(false);
+  const [funcionesTexto, setFuncionesTexto] = useState('');
 
   // Estados del Modal Selector Universal (Desplegable)
   type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'sideap' | 'perno';
@@ -457,7 +466,28 @@ function NuevaValidacionScreen() {
       .sort((a, b) => Number(a.valor) - Number(b.valor));
   }, [plazasFiltradas, planta]);
 
-  // Aplicar selección completa de una plaza oficial
+  const parseMesesExp = (str?: string | null): number | null => {
+    if (!str) return null;
+    const s = String(str).toLowerCase();
+    if (s.includes('no requiere') || s.includes('no aplica')) return 0;
+    const mMesesPar = s.match(/\((\d+)\)\s*meses?/);
+    if (mMesesPar) return parseInt(mMesesPar[1], 10);
+    const mMeses = s.match(/(\d+)\s*meses?/);
+    if (mMeses) return parseInt(mMeses[1], 10);
+    const mAñosPar = s.match(/\((\d+)\)\s*(?:año|años)/);
+    if (mAñosPar) return parseInt(mAñosPar[1], 10) * 12;
+    const mAños = s.match(/(\d+)\s*(?:año|años)/);
+    if (mAños) return parseInt(mAños[1], 10) * 12;
+    if (s.includes('un (1) año') || s.includes('un año') || s.includes('1 año')) return 12;
+    if (s.includes('dos (2) años') || s.includes('dos años') || s.includes('2 años')) return 24;
+    if (s.includes('tres (3) años') || s.includes('tres años') || s.includes('3 años')) return 36;
+    if (s.includes('cuatro (4) años') || s.includes('cuatro años') || s.includes('4 años')) return 48;
+    if (s.includes('cinco (5) años') || s.includes('cinco años') || s.includes('5 años')) return 60;
+    if (s.includes('seis (6) años') || s.includes('seis años') || s.includes('6 años')) return 72;
+    return null;
+  };
+
+  // Aplicar selección completa de una plaza oficial con toda la información técnica de Ficha Técnica, manual y requisitos
   const aplicarPlazaCompleta = (p: PlazaPlanta) => {
     setPlazaSeleccionada(p);
     setIdSideap(p.id_sideap != null ? String(p.id_sideap) : '');
@@ -475,15 +505,64 @@ function NuevaValidacionScreen() {
     setFiltroSideap(p.id_sideap != null ? String(p.id_sideap) : '');
     setFiltroPerno(p.id_perno != null ? String(p.id_perno) : '');
 
-    if (p.requisitos) {
-      setFormacionExigida(p.requisitos);
+    // 1. Propósito Institucional del Cargo (Manual de Funciones)
+    if (p.proposito) {
+      setPropositoCargo(p.proposito);
     }
 
-    // Funciones
-    if (Array.isArray(p.funciones) && p.funciones.length > 0) {
-      setFuncionesTexto(p.funciones.join('\n'));
+    // 2. Instrumento Normativo / Resolución
+    const manualDoc = p.manual_funciones || p.resolucion_manual || 'Resolución 104 de 2024 / Planta Oficial SJD';
+    setManualResolucion(manualDoc);
+
+    // 3. Requisitos de Formación Académica (Manual de Funciones)
+    if (p.requisitos_formacion) {
+      setFormacionExigida(p.requisitos_formacion);
+    } else if (p.requisitos) {
+      if (p.requisitos.includes('Formación:')) {
+        const partes = p.requisitos.split(/Experiencia:/i);
+        const formPart = partes[0].replace(/Formación:\s*/i, '').trim();
+        setFormacionExigida(formPart);
+      } else {
+        setFormacionExigida(p.requisitos);
+      }
+    }
+
+    // 4. Requisitos de Experiencia Exigida (Texto Oficial)
+    if (p.requisitos_experiencia) {
+      setRequisitosExperiencia(p.requisitos_experiencia);
+    } else if (p.requisitos && p.requisitos.includes('Experiencia:')) {
+      const expPart = p.requisitos.split(/Experiencia:\s*/i)[1]?.trim() || '';
+      if (expPart) setRequisitosExperiencia(expPart);
+    }
+
+    // 5. Meses de Experiencia Exigidos (Cómputo exacto de la Ficha Técnica)
+    if (p.meses_experiencia !== undefined && p.meses_experiencia !== null && !isNaN(Number(p.meses_experiencia))) {
+      setMesesExigidos(String(p.meses_experiencia));
     } else {
-      const matchCargo = cargos.find(c =>
+      const matchCargo = cargos.find((c) =>
+        c.nombre.toLowerCase().trim() === p.cargo.toLowerCase().trim()
+      );
+      if (matchCargo && matchCargo.requisito_experiencia_meses) {
+        setMesesExigidos(String(matchCargo.requisito_experiencia_meses));
+      } else {
+        const mesesCalc = parseMesesExp(p.requisitos_experiencia || p.requisitos || '');
+        if (mesesCalc !== null) {
+          setMesesExigidos(String(mesesCalc));
+        }
+      }
+    }
+
+    // 6. Funciones Oficiales del Cargo (Manual de Funciones Completo)
+    if (Array.isArray(p.funciones) && p.funciones.length > 0) {
+      const funcionesLimpias = p.funciones.map((f, i) => {
+        const clean = f.replace(/^\d+[\.\)]\s*/, '').trim();
+        return `${i + 1}. ${clean}`;
+      });
+      setFuncionesTexto(funcionesLimpias.join('\n'));
+    } else if (typeof p.funciones === 'string' && p.funciones.trim()) {
+      setFuncionesTexto(p.funciones);
+    } else {
+      const matchCargo = cargos.find((c) =>
         c.nombre.toLowerCase().trim() === p.cargo.toLowerCase().trim()
       );
       if (matchCargo && Array.isArray(matchCargo.funciones_cargo) && matchCargo.funciones_cargo.length > 0) {
@@ -491,25 +570,9 @@ function NuevaValidacionScreen() {
       }
     }
 
-    // Meses de experiencia exigidos
-    const matchCargo = cargos.find(c =>
-        c.nombre.toLowerCase().trim() === p.cargo.toLowerCase().trim()
-    );
-    if (matchCargo && matchCargo.requisito_experiencia_meses) {
-      setMesesExigidos(String(matchCargo.requisito_experiencia_meses));
-      if (!p.requisitos && matchCargo.requisitos_formacion) {
-        setFormacionExigida(matchCargo.requisitos_formacion);
-      }
-    } else if (p.requisitos) {
-      const matchMeses = p.requisitos.match(/(\d{1,3})\s*meses/i);
-      if (matchMeses && matchMeses[1]) {
-        setMesesExigidos(matchMeses[1]);
-      }
-    }
-
-    // Detección automática del tipo de experiencia según naturaleza del cargo, nivel y requisitos:
+    // 7. Detección automática del tipo de experiencia según naturaleza del cargo, nivel y requisitos:
     const cargoLower = (p.cargo || '').toLowerCase();
-    const reqLower = (p.requisitos || '').toLowerCase();
+    const reqLower = ((p.requisitos_experiencia || '') + ' ' + (p.requisitos || '')).toLowerCase();
     const nivelLower = (p.nivel || '').toLowerCase();
 
     if (
@@ -546,7 +609,7 @@ function NuevaValidacionScreen() {
     setPlazaSeleccionada(null);
   };
 
-  // Sincronización automática de plaza y funciones cuando cargan planta/cargos y vienen params de Vinculación
+  // Sincronización automática de plaza y funciones oficiales cuando cargan planta/cargos o vienen params
   useEffect(() => {
     if (rehacerId) return;
     if (planta.length === 0 && cargos.length === 0) return;
@@ -565,11 +628,32 @@ function NuevaValidacionScreen() {
     }
     if (!plazaEncontrada && params.cargo) {
       const cleanCargo = String(params.cargo).toLowerCase().trim();
-      plazaEncontrada = planta.find(
-        (p) =>
-          p.cargo?.toLowerCase().trim() === cleanCargo &&
-          (!params.codigo || String(p.codigo) === String(params.codigo))
-      ) || planta.find((p) => p.cargo?.toLowerCase().trim() === cleanCargo);
+      plazaEncontrada =
+        planta.find(
+          (p) =>
+            p.cargo?.toLowerCase().trim() === cleanCargo &&
+            (!params.codigo || String(p.codigo) === String(params.codigo)) &&
+            (!params.grado || String(p.grado) === String(params.grado))
+        ) ||
+        planta.find(
+          (p) =>
+            p.cargo?.toLowerCase().trim() === cleanCargo &&
+            (!params.codigo || String(p.codigo) === String(params.codigo))
+        ) ||
+        planta.find((p) => p.cargo?.toLowerCase().trim() === cleanCargo);
+    }
+
+    // Si aún no se encontró porque no hay params de búsqueda, cargar la plaza oficial del cargo inicial ("Profesional Especializado 222-24") o la primera plaza de planta
+    if (!plazaEncontrada && !plazaSeleccionada) {
+      plazaEncontrada =
+        planta.find(
+          (p) =>
+            p.cargo?.toLowerCase().includes('profesional especializado') &&
+            String(p.codigo) === '222' &&
+            String(p.grado) === '24'
+        ) ||
+        planta.find((p) => p.cargo?.toLowerCase().includes('profesional especializado')) ||
+        planta[0];
     }
 
     if (plazaEncontrada) {
@@ -594,7 +678,7 @@ function NuevaValidacionScreen() {
         }
       }
     }
-  }, [planta, cargos, params.idPlaza, params.perno, params.sideap, params.cargo, params.codigo, rehacerId]);
+  }, [planta, cargos, params.idPlaza, params.perno, params.sideap, params.cargo, params.codigo, params.grado, rehacerId]);
 
   const abrirPicker = (tipo: PickerTipo) => {
     setPickerTipo(tipo);
@@ -717,15 +801,20 @@ function NuevaValidacionScreen() {
       setFiltroSituacion('');
       setFiltroSideap('');
       setFiltroPerno('');
-      setPlazaSeleccionada(null);
 
-      const matchC = cargos.find(c => c.nombre.toLowerCase().trim() === item.valor.toLowerCase().trim());
-      if (matchC) {
-        setCargoSeleccionado(matchC);
-        setMesesExigidos(String(matchC.requisito_experiencia_meses || 54));
-        if (matchC.requisitos_formacion) setFormacionExigida(matchC.requisitos_formacion);
-        if (Array.isArray(matchC.funciones_cargo) && matchC.funciones_cargo.length > 0) {
-          setFuncionesTexto(matchC.funciones_cargo.join('\n'));
+      const plazaDelCargo = planta.find(p => p.cargo?.toLowerCase().trim() === item.valor.toLowerCase().trim());
+      if (plazaDelCargo) {
+        aplicarPlazaCompleta(plazaDelCargo);
+      } else {
+        setPlazaSeleccionada(null);
+        const matchC = cargos.find(c => c.nombre.toLowerCase().trim() === item.valor.toLowerCase().trim());
+        if (matchC) {
+          setCargoSeleccionado(matchC);
+          setMesesExigidos(String(matchC.requisito_experiencia_meses || 54));
+          if (matchC.requisitos_formacion) setFormacionExigida(matchC.requisitos_formacion);
+          if (Array.isArray(matchC.funciones_cargo) && matchC.funciones_cargo.length > 0) {
+            setFuncionesTexto(matchC.funciones_cargo.join('\n'));
+          }
         }
       }
     } else if (pickerTipo === 'codigoGrado') {
@@ -737,7 +826,15 @@ function NuevaValidacionScreen() {
       setFiltroSituacion('');
       setFiltroSideap('');
       setFiltroPerno('');
-      setPlazaSeleccionada(null);
+      const coincidente = planta.find(p =>
+        (filtroCargo ? p.cargo.toLowerCase() === filtroCargo.toLowerCase() : true) &&
+        `${p.codigo || ''}-${p.grado || ''}` === item.valor
+      );
+      if (coincidente) {
+        aplicarPlazaCompleta(coincidente);
+      } else {
+        setPlazaSeleccionada(null);
+      }
     } else if (pickerTipo === 'dependencia') {
       setFiltroDependencia(item.valor);
       setDependenciaCargo(item.valor);
@@ -1842,6 +1939,26 @@ function NuevaValidacionScreen() {
                         </Text>
                       ) : null}
                       <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <TouchableOpacity
+                          onPress={() => setModalFichaPlazaVisible(true)}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            backgroundColor: '#0D2A48',
+                            paddingHorizontal: 12,
+                            paddingVertical: 7,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: '#1E3A5F'
+                          }}
+                        >
+                          <Ionicons name="clipboard-outline" size={15} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                            Ver Ficha Técnica Plaza
+                          </Text>
+                        </TouchableOpacity>
+
                         <BotonManualFunciones
                           id_sideap={plazaSeleccionada.id_sideap}
                           cargo={plazaSeleccionada.cargo}
@@ -1850,6 +1967,23 @@ function NuevaValidacionScreen() {
                           variante="boton"
                           etiqueta="Ver Manual de Funciones (PDF)"
                         />
+
+                        {manualResolucion ? (
+                          <View
+                            style={{
+                              backgroundColor: '#EFF6FF',
+                              borderWidth: 1,
+                              borderColor: '#BFDBFE',
+                              paddingHorizontal: 8,
+                              paddingVertical: 5,
+                              borderRadius: 6
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>
+                              Norma: {manualResolucion}
+                            </Text>
+                          </View>
+                        ) : null}
                       </View>
                     </View>
                   </View>
@@ -2338,84 +2472,230 @@ function NuevaValidacionScreen() {
                 </View>
               </View>
 
-              {/* Nombre del Cargo */}
+              {/* Fila: Nombre del Cargo y Dependencia */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
+                <View style={{ flex: 1, minWidth: 260 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                    Nombre del Cargo *
+                  </Text>
+                  <TextInput
+                    value={nombreCargo}
+                    onChangeText={setNombreCargo}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      padding: 10,
+                      backgroundColor: '#FFFFFF',
+                      fontSize: 14,
+                      color: '#0F172A',
+                      fontWeight: '700'
+                    }}
+                  />
+                </View>
+
+                <View style={{ flex: 1, minWidth: 260 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                    Dependencia Asignada
+                  </Text>
+                  <TextInput
+                    value={dependenciaCargo}
+                    onChangeText={setDependenciaCargo}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      padding: 10,
+                      backgroundColor: '#FFFFFF',
+                      fontSize: 14,
+                      color: '#0F172A'
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Propósito Principal del Empleo (según Manual de Funciones) */}
               <View style={{ marginBottom: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>
-                  Nombre del Cargo *
-                </Text>
-                <TextInput
-                  value={nombreCargo}
-                  onChangeText={setNombreCargo}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#CBD5E1',
-                    borderRadius: 8,
-                    padding: 10,
-                    backgroundColor: '#FFFFFF',
-                    fontSize: 14,
-                    color: '#0F172A',
-                    fontWeight: '600'
-                  }}
-                />
-              </View>
-
-              {/* Dependencia */}
-              <View style={{ marginBottom: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>
-                  Dependencia
-                </Text>
-                <TextInput
-                  value={dependenciaCargo}
-                  onChangeText={setDependenciaCargo}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#CBD5E1',
-                    borderRadius: 8,
-                    padding: 10,
-                    backgroundColor: '#FFFFFF',
-                    fontSize: 14,
-                    color: '#0F172A'
-                  }}
-                />
-              </View>
-
-              <View style={{ marginTop: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>
-                  Requisitos de Formación Académica
-                </Text>
-                <TextInput
-                  value={formacionExigida}
-                  onChangeText={setFormacionExigida}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#CBD5E1',
-                    borderRadius: 8,
-                    padding: 10,
-                    backgroundColor: '#FFFFFF',
-                    fontSize: 14,
-                    color: '#0F172A'
-                  }}
-                />
-              </View>
-
-              <View style={{ marginTop: 14 }}>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#334155', marginBottom: 6 }}>
-                  Funciones Oficiales del Cargo (Manual de Funciones) - Una por línea *
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="compass-outline" size={16} color="#0D2A48" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                      Propósito Principal del Empleo (Manual de Funciones)
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setModalFichaPlazaVisible(true)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  >
+                    <Ionicons name="eye-outline" size={13} color="#2563EB" />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563EB' }}>
+                      Ver Ficha Técnica Plaza
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 <TextInput
                   multiline
-                  numberOfLines={5}
-                  value={funcionesTexto}
-                  onChangeText={setFuncionesTexto}
+                  numberOfLines={2}
+                  value={propositoCargo}
+                  onChangeText={setPropositoCargo}
+                  placeholder="Propósito del cargo según el manual oficial de funciones..."
+                  placeholderTextColor="#94A3B8"
                   style={{
                     borderWidth: 1,
                     borderColor: '#CBD5E1',
                     borderRadius: 8,
                     padding: 10,
+                    backgroundColor: '#F8FAFC',
+                    fontSize: 12.5,
+                    color: '#334155',
+                    minHeight: 52,
+                    lineHeight: 18,
+                    textAlignVertical: 'top'
+                  }}
+                />
+              </View>
+
+              {/* Fila: Requisitos de Formación y Requisitos de Experiencia Exigida */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
+                {/* Formación Académica Exigida */}
+                <View style={{ flex: 1, minWidth: 280 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 }}>
+                    Requisitos de Formación Académica (Manual de Funciones)
+                  </Text>
+                  <TextInput
+                    multiline
+                    value={formacionExigida}
+                    onChangeText={setFormacionExigida}
+                    placeholder="Título profesional, NBC afines, postgrados, etc."
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      padding: 10,
+                      backgroundColor: '#FFFFFF',
+                      fontSize: 13,
+                      color: '#0F172A',
+                      minHeight: 65,
+                      textAlignVertical: 'top'
+                    }}
+                  />
+                </View>
+
+                {/* Experiencia Exigida Oficial */}
+                <View style={{ flex: 1, minWidth: 280 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 4 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155' }}>
+                      Requisitos de Experiencia Exigida (Manual de Funciones)
+                    </Text>
+                    <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FECACA' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#991B1B' }}>
+                        {mesesExigidos || '0'} meses exigidos
+                      </Text>
+                    </View>
+                  </View>
+                  <TextInput
+                    multiline
+                    value={requisitosExperiencia}
+                    onChangeText={setRequisitosExperiencia}
+                    placeholder="Ej: Cuatro (4) años de experiencia profesional relacionada."
+                    placeholderTextColor="#94A3B8"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      padding: 10,
+                      backgroundColor: '#FFFFFF',
+                      fontSize: 13,
+                      color: '#0F172A',
+                      minHeight: 65,
+                      textAlignVertical: 'top'
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Funciones Oficiales del Cargo (Manual de Funciones) */}
+              <View style={{ marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="document-text-outline" size={17} color="#0D2A48" />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                      Funciones Oficiales del Cargo (Manual de Funciones) - Una por línea *
+                    </Text>
+                    <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 1, borderRadius: 10 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#4338CA' }}>
+                        {funcionesTexto.split('\n').filter(f => f.trim().length > 0).length} funciones
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {plazaSeleccionada && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (plazaSeleccionada) {
+                            aplicarPlazaCompleta(plazaSeleccionada);
+                          }
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 4,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 6,
+                          backgroundColor: '#F1F5F9',
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1'
+                        }}
+                      >
+                        <Ionicons name="refresh-outline" size={13} color="#475569" />
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
+                          Restaurar del Manual
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      onPress={() => setModalFichaPlazaVisible(true)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        borderRadius: 6,
+                        backgroundColor: '#EFF6FF',
+                        borderWidth: 1,
+                        borderColor: '#BFDBFE'
+                      }}
+                    >
+                      <Ionicons name="clipboard-outline" size={13} color="#1D4ED8" />
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>
+                        Ficha Técnica
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <TextInput
+                  multiline
+                  numberOfLines={6}
+                  value={funcionesTexto}
+                  onChangeText={setFuncionesTexto}
+                  placeholder="1. Función 1...&#10;2. Función 2..."
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    padding: 12,
                     backgroundColor: '#FFFFFF',
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: '#0F172A',
-                    minHeight: 110,
+                    minHeight: 140,
+                    lineHeight: 18,
                     textAlignVertical: 'top'
                   }}
                 />
@@ -4762,6 +5042,24 @@ function NuevaValidacionScreen() {
         nombreArchivo={visorPdfNombre}
         pdfUrl={visorPdfUrl}
         pdfBase64={visorPdfBase64}
+      />
+
+      {/* Modal Ficha Técnica Integral del Cargo y Plaza (Idéntico a Nómina y Vinculaciones) */}
+      <ModalFichaPlazaNomina
+        visible={modalFichaPlazaVisible}
+        onClose={() => setModalFichaPlazaVisible(false)}
+        plaza={
+          (plazaSeleccionada ||
+            planta.find(
+              (p) =>
+                p.cargo?.toLowerCase().trim() === (nombreCargo || '').toLowerCase().trim() &&
+                (!codigoCargo || String(p.codigo) === String(codigoCargo))
+            ) ||
+            planta.find((p) => p.cargo?.toLowerCase().trim() === (nombreCargo || '').toLowerCase().trim()) ||
+            planta[0] ||
+            null) as any
+        }
+        todasLasPlazas={planta as any}
       />
     </View>
   );

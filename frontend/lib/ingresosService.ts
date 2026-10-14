@@ -1,4 +1,5 @@
 import { API_URL, appStorage } from './supabase';
+import mockPlazasData from './plantaMockData.json';
 
 export interface CargoEvaluado {
   id?: string;
@@ -26,8 +27,14 @@ export interface PlazaPlanta {
   dependencia_cargo?: string;
   dependencia_funcional?: string;
   proposito?: string;
-  funciones?: string[];
+  funciones?: string[] | string;
   requisitos?: string;
+  requisitos_formacion?: string;
+  requisitos_experiencia?: string;
+  meses_experiencia?: number | null;
+  manual_funciones?: string;
+  resolucion_manual?: string;
+  archivo_pdf?: string;
   asignacion_basica?: number;
   titular_cedula?: string;
   titular_nombre?: string;
@@ -258,9 +265,65 @@ export const ingresosService = {
   },
 
   async obtenerPlanta(): Promise<PlazaPlanta[]> {
-    const res = await fetch(`${API_URL}/api/ingresos/planta`);
-    if (!res.ok) throw new Error('Error al obtener planta de personal');
-    return res.json();
+    let plazasApi: PlazaPlanta[] = [];
+    try {
+      const res = await fetch(`${API_URL}/api/ingresos/planta`);
+      if (res.ok) {
+        plazasApi = await res.json();
+      }
+    } catch (e) {
+      console.warn('Advertencia al consultar /api/ingresos/planta, usando datos locales:', e);
+    }
+
+    const mockMap = new Map<number, any>();
+    const mockMapSideap = new Map<number, any>();
+    (mockPlazasData as any[]).forEach((m) => {
+      if (m.id_plaza) mockMap.set(m.id_plaza, m);
+      if (m.id_sideap) mockMapSideap.set(Number(m.id_sideap), m);
+    });
+
+    const baseList = plazasApi && plazasApi.length > 0 ? plazasApi : (mockPlazasData as unknown as PlazaPlanta[]);
+
+    return baseList.map((p) => {
+      const mock =
+        (p.id_plaza && mockMap.get(p.id_plaza)) ||
+        (p.id_sideap && mockMapSideap.get(Number(p.id_sideap))) ||
+        (mockPlazasData as any[]).find(
+          (m) =>
+            m.cargo?.toLowerCase().trim() === p.cargo?.toLowerCase().trim() &&
+            String(m.codigo) === String(p.codigo) &&
+            String(m.grado) === String(p.grado)
+        );
+
+      let funcionesArr: string[] = [];
+      if (Array.isArray(p.funciones) && p.funciones.length > 0) {
+        funcionesArr = p.funciones.map((f) => String(f).trim()).filter(Boolean);
+      } else if (mock?.funciones && Array.isArray(mock.funciones) && mock.funciones.length > 0) {
+        funcionesArr = mock.funciones.map((f: any) => String(f).trim()).filter(Boolean);
+      } else if (typeof p.funciones === 'string' && p.funciones.trim()) {
+        funcionesArr = p.funciones.split('\n').map((f) => f.trim()).filter(Boolean);
+      } else if (typeof mock?.funciones === 'string' && mock.funciones.trim()) {
+        funcionesArr = mock.funciones.split('\n').map((f: any) => f.trim()).filter(Boolean);
+      }
+
+      return {
+        ...p,
+        proposito: p.proposito || mock?.proposito || '',
+        funciones: funcionesArr,
+        requisitos: p.requisitos || mock?.requisitos || '',
+        requisitos_formacion: p.requisitos_formacion || mock?.requisitos_formacion || '',
+        requisitos_experiencia: p.requisitos_experiencia || mock?.requisitos_experiencia || '',
+        meses_experiencia:
+          p.meses_experiencia !== undefined && p.meses_experiencia !== null
+            ? Number(p.meses_experiencia)
+            : mock?.meses_experiencia !== undefined && mock?.meses_experiencia !== null
+            ? Number(mock.meses_experiencia)
+            : null,
+        manual_funciones: p.manual_funciones || mock?.manual_funciones || '',
+        resolucion_manual: p.resolucion_manual || mock?.resolucion_manual || '',
+        archivo_pdf: p.archivo_pdf || mock?.archivo_pdf || '',
+      };
+    });
   },
 
   async guardarCargo(cargo: CargoEvaluado): Promise<CargoEvaluado> {

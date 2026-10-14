@@ -262,3 +262,73 @@ export async function abrirODescargarArchivoAdjunto(
     }
   }
 }
+
+/**
+ * Obtiene la URL resoluble (Blob URL o HTTP) de un documento persistido para visor en Modal
+ */
+export async function resolverUrlArchivoAdjunto(doc: {
+  id: string;
+  nombre: string;
+  uri?: string;
+  mimeType?: string;
+}): Promise<{ url: string; mimeType: string; esPrevisualizable: boolean } | null> {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    let dataUrl = '';
+
+    try {
+      const enDB = await obtenerArchivoDeIndexedDB(doc.id);
+      if (enDB && enDB.dataUrl) {
+        dataUrl = enDB.dataUrl;
+      }
+    } catch (e) {
+      console.warn('Error leyendo de IndexedDB:', e);
+    }
+
+    if (!dataUrl && doc.uri && doc.uri.startsWith('data:')) {
+      dataUrl = doc.uri;
+    }
+
+    if (dataUrl) {
+      const matchMime = dataUrl.substring(0, 50).match(/:(.*?);/);
+      const mime = doc.mimeType || (matchMime ? matchMime[1] : 'application/octet-stream');
+      const blob = dataUrlABlob(dataUrl, mime);
+      const freshBlobUrl = URL.createObjectURL(blob);
+      const esPrevisualizable =
+        mime.includes('pdf') ||
+        mime.startsWith('image/') ||
+        doc.nombre.toLowerCase().endsWith('.pdf') ||
+        /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.nombre);
+
+      return {
+        url: freshBlobUrl,
+        mimeType: mime,
+        esPrevisualizable,
+      };
+    }
+
+    if (doc.uri && (doc.uri.startsWith('http://') || doc.uri.startsWith('https://') || doc.uri.startsWith('blob:'))) {
+      const mime = doc.mimeType || (doc.nombre.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
+      return {
+        url: doc.uri,
+        mimeType: mime,
+        esPrevisualizable: mime.includes('pdf') || mime.startsWith('image/') || doc.nombre.toLowerCase().endsWith('.pdf'),
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Descarga directamente un archivo a través de su Blob o URL
+ */
+export function descargarArchivoDirecto(url: string, nombreArchivo: string) {
+  if (typeof document === 'undefined') return;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombreArchivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+

@@ -32,11 +32,13 @@ import { CASOS_2026_RAW } from '../../lib/casos2026Data';
 import { ModalRequisitosPosesionFT095 } from '../../components/rrhh/ModalRequisitosPosesionFT095';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
 import ModalFichaPlazaNomina from '../../components/rrhh/ModalFichaPlazaNomina';
+import PdfViewerModal from '../../components/PdfViewerModal';
 import {
   assetADataUrl,
   guardarArchivoEnIndexedDB,
   eliminarArchivoDeIndexedDB,
   abrirODescargarArchivoAdjunto,
+  resolverUrlArchivoAdjunto,
 } from '../../lib/storageAdjuntosIndexedDB';
 
 // ============================================================================
@@ -335,6 +337,8 @@ export interface RequisitoEtapa {
   posiblesEvidencias?: string[];
   documentosAdjuntos?: DocumentoSoporteAdjunto[];
   noAplica?: boolean;
+  tipoCobroUsoLista?: 'sin_cobro' | 'con_cobro';
+  numeroResolucionPago?: string;
 }
 
 
@@ -733,6 +737,22 @@ export function generarEtapasParaCaso(
                 detalleProcedimiento: 'No aplica para uso de listas; el término preclusivo de exclusión de 5 días hábiles ya feneció con la firmeza original de la lista adoptada por la CNSC.',
                 posiblesEvidencias: [
                   "No aplica para uso de listas (término preclusivo de 5 días ya fenecido tras la firmeza inicial)",
+                ],
+              },
+              {
+                id: 'vc2_4',
+                label: 'Aprobación de la Comisión de Personal para uso de lista y determinación de cobro CNSC (Con / Sin Cobro)',
+                cumplido: false,
+                obligatorio: true,
+                tipoCobroUsoLista: 'sin_cobro',
+                norma: 'Ley 909 de 2004, Art. 16 • Acuerdos CNSC de Uso de Listas • Estatuto Presupuestal Distrital',
+                textoNormativo: 'La Comisión de Personal debe sesionar formalmente mediante Acta aprobando el uso de la lista de elegibles para la provisión del empleo. Asimismo, se debe verificar si la autorización emitida por la CNSC es a título gratuito ("Sin Cobro") o si genera costos de prueba/concurso ("Con Cobro"). En caso de ser con cobro, la entidad debe expedir obligatoriamente la Resolución de Ordenación del Gasto y Pago a favor de la CNSC con cargo al presupuesto institucional.',
+                detalleProcedimiento: '1. Verificar y adjuntar el Acta de Comisión de Personal donde se aprueba el uso de la lista.\n2. Definir si el trámite es "Sin cobro" o "Con cobro".\n3. Si es "Con cobro", ingresar el número de Resolución de Pago a la CNSC y adjuntar el acto administrativo de pago junto con su CDP y RP presupuestal.',
+                posiblesEvidencias: [
+                  'Acta de la Comisión de Personal aprobando el uso de lista de elegibles',
+                  'Oficio / Autorización de la CNSC indicando si aplica cobro por uso de lista',
+                  'Resolución de Ordenación del Gasto y Pago a favor de la CNSC (obligatoria si es con cobro)',
+                  'Certificado de Disponibilidad Presupuestal (CDP) y Registro Presupuestal (RP) para el pago a la CNSC',
                 ],
               },
             ],
@@ -3481,6 +3501,8 @@ export function sincronizarEtapasCaso(
           usuarioRegistro: reqG.usuarioRegistro || reqM.usuarioRegistro,
           noAplica: noAplicaFinal,
           documentosAdjuntos: Array.isArray(reqG.documentosAdjuntos) ? reqG.documentosAdjuntos : (reqM.documentosAdjuntos || []),
+          tipoCobroUsoLista: reqG.tipoCobroUsoLista !== undefined ? reqG.tipoCobroUsoLista : reqM.tipoCobroUsoLista,
+          numeroResolucionPago: reqG.numeroResolucionPago !== undefined ? reqG.numeroResolucionPago : reqM.numeroResolucionPago,
         };
       }
 
@@ -5840,6 +5862,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const casoId = casoParaTerminar.id;
     const servidorNombre = casoParaTerminar.servidor_nombre;
     alternarEstadoTramiteCompleto(casoId, true);
+    const mapa: Record<string, boolean> = {};
+    casoParaTerminar.etapas.forEach((et) => {
+      mapa[et.id] = false;
+    });
+    setFasesExpandidas(mapa);
     setModalConfirmarTerminadoVisible(false);
     setCasoParaTerminar(null);
     mostrarModal(
@@ -5868,29 +5895,106 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     };
   }, [casos, casoSeleccionadoId, tabActiva]);
 
+  // Resolución reactiva de OPEC y Convocatoria asociada al caso activo o su plaza
+  const plazaOpecMatch = useMemo(() => {
+    if (!casoActivo) return null;
+    if (casoActivo.id_plaza) {
+      return (mockPlazasData as any[]).find((p) => p.id_plaza === casoActivo.id_plaza);
+    }
+    return (mockPlazasData as any[]).find(
+      (p) =>
+        p.cargo?.trim().toUpperCase() === casoActivo.cargo?.trim().toUpperCase() &&
+        (!casoActivo.codigo || String(p.codigo) === String(casoActivo.codigo)) &&
+        (!casoActivo.grado || String(p.grado) === String(casoActivo.grado))
+    );
+  }, [casoActivo]);
+
+  const opecValorActual = useMemo(() => {
+    if (!casoActivo) return '203205';
+    if (casoActivo.concurso_opec) return casoActivo.concurso_opec;
+    if ((casoActivo as any).opec) return (casoActivo as any).opec;
+    if (casoActivo.id_plaza && opecPersonalizadasPlazas[casoActivo.id_plaza]?.opec) {
+      return opecPersonalizadasPlazas[casoActivo.id_plaza].opec;
+    }
+    if (plazaOpecMatch?.opec) return plazaOpecMatch.opec;
+    return '203205';
+  }, [casoActivo, opecPersonalizadasPlazas, plazaOpecMatch]);
+
+  const convocatoriaValorActual = useMemo(() => {
+    if (!casoActivo) return 'Distrito Capital 5 - CNSC';
+    if (casoActivo.concurso_convocatoria) return casoActivo.concurso_convocatoria;
+    if ((casoActivo as any).convocatoria) return (casoActivo as any).convocatoria;
+    if (casoActivo.id_plaza && opecPersonalizadasPlazas[casoActivo.id_plaza]?.convocatoria) {
+      return opecPersonalizadasPlazas[casoActivo.id_plaza].convocatoria;
+    }
+    return 'Distrito Capital 5 - CNSC';
+  }, [casoActivo, opecPersonalizadasPlazas]);
+
+  const [modalEditarOpecCasoVisible, setModalEditarOpecCasoVisible] = useState(false);
+  const [inputOpecCaso, setInputOpecCaso] = useState('');
+  const [inputConvocatoriaCaso, setInputConvocatoriaCaso] = useState('');
+
+  const abrirModalEditarOpecCaso = () => {
+    if (!casoActivo) return;
+    setInputOpecCaso(opecValorActual);
+    setInputConvocatoriaCaso(convocatoriaValorActual);
+    setModalEditarOpecCasoVisible(true);
+  };
+
+  const guardarOpecConvocatoriaCaso = () => {
+    if (!casoActivo) return;
+    const nuevaOpec = inputOpecCaso.trim() || '203205';
+    const nuevaConv = inputConvocatoriaCaso.trim() || 'Distrito Capital 5 - CNSC';
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== casoActivo.id) return c;
+        return {
+          ...c,
+          concurso_opec: nuevaOpec,
+          concurso_convocatoria: nuevaConv,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+
+    setModalEditarOpecCasoVisible(false);
+  };
+
   // Alternar cumplimiento de requisito y recalcular estado
   // ==========================================================================
   // ESTADOS PARA EXPANSION DE FASES, DESPLEGABLES NORMATIVOS Y MODALES DE OBSERVACIONES
   // ==========================================================================
-  const [fasesExpandidas, setFasesExpandidas] = useState<Record<string, boolean>>({
-    v_carr_1: true,
-    v_carr_4: true,
-    v_lnr_1: true,
-    v_lnr_2: true,
-    v_prov_1: true,
-    v_prov_3: true,
-    v_prac_1: true,
-    v_prac_3: true,
-    d_carr_1: true,
-    d_carr_3: true,
-    d_prov_1: true,
-    d_prov_3: true,
-    d_lnr_1: true,
-    d_lnr_3: true,
-    d_prac_1: true,
-    d_prac_3: true,
-    d_serv_1: true,
-    d_serv_3: true,
+  const calcularFasesExpandidasParaCaso = (caso?: CasoFlujoFuncionario | null): Record<string, boolean> => {
+    if (!caso?.etapas) return {};
+    const nuevoMap: Record<string, boolean> = {};
+    caso.etapas.forEach((et) => {
+      const totalReq = et.requisitos?.length || 0;
+      const esFinalizada =
+        et.estado === 'completed' ||
+        (totalReq > 0 &&
+          et.requisitos
+            .filter((r) => r.obligatorio && !r.noAplica)
+            .every((r) => r.cumplido));
+
+      // Al abrir una persona: si la fase ya está finalizada se deja contraída (false), si no, expandida (true)
+      nuevoMap[et.id] = !esFinalizada;
+    });
+    return nuevoMap;
+  };
+
+  const [fasesExpandidas, setFasesExpandidas] = useState<Record<string, boolean>>(() => {
+    const casoInicialId = obtenerCasoActivoInicial();
+    const casosInit = obtenerCasosIniciales();
+    const cActivo = casosInit.find((c) => c.id === casoInicialId) || casosInit[0];
+    return calcularFasesExpandidasParaCaso(cActivo);
   });
   const [fasesNormaExpandida, setFasesNormaExpandida] = useState<Record<string, boolean>>({});
   const [reqDetalleExpandido, setReqDetalleExpandido] = useState<Record<string, boolean>>({});
@@ -5938,6 +6042,51 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   };
   
   // Estados para gestión y carga de documentos de soporte
+  const [modalVisorDoc, setModalVisorDoc] = useState<{
+    visible: boolean;
+    titulo: string;
+    nombreArchivo: string;
+    url: string | null;
+    mimeType?: string;
+  } | null>(null);
+
+  const [obsReqTipoCobro, setObsReqTipoCobro] = useState<'sin_cobro' | 'con_cobro'>('sin_cobro');
+  const [obsReqNumResolucion, setObsReqNumResolucion] = useState('');
+
+  const actualizarCobroUsoLista = (
+    casoId: string,
+    etapaId: string,
+    requisitoId: string,
+    tipoCobro: 'sin_cobro' | 'con_cobro',
+    numeroResolucion?: string
+  ) => {
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((caso) => {
+        if (caso.id !== casoId) return caso;
+        const nuevasEtapas = caso.etapas.map((etapa) => {
+          if (etapa.id !== etapaId) return etapa;
+          const nuevosRequisitos = etapa.requisitos.map((req) => {
+            if (req.id !== requisitoId) return req;
+            return {
+              ...req,
+              tipoCobroUsoLista: tipoCobro,
+              numeroResolucionPago: numeroResolucion !== undefined ? numeroResolucion : req.numeroResolucionPago,
+            };
+          });
+          return { ...etapa, requisitos: nuevosRequisitos };
+        });
+        return { ...caso, etapas: nuevasEtapas };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+  };
   const [modalExpedienteVisible, setModalExpedienteVisible] = useState(false);
   const [modalMensajeDoc, setModalMensajeDoc] = useState<{
     visible: boolean;
@@ -6169,6 +6318,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const handleAbrirArchivoAdjunto = async (doc: DocumentoSoporteAdjunto) => {
     try {
       if (Platform.OS === 'web') {
+        const res = await resolverUrlArchivoAdjunto(doc);
+        if (res && res.url) {
+          setModalVisorDoc({
+            visible: true,
+            titulo: `Documento de Soporte: ${doc.nombre}`,
+            nombreArchivo: doc.nombre,
+            url: res.url,
+            mimeType: res.mimeType,
+          });
+          return;
+        }
+
+        // Si no se pudo resolver desde IndexedDB, probar abrirODescargarArchivoAdjunto como fallback
         await abrirODescargarArchivoAdjunto(doc, (msg) => {
           setModalMensajeDoc({
             visible: true,
@@ -6233,6 +6395,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     expandirTodasLasFases(!todasExpandidas);
   };
 
+  // Al abrir o cambiar de persona seleccionada, si la fase ya está finalizada se deja contraída
+  useEffect(() => {
+    if (!casoActivo) return;
+    setFasesExpandidas(calcularFasesExpandidasParaCaso(casoActivo));
+  }, [casoActivo?.id]);
+
+  const seleccionarCaso = (id: string) => {
+    setCasoSeleccionadoId(id);
+    const target = casos.find((c) => c.id === id);
+    if (target) {
+      setFasesExpandidas(calcularFasesExpandidasParaCaso(target));
+    }
+  };
+
   // Abrir modal de observaciones al cerrar o inspeccionar un requisito
   const abrirModalObservacionReq = (
     casoId: string,
@@ -6254,6 +6430,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
     setObsReqMarcarCumplido(intentaCerrar ? true : req.cumplido);
     setObsReqNoAplica(req.noAplica ?? false);
+    setObsReqTipoCobro(req.tipoCobroUsoLista || 'sin_cobro');
+    setObsReqNumResolucion(req.numeroResolucionPago || '');
     setModalObsReqVisible(true);
   };
 
@@ -6287,6 +6465,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 : (obsReqTexto.trim() || undefined),
               radicadoSoporte: obsReqRadicado.trim() || undefined,
               usuarioRegistro: 'Profesional TH (SJD)',
+              tipoCobroUsoLista: req.id === 'vc2_4' || req.tipoCobroUsoLista !== undefined ? obsReqTipoCobro : r.tipoCobroUsoLista,
+              numeroResolucionPago: req.id === 'vc2_4' || req.tipoCobroUsoLista !== undefined ? (obsReqNumResolucion.trim() || undefined) : r.numeroResolucionPago,
             };
           });
 
@@ -7724,7 +7904,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         return (
                           <Pressable
                             key={c.id}
-                            onPress={() => setCasoSeleccionadoId(c.id)}
+                            onPress={() => seleccionarCaso(c.id)}
                             style={({ pressed }) => ({
                               backgroundColor: esActivo
                                 ? colorBgActivo
@@ -8310,37 +8490,40 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       <View
                         style={{
                           flexDirection: 'column',
-                          gap: 12,
-                          paddingBottom: 14,
-                          borderBottomWidth: 1,
+                          gap: 16,
+                          paddingTop: 8,
+                          paddingBottom: 20,
+                          paddingHorizontal: 6,
+                          borderBottomWidth: 1.5,
                           borderBottomColor: THEME.slate200,
                         }}
                       >
-                        {/* Fila Superior: Identidad del Servidor y Datos del Cargo */}
-                        <View style={{ gap: 8 }}>
+                        {/* Fila Superior: Identidad del Servidor, Proceso, OPEC y Convocatoria CNSC */}
+                        <View style={{ gap: 14 }}>
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
                               flexWrap: 'wrap',
-                              gap: 8,
+                              gap: 10,
                             }}
                           >
                             <Text
                               style={{
                                 color: THEME.slate900,
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: '800',
-                                letterSpacing: -0.2,
+                                letterSpacing: -0.3,
                               }}
                             >
                               {casoActivo.servidor_nombre}
                             </Text>
 
+                            {/* Badge de Tipo de Proceso */}
                             <View
                               style={{
-                                paddingHorizontal: 10,
-                                paddingVertical: 3,
+                                paddingHorizontal: 12,
+                                paddingVertical: 4.5,
                                 borderRadius: 9999,
                                 backgroundColor:
                                   casoActivo.tipo_proceso === 'VINCULACION'
@@ -8351,6 +8534,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   casoActivo.tipo_proceso === 'VINCULACION'
                                     ? 'transparent'
                                     : THEME.roseRing,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.08,
+                                shadowRadius: 2,
+                                elevation: 1,
                               }}
                             >
                               <Text
@@ -8359,40 +8547,96 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     casoActivo.tipo_proceso === 'VINCULACION'
                                       ? '#ffffff'
                                       : THEME.roseText,
-                                  fontSize: 10.5,
+                                  fontSize: 11,
                                   fontWeight: '800',
-                                  letterSpacing: 0.4,
+                                  letterSpacing: 0.5,
                                 }}
                               >
                                 {casoActivo.tipo_proceso}
                               </Text>
                             </View>
+
+                            {/* Chip Número de OPEC (SIMO) */}
+                            <Pressable
+                              onPress={abrirModalEditarOpecCaso}
+                              style={({ hovered, pressed }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                backgroundColor: pressed ? '#DCFCE7' : hovered ? '#F0FDF4' : '#F8FAFC',
+                                borderWidth: 1.2,
+                                borderColor: hovered ? '#16A34A' : '#86EFAC',
+                                paddingHorizontal: 11,
+                                paddingVertical: 4.5,
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                shadowColor: '#059669',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.08,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              })}
+                            >
+                              <Ionicons name="barcode-outline" size={15} color="#15803D" />
+                              <Text style={{ color: '#166534', fontSize: 11.5, fontWeight: '800' }}>
+                                OPEC (SIMO): {opecValorActual}
+                              </Text>
+                              <Ionicons name="pencil-outline" size={12} color="#15803D" style={{ marginLeft: 2, opacity: 0.8 }} />
+                            </Pressable>
+
+                            {/* Chip Convocatoria / Proceso de Selección CNSC */}
+                            <Pressable
+                              onPress={abrirModalEditarOpecCaso}
+                              style={({ hovered, pressed }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                backgroundColor: pressed ? '#E0E7FF' : hovered ? '#EEF2FF' : '#F8FAFC',
+                                borderWidth: 1.2,
+                                borderColor: hovered ? '#4F46E5' : '#A5B4FC',
+                                paddingHorizontal: 11,
+                                paddingVertical: 4.5,
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                shadowColor: '#4338CA',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.08,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              })}
+                            >
+                              <Ionicons name="trophy-outline" size={14} color="#4338CA" />
+                              <Text style={{ color: '#3730A3', fontSize: 11.5, fontWeight: '700' }}>
+                                Convocatoria CNSC: {convocatoriaValorActual}
+                              </Text>
+                              <Ionicons name="pencil-outline" size={12} color="#4338CA" style={{ marginLeft: 2, opacity: 0.8 }} />
+                            </Pressable>
                           </View>
 
-                          {/* Chips Estructurados de Metadatos */}
+                          {/* Chips Estructurados de Metadatos con mayor espacio */}
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
                               flexWrap: 'wrap',
-                              gap: 8,
+                              gap: 12,
                             }}
                           >
                             <View
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 5,
+                                gap: 6,
                                 backgroundColor: THEME.slate50,
                                 borderWidth: 1,
                                 borderColor: THEME.slate200,
-                                paddingHorizontal: 9,
-                                paddingVertical: 4.5,
-                                borderRadius: 6,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
                               }}
                             >
-                              <Ionicons name="card-outline" size={13} color={THEME.slate500} />
-                              <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '600' }}>
+                              <Ionicons name="card-outline" size={14} color={THEME.slate500} />
+                              <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '600' }}>
                                 Cédula: {casoActivo.servidor_cedula}
                               </Text>
                             </View>
@@ -8402,21 +8646,21 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 5,
+                                gap: 6,
                                 backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : THEME.slate50,
                                 borderWidth: 1,
                                 borderColor: hovered ? THEME.marca600 : THEME.slate200,
-                                paddingHorizontal: 9,
-                                paddingVertical: 4.5,
-                                borderRadius: 6,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
                                 cursor: 'pointer',
                               })}
                             >
-                              <Ionicons name="briefcase-outline" size={13} color={THEME.marca700} />
-                              <Text style={{ color: THEME.slate900, fontSize: 11.5, fontWeight: '700' }}>
+                              <Ionicons name="briefcase-outline" size={14} color={THEME.marca700} />
+                              <Text style={{ color: THEME.slate900, fontSize: 12, fontWeight: '700' }}>
                                 {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
                               </Text>
-                              <Ionicons name="open-outline" size={12} color={THEME.marca700} style={{ marginLeft: 2 }} />
+                              <Ionicons name="open-outline" size={13} color={THEME.marca700} style={{ marginLeft: 2 }} />
                             </Pressable>
 
                             <BotonManualFunciones
@@ -8432,31 +8676,31 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 5,
+                                gap: 6,
                                 backgroundColor: THEME.slate50,
                                 borderWidth: 1,
                                 borderColor: THEME.slate200,
-                                paddingHorizontal: 9,
-                                paddingVertical: 4.5,
-                                borderRadius: 6,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 8,
                               }}
                             >
-                              <Ionicons name="business-outline" size={13} color={THEME.slate500} />
-                              <Text style={{ color: THEME.slate600, fontSize: 11.5, fontWeight: '500' }}>
+                              <Ionicons name="business-outline" size={14} color={THEME.slate500} />
+                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '500' }}>
                                 {casoActivo.dependencia}
                               </Text>
                             </View>
                           </View>
                         </View>
 
-                        {/* Botones de Acción: Modernizados y pulidos */}
+                        {/* Botones de Acción: Modernizados, pulidos y con espacios amplios */}
                         <View
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',
                             flexWrap: 'wrap',
-                            gap: 8,
-                            paddingTop: 4,
+                            gap: 10,
+                            paddingTop: 8,
                           }}
                         >
                           {/* 1. Consultar SECOP II: Azul Marino Institucional */}
@@ -8472,23 +8716,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               flexDirection: 'row',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 6,
+                              gap: 7,
                               backgroundColor: pressed ? '#17406d' : '#1e3a5f',
-                              paddingHorizontal: 13,
-                              paddingVertical: 7.5,
+                              paddingHorizontal: 16,
+                              paddingVertical: 9.5,
                               borderRadius: 8,
                               borderWidth: 1,
                               borderColor: 'rgba(147, 197, 253, 0.35)',
                               shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.12,
-                              shadowRadius: 2,
+                              shadowOffset: { width: 0, height: 1.5 },
+                              shadowOpacity: 0.14,
+                              shadowRadius: 3,
                               elevation: 2,
                             })}
                           >
-                            <Ionicons name="search" size={14} color="#93c5fd" />
+                            <Ionicons name="search" size={15} color="#93c5fd" />
                             <Text
-                              style={{ color: '#ffffff', fontSize: 11.5, fontWeight: '700' }}
+                              style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}
                             >
                               Consultar SECOP II
                             </Text>
@@ -8502,25 +8746,25 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: 6,
+                                gap: 7,
                                 backgroundColor: pressed ? '#0b3f3b' : '#0f766e',
-                                paddingHorizontal: 13,
-                                paddingVertical: 7.5,
+                                paddingHorizontal: 16,
+                                paddingVertical: 9.5,
                                 borderRadius: 8,
                                 borderWidth: 1,
                                 borderColor: 'rgba(94, 234, 212, 0.45)',
                                 shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.12,
-                                shadowRadius: 2,
+                                shadowOffset: { width: 0, height: 1.5 },
+                                shadowOpacity: 0.14,
+                                shadowRadius: 3,
                                 elevation: 2,
                               })}
                             >
-                              <Ionicons name="sparkles" size={14} color="#5eead4" />
+                              <Ionicons name="sparkles" size={15} color="#5eead4" />
                               <Text
                                 style={{
                                   color: '#ffffff',
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: '700',
                                 }}
                               >
@@ -8536,25 +8780,25 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               flexDirection: 'row',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 6,
+                              gap: 7,
                               backgroundColor: pressed ? '#242f42' : '#334155',
-                              paddingHorizontal: 13,
-                              paddingVertical: 7.5,
+                              paddingHorizontal: 16,
+                              paddingVertical: 9.5,
                               borderRadius: 8,
                               borderWidth: 1,
                               borderColor: 'rgba(203, 213, 225, 0.3)',
                               shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.12,
-                              shadowRadius: 2,
+                              shadowOffset: { width: 0, height: 1.5 },
+                              shadowOpacity: 0.14,
+                              shadowRadius: 3,
                               elevation: 2,
                             })}
                           >
-                            <Ionicons name="folder-open-outline" size={14} color="#cbd5e1" />
+                            <Ionicons name="folder-open-outline" size={15} color="#cbd5e1" />
                             <Text
                               style={{
                                 color: '#ffffff',
-                                fontSize: 11.5,
+                                fontSize: 12,
                                 fontWeight: '700',
                               }}
                             >
@@ -8570,29 +8814,29 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: 6,
+                                gap: 7,
                                 backgroundColor: pressed ? '#581c45' : '#701a75',
-                                paddingHorizontal: 13,
-                                paddingVertical: 7.5,
+                                paddingHorizontal: 16,
+                                paddingVertical: 9.5,
                                 borderRadius: 8,
                                 borderWidth: 1,
                                 borderColor: 'rgba(244, 114, 182, 0.35)',
                                 shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.12,
-                                shadowRadius: 2,
+                                shadowOffset: { width: 0, height: 1.5 },
+                                shadowOpacity: 0.14,
+                                shadowRadius: 3,
                                 elevation: 2,
                               })}
                             >
-                              <Ionicons name="clipboard-outline" size={14} color="#f472b6" />
+                              <Ionicons name="clipboard-outline" size={15} color="#f472b6" />
                               <Text
                                 style={{
                                   color: '#ffffff',
-                                  fontSize: 11.5,
+                                  fontSize: 12,
                                   fontWeight: '700',
                                 }}
                               >
-                                📝 Evaluación Retiro (Forms)
+                                Evaluación Retiro (Forms)
                               </Text>
                             </Pressable>
                           )}
@@ -8730,119 +8974,213 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         );
                       })()}
 
-                      {/* Stepper de Fases: 1 fila en pantallas grandes (isTablet) o 2 filas distribuidas en pantallas pequeñas (!isTablet) */}
+                      {/* BOX CONTENEDOR DE FASES: Visualización clara, organizada y responsiva */}
                       {(() => {
-                        const renderPillFase = (etapa: any, mostrarConector = true) => {
+                        const fasesTotales = casoActivo.etapas.length;
+                        const fasesCompletadas = casoActivo.etapas.filter((e) => e.estado === 'completed').length;
+                        const porcentajeFases = Math.round((fasesCompletadas / (fasesTotales || 1)) * 100);
+
+                        // Breakpoints para diseño:
+                        // - Pantalla muy pequeña (< 520px): Scroll horizontal
+                        // - Pantalla mediana/pequeña (520px a 1180px): 2 filas equilibradas para ver todas las fases sin scroll
+                        // - Pantalla grande (>= 1180px): 1 fila completa continua
+                        const esMuyPequena = width < 520;
+                        const esMediana = width >= 520 && width < 1180;
+
+                        const enfocarFase = (etapaId: string) => {
+                          setFasesExpandidas((prev) => ({
+                            ...prev,
+                            [etapaId]: true,
+                          }));
+                        };
+
+                        const renderPillFase = (etapa: any, flexUno = true) => {
                           const esCompletada = etapa.estado === 'completed';
                           const esEnProgreso = etapa.estado === 'in_progress';
 
+                          const reqsTotales = etapa.requisitos?.length || 0;
+                          const reqsCumplidos = etapa.requisitos?.filter((r: any) => r.cumplido || r.noAplica)?.length || 0;
+
                           const colorBg = esCompletada ? '#ecfdf5' : esEnProgreso ? '#fffbeb' : '#f8fafc';
-                          const colorBorde = esCompletada ? '#a7f3d0' : esEnProgreso ? '#fcd34d' : THEME.slate200;
+                          const colorBorde = esCompletada ? '#a7f3d0' : esEnProgreso ? '#f59e0b' : THEME.slate200;
                           const colorIcono = esCompletada ? '#059669' : esEnProgreso ? '#d97706' : THEME.slate400;
-                          const colorTexto = esCompletada ? '#065f46' : esEnProgreso ? '#92400e' : THEME.slate600;
+                          const colorTexto = esCompletada ? '#065f46' : esEnProgreso ? '#92400e' : THEME.slate700;
 
                           return (
-                            <View
+                            <Pressable
                               key={etapa.id}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                flex: !isTablet ? 1 : undefined,
-                              }}
+                              onPress={() => enfocarFase(etapa.id)}
+                              style={({ hovered, pressed }: any) => ({
+                                flex: flexUno ? 1 : undefined,
+                                minWidth: esMuyPequena ? 165 : undefined,
+                                backgroundColor: pressed ? '#e2e8f0' : hovered ? '#f1f5f9' : colorBg,
+                                borderRadius: 8,
+                                paddingHorizontal: 10,
+                                paddingVertical: 8,
+                                borderWidth: esEnProgreso ? 1.5 : 1,
+                                borderColor: colorBorde,
+                                flexDirection: 'column',
+                                gap: 4,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: esEnProgreso ? 0.08 : 0.03,
+                                shadowRadius: 2,
+                                elevation: esEnProgreso ? 2 : 1,
+                                cursor: 'pointer',
+                              })}
                             >
-                              <View
-                                style={{
-                                  backgroundColor: colorBg,
-                                  borderRadius: 8,
-                                  paddingHorizontal: !isTablet ? 8 : 11,
-                                  paddingVertical: !isTablet ? 6 : 7.5,
-                                  borderWidth: esEnProgreso ? 1.5 : 1,
-                                  borderColor: colorBorde,
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: !isTablet ? 'center' : 'flex-start',
-                                  gap: 6,
-                                  flex: !isTablet ? 1 : undefined,
-                                  shadowColor: '#000',
-                                  shadowOffset: { width: 0, height: 1 },
-                                  shadowOpacity: esEnProgreso ? 0.08 : 0.03,
-                                  shadowRadius: 2,
-                                  elevation: esEnProgreso ? 2 : 1,
-                                }}
-                              >
-                                <Ionicons
-                                  name={
-                                    esCompletada
-                                      ? 'checkmark-circle'
-                                      : esEnProgreso
-                                      ? 'time'
-                                      : 'ellipse-outline'
-                                  }
-                                  size={!isTablet ? 13 : 15}
-                                  color={colorIcono}
-                                />
-                                <Text
-                                  numberOfLines={1}
-                                  style={{
-                                    fontSize: !isTablet ? 10.5 : 11,
-                                    fontWeight: esEnProgreso || esCompletada ? '700' : '600',
-                                    color: colorTexto,
-                                  }}
-                                >
-                                  {!isTablet ? `Fase ${etapa.numero}` : `Fase ${etapa.numero}: ${etapa.titulo}`}
-                                </Text>
-                              </View>
-                              {mostrarConector && isTablet && (
+                              {/* Fila 1: Indicador de estado y número de fase */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                  <Ionicons
+                                    name={
+                                      esCompletada
+                                        ? 'checkmark-circle'
+                                        : esEnProgreso
+                                        ? 'time'
+                                        : 'ellipse-outline'
+                                    }
+                                    size={14}
+                                    color={colorIcono}
+                                  />
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: '800',
+                                      color: colorTexto,
+                                      letterSpacing: 0.2,
+                                    }}
+                                  >
+                                    Fase {etapa.numero}
+                                  </Text>
+                                </View>
+
+                                {/* Badge de Requisitos */}
                                 <View
                                   style={{
-                                    width: 14,
-                                    height: 2,
-                                    backgroundColor: esCompletada
-                                      ? '#10b981'
-                                      : esEnProgreso
-                                      ? '#f59e0b'
-                                      : THEME.slate200,
+                                    backgroundColor: esCompletada ? '#dcfce7' : esEnProgreso ? '#fef3c7' : '#f1f5f9',
+                                    paddingHorizontal: 5,
+                                    paddingVertical: 1,
+                                    borderRadius: 4,
+                                    borderWidth: 1,
+                                    borderColor: esCompletada ? '#bbf7d0' : esEnProgreso ? '#fde68a' : '#e2e8f0',
                                   }}
-                                />
-                              )}
-                            </View>
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '700',
+                                      color: esCompletada ? '#15803d' : esEnProgreso ? '#b45309' : '#64748b',
+                                    }}
+                                  >
+                                    {esCompletada ? '100%' : (reqsCumplidos + '/' + reqsTotales)}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              {/* Fila 2: Título descriptivo de la fase */}
+                              <Text
+                                numberOfLines={1}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: esEnProgreso || esCompletada ? '700' : '500',
+                                  color: colorTexto,
+                                }}
+                              >
+                                {etapa.titulo}
+                              </Text>
+                            </Pressable>
                           );
                         };
 
-                        if (!isTablet) {
-                          // Pantallas pequeñas: Distribución en 2 filas
-                          const mitad = Math.ceil(casoActivo.etapas.length / 2);
-                          const fila1 = casoActivo.etapas.slice(0, mitad);
-                          const fila2 = casoActivo.etapas.slice(mitad);
-
-                          return (
-                            <View style={{ gap: 6, paddingVertical: 6, width: '100%' }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, width: '100%' }}>
-                                {fila1.map((etapa) => renderPillFase(etapa, false))}
-                              </View>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, width: '100%' }}>
-                                {fila2.map((etapa) => renderPillFase(etapa, false))}
-                              </View>
-                            </View>
-                          );
-                        }
-
-                        // Pantallas normales / grandes: Stepper horizontal continuo
                         return (
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                          <View
+                            style={{
+                              backgroundColor: THEME.white,
+                              borderRadius: 12,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              padding: 12,
+                              gap: 10,
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1.5 },
+                              shadowOpacity: 0.05,
+                              shadowRadius: 3,
+                              elevation: 2,
+                            }}
+                          >
+                            {/* Cabecera del Box de Fases */}
                             <View
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                paddingVertical: 8,
-                                gap: 8,
+                                justifyContent: 'space-between',
+                                flexWrap: 'wrap',
+                                gap: 6,
+                                paddingBottom: 6,
+                                borderBottomWidth: 1,
+                                borderBottomColor: THEME.slate100,
                               }}
                             >
-                              {casoActivo.etapas.map((etapa, idx) =>
-                                renderPillFase(etapa, idx < casoActivo.etapas.length - 1)
-                              )}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <Ionicons name="git-network-outline" size={15} color={THEME.marca700} />
+                                <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.slate800 }}>
+                                  Ruta y Secuencia de Fases
+                                </Text>
+                                <View
+                                  style={{
+                                    backgroundColor: THEME.marca50,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 1.5,
+                                    borderRadius: 10,
+                                    borderWidth: 1,
+                                    borderColor: THEME.marca100,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca800 }}>
+                                    {fasesCompletadas}/{fasesTotales} Fases Concluidas ({porcentajeFases}%)
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <Text style={{ fontSize: 10.5, color: THEME.slate400, fontWeight: '500' }}>
+                                Haga clic en una fase para abrirla
+                              </Text>
                             </View>
-                          </ScrollView>
+
+                            {/* Contenido según ancho de pantalla */}
+                            {esMuyPequena ? (
+                              // Pantallas muy pequeñas (< 520px): Scroll horizontal fluido
+                              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 }}>
+                                  {casoActivo.etapas.map((etapa) => renderPillFase(etapa, false))}
+                                </View>
+                              </ScrollView>
+                            ) : esMediana ? (
+                              // Pantallas medianas y pequeñas: 2 filas sin necesidad de scroll
+                              (() => {
+                                const mitad = Math.ceil(casoActivo.etapas.length / 2);
+                                const fila1 = casoActivo.etapas.slice(0, mitad);
+                                const fila2 = casoActivo.etapas.slice(mitad);
+
+                                return (
+                                  <View style={{ gap: 8, width: '100%' }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+                                      {fila1.map((etapa) => renderPillFase(etapa, true))}
+                                    </View>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+                                      {fila2.map((etapa) => renderPillFase(etapa, true))}
+                                    </View>
+                                  </View>
+                                );
+                              })()
+                            ) : (
+                              // Pantallas grandes (>= 1180px): 1 sola fila continua que ocupa el 100%
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+                                {casoActivo.etapas.map((etapa) => renderPillFase(etapa, true))}
+                              </View>
+                            )}
+                          </View>
                         );
                       })()}
 
@@ -9254,7 +9592,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               <Ionicons
                                                 name={req.noAplica ? 'remove-circle-outline' : req.cumplido ? 'checkbox' : 'square-outline'}
                                                 size={20}
-                                                color={req.noAplica ? '#94a3b8' : req.cumplido ? THEME.emeraldText : THEME.slate400}
+                                                color={req.noAplica ? '#475569' : req.cumplido ? THEME.emeraldText : THEME.slate400}
                                               />
                                             </Pressable>
 
@@ -9264,7 +9602,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   style={{
                                                     fontSize: 13.5,
                                                     fontWeight: '700',
-                                                    color: req.noAplica ? THEME.slate600 : req.cumplido ? THEME.slate500 : THEME.slate900,
+                                                    color: req.noAplica ? '#1e293b' : req.cumplido ? THEME.slate500 : THEME.slate900,
                                                     textDecorationLine: req.noAplica ? 'none' : req.cumplido ? 'line-through' : 'none',
                                                     lineHeight: 19,
                                                   }}
@@ -9274,19 +9612,24 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 {req.noAplica && (
                                                   <View
                                                     style={{
-                                                      backgroundColor: '#f1f5f9',
-                                                      borderColor: '#cbd5e1',
+                                                      backgroundColor: '#334155',
+                                                      borderColor: '#1e293b',
                                                       borderWidth: 1,
-                                                      paddingHorizontal: 7,
-                                                      paddingVertical: 2,
+                                                      paddingHorizontal: 8,
+                                                      paddingVertical: 2.5,
                                                       borderRadius: 6,
                                                       flexDirection: 'row',
                                                       alignItems: 'center',
                                                       gap: 4,
+                                                      shadowColor: '#000',
+                                                      shadowOffset: { width: 0, height: 1 },
+                                                      shadowOpacity: 0.12,
+                                                      shadowRadius: 2,
+                                                      elevation: 1,
                                                     }}
                                                   >
-                                                    <Ionicons name="remove-circle" size={12} color="#64748b" />
-                                                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569' }}>
+                                                    <Ionicons name="remove-circle" size={13} color="#ffffff" />
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#ffffff', letterSpacing: 0.3 }}>
                                                       NO APLICA (USO DE LISTA)
                                                     </Text>
                                                   </View>
@@ -9594,6 +9937,132 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 </Pressable>
 
                                                                                                 </View>
+
+                                                {/* PANEL ESPECIAL: DETERMINACIÓN DE COBRO CNSC & RESOLUCIÓN DE PAGO (FASE 2) */}
+                                                {(req.id === 'vc2_4' || req.tipoCobroUsoLista !== undefined) && (() => {
+                                                  const tipoCobro = req.tipoCobroUsoLista || 'sin_cobro';
+                                                  const esConCobro = tipoCobro === 'con_cobro';
+
+                                                  return (
+                                                    <View
+                                                      style={{
+                                                        width: '100%',
+                                                        backgroundColor: esConCobro ? '#fffbeb' : '#f0fdf4',
+                                                        borderWidth: 1.2,
+                                                        borderColor: esConCobro ? '#fcd34d' : '#86efac',
+                                                        borderRadius: 8,
+                                                        padding: 10,
+                                                        gap: 8,
+                                                        marginTop: 6,
+                                                      }}
+                                                    >
+                                                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                          <Ionicons name={esConCobro ? 'cash-outline' : 'shield-checkmark-outline'} size={16} color={esConCobro ? '#b45309' : '#15803d'} />
+                                                          <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobro ? '#92400e' : '#166534' }}>
+                                                            Modalidad de Cobro por Uso de Lista CNSC:
+                                                          </Text>
+                                                        </View>
+
+                                                        {/* Selector interactivo Sin Cobro vs Con Cobro */}
+                                                        <View style={{ flexDirection: 'row', gap: 6 }}>
+                                                          <Pressable
+                                                            onPress={(e) => {
+                                                              e.stopPropagation();
+                                                              actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'sin_cobro');
+                                                            }}
+                                                            style={{
+                                                              flexDirection: 'row',
+                                                              alignItems: 'center',
+                                                              gap: 4,
+                                                              paddingHorizontal: 10,
+                                                              paddingVertical: 4.5,
+                                                              borderRadius: 6,
+                                                              backgroundColor: !esConCobro ? '#15803d' : '#ffffff',
+                                                              borderWidth: 1,
+                                                              borderColor: !esConCobro ? '#15803d' : '#cbd5e1',
+                                                              cursor: 'pointer',
+                                                            }}
+                                                          >
+                                                            <Ionicons name={!esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={!esConCobro ? '#ffffff' : '#64748b'} />
+                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: !esConCobro ? '#ffffff' : '#475569' }}>
+                                                              Sin Cobro (Gratuito)
+                                                            </Text>
+                                                          </Pressable>
+
+                                                          <Pressable
+                                                            onPress={(e) => {
+                                                              e.stopPropagation();
+                                                              actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'con_cobro');
+                                                            }}
+                                                            style={{
+                                                              flexDirection: 'row',
+                                                              alignItems: 'center',
+                                                              gap: 4,
+                                                              paddingHorizontal: 10,
+                                                              paddingVertical: 4.5,
+                                                              borderRadius: 6,
+                                                              backgroundColor: esConCobro ? '#b45309' : '#ffffff',
+                                                              borderWidth: 1,
+                                                              borderColor: esConCobro ? '#b45309' : '#cbd5e1',
+                                                              cursor: 'pointer',
+                                                            }}
+                                                          >
+                                                            <Ionicons name={esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={esConCobro ? '#ffffff' : '#64748b'} />
+                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: esConCobro ? '#ffffff' : '#475569' }}>
+                                                              Con Cobro (Requiere Resolución)
+                                                            </Text>
+                                                          </Pressable>
+                                                        </View>
+                                                      </View>
+
+                                                      {esConCobro ? (
+                                                        <View style={{ gap: 6, backgroundColor: '#ffffff', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#fde68a' }}>
+                                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                            <Ionicons name="warning" size={13} color="#d97706" />
+                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#b45309' }}>
+                                                              ⚠️ Obligatorio: Expedición de Resolución de Pago a la CNSC
+                                                            </Text>
+                                                          </View>
+                                                          <Text style={{ fontSize: 10.5, color: '#92400e', lineHeight: 15 }}>
+                                                            Al ser con cobro, la Secretaría Jurídica Distrital debe proyectar y expedir el acto administrativo de ordenación del gasto y pago a la CNSC con cargo al rubro presupuestal institucional.
+                                                          </Text>
+
+                                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                                                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate700 }}>
+                                                              Resolución de Pago CNSC:
+                                                            </Text>
+                                                            <TextInput
+                                                              value={req.numeroResolucionPago || ''}
+                                                              onChangeText={(val) => actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'con_cobro', val)}
+                                                              placeholder="Ej: Resolución No. 184 de 2026..."
+                                                              placeholderTextColor={THEME.slate400}
+                                                              style={{
+                                                                flex: 1,
+                                                                backgroundColor: THEME.white,
+                                                                borderWidth: 1,
+                                                                borderColor: '#f59e0b',
+                                                                borderRadius: 5,
+                                                                paddingHorizontal: 8,
+                                                                paddingVertical: 4,
+                                                                fontSize: 11.5,
+                                                                fontWeight: '700',
+                                                                color: THEME.slate900,
+                                                              }}
+                                                            />
+                                                          </View>
+                                                        </View>
+                                                      ) : (
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                          <Ionicons name="checkmark-done-circle" size={13} color="#16a34a" />
+                                                          <Text style={{ fontSize: 10.5, color: '#166534', fontWeight: '600' }}>
+                                                            Trámite a título gratuito avalado en Acta de Comisión de Personal. No genera cobro ni requiere resolución presupuestal de pago.
+                                                          </Text>
+                                                        </View>
+                                                      )}
+                                                    </View>
+                                                  );
+                                                })()}
 
 
 
@@ -13964,7 +14433,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                   <View
                     style={{
-                      backgroundColor: modalReqContext?.req.cumplido ? THEME.emeraldBg : THEME.amberBg,
+                      backgroundColor: modalReqContext?.req.noAplica
+                        ? '#334155'
+                        : modalReqContext?.req.cumplido
+                        ? THEME.emeraldBg
+                        : THEME.amberBg,
+                      borderColor: modalReqContext?.req.noAplica ? '#1e293b' : 'transparent',
+                      borderWidth: modalReqContext?.req.noAplica ? 1 : 0,
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 4,
@@ -13973,11 +14448,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     <Text
                       style={{
                         fontSize: 10,
-                        fontWeight: '700',
-                        color: modalReqContext?.req.cumplido ? THEME.emeraldText : THEME.amberText,
+                        fontWeight: '800',
+                        color: modalReqContext?.req.noAplica
+                          ? '#ffffff'
+                          : modalReqContext?.req.cumplido
+                          ? THEME.emeraldText
+                          : THEME.amberText,
                       }}
                     >
-                      {modalReqContext?.req.cumplido ? 'CUMPLIDO' : 'PENDIENTE'}
+                      {modalReqContext?.req.noAplica ? 'NO APLICA' : modalReqContext?.req.cumplido ? 'CUMPLIDO' : 'PENDIENTE'}
                     </Text>
                   </View>
                 </View>
@@ -14476,6 +14955,90 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
               {/* Formulario de Observaciones y Soporte */}
               <View style={{ gap: 12 }}>
+                {/* SECCIÓN ESPECIAL: DETERMINACIÓN DE COBRO CNSC & RESOLUCIÓN EN MODAL */}
+                {(modalReqContext?.req.id === 'vc2_4' || modalReqContext?.req.tipoCobroUsoLista !== undefined) && (
+                  <View
+                    style={{
+                      backgroundColor: obsReqTipoCobro === 'con_cobro' ? '#fffbeb' : '#f0fdf4',
+                      borderWidth: 1.2,
+                      borderColor: obsReqTipoCobro === 'con_cobro' ? '#fcd34d' : '#86efac',
+                      borderRadius: 8,
+                      padding: 12,
+                      gap: 8,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: obsReqTipoCobro === 'con_cobro' ? '#92400e' : '#166534' }}>
+                      🏛️ Modalidad de Cobro por Uso de Lista CNSC:
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <Pressable
+                        onPress={() => setObsReqTipoCobro('sin_cobro')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          backgroundColor: obsReqTipoCobro === 'sin_cobro' ? '#15803d' : '#ffffff',
+                          borderWidth: 1,
+                          borderColor: obsReqTipoCobro === 'sin_cobro' ? '#15803d' : '#cbd5e1',
+                        }}
+                      >
+                        <Ionicons name={obsReqTipoCobro === 'sin_cobro' ? 'checkmark-circle' : 'ellipse-outline'} size={14} color={obsReqTipoCobro === 'sin_cobro' ? '#ffffff' : '#64748b'} />
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: obsReqTipoCobro === 'sin_cobro' ? '#ffffff' : '#475569' }}>
+                          Sin Cobro (Gratuito)
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setObsReqTipoCobro('con_cobro')}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          backgroundColor: obsReqTipoCobro === 'con_cobro' ? '#b45309' : '#ffffff',
+                          borderWidth: 1,
+                          borderColor: obsReqTipoCobro === 'con_cobro' ? '#b45309' : '#cbd5e1',
+                        }}
+                      >
+                        <Ionicons name={obsReqTipoCobro === 'con_cobro' ? 'checkmark-circle' : 'ellipse-outline'} size={14} color={obsReqTipoCobro === 'con_cobro' ? '#ffffff' : '#64748b'} />
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: obsReqTipoCobro === 'con_cobro' ? '#ffffff' : '#475569' }}>
+                          Con Cobro (Requiere Resolución de Pago)
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {obsReqTipoCobro === 'con_cobro' && (
+                      <View style={{ gap: 5, marginTop: 4 }}>
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#b45309' }}>
+                          Número de Resolución de Ordenación del Gasto y Pago a la CNSC:
+                        </Text>
+                        <TextInput
+                          value={obsReqNumResolucion}
+                          onChangeText={setObsReqNumResolucion}
+                          placeholder="Ej: Resolución No. 184 del 12 de Marzo de 2026"
+                          placeholderTextColor={THEME.slate400}
+                          style={{
+                            backgroundColor: THEME.white,
+                            borderWidth: 1,
+                            borderColor: '#f59e0b',
+                            borderRadius: 6,
+                            paddingHorizontal: 10,
+                            paddingVertical: 7,
+                            fontSize: 12,
+                            fontWeight: '700',
+                            color: THEME.slate900,
+                          }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                )}
                 {/* Campo de Observaciones Multilínea */}
                 <View style={{ gap: 4 }}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: THEME.slate800 }}>
@@ -15795,8 +16358,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       flexDirection: 'row',
                                       alignItems: 'flex-start',
                                       gap: 8,
-                                      paddingVertical: 4,
-                                      borderTopWidth: rIdx > 0 ? 1 : 0,
+                                      paddingVertical: req.noAplica ? 6 : 4,
+                                      paddingHorizontal: req.noAplica ? 8 : 0,
+                                      borderRadius: 6,
+                                      backgroundColor: req.noAplica ? '#e2e8f0' : 'transparent',
+                                      borderLeftWidth: req.noAplica ? 3 : 0,
+                                      borderLeftColor: '#475569',
+                                      borderTopWidth: rIdx > 0 && !req.noAplica ? 1 : 0,
                                       borderTopColor: THEME.slate100,
                                     }}
                                   >
@@ -16777,6 +17345,197 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         visible={!!fichaPlazaModal}
         onClose={() => setFichaPlazaModal(null)}
         plaza={fichaPlazaModal}
+      />
+
+      {/* Modal para Editar Número de OPEC (SIMO) y Convocatoria CNSC */}
+      <Modal
+        visible={modalEditarOpecCasoVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalEditarOpecCasoVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 520,
+              backgroundColor: THEME.white,
+              borderRadius: 14,
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          >
+            {/* Header del Modal */}
+            <View
+              style={{
+                backgroundColor: THEME.marca900,
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Ionicons name="barcode-outline" size={22} color="#93C5FD" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: THEME.white, fontSize: 15, fontWeight: '800' }}>
+                    Gestión OPEC (SIMO) & Convocatoria CNSC
+                  </Text>
+                  <Text style={{ color: THEME.marca100, fontSize: 11, marginTop: 1 }} numberOfLines={1}>
+                    {casoActivo?.servidor_nombre} • {casoActivo?.cargo}
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={() => setModalEditarOpecCasoVisible(false)}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close" size={20} color={THEME.white} />
+              </Pressable>
+            </View>
+
+            {/* Contenido del Formulario */}
+            <View style={{ padding: 20, gap: 16 }}>
+              <View
+                style={{
+                  backgroundColor: '#EEF2FF',
+                  borderColor: '#C7D2FE',
+                  borderWidth: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  gap: 4,
+                }}
+              >
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#3730A3' }}>
+                  🏛️ Parámetros de Mérito Constitucional (Ley 909 de 2004)
+                </Text>
+                <Text style={{ fontSize: 11, color: '#4338CA', lineHeight: 16 }}>
+                  Registre el código de Oferta Pública de Empleos de Carrera (OPEC) de la plataforma SIMO 4.0 y el Proceso de Selección o Convocatoria de la Comisión Nacional del Servicio Civil (CNSC).
+                </Text>
+              </View>
+
+              {/* Input Número de OPEC */}
+              <View style={{ gap: 6 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                  Número de OPEC (SIMO):
+                </Text>
+                <TextInput
+                  value={inputOpecCaso}
+                  onChangeText={setInputOpecCaso}
+                  placeholder="Ej: 203205"
+                  placeholderTextColor={THEME.slate400}
+                  keyboardType="numeric"
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderWidth: 1,
+                    borderColor: THEME.slate300,
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: THEME.slate900,
+                  }}
+                />
+              </View>
+
+              {/* Input Convocatoria / Proceso de Selección */}
+              <View style={{ gap: 6 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                  Convocatoria / Proceso de Selección CNSC:
+                </Text>
+                <TextInput
+                  value={inputConvocatoriaCaso}
+                  onChangeText={setInputConvocatoriaCaso}
+                  placeholder="Ej: Convocatoria Distrito Capital 5 - CNSC"
+                  placeholderTextColor={THEME.slate400}
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderWidth: 1,
+                    borderColor: THEME.slate300,
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    color: THEME.slate900,
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Footer con Botones */}
+            <View
+              style={{
+                backgroundColor: THEME.slate50,
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                borderTopWidth: 1,
+                borderTopColor: THEME.slate200,
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                gap: 10,
+              }}
+            >
+              <Pressable
+                onPress={() => setModalEditarOpecCasoVisible(false)}
+                style={{
+                  backgroundColor: THEME.white,
+                  borderWidth: 1,
+                  borderColor: THEME.slate300,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '600' }}>
+                  Cancelar
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={guardarOpecConvocatoriaCaso}
+                style={{
+                  backgroundColor: THEME.marca700,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Ionicons name="checkmark-circle-outline" size={16} color={THEME.white} />
+                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
+                  Guardar y Actualizar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal Visor Institucional de Documentos y Evidencias de Soporte (Idéntico a Manual de Funciones) */}
+      <PdfViewerModal
+        visible={!!modalVisorDoc?.visible}
+        onClose={() => setModalVisorDoc(null)}
+        titulo={modalVisorDoc?.titulo || 'Documento de Soporte'}
+        nombreArchivo={modalVisorDoc?.nombreArchivo}
+        pdfUrl={modalVisorDoc?.url}
+        mimeType={modalVisorDoc?.mimeType}
       />
 
     </View>
