@@ -1696,17 +1696,53 @@ export default function NominaScreen() {
       mockMatch?.resolucion_manual ||
       manualOficial;
 
-    // Funciones esenciales del empleo (Columna AF del Archivo de Planta Oficial)
+    // Helper para normalizar funciones y separar textos continuos (ej. '1. ... 2. ... 3. ...')
+    const normalizarFuncionesRobustas = (input: any): string[] => {
+      if (!input) return [];
+      let lista: string[] = [];
+      if (Array.isArray(input)) {
+        lista = input.map((s) => String(s || '').trim()).filter(Boolean);
+      } else if (typeof input === 'string') {
+        lista = input.split('\n').map((s) => s.trim()).filter(Boolean);
+      }
+
+      const resultado: string[] = [];
+      for (const item of lista) {
+        const partes = item
+          .split(/(?=(?:^|\n|[\.\s])\d+[\.\)]\s*[A-ZÁÉÍÓÚÑ])/g)
+          .map((p) => p.replace(/^[\s\.\,\;\-]+/, '').trim())
+          .filter((p) => p.length > 5);
+        if (partes.length > 1) {
+          resultado.push(...partes);
+        } else {
+          resultado.push(item);
+        }
+      }
+
+      return resultado.map((f, i) => {
+        const clean = f.replace(/^\d+[\.\)]\s*/, '').trim();
+        return `${i + 1}. ${clean}`;
+      });
+    };
+
+    // Funciones esenciales del empleo
     const funcionesArray: string[] = (() => {
-      if (Array.isArray(plazaModal.funciones) && plazaModal.funciones.length > 0) {
-        return plazaModal.funciones;
+      const candidata =
+        (Array.isArray(plazaModal.funciones) && plazaModal.funciones.length > 0)
+          ? plazaModal.funciones
+          : (typeof plazaModal.funciones === 'string' && plazaModal.funciones.trim())
+          ? plazaModal.funciones
+          : (mockMatch && Array.isArray(mockMatch.funciones) && mockMatch.funciones.length > 0)
+          ? mockMatch.funciones
+          : (mockMatch && typeof mockMatch.funciones === 'string' && mockMatch.funciones.trim())
+          ? mockMatch.funciones
+          : null;
+
+      if (candidata) {
+        const parseadas = normalizarFuncionesRobustas(candidata);
+        if (parseadas.length > 0) return parseadas;
       }
-      if (typeof plazaModal.funciones === 'string' && plazaModal.funciones.trim()) {
-        return plazaModal.funciones.split('\n').filter(Boolean);
-      }
-      if (mockMatch && Array.isArray(mockMatch.funciones) && mockMatch.funciones.length > 0) {
-        return mockMatch.funciones;
-      }
+
       return [
         '1. Asesorar y ejecutar las actividades técnicas, jurídicas y operativas del área asignada conforme al Plan Estratégico Institucional.',
         '2. Proyectar y revisar actos administrativos, conceptos jurídicos y documentos de gestión asignados por la jefatura.',
@@ -1730,11 +1766,33 @@ export default function NominaScreen() {
       mockMatch?.requisitos ||
       'Título profesional en disciplina académica del Núcleo Básico de Conocimiento (NBC) afín a la dependencia y experiencia relacionada según el nivel jerárquico.';
 
+    const requisitosFormacionTexto: string =
+      plazaModal.requisitos_formacion ||
+      (mockMatch as any)?.requisitos_formacion ||
+      plazaModal.requisitos ||
+      mockMatch?.requisitos ||
+      'Título o formación reglamentaria según el nivel jerárquico y núcleo básico del conocimiento afín.';
+
+    const requisitosExperienciaTexto: string =
+      plazaModal.requisitos_experiencia ||
+      (mockMatch as any)?.requisitos_experiencia ||
+      'No requiere experiencia previa o según lo reglamentado en el manual de funciones.';
+
+    const mesesExpValor: number | null =
+      plazaModal.meses_experiencia !== undefined && plazaModal.meses_experiencia !== null
+        ? Number(plazaModal.meses_experiencia)
+        : ((mockMatch as any)?.meses_experiencia !== undefined && (mockMatch as any)?.meses_experiencia !== null)
+        ? Number((mockMatch as any).meses_experiencia)
+        : null;
+
     return {
       ...plazaModal,
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
+      requisitos_formacion: requisitosFormacionTexto,
+      requisitos_experiencia: requisitosExperienciaTexto,
+      meses_experiencia: mesesExpValor,
       manual_funciones: manualOficial,
       resolucion_manual: resolucionOficial,
       // Datos de las personas en PERNO
@@ -10151,9 +10209,16 @@ export default function NominaScreen() {
                           Tipo de Experiencia
                         </Text>
                         <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModal?.nivel === 'PROFESIONAL' || plazaModal?.nivel === 'ASESOR' || plazaModal?.nivel === 'DIRECTIVO'
-                            ? 'Profesional Relacionada'
-                            : 'Laboral o Asistencial'}
+                          {(() => {
+                            const expTexto = String((plazaModalEnriquecida as any)?.requisitos_experiencia || '').toLowerCase();
+                            const meses = (plazaModalEnriquecida as any)?.meses_experiencia;
+                            if (meses === 0 || expTexto.includes('no requiere') || expTexto.includes('sin experiencia')) {
+                              return 'No Aplica (Sin experiencia exigida)';
+                            }
+                            return (plazaModal?.nivel === 'PROFESIONAL' || plazaModal?.nivel === 'ASESOR' || plazaModal?.nivel === 'DIRECTIVO')
+                              ? 'Profesional Relacionada'
+                              : 'Laboral o Asistencial';
+                          })()}
                         </Text>
                       </View>
 
@@ -10162,15 +10227,20 @@ export default function NominaScreen() {
                           Tiempo Estándar de Experiencia
                         </Text>
                         <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 2 }}>
-                          {(plazaModalEnriquecida as any)?.meses_experiencia
-                            ? `${(plazaModalEnriquecida as any).meses_experiencia} meses`
-                            : plazaModal?.nivel === 'DIRECTIVO'
-                            ? '48 a 72 meses'
-                            : plazaModal?.nivel === 'ASESOR'
-                            ? '36 a 60 meses'
-                            : (Number(plazaModal?.grado) || 0) >= 15
-                            ? '24 a 36 meses'
-                            : '12 a 24 meses'}
+                          {(() => {
+                            const expTexto = String((plazaModalEnriquecida as any)?.requisitos_experiencia || '').toLowerCase();
+                            const meses = (plazaModalEnriquecida as any)?.meses_experiencia;
+                            if (meses === 0 || expTexto.includes('no requiere') || expTexto.includes('sin experiencia')) {
+                              return 'No requiere experiencia previa';
+                            }
+                            if (typeof meses === 'number' && meses > 0) {
+                              return `${meses} meses`;
+                            }
+                            if (plazaModal?.nivel === 'DIRECTIVO') return '48 a 72 meses';
+                            if (plazaModal?.nivel === 'ASESOR') return '36 a 60 meses';
+                            if (plazaModal?.nivel === 'ASISTENCIAL') return 'No requiere experiencia previa';
+                            return (Number(plazaModal?.grado) || 0) >= 15 ? '24 a 36 meses' : '12 a 24 meses';
+                          })()}
                         </Text>
                       </View>
                     </View>

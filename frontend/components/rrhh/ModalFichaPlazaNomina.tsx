@@ -234,16 +234,51 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       mockMatch?.resolucion_manual ||
       manualOficial;
 
+    const normalizarFuncionesRobustas = (input: any): string[] => {
+      if (!input) return [];
+      let lista: string[] = [];
+      if (Array.isArray(input)) {
+        lista = input.map((s) => String(s || '').trim()).filter(Boolean);
+      } else if (typeof input === 'string') {
+        lista = input.split('\n').map((s) => s.trim()).filter(Boolean);
+      }
+
+      const resultado: string[] = [];
+      for (const item of lista) {
+        const partes = item
+          .split(/(?=(?:^|\n|[\.\s])\d+[\.\)]\s*[A-ZÁÉÍÓÚÑ])/g)
+          .map((p) => p.replace(/^[\s\.\,\;\-]+/, '').trim())
+          .filter((p) => p.length > 5);
+        if (partes.length > 1) {
+          resultado.push(...partes);
+        } else {
+          resultado.push(item);
+        }
+      }
+
+      return resultado.map((f, i) => {
+        const clean = f.replace(/^\d+[\.\)]\s*/, '').trim();
+        return `${i + 1}. ${clean}`;
+      });
+    };
+
     const funcionesArray: string[] = (() => {
-      if (Array.isArray(plazaActiva.funciones) && plazaActiva.funciones.length > 0) {
-        return plazaActiva.funciones;
+      const candidata =
+        (Array.isArray(plazaActiva.funciones) && plazaActiva.funciones.length > 0)
+          ? plazaActiva.funciones
+          : (typeof plazaActiva.funciones === 'string' && plazaActiva.funciones.trim())
+          ? plazaActiva.funciones
+          : (mockMatch && Array.isArray(mockMatch.funciones) && mockMatch.funciones.length > 0)
+          ? mockMatch.funciones
+          : (mockMatch && typeof mockMatch.funciones === 'string' && mockMatch.funciones.trim())
+          ? mockMatch.funciones
+          : null;
+
+      if (candidata) {
+        const parseadas = normalizarFuncionesRobustas(candidata);
+        if (parseadas.length > 0) return parseadas;
       }
-      if (typeof plazaActiva.funciones === 'string' && plazaActiva.funciones.trim()) {
-        return plazaActiva.funciones.split('\n').filter(Boolean);
-      }
-      if (mockMatch && Array.isArray(mockMatch.funciones) && mockMatch.funciones.length > 0) {
-        return mockMatch.funciones;
-      }
+
       return [
         '1. Asesorar y ejecutar las actividades técnicas, jurídicas y operativas del empleo conforme al Plan Estratégico Institucional.',
         '2. Desarrollar y verificar actos administrativos, conceptos técnicos y documentos de gestión asignados por la dirección.',
@@ -265,11 +300,33 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
       mockMatch?.requisitos ||
       'Título y formación según el nivel jerárquico (NBC afín a la entidad) y experiencia laboral acorde al Manual Específico de Funciones y Competencias Laborales.';
 
+    const requisitosFormacionTexto: string =
+      plazaActiva.requisitos_formacion ||
+      (mockMatch as any)?.requisitos_formacion ||
+      plazaActiva.requisitos ||
+      mockMatch?.requisitos ||
+      'Título o formación reglamentaria según el nivel jerárquico y núcleo básico del conocimiento afín.';
+
+    const requisitosExperienciaTexto: string =
+      plazaActiva.requisitos_experiencia ||
+      (mockMatch as any)?.requisitos_experiencia ||
+      'No requiere experiencia previa o según lo reglamentado en el manual de funciones.';
+
+    const mesesExpValor: number | null =
+      plazaActiva.meses_experiencia !== undefined && plazaActiva.meses_experiencia !== null
+        ? Number(plazaActiva.meses_experiencia)
+        : ((mockMatch as any)?.meses_experiencia !== undefined && (mockMatch as any)?.meses_experiencia !== null)
+        ? Number((mockMatch as any).meses_experiencia)
+        : null;
+
     return {
       ...plazaActiva,
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
+      requisitos_formacion: requisitosFormacionTexto,
+      requisitos_experiencia: requisitosExperienciaTexto,
+      meses_experiencia: mesesExpValor,
       manual_funciones: manualOficial,
       resolucion_manual: resolucionOficial,
       perno_activo: pernoActivo,
@@ -1303,17 +1360,159 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                     </View>
                     <View>
                       <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
-                        Formación Académica y Disciplinas Exigidas
+                        Formación Académica y Núcleo de Conocimiento
                       </Text>
                       <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                        Núcleos Básicos de Conocimiento (NBC)
+                        Estudios reglamentarios para el nivel {plazaActiva?.nivel || 'jerárquico'}
                       </Text>
                     </View>
                   </View>
 
-                  <Text style={{ fontSize: 12.5, color: THEME.slate800, lineHeight: 18, marginBottom: 12 }}>
-                    {plazaEnriquecida?.requisitos}
-                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: THEME.slate50,
+                      borderRadius: 8,
+                      padding: 12,
+                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: THEME.slate200,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase', marginBottom: 4 }}>
+                      Formación Académica y Títulos Exigidos:
+                    </Text>
+                    <Text style={{ fontSize: 13, color: THEME.slate800, lineHeight: 19 }}>
+                      {(plazaEnriquecida as any)?.requisitos_formacion || plazaEnriquecida?.requisitos || 'No especificado'}
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 140 }}>
+                      <Text style={{ fontSize: 11, color: THEME.slate500 }}>Núcleo Básico (NBC)</Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {plazaActiva?.nivel === 'DIRECTIVO' || plazaActiva?.nivel === 'ASESOR'
+                          ? 'Derecho, Ciencias Sociales, Administración'
+                          : plazaActiva?.nivel === 'PROFESIONAL'
+                          ? 'Derecho, Ciencia Política, Economía, Sistemas'
+                          : 'Bachillerato Técnico / Gestión Administrativa'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Tarjeta de Experiencia Laboral y Profesional Exigida */}
+                <View
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: THEME.slate200,
+                    padding: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: '#FEF3C7',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="briefcase" size={17} color="#B45309" />
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900 }}>
+                          Experiencia Laboral y Profesional Exigida
+                        </Text>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>
+                          Acreditación de experiencia según el nivel y grado
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      onPress={() => setModalEditarPerfilVisible(true)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5,
+                        backgroundColor: pressed ? '#1E40AF' : '#2563EB',
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                      })}
+                    >
+                      <Ionicons name="create-outline" size={13} color={THEME.white} />
+                      <Text style={{ color: THEME.white, fontSize: 11.5, fontWeight: '700' }}>
+                        Editar Formación / Experiencia
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  <View
+                    style={{
+                      backgroundColor: '#FFFBEB',
+                      borderRadius: 8,
+                      padding: 12,
+                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: '#FDE68A',
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', marginBottom: 4 }}>
+                      Experiencia Requerida Oficial:
+                    </Text>
+                    <Text style={{ fontSize: 13, color: '#78350F', lineHeight: 19 }}>
+                      {(plazaEnriquecida as any)?.requisitos_experiencia || 'No requiere experiencia previa o según reglamento.'}
+                    </Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                    <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 10, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        Tipo de Experiencia
+                      </Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                        {(() => {
+                          const expTexto = String((plazaEnriquecida as any)?.requisitos_experiencia || '').toLowerCase();
+                          const meses = (plazaEnriquecida as any)?.meses_experiencia;
+                          if (meses === 0 || expTexto.includes('no requiere') || expTexto.includes('sin experiencia')) {
+                            return 'No Aplica (Sin experiencia exigida)';
+                          }
+                          return (plazaActiva?.nivel === 'PROFESIONAL' || plazaActiva?.nivel === 'ASESOR' || plazaActiva?.nivel === 'DIRECTIVO')
+                            ? 'Profesional Relacionada'
+                            : 'Laboral o Asistencial';
+                        })()}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 140, backgroundColor: THEME.slate50, padding: 10, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate500, textTransform: 'uppercase' }}>
+                        Tiempo Estándar de Experiencia
+                      </Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.marca700, marginTop: 2 }}>
+                        {(() => {
+                          const expTexto = String((plazaEnriquecida as any)?.requisitos_experiencia || '').toLowerCase();
+                          const meses = (plazaEnriquecida as any)?.meses_experiencia;
+                          if (meses === 0 || expTexto.includes('no requiere') || expTexto.includes('sin experiencia')) {
+                            return 'No requiere experiencia previa';
+                          }
+                          if (typeof meses === 'number' && meses > 0) {
+                            return `${meses} meses`;
+                          }
+                          if (plazaActiva?.nivel === 'DIRECTIVO') return '48 a 72 meses';
+                          if (plazaActiva?.nivel === 'ASESOR') return '36 a 60 meses';
+                          if (plazaActiva?.nivel === 'ASISTENCIAL') return 'No requiere experiencia previa';
+                          return (Number(plazaActiva?.grado) || 0) >= 15 ? '24 a 36 meses' : '12 a 24 meses';
+                        })()}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
                 {/* Tarjeta Competencias Comportamentales */}

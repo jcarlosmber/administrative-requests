@@ -104,6 +104,10 @@ export interface PlazaNomina {
   // Resoluciones y Manual de Funciones (Columnas AJ, AF y AH)
   resolucion_manual?: string;
   manual_funciones?: string;
+  requisitos_formacion?: string | null;
+  requisitos_experiencia?: string | null;
+  meses_experiencia?: number | null;
+  archivo_pdf?: string | null;
   // Situaciones administrativas específicas (Columnas S a V)
   pv?: string | null;
   pp_oe?: string | null;
