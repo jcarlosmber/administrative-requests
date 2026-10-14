@@ -313,6 +313,10 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   *⚖️ Norma*: Ley 909 de 2004, Art. 16 Lit. a • Decreto Ley 760 de 2005, Art. 14 • Decreto 1083 de 2015, Art. 2.2.6.21.  
   *💡 Aplicabilidad*: **NO APLICA** para trámites de uso de listas, dado que el término fatal de 5 días hábiles de la Comisión de Personal opera únicamente tras la publicación inicial de la lista y precluye con su firmeza.  
   *📁 Posibles Evidencias*: Acta oficial de sesión de la Comisión de Personal de la Secretaría Jurídica Distrital; Informe técnico de verificación de no configuración de causales de exclusión sobrevinientes.
+* **Requisito 2.4 (`vc2_4`)**: *Aprobación de la Comisión de Personal para uso de lista y determinación de cobro CNSC (Con / Sin Cobro)*.  
+  *⚖️ Norma*: Ley 909 de 2004, Art. 16 • Acuerdos CNSC de Uso de Listas.  
+  *💡 Aplicabilidad*: **OBLIGATORIO**. Permite registrar el Acta de Comisión de Personal y clasificar la autorización como "Sin Cobro" (a título gratuito) o "Con Cobro" (con costo de pruebas a gestionar en la Fase 5).  
+  *📁 Posibles Evidencias*: Acta oficial de la Comisión de Personal aprobando el uso de la lista de elegibles; Comunicación o autorización de la CNSC indicando la modalidad de cobro.
 
 ---
 
@@ -374,6 +378,10 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
 * **Requisito 5.5 (`vc6_5`)**: *Inducción y concertación de compromisos periodo de prueba* (Formato `2311300-FT-106`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.6.25 • Acuerdo CNSC EDL.  
   *📁 Posibles Evidencias*: Acta de inducción institucional en formato FT-106; Formato oficial de concertación de compromisos funcionales y comportamentales del periodo de prueba en el aplicativo EDL de la CNSC.
+* **Requisito 5.6 (`vc6_pago_cnsc`)**: *Resolución de Ordenación del Gasto y Pago a la CNSC por uso de lista (Aplica si es Con Cobro)*.  
+  *⚖️ Norma*: Estatuto Orgánico de Presupuesto Distrital • Ley 909 de 2004 • Acuerdos CNSC de Cobro.  
+  *💡 Aplicabilidad*: **CONDICIONADO / OBLIGATORIO SI ES CON COBRO**. Si en la Fase 2 se clasificó como "Con Cobro", se exige expedir y numerar el acto administrativo de pago junto con su CDP y RP. Si fue "Sin Cobro", este requisito queda marcado como NO APLICA (cumplido).  
+  *📁 Posibles Evidencias*: Resolución de Ordenación del Gasto y Pago a favor de la CNSC debidamente suscrita y numerada; Certificado de Disponibilidad Presupuestal (CDP); Registro Presupuestal (RP); Comprobante de egreso o radicado de transferencia bancaria distrital a la CNSC.
 
 ---
 
