@@ -340,6 +340,7 @@ export interface RequisitoEtapa {
   id: string;
   label: string;
   cumplido: boolean;
+  cargoResponsable?: string;
   fecha_cumplimiento?: string;
   codigoFormato?: string;
   obligatorio: boolean;
@@ -755,10 +756,144 @@ export interface CasoFlujoFuncionario {
 }
 
 // ============================================================================
+// MAPA OFICIAL DE CARGOS RESPONSABLES POR REQUISITO / ACTIVIDAD
+// (Fuente: PR-145 V01 Vinculacion, PR-074 V06 Desvinculacion de la SJD)
+// ============================================================================
+export const CARGO_RESPONSABLE_MAP: Record<string, string> = {
+  "vc1_1": "Profesional Universitario TH",
+  "vc1_2": "Profesional Universitario TH",
+  "vc1_3": "Profesional Universitario TH",
+  "vc2_1": "Comisión de Personal / CNSC",
+  "vc2_2": "Comisión de Personal / CNSC",
+  "vc2_3": "Comisión de Personal",
+  "vc2_4": "Profesional Especializado TH / Gestión Financiera",
+  "vc3_1": "Profesional Universitario TH",
+  "vc3_2": "Profesional Universitario TH",
+  "vc4_1": "Profesional Especializado TH / Presupuesto",
+  "vc4_2": "Profesional Universitario TH",
+  "vc4_3": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "vc4_4": "Técnico Operativo (Notificaciones)",
+  "vc4_5": "Servidor / Candidato Elegible",
+  "vc5_1": "Profesional Universitario TH",
+  "vc5_secop": "Profesional Universitario TH",
+  "vc5_2": "Profesional en Seguridad y Salud en el Trabajo (SST)",
+  "vc5_3": "Servidor / Candidato Elegible",
+  "vc5_4": "Secretario(a) Jurídico(a) Distrital / Director(a) GC",
+  "vc5_5": "Profesional Universitario TH",
+  "vc6_1": "Auxiliar Administrativo TH",
+  "vc6_pago_cnsc": "Profesional Especializado TH / Gestión Financiera",
+  "vc6_2": "Profesional Especializado (Nómina)",
+  "vc6_3": "Profesional Universitario TH / Administrador SIMO",
+  "vc6_4": "Secretario Ejecutivo (Archivo)",
+  "vc7_1": "Jefe Inmediato / Evaluador del Desempeño",
+  "vc7_2": "Jefe Inmediato / Evaluador del Desempeño",
+  "vc7_3": "Profesional Universitario TH / Administrador SIMO",
+  "vc7_4_definitiva": "Servidor de Carrera",
+  "vc7_5_declaratoria": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "vp1_1": "Profesional Universitario TH",
+  "vp1_3": "Profesional Universitario TH / Administrador SIMO",
+  "vp2_1": "Profesional Universitario TH",
+  "vp2_2": "Profesional Universitario TH",
+  "vp2_3": "Director(a) de Gestión Corporativa",
+  "vp3_1": "Profesional Universitario TH",
+  "vp3_secop": "Profesional Universitario TH",
+  "vp3_2": "Auxiliar Administrativo TH",
+  "vp3_3": "Profesional Universitario TH",
+  "vp4_cdp": "Profesional Especializado TH / Presupuesto",
+  "vp4_1": "Profesional Universitario TH",
+  "vp4_2": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "vp4_3": "Técnico Operativo (Notificaciones)",
+  "vp5_1": "Profesional en Seguridad y Salud en el Trabajo (SST)",
+  "vp5_2": "Servidor / Candidato Seleccionado",
+  "vp5_3": "Director(a) de Gestión Corporativa",
+  "vp6_1": "Auxiliar Administrativo TH",
+  "vp6_2": "Profesional Especializado (Nómina)",
+  "vp6_3": "Jefe Inmediato / Profesional TH",
+  "vl1_1": "Profesional Universitario TH",
+  "vl1_2": "Profesional Universitario TH",
+  "vl1_3": "Director(a) de Gestión Corporativa",
+  "vl2_1": "Profesional Universitario TH",
+  "vl2_secop": "Profesional Universitario TH",
+  "vl2_2": "Auxiliar Administrativo TH",
+  "vl3_1": "Director(a) de Gestión Corporativa",
+  "vl3_2": "Director(a) de Gestión Corporativa",
+  "vl4_1": "Profesional Especializado TH / Presupuesto",
+  "vl4_2": "Profesional Universitario TH",
+  "vl4_3": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "vl4_4": "Técnico Operativo (Notificaciones)",
+  "vl4_5": "Servidor Directivo Designado",
+  "vl5_1": "Profesional en Seguridad y Salud en el Trabajo (SST)",
+  "vl5_2": "Servidor Directivo Designado",
+  "vl5_3": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "vl5_4": "Subsecretario(a) General / Despacho",
+  "vl6_1": "Auxiliar Administrativo TH",
+  "vl6_2": "Profesional Especializado (Nómina)",
+  "vl6_3": "Profesional Especializado TH",
+  "vl6_4": "Secretario Ejecutivo (Archivo)",
+  "dc1_1": "Profesional Universitario TH",
+  "dc1_2": "Profesional Universitario TH",
+  "dc1_3": "Especialista de Nómina / Profesional TH",
+  "dc2_1": "Profesional Universitario TH",
+  "dc2_2": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "dc2_3": "Técnico Operativo (Notificaciones)",
+  "dc3_1": "Servidor Saliente",
+  "dc3_2": "Servidor Saliente / Jefe Inmediato",
+  "dc3_3": "Servidor Saliente",
+  "dc3_4": "Servidor Saliente",
+  "dc4_1": "Líderes TIC, Almacén, Archivo y TH",
+  "dc5_1": "Profesional Especializado TH",
+  "dc5_2": "Profesional Especializado (Nómina)",
+  "dc5_3": "Director(a) de Gestión Corporativa",
+  "dc5_4": "Gestión Financiera (Tesorería)",
+  "dc6_1": "Profesional Universitario TH / Administrador SIMO",
+  "dc6_2": "Profesional Universitario TH / Administrador SIMO",
+  "dc6_3": "Secretario Ejecutivo (Archivo)",
+  "dp1_1": "Profesional Universitario TH",
+  "dp1_2": "Profesional Universitario TH",
+  "dp1_3": "Profesional Universitario TH",
+  "dp2_1": "Profesional Universitario TH",
+  "dp2_2": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "dp2_3": "Técnico Operativo (Notificaciones)",
+  "dp3_1": "Servidor Saliente",
+  "dp3_2": "Servidor Saliente / Jefe Inmediato",
+  "dp3_3": "Servidor Saliente",
+  "dp3_4": "Servidor Saliente",
+  "dp4_1": "Líderes TIC, Almacén, Archivo y TH",
+  "dp5_1": "Profesional Especializado TH",
+  "dp5_2": "Profesional Especializado (Nómina)",
+  "dp5_3": "Director(a) de Gestión Corporativa",
+  "dp5_4": "Gestión Financiera (Tesorería)",
+  "dp6_1": "Profesional Universitario TH / Administrador SIMO",
+  "dp6_2": "Secretario Ejecutivo (Archivo)",
+  "dl1_1": "Profesional Universitario TH",
+  "dl1_2": "Profesional Universitario TH",
+  "dl1_3": "Profesional Universitario TH",
+  "dl2_1": "Profesional Universitario TH",
+  "dl2_2": "Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "dl2_3": "Técnico Operativo (Notificaciones)",
+  "dl3_1": "Directivo Saliente",
+  "dl3_2": "Directivo Saliente / Jefe Inmediato",
+  "dl3_3": "Directivo Saliente",
+  "dl3_4": "Directivo Saliente",
+  "dl3_5": "Directivo Saliente",
+  "dl4_1": "Líderes TIC, Almacén, Archivo y TH",
+  "dl5_1": "Profesional Especializado TH",
+  "dl5_2": "Profesional Especializado (Nómina)",
+  "dl5_3": "Director(a) de Gestión Corporativa",
+  "dl5_4": "Gestión Financiera (Tesorería)",
+  "dl6_1": "Profesional Universitario TH / Control Interno",
+  "dl6_2": "Secretario Ejecutivo (Archivo)"
+};
+
+export function obtenerCargoResponsable(reqId: string, etapaResponsable?: string): string {
+  return CARGO_RESPONSABLE_MAP[reqId] || etapaResponsable || 'Profesional Universitario TH';
+}
+
+// ============================================================================
 // GENERADORES DE ETAPAS (Articulados con PR-145, PR-137 y SECOP II)
 // ============================================================================
 
-export function generarEtapasParaCaso(
+function generarEtapasParaCasoInterno(
   tipo: TipoProceso,
   modalidad: ModalidadPersonal,
   subtipoConcurso?: 'ABIERTO' | 'ASCENSO'
@@ -3576,6 +3711,22 @@ export function generarEtapasParaCaso(
   }
   return [];
 }
+
+export function generarEtapasParaCaso(
+  tipo: TipoProceso,
+  modalidad: ModalidadPersonal,
+  subtipoConcurso?: 'ABIERTO' | 'ASCENSO'
+): EtapaFlujo[] {
+  const etapas = generarEtapasParaCasoInterno(tipo, modalidad, subtipoConcurso);
+  return etapas.map((etapa) => ({
+    ...etapa,
+    requisitos: etapa.requisitos.map((req) => ({
+      ...req,
+      cargoResponsable: req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH',
+    })),
+  }));
+}
+
 export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[] {
   return etapas.map((etapa, idx) => {
     const todosNoAplica = etapa.requisitos.length > 0 && etapa.requisitos.every((r) => r.noAplica);
@@ -3712,6 +3863,7 @@ export function sincronizarEtapasCaso(
         const cumplidoFinal = noAplicaFinal ? true : (reqG.cumplido !== undefined ? reqG.cumplido : reqM.cumplido);
         return {
           ...reqM,
+          cargoResponsable: reqG.cargoResponsable || reqM.cargoResponsable || CARGO_RESPONSABLE_MAP[reqM.id] || etapaM.responsable || 'Profesional Universitario TH',
           cumplido: cumplidoFinal,
           fecha_cumplimiento: reqG.fecha_cumplimiento || reqM.fecha_cumplimiento,
           observaciones: reqG.observaciones !== undefined ? reqG.observaciones : reqM.observaciones,
@@ -11439,6 +11591,28 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                               {/* Badges y Acciones Rápidas */}
                                               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                {/* Cargo / Rol Responsable Oficial */}
+                                                {(req.cargoResponsable || etapa.responsable) && (
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: '#EFF6FF',
+                                                      borderColor: '#BFDBFE',
+                                                      borderWidth: 1,
+                                                      paddingHorizontal: 7,
+                                                      paddingVertical: 2,
+                                                      borderRadius: 4,
+                                                      flexDirection: 'row',
+                                                      alignItems: 'center',
+                                                      gap: 4,
+                                                    }}
+                                                  >
+                                                    <Ionicons name="person-circle-outline" size={13} color="#1D4ED8" />
+                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>
+                                                      {req.cargoResponsable || etapa.responsable}
+                                                    </Text>
+                                                  </View>
+                                                )}
+
                                                 {/* Código Formato */}
                                                 {req.codigoFormato && (
                                                   <View
@@ -16396,6 +16570,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   </View>
                 </View>
 
+                {/* Cargo Responsable de la Actividad */}
+                {(modalReqContext?.req.cargoResponsable || CARGO_RESPONSABLE_MAP[modalReqContext?.req.id || '']) && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      backgroundColor: '#EFF6FF',
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: '#BFDBFE',
+                      marginTop: 6,
+                      marginBottom: 2,
+                    }}
+                  >
+                    <Ionicons name="briefcase-outline" size={15} color="#1D4ED8" />
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#1E40AF' }}>
+                      Responsable Oficial: <Text style={{ fontWeight: '600', color: '#1E3A8A' }}>{modalReqContext?.req.cargoResponsable || CARGO_RESPONSABLE_MAP[modalReqContext?.req.id || ''] || 'Profesional Universitario TH'}</Text>
+                    </Text>
+                  </View>
+                )}
+
                 {modalReqContext?.req.codigoFormato && (
                   <Text style={{ fontSize: 11, color: THEME.slate600, fontWeight: '600' }}>
                     📄 Formato Institucional: {modalReqContext.req.codigoFormato}
@@ -18801,6 +18999,27 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           >
                                             <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748b' }}>
                                               NO APLICA (USO DE LISTA)
+                                            </Text>
+                                          </View>
+                                        )}
+                                        {/* Cargo Responsable */}
+                                        {(req.cargoResponsable || etapa.responsable) && (
+                                          <View
+                                            style={{
+                                              backgroundColor: '#EFF6FF',
+                                              borderColor: '#BFDBFE',
+                                              borderWidth: 1,
+                                              paddingHorizontal: 5,
+                                              paddingVertical: 1.5,
+                                              borderRadius: 4,
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              gap: 3,
+                                            }}
+                                          >
+                                            <Ionicons name="person-outline" size={10} color="#1D4ED8" />
+                                            <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#1E40AF' }}>
+                                              {req.cargoResponsable || etapa.responsable}
                                             </Text>
                                           </View>
                                         )}
