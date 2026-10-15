@@ -18,6 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
 import { API_URL } from '../../lib/supabase';
 import mockPlazasData from '../../lib/plantaMockData.json';
+import mockPernoData from '../../lib/pernoMockData.json';
 import { nominaService, PlazaNomina, PersonaPerno } from '../../lib/nominaService';
 import {
   secopService,
@@ -936,6 +937,19 @@ export function generarEtapasParaCaso(
                 ],
               },
               {
+                id: 'vc4_cdp',
+                label: 'Solicitud y expedición de CDP Individual de nómina (Gestión Financiera - Presupuesto)',
+                cumplido: true,
+                obligatorio: true,
+                norma: 'Estatuto Orgánico de Presupuesto Distrital (Decreto 714 de 1996) • Procedimiento 2311300-PR-145 V1',
+                textoNormativo: 'Para la provisión de cada vacante, Talento Humano solicita a Gestión Financiera (Presupuesto) la expedición del Certificado de Disponibilidad Presupuestal (CDP) individual que ampara la asignación salarial y prestacional en la vigencia fiscal.',
+                detalleProcedimiento: 'Radicar solicitud formal a Presupuesto/Financiera para la expedición del CDP individual antes de la expedición del nombramiento y la posesión.',
+                posiblesEvidencias: [
+                  'Certificado de Disponibilidad Presupuestal (CDP) individual expedido por Presupuesto.',
+                  'Memorando de solicitud de CDP radicado ante Gestión Financiera.',
+                ],
+              },
+              {
                 id: 'vc4_1',
                 label: 'Elaboración de Resolución de Nombramiento en Periodo de Prueba',
                 cumplido: true,
@@ -1124,18 +1138,18 @@ export function generarEtapasParaCaso(
             },
               {
                 id: 'vc6_2',
-                label: 'Inclusión en nómina institucional (Sistema PERNO)',
+                label: 'Inclusión en nómina (PERNO) & Creación automática de tercero en BOGDATA',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto Distrital 101 de 2004 • Manual Distrital de Nómina',
-                textoNormativo: 'Se debe registrar el alta en el sistema de nómina institucional dentro del período contable respectivo, garantizando la debida apropiación de salarios y factores prestacionales.',
-                detalleProcedimiento: 'Registrar la plaza, asignación básica, cuenta bancaria para dispersión y descuentos de ley en el módulo de personal PERNO.',
-              
-              posiblesEvidencias: [
-                "Reporte de novedades de alta en el sistema de nómina distrital PERNO",
-          "Certificación bancaria del servidor",
-              ],
-            },
+                norma: 'Decreto Distrital 101 de 2004 • Manual Distrital de Nómina • Sistema BOGDATA',
+                textoNormativo: 'Se debe registrar el alta en el sistema de nómina institucional PERNO dentro del período contable. La creación del tercero para dispersión bancaria en BOGDATA se sincroniza automáticamente desde PERNO sin requerir trámite manual en Contabilidad.',
+                detalleProcedimiento: 'Registrar la plaza, asignación básica, cuenta bancaria para dispersión y descuentos en el módulo de personal PERNO. El tercero en BOGDATA se activa de forma automática.',
+                posiblesEvidencias: [
+                  'Reporte de novedades de alta en el sistema de nómina distrital PERNO',
+                  'Confirmación de tercero activo en BOGDATA sincronizado automáticamente desde nómina',
+                  'Certificación bancaria del servidor',
+                ],
+              },
               {
                 id: 'vc6_3',
                 label: 'Activación del servidor en aplicativo SIDEAP Distrital',
@@ -1476,6 +1490,19 @@ export function generarEtapasParaCaso(
             procedimientoDetallado: 'Emisión del decreto o resolución de nombramiento ordinario debidamente motivado, numerado y notificado formalmente.',
             requisitos: [
               {
+                id: 'vl4_cdp',
+                label: 'Solicitud y expedición de CDP Individual de nómina (Gestión Financiera - Presupuesto)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Estatuto Orgánico de Presupuesto Distrital (Decreto 714 de 1996) • Procedimiento 2311300-PR-145 V1',
+                textoNormativo: 'Para la provisión de cada vacante de Libre Nombramiento, Talento Humano solicita a Gestión Financiera (Presupuesto) la expedición del Certificado de Disponibilidad Presupuestal (CDP) individual que ampara el cargo en la vigencia.',
+                detalleProcedimiento: 'Radicar solicitud formal a Presupuesto/Financiera para la expedición del CDP individual antes de proferir el acto de nombramiento ordinario.',
+                posiblesEvidencias: [
+                  'Certificado de Disponibilidad Presupuestal (CDP) individual expedido por Presupuesto.',
+                  'Memorando de solicitud de CDP radicado ante Gestión Financiera.',
+                ],
+              },
+              {
                 id: 'vl4_1',
                 label: 'Proyección y firma de Resolución de Nombramiento Ordinario',
                 cumplido: false,
@@ -1617,17 +1644,17 @@ export function generarEtapasParaCaso(
             },
               {
                 id: 'vl6_2',
-                label: 'Inclusión en nómina institucional (PERNO)',
+                label: 'Inclusión en nómina (PERNO) & Creación automática de tercero en BOGDATA',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto Distrital 101 de 2004',
-                textoNormativo: 'Alta en el sistema de nómina PERNO distrital para imputación de gastos salariales y asignación de gastos de representación si aplican al nivel jerárquico.',
-                detalleProcedimiento: 'Vincular cédula, datos bancarios, retención en la fuente y gastos de representación.',
-              
-              posiblesEvidencias: [
-                "Reporte de alta en PERNO con la asignación básica y gastos de representación parametri",
-              ],
-            },
+                norma: 'Decreto Distrital 101 de 2004 • Sistema BOGDATA',
+                textoNormativo: 'Alta en el sistema de nómina PERNO distrital para imputación de gastos salariales y asignación de gastos de representación si aplican. La creación de tercero en BOGDATA se sincroniza automáticamente desde PERNO.',
+                detalleProcedimiento: 'Vincular cédula, datos bancarios, retención en la fuente y gastos de representación en PERNO. El tercero en BOGDATA queda creado y activo automáticamente.',
+                posiblesEvidencias: [
+                  'Reporte de alta en PERNO con la asignación básica y gastos de representación parametrizados',
+                  'Confirmación de tercero activo en BOGDATA sincronizado automáticamente',
+                ],
+              },
               {
                 id: 'vl6_3',
                 label: 'Activación del servidor en el módulo de Talento Humano en SIDEAP',
@@ -1842,6 +1869,19 @@ export function generarEtapasParaCaso(
             procedimientoDetallado: 'Expedición del acto administrativo con mención expresa de la condición provisional del nombramiento y de la vacancia que lo origina.',
             requisitos: [
               {
+                id: 'vp4_cdp',
+                label: 'Solicitud y expedición de CDP Individual de nómina (Gestión Financiera - Presupuesto)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Estatuto Orgánico de Presupuesto Distrital (Decreto 714 de 1996) • Procedimiento 2311300-PR-145 V1',
+                textoNormativo: 'Para proveer la vacante provisional, Talento Humano solicita a Gestión Financiera (Presupuesto) la expedición del Certificado de Disponibilidad Presupuestal (CDP) individual que ampara el empleo en la vigencia fiscal.',
+                detalleProcedimiento: 'Radicar solicitud formal a Presupuesto/Financiera requiriendo el CDP individual antes de la expedición del acto administrativo de nombramiento provisional.',
+                posiblesEvidencias: [
+                  'Certificado de Disponibilidad Presupuestal (CDP) individual expedido por Presupuesto.',
+                  'Memorando de solicitud de CDP radicado ante Gestión Financiera.',
+                ],
+              },
+              {
                 id: 'vp4_1',
                 label: 'Elaboración de Resolución de Nombramiento Provisional',
                 cumplido: false,
@@ -1974,19 +2014,17 @@ export function generarEtapasParaCaso(
             },
               {
                 id: 'vp6_2',
-                label: 'Inclusión en nómina (PERNO) y actualización en SIDEAP',
+                label: 'Inclusión en nómina (PERNO) & Creación automática de tercero en BOGDATA',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Decreto Distrital 101 de 2004',
-                textoNormativo: 'Registro en nómina distrital PERNO y activación en el SIDEAP de la Secretaría Jurídica Distrital.',
-                detalleProcedimiento: 'Registrar la plaza en nómina y cambiar el estado del servidor a activo.',
-              
-              posiblesEvidencias: [
-                "Acta de posesión suscrita en Formato 2311520-FT-017 por el nominado y el nominador",
-          "Declaración Juramentada de Bienes y Rentas descargada de SIDEAP opción Ingreso",
-          "Declaración proactiva de bienes y conflictos de interés (Ley 2013 de 2019)",
-              ],
-            },
+                norma: 'Decreto Distrital 101 de 2004 • Sistema BOGDATA',
+                textoNormativo: 'Registro en nómina distrital PERNO y activación en SIDEAP. La creación de tercero en BOGDATA se sincroniza automáticamente desde PERNO sin trámite manual ante Contabilidad.',
+                detalleProcedimiento: 'Registrar la plaza en nómina PERNO y cambiar el estado del servidor a activo. Tercero en BOGDATA queda activado automáticamente.',
+                posiblesEvidencias: [
+                  'Reporte de novedad de posesión procesado en el sistema de nómina PERNO y activación en SIDEAP',
+                  'Confirmación de tercero activo en BOGDATA sincronizado automáticamente',
+                ],
+              },
               {
                 id: 'vp6_3',
                 label: 'Inducción y entrenamiento en puesto de trabajo (Formato 2311300-FT-106)',
@@ -2601,25 +2639,27 @@ export function generarEtapasParaCaso(
               },
               {
                 id: 'dc5_3',
-                label: 'Elaboración de Resolución de Reconocimiento y Liquidación (2311520-FT-130)',
+                label: 'Elaboración de Resolución de Liquidación (FT-130) y firma por Director(a) de Gestión Corporativa',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
                 norma: 'Estatuto Presupuestal Distrital • Procedimiento 2311420-PR-001',
-                detalleProcedimiento: 'Proyectar el acto administrativo de liquidación económica suscrito por el ordenador del gasto competente.',
+                detalleProcedimiento: 'Proyectada por el Profesional Universitario de Talento Humano y suscrita por el(la) Director(a) de Gestión Corporativa como ordenador(a) del gasto de nómina y personal.',
                 posiblesEvidencias: [
-                  'Resolución de liquidación firmada por el ordenador del gasto.',
+                  'Resolución de liquidación definitiva en Formato 2311520-FT-130 firmada por el Director de Gestión Corporativa.',
+                  'Hoja de control con visto bueno del Profesional Universitario de Talento Humano.',
                 ],
               },
               {
                 id: 'dc5_4',
-                label: 'Notificación del acto de liquidación y remisión formal a Tesorería para pago',
+                label: 'Ordenación del pago y dispersión bancaria en BOGDATA (Gestión Financiera)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 1437 de 2011 • Tesorería Distrital SJD',
-                detalleProcedimiento: 'Notificar al exfuncionario y remitir expediente liquidatorio a Tesorería para dispersión bancaria.',
+                norma: 'Ley 1437 de 2011 • Estatuto de Presupuesto • Sistema BOGDATA',
+                detalleProcedimiento: 'El Profesional Especializado de Gestión Financiera recibe el expediente de liquidación radicado, aprueba la ordenación del gasto en BOGDATA y gestiona la dispersión bancaria electrónica.',
                 posiblesEvidencias: [
-                  'Comprobante de dispersión bancaria y orden de pago de Tesorería.',
+                  'Orden de pago expedida en BOGDATA por el Profesional Especializado de Gestión Financiera.',
+                  'Comprobante de egreso y certificación de dispersión bancaria de Tesorería.',
                 ],
               },
             ],
@@ -2917,25 +2957,27 @@ export function generarEtapasParaCaso(
               },
               {
                 id: 'dp5_3',
-                label: 'Elaboración de Resolución de Reconocimiento y Liquidación (2311520-FT-130)',
+                label: 'Elaboración de Resolución de Liquidación (FT-130) y firma por Director(a) de Gestión Corporativa',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
                 norma: 'Estatuto Presupuestal Distrital • Procedimiento 2311420-PR-001',
-                detalleProcedimiento: 'Proyectar el acto de reconocimiento prestacional suscrito por el ordenador del gasto.',
+                detalleProcedimiento: 'Proyectada por el Profesional Universitario de Talento Humano y suscrita por el(la) Director(a) de Gestión Corporativa como ordenador(a) del gasto de nómina.',
                 posiblesEvidencias: [
-                  'Resolución de reconocimiento y pago de prestaciones firmada por el ordenador del gasto.',
+                  'Resolución de reconocimiento y pago de prestaciones firmada por el Director de Gestión Corporativa.',
+                  'Hoja de control con visto bueno del Profesional Universitario de Talento Humano.',
                 ],
               },
               {
                 id: 'dp5_4',
-                label: 'Notificación del acto liquidatorio y remisión a Tesorería para pago',
+                label: 'Ordenación del pago y dispersión bancaria en BOGDATA (Gestión Financiera)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 1437 de 2011 • Tesorería Distrital SJD',
-                detalleProcedimiento: 'Notificar al exservidor y remitir a Tesorería para dispersión bancaria.',
+                norma: 'Ley 1437 de 2011 • Estatuto de Presupuesto • Sistema BOGDATA',
+                detalleProcedimiento: 'El Profesional Especializado de Gestión Financiera recibe el expediente de liquidación radicado, aprueba la ordenación en BOGDATA y gestiona la dispersión bancaria.',
                 posiblesEvidencias: [
-                  'Comprobante de dispersión bancaria de Tesorería.',
+                  'Orden de pago expedida en BOGDATA por el Profesional Especializado de Gestión Financiera.',
+                  'Comprobante de dispersión bancaria y constancia electrónica de Tesorería.',
                 ],
               },
             ],
@@ -3229,25 +3271,27 @@ export function generarEtapasParaCaso(
               },
               {
                 id: 'dl5_3',
-                label: 'Elaboración de Resolución de Reconocimiento y Liquidación (2311520-FT-130)',
+                label: 'Elaboración de Resolución de Liquidación (FT-130) y firma por Director(a) de Gestión Corporativa',
                 cumplido: false,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
                 norma: 'Estatuto Presupuestal Distrital • Procedimiento 2311420-PR-001',
-                detalleProcedimiento: 'Proyectar el acto de reconocimiento prestacional firmado por el ordenador del gasto.',
+                detalleProcedimiento: 'Proyectada por el Profesional Universitario de Talento Humano y suscrita por el(la) Director(a) de Gestión Corporativa como ordenador(a) del gasto.',
                 posiblesEvidencias: [
-                  'Resolución de liquidación firmada por el ordenador del gasto.',
+                  'Resolución de liquidación firmada por el Director de Gestión Corporativa.',
+                  'Hoja de control con visto bueno del Profesional Universitario de Talento Humano.',
                 ],
               },
               {
                 id: 'dl5_4',
-                label: 'Notificación del acto liquidatorio y remisión a Tesorería para pago',
+                label: 'Ordenación del pago y dispersión bancaria en BOGDATA (Gestión Financiera)',
                 cumplido: false,
                 obligatorio: true,
-                norma: 'Ley 1437 de 2011 • Tesorería Distrital SJD',
-                detalleProcedimiento: 'Notificar al exfuncionario y remitir el expediente a Tesorería para dispersión en cuenta bancaria.',
+                norma: 'Ley 1437 de 2011 • Estatuto de Presupuesto • Sistema BOGDATA',
+                detalleProcedimiento: 'El Profesional Especializado de Gestión Financiera recibe el expediente de liquidación radicado, aprueba la ordenación en BOGDATA y efectúa la dispersión bancaria.',
                 posiblesEvidencias: [
-                  'Comprobante de dispersión bancaria de Tesorería.',
+                  'Orden de pago expedida en BOGDATA por el Profesional Especializado de Gestión Financiera.',
+                  'Comprobante de egreso y dispersión bancaria de Tesorería.',
                 ],
               },
             ],
@@ -4553,27 +4597,69 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
       `${p.nombres || ''} ${p.primer_apellido || ''} ${p.segundo_apellido || ''}`.trim();
     setNombreInput(nombreCompleto);
     setCedulaInput(String(p.cedula || ''));
-    setCargoInput(p.cargo || p.plaza_cargo || 'PROFESIONAL ESPECIALIZADO');
-    setDependenciaInput(p.plaza_dependencia_cargo || p.dependencia || 'SECRETARÍA JURÍDICA DISTRITAL');
 
-    if (p.plaza_id_plaza) {
+    // Búsqueda cruzada de plaza para el servidor (por plaza vinculada o por cédula titular/encargo)
+    const plazaAsociada =
+      (p.plaza_id_plaza
+        ? (mockPlazasData as any[]).find((pl) => pl.id_plaza === p.plaza_id_plaza)
+        : null) ||
+      (mockPlazasData as any[]).find(
+        (pl) =>
+          String(pl.titular_cedula) === String(p.cedula) ||
+          String(pl.encargo_cedula) === String(p.cedula)
+      );
+
+    if (plazaAsociada?.id_plaza) {
+      setPlazaSeleccionadaId(plazaAsociada.id_plaza);
+    } else if (p.plaza_id_plaza) {
       setPlazaSeleccionadaId(p.plaza_id_plaza);
     }
 
-    // Deducción de modalidad
-    const nomb = (p.tipo_nombramiento || p.plaza_tipo_vinculacion || '').toUpperCase();
-    if (nomb.includes('CARRERA')) {
-      setNuevaModalidad('CARRERA_ADMINISTRATIVA');
-    } else if (nomb.includes('PROVISIONAL')) {
+    // Cargo formateado con Código y Grado
+    const cargoBase = plazaAsociada?.cargo || p.plaza_cargo || p.cargo || 'PROFESIONAL ESPECIALIZADO';
+    const codBase = plazaAsociada?.codigo || p.plaza_codigo || p.cargo_cod || '';
+    const gradoBase = plazaAsociada?.grado || p.plaza_grado || p.grado || '';
+    const cargoFormateado = cargoBase
+      ? `${cargoBase}${codBase && gradoBase ? ` (Cód: ${codBase} Gr: ${gradoBase})` : ''}`
+      : 'PROFESIONAL ESPECIALIZADO';
+    setCargoInput(cargoFormateado);
+
+    // Dependencia
+    const depFinal =
+      plazaAsociada?.dependencia_cargo ||
+      p.plaza_dependencia_cargo ||
+      p.dependencia ||
+      'SECRETARÍA JURÍDICA DISTRITAL';
+    setDependenciaInput(depFinal);
+
+    // Deducción integral de Modalidad de Vinculación / Nombramiento
+    const modalTexto = (
+      p.tipo_nombramiento ||
+      p.plaza_tipo_vinculacion ||
+      p.plaza_situacion_titular ||
+      p.plaza_situacion_administrativa ||
+      plazaAsociada?.tipo_vinculacion ||
+      plazaAsociada?.tipo_nombramiento ||
+      plazaAsociada?.situacion_titular ||
+      plazaAsociada?.situacion_administrativa ||
+      p.tipo_funcionario ||
+      ''
+    ).toUpperCase();
+
+    if (modalTexto.includes('PROVISIONAL')) {
       setNuevaModalidad('PROVISIONALIDAD');
-    } else if (nomb.includes('LIBRE') || nomb.includes('REMOCION')) {
+    } else if (modalTexto.includes('CARRERA')) {
+      setNuevaModalidad('CARRERA_ADMINISTRATIVA');
+    } else if (modalTexto.includes('LIBRE') || modalTexto.includes('REMOCION')) {
       setNuevaModalidad('LIBRE_NOMBRAMIENTO');
+    } else if (modalTexto.includes('PRACTICANTE') || modalTexto.includes('JUDICANTE')) {
+      setNuevaModalidad('PRACTICANTE_JUDICANTE');
     }
 
     setNominaItemSeleccionado({
       tipo: 'SERVIDOR',
       titulo: nombreCompleto,
-      detalle: `C.C. ${p.cedula} • ${p.cargo || p.plaza_cargo || 'Sin cargo'} • ${p.plaza_dependencia_cargo || p.dependencia || 'Entidad'}`,
+      detalle: `C.C. ${p.cedula} • ${cargoFormateado} • ${depFinal}`,
       id: p.cedula,
     });
   };
@@ -6195,6 +6281,87 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     return 'Distrito Capital 6 - CNSC';
   }, [casoActivo, opecPersonalizadasPlazas]);
 
+  // Resolución reactiva del ID SIDEAP del caso o empleo público correspondiente
+  const sideapIdActual = useMemo(() => {
+    if (!casoActivo) return null;
+    if ((casoActivo as any).id_sideap) return (casoActivo as any).id_sideap;
+    if (casoActivo.id_plaza) {
+      const pl = (mockPlazasData as any[]).find((p) => p.id_plaza === casoActivo.id_plaza);
+      if (pl?.id_sideap) return pl.id_sideap;
+    }
+    // 1. Por cédula exacta en planta (titular o encargo)
+    const porCedula = (mockPlazasData as any[]).find(
+      (p) =>
+        String(p.titular_cedula) === String(casoActivo.servidor_cedula) ||
+        String(p.encargo_cedula) === String(casoActivo.servidor_cedula)
+    );
+    if (porCedula?.id_sideap) return porCedula.id_sideap;
+
+    // 2. Por coincidencia en plazaOpecMatch
+    if (plazaOpecMatch?.id_sideap) return plazaOpecMatch.id_sideap;
+
+    // 3. Por cargo, código y grado
+    const porCargo = (mockPlazasData as any[]).find(
+      (p) =>
+        p.cargo?.trim().toUpperCase() === casoActivo.cargo?.trim().toUpperCase() &&
+        (!casoActivo.codigo || String(p.codigo) === String(casoActivo.codigo)) &&
+        (!casoActivo.grado || String(p.grado) === String(casoActivo.grado))
+    );
+    return porCargo?.id_sideap || null;
+  }, [casoActivo, plazaOpecMatch]);
+
+  // Estados y funciones para la eliminación de trámites con confirmación estricta ('eliminar')
+  const [modalEliminarCasoVisible, setModalEliminarCasoVisible] = useState(false);
+  const [palabraConfirmacionEliminar, setPalabraConfirmacionEliminar] = useState('');
+  const [casoParaEliminar, setCasoParaEliminar] = useState<CasoFlujoFuncionario | null>(null);
+
+  const abrirModalEliminarCaso = (caso?: CasoFlujoFuncionario) => {
+    const target = caso || casoActivo;
+    if (!target) return;
+    setCasoParaEliminar(target);
+    setPalabraConfirmacionEliminar('');
+    setModalEliminarCasoVisible(true);
+  };
+
+  const confirmarEliminacionCaso = () => {
+    if (!casoParaEliminar) return;
+    if (palabraConfirmacionEliminar.trim().toLowerCase() !== 'eliminar') {
+      mostrarModal(
+        'Confirmación Requerida',
+        'Debe escribir exactamente la palabra "eliminar" para confirmar la eliminación.',
+        'warning'
+      );
+      return;
+    }
+
+    const idEliminado = casoParaEliminar.id;
+    const nombreEliminado = casoParaEliminar.servidor_nombre;
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.filter((c) => c.id !== idEliminado);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+      return actualizados;
+    });
+
+    if (casoSeleccionadoId === idEliminado) {
+      setCasoSeleccionadoId('');
+    }
+
+    setModalEliminarCasoVisible(false);
+    setCasoParaEliminar(null);
+    setPalabraConfirmacionEliminar('');
+
+    mostrarModal(
+      'Trámite Eliminado',
+      `El trámite de ${nombreEliminado} ha sido eliminado definitivamente.`,
+      'success'
+    );
+  };
+
   const [modalEditarOpecCasoVisible, setModalEditarOpecCasoVisible] = useState(false);
   const [inputOpecCaso, setInputOpecCaso] = useState('');
   const [inputConvocatoriaCaso, setInputConvocatoriaCaso] = useState('');
@@ -6254,6 +6421,159 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   };
 
+  // Función para importar automáticamente desde el reporte de nómina PERNO
+  const autoImportarDesdePerno = (caso?: CasoFlujoFuncionario) => {
+    const target = caso || casoActivo;
+    if (!target) return;
+
+    const cedulaLimpia = String(target.servidor_cedula || '').replace(/\D/g, '');
+    const registroPerno = (mockPernoData as any[]).find(
+      (p) => String(p.cedula || '').replace(/\D/g, '') === cedulaLimpia
+    );
+
+    if (!registroPerno) {
+      mostrarModal(
+        'Servidor no encontrado en PERNO',
+        `No se encontró un registro en el último reporte de nómina PERNO para la cédula C.C. ${target.servidor_cedula}. Puede actualizar el reporte de nómina en la pestaña de Nómina.`,
+        'warning'
+      );
+      return;
+    }
+
+    const cambiosRealizados: string[] = [];
+    const esVinculacion = target.tipo_proceso === 'VINCULACION';
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== target.id) return c;
+
+        const etapasActualizadas = c.etapas.map((etapa) => {
+          const requisitosActualizados = etapa.requisitos.map((req) => {
+            const reqId = req.id.toLowerCase();
+            const reqLabel = req.label.toLowerCase();
+
+            // 1. Vinculación: Afiliaciones a Seguridad Social (EPS, Pensión, Cesantías)
+            if (
+              esVinculacion &&
+              (reqId.includes('6_1') || reqId.includes('5_1') || reqLabel.includes('afiliación a arl, eps') || reqLabel.includes('afiliaciones a arl y seguridad'))
+            ) {
+              const fondos: string[] = [];
+              if (registroPerno.fondo_salud) fondos.push(`EPS: ${registroPerno.fondo_salud}`);
+              if (registroPerno.fondo_pension) fondos.push(`Pensión: ${registroPerno.fondo_pension}`);
+              if (registroPerno.fondo_cesantias) fondos.push(`Cesantías: ${registroPerno.fondo_cesantias}`);
+
+              if (fondos.length > 0) {
+                cambiosRealizados.push(`Seguridad Social (${fondos.join(', ')})`);
+                return {
+                  ...req,
+                  cumplido: true,
+                  fecha_cumplimiento: req.fecha_cumplimiento || registroPerno.fecha_ingreso_entidad || registroPerno.fecha_efectiva_nombramiento || new Date().toISOString().split('T')[0],
+                  observaciones: `Sincronizado automáticamente de PERNO: ${fondos.join(' • ')}`,
+                };
+              }
+            }
+
+            // 2. Vinculación: Inclusión en nómina PERNO & Sincronización BOGDATA
+            if (
+              esVinculacion &&
+              (reqId.includes('6_2') || reqId.includes('5_2') || reqLabel.includes('inclusión en nómina') || reqLabel.includes('alta en nómina'))
+            ) {
+              const asignacion = registroPerno.asignacion_basica
+                ? `$${Number(registroPerno.asignacion_basica).toLocaleString('es-CO')}`
+                : 'Asignada según planta';
+              cambiosRealizados.push(`Nómina: Alta en PERNO (${asignacion}) & Tercero BOGDATA sincronizado`);
+              return {
+                ...req,
+                cumplido: true,
+                fecha_cumplimiento: req.fecha_cumplimiento || registroPerno.fecha_ingreso_entidad || new Date().toISOString().split('T')[0],
+                observaciones: `Servidor activo en nómina PERNO (${asignacion}). Tercero en BOGDATA sincronizado automáticamente desde nómina.`,
+              };
+            }
+
+            // 3. Vinculación: Acto Administrativo de Nombramiento
+            if (
+              esVinculacion &&
+              registroPerno.numero_acto_nombramiento &&
+              (reqId.includes('4_1') || reqId.includes('4_2') || reqLabel.includes('resolución de nombramiento') || reqLabel.includes('elaboración de resolución'))
+            ) {
+              cambiosRealizados.push(`Acto Administrativo: ${registroPerno.numero_acto_nombramiento}`);
+              return {
+                ...req,
+                cumplido: true,
+                radicadoSoporte: req.radicadoSoporte || String(registroPerno.numero_acto_nombramiento),
+                fecha_cumplimiento: req.fecha_cumplimiento || registroPerno.fecha_acto_nombramiento || registroPerno.fecha_efectiva_nombramiento,
+                observaciones: req.observaciones || `Acto administrativo registrado en PERNO: ${registroPerno.numero_acto_nombramiento}`,
+              };
+            }
+
+            // 4. Desvinculación: Novedad de retiro procesada en nómina PERNO
+            if (
+              !esVinculacion &&
+              (reqId.includes('5_1') || reqLabel.includes('novedad de retiro en nómina'))
+            ) {
+              const fRetiro = registroPerno.fecha_retiro || 'registrada en nómina';
+              cambiosRealizados.push(`Novedad de Retiro: Registrada en PERNO con fecha ${fRetiro}`);
+              return {
+                ...req,
+                cumplido: true,
+                fecha_cumplimiento: req.fecha_cumplimiento || registroPerno.fecha_retiro || new Date().toISOString().split('T')[0],
+                observaciones: `Novedad de retiro procesada en nómina PERNO. Fecha de retiro: ${fRetiro}. Estado: ${registroPerno.estado_funcionario === 'R' ? 'Retirado (R)' : 'En trámite de retiro'}.`,
+              };
+            }
+
+            // 5. Desvinculación: Paz y Salvo Electrónico (SIGA Trámites)
+            if (
+              !esVinculacion &&
+              (reqId.includes('4_1') || reqLabel.includes('paz y salvo'))
+            ) {
+              return {
+                ...req,
+                noAplica: true,
+                cumplido: true,
+                observaciones: 'No aplica en este procedimiento. Se gestiona de forma externa en el sistema SIGA Trámites.',
+              };
+            }
+
+            return req;
+          });
+
+          const todosCumplidos = requisitosActualizados.every((r) => r.cumplido || r.noAplica);
+          return {
+            ...etapa,
+            requisitos: requisitosActualizados,
+            estado: todosCumplidos ? 'completed' : etapa.estado,
+          };
+        });
+
+        return {
+          ...c,
+          etapas: etapasActualizadas,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+      return actualizados;
+    });
+
+    if (cambiosRealizados.length > 0) {
+      mostrarModal(
+        'Sincronización Exitosa con PERNO',
+        `Se importaron automáticamente del reporte oficial de nómina PERNO:\n\n• ${cambiosRealizados.join('\n• ')}`,
+        'success'
+      );
+    } else {
+      mostrarModal(
+        'PERNO Actualizado',
+        `El servidor ${target.servidor_nombre} figura en PERNO pero sus requisitos ya estaban sincronizados con la información oficial.`,
+        'info'
+      );
+    }
+  };
+
   const abrirModalEditarOpecCaso = () => {
     if (!casoActivo) return;
     setInputOpecCaso(opecValorActual);
@@ -6278,7 +6598,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       const actualizados = prevCasos.map((c) => {
         if (c.id !== casoActivo.id) return c;
         const nuevasEtapas = c.etapas.map((et) => {
-          if (et.id === 'v_carr_7' || et.numero === 6) {
+          if (et.id === 'v_carr_7') {
             const nuevosReqs = et.requisitos.map((r) => {
               if (r.id === 'vc7_4') {
                 return {
@@ -6341,6 +6661,42 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   };
 
+  const guardarFechaPosesionCaso = (fechaNueva: string) => {
+    if (!casoActivo) return;
+    const fechaLimpia = (fechaNueva || '').trim();
+    if (!fechaLimpia) {
+      mostrarModal('Campo Obligatorio', 'Por favor ingrese una fecha válida en formato YYYY-MM-DD.', 'info');
+      return;
+    }
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== casoActivo.id) return c;
+        return {
+          ...c,
+          fecha_posesion_periodo_prueba: fechaLimpia,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+
+    const esCarrera = casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO';
+    mostrarModal(
+      'Fecha de Posesión Registrada',
+      esCarrera
+        ? `Se actualizó la Fecha de Posesión efectiva a "${fechaLimpia}". El cronograma legal de 6 meses y términos de calificación EDL han sido recalculados automáticamente.`
+        : `Se actualizó la Fecha de Posesión efectiva a "${fechaLimpia}". Para nombramientos provisionales no aplica período de prueba (Ley 909 de 2004, Art. 25).`,
+      'success'
+    );
+  };
+
   const alternarSubtipoConcursoCaso = (casoId: string, forzarSubtipo?: 'ABIERTO' | 'ASCENSO') => {
     let nuevoSubtipoFinal: 'ABIERTO' | 'ASCENSO' = 'ASCENSO';
 
@@ -6353,7 +6709,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         const esAscenso = targetSubtipo === 'ASCENSO';
 
         const nuevasEtapas = c.etapas.map((et) => {
-          if (et.id === 'v_carr_7' || et.numero === 6) {
+          if (et.id === 'v_carr_7') {
             const nuevosReqs = et.requisitos.map((r) => {
               if (r.id === 'vc7_4') {
                 return {
@@ -8907,27 +9263,45 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
                               </View>
 
-                              {/* Radicado Chip */}
-                              <View
-                                style={{
-                                  backgroundColor: '#f8fafc',
-                                  borderWidth: 1,
-                                  borderColor: 'rgba(226, 232, 240, 0.8)',
-                                  borderRadius: 4,
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 2.5,
-                                }}
-                              >
-                                <Text
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                {/* Radicado Chip */}
+                                <View
                                   style={{
-                                    fontSize: 11,
-                                    fontWeight: '700',
-                                    color: '#64748b',
-                                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                    backgroundColor: '#f8fafc',
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(226, 232, 240, 0.8)',
+                                    borderRadius: 4,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2.5,
                                   }}
                                 >
-                                  {c.id}
-                                </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: '700',
+                                      color: '#64748b',
+                                      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                    }}
+                                  >
+                                    {c.id}
+                                  </Text>
+                                </View>
+
+                                {/* Botón Eliminar Trámite */}
+                                <Pressable
+                                  onPress={(e: any) => {
+                                    e?.stopPropagation?.();
+                                    abrirModalEliminarCaso(c);
+                                  }}
+                                  style={({ pressed, hovered }: any) => ({
+                                    padding: 4,
+                                    borderRadius: 4,
+                                    backgroundColor: pressed ? '#fee2e2' : hovered ? '#fef2f2' : 'transparent',
+                                    cursor: 'pointer',
+                                  })}
+                                >
+                                  <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                                </Pressable>
                               </View>
                             </View>
 
@@ -9545,6 +9919,29 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Pressable>
                             );
                           })()}
+
+                          {/* Botón Eliminar Trámite de Personal */}
+                          <Pressable
+                            onPress={() => abrirModalEliminarCaso(casoActivo)}
+                            style={({ hovered, pressed }: any) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 5,
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 6,
+                              backgroundColor: pressed ? '#7F1D1D' : hovered ? '#991B1B' : 'rgba(239, 68, 68, 0.16)',
+                              borderWidth: 1,
+                              borderColor: 'rgba(239, 68, 68, 0.45)',
+                              cursor: 'pointer',
+                              marginLeft: 'auto',
+                            })}
+                          >
+                            <Ionicons name="trash-outline" size={13} color="#FCA5A5" />
+                            <Text style={{ color: '#FCA5A5', fontSize: 11, fontWeight: '700' }}>
+                              Eliminar Trámite
+                            </Text>
+                          </Pressable>
                         </View>
 
                         {/* Fila 2: Box Organizado de Cargo, Dependencia y Manual de Funciones */}
@@ -9573,7 +9970,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               minWidth: 260,
                             }}
                           >
-                            {/* Cargo con link a Ficha del Cargo */}
+                            {/* Cargo con link a Ficha del Cargo + ID SIDEAP */}
                             <Pressable
                               onPress={() => abrirFichaCargo(casoActivo)}
                               style={({ hovered, pressed }: any) => ({
@@ -9597,6 +9994,27 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
                                 {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
                               </Text>
+                              {!!sideapIdActual && (
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3.5,
+                                    backgroundColor: 'rgba(14, 165, 233, 0.25)',
+                                    borderWidth: 1,
+                                    borderColor: '#38BDF8',
+                                    paddingHorizontal: 6,
+                                    paddingVertical: 1.5,
+                                    borderRadius: 4,
+                                    marginLeft: 2,
+                                  }}
+                                >
+                                  <Ionicons name="finger-print-outline" size={11} color="#BAE6FD" />
+                                  <Text style={{ color: '#E0F2FE', fontSize: 10.5, fontWeight: '800' }}>
+                                    ID SIDEAP: {sideapIdActual}
+                                  </Text>
+                                </View>
+                              )}
                               <Ionicons name="open-outline" size={12} color="#93C5FD" style={{ marginLeft: 2 }} />
                             </Pressable>
 
@@ -9623,7 +10041,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                           {/* Lado derecho: Botón del Manual de Funciones PDF */}
                           <BotonManualFunciones
-                            id_sideap={(casoActivo as any).id_sideap}
+                            id_sideap={sideapIdActual || (casoActivo as any).id_sideap}
                             cargo={casoActivo.cargo}
                             codigo={casoActivo.codigo}
                             grado={casoActivo.grado}
@@ -9819,7 +10237,34 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </Text>
                         </Pressable>
 
-                        {/* 4. Evaluación Retiro (Forms) para Desvinculación */}
+                        {/* 4. Auto-Importar de PERNO (Novedades Financieras y de Nómina) */}
+                        <Pressable
+                          onPress={() => autoImportarDesdePerno(casoActivo)}
+                          style={({ pressed, hovered }: any) => ({
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            backgroundColor: pressed ? '#0F766E' : hovered ? '#115E59' : '#0D9488',
+                            paddingHorizontal: 13,
+                            paddingVertical: 7,
+                            borderRadius: 7,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.25)',
+                            cursor: 'pointer',
+                            shadowColor: '#134E4A',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 2,
+                            elevation: 1,
+                          })}
+                        >
+                          <Ionicons name="flash-outline" size={13.5} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                            Auto-Importar de PERNO
+                          </Text>
+                        </Pressable>
+
+                        {/* 5. Evaluación Retiro (Forms) para Desvinculación */}
                         {casoActivo.tipo_proceso === 'DESVINCULACION' && (
                           <Pressable
                             onPress={handleAbrirEvaluacionRetiroGoogleForms}
@@ -9981,14 +10426,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         );
                       })()}
 
-                      {/* BOX CONTENEDOR DE FASES: Fondo oscuro, letra clara, colores muted */}
+                      {/* BOX CONTENEDOR DE FASES: Responsive fluido, sin truncar nombres con puntos suspensivos */}
                       {(() => {
                         const fasesTotales = casoActivo.etapas.length;
                         const fasesCompletadas = casoActivo.etapas.filter((e) => e.estado === 'completed').length;
                         const porcentajeFases = Math.round((fasesCompletadas / (fasesTotales || 1)) * 100);
-
-                        const esMuyPequena = width < 520;
-                        const esMediana = width >= 520 && width < 1180;
 
                         const enfocarFase = (etapaId: string) => {
                           setFasesExpandidas((prev) => ({
@@ -9997,30 +10439,28 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           }));
                         };
 
-                        const renderPillFase = (etapa: any, flexUno = true) => {
+                        const renderPillFase = (etapa: any) => {
                           const esCompletada = etapa.estado === 'completed';
                           const esEnProgreso = etapa.estado === 'in_progress';
 
                           const reqsTotales = etapa.requisitos?.length || 0;
                           const reqsCumplidos = etapa.requisitos?.filter((r: any) => r.cumplido || r.noAplica)?.length || 0;
 
-                          // Paleta muted en entorno oscuro:
-                          // - Completada: success-muted (#4d8e7b)
-                          // - En Progreso: orange-muted (#d37d40)
-                          // - Pendiente: dark/slate (#334155 / rgba)
                           const colorBg = esCompletada ? '#23463C' : esEnProgreso ? '#4A2B16' : 'rgba(255, 255, 255, 0.04)';
                           const colorBgHover = esCompletada ? '#2D5448' : esEnProgreso ? '#61391D' : 'rgba(255, 255, 255, 0.08)';
                           const colorBorde = esCompletada ? '#4D8E7B' : esEnProgreso ? '#D37D40' : '#334155';
-                          const colorIcono = esCompletada ? '#4D8E7B' : esEnProgreso ? '#FDBA74' : '#64748B';
+                          const colorIcono = esCompletada ? '#5EEAD4' : esEnProgreso ? '#FDBA74' : '#64748B';
                           const colorTexto = esCompletada ? '#FFFFFF' : esEnProgreso ? '#FFFFFF' : '#CBD5E1';
 
                           return (
                             <Pressable
                               key={etapa.id}
                               onPress={() => enfocarFase(etapa.id)}
+                              accessibilityLabel={`Fase ${etapa.numero}: ${etapa.titulo}`}
                               style={({ hovered, pressed }: any) => ({
-                                flex: flexUno ? 1 : undefined,
-                                minWidth: esMuyPequena ? 165 : undefined,
+                                flex: 1,
+                                minWidth: 155,
+                                minHeight: 64,
                                 backgroundColor: pressed ? '#1E293B' : hovered ? colorBgHover : colorBg,
                                 borderRadius: 8,
                                 paddingHorizontal: 10,
@@ -10028,7 +10468,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 borderWidth: esEnProgreso ? 1.5 : 1,
                                 borderColor: colorBorde,
                                 flexDirection: 'column',
-                                gap: 4,
+                                justifyContent: 'space-between',
+                                gap: 6,
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
                                 shadowOpacity: esEnProgreso ? 0.2 : 0.08,
@@ -10081,16 +10522,17 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       color: '#FFFFFF',
                                     }}
                                   >
-                                    {esCompletada ? '100%' : (reqsCumplidos + '/' + reqsTotales)}
+                                    {esCompletada ? '100%' : `${reqsCumplidos}/${reqsTotales}`}
                                   </Text>
                                 </View>
                               </View>
 
-                              {/* Fila 2: Título descriptivo de la fase */}
+                              {/* Fila 2: Título descriptivo de la fase (hasta 2 líneas para lectura completa) */}
                               <Text
-                                numberOfLines={1}
+                                numberOfLines={2}
                                 style={{
                                   fontSize: 11,
+                                  lineHeight: 14.5,
                                   fontWeight: esEnProgreso || esCompletada ? '600' : '400',
                                   color: esCompletada ? '#E2E8F0' : esEnProgreso ? '#FFFFFF' : '#94A3B8',
                                 }}
@@ -10156,41 +10598,22 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
 
-                            {/* Contenido según ancho de pantalla */}
-                            {esMuyPequena ? (
-                              // Pantallas muy pequeñas (< 520px): Scroll horizontal fluido
-                              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 }}>
-                                  {casoActivo.etapas.map((etapa) => renderPillFase(etapa, false))}
-                                </View>
-                              </ScrollView>
-                            ) : esMediana ? (
-                              // Pantallas medianas y pequeñas: 2 filas sin necesidad de scroll
-                              (() => {
-                                const mitad = Math.ceil(casoActivo.etapas.length / 2);
-                                const fila1 = casoActivo.etapas.slice(0, mitad);
-                                const fila2 = casoActivo.etapas.slice(mitad);
-
-                                return (
-                                  <View style={{ gap: 8, width: '100%' }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
-                                      {fila1.map((etapa) => renderPillFase(etapa, true))}
-                                    </View>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
-                                      {fila2.map((etapa) => renderPillFase(etapa, true))}
-                                    </View>
-                                  </View>
-                                );
-                              })()
-                            ) : (
-                              // Pantallas grandes (>= 1180px): 1 sola fila continua que ocupa el 100%
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
-                                {casoActivo.etapas.map((etapa) => renderPillFase(etapa, true))}
-                              </View>
-                            )}
+                            {/* Contenedor Adaptable y Responsive con FlexWrap */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'stretch',
+                                flexWrap: 'wrap',
+                                gap: 8,
+                                width: '100%',
+                              }}
+                            >
+                              {casoActivo.etapas.map((etapa) => renderPillFase(etapa))}
+                            </View>
                           </View>
                         );
                       })()}
+
 
                       {/* ============================================================== */}
                       {/* FASES AMPLIADAS CON DESPLEGABLES, NORMA Y OBSERVACIONES         */}
@@ -10572,8 +10995,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     )}
                                   </View>
 
-                                  {/* TARJETA ESPECIAL: CÁLCULO DE PERÍODO DE PRUEBA Y TÉRMINOS LEGALES DE CALIFICACIÓN EDL */}
-                                  {(etapa.id === 'v_carr_7' || etapa.numero === 6) && (() => {
+                                  {/* TARJETA ESPECIAL: CÁLCULO DE PERÍODO DE PRUEBA Y TÉRMINOS LEGALES DE CALIFICACIÓN EDL (EXCLUSIVO PARA CARRERA ADMINISTRATIVA Y ASCENSO - NO APLICA A PROVISIONALIDAD) */}
+                                  {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO') && etapa.id === 'v_carr_7' && (() => {
                                     const fechaBasePosesion =
                                       casoActivo.fecha_posesion_periodo_prueba ||
                                       casoActivo.fecha_efectiva ||
@@ -10632,22 +11055,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           </View>
 
                                           <Pressable
-                                            onPress={abrirModalEditarOpecCaso}
-                                            style={{
+                                            onPress={() => setModalFT095Visible(true)}
+                                            style={({ hovered }: any) => ({
                                               flexDirection: 'row',
                                               alignItems: 'center',
-                                              gap: 4,
-                                              backgroundColor: '#FFFFFF',
+                                              gap: 5,
+                                              backgroundColor: hovered ? '#F1F5F9' : '#FFFFFF',
                                               borderWidth: 1,
                                               borderColor: '#CBD5E1',
-                                              paddingHorizontal: 8,
-                                              paddingVertical: 4,
+                                              paddingHorizontal: 10,
+                                              paddingVertical: 5,
                                               borderRadius: 6,
-                                            }}
+                                              cursor: 'pointer',
+                                            })}
                                           >
-                                            <Ionicons name="calendar-outline" size={13} color="#334155" />
-                                            <Text style={{ fontSize: 11, fontWeight: '600', color: '#334155' }}>
-                                              Ajustar Fechas
+                                            <Ionicons name="calendar-outline" size={13.5} color="#0F172A" />
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>
+                                              Ajustar en Posesión (FT-095)
                                             </Text>
                                           </Pressable>
                                         </View>
@@ -10845,6 +11269,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       </View>
                                     );
                                   })()}
+
+                                  {/* TARJETA INFORMATIVA: PROVISIONALIDAD NO APLICA PERÍODO DE PRUEBA */}
+                                  {casoActivo.modalidad === 'PROVISIONALIDAD' && etapa.id === 'v_prov_6' && (
+                                    <View
+                                      style={{
+                                        backgroundColor: '#FFFBEB',
+                                        borderRadius: 10,
+                                        borderWidth: 1.5,
+                                        borderColor: '#FDE68A',
+                                        padding: 14,
+                                        gap: 8,
+                                      }}
+                                    >
+                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        <Ionicons name="information-circle-outline" size={20} color="#B45309" />
+                                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
+                                          Régimen de Provisionalidad: No Aplica Período de Prueba
+                                        </Text>
+                                      </View>
+                                      <Text style={{ fontSize: 11.5, color: '#78350F', lineHeight: 16 }}>
+                                        De conformidad con el artículo 25 de la Ley 909 de 2004 y los artículos 2.2.5.3.1 y 2.2.5.3.4 del Decreto 1083 de 2015, los nombramientos provisionales tienen carácter estrictamente transitorio. Por su naturaleza legal, <Text style={{ fontWeight: '800' }}>no están sujetos a período de prueba reglamentario de carrera (6 meses)</Text> ni otorgan derechos de carrera administrativa, rigiéndose por la evaluación anual ordinaria del desempeño.
+                                      </Text>
+                                    </View>
+                                  )}
 
                                   {/* LISTA DE REQUISITOS DE LA FASE */}
                                   <View style={{ gap: 8 }}>
@@ -19308,6 +19756,190 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         plaza={fichaPlazaModal}
       />
 
+      {/* MODAL INSTITUCIONAL: CONFIRMACIÓN DE ELIMINACIÓN DE TRÁMITE DE PERSONAL */}
+      <Modal
+        visible={modalEliminarCasoVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setModalEliminarCasoVisible(false);
+          setCasoParaEliminar(null);
+          setPalabraConfirmacionEliminar('');
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 480,
+              backgroundColor: THEME.white,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              padding: 20,
+              gap: 16,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            {/* Cabecera del modal */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: '#FEE2E2',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="trash" size={22} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                  Eliminar Trámite de Personal
+                </Text>
+                <Text style={{ fontSize: 12, color: '#64748B' }}>
+                  Confirmación de seguridad obligatoria
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => {
+                  setModalEliminarCasoVisible(false);
+                  setCasoParaEliminar(null);
+                  setPalabraConfirmacionEliminar('');
+                }}
+                style={{ padding: 6, borderRadius: 6, backgroundColor: '#F1F5F9' }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
+              </Pressable>
+            </View>
+
+            {/* Advertencia institucional */}
+            <View
+              style={{
+                backgroundColor: '#FEF2F2',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#FECACA',
+                padding: 12,
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 13, color: '#991B1B', lineHeight: 18 }}>
+                ¿Está seguro de que desea eliminar permanentemente el trámite de{' '}
+                <Text style={{ fontWeight: '800' }}>
+                  {casoParaEliminar?.tipo_proceso === 'VINCULACION' ? 'Vinculación' : 'Desvinculación'}
+                </Text>{' '}
+                de{' '}
+                <Text style={{ fontWeight: '800' }}>
+                  {casoParaEliminar?.servidor_nombre}
+                </Text>{' '}
+                (C.C. {casoParaEliminar?.servidor_cedula})?
+              </Text>
+              <Text style={{ fontSize: 11.5, color: '#B91C1C', fontWeight: '500' }}>
+                Esta acción removerá el expediente del trámite, sus requisitos y registros asociados. No se puede deshacer.
+              </Text>
+            </View>
+
+            {/* Input de confirmación con la palabra 'eliminar' */}
+            <View style={{ gap: 6 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>
+                Para confirmar, escriba la palabra <Text style={{ color: '#DC2626', fontWeight: '900' }}>eliminar</Text> a continuación:
+              </Text>
+              <TextInput
+                value={palabraConfirmacionEliminar}
+                onChangeText={setPalabraConfirmacionEliminar}
+                placeholder="Escriba 'eliminar' para confirmar..."
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1.5,
+                  borderColor:
+                    palabraConfirmacionEliminar.trim().toLowerCase() === 'eliminar'
+                      ? '#DC2626'
+                      : '#CBD5E1',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: '#0F172A',
+                }}
+              />
+            </View>
+
+            {/* Acciones */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+              <Pressable
+                onPress={() => {
+                  setModalEliminarCasoVisible(false);
+                  setCasoParaEliminar(null);
+                  setPalabraConfirmacionEliminar('');
+                }}
+                style={({ hovered }: any) => ({
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 8,
+                  backgroundColor: hovered ? '#E2E8F0' : '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  cursor: 'pointer',
+                })}
+              >
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#475569' }}>
+                  Cancelar
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={confirmarEliminacionCaso}
+                disabled={palabraConfirmacionEliminar.trim().toLowerCase() !== 'eliminar'}
+                style={({ pressed, hovered }: any) => {
+                  const habilitado = palabraConfirmacionEliminar.trim().toLowerCase() === 'eliminar';
+                  return {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 8,
+                    backgroundColor: !habilitado
+                      ? '#CBD5E1'
+                      : pressed
+                      ? '#991B1B'
+                      : hovered
+                      ? '#B91C1C'
+                      : '#DC2626',
+                    cursor: (habilitado ? 'pointer' : 'default') as any,
+                    opacity: habilitado ? 1 : 0.6,
+                  } as any;
+                }}
+              >
+                <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
+                <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF' }}>
+                  Eliminar Definitivamente
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Modal para Editar Número de OPEC (SIMO) y Convocatoria CNSC */}
       <Modal
         visible={modalEditarOpecCasoVisible}
@@ -19542,33 +20174,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   }}
                 />
               </View>
-
-              {/* Input Fecha de Posesión / Inicio Período de Prueba */}
-              <View style={{ gap: 6 }}>
-                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
-                  Fecha de Posesión / Inicio de Período de Prueba (YYYY-MM-DD):
-                </Text>
-                <TextInput
-                  value={inputFechaPosesionPeriodo}
-                  onChangeText={setInputFechaPosesionPeriodo}
-                  placeholder="Ej: 2026-03-15"
-                  placeholderTextColor={THEME.slate400}
-                  style={{
-                    backgroundColor: THEME.white,
-                    borderWidth: 1,
-                    borderColor: THEME.slate300,
-                    borderRadius: 8,
-                    paddingHorizontal: 12,
-                    paddingVertical: 9,
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: THEME.slate900,
-                  }}
-                />
-                <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
-                  Base legal para calcular automáticamente el vencimiento de los 6 meses y el plazo de 10 días hábiles de la calificación EDL.
-                </Text>
-              </View>
             </View>
 
             {/* Footer con Botones */}
@@ -19645,8 +20250,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             grado: casoActivo.grado,
             dependencia: casoActivo.dependencia,
             modalidad: casoActivo.modalidad,
-            fecha: casoActivo.fecha_inicio_tramite || new Date().toISOString().split('T')[0],
+            fecha: casoActivo.fecha_posesion_periodo_prueba || casoActivo.fecha_inicio_tramite || new Date().toISOString().split('T')[0],
           }}
+          fechaPosesionInicial={casoActivo.fecha_posesion_periodo_prueba || casoActivo.fecha_efectiva || ''}
+          onGuardarFechaPosesion={guardarFechaPosesionCaso}
           onDescargarPlantillaBase={handleDescargarFormatoOficial}
         />
       )}

@@ -31,6 +31,8 @@ interface ModalRequisitosPosesionFT095Props {
     fecha?: string;
   };
   onDescargarPlantillaBase?: (archivo: string) => void;
+  fechaPosesionInicial?: string;
+  onGuardarFechaPosesion?: (fecha: string) => void;
 }
 
 export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095Props> = ({
@@ -38,6 +40,8 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
   onClose,
   servidorInicial,
   onDescargarPlantillaBase,
+  fechaPosesionInicial,
+  onGuardarFechaPosesion,
 }) => {
   const { width, height } = useWindowDimensions();
   const isDesktop = width >= 1024;
@@ -51,13 +55,22 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
   const [busqueda, setBusqueda] = useState('');
   const [mostrarEncabezadoEditable, setMostrarEncabezadoEditable] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [fechaPosesionInput, setFechaPosesionInput] = useState<string>(
+    fechaPosesionInicial || servidorInicial?.fecha || ''
+  );
 
-  // Sincronizar cuando cambia el servidor inicial seleccionado
+  // Sincronizar cuando cambia el servidor inicial seleccionado o la fecha
   useEffect(() => {
     if (servidorInicial && servidorInicial.cedula) {
       setDatos(requisitosPosesionService.crearEstadoInicial(servidorInicial));
     }
   }, [servidorInicial?.cedula, servidorInicial?.nombre]);
+
+  useEffect(() => {
+    if (fechaPosesionInicial) {
+      setFechaPosesionInput(fechaPosesionInicial);
+    }
+  }, [fechaPosesionInicial]);
 
   const resumen = useMemo(() => {
     return requisitosPosesionService.calcularResumen(datos);
@@ -499,6 +512,89 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
                   </View>
                 </View>
               )}
+
+              {/* Franja Destacada: Fecha de Posesión Efectiva (o Inicio de Período de Prueba según modalidad) */}
+              {(() => {
+                const esProvisional = (servidorInicial?.modalidad || datos.tipoVinculacion || '').toUpperCase().includes('PROVISIONAL');
+                return (
+                  <View
+                    style={{
+                      backgroundColor: esProvisional ? '#fffbeb' : '#f0fdf4',
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: esProvisional ? '#fde68a' : '#86efac',
+                      padding: 12,
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="calendar-outline" size={17} color={esProvisional ? '#b45309' : '#166534'} />
+                        <Text style={{ fontSize: 12.5, fontWeight: '800', color: esProvisional ? '#92400e' : '#166534' }}>
+                          {esProvisional
+                            ? 'Fecha de Posesión Efectiva (YYYY-MM-DD):'
+                            : 'Fecha de Posesión / Inicio de Período de Prueba (YYYY-MM-DD):'}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 11, color: esProvisional ? '#b45309' : '#15803d', fontWeight: '500' }}>
+                        {esProvisional
+                          ? 'No aplica período de prueba para provisionales (Ley 909/2004, Art. 25)'
+                          : 'Base legal para cómputo de 6 meses y calificación EDL (Ley 909/2004, Art. 31)'}
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TextInput
+                        value={fechaPosesionInput}
+                        onChangeText={(txt) => setFechaPosesionInput(txt)}
+                        placeholder="Ej: 2026-03-15"
+                        placeholderTextColor="#94a3b8"
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#ffffff',
+                          borderWidth: 1,
+                          borderColor: esProvisional ? '#fde68a' : '#86efac',
+                          borderRadius: 6,
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          fontSize: 13,
+                          fontWeight: '700',
+                          color: '#0f172a',
+                        }}
+                      />
+                      <Pressable
+                        onPress={() => {
+                          if (onGuardarFechaPosesion) {
+                            onGuardarFechaPosesion(fechaPosesionInput);
+                          }
+                          setMensajeExito('Fecha de Posesión guardada correctamente.');
+                          setTimeout(() => setMensajeExito(null), 3500);
+                        }}
+                        style={({ pressed, hovered }: any) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          backgroundColor: pressed
+                            ? (esProvisional ? '#b45309' : '#15803d')
+                            : hovered
+                            ? (esProvisional ? '#92400e' : '#166534')
+                            : (esProvisional ? '#d97706' : '#15803d'),
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 6,
+                          cursor: 'pointer',
+                        })}
+                      >
+                        <Ionicons name="checkmark-circle-outline" size={15} color="#ffffff" />
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#ffffff' }}>
+                          Guardar Fecha
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                );
+              })()}
             </View>
 
             {/* BARRA DE PROGRESO Y CONTADORES */}

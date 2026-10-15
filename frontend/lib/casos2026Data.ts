@@ -838,7 +838,7 @@ export const CASOS_2026_RAW: Caso2026Raw[] = [
     "id": "TR-VINC-2026-026",
     "tipo_proceso": "VINCULACION",
     "modalidad": "CARRERA_ADMINISTRATIVA",
-    "servidor_nombre": "MARÍA PAULA RUEDA SOCHA",
+    "servidor_nombre": "MARIA PAULA ROCHA VEGA",
     "servidor_cedula": "1007538666",
     "cargo": "PROFESIONAL UNIVERSITARIO",
     "codigo": "219",
