@@ -9434,7 +9434,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         ) : null;
                       })()}
 
-                      {/* Cabecera Principal del Caso: Header fondo oscuro, letra clara, botones uniformes con paleta muted */}
+                      {/* Cabecera Principal del Caso: Header fondo oscuro, letra clara */}
                       <View
                         style={{
                           backgroundColor: '#1E293B',
@@ -9451,9 +9451,110 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           elevation: 3,
                         }}
                       >
-                        {/* Fila 1: Nombre del Servidor + Cédula + Badge Editable de Tipo de Vinculación + Botones de Acción Uniformes */}
+                        {/* Fila 1: Nombre del Servidor + Cédula + Badge Editable de Tipo de Vinculación */}
                         <View
                           style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: 10,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: '#FFFFFF',
+                              fontSize: 19,
+                              fontWeight: '800',
+                              letterSpacing: -0.3,
+                            }}
+                          >
+                            {casoActivo.servidor_nombre}
+                          </Text>
+
+                          {/* Cédula junto al nombre */}
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4.5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                              borderWidth: 1,
+                              borderColor: 'rgba(255, 255, 255, 0.16)',
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                            }}
+                          >
+                            <Ionicons name="card-outline" size={13} color="#94A3B8" />
+                            <Text style={{ color: '#F1F5F9', fontSize: 12, fontWeight: '600' }}>
+                              Cédula: {casoActivo.servidor_cedula}
+                            </Text>
+                          </View>
+
+                          {/* Badge Interactivo de Vinculación y Modalidad con Botón de Edición */}
+                          {(() => {
+                            const infoM = obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso);
+                            const esVinculacion = casoActivo.tipo_proceso === 'VINCULACION';
+                            return (
+                              <Pressable
+                                onPress={abrirModalCambiarModalidad}
+                                style={({ hovered, pressed }: any) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 5,
+                                  borderRadius: 6,
+                                  backgroundColor: pressed ? '#47539A' : hovered ? '#47539A' : '#5C6AC4',
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(255, 255, 255, 0.22)',
+                                  cursor: 'pointer',
+                                })}
+                              >
+                                <Ionicons
+                                  name={(infoM.icono as any) || (esVinculacion ? 'person-add-outline' : 'person-remove-outline')}
+                                  size={13}
+                                  color="#FFFFFF"
+                                />
+                                <Text
+                                  style={{
+                                    color: '#FFFFFF',
+                                    fontSize: 11,
+                                    fontWeight: '700',
+                                    letterSpacing: 0.3,
+                                  }}
+                                >
+                                  {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'} • {infoM.badgeTexto}
+                                </Text>
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+                                    paddingHorizontal: 5,
+                                    paddingVertical: 1.5,
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Ionicons name="pencil" size={10} color="#FFFFFF" />
+                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#FFFFFF' }}>
+                                    Cambiar
+                                  </Text>
+                                </View>
+                              </Pressable>
+                            );
+                          })()}
+                        </View>
+
+                        {/* Fila 2: Box Organizado de Cargo, Dependencia y Manual de Funciones */}
+                        <View
+                          style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.14)',
+                            padding: 10,
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'space-between',
@@ -9461,266 +9562,66 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             gap: 10,
                           }}
                         >
-                          {/* Izquierda: Nombre, Cédula y Badge de Régimen / Modalidad */}
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                            <Text
-                              style={{
-                                color: '#FFFFFF',
-                                fontSize: 19,
-                                fontWeight: '800',
-                                letterSpacing: -0.3,
-                              }}
-                            >
-                              {casoActivo.servidor_nombre}
-                            </Text>
-
-                            {/* Cédula junto al nombre */}
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4.5,
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.16)',
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                borderRadius: 6,
-                              }}
-                            >
-                              <Ionicons name="card-outline" size={13} color="#94A3B8" />
-                              <Text style={{ color: '#F1F5F9', fontSize: 12, fontWeight: '600' }}>
-                                Cédula: {casoActivo.servidor_cedula}
-                              </Text>
-                            </View>
-
-                            {/* Badge Interactivo de Vinculación y Modalidad con Botón de Edición */}
-                            {(() => {
-                              const infoM = obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso);
-                              const esVinculacion = casoActivo.tipo_proceso === 'VINCULACION';
-                              return (
-                                <Pressable
-                                  onPress={abrirModalCambiarModalidad}
-                                  style={({ hovered, pressed }: any) => ({
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 5,
-                                    borderRadius: 6,
-                                    backgroundColor: pressed ? '#47539A' : hovered ? '#47539A' : '#5C6AC4',
-                                    borderWidth: 1,
-                                    borderColor: 'rgba(255, 255, 255, 0.22)',
-                                    cursor: 'pointer',
-                                  })}
-                                >
-                                  <Ionicons
-                                    name={(infoM.icono as any) || (esVinculacion ? 'person-add-outline' : 'person-remove-outline')}
-                                    size={13}
-                                    color="#FFFFFF"
-                                  />
-                                  <Text
-                                    style={{
-                                      color: '#FFFFFF',
-                                      fontSize: 11,
-                                      fontWeight: '700',
-                                      letterSpacing: 0.3,
-                                    }}
-                                  >
-                                    {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'} • {infoM.badgeTexto}
-                                  </Text>
-                                  <View
-                                    style={{
-                                      flexDirection: 'row',
-                                      alignItems: 'center',
-                                      gap: 2,
-                                      backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                                      paddingHorizontal: 5,
-                                      paddingVertical: 1.5,
-                                      borderRadius: 4,
-                                    }}
-                                  >
-                                    <Ionicons name="pencil" size={10} color="#FFFFFF" />
-                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                      Cambiar
-                                    </Text>
-                                  </View>
-                                </Pressable>
-                              );
-                            })()}
-                          </View>
-
-                          {/* Derecha: Botones de Acción Uniformes con Paleta Muted */}
+                          {/* Lado izquierdo: Cargo y Dependencia */}
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
                               flexWrap: 'wrap',
-                              gap: 8,
+                              gap: 10,
+                              flex: 1,
+                              minWidth: 260,
                             }}
                           >
-                            {/* 1. Consultar SECOP II: blue-muted (#526ed3) */}
-                            {casoActivo.tipo_proceso === 'VINCULACION' && (
-                              <Pressable
-                                onPress={() =>
-                                  abrirConsultaSecopParaCandidato(
-                                    casoActivo.servidor_nombre,
-                                    casoActivo.servidor_cedula,
-                                    casoActivo.id
-                                  )
-                                }
-                                style={({ pressed, hovered }: any) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  backgroundColor: pressed ? '#3B51A3' : hovered ? '#3B51A3' : '#526ED3',
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 6.5,
-                                  borderRadius: 6,
-                                  borderWidth: 1,
-                                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                                  cursor: 'pointer',
-                                })}
-                              >
-                                <Ionicons name="search" size={13.5} color="#FFFFFF" />
-                                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
-                                  Consultar SECOP II
-                                </Text>
-                              </Pressable>
-                            )}
-
-                            {/* 2. Validación FT-318 IA: success-muted (#4d8e7b) */}
-                            {casoActivo.tipo_proceso === 'VINCULACION' && (() => {
-                              const valCoincidente = buscarValidacionCoincidenteCaso(casoActivo);
-                              return (
-                                <Pressable
-                                  onPress={() => abrirOIniciarValidacionFT318(casoActivo)}
-                                  style={({ pressed, hovered }: any) => ({
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 6,
-                                    backgroundColor: pressed ? '#3A6B5C' : hovered ? '#3A6B5C' : '#4D8E7B',
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 6.5,
-                                    borderRadius: 6,
-                                    borderWidth: 1,
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                                    cursor: 'pointer',
-                                  })}
-                                >
-                                  <Ionicons
-                                    name={valCoincidente ? 'open-outline' : 'sparkles'}
-                                    size={13.5}
-                                    color="#FFFFFF"
-                                  />
-                                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
-                                    {valCoincidente ? `Validación FT-318 IA (${valCoincidente.resultado_final || 'Abrir'})` : 'Validación FT-318 IA'}
-                                  </Text>
-                                </Pressable>
-                              );
-                            })()}
-
-                            {/* 3. Formatos Oficiales: slate-muted (#64748b) */}
+                            {/* Cargo con link a Ficha del Cargo */}
                             <Pressable
-                              onPress={() => setModalFormatosVisible(true)}
-                              style={({ pressed, hovered }: any) => ({
+                              onPress={() => abrirFichaCargo(casoActivo)}
+                              style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 6,
-                                backgroundColor: pressed ? '#4B5563' : hovered ? '#4B5563' : '#64748B',
-                                paddingHorizontal: 12,
-                                paddingVertical: 6.5,
-                                borderRadius: 6,
+                                backgroundColor: pressed
+                                  ? 'rgba(255, 255, 255, 0.16)'
+                                  : hovered
+                                  ? 'rgba(255, 255, 255, 0.12)'
+                                  : 'rgba(255, 255, 255, 0.08)',
                                 borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderColor: 'rgba(255, 255, 255, 0.18)',
+                                paddingHorizontal: 10,
+                                paddingVertical: 5.5,
+                                borderRadius: 6,
                                 cursor: 'pointer',
                               })}
                             >
-                              <Ionicons name="folder-open-outline" size={13.5} color="#FFFFFF" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
-                                Formatos Oficiales
+                              <Ionicons name="briefcase-outline" size={13.5} color="#93C5FD" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                                {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
                               </Text>
+                              <Ionicons name="open-outline" size={12} color="#93C5FD" style={{ marginLeft: 2 }} />
                             </Pressable>
 
-                            {/* 4. Evaluación Retiro (Forms): purple-muted (#7c59d3) */}
-                            {casoActivo.tipo_proceso === 'DESVINCULACION' && (
-                              <Pressable
-                                onPress={handleAbrirEvaluacionRetiroGoogleForms}
-                                style={({ pressed, hovered }: any) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  backgroundColor: pressed ? '#5F44A3' : hovered ? '#5F44A3' : '#7C59D3',
-                                  paddingHorizontal: 12,
-                                  paddingVertical: 6.5,
-                                  borderRadius: 6,
-                                  borderWidth: 1,
-                                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                                  cursor: 'pointer',
-                                })}
-                              >
-                                <Ionicons name="clipboard-outline" size={13.5} color="#FFFFFF" />
-                                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
-                                  Evaluación Retiro (Forms)
-                                </Text>
-                              </Pressable>
-                            )}
-                          </View>
-                        </View>
-
-                        {/* Fila 2: Franja de Información del Cargo, Dependencia y Manual de Funciones */}
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: 8,
-                          }}
-                        >
-                          {/* Cargo */}
-                          <Pressable
-                            onPress={() => abrirFichaCargo(casoActivo)}
-                            style={({ hovered, pressed }: any) => ({
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 5,
-                              backgroundColor: pressed ? 'rgba(255, 255, 255, 0.16)' : hovered ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)',
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.16)',
-                              paddingHorizontal: 10,
-                              paddingVertical: 5.5,
-                              borderRadius: 6,
-                              cursor: 'pointer',
-                            })}
-                          >
-                            <Ionicons name="briefcase-outline" size={13} color="#93C5FD" />
-                            <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
-                              {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
-                            </Text>
-                            <Ionicons name="open-outline" size={12} color="#93C5FD" />
-                          </Pressable>
-
-                          {/* Dependencia */}
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 5,
-                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.16)',
-                              paddingHorizontal: 10,
-                              paddingVertical: 5.5,
-                              borderRadius: 6,
-                            }}
-                          >
-                            <Ionicons name="business-outline" size={13} color="#94A3B8" />
-                            <Text style={{ color: '#CBD5E1', fontSize: 11.5, fontWeight: '500' }}>
-                              {casoActivo.dependencia}
-                            </Text>
+                            {/* Dependencia institucional */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.12)',
+                                paddingHorizontal: 10,
+                                paddingVertical: 5.5,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="business-outline" size={13} color="#94A3B8" />
+                              <Text style={{ color: '#CBD5E1', fontSize: 11.5, fontWeight: '500' }}>
+                                {casoActivo.dependencia}
+                              </Text>
+                            </View>
                           </View>
 
-                          {/* Botón Manual de Funciones: orange-muted (#d37d40) */}
+                          {/* Lado derecho: Botón del Manual de Funciones PDF */}
                           <BotonManualFunciones
                             id_sideap={(casoActivo as any).id_sideap}
                             cargo={casoActivo.cargo}
@@ -9731,7 +9632,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             estiloContenedor={{
                               backgroundColor: '#D37D40',
                               borderColor: 'rgba(255, 255, 255, 0.22)',
-                              paddingHorizontal: 10,
+                              paddingHorizontal: 11,
                               paddingVertical: 5.5,
                               borderRadius: 6,
                             }}
@@ -9784,14 +9685,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
                             </Pressable>
 
-                            {/* Chip Convocatoria CNSC: indigo-muted (#5c6ac4) */}
+                            {/* Chip Convocatoria CNSC: Mismo color de OPEC teal-muted (#4f9d94) */}
                             <Pressable
                               onPress={abrirModalEditarOpecCaso}
                               style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 4,
-                                backgroundColor: pressed ? '#47539A' : hovered ? '#47539A' : '#5C6AC4',
+                                backgroundColor: pressed ? '#3D7A73' : hovered ? '#3D7A73' : '#4F9D94',
                                 borderWidth: 1,
                                 borderColor: 'rgba(255, 255, 255, 0.2)',
                                 paddingHorizontal: 9,
@@ -9806,37 +9707,148 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                               <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
                             </Pressable>
-
-                            {/* Subtipo: Concurso Abierto vs Concurso Ascenso: blue-muted (#526ed3) */}
-                            {(() => {
-                              const esAscenso = casoActivo.subtipo_concurso === 'ASCENSO' || casoActivo.modalidad === 'ASCENSO';
-                              return (
-                                <Pressable
-                                  onPress={() => alternarSubtipoConcursoCaso(casoActivo.id)}
-                                  style={({ hovered, pressed }: any) => ({
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 4,
-                                    backgroundColor: pressed ? '#3B51A3' : hovered ? '#3B51A3' : '#526ED3',
-                                    borderWidth: 1,
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                                    paddingHorizontal: 9,
-                                    paddingVertical: 4.5,
-                                    borderRadius: 6,
-                                    cursor: 'pointer',
-                                  })}
-                                >
-                                  <Ionicons name={esAscenso ? 'trending-up' : 'person'} size={12.5} color="#FFFFFF" />
-                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
-                                    {esAscenso ? 'Modalidad: Ascenso' : 'Modalidad: Abierto'}
-                                  </Text>
-                                  <Ionicons name="swap-horizontal" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
-                                </Pressable>
-                              );
-                            })()}
                           </View>
                         )}
                       </View>
+
+                      {/* Botones de Acción por FUERA del Box de Cabecera (Inmediatamente Debajo) */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 9,
+                          paddingVertical: 2,
+                        }}
+                      >
+                        {/* 1. Consultar SECOP II */}
+                        {casoActivo.tipo_proceso === 'VINCULACION' && (
+                          <Pressable
+                            onPress={() =>
+                              abrirConsultaSecopParaCandidato(
+                                casoActivo.servidor_nombre,
+                                casoActivo.servidor_cedula,
+                                casoActivo.id
+                              )
+                            }
+                            style={({ pressed, hovered }: any) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              backgroundColor: pressed ? '#3B51A3' : hovered ? '#4159B5' : '#526ED3',
+                              paddingHorizontal: 13,
+                              paddingVertical: 7,
+                              borderRadius: 7,
+                              borderWidth: 1,
+                              borderColor: 'rgba(255, 255, 255, 0.25)',
+                              cursor: 'pointer',
+                              shadowColor: '#1E3A8A',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.1,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            })}
+                          >
+                            <Ionicons name="search" size={13.5} color="#FFFFFF" />
+                            <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                              Consultar SECOP II
+                            </Text>
+                          </Pressable>
+                        )}
+
+                        {/* 2. Validación FT-318 IA */}
+                        {casoActivo.tipo_proceso === 'VINCULACION' && (() => {
+                          const valCoincidente = buscarValidacionCoincidenteCaso(casoActivo);
+                          return (
+                            <Pressable
+                              onPress={() => abrirOIniciarValidacionFT318(casoActivo)}
+                              style={({ pressed, hovered }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                backgroundColor: pressed ? '#3A6B5C' : hovered ? '#427A6A' : '#4D8E7B',
+                                paddingHorizontal: 13,
+                                paddingVertical: 7,
+                                borderRadius: 7,
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.25)',
+                                cursor: 'pointer',
+                                shadowColor: '#064E3B',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              })}
+                            >
+                              <Ionicons
+                                name={valCoincidente ? 'open-outline' : 'sparkles'}
+                                size={13.5}
+                                color="#FFFFFF"
+                              />
+                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                {valCoincidente ? `Validación FT-318 IA (${valCoincidente.resultado_final || 'Abrir'})` : 'Validación FT-318 IA'}
+                              </Text>
+                            </Pressable>
+                          );
+                        })()}
+
+                        {/* 3. Formatos Oficiales */}
+                        <Pressable
+                          onPress={() => setModalFormatosVisible(true)}
+                          style={({ pressed, hovered }: any) => ({
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                            backgroundColor: pressed ? '#4B5563' : hovered ? '#525E6F' : '#64748B',
+                            paddingHorizontal: 13,
+                            paddingVertical: 7,
+                            borderRadius: 7,
+                            borderWidth: 1,
+                            borderColor: 'rgba(255, 255, 255, 0.25)',
+                            cursor: 'pointer',
+                            shadowColor: '#0F172A',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 2,
+                            elevation: 1,
+                          })}
+                        >
+                          <Ionicons name="folder-open-outline" size={13.5} color="#FFFFFF" />
+                          <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                            Formatos Oficiales
+                          </Text>
+                        </Pressable>
+
+                        {/* 4. Evaluación Retiro (Forms) para Desvinculación */}
+                        {casoActivo.tipo_proceso === 'DESVINCULACION' && (
+                          <Pressable
+                            onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                            style={({ pressed, hovered }: any) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              backgroundColor: pressed ? '#5F44A3' : hovered ? '#6C4DBA' : '#7C59D3',
+                              paddingHorizontal: 13,
+                              paddingVertical: 7,
+                              borderRadius: 7,
+                              borderWidth: 1,
+                              borderColor: 'rgba(255, 255, 255, 0.25)',
+                              cursor: 'pointer',
+                              shadowColor: '#581C87',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.1,
+                              shadowRadius: 2,
+                              elevation: 1,
+                            })}
+                          >
+                            <Ionicons name="clipboard-outline" size={13.5} color="#FFFFFF" />
+                            <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                              Evaluación Retiro (Forms)
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
+
 
                       {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
                       {(() => {
