@@ -125,6 +125,7 @@ export function obtenerInfoModalidad(
 ): InfoModalidadConfig {
   if (tipo === 'DESVINCULACION') {
     switch (m) {
+      case 'ASCENSO':
       case 'CARRERA_ADMINISTRATIVA':
         return {
           titulo: 'Carrera Administrativa (Retiro)',
@@ -200,6 +201,20 @@ export function obtenerInfoModalidad(
 
   // VINCULACIÓN (Por defecto)
   switch (m) {
+    case 'ASCENSO':
+      return {
+        titulo: 'Concurso de Ascenso (Carrera Administrativa)',
+        subtitulo: 'Concurso Interno CNSC / Vacancia Temporal / Período de Prueba (6 Meses)',
+        badgeTexto: 'CONCURSO ASCENSO',
+        icono: 'trending-up-outline',
+        colorTexto: '#4338ca', // Indigo 700
+        colorBg: '#eef2ff',   // Indigo 50
+        colorBorde: '#c7d2fe', // Indigo 200
+        marcoLegal: 'Ley 909 de 2004, Art. 31 • Ley 1960 de 2019 • Decreto 1083 de 2015, Arts. 2.2.5.5.51 y 2.2.6.25 • Circular CNSC 011 de 2021',
+        descripcionFases: 'Provisión por mérito reservada a servidores con derechos de carrera. Declara vacancia temporal en cargo de origen durante 6 meses de prueba. Al aprobar la evaluación del desempeño en SIMO, el servidor renuncia a su cargo previo declarando vacancia definitiva y actualiza su RPCA. Si no aprueba, regresa a su empleo anterior con plenos derechos.',
+        requisitoPrincipal: 'Servidor con derechos de carrera, elegible en concurso de ascenso SIMO, y vacancia temporal en cargo origen.',
+        diferenciaClave: 'Doble protección: si no supera el período de prueba regresa a su empleo anterior de carrera. Al superarlo, renuncia al empleo de origen para declarar la vacante definitiva.',
+      };
     case 'CARRERA_ADMINISTRATIVA':
       return {
         titulo: 'Carrera Administrativa',
@@ -301,6 +316,7 @@ export type EstadoReporteOpec =
 
 export type ModalidadPersonal =
   | 'CARRERA_ADMINISTRATIVA'
+  | 'ASCENSO'
   | 'LIBRE_NOMBRAMIENTO'
   | 'PROVISIONALIDAD'
   | 'PRACTICANTE_JUDICANTE';
@@ -367,7 +383,7 @@ export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
     articulos: 'Art. 14',
     descripcion: 'Término fatal para que la Comisión de Personal solicite a la CNSC la exclusión de aspirantes de la lista.',
     tipoProceso: 'VINCULACION',
-    modalidades: ['CARRERA_ADMINISTRATIVA'],
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'ASCENSO'],
     requisitoAsociadoId: 'vc2_3',
   },
   {
@@ -378,7 +394,7 @@ export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
     articulos: 'Art. 2.2.5.1.6',
     descripcion: 'Plazo legal del servidor designado para manifestar por escrito si acepta o no el nombramiento.',
     tipoProceso: 'VINCULACION',
-    modalidades: ['CARRERA_ADMINISTRATIVA', 'LIBRE_NOMBRAMIENTO', 'PROVISIONALIDAD'],
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'ASCENSO', 'LIBRE_NOMBRAMIENTO', 'PROVISIONALIDAD'],
     requisitoAsociadoId: 'vc4_4',
   },
   {
@@ -389,8 +405,30 @@ export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
     articulos: 'Art. 2.2.5.1.7',
     descripcion: 'Plazo legal improrrogable (salvo prórroga motivada) para prestar juramento y tomar posesión tras la aceptación.',
     tipoProceso: 'VINCULACION',
-    modalidades: ['CARRERA_ADMINISTRATIVA', 'LIBRE_NOMBRAMIENTO', 'PROVISIONALIDAD'],
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'ASCENSO', 'LIBRE_NOMBRAMIENTO', 'PROVISIONALIDAD'],
     requisitoAsociadoId: 'vc6_2',
+  },
+  {
+    id: 'tl_carr_calificacion_edl',
+    nombre: 'Remisión de Calificación Definitiva de Período de Prueba (EDL CNSC)',
+    plazoDiasHabiles: 10,
+    norma: 'Ley 909 de 2004, Art. 31 • Decreto 1083 de 2015, Art. 2.2.6.25',
+    articulos: 'Art. 31',
+    descripcion: 'Término legal perentorio de 10 días hábiles siguientes al vencimiento de los 6 meses de período de prueba para emitir y notificar la calificación definitiva.',
+    tipoProceso: 'VINCULACION',
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'ASCENSO'],
+    requisitoAsociadoId: 'vc7_2',
+  },
+  {
+    id: 'tl_carr_reporte_rpca',
+    nombre: 'Reporte a CNSC e Inscripción / Actualización en RPCA (SIMO 4.0)',
+    plazoDiasHabiles: 5,
+    norma: 'Circular Externa CNSC 011 de 2021',
+    articulos: 'Num. 6 • Ley 909 Art. 31',
+    descripcion: 'Plazo de 5 días hábiles siguientes a la firmeza de la calificación aprobatoria para solicitar ante la CNSC la inscripción o actualización en el RPCA.',
+    tipoProceso: 'VINCULACION',
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'ASCENSO'],
+    requisitoAsociadoId: 'vc7_3',
   },
   {
     id: 'tl_des_simo',
@@ -400,7 +438,7 @@ export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
     articulos: 'Num. 2 • Ley 1960 de 2019',
     descripcion: 'Plazo perentorio de 5 días hábiles siguientes al retiro para reportar la novedad de vacancia en SIMO.',
     tipoProceso: 'DESVINCULACION',
-    modalidades: ['CARRERA_ADMINISTRATIVA', 'PROVISIONALIDAD'],
+    modalidades: ['CARRERA_ADMINISTRATIVA', 'ASCENSO', 'PROVISIONALIDAD'],
     requisitoAsociadoId: 'dc6_1',
   },
   {
@@ -426,6 +464,96 @@ export const HITOS_TERMINOS_LEGALES: HitoTerminoLegal[] = [
     requisitoAsociadoId: 'dpj2_2',
   },
 ];
+
+export interface InfoPeriodoPrueba {
+  fechaPosesion: string;
+  fechaFinPeriodoPrueba: string;
+  fechaLimiteCalificacion: string;
+  diasCalendarioRestantesPeriodo: number;
+  periodoPruebaTerminado: boolean;
+  diasHabilesRestantesCalificacion: number;
+  calificacionVencida: boolean;
+  estadoSemaforo: 'EN_PERIODO' | 'CALIFICACION_EN_TERMINO' | 'CALIFICACION_VENCIDA';
+}
+
+export function calcularTerminosPeriodoPrueba(fechaInicioStr?: string): InfoPeriodoPrueba | null {
+  if (!fechaInicioStr) return null;
+  const partes = fechaInicioStr.split('-');
+  if (partes.length !== 3) return null;
+  const y = parseInt(partes[0], 10);
+  const m = parseInt(partes[1], 10);
+  const d = parseInt(partes[2], 10);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+
+  const inicio = new Date(y, m - 1, d);
+  // Período de prueba: 6 meses continuos
+  const finPeriodo = new Date(y, m - 1 + 6, d);
+
+  // Plazo legal de calificación: 10 días hábiles siguientes al vencimiento de los 6 meses (Ley 909 Art 31)
+  let cur = new Date(finPeriodo);
+  cur.setDate(cur.getDate() + 1);
+  let habiles = 0;
+  while (habiles < 10) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) {
+      habiles++;
+      if (habiles === 10) break;
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  const fechaLimiteCalificacion = cur;
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const format = (dt: Date) => {
+    const a = dt.getFullYear();
+    const b = String(dt.getMonth() + 1).padStart(2, '0');
+    const c = String(dt.getDate()).padStart(2, '0');
+    return `${a}-${b}-${c}`;
+  };
+
+  const msPorDia = 1000 * 60 * 60 * 24;
+  const diasCalendarioRestantesPeriodo = Math.ceil((finPeriodo.getTime() - hoy.getTime()) / msPorDia);
+  const periodoPruebaTerminado = diasCalendarioRestantesPeriodo <= 0;
+
+  // Si ya terminó el período de prueba, calcular cuántos días hábiles quedan hasta fechaLimiteCalificacion
+  let diasHabilesRestantesCalificacion = 0;
+  let calificacionVencida = false;
+
+  if (periodoPruebaTerminado) {
+    if (hoy > fechaLimiteCalificacion) {
+      calificacionVencida = true;
+      diasHabilesRestantesCalificacion = 0;
+    } else {
+      let temp = new Date(hoy);
+      temp.setDate(temp.getDate() + 1);
+      while (temp <= fechaLimiteCalificacion) {
+        const day = temp.getDay();
+        if (day !== 0 && day !== 6) {
+          diasHabilesRestantesCalificacion++;
+        }
+        temp.setDate(temp.getDate() + 1);
+      }
+    }
+  }
+
+  let estadoSemaforo: 'EN_PERIODO' | 'CALIFICACION_EN_TERMINO' | 'CALIFICACION_VENCIDA' = 'EN_PERIODO';
+  if (periodoPruebaTerminado) {
+    estadoSemaforo = calificacionVencida ? 'CALIFICACION_VENCIDA' : 'CALIFICACION_EN_TERMINO';
+  }
+
+  return {
+    fechaPosesion: format(inicio),
+    fechaFinPeriodoPrueba: format(finPeriodo),
+    fechaLimiteCalificacion: format(fechaLimiteCalificacion),
+    diasCalendarioRestantesPeriodo,
+    periodoPruebaTerminado,
+    diasHabilesRestantesCalificacion,
+    calificacionVencida,
+    estadoSemaforo,
+  };
+}
 
 export function calcularDiasHabilesTranscurridos(fechaInicioStr: string): number {
   if (!fechaInicioStr) return 0;
@@ -597,6 +725,11 @@ export interface CasoFlujoFuncionario {
   acto_derogatoria?: string;
   siguiente_elegible_solicitado?: boolean;
   observaciones?: string;
+  subtipo_concurso?: 'ABIERTO' | 'ASCENSO';
+  cargo_anterior_carrera?: string;
+  fecha_posesion_periodo_prueba?: string;
+  fecha_fin_periodo_prueba?: string;
+  fecha_limite_calificacion_edl?: string;
   validacionIngresoId?: string;
   estadoValidacionIA?: 'CUMPLE' | 'NO_CUMPLE' | 'REQUIERE_REVISION';
   resultadoSecop?: {
@@ -626,11 +759,14 @@ export interface CasoFlujoFuncionario {
 
 export function generarEtapasParaCaso(
   tipo: TipoProceso,
-  modalidad: ModalidadPersonal
+  modalidad: ModalidadPersonal,
+  subtipoConcurso?: 'ABIERTO' | 'ASCENSO'
 ): EtapaFlujo[] {
   if (tipo === 'VINCULACION') {
     switch (modalidad) {
+      case 'ASCENSO':
       case 'CARRERA_ADMINISTRATIVA':
+        const esModalidadAscenso = modalidad === 'ASCENSO' || subtipoConcurso === 'ASCENSO';
         return [
           {
             id: 'v_carr_1',
@@ -1057,6 +1193,80 @@ export function generarEtapasParaCaso(
                   'Resolución de Ordenación del Gasto y Pago a favor de la CNSC debidamente suscrita y numerada',
                   'Certificado de Disponibilidad Presupuestal (CDP) y Registro Presupuestal (RP) para el pago a la CNSC',
                   'Comprobante de egreso o radicado de transferencia bancaria distrital a la CNSC',
+                ],
+              },
+            ],
+          },
+          {
+            id: 'v_carr_7',
+            numero: 6,
+            titulo: 'Período de Prueba, Calificación EDL & Consolidación / Vacancia Definitiva',
+            subtitulo: 'Término de 6 meses, Calificación EDL, reporte SIMO 4.0 y vacancia de cargo origen (Ascenso)',
+            icono: 'medal-outline',
+            estado: 'pending',
+            tiempoEstimadoDias: 180,
+            responsable: 'Evaluador del Desempeño / Nominador / CNSC',
+            normaGeneral: 'Ley 909 de 2004, Art. 31; Ley 1960 de 2019; Decreto 1083 de 2015, Arts. 2.2.5.5.51 y 2.2.6.25; Circular CNSC 011 de 2021',
+            plazoLegal: '10 días hábiles siguientes al vencimiento de los 6 meses para allegar la calificación; 5 días hábiles para reporte SIMO',
+            procedimientoDetallado: 'Al cumplirse los seis (6) meses continuos de período de prueba contados a partir de la posesión, el evaluador asignado debe registrar y notificar la calificación definitiva en el aplicativo EDL de la CNSC dentro del plazo perentorio de 10 días hábiles. Con calificación aprobatoria (Sobresaliente o Satisfactoria): 1. Se tramita ante la CNSC mediante el aplicativo BNLE SIMO 4.0 la inscripción (concurso abierto) o actualización (concurso ascenso) en el Registro Público de Carrera Administrativa (RPCA). 2. En la modalidad de Concurso de Ascenso, el servidor presenta la renuncia formal al cargo anterior del cual era titular con derechos de carrera (el cual se encontraba en vacancia temporal), permitiendo expedir el Acto Administrativo que declara la Vacancia Definitiva de dicha plaza para proveerse en debida forma. 3. En caso de no superarse el período de prueba, el servidor en ascenso regresa a su empleo anterior de carrera, mientras que en concurso abierto se declara la insubsistencia.',
+            requisitos: [
+              {
+                id: 'vc7_1',
+                label: 'Cálculo y Vencimiento del Período de Prueba (6 Meses) y Plazo Límite de Calificación (10 días hábiles)',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Ley 909 de 2004, Art. 31 • Decreto 1083 de 2015, Art. 2.2.6.25 • Acuerdo CNSC EDL',
+                textoNormativo: 'El período de prueba tiene una duración legal perentoria de seis (6) meses. Concluido este lapso, el jefe inmediato o evaluador dispone de un término improrrogable de diez (10) días hábiles siguientes para emitir y notificar la calificación definitiva del desempeño laboral.',
+                detalleProcedimiento: 'Verificar la fecha de inicio/posesión efectiva, computar el vencimiento de los 6 meses y monitorear la fecha perentoria para la radicación de la evaluación en Talento Humano.',
+                posiblesEvidencias: [
+                  'Cronograma y certificación de cómputo de los 6 meses de período de prueba',
+                  'Alerta de vencimiento del término legal de 10 días hábiles para el evaluador',
+                ],
+              },
+              {
+                id: 'vc7_2',
+                label: 'Calificación Definitiva de Servicios en Período de Prueba (Aplicativo EDL CNSC)',
+                cumplido: false,
+                obligatorio: true,
+                codigoFormato: 'EDL-CNSC',
+                norma: 'Ley 909 de 2004, Art. 31 • Criterio Unificado CNSC Evaluación del Desempeño',
+                textoNormativo: 'El nombramiento adquiere carácter definitivo una vez el servidor supere el período de prueba con calificación sobresaliente o satisfactoria. Si la calificación fuere insatisfactoria, procederá el retiro del servicio (en concurso abierto) o el reintegro al cargo de origen (en concurso de ascenso).',
+                detalleProcedimiento: 'Verificar el cargue del acta de calificación definitiva en la plataforma EDL de la CNSC y constatar que el puntaje obtenido sea igual o superior al umbral satisfactorio.',
+                posiblesEvidencias: [
+                  'Formulario de calificación definitiva del período de prueba firmado en el aplicativo EDL',
+                  'Constancia de ejecutoria y firmeza de la calificación laboral',
+                ],
+              },
+              {
+                id: 'vc7_3',
+                label: 'Reporte en aplicativo BNLE SIMO 4.0 ante la CNSC e Inscripción / Actualización en el RPCA',
+                cumplido: false,
+                obligatorio: true,
+                norma: 'Circular Externa CNSC 011 de 2021 • Decreto 1083 de 2015, Art. 2.2.6.28 • Ley 909 de 2004, Art. 31',
+                textoNormativo: 'En firme la calificación del período de prueba, la entidad debe remitir a la CNSC por medio de SIMO 4.0 los soportes para la inscripción en el Registro Público de Carrera Administrativa (RPCA) por primera vez (concurso abierto) o la actualización del escalafón registral (concurso en modalidad de ascenso).',
+                detalleProcedimiento: 'Ingresar a SIMO 4.0, cargar la evaluación aprobatoria y solicitar la expedición del Registro Público de Carrera Administrativa (RPCA).',
+                posiblesEvidencias: [
+                  'Radicado de solicitud de inscripción o actualización de carrera en SIMO 4.0',
+                  'Constancia o resolución de registro en el RPCA expedida por la CNSC',
+                ],
+              },
+              {
+                id: 'vc7_4',
+                label: 'Renuncia formal al empleo anterior y Acto Administrativo de Vacancia Definitiva (Aplica en Concurso de Ascenso)',
+                cumplido: !esModalidadAscenso,
+                obligatorio: esModalidadAscenso,
+                noAplica: !esModalidadAscenso,
+                codigoFormato: '2311520-FT-018',
+                norma: 'Decreto 1083 de 2015, Art. 2.2.5.5.51 • Ley 909 de 2004, Art. 26 • Circular CNSC 011 de 2021',
+                textoNormativo: 'En la modalidad de ascenso, el empleo del cual era titular de carrera el servidor ascendido se mantenía en vacancia temporal durante los seis meses de prueba. Una vez superado el período de prueba y consolidado el ascenso, el servidor debe presentar la renuncia formal al empleo anterior, y la entidad debe expedir la Resolución de Aceptación de Renuncia y Declaratoria de Vacancia Definitiva de dicha plaza para reportarla en SIMO.',
+                detalleProcedimiento: '1. Recibir memorial de renuncia al cargo anterior suscrito por el servidor ascendido.\n2. Expedir la Resolución que acepta la renuncia y declara la vacancia definitiva del empleo previo.\n3. Reportar la vacancia definitiva en SIMO 4.0 dentro de los 5 días hábiles siguientes.\n(Nota: Si es Concurso Abierto, este requisito no aplica y se marca como No Aplica).',
+                observaciones: !esModalidadAscenso
+                  ? 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)'
+                  : undefined,
+                posiblesEvidencias: [
+                  'Carta de renuncia al cargo anterior suscrita por el servidor con derechos de carrera',
+                  'Resolución de aceptación de renuncia y declaratoria formal de vacancia definitiva',
+                  'Comprobante de reporte de vacancia en SIMO 4.0 de la plaza liberada',
                 ],
               },
             ],
@@ -3466,6 +3676,7 @@ export function generarEtapasParaCaso(
         ];
     }
   }
+  return [];
 }
 export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[] {
   return etapas.map((etapa, idx) => ({
@@ -3486,12 +3697,15 @@ export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[
 export function sincronizarEtapasCaso(
   etapasGuardadas: EtapaFlujo[] | undefined,
   tipoProceso: TipoProceso,
-  modalidad: ModalidadPersonal
+  modalidad: ModalidadPersonal,
+  subtipoConcurso?: 'ABIERTO' | 'ASCENSO'
 ): EtapaFlujo[] {
-  const etapasMaestras = generarEtapasParaCaso(tipoProceso, modalidad);
+  const etapasMaestras = generarEtapasParaCaso(tipoProceso, modalidad, subtipoConcurso);
   if (!etapasGuardadas || !Array.isArray(etapasGuardadas) || etapasGuardadas.length === 0) {
     return etapasMaestras;
   }
+
+  const esAsc = modalidad === 'ASCENSO' || subtipoConcurso === 'ASCENSO';
 
   return etapasMaestras.map((etapaM) => {
     const etapaG = etapasGuardadas.find(
@@ -3550,6 +3764,25 @@ export function sincronizarEtapasCaso(
         };
       }
 
+      // Reconciliación para Requisito 4 de la Fase 6 (Renuncia al cargo anterior en Ascenso)
+      if (reqM.id === 'vc7_4') {
+        const noAplicaFinal = !esAsc;
+        const cumplidoFinal = noAplicaFinal ? true : (reqG?.cumplido ?? false);
+        return {
+          ...reqM,
+          cumplido: cumplidoFinal,
+          noAplica: noAplicaFinal,
+          obligatorio: esAsc,
+          observaciones: noAplicaFinal
+            ? 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)'
+            : (reqG?.observaciones === 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)' ? undefined : reqG?.observaciones || reqM.observaciones),
+          fecha_cumplimiento: reqG?.fecha_cumplimiento || reqM.fecha_cumplimiento,
+          radicadoSoporte: reqG?.radicadoSoporte || reqM.radicadoSoporte,
+          usuarioRegistro: reqG?.usuarioRegistro || reqM.usuarioRegistro,
+          documentosAdjuntos: Array.isArray(reqG?.documentosAdjuntos) ? reqG.documentosAdjuntos : (reqM.documentosAdjuntos || []),
+        };
+      }
+
       if (reqG) {
         const noAplicaFinal = reqG.noAplica !== undefined ? reqG.noAplica : Boolean(reqM.noAplica);
         const cumplidoFinal = noAplicaFinal ? true : (reqG.cumplido !== undefined ? reqG.cumplido : reqM.cumplido);
@@ -3600,9 +3833,10 @@ export function generarEtapasParaCasoConEstado(
   tipo: TipoProceso,
   modalidad: ModalidadPersonal,
   esTerminado: boolean,
-  fechaEfectiva?: string
+  fechaEfectiva?: string,
+  subtipoConcurso?: 'ABIERTO' | 'ASCENSO'
 ): EtapaFlujo[] {
-  const etapas = generarEtapasParaCaso(tipo, modalidad);
+  const etapas = generarEtapasParaCaso(tipo, modalidad, subtipoConcurso);
   if (esTerminado) {
     return etapas.map((e) => ({
       ...e,
@@ -3667,14 +3901,19 @@ export const esTerminadoDefault2026 = (id: string, tipo: string): boolean => {
   return false;
 };
 
-const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => ({
-  ...c,
-  etapas: generarEtapasParaCasoConEstado(
-    c.tipo_proceso,
-    c.modalidad,
-    esTerminadoDefault2026(c.id, c.tipo_proceso),
-    c.fecha_efectiva
-  ),
+const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => {
+  const esAsc = c.modalidad === 'ASCENSO';
+  const subtipo = esAsc ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined);
+  return {
+    ...c,
+    subtipo_concurso: subtipo,
+    etapas: generarEtapasParaCasoConEstado(
+      c.tipo_proceso,
+      c.modalidad,
+      esTerminadoDefault2026(c.id, c.tipo_proceso),
+      c.fecha_efectiva,
+      subtipo
+    ),
   ...(c.servidor_cedula === '1014234567'
     ? {
         resultadoSecop: {
@@ -3693,7 +3932,8 @@ const CASOS_BASE: CasoFlujoFuncionario[] = CASOS_2026_RAW.map((c) => ({
         },
       }
     : {}),
-}));
+  };
+});
 
 // ============================================================================
 // CATÁLOGO DE FORMATOS OFICIALES Y PLANTILLAS DE TALENTO HUMANO
@@ -3977,6 +4217,17 @@ export const CAUSALES_ARTICULO_41_LEY_909: CausalArticulo41[] = [
 ];
 
 export const CAUSALES_RETIRO_POR_MODALIDAD: Record<ModalidadPersonal, string[]> = {
+  ASCENSO: [
+    'Renuncia formal al empleo anterior por consolidación de ascenso (Decreto 1083 de 2015, Art. 2.2.5.5.51)',
+    'Renuncia libre y regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
+    'Retiro con derecho a pensión de vejez/invalidez con inclusión en nómina (Ley 909, Art. 41 lit. e • C-1037/2003)',
+    'Declaratoria de insubsistencia por Calificación No Satisfactoria en EDL (Ley 909, Art. 41 lit. b)',
+    'Supresión del empleo de carrera con indemnización o reincorporación (Ley 909, Art. 41 lit. l y Art. 44)',
+    'Edad de retiro forzoso - 70 años (Ley 1821 de 2016 • Ley 909, Art. 41 lit. g)',
+    'Destitución como consecuencia de proceso disciplinario en firme (Ley 909, Art. 41 lit. h)',
+    'Declaratoria de vacancia del empleo por abandono del cargo (Ley 909, Art. 41 lit. i)',
+    'Muerte del servidor público (Ley 909, Art. 41 lit. m)',
+  ],
   CARRERA_ADMINISTRATIVA: [
     'Renuncia libre y regularmente aceptada (Ley 909 de 2004, Art. 41 lit. d)',
     'Retiro con derecho a pensión de vejez/invalidez con inclusión en nómina (Ley 909, Art. 41 lit. e • C-1037/2003)',
@@ -4059,6 +4310,26 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const isDesktop = width >= 992;
   const isTablet = width >= 640;
 
+  // Control de expansión / contracción del Sidebar de Trámites
+  const [sidebarContraido, setSidebarContraido] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem('rrhh_sidebar_contraido') === 'true';
+    }
+    return false;
+  });
+
+  const alternarSidebar = (forzar?: boolean) => {
+    setSidebarContraido((prev) => {
+      const nuevo = typeof forzar === 'boolean' ? forzar : !prev;
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem('rrhh_sidebar_contraido', String(nuevo));
+        } catch (e) {}
+      }
+      return nuevo;
+    });
+  };
+
   // Pestañas principales divididas en Ingresos y Desvinculaciones (estilo Nómina)
   const [tabActiva, setTabActiva] = useState<
     'ingresos' | 'desvinculaciones' | 'concursos_listas' | 'secop' | 'validacion_ia' | 'paz_salvo' | 'matriz_normativa'
@@ -4088,8 +4359,9 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
 
   // Estados de concursos en modal de nuevo registro
   const [mecanismoMeritoInput, setMecanismoMeritoInput] = useState<MecanismoMeritoConcurso>('LISTA_DIRECTA_OPEC');
+  const [subtipoConcursoInput, setSubtipoConcursoInput] = useState<'ABIERTO' | 'ASCENSO'>('ABIERTO');
   const [opecInput, setOpecInput] = useState('');
-  const [convocatoriaInput, setConvocatoriaInput] = useState('Convocatoria Distrito Capital 5 - CNSC');
+  const [convocatoriaInput, setConvocatoriaInput] = useState('Convocatoria Distrito Capital 6 - CNSC');
   const [puestoListaInput, setPuestoListaInput] = useState('1');
   const [resolucionListaInput, setResolucionListaInput] = useState('Resolución CNSC No. 14210 de 2025');
 
@@ -4098,7 +4370,15 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     if (typeof window !== 'undefined' && window.localStorage) {
       try {
         const salvadas = window.localStorage.getItem('rrhh_opec_plazas_v1');
-        if (salvadas) return JSON.parse(salvadas);
+        if (salvadas) {
+          const parsed = JSON.parse(salvadas);
+          Object.keys(parsed).forEach((k) => {
+            if (parsed[k]?.convocatoria) {
+              parsed[k].convocatoria = parsed[k].convocatoria.replace(/Distrito Capital 5/g, 'Distrito Capital 6');
+            }
+          });
+          return parsed;
+        }
       } catch (e) {
         console.warn('Error leyendo opec de localStorage', e);
       }
@@ -4133,10 +4413,18 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         if (guardados) {
           const parsed = JSON.parse(guardados);
           if (Array.isArray(parsed) && parsed.length >= CASOS_BASE.length) {
-            return parsed.map((c: CasoFlujoFuncionario) => ({
-              ...c,
-              etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad),
-            }));
+            return parsed.map((c: CasoFlujoFuncionario) => {
+              const subtipo = c.subtipo_concurso || (c.modalidad === 'ASCENSO' ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined));
+              const conv = c.concurso_convocatoria
+                ? c.concurso_convocatoria.replace(/Distrito Capital 5/g, 'Distrito Capital 6')
+                : c.concurso_convocatoria;
+              return {
+                ...c,
+                concurso_convocatoria: conv,
+                subtipo_concurso: subtipo,
+                etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad, subtipo),
+              };
+            });
           }
         }
       } catch (e) {
@@ -4163,10 +4451,18 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   // Asegurar migración de cualquier trámite previamente persistido a las normas y textos maestros vigentes
   useEffect(() => {
     setCasos((prevCasos) =>
-      prevCasos.map((c) => ({
-        ...c,
-        etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad),
-      }))
+      prevCasos.map((c) => {
+        const subtipo = c.subtipo_concurso || (c.modalidad === 'ASCENSO' ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined));
+        const conv = c.concurso_convocatoria
+          ? c.concurso_convocatoria.replace(/Distrito Capital 5/g, 'Distrito Capital 6')
+          : c.concurso_convocatoria;
+        return {
+          ...c,
+          concurso_convocatoria: conv,
+          subtipo_concurso: subtipo,
+          etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad, subtipo),
+        };
+      })
     );
   }, []);
 
@@ -4450,6 +4746,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     setNominaFiltroDependencia('');
     setNominaResultadosServidores([]);
     setNominaResultadosPlazas([]);
+    setSubtipoConcursoInput('ABIERTO');
     setModalModoEntrada('NOMINA');
   };
 
@@ -4546,7 +4843,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
       ...opecPersonalizadasPlazas,
       [plId]: {
         opec: inputOpecValor.trim(),
-        convocatoria: inputConvocatoriaValor.trim() || 'Convocatoria Distrito Capital 5 - CNSC',
+        convocatoria: inputConvocatoriaValor.trim() || 'Convocatoria Distrito Capital 6 - CNSC',
         estadoReporte: inputEstadoReporteValor,
       },
     };
@@ -4617,7 +4914,7 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
         const custom = opecPersonalizadasPlazas[p.id_plaza];
         const opecVal = custom?.opec || p.opec || 'SIN_OPEC';
         const estReporte = custom?.estadoReporte || (p.opec ? 'REPORTADO_OPEC' : 'PENDIENTE_REPORTE');
-        const convVal = custom?.convocatoria || (p.opec ? 'Distrito Capital 5' : 'Pendiente Convocatoria');
+        const convVal = custom?.convocatoria || (p.opec ? 'Distrito Capital 6' : 'Pendiente Convocatoria');
         const fila = [
           p.id_plaza,
           `"${opecVal}"`,
@@ -6007,38 +6304,141 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   }, [casoActivo, opecPersonalizadasPlazas, plazaOpecMatch]);
 
   const convocatoriaValorActual = useMemo(() => {
-    if (!casoActivo) return 'Distrito Capital 5 - CNSC';
+    if (!casoActivo) return 'Distrito Capital 6 - CNSC';
     if (casoActivo.concurso_convocatoria) return casoActivo.concurso_convocatoria;
     if ((casoActivo as any).convocatoria) return (casoActivo as any).convocatoria;
     if (casoActivo.id_plaza && opecPersonalizadasPlazas[casoActivo.id_plaza]?.convocatoria) {
       return opecPersonalizadasPlazas[casoActivo.id_plaza].convocatoria;
     }
-    return 'Distrito Capital 5 - CNSC';
+    return 'Distrito Capital 6 - CNSC';
   }, [casoActivo, opecPersonalizadasPlazas]);
 
   const [modalEditarOpecCasoVisible, setModalEditarOpecCasoVisible] = useState(false);
   const [inputOpecCaso, setInputOpecCaso] = useState('');
   const [inputConvocatoriaCaso, setInputConvocatoriaCaso] = useState('');
+  const [inputSubtipoConcursoCaso, setInputSubtipoConcursoCaso] = useState<'ABIERTO' | 'ASCENSO'>('ABIERTO');
+  const [inputCargoAnteriorCaso, setInputCargoAnteriorCaso] = useState('');
+  const [inputFechaPosesionPeriodo, setInputFechaPosesionPeriodo] = useState('');
+
+  // Estados y funciones para modificar la Modalidad / Régimen del Caso
+  const [modalCambiarModalidadCasoVisible, setModalCambiarModalidadCasoVisible] = useState(false);
+  const [modalidadSeleccionadaModal, setModalidadSeleccionadaModal] = useState<ModalidadPersonal>('CARRERA_ADMINISTRATIVA');
+  const [subtipoConcursoModal, setSubtipoConcursoModal] = useState<'ABIERTO' | 'ASCENSO'>('ABIERTO');
+
+  const abrirModalCambiarModalidad = () => {
+    if (!casoActivo) return;
+    const modActual = casoActivo.modalidad || 'CARRERA_ADMINISTRATIVA';
+    const esAsc = casoActivo.subtipo_concurso === 'ASCENSO' || modActual === 'ASCENSO';
+    setModalidadSeleccionadaModal(modActual === 'ASCENSO' ? 'CARRERA_ADMINISTRATIVA' : modActual);
+    setSubtipoConcursoModal(esAsc ? 'ASCENSO' : 'ABIERTO');
+    setModalCambiarModalidadCasoVisible(true);
+  };
+
+  const guardarCambioModalidadCaso = () => {
+    if (!casoActivo) return;
+    const esCarrera = modalidadSeleccionadaModal === 'CARRERA_ADMINISTRATIVA';
+    const esAsc = esCarrera && subtipoConcursoModal === 'ASCENSO';
+    const nuevaModFinal: ModalidadPersonal = esAsc ? 'ASCENSO' : modalidadSeleccionadaModal;
+    const nuevoSubtipoFinal: 'ABIERTO' | 'ASCENSO' | undefined = esCarrera ? (esAsc ? 'ASCENSO' : 'ABIERTO') : undefined;
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== casoActivo.id) return c;
+        const nuevasEtapas = sincronizarEtapasCaso(c.etapas, c.tipo_proceso, nuevaModFinal, nuevoSubtipoFinal);
+        return {
+          ...c,
+          modalidad: nuevaModFinal,
+          subtipo_concurso: nuevoSubtipoFinal,
+          etapas: nuevasEtapas,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+
+    setModalCambiarModalidadCasoVisible(false);
+
+    const infoMod = obtenerInfoModalidad(nuevaModFinal, casoActivo.tipo_proceso);
+    mostrarModal(
+      'Modalidad Actualizada',
+      `El trámite de ${casoActivo.servidor_nombre} ahora está asignado como "${infoMod.titulo}". Las etapas y requisitos normativos han sido sincronizados.`,
+      'success'
+    );
+  };
 
   const abrirModalEditarOpecCaso = () => {
     if (!casoActivo) return;
     setInputOpecCaso(opecValorActual);
     setInputConvocatoriaCaso(convocatoriaValorActual);
+    const esAsc = casoActivo.subtipo_concurso === 'ASCENSO' || casoActivo.modalidad === 'ASCENSO';
+    setInputSubtipoConcursoCaso(esAsc ? 'ASCENSO' : 'ABIERTO');
+    setInputCargoAnteriorCaso(casoActivo.cargo_anterior_carrera || '');
+    setInputFechaPosesionPeriodo(
+      casoActivo.fecha_posesion_periodo_prueba || casoActivo.fecha_efectiva || casoActivo.fecha_inicio_tramite || ''
+    );
     setModalEditarOpecCasoVisible(true);
   };
 
   const guardarOpecConvocatoriaCaso = () => {
     if (!casoActivo) return;
     const nuevaOpec = inputOpecCaso.trim() || '203205';
-    const nuevaConv = inputConvocatoriaCaso.trim() || 'Distrito Capital 5 - CNSC';
+    const nuevaConv = inputConvocatoriaCaso.trim() || 'Distrito Capital 6 - CNSC';
+    const nuevoSubtipo = inputSubtipoConcursoCaso;
+    const esAscenso = nuevoSubtipo === 'ASCENSO';
 
     setCasos((prevCasos) => {
       const actualizados = prevCasos.map((c) => {
         if (c.id !== casoActivo.id) return c;
+        const nuevasEtapas = c.etapas.map((et) => {
+          if (et.id === 'v_carr_7' || et.numero === 6) {
+            const nuevosReqs = et.requisitos.map((r) => {
+              if (r.id === 'vc7_4') {
+                return {
+                  ...r,
+                  noAplica: !esAscenso,
+                  obligatorio: esAscenso,
+                  cumplido: !esAscenso ? true : r.cumplido,
+                  observaciones: !esAscenso
+                    ? 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)'
+                    : (r.observaciones === 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)' ? undefined : r.observaciones),
+                };
+              }
+              return r;
+            });
+
+            const reqsObligatorios = nuevosReqs.filter((r) => r.obligatorio && !r.noAplica);
+            const todosCumplidos = reqsObligatorios.length > 0
+              ? reqsObligatorios.every((r) => r.cumplido)
+              : nuevosReqs.filter((r) => !r.noAplica).every((r) => r.cumplido);
+            const algunCumplido = nuevosReqs.some((r) => r.cumplido);
+
+            let estadoFinal: EstadoEtapa = 'pending';
+            if (todosCumplidos && nuevosReqs.length > 0) {
+              estadoFinal = 'completed';
+            } else if (algunCumplido) {
+              estadoFinal = 'in_progress';
+            }
+
+            return { ...et, estado: estadoFinal, requisitos: nuevosReqs };
+          }
+          return et;
+        });
+
         return {
           ...c,
           concurso_opec: nuevaOpec,
           concurso_convocatoria: nuevaConv,
+          subtipo_concurso: nuevoSubtipo,
+          modalidad: esAscenso ? ('ASCENSO' as const) : ('CARRERA_ADMINISTRATIVA' as const),
+          cargo_anterior_carrera: inputCargoAnteriorCaso.trim() || undefined,
+          fecha_posesion_periodo_prueba: inputFechaPosesionPeriodo.trim() || c.fecha_posesion_periodo_prueba,
+          etapas: nuevasEtapas,
         };
       });
 
@@ -6052,6 +6452,81 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     });
 
     setModalEditarOpecCasoVisible(false);
+    mostrarModal(
+      'Parámetros Actualizados',
+      `Se guardaron la OPEC (${nuevaOpec}), Convocatoria y la modalidad como "${nuevoSubtipo === 'ASCENSO' ? 'Concurso de Ascenso' : 'Concurso Abierto'}".`,
+      'success'
+    );
+  };
+
+  const alternarSubtipoConcursoCaso = (casoId: string, forzarSubtipo?: 'ABIERTO' | 'ASCENSO') => {
+    let nuevoSubtipoFinal: 'ABIERTO' | 'ASCENSO' = 'ASCENSO';
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== casoId) return c;
+        const actualEsAsc = c.subtipo_concurso === 'ASCENSO' || c.modalidad === 'ASCENSO';
+        const targetSubtipo = forzarSubtipo || (actualEsAsc ? 'ABIERTO' : 'ASCENSO');
+        nuevoSubtipoFinal = targetSubtipo;
+        const esAscenso = targetSubtipo === 'ASCENSO';
+
+        const nuevasEtapas = c.etapas.map((et) => {
+          if (et.id === 'v_carr_7' || et.numero === 6) {
+            const nuevosReqs = et.requisitos.map((r) => {
+              if (r.id === 'vc7_4') {
+                return {
+                  ...r,
+                  noAplica: !esAscenso,
+                  obligatorio: esAscenso,
+                  cumplido: !esAscenso ? true : r.cumplido,
+                  observaciones: !esAscenso
+                    ? 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)'
+                    : (r.observaciones === 'No Aplica: Concurso Abierto (no tiene cargo previo en vacancia temporal)' ? undefined : r.observaciones),
+                };
+              }
+              return r;
+            });
+
+            const reqsObligatorios = nuevosReqs.filter((r) => r.obligatorio && !r.noAplica);
+            const todosCumplidos = reqsObligatorios.length > 0
+              ? reqsObligatorios.every((r) => r.cumplido)
+              : nuevosReqs.filter((r) => !r.noAplica).every((r) => r.cumplido);
+            const algunCumplido = nuevosReqs.some((r) => r.cumplido);
+
+            let estadoFinal: EstadoEtapa = 'pending';
+            if (todosCumplidos && nuevosReqs.length > 0) {
+              estadoFinal = 'completed';
+            } else if (algunCumplido) {
+              estadoFinal = 'in_progress';
+            }
+
+            return { ...et, estado: estadoFinal, requisitos: nuevosReqs };
+          }
+          return et;
+        });
+
+        return {
+          ...c,
+          subtipo_concurso: targetSubtipo,
+          modalidad: esAscenso ? ('ASCENSO' as const) : ('CARRERA_ADMINISTRATIVA' as const),
+          etapas: nuevasEtapas,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+
+    mostrarModal(
+      'Modalidad de Concurso Actualizada',
+      `El trámite ahora está configurado como "${nuevoSubtipoFinal === 'ASCENSO' ? 'Concurso de Ascenso' : 'Concurso Abierto'}". Requisitos de la Fase 6 actualizados.`,
+      'success'
+    );
   };
 
   // Alternar cumplimiento de requisito y recalcular estado
@@ -6896,13 +7371,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     const nuevoId = `TR-${new Date().getFullYear()}-${String(numMax + 1).padStart(3, '0')}`;
 
     // Generar etapas totalmente en blanco para el nuevo trámite (ningún requisito pre-marcado)
-    const etapasBase = generarEtapasParaCaso(nuevoTipoProceso, nuevaModalidad);
+    const esConcurso = nuevaModalidad === 'CARRERA_ADMINISTRATIVA' || nuevaModalidad === 'ASCENSO';
+    const esAsc = nuevaModalidad === 'ASCENSO' || (esConcurso && subtipoConcursoInput === 'ASCENSO');
+    const modalidadEfectiva: ModalidadPersonal = esAsc ? 'ASCENSO' : nuevaModalidad;
+    const etapasBase = generarEtapasParaCaso(nuevoTipoProceso, modalidadEfectiva, esConcurso ? subtipoConcursoInput : undefined);
     const etapasLimpias = limpiarEtapasParaNuevoTramite(etapasBase);
 
     const nuevoCaso: CasoFlujoFuncionario = {
       id: nuevoId,
       tipo_proceso: nuevoTipoProceso,
-      modalidad: nuevaModalidad,
+      modalidad: modalidadEfectiva,
+      subtipo_concurso: esConcurso ? subtipoConcursoInput : undefined,
+      concurso_opec: esConcurso && opecInput.trim() ? opecInput.trim() : undefined,
+      concurso_convocatoria: esConcurso && convocatoriaInput.trim() ? convocatoriaInput.trim() : undefined,
       id_plaza: plazaSeleccionadaId || undefined,
       servidor_nombre: nombreInput.trim(),
       servidor_cedula: cedulaInput.trim(),
@@ -7022,6 +7503,112 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       pathname: '/ingresos/nueva',
       params: queryParams,
     });
+  };
+
+  // Busca si ya existe una validación técnica FT-318 coincidente para un caso
+  const buscarValidacionCoincidenteCaso = (caso?: CasoFlujoFuncionario | null) => {
+    const casoRef = caso || casoActivo;
+    if (!casoRef) return null;
+
+    // 1. Revisar si hay un ID vinculado en algún requisito del caso
+    if (casoRef.etapas) {
+      for (const etapa of casoRef.etapas) {
+        if (etapa.requisitos) {
+          for (const req of etapa.requisitos) {
+            const obs = (req as any).observacion || req.observaciones || '';
+            const matchExp = obs.match(/Expediente:\s*([a-f0-9\-]+)/i);
+            if (matchExp && matchExp[1]) {
+              const valExp = validacionesIngresos.find((v) => v.id === matchExp[1]);
+              if (valExp) return valExp;
+            }
+          }
+        }
+      }
+    }
+
+    const cedulaCaso = (casoRef.servidor_cedula || '').trim();
+    const nombreCaso = (casoRef.servidor_nombre || '').trim().toLowerCase();
+
+    // 2. Coincidencia por documento de identidad
+    if (cedulaCaso) {
+      const valDoc = validacionesIngresos.find((v) => {
+        if (!v.candidato_documento) return false;
+        const cleanVal = String(v.candidato_documento).replace(/\D/g, '');
+        const cleanCaso = cedulaCaso.replace(/\D/g, '');
+        return cleanVal && cleanCaso && cleanVal === cleanCaso;
+      });
+      if (valDoc) return valDoc;
+    }
+
+    // 3. Coincidencia por nombre completo o primer nombre + apellido
+    if (nombreCaso) {
+      const valNombre = validacionesIngresos.find((v) => {
+        if (!v.candidato_nombre) return false;
+        const nomVal = v.candidato_nombre.toLowerCase().trim();
+        if (nomVal === nombreCaso) return true;
+        const partes = nombreCaso.split(/\s+/).filter((p) => p.length >= 3);
+        if (partes.length >= 2 && nomVal.includes(partes[0]) && nomVal.includes(partes[partes.length - 1])) {
+          return true;
+        }
+        if (partes.length >= 1 && nomVal.includes(partes[0])) {
+          return true;
+        }
+        return false;
+      });
+      if (valNombre) return valNombre;
+    }
+
+    return null;
+  };
+
+  // Abre la validación coincidente si existe, o abre el formulario para crear una nueva
+  const abrirOIniciarValidacionFT318 = async (caso?: CasoFlujoFuncionario | null) => {
+    const casoRef = caso || casoActivo;
+    if (!casoRef) {
+      router.push('/ingresos/nueva');
+      return;
+    }
+
+    // Asegurar que la lista de validaciones esté al día si está vacía
+    let listaValidaciones = validacionesIngresos;
+    if (!listaValidaciones || listaValidaciones.length === 0) {
+      try {
+        const data = await ingresosService.obtenerValidaciones();
+        if (Array.isArray(data)) {
+          listaValidaciones = data;
+          setValidacionesIngresos(data);
+        }
+      } catch (e) {}
+    }
+
+    // Buscar coincidencia
+    let valCoincidente = buscarValidacionCoincidenteCaso(casoRef);
+    if (!valCoincidente && listaValidaciones && listaValidaciones.length > 0) {
+      const cedulaCaso = (casoRef.servidor_cedula || '').trim();
+      const nombreCaso = (casoRef.servidor_nombre || '').trim().toLowerCase();
+      valCoincidente = listaValidaciones.find((v) => {
+        if (cedulaCaso && v.candidato_documento) {
+          const cV = String(v.candidato_documento).replace(/\D/g, '');
+          const cC = cedulaCaso.replace(/\D/g, '');
+          if (cV && cC && cV === cC) return true;
+        }
+        if (nombreCaso && v.candidato_nombre) {
+          const nV = v.candidato_nombre.toLowerCase().trim();
+          if (nV === nombreCaso) return true;
+          const p = nombreCaso.split(/\s+/).filter((x) => x.length >= 3);
+          if (p.length >= 1 && nV.includes(p[0])) return true;
+        }
+        return false;
+      }) || null;
+    }
+
+    if (valCoincidente?.id) {
+      router.push(`/ingresos/${valCoincidente.id}`);
+      return;
+    }
+
+    // Si no coincide con ninguna previa, proceder a crear la nueva
+    irAValidacionIngresosNueva(casoRef);
   };
 
   // Función para formatear el texto del cargo evitando duplicidad de códigos/grados
@@ -7781,9 +8368,136 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
               {/* Layout de Contenido Principal: Dos Columnas */}
               <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 18 }}>
-                {/* Columna Izquierda: Tarjetas de Trámites con Filtros Avanzados y Diferenciación de Terminados */}
-                <View style={{ width: isDesktop ? 370 : '100%', gap: 10 }}>
-                  {(() => {
+                {/* Columna Izquierda: Tarjetas de Trámites con Filtros Avanzados y Modo Colapsable */}
+                <View style={{ width: isDesktop ? (sidebarContraido ? 56 : 370) : '100%', gap: 10 }}>
+                  {isDesktop && sidebarContraido ? (
+                    <View
+                      style={{
+                        width: 56,
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: THEME.slate200,
+                        paddingVertical: 12,
+                        paddingHorizontal: 6,
+                        alignItems: 'center',
+                        gap: 10,
+                        alignSelf: 'flex-start',
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 3,
+                        elevation: 1,
+                      }}
+                    >
+                      {/* Botón para expandir sidebar */}
+                      <Pressable
+                        onPress={() => alternarSidebar(false)}
+                        accessibilityLabel="Expandir lista de trámites"
+                        style={({ hovered }: any) => ({
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          backgroundColor: hovered ? '#EFF6FF' : THEME.white,
+                          borderWidth: 1.5,
+                          borderColor: hovered ? '#2563EB' : '#BFDBFE',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          shadowColor: '#2563EB',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.12,
+                          shadowRadius: 2,
+                          elevation: 2,
+                        })}
+                      >
+                        <Ionicons name="chevron-forward" size={18} color="#2563EB" />
+                      </Pressable>
+
+                      {/* Contador de trámites */}
+                      <View
+                        style={{
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          borderRadius: 9999,
+                          backgroundColor: '#E2E8F0',
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: THEME.slate700 }}>
+                          {casosFiltrados.length}
+                        </Text>
+                      </View>
+
+                      <View style={{ width: 32, height: 1, backgroundColor: THEME.slate200, marginVertical: 2 }} />
+
+                      {/* Mini-avatares interactivos de los casos */}
+                      <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        style={{ width: '100%', maxHeight: 680 }}
+                        contentContainerStyle={{ alignItems: 'center', gap: 8, paddingBottom: 10 }}
+                      >
+                        {casosFiltrados.map((c) => {
+                          const esActivo = c.id === casoActivo?.id;
+                          const nombreLimpio = c.servidor_nombre?.trim() || '';
+                          const partes = nombreLimpio.split(/\s+/).filter(Boolean);
+                          const iniciales = partes.length === 1 ? partes[0].slice(0, 2).toUpperCase() : (partes[0][0] + (partes[partes.length - 1]?.[0] || '')).toUpperCase();
+                          const etapasComp = c.etapas.filter((e) => e.estado === 'completed').length;
+                          const esTerminado = etapasComp === c.etapas.length || c.etapas.every((e) => e.estado === 'completed');
+
+                          return (
+                            <Pressable
+                              key={`mini-${c.id}`}
+                              onPress={() => seleccionarCaso(c.id)}
+                              accessibilityLabel={`${c.servidor_nombre} - ${c.cargo}`}
+                              style={({ hovered }: any) => ({
+                                width: 40,
+                                height: 40,
+                                borderRadius: 8,
+                                backgroundColor: esActivo ? '#EFF6FF' : (hovered ? '#F1F5F9' : THEME.white),
+                                borderWidth: esActivo ? 2 : 1,
+                                borderColor: esActivo ? '#2563EB' : (hovered ? THEME.slate300 : '#E2E8F0'),
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                shadowColor: esActivo ? '#2563EB' : '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: esActivo ? 0.15 : 0.04,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              })}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 11.5,
+                                  fontWeight: '800',
+                                  color: esActivo ? '#1D4ED8' : THEME.slate700,
+                                }}
+                              >
+                                {iniciales}
+                              </Text>
+                              {/* Punto de estado */}
+                              <View
+                                style={{
+                                  position: 'absolute',
+                                  top: -2,
+                                  right: -2,
+                                  width: 9,
+                                  height: 9,
+                                  borderRadius: 9999,
+                                  backgroundColor: esTerminado ? '#16A34A' : '#F59E0B',
+                                  borderWidth: 1.5,
+                                  borderColor: THEME.white,
+                                }}
+                              />
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  ) : (
+                    <>
+                      {(() => {
                     const casosTabActual = casos.filter((c) =>
                       tabActiva === 'ingresos' ? c.tipo_proceso === 'VINCULACION' : c.tipo_proceso === 'DESVINCULACION'
                     );
@@ -7823,32 +8537,58 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                     return (
                       <View style={{ gap: 8 }}>
-                        {/* Cabecera y Contador */}
+                        {/* Cabecera y Contador con Botón Contraer */}
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Text style={{ fontSize: 13.5, fontWeight: '800', color: THEME.slate800 }}>
                             {tabActiva === 'ingresos'
                               ? `Trámites de Ingreso (${casosFiltrados.length})`
                               : `Trámites de Desvinculación (${casosFiltrados.length})`}
                           </Text>
-                          {hayFiltrosActivos && (
-                            <Pressable
-                              onPress={limpiarFiltrosColumna}
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 3,
-                                paddingVertical: 2.5,
-                                paddingHorizontal: 7,
-                                borderRadius: 5,
-                                backgroundColor: THEME.roseBg,
-                                borderWidth: 1,
-                                borderColor: THEME.roseRing,
-                              }}
-                            >
-                              <Ionicons name="close-circle-outline" size={12} color={THEME.rose600} />
-                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.rose600 }}>Limpiar</Text>
-                            </Pressable>
-                          )}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            {hayFiltrosActivos && (
+                              <Pressable
+                                onPress={limpiarFiltrosColumna}
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                  paddingVertical: 2.5,
+                                  paddingHorizontal: 7,
+                                  borderRadius: 5,
+                                  backgroundColor: THEME.roseBg,
+                                  borderWidth: 1,
+                                  borderColor: THEME.roseRing,
+                                }}
+                              >
+                                <Ionicons name="close-circle-outline" size={12} color={THEME.rose600} />
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.rose600 }}>Limpiar</Text>
+                              </Pressable>
+                            )}
+
+                            {isDesktop && (
+                              <Pressable
+                                onPress={() => alternarSidebar(true)}
+                                accessibilityLabel="Contraer lista para ampliar detalle"
+                                style={({ hovered }: any) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                  paddingVertical: 2.5,
+                                  paddingHorizontal: 7,
+                                  borderRadius: 5,
+                                  backgroundColor: hovered ? '#E2E8F0' : '#F1F5F9',
+                                  borderWidth: 1,
+                                  borderColor: THEME.slate300,
+                                  cursor: 'pointer',
+                                })}
+                              >
+                                <Ionicons name="chevron-back" size={13} color={THEME.slate700} />
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.slate700 }}>
+                                  Contraer
+                                </Text>
+                              </Pressable>
+                            )}
+                          </View>
                         </View>
 
                         {/* Píldoras de Filtro por Estado: [Todos] [⏳ En Trámite] [✓ Terminados] */}
@@ -8127,16 +8867,24 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         return (primera + ultima).toUpperCase();
                       };
 
-                      const obtenerEstilosModalidad = (m: ModalidadPersonal): {
+                      const obtenerEstilosModalidad = (m: ModalidadPersonal, subtipo?: 'ABIERTO' | 'ASCENSO'): {
                         etiqueta: string;
                         colorTexto: string;
                         colorBg: string;
                         colorBorde: string;
                       } => {
+                        if (m === 'ASCENSO' || subtipo === 'ASCENSO') {
+                          return {
+                            etiqueta: 'Ascenso',
+                            colorTexto: '#4338ca', // Indigo concurso de méritos
+                            colorBg: '#eef2ff',
+                            colorBorde: '#c7d2fe',
+                          };
+                        }
                         switch (m) {
                           case 'CARRERA_ADMINISTRATIVA':
                             return {
-                              etiqueta: 'Carrera Adm.',
+                              etiqueta: subtipo === 'ABIERTO' ? 'Carrera Abierta' : 'Carrera Adm.',
                               colorTexto: '#1e40af', // Azul Índigo institucional
                               colorBg: '#eff6ff',
                               colorBorde: '#bfdbfe',
@@ -8180,7 +8928,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         const porcentaje = Math.round((etapasCompletadas / totalEtapas) * 100);
                         const esTerminado = porcentaje === 100 || c.etapas.every((e) => e.estado === 'completed');
                         const iniciales = obtenerInicialesServidor(c.servidor_nombre);
-                        const estiloModalidad = obtenerEstilosModalidad(c.modalidad);
+                        const estiloModalidad = obtenerEstilosModalidad(c.modalidad, c.subtipo_concurso);
 
                         // Paleta visual: Amarillo/Ámbar si es en trámite, Verde si es terminado
                         const colorBordeActivo = esTerminado ? 'rgb(29, 85, 78)' : '#f59e0b';
@@ -8657,10 +9405,42 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       });
                     })()
                   )}
+                    </>
+                  )}
                 </View>
 
                 {/* Columna Derecha: Pipeline y Detalle del Trámite */}
                 <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+                  {isDesktop && sidebarContraido && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start' }}>
+                      <Pressable
+                        onPress={() => alternarSidebar(false)}
+                        style={({ hovered }: any) => ({
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          backgroundColor: hovered ? '#EFF6FF' : '#F8FAFC',
+                          borderWidth: 1,
+                          borderColor: hovered ? '#2563EB' : '#BFDBFE',
+                          paddingHorizontal: 11,
+                          paddingVertical: 5.5,
+                          borderRadius: 7,
+                          cursor: 'pointer',
+                          shadowColor: '#2563EB',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.08,
+                          shadowRadius: 2,
+                          elevation: 1,
+                        })}
+                      >
+                        <Ionicons name="albums-outline" size={14} color="#2563EB" />
+                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#1D4ED8' }}>
+                          Mostrar Lista de Trámites ({casosFiltrados.length})
+                        </Text>
+                        <Ionicons name="chevron-forward" size={13} color="#2563EB" />
+                      </Pressable>
+                    </View>
+                  )}
                   {casoActivo ? (
                     <View
                       style={{
@@ -8772,32 +9552,34 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         ) : null;
                       })()}
 
-                      {/* Cabecera Principal del Caso: Identidad y Acciones Rápidas */}
+                      {/* Cabecera Principal del Caso: Organizada, Limpia y No Sobrecargada */}
                       <View
                         style={{
                           flexDirection: 'column',
-                          gap: 16,
-                          paddingTop: 8,
-                          paddingBottom: 20,
-                          paddingHorizontal: 6,
+                          gap: 12,
+                          paddingTop: 6,
+                          paddingBottom: 16,
+                          paddingHorizontal: 4,
                           borderBottomWidth: 1.5,
                           borderBottomColor: THEME.slate200,
                         }}
                       >
-                        {/* Fila Superior: Identidad del Servidor, Proceso, OPEC y Convocatoria CNSC */}
-                        <View style={{ gap: 14 }}>
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
-                              gap: 10,
-                            }}
-                          >
+                        {/* Fila 1: Nombre del Servidor + Badge Editable de Tipo de Vinculación + Botones de Acción Tono Medio */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: 10,
+                          }}
+                        >
+                          {/* Izquierda: Nombre y Badge de Régimen / Modalidad */}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                             <Text
                               style={{
                                 color: THEME.slate900,
-                                fontSize: 20,
+                                fontSize: 19,
                                 fontWeight: '800',
                                 letterSpacing: -0.3,
                               }}
@@ -8805,329 +9587,387 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               {casoActivo.servidor_nombre}
                             </Text>
 
-                            {/* Badge de Tipo de Proceso */}
-                            <View
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 4.5,
-                                borderRadius: 9999,
-                                backgroundColor:
-                                  casoActivo.tipo_proceso === 'VINCULACION'
-                                    ? 'rgb(6, 95, 70)'
-                                    : THEME.roseBg,
-                                borderWidth: 1,
-                                borderColor:
-                                  casoActivo.tipo_proceso === 'VINCULACION'
-                                    ? 'transparent'
-                                    : THEME.roseRing,
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.08,
-                                shadowRadius: 2,
-                                elevation: 1,
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  color:
-                                    casoActivo.tipo_proceso === 'VINCULACION'
-                                      ? '#ffffff'
-                                      : THEME.roseText,
-                                  fontSize: 11,
-                                  fontWeight: '800',
-                                  letterSpacing: 0.5,
-                                }}
-                              >
-                                {casoActivo.tipo_proceso}
-                              </Text>
-                            </View>
-
-                            {/* Chip Número de OPEC (SIMO) */}
-                            <Pressable
-                              onPress={abrirModalEditarOpecCaso}
-                              style={({ hovered, pressed }: any) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: pressed ? '#DCFCE7' : hovered ? '#F0FDF4' : '#F8FAFC',
-                                borderWidth: 1.2,
-                                borderColor: hovered ? '#16A34A' : '#86EFAC',
-                                paddingHorizontal: 11,
-                                paddingVertical: 4.5,
-                                borderRadius: 8,
-                                cursor: 'pointer',
-                                shadowColor: '#059669',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.08,
-                                shadowRadius: 2,
-                                elevation: 1,
-                              })}
-                            >
-                              <Ionicons name="barcode-outline" size={15} color="#15803D" />
-                              <Text style={{ color: '#166534', fontSize: 11.5, fontWeight: '800' }}>
-                                OPEC (SIMO): {opecValorActual}
-                              </Text>
-                              <Ionicons name="pencil-outline" size={12} color="#15803D" style={{ marginLeft: 2, opacity: 0.8 }} />
-                            </Pressable>
-
-                            {/* Chip Convocatoria / Proceso de Selección CNSC */}
-                            <Pressable
-                              onPress={abrirModalEditarOpecCaso}
-                              style={({ hovered, pressed }: any) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: pressed ? '#E0E7FF' : hovered ? '#EEF2FF' : '#F8FAFC',
-                                borderWidth: 1.2,
-                                borderColor: hovered ? '#4F46E5' : '#A5B4FC',
-                                paddingHorizontal: 11,
-                                paddingVertical: 4.5,
-                                borderRadius: 8,
-                                cursor: 'pointer',
-                                shadowColor: '#4338CA',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.08,
-                                shadowRadius: 2,
-                                elevation: 1,
-                              })}
-                            >
-                              <Ionicons name="trophy-outline" size={14} color="#4338CA" />
-                              <Text style={{ color: '#3730A3', fontSize: 11.5, fontWeight: '700' }}>
-                                Convocatoria CNSC: {convocatoriaValorActual}
-                              </Text>
-                              <Ionicons name="pencil-outline" size={12} color="#4338CA" style={{ marginLeft: 2, opacity: 0.8 }} />
-                            </Pressable>
+                            {/* Badge Interactivo de Vinculación y Modalidad con Botón de Edición */}
+                            {(() => {
+                              const infoM = obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso);
+                              const esVinculacion = casoActivo.tipo_proceso === 'VINCULACION';
+                              return (
+                                <Pressable
+                                  onPress={abrirModalCambiarModalidad}
+                                  style={({ hovered, pressed }: any) => ({
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 5,
+                                    borderRadius: 8,
+                                    backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : infoM.colorBg,
+                                    borderWidth: 1.2,
+                                    borderColor: hovered ? THEME.marca600 : infoM.colorBorde,
+                                    cursor: 'pointer',
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: 0.06,
+                                    shadowRadius: 2,
+                                    elevation: 1,
+                                  })}
+                                >
+                                  <Ionicons
+                                    name={(infoM.icono as any) || (esVinculacion ? 'person-add-outline' : 'person-remove-outline')}
+                                    size={13.5}
+                                    color={infoM.colorTexto}
+                                  />
+                                  <Text
+                                    style={{
+                                      color: infoM.colorTexto,
+                                      fontSize: 11,
+                                      fontWeight: '800',
+                                      letterSpacing: 0.3,
+                                    }}
+                                  >
+                                    {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'} • {infoM.badgeTexto}
+                                  </Text>
+                                  <View
+                                    style={{
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 2,
+                                      backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                                      paddingHorizontal: 5,
+                                      paddingVertical: 1.5,
+                                      borderRadius: 4,
+                                      borderWidth: 0.5,
+                                      borderColor: infoM.colorBorde,
+                                    }}
+                                  >
+                                    <Ionicons name="pencil" size={10} color={infoM.colorTexto} />
+                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: infoM.colorTexto }}>
+                                      Cambiar
+                                    </Text>
+                                  </View>
+                                </Pressable>
+                              );
+                            })()}
                           </View>
 
-                          {/* Chips Estructurados de Metadatos con mayor espacio */}
+                          {/* Derecha: Botones de Acción Más Pequeños y Colores Tono Medio */}
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
                               flexWrap: 'wrap',
-                              gap: 12,
+                              gap: 8,
                             }}
                           >
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: THEME.slate50,
-                                borderWidth: 1,
-                                borderColor: THEME.slate200,
-                                paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 8,
-                              }}
-                            >
-                              <Ionicons name="card-outline" size={14} color={THEME.slate500} />
-                              <Text style={{ color: THEME.slate700, fontSize: 12, fontWeight: '600' }}>
-                                Cédula: {casoActivo.servidor_cedula}
-                              </Text>
-                            </View>
-
+                            {/* 1. Consultar SECOP II: Azul Medio Profesional */}
                             <Pressable
-                              onPress={() => abrirFichaCargo(casoActivo)}
-                              style={({ hovered, pressed }: any) => ({
+                              onPress={() =>
+                                abrirConsultaSecopParaCandidato(
+                                  casoActivo.servidor_nombre,
+                                  casoActivo.servidor_cedula,
+                                  casoActivo.id
+                                )
+                              }
+                              style={({ pressed, hovered }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 6,
-                                backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : THEME.slate50,
-                                borderWidth: 1,
-                                borderColor: hovered ? THEME.marca600 : THEME.slate200,
+                                backgroundColor: pressed ? '#1D4ED8' : hovered ? '#1E40AF' : '#2563EB',
                                 paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 8,
+                                paddingVertical: 6.5,
+                                borderRadius: 7,
+                                borderWidth: 1,
+                                borderColor: 'rgba(191, 219, 254, 0.45)',
                                 cursor: 'pointer',
+                                shadowColor: '#1E3A8A',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.12,
+                                shadowRadius: 2,
+                                elevation: 1,
                               })}
                             >
-                              <Ionicons name="briefcase-outline" size={14} color={THEME.marca700} />
-                              <Text style={{ color: THEME.slate900, fontSize: 12, fontWeight: '700' }}>
-                                {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
+                              <Ionicons name="search" size={13.5} color="#DBEAFE" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                Consultar SECOP II
                               </Text>
-                              <Ionicons name="open-outline" size={13} color={THEME.marca700} style={{ marginLeft: 2 }} />
                             </Pressable>
 
-                            <BotonManualFunciones
-                              id_sideap={(casoActivo as any).id_sideap}
-                              cargo={casoActivo.cargo}
-                              codigo={casoActivo.codigo}
-                              grado={casoActivo.grado}
-                              variante="chip"
-                              etiqueta="Manual de Funciones"
-                            />
+                            {/* 2. Validación FT-318 IA: Verde Esmeralda Tono Medio */}
+                            {casoActivo.tipo_proceso === 'VINCULACION' && (() => {
+                              const valCoincidente = buscarValidacionCoincidenteCaso(casoActivo);
+                              return (
+                                <Pressable
+                                  onPress={() => abrirOIniciarValidacionFT318(casoActivo)}
+                                  style={({ pressed, hovered }: any) => ({
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    backgroundColor: pressed
+                                      ? '#047857'
+                                      : hovered
+                                      ? '#065F46'
+                                      : (valCoincidente ? '#059669' : '#0D9488'),
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6.5,
+                                    borderRadius: 7,
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(167, 243, 208, 0.5)',
+                                    cursor: 'pointer',
+                                    shadowColor: '#064E3B',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: 0.12,
+                                    shadowRadius: 2,
+                                    elevation: 1,
+                                  })}
+                                >
+                                  <Ionicons
+                                    name={valCoincidente ? 'open-outline' : 'sparkles'}
+                                    size={13.5}
+                                    color="#A7F3D0"
+                                  />
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                    {valCoincidente ? `Validación FT-318 IA (${valCoincidente.resultado_final || 'Abrir'})` : 'Validación FT-318 IA'}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })()}
 
-                            <View
-                              style={{
+                            {/* 3. Formatos Oficiales: Gris Pizarra Tono Medio */}
+                            <Pressable
+                              onPress={() => setModalFormatosVisible(true)}
+                              style={({ pressed, hovered }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 6,
-                                backgroundColor: THEME.slate50,
-                                borderWidth: 1,
-                                borderColor: THEME.slate200,
+                                backgroundColor: pressed ? '#334155' : hovered ? '#475569' : '#64748B',
                                 paddingHorizontal: 12,
-                                paddingVertical: 6,
-                                borderRadius: 8,
-                              }}
+                                paddingVertical: 6.5,
+                                borderRadius: 7,
+                                borderWidth: 1,
+                                borderColor: 'rgba(226, 232, 240, 0.35)',
+                                cursor: 'pointer',
+                                shadowColor: '#0F172A',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              })}
                             >
-                              <Ionicons name="business-outline" size={14} color={THEME.slate500} />
-                              <Text style={{ color: THEME.slate600, fontSize: 12, fontWeight: '500' }}>
-                                {casoActivo.dependencia}
+                              <Ionicons name="folder-open-outline" size={13.5} color="#E2E8F0" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                Formatos Oficiales
                               </Text>
-                            </View>
+                            </Pressable>
+
+                            {/* 4. Evaluación Retiro (Forms): Ciruela / Violeta Medio para Desvinculación */}
+                            {casoActivo.tipo_proceso === 'DESVINCULACION' && (
+                              <Pressable
+                                onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                                style={({ pressed, hovered }: any) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  backgroundColor: pressed ? '#7E22CE' : hovered ? '#9333EA' : '#A21CAF',
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 6.5,
+                                  borderRadius: 7,
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(245, 208, 254, 0.45)',
+                                  cursor: 'pointer',
+                                })}
+                              >
+                                <Ionicons name="clipboard-outline" size={13.5} color="#F5D0FE" />
+                                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                  Evaluación Retiro (Forms)
+                                </Text>
+                              </Pressable>
+                            )}
                           </View>
                         </View>
 
-                        {/* Botones de Acción: Modernizados, pulidos y con espacios amplios */}
+                        {/* Fila 2: Franja Horizontal de Información del Servidor y Cargo */}
                         <View
                           style={{
                             flexDirection: 'row',
                             alignItems: 'center',
                             flexWrap: 'wrap',
-                            gap: 10,
-                            paddingTop: 8,
+                            gap: 8,
                           }}
                         >
-                          {/* 1. Consultar SECOP II: Azul Marino Institucional */}
-                          <Pressable
-                            onPress={() =>
-                              abrirConsultaSecopParaCandidato(
-                                casoActivo.servidor_nombre,
-                                casoActivo.servidor_cedula,
-                                casoActivo.id
-                              )
-                            }
-                            style={({ pressed }) => ({
+                          {/* Cédula */}
+                          <View
+                            style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 7,
-                              backgroundColor: pressed ? '#17406d' : '#1e3a5f',
-                              paddingHorizontal: 16,
-                              paddingVertical: 9.5,
-                              borderRadius: 8,
+                              gap: 5,
+                              backgroundColor: THEME.slate50,
                               borderWidth: 1,
-                              borderColor: 'rgba(147, 197, 253, 0.35)',
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1.5 },
-                              shadowOpacity: 0.14,
-                              shadowRadius: 3,
-                              elevation: 2,
-                            })}
+                              borderColor: THEME.slate200,
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 7,
+                            }}
                           >
-                            <Ionicons name="search" size={15} color="#93c5fd" />
-                            <Text
-                              style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}
-                            >
-                              Consultar SECOP II
+                            <Ionicons name="card-outline" size={13} color={THEME.slate500} />
+                            <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '600' }}>
+                              Cédula: {casoActivo.servidor_cedula}
                             </Text>
-                          </Pressable>
+                          </View>
 
-                          {/* 2. Validación FT-318 IA: Verde Petróleo Inteligente */}
-                          {casoActivo.tipo_proceso === 'VINCULACION' && (
-                            <Pressable
-                              onPress={() => irAValidacionIngresosNueva(casoActivo)}
-                              style={({ pressed }) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 7,
-                                backgroundColor: pressed ? '#0b3f3b' : '#0f766e',
-                                paddingHorizontal: 16,
-                                paddingVertical: 9.5,
-                                borderRadius: 8,
-                                borderWidth: 1,
-                                borderColor: 'rgba(94, 234, 212, 0.45)',
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 1.5 },
-                                shadowOpacity: 0.14,
-                                shadowRadius: 3,
-                                elevation: 2,
-                              })}
-                            >
-                              <Ionicons name="sparkles" size={15} color="#5eead4" />
-                              <Text
-                                style={{
-                                  color: '#ffffff',
-                                  fontSize: 12,
-                                  fontWeight: '700',
-                                }}
-                              >
-                                Validación FT-318 IA
-                              </Text>
-                            </Pressable>
-                          )}
-
-                          {/* 3. Formatos Oficiales: Gris Pizarra Sofisticado */}
+                          {/* Cargo */}
                           <Pressable
-                            onPress={() => setModalFormatosVisible(true)}
-                            style={({ pressed }) => ({
+                            onPress={() => abrirFichaCargo(casoActivo)}
+                            style={({ hovered, pressed }: any) => ({
                               flexDirection: 'row',
                               alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: 7,
-                              backgroundColor: pressed ? '#242f42' : '#334155',
-                              paddingHorizontal: 16,
-                              paddingVertical: 9.5,
-                              borderRadius: 8,
+                              gap: 5,
+                              backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : THEME.slate50,
                               borderWidth: 1,
-                              borderColor: 'rgba(203, 213, 225, 0.3)',
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1.5 },
-                              shadowOpacity: 0.14,
-                              shadowRadius: 3,
-                              elevation: 2,
+                              borderColor: hovered ? THEME.marca600 : THEME.slate200,
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 7,
+                              cursor: 'pointer',
                             })}
                           >
-                            <Ionicons name="folder-open-outline" size={15} color="#cbd5e1" />
-                            <Text
-                              style={{
-                                color: '#ffffff',
-                                fontSize: 12,
-                                fontWeight: '700',
-                              }}
-                            >
-                              Formatos Oficiales
+                            <Ionicons name="briefcase-outline" size={13} color={THEME.marca700} />
+                            <Text style={{ color: THEME.slate900, fontSize: 11.5, fontWeight: '700' }}>
+                              {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
                             </Text>
+                            <Ionicons name="open-outline" size={12} color={THEME.marca700} />
                           </Pressable>
 
-                          {/* 4. Evaluación Retiro (Forms): Ciruela Suave */}
-                          {casoActivo.tipo_proceso === 'DESVINCULACION' && (
-                            <Pressable
-                              onPress={handleAbrirEvaluacionRetiroGoogleForms}
-                              style={({ pressed }) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 7,
-                                backgroundColor: pressed ? '#581c45' : '#701a75',
-                                paddingHorizontal: 16,
-                                paddingVertical: 9.5,
-                                borderRadius: 8,
-                                borderWidth: 1,
-                                borderColor: 'rgba(244, 114, 182, 0.35)',
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 1.5 },
-                                shadowOpacity: 0.14,
-                                shadowRadius: 3,
-                                elevation: 2,
-                              })}
-                            >
-                              <Ionicons name="clipboard-outline" size={15} color="#f472b6" />
-                              <Text
-                                style={{
-                                  color: '#ffffff',
-                                  fontSize: 12,
-                                  fontWeight: '700',
-                                }}
-                              >
-                                Evaluación Retiro (Forms)
-                              </Text>
-                            </Pressable>
-                          )}
+                          {/* Dependencia */}
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 5,
+                              backgroundColor: THEME.slate50,
+                              borderWidth: 1,
+                              borderColor: THEME.slate200,
+                              paddingHorizontal: 10,
+                              paddingVertical: 5,
+                              borderRadius: 7,
+                            }}
+                          >
+                            <Ionicons name="business-outline" size={13} color={THEME.slate500} />
+                            <Text style={{ color: THEME.slate600, fontSize: 11.5, fontWeight: '500' }}>
+                              {casoActivo.dependencia}
+                            </Text>
+                          </View>
+
+                          {/* Botón Manual de Funciones */}
+                          <BotonManualFunciones
+                            id_sideap={(casoActivo as any).id_sideap}
+                            cargo={casoActivo.cargo}
+                            codigo={casoActivo.codigo}
+                            grado={casoActivo.grado}
+                            variante="chip"
+                            etiqueta="Manual de Funciones"
+                          />
                         </View>
+
+                        {/* Fila 3: Parámetros CNSC / OPEC (SOLO para Carrera Administrativa / Concurso) */}
+                        {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO' || !!casoActivo.concurso_opec) && (
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                              backgroundColor: '#F8FAFC',
+                              borderWidth: 1,
+                              borderColor: '#E2E8F0',
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
+                              <Ionicons name="ribbon-outline" size={13.5} color="#2563EB" />
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase' }}>
+                                Concurso CNSC:
+                              </Text>
+                            </View>
+
+                            {/* Chip OPEC SIMO */}
+                            <Pressable
+                              onPress={abrirModalEditarOpecCaso}
+                              style={({ hovered, pressed }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                backgroundColor: pressed ? '#DCFCE7' : hovered ? '#F0FDF4' : '#FFFFFF',
+                                borderWidth: 1,
+                                borderColor: hovered ? '#16A34A' : '#86EFAC',
+                                paddingHorizontal: 8,
+                                paddingVertical: 3.5,
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                              })}
+                            >
+                              <Ionicons name="barcode-outline" size={13} color="#15803D" />
+                              <Text style={{ color: '#166534', fontSize: 11, fontWeight: '700' }}>
+                                OPEC: {opecValorActual}
+                              </Text>
+                              <Ionicons name="pencil-outline" size={11} color="#15803D" style={{ opacity: 0.7 }} />
+                            </Pressable>
+
+                            {/* Chip Convocatoria CNSC */}
+                            <Pressable
+                              onPress={abrirModalEditarOpecCaso}
+                              style={({ hovered, pressed }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                                backgroundColor: pressed ? '#EEF2FF' : hovered ? '#F5F3FF' : '#FFFFFF',
+                                borderWidth: 1,
+                                borderColor: hovered ? '#4F46E5' : '#C7D2FE',
+                                paddingHorizontal: 8,
+                                paddingVertical: 3.5,
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                              })}
+                            >
+                              <Ionicons name="trophy-outline" size={12.5} color="#4338CA" />
+                              <Text style={{ color: '#3730A3', fontSize: 11, fontWeight: '700' }}>
+                                {convocatoriaValorActual}
+                              </Text>
+                              <Ionicons name="pencil-outline" size={11} color="#4338CA" style={{ opacity: 0.7 }} />
+                            </Pressable>
+
+                            {/* Subtipo: Concurso Abierto vs Concurso Ascenso */}
+                            {(() => {
+                              const esAscenso = casoActivo.subtipo_concurso === 'ASCENSO' || casoActivo.modalidad === 'ASCENSO';
+                              return (
+                                <Pressable
+                                  onPress={() => alternarSubtipoConcursoCaso(casoActivo.id)}
+                                  style={({ hovered, pressed }: any) => ({
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    backgroundColor: pressed ? '#E0E7FF' : hovered ? '#EEF2FF' : '#FFFFFF',
+                                    borderWidth: 1,
+                                    borderColor: hovered ? '#2563EB' : '#93C5FD',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3.5,
+                                    borderRadius: 6,
+                                    cursor: 'pointer',
+                                  })}
+                                >
+                                  <Ionicons name={esAscenso ? 'trending-up' : 'person'} size={12.5} color={esAscenso ? '#4338CA' : '#1D4ED8'} />
+                                  <Text style={{ color: esAscenso ? '#3730A3' : '#1E40AF', fontSize: 11, fontWeight: '700' }}>
+                                    {esAscenso ? 'Modalidad: Ascenso' : 'Modalidad: Abierto'}
+                                  </Text>
+                                  <Ionicons name="swap-horizontal" size={11} color={esAscenso ? '#4338CA' : '#1D4ED8'} style={{ opacity: 0.7 }} />
+                                </Pressable>
+                              );
+                            })()}
+                          </View>
+                        )}
                       </View>
+
 
                       {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
                       {(() => {
@@ -9849,6 +10689,280 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       </View>
                                     )}
                                   </View>
+
+                                  {/* TARJETA ESPECIAL: CÁLCULO DE PERÍODO DE PRUEBA Y TÉRMINOS LEGALES DE CALIFICACIÓN EDL */}
+                                  {(etapa.id === 'v_carr_7' || etapa.numero === 6) && (() => {
+                                    const fechaBasePosesion =
+                                      casoActivo.fecha_posesion_periodo_prueba ||
+                                      casoActivo.fecha_efectiva ||
+                                      casoActivo.fecha_inicio_tramite ||
+                                      '2026-03-15';
+                                    const infoTerminos = calcularTerminosPeriodoPrueba(fechaBasePosesion);
+                                    const esAscenso =
+                                      casoActivo.subtipo_concurso === 'ASCENSO' ||
+                                      casoActivo.modalidad === 'ASCENSO';
+
+                                    if (!infoTerminos) return null;
+
+                                    return (
+                                      <View
+                                        style={{
+                                          backgroundColor: '#F8FAFC',
+                                          borderRadius: 10,
+                                          borderWidth: 1.5,
+                                          borderColor: '#94A3B8',
+                                          padding: 14,
+                                          gap: 12,
+                                        }}
+                                      >
+                                        {/* Cabecera del Panel de Términos */}
+                                        <View
+                                          style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            borderBottomWidth: 1,
+                                            borderBottomColor: '#E2E8F0',
+                                            paddingBottom: 8,
+                                          }}
+                                        >
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                            <View
+                                              style={{
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: 8,
+                                                backgroundColor: '#0F172A',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                              }}
+                                            >
+                                              <Ionicons name="timer-outline" size={18} color="#FFFFFF" />
+                                            </View>
+                                            <View>
+                                              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                                Cronograma Legal del Período de Prueba & Calificación de Servicios
+                                              </Text>
+                                              <Text style={{ fontSize: 11, color: '#64748B' }}>
+                                                Ley 909 de 2004, Art. 31 • Cómputo de 6 Meses y 10 días hábiles
+                                              </Text>
+                                            </View>
+                                          </View>
+
+                                          <Pressable
+                                            onPress={abrirModalEditarOpecCaso}
+                                            style={{
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              gap: 4,
+                                              backgroundColor: '#FFFFFF',
+                                              borderWidth: 1,
+                                              borderColor: '#CBD5E1',
+                                              paddingHorizontal: 8,
+                                              paddingVertical: 4,
+                                              borderRadius: 6,
+                                            }}
+                                          >
+                                            <Ionicons name="calendar-outline" size={13} color="#334155" />
+                                            <Text style={{ fontSize: 11, fontWeight: '600', color: '#334155' }}>
+                                              Ajustar Fechas
+                                            </Text>
+                                          </Pressable>
+                                        </View>
+
+                                        {/* Tres Columnas de Fechas Clave */}
+                                        <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 10 }}>
+                                          {/* 1. Posesión Efectiva */}
+                                          <View
+                                            style={{
+                                              flex: 1,
+                                              backgroundColor: '#FFFFFF',
+                                              borderWidth: 1,
+                                              borderColor: '#E2E8F0',
+                                              borderRadius: 8,
+                                              padding: 10,
+                                              gap: 4,
+                                            }}
+                                          >
+                                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                                              📅 Inicio / Posesión
+                                            </Text>
+                                            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>
+                                              {infoTerminos.fechaPosesion}
+                                            </Text>
+                                            <Text style={{ fontSize: 10.5, color: '#475569' }}>
+                                              Investidura en empleo público
+                                            </Text>
+                                          </View>
+
+                                          {/* 2. Culminación de 6 Meses */}
+                                          <View
+                                            style={{
+                                              flex: 1,
+                                              backgroundColor: infoTerminos.periodoPruebaTerminado ? '#F0FDF4' : '#EFF6FF',
+                                              borderWidth: 1,
+                                              borderColor: infoTerminos.periodoPruebaTerminado ? '#86EFAC' : '#93C5FD',
+                                              borderRadius: 8,
+                                              padding: 10,
+                                              gap: 4,
+                                            }}
+                                          >
+                                            <Text
+                                              style={{
+                                                fontSize: 10.5,
+                                                fontWeight: '700',
+                                                color: infoTerminos.periodoPruebaTerminado ? '#166534' : '#1E40AF',
+                                                textTransform: 'uppercase',
+                                              }}
+                                            >
+                                              ⏳ Fin Período Prueba (6m)
+                                            </Text>
+                                            <Text
+                                              style={{
+                                                fontSize: 14,
+                                                fontWeight: '800',
+                                                color: infoTerminos.periodoPruebaTerminado ? '#15803D' : '#1D4ED8',
+                                              }}
+                                            >
+                                              {infoTerminos.fechaFinPeriodoPrueba}
+                                            </Text>
+                                            <Text
+                                              style={{
+                                                fontSize: 10.5,
+                                                fontWeight: '600',
+                                                color: infoTerminos.periodoPruebaTerminado ? '#166534' : '#2563EB',
+                                              }}
+                                            >
+                                              {infoTerminos.periodoPruebaTerminado
+                                                ? '✓ Período de 6 meses cumplido'
+                                                : `Faltan ${infoTerminos.diasCalendarioRestantesPeriodo} días calendario`}
+                                            </Text>
+                                          </View>
+
+                                          {/* 3. Término Legal de Calificación EDL */}
+                                          <View
+                                            style={{
+                                              flex: 1,
+                                              backgroundColor:
+                                                infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
+                                                  ? '#FEF2F2'
+                                                  : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
+                                                  ? '#FFFBEB'
+                                                  : '#F8FAFC',
+                                              borderWidth: 1,
+                                              borderColor:
+                                                infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
+                                                  ? '#FCA5A5'
+                                                  : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
+                                                  ? '#FDE68A'
+                                                  : '#CBD5E1',
+                                              borderRadius: 8,
+                                              padding: 10,
+                                              gap: 4,
+                                            }}
+                                          >
+                                            <Text
+                                              style={{
+                                                fontSize: 10.5,
+                                                fontWeight: '700',
+                                                color:
+                                                  infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
+                                                    ? '#991B1B'
+                                                    : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
+                                                    ? '#92400E'
+                                                    : '#475569',
+                                                textTransform: 'uppercase',
+                                              }}
+                                            >
+                                              🎯 Plazo Límite Calificación
+                                            </Text>
+                                            <Text
+                                              style={{
+                                                fontSize: 14,
+                                                fontWeight: '800',
+                                                color:
+                                                  infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
+                                                    ? '#B91C1C'
+                                                    : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
+                                                    ? '#B45309'
+                                                    : '#334155',
+                                              }}
+                                            >
+                                              {infoTerminos.fechaLimiteCalificacion}
+                                            </Text>
+                                            <Text
+                                              style={{
+                                                fontSize: 10.5,
+                                                fontWeight: '700',
+                                                color:
+                                                  infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
+                                                    ? '#DC2626'
+                                                    : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
+                                                    ? '#D97706'
+                                                    : '#64748B',
+                                              }}
+                                            >
+                                              {infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
+                                                ? '🚨 Término de 10 días hábiles vencido'
+                                                : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
+                                                ? `⚠️ En plazo: quedan ${infoTerminos.diasHabilesRestantesCalificacion} días hábiles`
+                                                : '10 días hábiles tras cumplir los 6 meses'}
+                                            </Text>
+                                          </View>
+                                        </View>
+
+                                        {/* Advertencia especial para Concurso de Ascenso */}
+                                        {esAscenso ? (
+                                          <View
+                                            style={{
+                                              backgroundColor: '#EEF2FF',
+                                              borderRadius: 8,
+                                              borderWidth: 1,
+                                              borderColor: '#C7D2FE',
+                                              padding: 10,
+                                              flexDirection: 'row',
+                                              alignItems: 'flex-start',
+                                              gap: 8,
+                                            }}
+                                          >
+                                            <Ionicons name="information-circle" size={18} color="#4338CA" style={{ marginTop: 1 }} />
+                                            <View style={{ flex: 1, gap: 2 }}>
+                                              <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#3730A3' }}>
+                                                Procedimiento para Concurso en Modalidad de Ascenso
+                                              </Text>
+                                              <Text style={{ fontSize: 11, color: '#4338CA', lineHeight: 16 }}>
+                                                El servidor ascendido mantuvo su empleo anterior en vacancia temporal durante los 6 meses de prueba. Una vez superado el período de prueba con calificación satisfactoria en EDL y reportada en SIMO,{' '}
+                                                <Text style={{ fontWeight: '800' }}>
+                                                  debe radicar la renuncia formal al cargo anterior
+                                                </Text>{' '}
+                                                para que la entidad expida el Acto Administrativo que declara la{' '}
+                                                <Text style={{ fontWeight: '800' }}>Vacancia Definitiva</Text>{' '}
+                                                de dicha plaza para su provisión de ley (Requisito 4).
+                                              </Text>
+                                            </View>
+                                          </View>
+                                        ) : (
+                                          <View
+                                            style={{
+                                              backgroundColor: '#F0FDF4',
+                                              borderRadius: 8,
+                                              borderWidth: 1,
+                                              borderColor: '#BBF7D0',
+                                              padding: 10,
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              gap: 8,
+                                            }}
+                                          >
+                                            <Ionicons name="checkmark-circle" size={16} color="#15803D" />
+                                            <Text style={{ fontSize: 11, color: '#166534', flex: 1 }}>
+                                              Modalidad Concurso Abierto: Al superar el período de prueba y contar con calificación aprobatoria, se tramita directamente la inscripción en el RPCA ante la CNSC en SIMO 4.0. No requiere renuncia previa.
+                                            </Text>
+                                          </View>
+                                        )}
+                                      </View>
+                                    );
+                                  })()}
 
                                   {/* LISTA DE REQUISITOS DE LA FASE */}
                                   <View style={{ gap: 8 }}>
@@ -11434,7 +12548,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             const opecVal = custom?.opec || pl.opec || '';
                             const tieneOpec = !!opecVal;
                             const estado = custom?.estadoReporte || (tieneOpec ? 'REPORTADO_OPEC' : 'PENDIENTE_REPORTE');
-                            const convVal = custom?.convocatoria || (tieneOpec ? 'Distrito Capital 5' : 'Pendiente Convocatoria');
+                            const convVal = custom?.convocatoria || (tieneOpec ? 'Distrito Capital 6' : 'Pendiente Convocatoria');
                             const esVacante = (pl.titular_nombre || '').toUpperCase().includes('VACANTE') || pl.estado_cargo.includes('VACANTE');
 
                             return (
@@ -11728,7 +12842,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   : 'Lista de Elegibles Directa (OPEC Convocada)'}
                               </Text>
                               <Text style={{ fontSize: 11, color: THEME.slate500, marginTop: 2 }}>
-                                {caso.concurso_convocatoria || 'Convocatoria Distrito Capital 5'} • Puesto #{caso.concurso_posicion_lista || 1}
+                                {caso.concurso_convocatoria || 'Convocatoria Distrito Capital 6'} • Puesto #{caso.concurso_posicion_lista || 1}
                               </Text>
                             </View>
 
@@ -13798,6 +14912,62 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         </Text>
                       </View>
 
+                      {/* Selector de Modalidad del Concurso: Abierto vs Ascenso */}
+                      <View>
+                        <Text style={{ fontSize: 11, color: '#1E40AF', fontWeight: '600', marginBottom: 4 }}>
+                          Modalidad del Concurso *
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <Pressable
+                            onPress={() => setSubtipoConcursoInput('ABIERTO')}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 6,
+                              paddingHorizontal: 8,
+                              borderRadius: 6,
+                              backgroundColor: subtipoConcursoInput === 'ABIERTO' ? '#1D4ED8' : '#DBEAFE',
+                              borderWidth: 1,
+                              borderColor: subtipoConcursoInput === 'ABIERTO' ? '#1E40AF' : '#BFDBFE',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                fontWeight: subtipoConcursoInput === 'ABIERTO' ? '800' : '600',
+                                color: subtipoConcursoInput === 'ABIERTO' ? '#FFFFFF' : '#1E40AF',
+                              }}
+                            >
+                              Concurso Abierto
+                            </Text>
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => setSubtipoConcursoInput('ASCENSO')}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 6,
+                              paddingHorizontal: 8,
+                              borderRadius: 6,
+                              backgroundColor: subtipoConcursoInput === 'ASCENSO' ? '#4F46E5' : '#E0E7FF',
+                              borderWidth: 1,
+                              borderColor: subtipoConcursoInput === 'ASCENSO' ? '#4338CA' : '#C7D2FE',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                fontWeight: subtipoConcursoInput === 'ASCENSO' ? '800' : '600',
+                                color: subtipoConcursoInput === 'ASCENSO' ? '#FFFFFF' : '#3730A3',
+                              }}
+                            >
+                              Concurso de Ascenso
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+
                       {/* Selector de Mecanismo de Provisión */}
                       <View>
                         <Text style={{ fontSize: 11, color: '#1E40AF', fontWeight: '600', marginBottom: 4 }}>
@@ -13864,7 +15034,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           <TextInput
                             value={convocatoriaInput}
                             onChangeText={setConvocatoriaInput}
-                            placeholder="Ej. Convocatoria Distrito Capital 5 - CNSC"
+                            placeholder="Ej. Convocatoria Distrito Capital 6 - CNSC"
                             placeholderTextColor="#93C5FD"
                             style={{
                               backgroundColor: '#FFFFFF',
@@ -18016,7 +19186,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               <TextInput
                 value={inputConvocatoriaValor}
                 onChangeText={setInputConvocatoriaValor}
-                placeholder="Ej. Convocatoria Distrito Capital 5 - CNSC"
+                placeholder="Ej. Convocatoria Distrito Capital 6 - CNSC"
                 placeholderTextColor={THEME.slate400}
                 style={{
                   backgroundColor: THEME.slate50,
@@ -18295,9 +19465,115 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   🏛️ Parámetros de Mérito Constitucional (Ley 909 de 2004)
                 </Text>
                 <Text style={{ fontSize: 11, color: '#4338CA', lineHeight: 16 }}>
-                  Registre el código de Oferta Pública de Empleos de Carrera (OPEC) de la plataforma SIMO 4.0 y el Proceso de Selección o Convocatoria de la Comisión Nacional del Servicio Civil (CNSC).
+                  Configure la modalidad del proceso de mérito (Abierto o Ascenso), el código OPEC en SIMO 4.0, la Convocatoria CNSC y la fecha base para el cómputo de términos del período de prueba.
                 </Text>
               </View>
+
+              {/* Selector de Modalidad: Concurso Abierto vs Concurso Ascenso */}
+              <View style={{ gap: 6 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                  Modalidad del Concurso de Méritos:
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {/* Opción 1: Concurso Abierto */}
+                  <Pressable
+                    onPress={() => setInputSubtipoConcursoCaso('ABIERTO')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: inputSubtipoConcursoCaso === 'ABIERTO' ? '#EFF6FF' : THEME.white,
+                      borderWidth: 1.5,
+                      borderColor: inputSubtipoConcursoCaso === 'ABIERTO' ? '#2563EB' : THEME.slate300,
+                      borderRadius: 8,
+                      padding: 10,
+                      gap: 4,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons
+                        name={inputSubtipoConcursoCaso === 'ABIERTO' ? 'radio-button-on' : 'radio-button-off'}
+                        size={16}
+                        color={inputSubtipoConcursoCaso === 'ABIERTO' ? '#2563EB' : THEME.slate400}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: inputSubtipoConcursoCaso === 'ABIERTO' ? '#1E40AF' : THEME.slate700,
+                        }}
+                      >
+                        Concurso Abierto
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 10.5, color: THEME.slate500, lineHeight: 14 }}>
+                      Lista general de elegibles. Provisión ordinaria de vacante definitiva.
+                    </Text>
+                  </Pressable>
+
+                  {/* Opción 2: Concurso de Ascenso */}
+                  <Pressable
+                    onPress={() => setInputSubtipoConcursoCaso('ASCENSO')}
+                    style={{
+                      flex: 1,
+                      backgroundColor: inputSubtipoConcursoCaso === 'ASCENSO' ? '#EEF2FF' : THEME.white,
+                      borderWidth: 1.5,
+                      borderColor: inputSubtipoConcursoCaso === 'ASCENSO' ? '#4F46E5' : THEME.slate300,
+                      borderRadius: 8,
+                      padding: 10,
+                      gap: 4,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons
+                        name={inputSubtipoConcursoCaso === 'ASCENSO' ? 'radio-button-on' : 'radio-button-off'}
+                        size={16}
+                        color={inputSubtipoConcursoCaso === 'ASCENSO' ? '#4F46E5' : THEME.slate400}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: inputSubtipoConcursoCaso === 'ASCENSO' ? '#3730A3' : THEME.slate700,
+                        }}
+                      >
+                        Concurso de Ascenso
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 10.5, color: THEME.slate500, lineHeight: 14 }}>
+                      Servidor con derechos de carrera. Deja vacancia temporal en cargo origen.
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Si es Ascenso: Campo Cargo Anterior de Carrera */}
+              {inputSubtipoConcursoCaso === 'ASCENSO' && (
+                <View style={{ gap: 6 }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#3730A3' }}>
+                    Empleo Anterior del cual es Titular de Carrera:
+                  </Text>
+                  <TextInput
+                    value={inputCargoAnteriorCaso}
+                    onChangeText={setInputCargoAnteriorCaso}
+                    placeholder="Ej: Profesional Universitario Código 219 Grado 15"
+                    placeholderTextColor={THEME.slate400}
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderWidth: 1,
+                      borderColor: '#C7D2FE',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      fontSize: 13,
+                      color: THEME.slate900,
+                    }}
+                  />
+                  <Text style={{ fontSize: 10.5, color: '#4338CA' }}>
+                    * Al superar el período de prueba de 6 meses, presentará la renuncia formal a este empleo para declarar su vacancia definitiva.
+                  </Text>
+                </View>
+              )}
 
               {/* Input Número de OPEC */}
               <View style={{ gap: 6 }}>
@@ -18332,7 +19608,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <TextInput
                   value={inputConvocatoriaCaso}
                   onChangeText={setInputConvocatoriaCaso}
-                  placeholder="Ej: Convocatoria Distrito Capital 5 - CNSC"
+                  placeholder="Ej: Convocatoria Distrito Capital 6 - CNSC"
                   placeholderTextColor={THEME.slate400}
                   style={{
                     backgroundColor: THEME.white,
@@ -18345,6 +19621,33 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     color: THEME.slate900,
                   }}
                 />
+              </View>
+
+              {/* Input Fecha de Posesión / Inicio Período de Prueba */}
+              <View style={{ gap: 6 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: THEME.slate800 }}>
+                  Fecha de Posesión / Inicio de Período de Prueba (YYYY-MM-DD):
+                </Text>
+                <TextInput
+                  value={inputFechaPosesionPeriodo}
+                  onChangeText={setInputFechaPosesionPeriodo}
+                  placeholder="Ej: 2026-03-15"
+                  placeholderTextColor={THEME.slate400}
+                  style={{
+                    backgroundColor: THEME.white,
+                    borderWidth: 1,
+                    borderColor: THEME.slate300,
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: THEME.slate900,
+                  }}
+                />
+                <Text style={{ fontSize: 10.5, color: THEME.slate500 }}>
+                  Base legal para calcular automáticamente el vencimiento de los 6 meses y el plazo de 10 días hábiles de la calificación EDL.
+                </Text>
               </View>
             </View>
 
@@ -18427,6 +19730,333 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           onDescargarPlantillaBase={handleDescargarFormatoOficial}
         />
       )}
+
+      {/* MODAL INSTITUCIONAL: MODIFICAR MODALIDAD / RÉGIMEN DEL CASO */}
+      <Modal
+        visible={modalCambiarModalidadCasoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalCambiarModalidadCasoVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: THEME.white,
+              borderRadius: 14,
+              width: '100%',
+              maxWidth: 580,
+              maxHeight: '90%',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header del Modal */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                borderBottomWidth: 1,
+                borderBottomColor: THEME.slate200,
+                backgroundColor: THEME.slate50,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 8,
+                    backgroundColor: '#EFF6FF',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: '#BFDBFE',
+                  }}
+                >
+                  <Ionicons name="swap-vertical" size={20} color="#1D4ED8" />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: THEME.slate900 }}>
+                    Cambiar Régimen / Modalidad
+                  </Text>
+                  <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                    {casoActivo?.servidor_nombre} • CC: {casoActivo?.servidor_cedula}
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={() => setModalCambiarModalidadCasoVisible(false)}
+                style={({ hovered }: any) => ({
+                  width: 32,
+                  height: 32,
+                  borderRadius: 6,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: hovered ? '#F1F5F9' : 'transparent',
+                })}
+              >
+                <Ionicons name="close" size={20} color={THEME.slate600} />
+              </Pressable>
+            </View>
+
+            {/* Contenido con opciones */}
+            <ScrollView style={{ padding: 20 }} contentContainerStyle={{ gap: 14 }}>
+              <View
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 8,
+                  padding: 12,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  gap: 4,
+                }}
+              >
+                <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.slate700 }}>
+                  Ajuste de Régimen Constitucional
+                </Text>
+                <Text style={{ fontSize: 11, color: THEME.slate600, lineHeight: 16 }}>
+                  Seleccione el régimen o naturaleza jurídica correspondiente. Al guardar, las fases y requisitos del trámite se sincronizarán preservando los soportes y avances ya diligenciados.
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.slate800, marginTop: 4 }}>
+                Seleccione la Modalidad:
+              </Text>
+
+              {/* Opciones */}
+              {[
+                {
+                  key: 'CARRERA_ADMINISTRATIVA' as ModalidadPersonal,
+                  titulo: 'Carrera Administrativa',
+                  badge: 'Mérito CNSC / SIMO 4.0',
+                  subtitulo: 'Provisión obligatoria por lista de elegibles o concurso de méritos. Período de prueba de 6 meses.',
+                  icono: 'ribbon-outline',
+                  color: '#2563EB',
+                  bgColor: '#EFF6FF',
+                  borderColor: '#93C5FD',
+                },
+                {
+                  key: 'PROVISIONALIDAD' as ModalidadPersonal,
+                  titulo: 'Nombramiento Provisional',
+                  badge: 'Dec. 1083 / Transitorio',
+                  subtitulo: 'Provisión temporal de vacante definitiva o temporal sin derechos de carrera.',
+                  icono: 'hourglass-outline',
+                  color: '#0D9488',
+                  bgColor: '#F0FDFA',
+                  borderColor: '#99F6E4',
+                },
+                {
+                  key: 'LIBRE_NOMBRAMIENTO' as ModalidadPersonal,
+                  titulo: 'Libre Nombramiento y Remoción',
+                  badge: 'Directivo / Asesor',
+                  subtitulo: 'Cargos de dirección institucional, confianza o manejo. Nombramiento ordinario.',
+                  icono: 'shield-outline',
+                  color: '#7C3AED',
+                  bgColor: '#FAF5FF',
+                  borderColor: '#DDD6FE',
+                },
+                {
+                  key: 'PRACTICANTE_JUDICANTE' as ModalidadPersonal,
+                  titulo: 'Pasante / Judicante',
+                  badge: 'Ley 2043 de 2020',
+                  subtitulo: 'Prácticas académicas o judicatura formativa. Culmina con certificación oficial de experiencia.',
+                  icono: 'school-outline',
+                  color: '#EA580C',
+                  bgColor: '#FFF7ED',
+                  borderColor: '#FED7AA',
+                },
+              ].map((op) => {
+                const seleccionada = modalidadSeleccionadaModal === op.key;
+                return (
+                  <Pressable
+                    key={op.key}
+                    onPress={() => setModalidadSeleccionadaModal(op.key)}
+                    style={({ hovered }: any) => ({
+                      padding: 12,
+                      borderRadius: 10,
+                      backgroundColor: seleccionada ? op.bgColor : (hovered ? '#F8FAFC' : THEME.white),
+                      borderWidth: seleccionada ? 2 : 1,
+                      borderColor: seleccionada ? op.color : (hovered ? THEME.slate300 : '#E2E8F0'),
+                      cursor: 'pointer',
+                      gap: 6,
+                    })}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons
+                          name={seleccionada ? 'radio-button-on' : 'radio-button-off'}
+                          size={18}
+                          color={seleccionada ? op.color : THEME.slate400}
+                        />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: seleccionada ? op.color : THEME.slate800 }}>
+                          {op.titulo}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 9999,
+                          backgroundColor: seleccionada ? op.color : '#F1F5F9',
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: seleccionada ? '#FFFFFF' : THEME.slate600 }}>
+                          {op.badge}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: THEME.slate600, paddingLeft: 26, lineHeight: 15 }}>
+                      {op.subtitulo}
+                    </Text>
+
+                    {/* Si es Carrera Administrativa, mostrar selector de Abierto vs Ascenso */}
+                    {seleccionada && op.key === 'CARRERA_ADMINISTRATIVA' && (
+                      <View
+                        style={{
+                          marginLeft: 26,
+                          marginTop: 6,
+                          padding: 10,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: '#BFDBFE',
+                          gap: 6,
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>
+                          Modalidad de Concurso de Méritos:
+                        </Text>
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                          <Pressable
+                            onPress={() => setSubtipoConcursoModal('ABIERTO')}
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: 8,
+                              borderRadius: 6,
+                              backgroundColor: subtipoConcursoModal === 'ABIERTO' ? '#EFF6FF' : '#F8FAFC',
+                              borderWidth: 1,
+                              borderColor: subtipoConcursoModal === 'ABIERTO' ? '#2563EB' : '#E2E8F0',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Ionicons
+                              name={subtipoConcursoModal === 'ABIERTO' ? 'radio-button-on' : 'radio-button-off'}
+                              size={15}
+                              color={subtipoConcursoModal === 'ABIERTO' ? '#2563EB' : THEME.slate400}
+                            />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: subtipoConcursoModal === 'ABIERTO' ? '#1D4ED8' : THEME.slate700 }}>
+                              Concurso Abierto
+                            </Text>
+                          </Pressable>
+
+                          <Pressable
+                            onPress={() => setSubtipoConcursoModal('ASCENSO')}
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                              padding: 8,
+                              borderRadius: 6,
+                              backgroundColor: subtipoConcursoModal === 'ASCENSO' ? '#EEF2FF' : '#F8FAFC',
+                              borderWidth: 1,
+                              borderColor: subtipoConcursoModal === 'ASCENSO' ? '#4F46E5' : '#E2E8F0',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Ionicons
+                              name={subtipoConcursoModal === 'ASCENSO' ? 'radio-button-on' : 'radio-button-off'}
+                              size={15}
+                              color={subtipoConcursoModal === 'ASCENSO' ? '#4F46E5' : THEME.slate400}
+                            />
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: subtipoConcursoModal === 'ASCENSO' ? '#4338CA' : THEME.slate700 }}>
+                              Concurso de Ascenso
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {/* Footer con Acciones */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                gap: 10,
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                borderTopWidth: 1,
+                borderTopColor: THEME.slate200,
+                backgroundColor: THEME.slate50,
+              }}
+            >
+              <Pressable
+                onPress={() => setModalCambiarModalidadCasoVisible(false)}
+                style={({ hovered }: any) => ({
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  backgroundColor: hovered ? '#E2E8F0' : THEME.white,
+                  borderWidth: 1,
+                  borderColor: THEME.slate300,
+                  cursor: 'pointer',
+                })}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '600', color: THEME.slate700 }}>
+                  Cancelar
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={guardarCambioModalidadCaso}
+                style={({ pressed, hovered }: any) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  backgroundColor: pressed ? '#1D4ED8' : hovered ? '#1E40AF' : '#2563EB',
+                  cursor: 'pointer',
+                  shadowColor: '#1E3A8A',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 3,
+                  elevation: 2,
+                })}
+              >
+                <Ionicons name="checkmark-circle-outline" size={15} color="#FFFFFF" />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
+                  Guardar Cambio de Modalidad
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );

@@ -6,6 +6,7 @@ const geminiIngresosService = require('../services/geminiIngresosService');
 const timeCalculatorService = require('../services/timeCalculatorService');
 const excelReportService = require('../services/excelReportService');
 const iduTramosService = require('../services/iduTramosService');
+const plantaOficialCatalog = require('../services/plantaOficialCatalog');
 
 // Directorio base para almacenamiento de archivos PDF de ingresos
 const UPLOADS_DIR = path.join(__dirname, '../uploads/ingresos');
@@ -33,6 +34,58 @@ const guardarArchivoEnDisco = (folder, nombre, base64Data) => {
   }
 };
 
+const rescatarLicenciasDeNoAplican = (formacion, noAplican) => {
+  const listaFormacion = Array.isArray(formacion) ? [...formacion] : [];
+  const listaNoAplican = Array.isArray(noAplican) ? [...noAplican] : [];
+  const noAplicanRestantes = [];
+
+  listaNoAplican.forEach(item => {
+    const texto = `${item.descripcion || ''} ${item.nombre_archivo || ''} ${item.motivo_no_aplica || ''} ${item.entidad || ''}`.toUpperCase();
+    const esLicencia = texto.includes('LICENCIA') || texto.includes('CONDUCC') || texto.includes('PASE') || texto.includes('RUNT');
+
+    if (esLicencia) {
+      const yaExiste = listaFormacion.some(f => {
+        const fTexto = `${f.tipo || ''} ${f.titulo_obtenido || ''} ${f.nombre_archivo || ''}`.toUpperCase();
+        return fTexto.includes('LICENCIA') || fTexto.includes('CONDUCC');
+      });
+      if (!yaExiste) {
+        const matchCat = (texto + ' ' + (item.motivo_no_aplica || '')).match(/\b(?:CATEGOR[IÍ]A|CAT\.?)\s*([A-C][1-3]|\bC1\b|\bC2\b|\bC3\b|\bB1\b|\bB2\b|\bA1\b|\bA2\b)/i) || texto.match(/\b([A-C][1-3])\b/i);
+        const catDetectada = item.categoria || (matchCat ? (matchCat[1] || matchCat[0]).toUpperCase() : 'C1');
+        const numLic = item.numero_licencia || item.numero_tarjeta || item.numero_tarjeta_o_registro || (() => {
+          const mNum = texto.match(/\b\d{8,12}\b/);
+          return mNum ? mNum[0] : 'NO CONSTA';
+        })();
+        let fExp = item.fecha_expedicion || item.fecha_grado || null;
+        let fVenc = item.fecha_vencimiento || null;
+        if (!fExp || fExp === 'NO CONSTA') {
+          const matchesF = (item.descripcion + ' ' + (item.motivo_no_aplica || '')).match(/\b(19\d\d|20\d\d)[-\/\.]\d{1,2}[-\/\.]\d{1,2}\b|\b\d{1,2}[-\/\.]\d{1,2}[-\/\.](19\d\d|20\d\d)\b/g);
+          if (matchesF && matchesF.length > 0) fExp = matchesF[0];
+          if (matchesF && matchesF.length > 1) fVenc = matchesF[1];
+        }
+
+        listaFormacion.push({
+          id: `ACAD-${listaFormacion.length + 1}`,
+          nombre_archivo: item.nombre_archivo || 'Licencia de Conducción',
+          tipo: 'LICENCIA_CONDUCCION',
+          titulo_obtenido: item.descripcion || `Licencia de Conducción Categoría ${catDetectada}`,
+          institucion: item.entidad && item.entidad !== 'NO CONSTA' ? item.entidad : 'Ministerio de Transporte / Tránsito',
+          numero_licencia: numLic,
+          numero_tarjeta_o_registro: numLic,
+          categoria: catDetectada,
+          fecha_expedicion: fExp || 'NO CONSTA',
+          fecha_vencimiento: fVenc || 'NO CONSTA',
+          cumple_requisito_cargo: true,
+          justificacion: `Licencia de conducción categoría ${catDetectada} habilitada para el cargo.`
+        });
+      }
+    } else {
+      noAplicanRestantes.push(item);
+    }
+  });
+
+  return { formacion: listaFormacion, noAplican: noAplicanRestantes };
+};
+
 const sanitizarDocumentosNoAplican = (noAplican, certs, formacion) => {
   if (!Array.isArray(noAplican) || noAplican.length === 0) return [];
   const certFiles = new Set((certs || []).map(c => (c.nombre_archivo || '').toLowerCase().trim()).filter(Boolean));
@@ -44,9 +97,14 @@ const sanitizarDocumentosNoAplican = (noAplican, certs, formacion) => {
     const idItem = (item.id || '').toUpperCase().trim();
     const desc = (item.descripcion || '').toUpperCase();
     const ent = (item.entidad || '').toUpperCase();
+    const motivo = (item.motivo_no_aplica || '').toUpperCase();
+    const tipoDoc = (item.tipo_documento || '').toUpperCase();
+
+    // Las licencias de conducción NUNCA deben estar en documentos descartados/no aplican
+    const esLicencia = desc.includes('LICENCIA') || desc.includes('CONDUCC') || desc.includes('PASE') || nom.includes('LICENCIA') || nom.includes('PASE') || tipoDoc.includes('LICENCIA');
+    if (esLicencia) return false;
 
     // Excepción vital: Diplomados, cursos y educación continuada SIEMPRE se conservan en noAplican
-    const motivo = (item.motivo_no_aplica || '').toUpperCase();
     if (desc.includes('DIPLOMAD') || desc.includes('CURSO') || desc.includes('SEMINARIO') || motivo.includes('DIPLOMAD') || motivo.includes('NO FORMAL')) {
       return true;
     }
@@ -792,8 +850,13 @@ module.exports = function(pool) {
           observaciones: r.observaciones_json,
           nombre_archivo: r.nombre_archivo
         })),
-        formacion_academica: val.formacion_academica || [],
-        documentos_no_aplican: sanitizarDocumentosNoAplican(val.documentos_no_aplican || [], certsRes.rows, val.formacion_academica || []),
+        ...(() => {
+          const rescate = rescatarLicenciasDeNoAplican(val.formacion_academica || [], val.documentos_no_aplican || []);
+          return {
+            formacion_academica: rescate.formacion,
+            documentos_no_aplican: sanitizarDocumentosNoAplican(rescate.noAplican, certsRes.rows, rescate.formacion)
+          };
+        })(),
         created_at: val.created_at
       };
 
@@ -2022,24 +2085,26 @@ module.exports = function(pool) {
       const valQuery = `
         SELECT v.*, c.nombre as candidato_nombre, c.documento as candidato_documento,
                c.email as candidato_email, c.telefono as candidato_telefono,
-               COALESCE(v.requisitos_formacion, p.requisitos, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
-               COALESCE(v.requisitos_experiencia, p.requisitos_experiencia, ic.requisitos_experiencia, '') as requisitos_experiencia_resuelto,
-               COALESCE(v.cargo_dependencia, p.dependencia_cargo, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto,
+               COALESCE(p.requisitos_formacion, p.requisitos, v.requisitos_formacion, ic.requisitos_formacion, '') as requisitos_formacion_resuelto,
+               COALESCE(p.requisitos_experiencia, v.requisitos_experiencia, ic.requisitos_experiencia, '') as requisitos_experiencia_resuelto,
+               COALESCE(p.dependencia_cargo, v.cargo_dependencia, ic.dependencia, 'Secretaría Jurídica Distrital') as cargo_dependencia_resuelto,
                COALESCE(p.funciones, ic.funciones_cargo, '[]'::jsonb) as funciones_cargo_resuelto
         FROM ingreso_validaciones v
         LEFT JOIN ingreso_candidatos c ON v.candidato_id = c.id
         LEFT JOIN LATERAL (
           SELECT p.dependencia_cargo, p.requisitos, p.requisitos_formacion, p.requisitos_experiencia, p.funciones
           FROM planta_personal_sjd p
-          WHERE (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
-             OR (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
+          WHERE (v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap)
+             OR (v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza)
              OR (v.id_perno IS NOT NULL AND p.id_perno = v.id_perno)
-             OR (v.id_plaza IS NULL AND v.id_sideap IS NULL AND v.id_perno IS NULL AND p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado)
+             OR (p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado)
+             OR (v.cargo_nombre IS NOT NULL AND p.cargo ILIKE v.cargo_nombre)
           ORDER BY 
-            CASE WHEN v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza THEN 1
-                 WHEN v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap THEN 2
+            CASE WHEN v.id_sideap IS NOT NULL AND p.id_sideap = v.id_sideap THEN 1
+                 WHEN v.id_plaza IS NOT NULL AND p.id_plaza = v.id_plaza THEN 2
                  WHEN v.id_perno IS NOT NULL AND p.id_perno = v.id_perno THEN 3
-                 ELSE 4 END
+                 WHEN p.codigo = v.cargo_codigo AND p.grado = v.cargo_grado THEN 4
+                 ELSE 5 END
           LIMIT 1
         ) p ON true
         LEFT JOIN LATERAL (
@@ -2061,11 +2126,38 @@ module.exports = function(pool) {
 
       const val = valRes.rows[0];
 
-      let reqExpOficial = (val.requisitos_experiencia_resuelto || val.requisitos_experiencia || '').trim();
-      if (!reqExpOficial && val.requisitos_formacion_resuelto && val.requisitos_formacion_resuelto.includes('Experiencia:')) {
-        const expMatch = val.requisitos_formacion_resuelto.match(/Experiencia:\s*([^]+)/i);
-        if (expMatch) reqExpOficial = expMatch[1].trim();
-      }
+      // Resolver la Redacción Oficial de los Requisitos de Experiencia usando el catálogo oficial
+      const reqExpOficial = plantaOficialCatalog.resolverRedaccionOficialExperiencia(
+        {
+          id_sideap: val.id_sideap,
+          id_plaza: val.id_plaza,
+          id_perno: val.id_perno,
+          codigo: val.cargo_codigo,
+          grado: val.cargo_grado,
+          nombre: val.cargo_nombre,
+          requisitos_experiencia: val.requisitos_experiencia_resuelto || val.requisitos_experiencia,
+          requisitos: val.requisitos_formacion_resuelto || val.requisitos_formacion
+        },
+        {
+          requisito_minimo_meses: Number(val.requisito_minimo_meses),
+          tipo_experiencia_requerida: val.tipo_experiencia_requerida
+        },
+        val
+      );
+
+      const reqFormacionOficial = plantaOficialCatalog.resolverRedaccionOficialFormacion(
+        {
+          id_sideap: val.id_sideap,
+          id_plaza: val.id_plaza,
+          id_perno: val.id_perno,
+          codigo: val.cargo_codigo,
+          grado: val.cargo_grado,
+          nombre: val.cargo_nombre,
+          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion,
+          requisitos: val.requisitos_formacion_resuelto
+        },
+        val
+      );
 
       let funcionesCargo = [];
       if (Array.isArray(val.funciones_cargo_resuelto)) {
@@ -2097,7 +2189,7 @@ module.exports = function(pool) {
           dependencia: val.cargo_dependencia_resuelto || val.cargo_dependencia || 'Secretaría Jurídica Distrital',
           requisito_experiencia_meses: Number(val.requisito_minimo_meses),
           tipo_experiencia_requerida: val.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA',
-          requisitos_formacion: val.requisitos_formacion_resuelto || val.requisitos_formacion || '',
+          requisitos_formacion: reqFormacionOficial,
           requisitos_experiencia: reqExpOficial,
           funciones_cargo: funcionesCargo
         },

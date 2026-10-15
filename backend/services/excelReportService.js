@@ -292,24 +292,12 @@ async function generarReporteExcelValidacion(data) {
   // ----------------------------------------------------
   // 3. REQUISITOS DEL CARGO (Fila 8)
   // ----------------------------------------------------
-  let reqExpTexto = (cargo.requisitos_experiencia || consolidado.requisitos_experiencia || data.requisitos_experiencia || '').trim();
-  if (!reqExpTexto) {
-    const reqMeses = consolidado.requisito_minimo_meses || cargo.requisito_experiencia_meses || 0;
-    const tipoExp = String(cargo.tipo_experiencia_requerida || consolidado.tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA').toUpperCase();
-    if (reqMeses === 0) {
-      reqExpTexto = 'No requiere experiencia.';
-    } else if (tipoExp === 'LABORAL') {
-      reqExpTexto = `${reqMeses} meses de experiencia laboral.`;
-    } else if (tipoExp === 'PROFESIONAL') {
-      reqExpTexto = `${reqMeses} meses de experiencia profesional.`;
-    } else {
-      reqExpTexto = `${reqMeses} meses de experiencia profesional relacionada con las funciones del cargo.`;
-    }
-  }
+  const plantaCatalog = require('./plantaOficialCatalog');
+  const reqExpTexto = plantaCatalog.resolverRedaccionOficialExperiencia(cargo, consolidado, data);
   ws.getCell('A8').value = reqExpTexto;
   ws.getCell('A8').alignment = { wrapText: true, vertical: 'top' };
 
-  const reqFormacion = cargo.requisitos_formacion || cargo.requisitos || '';
+  const reqFormacion = plantaCatalog.resolverRedaccionOficialFormacion(cargo, data);
   ws.getCell('G8').value = reqFormacion;
   ws.getCell('G8').alignment = { wrapText: true, vertical: 'top' };
 
@@ -336,6 +324,7 @@ async function generarReporteExcelValidacion(data) {
     }
 
     const texto = `${desc} ${archivo} ${motivo} ${entidad}`;
+    const esLicencia = texto.includes('LICENCIA') || texto.includes('CONDUCC') || texto.includes('PASE') || texto.includes('RUNT') || item.categoria || item.numero_licencia;
     const esBachiller = texto.includes('BACHILLER') || texto.includes('BACHILLERATO') || texto.includes('EDUCACION MEDIA') || texto.includes('SECUNDARIA');
     const esTecnico = texto.includes('TECNIC') && !texto.includes('TECNOLOG');
     const esTecnologo = texto.includes('TECNOLOG');
@@ -343,7 +332,32 @@ async function generarReporteExcelValidacion(data) {
     const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
     const esPregrado = texto.includes('PREGRADO') || texto.includes('TITULO PROFESIONAL') || texto.includes('ACTA DE GRADO') || texto.includes('LICENCIAT');
 
-    if (esBachiller || esTecnico || esTecnologo || esTarjeta || esPosgrado || esPregrado) {
+    if (esLicencia) {
+      const matchCat = (texto + ' ' + (item.motivo_no_aplica || '')).match(/\b(?:CATEGOR[IÍ]A|CAT\.?)\s*([A-C][1-3]|\bC1\b|\bC2\b|\bC3\b|\bB1\b|\bB2\b|\bA1\b|\bA2\b)/i) || texto.match(/\b([A-C][1-3])\b/i);
+      const catDetectada = item.categoria || (matchCat ? (matchCat[1] || matchCat[0]).toUpperCase() : '');
+      const numLic = item.numero_licencia || item.numero_tarjeta || item.numero_tarjeta_o_registro || (() => {
+        const mNum = texto.match(/\b\d{8,12}\b/);
+        return mNum ? mNum[0] : 'NO CONSTA';
+      })();
+      let fExp = item.fecha_expedicion || item.fecha_grado || null;
+      let fVenc = item.fecha_vencimiento || null;
+      if (!fExp || fExp === 'NO CONSTA') {
+        const matchesF = (item.descripcion + ' ' + (item.motivo_no_aplica || '')).match(/\b(19\d\d|20\d\d)[-\/\.]\d{1,2}[-\/\.]\d{1,2}\b|\b\d{1,2}[-\/\.]\d{1,2}[-\/\.](19\d\d|20\d\d)\b/g);
+        if (matchesF && matchesF.length > 0) fExp = matchesF[0];
+        if (matchesF && matchesF.length > 1) fVenc = matchesF[1];
+      }
+
+      formacionCompleta.push({
+        tipo: 'LICENCIA_CONDUCCION',
+        titulo_obtenido: item.descripcion || (catDetectada ? `Licencia de Conducción Categoría ${catDetectada}` : 'Licencia de Conducción'),
+        institucion: item.entidad && item.entidad !== 'NO CONSTA' ? item.entidad : 'Ministerio de Transporte / Tránsito',
+        numero_licencia: numLic,
+        numero_tarjeta_o_registro: numLic,
+        categoria: catDetectada,
+        fecha_expedicion: fExp || 'NO CONSTA',
+        fecha_vencimiento: fVenc || 'NO CONSTA'
+      });
+    } else if (esBachiller || esTecnico || esTecnologo || esTarjeta || esPosgrado || esPregrado) {
       let tipo = 'PREGRADO';
       if (esBachiller) tipo = 'BACHILLER';
       else if (esTecnico) tipo = 'TECNICO';
@@ -375,11 +389,23 @@ async function generarReporteExcelValidacion(data) {
   const pregrados = [];
   const posgrados = [];
   let tarjeta = null;
+  let licenciaConduccion = null;
 
   formacionCompleta.forEach(item => {
     const tipo = (item.tipo || '').toUpperCase();
-    const titulo = (item.titulo_obtenido || '').toUpperCase();
-    if (tipo === 'BACHILLER' || titulo.includes('BACHILLER') || titulo.includes('BACHILLERATO') || titulo.includes('EDUCACION MEDIA') || titulo.includes('SECUNDARIA')) {
+    const titulo = (item.titulo_obtenido || item.descripcion || '').toUpperCase();
+    const archivo = (item.nombre_archivo || '').toUpperCase();
+    const textoItem = `${tipo} ${titulo} ${archivo} ${item.categoria || ''} ${item.numero_licencia || ''}`;
+
+    if (tipo === 'LICENCIA_CONDUCCION' ||
+        tipo === 'LICENCIA' ||
+        textoItem.includes('LICENCIA DE CONDUCCION') ||
+        textoItem.includes('LICENCIA DE CONDUCCIÓN') ||
+        textoItem.includes('PASE DE CONDUCCION') ||
+        textoItem.includes('PASE DE CONDUCCIÓN') ||
+        (textoItem.includes('LICENCIA') && (textoItem.includes('TRANSITO') || textoItem.includes('TRANSPORTE') || textoItem.includes('MOVILIDAD') || textoItem.includes('RUNT') || item.categoria))) {
+      if (!licenciaConduccion) licenciaConduccion = item;
+    } else if (tipo === 'BACHILLER' || titulo.includes('BACHILLER') || titulo.includes('BACHILLERATO') || titulo.includes('EDUCACION MEDIA') || titulo.includes('SECUNDARIA')) {
       if (!bachiller) bachiller = item;
     } else if (tipo === 'TECNICO' || (titulo.includes('TECNIC') && !titulo.includes('TECNOLOG'))) {
       tecnicos.push(item);
@@ -387,12 +413,16 @@ async function generarReporteExcelValidacion(data) {
       tecnologos.push(item);
     } else if (tipo === 'POSGRADO' || tipo === 'ESPECIALIZACION' || tipo === 'MAESTRIA' || tipo === 'DOCTORADO' || titulo.includes('ESPECIALIZ') || titulo.includes('MAESTR') || titulo.includes('DOCTOR') || titulo.includes('MAGISTER')) {
       posgrados.push(item);
-    } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || tipo === 'UNIVERSITARIO' || (!titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
-      pregrados.push(item);
     } else if ((tipo === 'TARJETA_PROFESIONAL' || titulo.includes('TARJETA') || item.numero_tarjeta_o_registro) && tipo !== 'BACHILLER' && !titulo.includes('BACHILLER')) {
       if (!tarjeta) tarjeta = item;
+    } else if (tipo === 'PREGRADO' || tipo === 'PROFESIONAL' || tipo === 'UNIVERSITARIO' || (!titulo.includes('ESPECIALIZ') && !titulo.includes('MAESTR') && !titulo.includes('DOCTOR') && tipo !== 'TARJETA_PROFESIONAL')) {
+      pregrados.push(item);
     }
   });
+
+  if (!licenciaConduccion && (data.licencia_conduccion || data.candidato?.licencia_conduccion)) {
+    licenciaConduccion = data.licencia_conduccion || data.candidato?.licencia_conduccion;
+  }
 
   // Fila 11: Bachiller (1 fila fija, deja campos vacíos si no hay)
   if (bachiller) {
@@ -451,8 +481,8 @@ async function generarReporteExcelValidacion(data) {
     ws.getRow(r).hidden = false;
   }
 
-  // Filas 24 a 31: Posgrados (8 filas en plantilla - REGLA: Dejar todas visibles)
-  for (let i = 0; i < 8; i++) {
+  // Filas 24 a 30: Posgrados (7 filas en plantilla - REGLA: Dejar todas visibles)
+  for (let i = 0; i < 7; i++) {
     const r = 24 + i;
     if (i < posgrados.length) {
       ws.getCell(`B${r}`).value = posgrados[i].titulo_obtenido;
@@ -464,6 +494,46 @@ async function generarReporteExcelValidacion(data) {
       ws.getCell(`N${r}`).value = null;
     }
     ws.getRow(r).hidden = false;
+  }
+
+  // Fila 31: Licencia de Conducción (inmediatamente arriba de Tarjeta Profesional en Fila 32)
+  const esCargoConductor = /CONDUCTOR/i.test(cargo.nombre || '') || /CONDUCTOR/i.test(cargo.denominacion || '');
+  if (licenciaConduccion || esCargoConductor) {
+    const lic = licenciaConduccion || {};
+    const numLic = lic.numero_licencia || lic.numero_tarjeta_o_registro || lic.numero || 'NO CONSTA';
+    let catLic = lic.categoria ? String(lic.categoria).toUpperCase().replace(/CATEGOR[IÍ]A:?\s*/i, '').trim() : '';
+    if (!catLic) {
+      const mCat = ((lic.titulo_obtenido || '') + ' ' + (lic.descripcion || '')).match(/\b(?:CATEGOR[IÍ]A|CAT\.?)\s*([A-C][1-3]|\bC1\b|\bC2\b|\bC3\b|\bB1\b|\bB2\b|\bA1\b|\bA2\b)/i) || ((lic.titulo_obtenido || '') + ' ' + (lic.descripcion || '')).match(/\b([A-C][1-3])\b/i);
+      if (mCat) catLic = (mCat[1] || mCat[0]).toUpperCase();
+    }
+    const fExpLic = parseFecha(lic.fecha_expedicion || lic.fecha_grado);
+    const fVencLic = parseFecha(lic.fecha_vencimiento);
+
+    ws.getCell('A31').value = 'LICENCIA DE CONDUCCIÓN:';
+    ws.getCell('B31').value = catLic ? `No. ${numLic} - Categoría: ${catLic}` : `No. ${numLic}`;
+    ws.getCell('E31').value = 'FECHA DE EXPEDICIÓN';
+    ws.getCell('H31').value = fExpLic;
+    ws.getCell('L31').value = 'FECHA VENCIMIENTO';
+    ws.getCell('N31').value = fVencLic;
+    ws.getRow(31).hidden = false;
+  } else {
+    // Si no hay licencia de conducción, se conserva la fila 31 para posgrados
+    if (posgrados.length >= 8) {
+      ws.getCell('A31').value = 'TITULO DE POSGRADO:';
+      ws.getCell('B31').value = posgrados[7].titulo_obtenido;
+      ws.getCell('E31').value = 'INSTITUCIÓN EDUCATIVA';
+      ws.getCell('H31').value = posgrados[7].institucion;
+      ws.getCell('L31').value = 'FECHA DE GRADO';
+      ws.getCell('N31').value = parseFecha(posgrados[7].fecha_grado);
+    } else {
+      ws.getCell('A31').value = 'TITULO DE POSGRADO:';
+      ws.getCell('B31').value = null;
+      ws.getCell('E31').value = 'INSTITUCIÓN EDUCATIVA';
+      ws.getCell('H31').value = null;
+      ws.getCell('L31').value = 'FECHA DE GRADO';
+      ws.getCell('N31').value = null;
+    }
+    ws.getRow(31).hidden = false;
   }
 
   // Fila 32: Tarjeta profesional
@@ -553,7 +623,35 @@ async function generarReporteExcelValidacion(data) {
       expPrevia.tipo_experiencia_previa_ley2039 === true ||
       expPrevia.decision_computo === 'COMPUTABLE_TOTAL_LEY_2039'
     );
-    const esRel = (cert.clasificacion_experiencia || '').toUpperCase() === 'RELACIONADA' || cert.experiencia_relacionada?.resultado === 'RELACIONADA';
+    // -------------------------------------------------------------------------
+    // Clasificación Oficial de la Experiencia (Decreto 1083 / Manual de Funciones)
+    // -------------------------------------------------------------------------
+    const clasifUpper = String(cert.clasificacion_experiencia || '').toUpperCase().trim();
+    const esLaboralExplicito = (
+      clasifUpper === 'LABORAL' ||
+      clasifUpper === 'LABORAL_GENERAL' ||
+      clasifUpper === 'ASISTENCIAL' ||
+      clasifUpper === 'NO_PROFESIONAL'
+    );
+    const esProfesionalNoRelExplicito = (
+      clasifUpper === 'PROFESIONAL' ||
+      clasifUpper === 'PROFESIONAL_GENERAL' ||
+      clasifUpper === 'NO_RELACIONADA' ||
+      clasifUpper === 'PROFESIONAL_NO_RELACIONADA'
+    );
+    const esRelacionadaExplicito = (
+      clasifUpper === 'RELACIONADA' ||
+      clasifUpper === 'PROFESIONAL_RELACIONADA'
+    );
+
+    let esRel = false;
+    if (esLaboralExplicito || esProfesionalNoRelExplicito) {
+      esRel = false;
+    } else if (esRelacionadaExplicito) {
+      esRel = true;
+    } else {
+      esRel = (cert.experiencia_relacionada?.resultado === 'RELACIONADA');
+    }
 
     const tieneTraslapeTotal = Boolean(
       cert.es_traslape_total === true ||
@@ -564,6 +662,27 @@ async function generarReporteExcelValidacion(data) {
 
     const sintesisCotejo = formatearSintesisFunciones(cert, cargo);
     const auditoriaDetallada = formatearCotejoDetalladoComentario(cert, cargo);
+
+    // Si el evaluador clasificó explícitamente el certificado como LABORAL:
+    // Debe computarse íntegramente como Experiencia Laboral (sin dividirse en profesional/relacionada)
+    if (esLaboralExplicito) {
+      filasExperiencia.push({
+        entidad: cert.entidad || 'N/A',
+        cargo: cargoConContrato,
+        fechaInicio: fIniOriginal,
+        fechaFin: fFin,
+        tipoExperiencia: 'Laboral',
+        esRel: false,
+        esLaboral: true,
+        tieneTraslapeTotal: tieneTraslapeTotal,
+        observacion: tieneTraslapeTotal
+          ? 'Traslape Total'
+          : (sintesisCotejo ? `Experiencia laboral. ${sintesisCotejo}` : 'Experiencia laboral.'),
+        observacionK: tieneTraslapeTotal ? 'Traslape Total' : 'Laboral',
+        nota: auditoriaDetallada || null
+      });
+      continue;
+    }
 
     if (fIniOriginal && fFin && fechaCorteCert && !esLey2039) {
       const tIni = fIniOriginal.getTime();

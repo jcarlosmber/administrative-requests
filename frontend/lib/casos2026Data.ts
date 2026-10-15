@@ -5,7 +5,7 @@
 export interface Caso2026Raw {
   id: string;
   tipo_proceso: 'VINCULACION' | 'DESVINCULACION';
-  modalidad: 'CARRERA_ADMINISTRATIVA' | 'LIBRE_NOMBRAMIENTO' | 'PROVISIONALIDAD' | 'PRACTICANTE_JUDICANTE';
+  modalidad: 'CARRERA_ADMINISTRATIVA' | 'ASCENSO' | 'LIBRE_NOMBRAMIENTO' | 'PROVISIONALIDAD' | 'PRACTICANTE_JUDICANTE';
   id_plaza?: number;
   servidor_nombre: string;
   servidor_cedula: string;
@@ -20,6 +20,8 @@ export interface Caso2026Raw {
   etapa_activa_id?: string;
   observaciones?: string;
   estadoValidacionIA?: 'CUMPLE' | 'NO_CUMPLE' | 'REQUIERE_REVISION';
+  subtipo_concurso?: 'ABIERTO' | 'ASCENSO';
+  cargo_anterior_carrera?: string;
 }
 
 export const CASOS_2026_RAW: Caso2026Raw[] = [

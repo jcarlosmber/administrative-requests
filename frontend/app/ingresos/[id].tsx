@@ -26,6 +26,7 @@ import {
 } from '../../lib/ingresosService';
 import mockPlazasData from '../../lib/plantaMockData.json';
 import PdfViewerModal from '../../components/PdfViewerModal';
+import BotonManualFunciones from '../../components/BotonManualFunciones';
 import { conMarcoRRHH, useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 
 function DetalleValidacionScreen() {
@@ -52,6 +53,8 @@ function DetalleValidacionScreen() {
   const [formCertificaMaterias, setFormCertificaMaterias] = useState(false);
   const [formFechaMaterias, setFormFechaMaterias] = useState('');
   const [formTarjeta, setFormTarjeta] = useState('');
+  const [formCategoriaLicencia, setFormCategoriaLicencia] = useState('');
+  const [formFechaVencimiento, setFormFechaVencimiento] = useState('');
   const [formCumple, setFormCumple] = useState(true);
   const [formJustificacion, setFormJustificacion] = useState('');
   const [descartadoReactivandoIdx, setDescartadoReactivandoIdx] = useState<number | null>(null);
@@ -661,6 +664,41 @@ function DetalleValidacionScreen() {
     return lista;
   }, [data?.consolidado, certificados, titulos]);
 
+  const plazaOficialCargo = useMemo(() => {
+    const cargo_evaluado = data?.cargo_evaluado;
+    if (!cargo_evaluado) return null;
+    return (mockPlazasData as any[]).find((p: any) => {
+      if (cargo_evaluado.id_sideap && Number(p.id_sideap) === Number(cargo_evaluado.id_sideap)) return true;
+      if (cargo_evaluado.id_plaza && Number(p.id_plaza) === Number(cargo_evaluado.id_plaza)) return true;
+      if (cargo_evaluado.id_perno && Number(p.id_perno) === Number(cargo_evaluado.id_perno)) return true;
+      if (
+        cargo_evaluado.codigo &&
+        cargo_evaluado.grado &&
+        String(p.codigo).trim() === String(cargo_evaluado.codigo).trim() &&
+        String(p.grado).trim() === String(cargo_evaluado.grado).trim()
+      ) {
+        return true;
+      }
+      if (
+        cargo_evaluado.nombre &&
+        p.cargo &&
+        p.cargo.toLowerCase().trim() === cargo_evaluado.nombre.toLowerCase().trim()
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }, [data?.cargo_evaluado]);
+
+  const manualDelCargoTexto = useMemo(() => {
+    const ce = data?.cargo_evaluado as any;
+    if (ce?.manual_funciones && ce.manual_funciones.trim()) return ce.manual_funciones.trim();
+    if (ce?.resolucion_manual && ce.resolucion_manual.trim()) return ce.resolucion_manual.trim();
+    if (plazaOficialCargo?.manual_funciones && plazaOficialCargo.manual_funciones.trim()) return plazaOficialCargo.manual_funciones.trim();
+    if (plazaOficialCargo?.resolucion_manual && plazaOficialCargo.resolucion_manual.trim()) return plazaOficialCargo.resolucion_manual.trim();
+    return 'Resolución 085 de 2020';
+  }, [data?.cargo_evaluado, plazaOficialCargo]);
+
   const redaccionOficialExperiencia = useMemo(() => {
     const cargo_evaluado = data?.cargo_evaluado;
     const consolidado = data?.consolidado;
@@ -669,27 +707,7 @@ function DetalleValidacionScreen() {
       return cargo_evaluado.requisitos_experiencia.trim();
     }
     // 2. Si está en mockPlazasData (170 plazas oficiales de la planta SJD)
-    const plazaEncontrada = (mockPlazasData as any[]).find((p: any) => {
-      if (cargo_evaluado?.id_sideap && p.id_sideap === cargo_evaluado.id_sideap) return true;
-      if (cargo_evaluado?.id_perno && p.id_perno === cargo_evaluado.id_perno) return true;
-      if (cargo_evaluado?.id_plaza && p.id_plaza === cargo_evaluado.id_plaza) return true;
-      if (
-        cargo_evaluado?.codigo &&
-        cargo_evaluado?.grado &&
-        String(p.codigo).trim() === String(cargo_evaluado.codigo).trim() &&
-        String(p.grado).trim() === String(cargo_evaluado.grado).trim()
-      ) {
-        return true;
-      }
-      if (
-        cargo_evaluado?.nombre &&
-        p.cargo &&
-        p.cargo.toLowerCase().trim() === cargo_evaluado.nombre.toLowerCase().trim()
-      ) {
-        return true;
-      }
-      return false;
-    });
+    const plazaEncontrada = plazaOficialCargo;
     if (plazaEncontrada?.requisitos_experiencia && plazaEncontrada.requisitos_experiencia.trim()) {
       return plazaEncontrada.requisitos_experiencia.trim();
     }
@@ -801,6 +819,8 @@ function DetalleValidacionScreen() {
     setFormCertificaMaterias(false);
     setFormFechaMaterias('');
     setFormTarjeta('');
+    setFormCategoriaLicencia('');
+    setFormFechaVencimiento('');
     setFormCumple(true);
     setFormJustificacion('');
     setModalTituloVisible(true);
@@ -814,10 +834,12 @@ function DetalleValidacionScreen() {
     setFormTipo(item.tipo || 'PREGRADO');
     setFormTitulo(item.titulo_obtenido || '');
     setFormInstitucion(item.institucion || '');
-    setFormFechaGrado(item.fecha_grado || '');
+    setFormFechaGrado(item.fecha_grado || item.fecha_expedicion || '');
     setFormCertificaMaterias(Boolean(item.certifica_terminacion_materias));
     setFormFechaMaterias(item.fecha_terminacion_materias || '');
-    setFormTarjeta(item.tipo === 'BACHILLER' ? '' : (item.numero_tarjeta_o_registro || ''));
+    setFormTarjeta(item.tipo === 'BACHILLER' ? '' : (item.numero_tarjeta_o_registro || item.numero_licencia || ''));
+    setFormCategoriaLicencia(item.categoria || '');
+    setFormFechaVencimiento(item.fecha_vencimiento || '');
     setFormCumple(item.cumple_requisito_cargo !== false);
     setFormJustificacion(item.justificacion || '');
     setModalTituloVisible(true);
@@ -828,13 +850,16 @@ function DetalleValidacionScreen() {
     if (!doc) return;
     setEditandoIndex(null);
     setDescartadoReactivandoIdx(docIdx);
-    setFormTipo('PREGRADO');
+    const esDocLicencia = (doc.descripcion || doc.nombre_archivo || '').toUpperCase().includes('LICENCIA') || (doc.descripcion || doc.nombre_archivo || '').toUpperCase().includes('CONDUCC');
+    setFormTipo(esDocLicencia ? 'LICENCIA_CONDUCCION' : 'PREGRADO');
     setFormTitulo(doc.descripcion || doc.nombre_archivo || '');
-    setFormInstitucion(doc.entidad || '');
+    setFormInstitucion(doc.entidad || (esDocLicencia ? 'Ministerio de Transporte / Movilidad' : ''));
     setFormFechaGrado('');
     setFormCertificaMaterias(false);
     setFormFechaMaterias('');
     setFormTarjeta('');
+    setFormCategoriaLicencia(esDocLicencia ? 'C1' : '');
+    setFormFechaVencimiento('');
     setFormCumple(true);
     setFormJustificacion('Reactivado manualmente desde documentos descartados.');
     setModalTituloVisible(true);
@@ -879,7 +904,7 @@ function DetalleValidacionScreen() {
       return;
     }
     if (!formInstitucion.trim()) {
-      mostrarMensaje('Campo Requerido', 'Debes ingresar la institución educativa emisora.');
+      mostrarMensaje('Campo Requerido', 'Debes ingresar la institución educativa o entidad emisora.');
       return;
     }
 
@@ -891,6 +916,10 @@ function DetalleValidacionScreen() {
       certifica_terminacion_materias: formTipo === 'PREGRADO' ? formCertificaMaterias : undefined,
       fecha_terminacion_materias: (formTipo === 'PREGRADO' && formCertificaMaterias) ? (formFechaMaterias.trim() || undefined) : undefined,
       numero_tarjeta_o_registro: formTipo === 'BACHILLER' ? undefined : (formTarjeta.trim() || undefined),
+      numero_licencia: formTipo === 'LICENCIA_CONDUCCION' ? (formTarjeta.trim() || undefined) : undefined,
+      categoria: formTipo === 'LICENCIA_CONDUCCION' ? (formCategoriaLicencia.trim() || undefined) : undefined,
+      fecha_expedicion: formTipo === 'LICENCIA_CONDUCCION' ? (formFechaGrado.trim() || undefined) : undefined,
+      fecha_vencimiento: formTipo === 'LICENCIA_CONDUCCION' ? (formFechaVencimiento.trim() || undefined) : undefined,
       cumple_requisito_cargo: formCumple,
       justificacion: formJustificacion.trim()
     };
@@ -2058,12 +2087,22 @@ function DetalleValidacionScreen() {
                   padding: 16,
                   borderWidth: 1,
                   borderColor: '#E2E8F0',
-                  gap: 10
+                  gap: 12
                 }}
               >
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
-                  Empleo Público al que Aspira
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
+                    Empleo Público al que Aspira
+                  </Text>
+                  <BotonManualFunciones
+                    id_sideap={cargo_evaluado.id_sideap || plazaOficialCargo?.id_sideap}
+                    cargo={cargo_evaluado.nombre}
+                    codigo={cargo_evaluado.codigo}
+                    grado={cargo_evaluado.grado}
+                    variante="chip"
+                    etiqueta="Manual PDF"
+                  />
+                </View>
 
                 <View>
                   <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }}>
@@ -2074,18 +2113,59 @@ function DetalleValidacionScreen() {
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                {/* Box de Manual del Cargo */}
+                <View
+                  style={{
+                    backgroundColor: '#FEF3C7',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderWidth: 1,
+                    borderColor: '#FDE68A',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 }}>
+                    <Ionicons name="book" size={16} color="#92400E" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#92400E', textTransform: 'uppercase' }}>
+                        Manual de Funciones del Cargo
+                      </Text>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#78350F', marginTop: 1 }}>
+                        {manualDelCargoTexto}
+                      </Text>
+                    </View>
+                  </View>
+                  <BotonManualFunciones
+                    id_sideap={cargo_evaluado.id_sideap || plazaOficialCargo?.id_sideap}
+                    cargo={cargo_evaluado.nombre}
+                    codigo={cargo_evaluado.codigo}
+                    grado={cargo_evaluado.grado}
+                    variante="boton"
+                    etiqueta="Consultar Manual"
+                  />
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
                   <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600' }}>
                     Dependencia del Cargo: {cargo_evaluado.dependencia || 'Secretaría Jurídica Distrital'}
                   </Text>
-                  {cargo_evaluado.id_sideap ? (
+                  {(cargo_evaluado.id_sideap || plazaOficialCargo?.id_sideap) ? (
                     <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#C7D2FE' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>SIDEAP #{cargo_evaluado.id_sideap}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#3730A3' }}>
+                        SIDEAP #{cargo_evaluado.id_sideap || plazaOficialCargo?.id_sideap}
+                      </Text>
                     </View>
                   ) : null}
-                  {cargo_evaluado.id_perno ? (
+                  {(cargo_evaluado.id_perno || plazaOficialCargo?.id_perno) ? (
                     <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>PERNO #{cargo_evaluado.id_perno}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E' }}>
+                        PERNO #{cargo_evaluado.id_perno || plazaOficialCargo?.id_perno}
+                      </Text>
                     </View>
                   ) : null}
                   {cargo_evaluado.opec ? (
@@ -2653,9 +2733,23 @@ function DetalleValidacionScreen() {
 
                           {/* NIVEL / TIPO */}
                           <View style={{ width: '14%', paddingRight: 8 }}>
-                            <View style={{ backgroundColor: estaExpandido ? '#1E3A8A' : '#EEF2FF', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' }}>
-                              <Text style={{ fontSize: 10, fontWeight: '800', color: estaExpandido ? '#93C5FD' : '#3730A3' }}>
-                                {t.tipo.replace('_', ' ')}
+                            <View style={{
+                              backgroundColor: t.tipo === 'LICENCIA_CONDUCCION'
+                                ? (estaExpandido ? '#065F46' : '#ECFDF5')
+                                : (estaExpandido ? '#1E3A8A' : '#EEF2FF'),
+                              paddingHorizontal: 7,
+                              paddingVertical: 3,
+                              borderRadius: 6,
+                              alignSelf: 'flex-start'
+                            }}>
+                              <Text style={{
+                                fontSize: 10,
+                                fontWeight: '800',
+                                color: t.tipo === 'LICENCIA_CONDUCCION'
+                                  ? (estaExpandido ? '#A7F3D0' : '#047857')
+                                  : (estaExpandido ? '#93C5FD' : '#3730A3')
+                              }}>
+                                {t.tipo === 'LICENCIA_CONDUCCION' ? 'LICENCIA CONDUCCIÓN' : t.tipo.replace('_', ' ')}
                               </Text>
                             </View>
                           </View>
@@ -2665,11 +2759,15 @@ function DetalleValidacionScreen() {
                             <Text style={{ fontSize: 12, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }} numberOfLines={2}>
                               {t.titulo_obtenido}
                             </Text>
-                            {!esBach && t.numero_tarjeta_o_registro ? (
+                            {t.tipo === 'LICENCIA_CONDUCCION' ? (
+                              <Text style={{ fontSize: 10, color: estaExpandido ? '#A7F3D0' : '#047857', fontWeight: '700' }}>
+                                Licencia N° {t.numero_licencia || t.numero_tarjeta_o_registro || 'S/N'}{t.categoria ? ` • Cat: ${t.categoria}` : ''}
+                              </Text>
+                            ) : (!esBach && t.numero_tarjeta_o_registro ? (
                               <Text style={{ fontSize: 10, color: estaExpandido ? '#93C5FD' : '#2563EB', fontWeight: '700' }}>
                                 Tarjeta: {t.numero_tarjeta_o_registro}
                               </Text>
-                            ) : null}
+                            ) : null)}
                           </View>
 
                           {/* INSTITUCIÓN */}
@@ -2679,16 +2777,31 @@ function DetalleValidacionScreen() {
                             </Text>
                           </View>
 
-                          {/* FECHA DE GRADO */}
+                          {/* FECHA DE GRADO / VIGENCIA */}
                           <View style={{ width: '12%', paddingRight: 8 }}>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }}>
-                              {t.fecha_grado || 'NO CONSTA'}
-                            </Text>
-                            {t.certifica_terminacion_materias && t.fecha_terminacion_materias ? (
-                              <Text style={{ fontSize: 10, color: estaExpandido ? '#6EE7B7' : '#059669', fontWeight: '700' }}>
-                                Mat: {t.fecha_terminacion_materias}
-                              </Text>
-                            ) : null}
+                            {t.tipo === 'LICENCIA_CONDUCCION' ? (
+                              <View>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }}>
+                                  Exp: {t.fecha_expedicion || t.fecha_grado || 'NO CONSTA'}
+                                </Text>
+                                {t.fecha_vencimiento && t.fecha_vencimiento !== 'NO CONSTA' ? (
+                                  <Text style={{ fontSize: 10, color: estaExpandido ? '#FDE68A' : '#B45309', fontWeight: '700' }}>
+                                    Vto: {t.fecha_vencimiento}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ) : (
+                              <View>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: estaExpandido ? '#FFFFFF' : '#0F172A' }}>
+                                  {t.fecha_grado || 'NO CONSTA'}
+                                </Text>
+                                {t.certifica_terminacion_materias && t.fecha_terminacion_materias ? (
+                                  <Text style={{ fontSize: 10, color: estaExpandido ? '#6EE7B7' : '#059669', fontWeight: '700' }}>
+                                    Mat: {t.fecha_terminacion_materias}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            )}
                           </View>
 
                           {/* ESTADO */}
@@ -5490,6 +5603,7 @@ function DetalleValidacionScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                   {[
                     { id: 'PREGRADO', label: 'Pregrado' },
+                    { id: 'LICENCIA_CONDUCCION', label: 'Licencia de Conducción' },
                     { id: 'ESPECIALIZACION', label: 'Especialización' },
                     { id: 'MAESTRIA', label: 'Maestría' },
                     { id: 'DOCTORADO', label: 'Doctorado' },
@@ -5503,14 +5617,21 @@ function DetalleValidacionScreen() {
                     return (
                       <TouchableOpacity
                         key={t.id}
-                        onPress={() => setFormTipo(t.id as any)}
+                        onPress={() => {
+                          setFormTipo(t.id as any);
+                          if (t.id === 'LICENCIA_CONDUCCION') {
+                            if (!formTitulo) setFormTitulo('Licencia de Conducción');
+                            if (!formInstitucion) setFormInstitucion('Ministerio de Transporte / Movilidad');
+                            if (!formCategoriaLicencia) setFormCategoriaLicencia('C1');
+                          }
+                        }}
                         style={{
-                          backgroundColor: sel ? '#1E40AF' : '#F1F5F9',
+                          backgroundColor: sel ? (t.id === 'LICENCIA_CONDUCCION' ? '#065F46' : '#1E40AF') : '#F1F5F9',
                           paddingHorizontal: 10,
                           paddingVertical: 6,
                           borderRadius: 6,
                           borderWidth: 1,
-                          borderColor: sel ? '#1E40AF' : '#CBD5E1'
+                          borderColor: sel ? (t.id === 'LICENCIA_CONDUCCION' ? '#065F46' : '#1E40AF') : '#CBD5E1'
                         }}
                       >
                         <Text style={{ fontSize: 11, fontWeight: '700', color: sel ? '#FFFFFF' : '#475569' }}>
@@ -5522,15 +5643,15 @@ function DetalleValidacionScreen() {
                 </ScrollView>
               </View>
 
-              {/* Título Obtenido */}
+              {/* Título Obtenido / Denominación */}
               <View>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                  Título Obtenido / Denominación *
+                  {formTipo === 'LICENCIA_CONDUCCION' ? 'Denominación / Categoría de la Licencia *' : 'Título Obtenido / Denominación *'}
                 </Text>
                 <TextInput
                   value={formTitulo}
                   onChangeText={setFormTitulo}
-                  placeholder="Ej. Abogado, Bachiller Académico, Contador Público"
+                  placeholder={formTipo === 'LICENCIA_CONDUCCION' ? 'Ej. Licencia de Conducción Categoría C1' : 'Ej. Abogado, Bachiller Académico, Contador Público'}
                   placeholderTextColor="#94A3B8"
                   style={{
                     backgroundColor: '#F8FAFC',
@@ -5545,15 +5666,15 @@ function DetalleValidacionScreen() {
                 />
               </View>
 
-              {/* Institución */}
+              {/* Institución Emisora */}
               <View>
                 <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                  Institución Educativa Emisora *
+                  {formTipo === 'LICENCIA_CONDUCCION' ? 'Organismo de Tránsito / Entidad Emisora *' : 'Institución Educativa Emisora *'}
                 </Text>
                 <TextInput
                   value={formInstitucion}
                   onChangeText={setFormInstitucion}
-                  placeholder="Ej. Universidad Nacional de Colombia, Colegio Mayor"
+                  placeholder={formTipo === 'LICENCIA_CONDUCCION' ? 'Ej. Ministerio de Transporte / Secretaría de Movilidad de Bogotá' : 'Ej. Universidad Nacional de Colombia, Colegio Mayor'}
                   placeholderTextColor="#94A3B8"
                   style={{
                     backgroundColor: '#F8FAFC',
@@ -5568,11 +5689,11 @@ function DetalleValidacionScreen() {
                 />
               </View>
 
-              {/* Fila Fecha y Tarjeta */}
+              {/* Fila Fecha y Tarjeta / Licencia */}
               <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
                 <View style={{ flex: 1, minWidth: 160 }}>
                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                    Fecha de Grado / Expedición
+                    {formTipo === 'LICENCIA_CONDUCCION' ? 'Fecha de Expedición *' : 'Fecha de Grado / Expedición'}
                   </Text>
                   <TextInput
                     value={formFechaGrado}
@@ -5592,16 +5713,16 @@ function DetalleValidacionScreen() {
                   />
                 </View>
 
-                {/* Solo mostrar N° Tarjeta / Registro si NO es Bachiller */}
+                {/* Mostrar N° Tarjeta / N° Licencia si NO es Bachiller */}
                 {formTipo !== 'BACHILLER' ? (
                   <View style={{ flex: 1, minWidth: 160 }}>
                     <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 4 }}>
-                      N° Tarjeta / Registro
+                      {formTipo === 'LICENCIA_CONDUCCION' ? 'Número de Licencia *' : 'N° Tarjeta / Registro'}
                     </Text>
                     <TextInput
                       value={formTarjeta}
                       onChangeText={setFormTarjeta}
-                      placeholder="Opcional (Ej. 345612 CSJ)"
+                      placeholder={formTipo === 'LICENCIA_CONDUCCION' ? 'Ej. 1023456789' : 'Opcional (Ej. 345612 CSJ)'}
                       placeholderTextColor="#94A3B8"
                       style={{
                         backgroundColor: '#F8FAFC',
@@ -5617,6 +5738,54 @@ function DetalleValidacionScreen() {
                   </View>
                 ) : null}
               </View>
+
+              {/* Campos Específicos para Licencia de Conducción: Categoría y Fecha de Vencimiento */}
+              {formTipo === 'LICENCIA_CONDUCCION' && (
+                <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap', backgroundColor: '#F0FDF4', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                  <View style={{ flex: 1, minWidth: 140 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534', marginBottom: 4 }}>
+                      Categoría de Conducción *
+                    </Text>
+                    <TextInput
+                      value={formCategoriaLicencia}
+                      onChangeText={setFormCategoriaLicencia}
+                      placeholder="Ej. C1, C2, B1, B2"
+                      placeholderTextColor="#86EFAC"
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: '#86EFAC',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        fontSize: 13,
+                        color: '#0F172A'
+                      }}
+                    />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 140 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#166534', marginBottom: 4 }}>
+                      Fecha de Vencimiento *
+                    </Text>
+                    <TextInput
+                      value={formFechaVencimiento}
+                      onChangeText={setFormFechaVencimiento}
+                      placeholder="AAAA-MM-DD (o NO CONSTA)"
+                      placeholderTextColor="#86EFAC"
+                      style={{
+                        backgroundColor: '#FFFFFF',
+                        borderWidth: 1,
+                        borderColor: '#86EFAC',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        fontSize: 13,
+                        color: '#0F172A'
+                      }}
+                    />
+                  </View>
+                </View>
+              )}
 
               {/* Decreto 1083 de 2015: Terminación de Pénsum / Materias (Solo Pregrado) */}
               {formTipo === 'PREGRADO' && (

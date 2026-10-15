@@ -210,13 +210,17 @@ export interface VerificacionFormalTarjeta {
 export interface FormacionAcademicaItem {
   id?: string;
   nombre_archivo?: string;
-  tipo: 'BACHILLER' | 'TECNICO' | 'TECNOLOGO' | 'PREGRADO' | 'ESPECIALIZACION' | 'MAESTRIA' | 'DOCTORADO' | 'TARJETA_PROFESIONAL' | 'OTRO';
+  tipo: 'BACHILLER' | 'TECNICO' | 'TECNOLOGO' | 'PREGRADO' | 'ESPECIALIZACION' | 'MAESTRIA' | 'DOCTORADO' | 'TARJETA_PROFESIONAL' | 'LICENCIA_CONDUCCION' | 'OTRO';
   titulo_obtenido: string;
   institucion: string;
   fecha_grado?: string;
   certifica_terminacion_materias?: boolean;
   fecha_terminacion_materias?: string;
   numero_tarjeta_o_registro?: string;
+  numero_licencia?: string;
+  categoria?: string;
+  fecha_expedicion?: string;
+  fecha_vencimiento?: string;
   cumple_requisito_cargo: boolean;
   justificacion: string;
   verificacion_formal_titulo?: VerificacionFormalTitulo;

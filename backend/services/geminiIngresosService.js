@@ -137,8 +137,18 @@ A. FORMACIÓN ACADÉMICA Y TARJETA PROFESIONAL (Diplomas y Actas de Grado de Bac
      3. TÍTULO DE PREGRADO (Institución, Fecha de Grado y Fecha de Terminación de Materias si aporta certificación)
      4. TÍTULOS DE POSGRADO (Institución y Fecha de Grado)
      5. TARJETA PROFESIONAL (Número de Registro y Fecha de Expedición)
-   - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL"), título obtenido, institución educativa, fecha de grado, si aporta certificado de terminación de materias y la fecha de terminación.
-   - Aplica los 7 checks normativos obligatorios de verificación formal en cada uno según sea título o tarjeta profesional.
+     6. LICENCIA DE CONDUCCIÓN (Cargos de Conductor o aspirantes que la aporten):
+        - ¡REGLA OBLIGATORIA!: NUNCA clasifiques una Licencia de Conducción (pase de conducción emitido por Ministerio de Transporte, RUNT o Secretaría de Movilidad/Tránsito) en "documentos_no_aplican".
+        - Clasifícala en "formacion_academica" con tipo "LICENCIA_CONDUCCION".
+        - Extrae obligatoriamente:
+          * numero_licencia: Número oficial de la licencia de conducción (o en numero_tarjeta_o_registro).
+          * categoria: Categoría autorizada de conducción (ej. C1, C2, C3, B1, B2, etc.).
+          * fecha_expedicion: Fecha cierta de expedición en formato YYYY-MM-DD.
+          * fecha_vencimiento: Fecha cierta de vencimiento en formato YYYY-MM-DD (o NO CONSTA).
+          * institucion: Organismo emisor (Ministerio de Transporte, Secretaría de Movilidad, etc.).
+          * titulo_obtenido: "Licencia de Conducción Categoría [categoría]".
+   - Extrae con precisión: tipo ("BACHILLER" | "TECNICO" | "TECNOLOGO" | "PREGRADO" | "ESPECIALIZACION" | "MAESTRIA" | "DOCTORADO" | "TARJETA_PROFESIONAL" | "LICENCIA_CONDUCCION"), título obtenido, institución educativa, fecha de grado o expedición, categoría y vigencia si es licencia.
+   - Aplica los checks normativos de verificación formal correspondientes según sea título, tarjeta profesional o licencia de conducción.
    - ¡REGLA OBLIGATORIA CONTRA CLASIFICAR DIPLOMADOS COMO PREGRADO!: NUNCA clasifiques diplomados, cursos cortos, talleres, seminarios, congresos, simposios o certificados de asistencia como Educación Formal (Pregrado, Especialización, Maestría ni Doctorado). Un diplomado (ej. 'Diplomado Código General del Proceso', 'Diplomado en Derecho Administrativo') NO es un pregrado ni posgrado formal según la Ley 30 de 1992 y el Decreto 1083 de 2015. Debes clasificarlo OBLIGATORIAMENTE en "documentos_no_aplican".
 B. CERTIFICADOS DE EXPERIENCIA LABORAL / CONTRATOS:
    - Certificaciones de cargos desempeñados o contratos de prestación de servicios con sus funciones y fechas. Aplica los 7 checks básicos, cotejo funcional y verifica si corresponde a modalidades de la Ley 2039 de 2020 si ocurrió previo al grado.
@@ -158,7 +168,7 @@ C. DOCUMENTOS QUE NO APLICAN AL CARGO (Documentos Descartados / No Computables):
    - DEBES clasificar aquí:
      1. DIPLOMADOS, cursos de actualización o capacitación corta, seminarios, talleres, congresos, simposios y certificaciones de educación no formal o continuada (ej. 'Diplomado Código General del Proceso (80 horas)' de Legis, diplomados universitarios no conducentes a título, etc.).
      2. Certificaciones laborales ilegibles, sin firmas o documentos que no constituyen relación laboral ni título de educación superior formal.
-   - ¡NO pongas aquí diplomas de bachiller, actas de grado de pregrado/posgrado ni tarjetas profesionales!
+   - ¡NO pongas aquí licencias de conducción (Ministerio de Transporte / RUNT / Secretaría de Movilidad), ni diplomas de bachiller, actas de grado de pregrado/posgrado ni tarjetas profesionales!
 `;
 
 function repararJsonConCaracteresControl(raw) {
@@ -398,13 +408,17 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
     {
       "id": "ACAD-1",
       "nombre_archivo": "string",
-      "tipo": "BACHILLER | TECNICO | TECNOLOGO | PREGRADO | ESPECIALIZACION | MAESTRIA | DOCTORADO | TARJETA_PROFESIONAL",
+      "tipo": "BACHILLER | TECNICO | TECNOLOGO | PREGRADO | ESPECIALIZACION | MAESTRIA | DOCTORADO | TARJETA_PROFESIONAL | LICENCIA_CONDUCCION",
       "titulo_obtenido": "string",
       "institucion": "string",
       "fecha_grado": "YYYY-MM-DD o NO CONSTA",
       "certifica_terminacion_materias": false,
       "fecha_terminacion_materias": "YYYY-MM-DD o NO CONSTA",
       "numero_tarjeta_o_registro": "string o NO CONSTA",
+      "numero_licencia": "string o NO CONSTA",
+      "categoria": "string (ej. C1, C2, B1) o NO CONSTA",
+      "fecha_expedicion": "YYYY-MM-DD o NO CONSTA",
+      "fecha_vencimiento": "YYYY-MM-DD o NO CONSTA",
       "cumple_requisito_cargo": true,
       "justificacion": "string",
       "verificacion_formal_titulo": {
@@ -788,8 +802,31 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
     const esTarjeta = texto.includes('TARJETA PROFESIONAL') || texto.includes('MATRICULA PROFESIONAL') || texto.includes('REGISTRO PROFESIONAL');
     const esPosgrado = texto.includes('ESPECIALIZ') || texto.includes('MAESTR') || texto.includes('MAGISTER') || texto.includes('DOCTOR');
     const esPregrado = texto.includes('PREGRADO') || texto.includes('ABOGAD') || texto.includes('LICENCIAT') || texto.includes('INGENIER') || texto.includes('DIPLOMA DE GRADO') || texto.includes('ACTA DE GRADO');
+    const esLicencia = texto.includes('LICENCIA') || texto.includes('CONDUCC') || texto.includes('PASE') || texto.includes('RUNT') || item.categoria || item.numero_licencia;
 
-    if (esBachiller || esTecnico || esTarjeta || esPosgrado || esPregrado) {
+    if (esLicencia) {
+      const matchCat = texto.match(/\b(?:CATEGOR[IÍ]A|CAT\.?)\s*([A-C][1-3]|\bC1\b|\bC2\b|\bC3\b|\bB1\b|\bB2\b|\bA1\b|\bA2\b)/i) || texto.match(/\b([A-C][1-3])\b/i);
+      const catDetectada = item.categoria || (matchCat ? (matchCat[1] || matchCat[0]).toUpperCase() : 'C1');
+      const numLicenciaDetectado = item.numero_licencia || item.numero_tarjeta || item.numero_tarjeta_o_registro || 'NO CONSTA';
+      const fechaExp = item.fecha_expedicion || item.fecha_grado || 'NO CONSTA';
+      const fechaVenc = item.fecha_vencimiento || 'NO CONSTA';
+
+      formacionAcademica.push({
+        id: `ACAD-${formacionAcademica.length + 1}`,
+        nombre_archivo: item.nombre_archivo || (pdfFiles[idx] ? pdfFiles[idx].name : 'Licencia de Conducción'),
+        tipo: 'LICENCIA_CONDUCCION',
+        titulo_obtenido: item.descripcion || `Licencia de Conducción Categoría ${catDetectada}`,
+        institucion: item.entidad || 'Ministerio de Transporte / Organismo de Tránsito',
+        fecha_grado: fechaExp,
+        fecha_expedicion: fechaExp,
+        fecha_vencimiento: fechaVenc,
+        categoria: catDetectada,
+        numero_licencia: numLicenciaDetectado,
+        numero_tarjeta_o_registro: numLicenciaDetectado,
+        cumple_requisito_cargo: true,
+        justificacion: `Licencia de conducción categoría ${catDetectada} aportada para cumplimiento de requisitos habilitantes del cargo.`
+      });
+    } else if (esBachiller || esTecnico || esTarjeta || esPosgrado || esPregrado) {
       let tipo = 'PREGRADO';
       if (esBachiller) tipo = 'BACHILLER';
       else if (esTecnico) tipo = 'TECNICO';
@@ -826,7 +863,19 @@ FORMATO DE RESPUESTA JSON ESTRICTO:
       delete item.verificacion_formal_tarjeta;
     }
 
-    const esTarjeta = !esBachiller && (item.tipo === 'TARJETA_PROFESIONAL' || (item.titulo_obtenido || '').toUpperCase().includes('TARJETA') || (item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA'));
+    const esLic = item.tipo === 'LICENCIA_CONDUCCION' || (item.titulo_obtenido || '').toUpperCase().includes('LICENCIA') || (item.titulo_obtenido || '').toUpperCase().includes('CONDUCC');
+    if (esLic) {
+      item.tipo = 'LICENCIA_CONDUCCION';
+      if (!item.numero_licencia) item.numero_licencia = item.numero_tarjeta_o_registro || 'NO CONSTA';
+      if (!item.numero_tarjeta_o_registro) item.numero_tarjeta_o_registro = item.numero_licencia;
+      if (!item.fecha_expedicion && item.fecha_grado) item.fecha_expedicion = item.fecha_grado;
+      if (!item.categoria) {
+        const mCat = (item.titulo_obtenido || '').match(/\b([A-C][1-3])\b/i);
+        if (mCat) item.categoria = mCat[1].toUpperCase();
+      }
+    }
+
+    const esTarjeta = !esBachiller && !esLic && (item.tipo === 'TARJETA_PROFESIONAL' || (item.titulo_obtenido || '').toUpperCase().includes('TARJETA') || (item.numero_tarjeta_o_registro && item.numero_tarjeta_o_registro !== 'NO CONSTA'));
 
     if (esTarjeta) {
       if (!item.verificacion_formal_tarjeta) {

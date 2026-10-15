@@ -1318,7 +1318,7 @@ export default function AsistentePeticionesOPEC() {
                 <TextInput
                   value={editProcesoSeleccion}
                   onChangeText={setEditProcesoSeleccion}
-                  placeholder="Ej: Proceso de Selección Distrito Capital 5"
+                  placeholder="Ej: Proceso de Selección Distrito Capital 6"
                   style={{ height: 40, borderWidth: 1, borderColor: THEME.slate300, borderRadius: 6, paddingHorizontal: 10, fontSize: 13 }}
                 />
               </View>

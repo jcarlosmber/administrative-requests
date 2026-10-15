@@ -270,9 +270,31 @@ function auditCertificatesAndCalculateTotals(
     };
 
     const clasifUpper = String(cert.clasificacion_experiencia || '').toUpperCase().trim();
-    const esRelacionada = cert.experiencia_relacionada?.resultado === 'RELACIONADA' ||
-                          clasifUpper === 'RELACIONADA' ||
-                          clasifUpper === 'PROFESIONAL_RELACIONADA';
+    const esLaboralExplicito = (
+      clasifUpper === 'LABORAL' ||
+      clasifUpper === 'LABORAL_GENERAL' ||
+      clasifUpper === 'ASISTENCIAL' ||
+      clasifUpper === 'NO_PROFESIONAL'
+    );
+    const esNoRelacionadaExplicito = (
+      clasifUpper === 'PROFESIONAL' ||
+      clasifUpper === 'PROFESIONAL_GENERAL' ||
+      clasifUpper === 'NO_RELACIONADA' ||
+      clasifUpper === 'PROFESIONAL_NO_RELACIONADA'
+    );
+    const esRelacionadaExplicito = (
+      clasifUpper === 'RELACIONADA' ||
+      clasifUpper === 'PROFESIONAL_RELACIONADA'
+    );
+
+    let esRelacionada = false;
+    if (esLaboralExplicito || esNoRelacionadaExplicito) {
+      esRelacionada = false;
+    } else if (esRelacionadaExplicito) {
+      esRelacionada = true;
+    } else {
+      esRelacionada = (cert.experiencia_relacionada?.resultado === 'RELACIONADA');
+    }
 
     // -------------------------------------------------------------------------
     // VALIDACIÓN DE EXPERIENCIA PROFESIONAL PREVIA AL GRADO (D. 1083/15 y L. 2039/20)
@@ -314,6 +336,13 @@ function auditCertificatesAndCalculateTotals(
             cert.tipo_experiencia = 'LABORAL';
             cert.es_laboral_previa = true;
             cert.observaciones.push(`Periodo previo al título de pregrado / terminación de pénsum (${infoCorte.fechaCorteStr}). Clasificado como Experiencia Laboral.`);
+            cert.tiempo_valido = { ...calc };
+          } else if (esLaboralExplicito) {
+            // Periodo cruza el corte pero fue clasificado explícitamente como Laboral por el evaluador
+            decisionComputo = 'LABORAL';
+            cert.clasificacion_experiencia = 'LABORAL';
+            cert.tipo_experiencia = 'LABORAL';
+            cert.observaciones.push('Experiencia clasificada oficialmente como Laboral General / Asistencial.');
             cert.tiempo_valido = { ...calc };
           } else {
             // Inició antes y terminó después -> Se divide en 2 tramos: Tramo 1 Laboral (previo), Tramo 2 Profesional / Relacionada (desde fechaCorte)

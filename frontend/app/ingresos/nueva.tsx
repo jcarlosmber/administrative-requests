@@ -3251,9 +3251,9 @@ function NuevaValidacionScreen() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1, minWidth: 260 }}>
                           <Ionicons
-                            name={fa.tipo === 'TARJETA_PROFESIONAL' ? 'card-outline' : 'school-outline'}
+                            name={fa.tipo === 'LICENCIA_CONDUCCION' ? 'car-outline' : (fa.tipo === 'TARJETA_PROFESIONAL' ? 'card-outline' : 'school-outline')}
                             size={20}
-                            color={fa.cumple_requisito_cargo ? '#15803D' : '#2563EB'}
+                            color={fa.tipo === 'LICENCIA_CONDUCCION' ? '#16A34A' : (fa.cumple_requisito_cargo ? '#15803D' : '#2563EB')}
                             style={{ marginTop: 2 }}
                           />
                           <View style={{ flex: 1 }}>
@@ -3263,26 +3263,32 @@ function NuevaValidacionScreen() {
                               </Text>
                               <View
                                 style={{
-                                  backgroundColor: '#E0E7FF',
+                                  backgroundColor: fa.tipo === 'LICENCIA_CONDUCCION' ? '#DCFCE7' : '#E0E7FF',
                                   paddingHorizontal: 6,
                                   paddingVertical: 1,
                                   borderRadius: 4
                                 }}
                               >
-                                <Text style={{ fontSize: 10, fontWeight: '700', color: '#3730A3' }}>
-                                  {fa.tipo.replace('_', ' ')}
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: fa.tipo === 'LICENCIA_CONDUCCION' ? '#166534' : '#3730A3' }}>
+                                  {fa.tipo === 'LICENCIA_CONDUCCION' ? 'LICENCIA CONDUCCIÓN' : fa.tipo.replace('_', ' ')}
                                 </Text>
                               </View>
                             </View>
 
                             <Text style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
-                              {fa.institucion} {fa.fecha_grado && fa.fecha_grado !== 'NO CONSTA' ? `• Fecha: ${fa.fecha_grado}` : ''}
+                              {fa.institucion} {fa.tipo === 'LICENCIA_CONDUCCION'
+                                ? `• Exp: ${fa.fecha_expedicion || fa.fecha_grado || 'NO CONSTA'}${fa.fecha_vencimiento ? ` • Vto: ${fa.fecha_vencimiento}` : ''}`
+                                : (fa.fecha_grado && fa.fecha_grado !== 'NO CONSTA' ? `• Fecha: ${fa.fecha_grado}` : '')}
                             </Text>
-                            {fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA' ? (
+                            {fa.tipo === 'LICENCIA_CONDUCCION' ? (
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#166534', marginTop: 2 }}>
+                                Licencia N°: {fa.numero_licencia || fa.numero_tarjeta_o_registro || 'NO CONSTA'}{fa.categoria ? ` • Categoría: ${fa.categoria}` : ''}
+                              </Text>
+                            ) : (fa.numero_tarjeta_o_registro && fa.numero_tarjeta_o_registro !== 'NO CONSTA' ? (
                               <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF', marginTop: 2 }}>
                                 Registro / Tarjeta N°: {fa.numero_tarjeta_o_registro}
                               </Text>
-                            ) : null}
+                            ) : null)}
                           </View>
                         </View>
 
