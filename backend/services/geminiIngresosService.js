@@ -56,7 +56,7 @@ REGLAS OBLIGATORIAS:
 15. Si existen dudas jurídicas, documentales o de interpretación, clasifica el resultado como "REQUIERE_REVISION".
 16. Cada conclusión debe incluir la EVIDENCIA TEXTUAL del documento que la sustenta (citas textuales entre comillas).
 17. No reemplaces la revisión humana cuando la certificación sea ambigua, incompleta o contradictoria.
-18. Devuelve exclusivamente un objeto JSON válido, sin explicaciones ni texto fuera del bloque JSON.
+18. Devuelve exclusivamente un objeto JSON válido, conciso y estructurado, sin explicaciones ni texto fuera del bloque JSON (esto ahorra tokens).
 19. REGLA OBLIGATORIA DE DIVISIÓN DE MÚLTIPLES CARGOS Y MANUALES DE FUNCIONES EN UN MISMO CERTIFICADO:
     - Cuando un mismo documento o certificado laboral certifique que el aspirante desempeñó dos (2) o más cargos distintos o periodos sucesivos dentro de la misma entidad (por ejemplo: ascensos, traslados o cambios de denominación como: 1. Profesional Senior 2012-2016, 2. Profesional Experto 2016-2017, 3. Jefe de División 2017-actualidad), ESTÁ TERMINANTEMENTE PROHIBIDO agruparlos en un único registro o ignorar los cargos anteriores.
     - DEBES crear obligatoriamente una entrada INDEPENDIENTE en el arreglo "certificados" para CADA CARGO desempeñado (ej. CERT-1, CERT-2, CERT-3).
@@ -68,6 +68,9 @@ REGLAS OBLIGATORIAS:
       * NO los dupliques generando traslapes ficticios.
       * Consolida el cargo en una ÚNICA entrada en "certificados" integrando la información: toma el periodo completo acreditado (fecha inicio y fecha fin del certificado consolidado), transcribe íntegramente las funciones aportadas en el documento que las detalla, y en el arreglo "anexos" incluye AMBOS nombres de archivo (ej. ["certificado_enel.pdf", "certificado_codensa.pdf"]).
       * Deja constancia en "observaciones": "Certificación complementada con 2 anexos: Funciones acreditadas en [Anexo 1] y periodo extendido en [Anexo 2] (sustitución patronal / fusión / actualización)".
+21. REGLA DE NO FRACCIONAMIENTO HORARIO (FALLO CONSEJO DE ESTADO SEPTIEMBRE 2026):
+    - El Consejo de Estado declaró nulo el inciso final del art. 2.2.2.3.8 del Decreto 1083 de 2015 que ordenaba dividir horas por ocho.
+    - Por tanto, para jornadas parciales, contratos de prestación de servicios o independientes, extrae siempre la fecha de inicio y fin calendario completas. NO penalices ni reduzcas periodos por intensidad horaria. Los cómputos de tiempo los realiza el servidor en Node.js de forma determinista.
 
 CRITERIO DE COMPARACIÓN FUNCIONAL:
 Para cada función certificada:

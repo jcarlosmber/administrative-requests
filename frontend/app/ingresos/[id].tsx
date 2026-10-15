@@ -112,6 +112,125 @@ function DetalleValidacionScreen() {
   const [archivoComplementario, setArchivoComplementario] = useState<{ name: string; base64: string; size?: number } | null>(null);
   const [procesandoComplementarIa, setProcesandoComplementarIa] = useState(false);
 
+  // Estados para Gestión de Confirmación Directa con la Entidad Emisora (Ley 190 / Dec 1083)
+  const [modalConfirmacionVisible, setModalConfirmacionVisible] = useState(false);
+  const [certEnGestion, setCertEnGestion] = useState<{ cert: CertificadoAnalizado; idx: number } | null>(null);
+  const [formConfMedio, setFormConfMedio] = useState<string>('CORREO_OFICIAL');
+  const [formConfContacto, setFormConfContacto] = useState<string>('');
+  const [formConfRadicadoSol, setFormConfRadicadoSol] = useState<string>('');
+  const [formConfFechaSol, setFormConfFechaSol] = useState<string>('');
+  const [formConfEstado, setFormConfEstado] = useState<string>('REQUIERE_CONFIRMACION_DIRECTA');
+  const [formConfRadicadoResp, setFormConfRadicadoResp] = useState<string>('');
+  const [formConfFechaResp, setFormConfFechaResp] = useState<string>('');
+  const [formConfResultadoResp, setFormConfResultadoResp] = useState<string>('AUTENTICO_CONFIRMADO');
+  const [formConfObservacion, setFormConfObservacion] = useState<string>('');
+
+  const abrirGestionConfirmacion = (cert: CertificadoAnalizado, idx: number) => {
+    setCertEnGestion({ cert, idx });
+    const gc = cert.gestion_confirmacion || {};
+    setFormConfMedio(gc.medio_contacto || 'CORREO_OFICIAL');
+    setFormConfContacto(gc.contacto_utilizado || cert.verificacion_formal?.mecanismos_contacto_cuales || '');
+    setFormConfRadicadoSol(gc.radicado_solicitud || '');
+    setFormConfFechaSol(gc.fecha_solicitud || new Date().toISOString().split('T')[0]);
+    setFormConfEstado(cert.estado_confirmacion || 'REQUIERE_CONFIRMACION_DIRECTA');
+    setFormConfRadicadoResp(gc.radicado_respuesta || '');
+    setFormConfFechaResp(gc.fecha_respuesta || '');
+    setFormConfResultadoResp(gc.resultado_respuesta || 'AUTENTICO_CONFIRMADO');
+    setFormConfObservacion(gc.observacion_tramite || '');
+    setModalConfirmacionVisible(true);
+  };
+
+  const copiarPlantillaOficioVerificacion = () => {
+    if (!certEnGestion || !data) return;
+    const c = certEnGestion.cert;
+    const cand = data.candidato?.nombre || 'Aspirante';
+    const candDoc = data.candidato?.documento || '';
+    const fechaHoy = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' });
+    const plantilla = `BOGOTÁ D.C., ${fechaHoy.toUpperCase()}
+
+SEÑORES
+${(c.entidad || 'ENTIDAD / EMPRESA EMISORA').toUpperCase()}
+Atn. Talento Humano / Verificación Laboral
+${formConfContacto ? `Canal / Contacto: ${formConfContacto}` : ''}
+
+ASUNTO: Solicitud de confirmación directa de certificación laboral (Art. 1 num. 2 Ley 190 de 1995 y Art. 2.2.5.1.5 Decreto 1083 de 2015).
+
+Respetados Señores:
+
+En el marco del proceso de vinculación y posesión para proveer un empleo público en la entidad, y en cumplimiento de la obligación legal establecida en el artículo 2.2.5.1.5 del Decreto 1083 de 2015 y la Ley 190 de 1995, solicitamos comedidamente su colaboración confirmando la veracidad, autenticidad e integridad de la certificación laboral aportada por el(la) ciudadano(a):
+
+• Nombre del Aspirante: ${cand}
+• Documento de Identidad: C.C. ${candDoc}
+• Cargo / Rol Certificado: ${c.cargo_certificado || 'N/A'}
+• Periodo Registrado: ${c.fecha_inicio} hasta ${c.fecha_fin || 'Vigente'}
+• Contrato / Acto: ${c.numero_contrato_o_acto || 'N/A'}
+
+Agradecemos informarnos formalmente a la mayor brevedad si el soporte fue efectivamente expedido por su institución y si las fechas y funciones certificadas corresponden con exactitud a los registros de su entidad.
+
+Atentamente,
+
+DIRECCIÓN DE GESTIÓN CORPORATIVA - TALENTO HUMANO`;
+
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(plantilla);
+      mostrarMensaje('Plantilla Copiada', 'El texto oficial de solicitud de verificación ha sido copiado al portapapeles. Puedes pegarlo en tu correo institucional o radicarlo formalmente.');
+    } else {
+      mostrarMensaje('Plantilla de Verificación', plantilla);
+    }
+  };
+
+  const guardarGestionConfirmacion = async () => {
+    if (!certEnGestion || !data) return;
+    const idx = certEnGestion.idx;
+    const certsCopia = [...certificados];
+    const certTarget = { ...certsCopia[idx] };
+
+    certTarget.estado_confirmacion = formConfEstado as any;
+    certTarget.requiere_confirmacion_directa = formConfEstado === 'REQUIERE_CONFIRMACION_DIRECTA';
+    certTarget.gestion_confirmacion = {
+      medio_contacto: formConfMedio,
+      contacto_utilizado: formConfContacto,
+      radicado_solicitud: formConfRadicadoSol,
+      fecha_solicitud: formConfFechaSol,
+      radicado_respuesta: formConfRadicadoResp,
+      fecha_respuesta: formConfFechaResp,
+      resultado_respuesta: formConfResultadoResp as any,
+      observacion_tramite: formConfObservacion
+    };
+
+    certsCopia[idx] = certTarget;
+    setCertificados(certsCopia);
+
+    // Recalcular en el servidor sin consumir tokens de IA
+    try {
+      const reqMeses = Number(data.cargo_evaluado?.requisito_experiencia_meses) || Number(data.consolidado?.requisito_minimo_meses) || 54;
+      const recalculo = await ingresosService.recalcularTiempos(
+        certsCopia,
+        reqMeses,
+        titulos,
+        data.cargo_evaluado?.tipo_experiencia_requerida || data.consolidado?.tipo_experiencia_requerida
+      );
+
+      const dataActualizada: AnalisisCompleto = {
+        ...data,
+        certificados: recalculo.certificados || certsCopia,
+        consolidado: recalculo.consolidado || data.consolidado
+      };
+
+      setData(dataActualizada);
+      await ingresosService.actualizarValidacion(id, {
+        certificados: recalculo.certificados || certsCopia,
+        consolidado: recalculo.consolidado || data.consolidado
+      });
+
+      setModalConfirmacionVisible(false);
+      setCertEnGestion(null);
+      mostrarMensaje('Gestión Guardada', 'Se ha actualizado el estado de confirmación directa del certificado y recalculado el consolidado de experiencia.');
+    } catch (e: any) {
+      mostrarMensaje('Error al Guardar', 'No fue posible guardar la gestión: ' + e.message);
+    }
+  };
+
   const toggleExpandirCertificado = (key: string) => {
     setCertificadosExpandidos(prev => ({
       ...prev,
@@ -2200,6 +2319,68 @@ function DetalleValidacionScreen() {
               </Text>
             </View>
 
+            {/* Banner de Confirmación Directa y Principio de Proporcionalidad (Ley 190 / Dec 1083 / Fallo Consejo de Estado) */}
+            {consolidado.tiene_confirmaciones_pendientes ? (
+              <View
+                style={{
+                  backgroundColor: consolidado.cumple_sin_certificados_dudosos ? '#F0FDF4' : '#FFFBEB',
+                  borderRadius: 12,
+                  padding: 16,
+                  borderLeftWidth: 4,
+                  borderLeftColor: consolidado.cumple_sin_certificados_dudosos ? '#16A34A' : '#D97706',
+                  borderWidth: 1,
+                  borderColor: consolidado.cumple_sin_certificados_dudosos ? '#BBF7D0' : '#FDE68A',
+                  gap: 8
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons
+                      name={consolidado.cumple_sin_certificados_dudosos ? 'shield-checkmark' : 'alert-circle'}
+                      size={18}
+                      color={consolidado.cumple_sin_certificados_dudosos ? '#15803D' : '#B45309'}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '800',
+                        color: consolidado.cumple_sin_certificados_dudosos ? '#14532D' : '#78350F'
+                      }}
+                    >
+                      {consolidado.cumple_sin_certificados_dudosos
+                        ? 'Principio de Proporcionalidad Aplicado (Dec. 1083 / Ley 190)'
+                        : 'Atención: Confirmaciones Directas Determinantes Pendientes'}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      backgroundColor: consolidado.cumple_sin_certificados_dudosos ? '#DCFCE7' : '#FEF3C7',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: consolidado.cumple_sin_certificados_dudosos ? '#166534' : '#92400E'
+                      }}
+                    >
+                      Confirmados: {consolidado.meses_confirmados_directos || 0}m / Exigidos: {consolidado.requisito_minimo_meses || 0}m
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={{ fontSize: 12.5, color: '#334155', lineHeight: 19 }}>
+                  {consolidado.cumple_sin_certificados_dudosos
+                    ? `El aspirante acredita ${consolidado.meses_confirmados_directos} meses de experiencia plenamente verificada y sin duda documental, superando de forma autónoma los ${consolidado.requisito_minimo_meses} meses exigidos. Las confirmaciones directas en trámite se gestionan por trazabilidad institucional pero no obstaculizan la procedencia del nombramiento.`
+                    : `El cumplimiento de los ${consolidado.requisito_minimo_meses} meses exigidos para el cargo depende de certificados que registran criterios de riesgo o ausencia de datos de contacto (Ley 190). Se recomienda culminar la confirmación directa con los emisores previo a la expedición del acto de nombramiento.`}
+                </Text>
+              </View>
+            ) : null}
+
             {/* LISTADO DE PUNTOS QUE REQUIEREN REVISIÓN TÉCNICA (CHECKLIST INTERACTIVO) */}
             {(puntosRevision.length > 0 || esRequiereRevision) && (
               <View
@@ -3994,6 +4175,174 @@ function DetalleValidacionScreen() {
                                     {c.verificacion_formal?.documento_legible_integro !== false ? '✓ Legible e Íntegro' : '❌ Ilegible o truncado'}
                                   </Text>
                                 </View>
+                              </View>
+                            </View>
+
+                            {/* Panel de Confirmación Directa y Riesgo Documental (Ley 190 / Dec 1083) */}
+                            <View
+                              style={{
+                                backgroundColor: c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                  ? '#F0FDF4'
+                                  : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                  ? '#FFFBEB'
+                                  : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                  ? '#FEF2F2'
+                                  : '#F8FAFC',
+                                borderRadius: 10,
+                                padding: 12,
+                                borderWidth: 1,
+                                borderColor: c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                  ? '#86EFAC'
+                                  : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                  ? '#FDE68A'
+                                  : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                  ? '#FECACA'
+                                  : '#E2E8F0',
+                                gap: 8
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Ionicons
+                                    name={
+                                      c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                        ? 'checkmark-circle'
+                                        : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                        ? 'alert-circle'
+                                        : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                        ? 'close-circle'
+                                        : 'shield-outline'
+                                    }
+                                    size={16}
+                                    color={
+                                      c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                        ? '#16A34A'
+                                        : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                        ? '#D97706'
+                                        : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                        ? '#DC2626'
+                                        : '#2563EB'
+                                    }
+                                  />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E293B', textTransform: 'uppercase' }}>
+                                    Confirmación Directa con el Emisor (Ley 190 / Dec. 1083)
+                                  </Text>
+                                </View>
+
+                                <TouchableOpacity
+                                  onPress={() => abrirGestionConfirmacion(c, idx)}
+                                  style={{
+                                    backgroundColor: '#FFFFFF',
+                                    borderWidth: 1,
+                                    borderColor: '#CBD5E1',
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4,
+                                    borderRadius: 6,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4
+                                  }}
+                                >
+                                  <Ionicons name="call-outline" size={13} color="#2563EB" />
+                                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#2563EB' }}>
+                                    Gestionar Confirmación
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+
+                              {/* Estado actual */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                <View
+                                  style={{
+                                    backgroundColor: c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                      ? '#DCFCE7'
+                                      : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                      ? '#FEF3C7'
+                                      : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                      ? '#FEE2E2'
+                                      : '#E0E7FF',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 6
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: 10.5,
+                                      fontWeight: '800',
+                                      color: c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                        ? '#15803D'
+                                        : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                        ? '#B45309'
+                                        : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                        ? '#B91C1C'
+                                        : '#3730A3'
+                                    }}
+                                  >
+                                    {c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+                                      ? '✓ Confirmado por la Entidad Emisora'
+                                      : c.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA'
+                                      ? '⚠️ Requiere Confirmación Directa'
+                                      : c.estado_confirmacion === 'RECHAZADO_IRREGULAR'
+                                      ? '❌ Rechazado por Irregularidad'
+                                      : c.estado_confirmacion === 'EN_TRAMITE_CONFIRMACION'
+                                      ? '⏳ En Trámite de Solicitud al Emisor'
+                                      : '✓ Verificado Directamente'}
+                                  </Text>
+                                </View>
+
+                                {c.es_determinante ? (
+                                  <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 }}>
+                                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#B91C1C' }}>
+                                      ⭐ Certificado Determinante
+                                    </Text>
+                                  </View>
+                                ) : null}
+
+                                {c.gestion_confirmacion?.radicado_respuesta ? (
+                                  <Text style={{ fontSize: 10.5, color: '#475569' }}>
+                                    Rad. Resp: {c.gestion_confirmacion.radicado_respuesta} ({c.gestion_confirmacion.fecha_respuesta || 'S/F'})
+                                  </Text>
+                                ) : null}
+                              </View>
+
+                              {/* Criterios de riesgo detectados si los hay */}
+                              {Array.isArray(c.criterios_confirmacion) && c.criterios_confirmacion.length > 0 ? (
+                                <View style={{ gap: 4, marginTop: 2 }}>
+                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#64748B' }}>
+                                    Criterios de Verificación Documental:
+                                  </Text>
+                                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                    {c.criterios_confirmacion.map((crit, crIdx) => (
+                                      <View
+                                        key={crIdx}
+                                        style={{
+                                          backgroundColor: crit.gravedad === 'ALTA' ? '#FEF2F2' : '#FFFBEB',
+                                          borderWidth: 1,
+                                          borderColor: crit.gravedad === 'ALTA' ? '#FECACA' : '#FDE68A',
+                                          paddingHorizontal: 8,
+                                          paddingVertical: 3,
+                                          borderRadius: 6
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 10, fontWeight: '700', color: crit.gravedad === 'ALTA' ? '#991B1B' : '#92400E' }}>
+                                          • {crit.etiqueta}: {crit.descripcion}
+                                        </Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                </View>
+                              ) : null}
+
+                              {/* Datos de contacto extraídos según Ley 190 */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                                <Ionicons name="call-outline" size={12} color="#64748B" />
+                                <Text style={{ fontSize: 10.5, color: '#475569' }}>
+                                  Canal de Contacto (Ley 190):{' '}
+                                  <Text style={{ fontWeight: '700', color: '#1E293B' }}>
+                                    {c.gestion_confirmacion?.contacto_utilizado || c.verificacion_formal?.mecanismos_contacto_cuales || 'No consta en documento'}
+                                  </Text>
+                                </Text>
                               </View>
                             </View>
                           </View>
@@ -8241,6 +8590,413 @@ function DetalleValidacionScreen() {
                   Guardar Configuración
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Gestión de Confirmación Directa con la Entidad Emisora (Ley 190 / Dec. 1083) */}
+      <Modal
+        visible={modalConfirmacionVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalConfirmacionVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 16
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              width: '100%',
+              maxWidth: 720,
+              maxHeight: '92%',
+              padding: 20,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10
+            }}
+          >
+            {/* Cabecera */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingBottom: 14,
+                borderBottomWidth: 1,
+                borderBottomColor: '#E2E8F0'
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="shield-checkmark" size={20} color="#2563EB" />
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                    Gestión de Confirmación Directa con el Emisor
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 11.5, color: '#64748B', marginTop: 2 }}>
+                  Art. 1 num. 2 Ley 190 de 1995 • Art. 2.2.5.1.5 Decreto 1083 de 2015
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setModalConfirmacionVisible(false)}
+                style={{ padding: 4, borderRadius: 6, backgroundColor: '#F1F5F9' }}
+              >
+                <Ionicons name="close" size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ marginVertical: 14 }} showsVerticalScrollIndicator={false}>
+              {certEnGestion?.cert && (
+                <View style={{ gap: 14 }}>
+                  {/* Resumen del Certificado */}
+                  <View
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: 10,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      gap: 4
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                      Soporte Sujeto a Verificación:
+                    </Text>
+                    <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#0F172A' }}>
+                      {certEnGestion.cert.entidad || 'Entidad no identificada'}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#334155' }}>
+                      Cargo: <Text style={{ fontWeight: '700' }}>{certEnGestion.cert.cargo_certificado}</Text> • Periodo: {certEnGestion.cert.fecha_inicio} al {certEnGestion.cert.fecha_fin || 'Vigente'}
+                    </Text>
+                    {certEnGestion.cert.es_determinante ? (
+                      <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start', marginTop: 2 }}>
+                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#B91C1C' }}>
+                          ⭐ Certificado determinante para el cumplimiento del cargo
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* Estado de Confirmación */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                      Estado del Trámite de Confirmación:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {[
+                        { id: 'REQUIERE_CONFIRMACION_DIRECTA', label: '⚠️ Requiere Confirmación' },
+                        { id: 'EN_TRAMITE_CONFIRMACION', label: '⏳ En Trámite / Solicitado' },
+                        { id: 'CONFIRMADO_POR_EMISOR', label: '✓ Confirmado por Emisor' },
+                        { id: 'VERIFICADO_DIRECTO', label: '✓ Verificado Directamente' },
+                        { id: 'RECHAZADO_IRREGULAR', label: '❌ Rechazado / Irregular' }
+                      ].map(est => (
+                        <TouchableOpacity
+                          key={est.id}
+                          onPress={() => setFormConfEstado(est.id)}
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            backgroundColor: formConfEstado === est.id ? '#1D4ED8' : '#F1F5F9',
+                            borderColor: formConfEstado === est.id ? '#1D4ED8' : '#CBD5E1'
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: formConfEstado === est.id ? '#FFFFFF' : '#334155' }}>
+                            {est.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Canal de Contacto del Emisor */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                      Datos de Contacto del Emisor (Ley 190 de 1995):
+                    </Text>
+                    <TextInput
+                      value={formConfContacto}
+                      onChangeText={setFormConfContacto}
+                      placeholder="Correo electrónico, PBX, teléfonos o dirección de Talento Humano del emisor"
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 8,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        fontSize: 12.5,
+                        backgroundColor: '#FFFFFF'
+                      }}
+                    />
+                  </View>
+
+                  {/* Medio de Contacto */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                      Medio Utilizado para la Solicitud:
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {[
+                        { id: 'CORREO_OFICIAL', label: '📧 Correo Electrónico Oficial' },
+                        { id: 'OFICIO_RADICADO', label: '📄 Oficio / Memorando Radicado' },
+                        { id: 'TELEFONICA_PBX', label: '📞 Comunicación Telefónica / PBX' },
+                        { id: 'VERIFICACION_DIGITAL', label: '🌐 Verificación Web / Código QR' }
+                      ].map(m => (
+                        <TouchableOpacity
+                          key={m.id}
+                          onPress={() => setFormConfMedio(m.id)}
+                          style={{
+                            paddingHorizontal: 9,
+                            paddingVertical: 5,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            backgroundColor: formConfMedio === m.id ? '#0F766E' : '#F8FAFC',
+                            borderColor: formConfMedio === m.id ? '#0F766E' : '#CBD5E1'
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: formConfMedio === m.id ? '#FFFFFF' : '#334155' }}>
+                            {m.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  {/* Radicado y Fecha de Solicitud */}
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                        Radicado de Salida / No. Solicitud:
+                      </Text>
+                      <TextInput
+                        value={formConfRadicadoSol}
+                        onChangeText={setFormConfRadicadoSol}
+                        placeholder="Ej. 2026EE-10495"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          fontSize: 12,
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                        Fecha de Envío de Solicitud:
+                      </Text>
+                      <TextInput
+                        value={formConfFechaSol}
+                        onChangeText={setFormConfFechaSol}
+                        placeholder="YYYY-MM-DD"
+                        style={{
+                          borderWidth: 1,
+                          borderColor: '#CBD5E1',
+                          borderRadius: 8,
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          fontSize: 12,
+                          backgroundColor: '#FFFFFF'
+                        }}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Sección de Respuesta */}
+                  <View
+                    style={{
+                      backgroundColor: '#F1F5F9',
+                      borderRadius: 10,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      gap: 10
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                      Respuesta Recibida de la Entidad Emisora:
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
+                          Radicado de Entrada / Contestación:
+                        </Text>
+                        <TextInput
+                          value={formConfRadicadoResp}
+                          onChangeText={setFormConfRadicadoResp}
+                          placeholder="Ej. 2026ER-5891"
+                          style={{
+                            borderWidth: 1,
+                            borderColor: '#CBD5E1',
+                            borderRadius: 6,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            fontSize: 12,
+                            backgroundColor: '#FFFFFF'
+                          }}
+                        />
+                      </View>
+
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
+                          Fecha de Respuesta:
+                        </Text>
+                        <TextInput
+                          value={formConfFechaResp}
+                          onChangeText={setFormConfFechaResp}
+                          placeholder="YYYY-MM-DD"
+                          style={{
+                            borderWidth: 1,
+                            borderColor: '#CBD5E1',
+                            borderRadius: 6,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            fontSize: 12,
+                            backgroundColor: '#FFFFFF'
+                          }}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={{ gap: 4 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
+                        Resultado Notificado por el Emisor:
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {[
+                          { id: 'AUTENTICO_CONFIRMADO', label: '✓ Auténtico y Vigente' },
+                          { id: 'ACLARADO_CON_ADENDA', label: '📄 Aclarado con Certificación Nueva' },
+                          { id: 'NO_EXPEDIDO_POR_ENTIDAD', label: '❌ No Expedido por la Empresa' },
+                          { id: 'CONTIENE_DATOS_FALSOS', label: '⚠️ Contiene Datos Inexactos' }
+                        ].map(r => (
+                          <TouchableOpacity
+                            key={r.id}
+                            onPress={() => setFormConfResultadoResp(r.id)}
+                            style={{
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              borderWidth: 1,
+                              backgroundColor: formConfResultadoResp === r.id ? '#1E293B' : '#FFFFFF',
+                              borderColor: formConfResultadoResp === r.id ? '#1E293B' : '#CBD5E1'
+                            }}
+                          >
+                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: formConfResultadoResp === r.id ? '#FFFFFF' : '#334155' }}>
+                              {r.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Observaciones del Trámite */}
+                  <View style={{ gap: 4 }}>
+                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                      Observaciones / Constancia Administrativa:
+                    </Text>
+                    <TextInput
+                      value={formConfObservacion}
+                      onChangeText={setFormConfObservacion}
+                      placeholder="Constancia de la llamada, funcionario con quien se corroboró, notas de verificación..."
+                      multiline
+                      numberOfLines={3}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                        borderRadius: 8,
+                        padding: 10,
+                        fontSize: 12,
+                        backgroundColor: '#FFFFFF',
+                        minHeight: 60,
+                        textAlignVertical: 'top'
+                      }}
+                    />
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            {/* Acciones del Modal */}
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: 12,
+                borderTopWidth: 1,
+                borderTopColor: '#E2E8F0',
+                gap: 8,
+                flexWrap: 'wrap'
+              }}
+            >
+              <TouchableOpacity
+                onPress={copiarPlantillaOficioVerificacion}
+                style={{
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5
+                }}
+              >
+                <Ionicons name="copy-outline" size={15} color="#2563EB" />
+                <Text style={{ color: '#2563EB', fontSize: 12, fontWeight: '800' }}>
+                  Copiar Plantilla Oficial
+                </Text>
+              </TouchableOpacity>
+
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setModalConfirmacionVisible(false)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    backgroundColor: '#F1F5F9'
+                  }}
+                >
+                  <Text style={{ color: '#475569', fontSize: 12.5, fontWeight: '700' }}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={guardarGestionConfirmacion}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    backgroundColor: '#1D4ED8',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Ionicons name="checkmark-done" size={15} color="#FFFFFF" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' }}>
+                    Guardar y Recalcular
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>

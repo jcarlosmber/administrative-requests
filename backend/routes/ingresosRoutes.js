@@ -519,10 +519,11 @@ module.exports = function(pool) {
    */
   router.post('/recalcular', async (req, res) => {
     try {
-      const { certificados, requisito_minimo_meses, formacion_academica, tipo_experiencia_requerida } = req.body;
+      const { certificados, requisito_minimo_meses, requisito_meses, formacion_academica, tipo_experiencia_requerida } = req.body;
+      const reqMeses = Number(requisito_minimo_meses || requisito_meses) || 54;
       const result = timeCalculatorService.auditCertificatesAndCalculateTotals(
         certificados || [],
-        Number(requisito_minimo_meses) || 54,
+        reqMeses,
         formacion_academica || [],
         tipo_experiencia_requerida || 'PROFESIONAL_RELACIONADA'
       );

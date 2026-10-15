@@ -163,6 +163,11 @@ export interface CertificadoAnalizado {
     dias?: number;
     meses_totales: number;
   };
+  es_determinante?: boolean;
+  requiere_confirmacion_directa?: boolean;
+  estado_confirmacion?: 'VERIFICADO_DIRECTO' | 'REQUIERE_CONFIRMACION_DIRECTA' | 'EN_TRAMITE_CONFIRMACION' | 'CONFIRMADO_POR_EMISOR' | 'RECHAZADO_IRREGULAR';
+  criterios_confirmacion?: CriterioConfirmacion[];
+  gestion_confirmacion?: GestionConfirmacionDirecta;
   documento?: {
     firma_visible: boolean;
     fecha_visible: boolean;
@@ -171,6 +176,25 @@ export interface CertificadoAnalizado {
     estado: 'COMPLETO' | 'INCOMPLETO';
   };
   observaciones?: string[];
+}
+
+export interface CriterioConfirmacion {
+  codigo: string;
+  etiqueta: string;
+  descripcion: string;
+  gravedad: 'ALTA' | 'MEDIA';
+}
+
+export interface GestionConfirmacionDirecta {
+  fecha_solicitud?: string;
+  radicado_solicitud?: string;
+  medio_contacto?: 'CORREO_OFICIAL' | 'OFICIO_RADICADO' | 'TELEFONICA_PBX' | 'VERIFICACION_DIGITAL' | string;
+  contacto_utilizado?: string;
+  observacion_tramite?: string;
+  fecha_respuesta?: string;
+  radicado_respuesta?: string;
+  resultado_respuesta?: 'AUTENTICO_CONFIRMADO' | 'NO_EXPEDIDO_POR_ENTIDAD' | 'CONTIENE_DATOS_FALSOS' | 'ACLARADO_CON_ADENDA' | 'PENDIENTE_RESPUESTA';
+  soporte_respuesta_nombre?: string;
 }
 
 export interface VerificacionFormalTitulo {
@@ -240,6 +264,10 @@ export interface DocumentoNoAplicaItem {
 export interface ConsolidadoValidacion {
   tipo_experiencia_requerida?: 'LABORAL' | 'RELACIONADA' | 'PROFESIONAL' | 'PROFESIONAL_RELACIONADA' | string;
   meses_computables?: number;
+  meses_confirmados_directos?: number;
+  meses_proyectados_totales?: number;
+  tiene_confirmaciones_pendientes?: boolean;
+  cumple_sin_certificados_dudosos?: boolean;
   experiencia_laboral_meses?: number;
   experiencia_relacionada_meses: number;
   experiencia_no_relacionada_meses: number;
@@ -252,6 +280,16 @@ export interface ConsolidadoValidacion {
   requiere_revision_humana: boolean;
 }
 
+export interface VerificacionPreviaNombramiento {
+  antecedentes_fiscales_contraloria?: { consultado: boolean; fecha?: string; estado?: 'SIN_HALLAZGO' | 'CON_HALLAZGO'; radicado?: string };
+  antecedentes_disciplinarios_procuraduria?: { consultado: boolean; fecha?: string; estado?: 'SIN_SANCION' | 'CON_SANCION'; radicado?: string };
+  antecedentes_disciplinarios_personeria?: { consultado: boolean; fecha?: string; estado?: 'SIN_SANCION' | 'CON_SANCION'; radicado?: string };
+  antecedentes_judiciales_policia?: { consultado: boolean; fecha?: string; estado?: 'NORMAL' | 'CON_REQUERIMIENTO'; radicado?: string };
+  inhabilidad_delitos_sexuales_ley1918?: { aplica: boolean; consultado: boolean; fecha?: string; estado?: 'SIN_INHABILIDAD' | 'INHABILITADO' };
+  responsable_verificacion?: string;
+  fecha_certificacion?: string;
+}
+
 export interface AnalisisCompleto {
   id?: string;
   candidato: CandidatoInfo;
@@ -260,6 +298,7 @@ export interface AnalisisCompleto {
   certificados: CertificadoAnalizado[];
   documentos_no_aplican?: DocumentoNoAplicaItem[];
   consolidado: ConsolidadoValidacion;
+  verificacion_previa_nombramiento?: VerificacionPreviaNombramiento;
   archivos?: Array<{ name: string; base64: string; size?: number; mimeType?: string }>;
   created_at?: string;
 }

@@ -525,6 +525,123 @@ function auditCertificatesAndCalculateTotals(
   }
   mesesNetosLaborales = Number(mesesNetosLaborales.toFixed(2));
 
+  // Paso 4: Evaluación de los 6 Criterios de Riesgo para Confirmación Directa (Ley 190 de 1995 y Decreto 1083 de 2015)
+  // Determinístico en JavaScript (0 consumo de tokens de IA)
+  let tieneConfirmacionesPendientes = false;
+  const certsSinDuda = [];
+
+  for (let i = 0; i < processedCerts.length; i++) {
+    const cert = processedCerts[i];
+    const criterios = [];
+
+    // Criterio 1: Dudas sobre integridad y autenticidad formal (tachaduras, ilegibilidad, falta de firma)
+    const faltaFirma = cert.documento?.firma_visible === false || cert.verificacion_formal?.cuenta_con_firma === false;
+    const noLegible = cert.documento?.documento_legible === false || cert.verificacion_formal?.documento_legible_integro === false;
+    if (faltaFirma || noLegible) {
+      criterios.push({
+        codigo: 'DUDAS_INTEGRIDAD_FIRMA',
+        etiqueta: 'Dudas sobre Integridad o Firma',
+        descripcion: 'El soporte presenta deficiencias de legibilidad, ausencia de firma visible o indicios de alteración.',
+        gravedad: 'ALTA'
+      });
+    }
+
+    // Criterio 2: Inverificabilidad en registros o entidad no identificable
+    if (cert.verificacion_formal?.entidad_identificable === false || cert.documento?.entidad_identificable === false) {
+      criterios.push({
+        codigo: 'ENTIDAD_NO_IDENTIFICABLE',
+        etiqueta: 'Entidad Emisora No Identificable',
+        descripcion: 'No se identifica con certeza la persona jurídica o entidad oficial que emite la constancia.',
+        gravedad: 'ALTA'
+      });
+    }
+
+    // Criterio 3: Inconsistencias internas cronológicas entre soportes
+    if (cert.fecha_incompleta || cert.es_traslape_total || (cert.traslapes && cert.traslapes.some(t => t.tipo === 'TRASLAPE_TOTAL'))) {
+      criterios.push({
+        codigo: 'INCONSISTENCIA_CRONOLOGICA',
+        etiqueta: 'Inconsistencia de Fechas o Superposición',
+        descripcion: 'Presenta fechas incompletas o superposición total de periodos con otros soportes del expediente.',
+        gravedad: 'MEDIA'
+      });
+    }
+
+    // Criterio 4: Certificado Determinante (se evalúa si su tiempo es indispensable para alcanzar el requisito)
+    const mesesAporte = cert.tiempo_valido?.meses_totales || 0;
+    const esDeterminante = (mesesNetosComputables >= requisitoMinimoMeses) && ((mesesNetosComputables - mesesAporte) < requisitoMinimoMeses);
+    cert.es_determinante = esDeterminante;
+    if (esDeterminante && mesesAporte > 0) {
+      criterios.push({
+        codigo: 'CERTIFICADO_DETERMINANTE',
+        etiqueta: 'Certificado Determinante para el Cumplimiento',
+        descripcion: 'Este certificado es decisivo: sin su cómputo, el aspirante no alcanzaría el tiempo mínimo del cargo.',
+        gravedad: 'ALTA'
+      });
+    }
+
+    // Criterio 5: Ausencia de mecanismos de contacto del emisor (Ley 190 de 1995, Art. 1 num. 2)
+    const contactoStr = String(cert.verificacion_formal?.mecanismos_contacto_cuales || '').toUpperCase().trim();
+    const noTieneContacto = !cert.verificacion_formal?.mecanismos_contacto_verificacion ||
+      contactoStr === 'NO CONSTA' ||
+      contactoStr === '' ||
+      contactoStr.length < 5;
+    if (noTieneContacto) {
+      criterios.push({
+        codigo: 'SIN_DATOS_CONTACTO_EMISOR',
+        etiqueta: 'Sin Datos de Contacto para Verificación',
+        descripcion: 'No constan teléfonos, correo ni dirección institucional para corroborar con el emisor (Ley 190/1995).',
+        gravedad: 'MEDIA'
+      });
+    }
+
+    // Criterio 6: Funciones ambiguas o duda funcional que requiere revisión
+    if (!esLaboralPura && (cert.experiencia_relacionada?.resultado === 'REQUIERE_REVISION' || cert.clasificacion_experiencia === 'NO_DETERMINABLE')) {
+      criterios.push({
+        codigo: 'FUNCIONES_AMBIGUAS',
+        etiqueta: 'Funciones Ambiguas o Sin Cotejo Concluyente',
+        descripcion: 'La descripción de actividades no permite establecer con certeza la similitud funcional con el cargo.',
+        gravedad: 'MEDIA'
+      });
+    }
+
+    // Determinación de si requiere confirmación directa
+    // Proporcionalidad: Requiere confirmación si tiene gravedad ALTA o al menos 2 criterios de gravedad MEDIA
+    const tieneGravedadAlta = criterios.some(c => c.gravedad === 'ALTA' && c.codigo !== 'CERTIFICADO_DETERMINANTE');
+    const requiereConfirmacion = (tieneGravedadAlta && esDeterminante) || criterios.length >= 2 || faltaFirma || noLegible;
+
+    cert.criterios_confirmacion = criterios;
+    cert.requiere_confirmacion_directa = requiereConfirmacion;
+    if (!cert.estado_confirmacion) {
+      cert.estado_confirmacion = requiereConfirmacion ? 'REQUIERE_CONFIRMACION_DIRECTA' : 'VERIFICADO_DIRECTO';
+    }
+
+    if (cert.estado_confirmacion === 'REQUIERE_CONFIRMACION_DIRECTA') {
+      tieneConfirmacionesPendientes = true;
+    } else {
+      certsSinDuda.push(cert);
+    }
+  }
+
+  // Paso 5: Cálculo de experiencia confirmada vs proyectada
+  // Meses netos confirmados (excluyendo los que están en REQUIERE_CONFIRMACION_DIRECTA)
+  const intervalsConfirmados = intervalsRelacionados.filter(item => {
+    const c = processedCerts.find(pc => pc.id_certificado === item.certId);
+    return c && c.estado_confirmacion !== 'REQUIERE_CONFIRMACION_DIRECTA';
+  });
+  const mergedConfirmados = mergeIntervals(intervalsConfirmados.map(item => ({
+    start: new Date(item.start.getTime()),
+    end: new Date(item.end.getTime())
+  })));
+  let mesesNetosConfirmados = 0;
+  for (const interval of mergedConfirmados) {
+    const p = calculatePeriod(interval.start, interval.end);
+    mesesNetosConfirmados += p.meses_totales;
+  }
+  mesesNetosConfirmados = Number(mesesNetosConfirmados.toFixed(2));
+
+  // Principio de proporcionalidad: ¿cumple de sobra aun sin los certificados en duda?
+  const cumpleSinCertificadosDudosos = (esLaboralPura ? mesesNetosLaborales : mesesNetosConfirmados) >= requisitoMinimoMeses;
+
   // Determinar meses computables según la exigencia del cargo
   const mesesNetosComputables = esLaboralPura ? mesesNetosLaborales : mesesNetosRelacionados;
   const sumaBrutaComputable = esLaboralPura ? sumaBrutaMesesLaborales : sumaBrutaMesesRelacionados;
@@ -542,10 +659,18 @@ function auditCertificatesAndCalculateTotals(
     resultadoFinal = 'REQUIERE_REVISION';
     justificacion = `El expediente requiere revisión humana debido a: ${razonesRevision.join('; ')}`;
   } else if (mesesNetosComputables >= requisitoMinimoMeses) {
-    resultadoFinal = 'CUMPLE';
-    justificacion = esLaboralPura
-      ? `Acredita ${mesesNetosComputables} meses de experiencia laboral neta (superando los ${requisitoMinimoMeses} meses exigidos para el cargo por una diferencia de +${diferenciaMeses} meses). Por la naturaleza del empleo (ej. Conductor / Nivel Asistencial), no se exige que sea relacionada ni corte de título profesional. Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.`
-      : `Acredita ${mesesNetosComputables} meses de ${etiquetaTipo} neta (superando los ${requisitoMinimoMeses} meses exigidos por una diferencia de +${diferenciaMeses} meses). Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.`;
+    if (tieneConfirmacionesPendientes && !cumpleSinCertificadosDudosos) {
+      resultadoFinal = 'REQUIERE_REVISION';
+      justificacion = `Acredita proyectadamente ${mesesNetosComputables} meses de ${etiquetaTipo}, pero ${mesesNetosComputables - mesesNetosConfirmados} meses dependen de certificados en estado de CONFIRMACIÓN DIRECTA. Sin estos soportes, el aspirante acredita ${mesesNetosConfirmados} meses frente a ${requisitoMinimoMeses} exigidos. Se requiere culminar la confirmación con los emisores.`;
+    } else {
+      resultadoFinal = 'CUMPLE';
+      const notaProporcionalidad = (tieneConfirmacionesPendientes && cumpleSinCertificadosDudosos)
+        ? ` En aplicación del principio de proporcionalidad, el aspirante CUMPLE el requisito mínimo con ${mesesNetosConfirmados} meses plenamente acreditados sin depender de los soportes en trámite de confirmación directa.`
+        : '';
+      justificacion = esLaboralPura
+        ? `Acredita ${mesesNetosComputables} meses de experiencia laboral neta (superando los ${requisitoMinimoMeses} meses exigidos para el cargo por una diferencia de +${diferenciaMeses} meses). Por la naturaleza del empleo (ej. Conductor / Nivel Asistencial), no se exige que sea relacionada ni corte de título profesional. Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.${notaProporcionalidad}`
+        : `Acredita ${mesesNetosComputables} meses de ${etiquetaTipo} neta (superando los ${requisitoMinimoMeses} meses exigidos por una diferencia de +${diferenciaMeses} meses). Se excluyeron ${tiempoExcluidoPorTraslapes} meses por traslapes.${notaProporcionalidad}`;
+    }
   } else {
     resultadoFinal = 'NO_CUMPLE';
     justificacion = esLaboralPura
@@ -564,6 +689,10 @@ function auditCertificatesAndCalculateTotals(
     consolidado: {
       tipo_experiencia_requerida: modoExp,
       meses_computables: mesesNetosComputables,
+      meses_confirmados_directos: mesesNetosConfirmados,
+      meses_proyectados_totales: mesesNetosComputables,
+      tiene_confirmaciones_pendientes: tieneConfirmacionesPendientes,
+      cumple_sin_certificados_dudosos: cumpleSinCertificadosDudosos,
       experiencia_laboral_meses: mesesNetosLaborales,
       experiencia_relacionada_meses: mesesNetosRelacionados,
       experiencia_no_relacionada_meses: esLaboralPura ? 0 : Number(sumaMesesNoRelacionados.toFixed(2)),
@@ -573,7 +702,7 @@ function auditCertificatesAndCalculateTotals(
       resultado_final: resultadoFinal,
       justificacion: justificacion,
       faltantes: diferenciaMeses < 0 ? [`Faltan ${Math.abs(diferenciaMeses)} meses de ${etiquetaTipo}.`] : [],
-      requiere_revision_humana: requiereRevisionGlobal
+      requiere_revision_humana: requiereRevisionGlobal || (tieneConfirmacionesPendientes && !cumpleSinCertificadosDudosos)
     }
   };
 }
