@@ -2537,71 +2537,28 @@ export function generarEtapasParaCaso(
           {
             id: 'd_carr_4',
             numero: 4,
-            titulo: 'Examen & 4 Paz y Salvos',
-            subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
+            titulo: 'Paz y Salvo Electrónico',
+            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
             icono: 'checkbox-outline',
-            estado: 'pending',
-            tiempoEstimadoDias: 3,
-            responsable: 'SST / TIC / Almacén / Archivo',
-            normaGeneral: 'Resolución 2346 de 2007 MinProtección, Art. 6; Ley 594 de 2000; Procedimiento PR-074 SJD',
-            plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
-            procedimientoDetallado: 'Trámite integral de los 4 paz y salvos institucionales: entrega de equipos TIC y revocación de accesos, descargo de bienes en Almacén (FT-200), transferencia documental en Archivo y paz y salvo de Talento Humano.',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'SIGA Trámites / Talento Humano',
+            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites',
+            plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
+            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dc4_1',
-                label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Resolución 2346 de 2007, Art. 6 • Decreto 1072 de 2015',
-                textoNormativo: 'Las evaluaciones médicas ocupacionales de egreso tienen por objetivo valorar y registrar las condiciones de salud en las que el trabajador se retira de la entidad.',
-                detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS ocupacional o archivar carta de desistimiento voluntario suscrita por el servidor.',
+                label: 'Paz y Salvo Electrónico',
+                cumplido: true,
+                noAplica: true,
+                obligatorio: false,
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
+                textoNormativo: 'El circuito de paz y salvo de bienes, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Certificado de examen médico ocupacional de egreso o acta de desistimiento voluntario.',
-                ],
-              },
-              {
-                id: 'dc4_2',
-                label: 'Paz y Salvo TIC: Entrega de computador, periféricos, buzón y accesos',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Política de Seguridad de la Información SJD; ISO 27001',
-                detalleProcedimiento: 'Recibir hardware, desactivar buzón corporativo de correo, token VPN y perfiles de acceso a bases de datos.',
-                posiblesEvidencias: [
-                  'Formato de paz y salvo de la Dirección de TIC firmado.',
-                ],
-              },
-              {
-                id: 'dc4_3',
-                label: 'Paz y Salvo Almacén: Devolución de bienes muebles individuales (2311500-FT-200)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311500-FT-200',
-                norma: 'Procedimiento de Almacén e Inventarios SJD',
-                detalleProcedimiento: 'Verificar descargo total de bienes muebles e individuales asignados al funcionario de carrera en el inventario del Almacén.',
-                posiblesEvidencias: [
-                  'Formato 2311500-FT-200 con firma del responsable de Almacén certificando paz y salvo.',
-                ],
-              },
-              {
-                id: 'dc4_4',
-                label: 'Paz y Salvo Archivo: Transferencia de expedientes judiciales y administrativos',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Ley 594 de 2000 Ley General de Archivos; Tablas de Retención Documental SJD',
-                detalleProcedimiento: 'Constatar la transferencia formal de expedientes físicos y electrónicos conforme a las TRD institucionales.',
-                posiblesEvidencias: [
-                  'Paz y salvo firmado por el área de Gestión Documental y Archivo.',
-                ],
-              },
-              {
-                id: 'dc4_5',
-                label: 'Paz y Salvo Talento Humano: Devolución carné institucional y firmas consolidadas',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-074 SJD',
-                detalleProcedimiento: 'Devolución física del carné institucional y consolidación de las cuatro (4) firmas en el formato de Paz y Salvo General.',
-                posiblesEvidencias: [
-                  'Formato consolidado de Paz y Salvo General con las cuatro firmas institucionales.',
+                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites',
                 ],
               },
             ],
@@ -2896,70 +2853,28 @@ export function generarEtapasParaCaso(
           {
             id: 'd_prov_4',
             numero: 4,
-            titulo: 'Examen & 4 Paz y Salvos',
-            subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
+            titulo: 'Paz y Salvo Electrónico',
+            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
             icono: 'checkbox-outline',
-            estado: 'pending',
-            tiempoEstimadoDias: 3,
-            responsable: 'SST / TIC / Almacén / Archivo',
-            normaGeneral: 'Resolución 2346 de 2007 MinProtección; Procedimiento PR-074 SJD; Ley 594 de 2000',
-            plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
-            procedimientoDetallado: 'Trámite de los 4 paz y salvos institucionales: entrega de equipo y accesos en TIC, entrega de inventarios en Almacén (FT-200), transferencia en Archivo y paz y salvo de Talento Humano.',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'SIGA Trámites / Talento Humano',
+            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites',
+            plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
+            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dp4_1',
-                label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Resolución 2346 de 2007, Art. 6 • Decreto 1072 de 2015',
-                detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS ocupacional o archivar desistimiento voluntario.',
+                label: 'Paz y Salvo Electrónico',
+                cumplido: true,
+                noAplica: true,
+                obligatorio: false,
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
+                textoNormativo: 'El circuito de paz y salvo de bienes, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Certificado de examen médico de egreso de IPS o carta de desistimiento voluntario.',
-                ],
-              },
-              {
-                id: 'dp4_2',
-                label: 'Paz y Salvo TIC: Entrega de hardware, periféricos y desactivación de accesos',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Política de Seguridad de la Información SJD',
-                detalleProcedimiento: 'Recibir equipos de cómputo, revocar buzón corporativo y credenciales de acceso.',
-                posiblesEvidencias: [
-                  'Paz y salvo firmado por el área de TIC.',
-                ],
-              },
-              {
-                id: 'dp4_3',
-                label: 'Paz y Salvo Almacén: Devolución de bienes muebles individuales (2311500-FT-200)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311500-FT-200',
-                norma: 'Procedimiento de Almacén e Inventarios SJD',
-                detalleProcedimiento: 'Verificar descargo de bienes muebles e individuales asignados al empleado provisional.',
-                posiblesEvidencias: [
-                  'Formato 2311500-FT-200 firmado por el responsable de Almacén.',
-                ],
-              },
-              {
-                id: 'dp4_4',
-                label: 'Paz y Salvo Archivo: Transferencia de expedientes judiciales/administrativos',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Ley 594 de 2000; TRD SJD',
-                detalleProcedimiento: 'Constatar entrega formal de expedientes según las Tablas de Retención Documental.',
-                posiblesEvidencias: [
-                  'Paz y salvo suscrito por Gestión Documental y Archivo.',
-                ],
-              },
-              {
-                id: 'dp4_5',
-                label: 'Paz y Salvo Talento Humano: Devolución carné institucional y firmas consolidadas',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-074 SJD',
-                detalleProcedimiento: 'Devolución de carné institucional y verificación de las 4 firmas en el Paz y Salvo general.',
-                posiblesEvidencias: [
-                  'Formato consolidado de Paz y Salvo General con las cuatro firmas institucionales.',
+                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites',
                 ],
               },
             ],
@@ -3250,70 +3165,28 @@ export function generarEtapasParaCaso(
           {
             id: 'd_lnr_4',
             numero: 4,
-            titulo: 'Examen & 4 Paz y Salvos',
-            subtitulo: 'Egreso SST, TIC, Almacén y Archivo',
+            titulo: 'Paz y Salvo Electrónico',
+            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
             icono: 'checkbox-outline',
-            estado: 'pending',
-            tiempoEstimadoDias: 3,
-            responsable: 'SST / TIC / Almacén / Archivo',
-            normaGeneral: 'Resolución 2346 de 2007 MinProtección; Procedimiento PR-074 SJD; Ley 594 de 2000',
-            plazoLegal: 'Examen médico dentro de los 5 días hábiles siguientes al retiro',
-            procedimientoDetallado: 'Trámite de los 4 paz y salvos institucionales: entrega de computador portátil directivo, smartphone institucional y revocación de tokens de firma digital; descargo de bienes en Almacén (FT-200); transferencia de expedientes directivos en Archivo; y paz y salvo de Talento Humano.',
+            estado: 'completed',
+            tiempoEstimadoDias: 1,
+            responsable: 'SIGA Trámites / Talento Humano',
+            normaGeneral: 'Procedimiento 2311420-PR-074 SJD; Sistema SIGA Trámites',
+            plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
+            procedimientoDetallado: 'El trámite y validación del circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se realiza de forma centralizada en el aplicativo SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dl4_1',
-                label: 'Citación y práctica de Examen Médico Ocupacional de Egreso (plazo 5 días hábiles)',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Resolución 2346 de 2007, Art. 6 • Decreto 1072 de 2015',
-                detalleProcedimiento: 'Remitir orden médica para valoración de egreso en IPS ocupacional o archivar desistimiento voluntario.',
+                label: 'Paz y Salvo Electrónico',
+                cumplido: true,
+                noAplica: true,
+                obligatorio: false,
+                norma: 'Procedimiento 2311420-PR-074 SJD • Sistema SIGA Trámites',
+                textoNormativo: 'El circuito de paz y salvo de bienes directivos, equipos, archivos y talento humano se gestiona electrónicamente mediante el sistema institucional SIGA Trámites.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Certificado de examen de egreso laboral o desistimiento voluntario suscrito.',
-                ],
-              },
-              {
-                id: 'dl4_2',
-                label: 'Paz y Salvo TIC: Entrega de laptop, smartphone, token y revocación firmas digitales',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Política de Seguridad de la Información SJD; Ley 527 de 1999',
-                detalleProcedimiento: 'Recibir hardware directivo asignado, revocar buzón oficial, token VPN y cancelar certificado de firma digital institucional.',
-                posiblesEvidencias: [
-                  'Paz y salvo firmado por TIC con constancia de revocación de firma digital.',
-                ],
-              },
-              {
-                id: 'dl4_3',
-                label: 'Paz y Salvo Almacén: Descargo de bienes muebles individuales (2311500-FT-200)',
-                cumplido: false,
-                obligatorio: true,
-                codigoFormato: '2311500-FT-200',
-                norma: 'Procedimiento de Almacén e Inventarios SJD',
-                detalleProcedimiento: 'Verificar descargo total de bienes muebles del despacho a cargo del directivo.',
-                posiblesEvidencias: [
-                  'Formato 2311500-FT-200 firmado por el responsable de Almacén.',
-                ],
-              },
-              {
-                id: 'dl4_4',
-                label: 'Paz y Salvo Archivo: Transferencia de expedientes directivos y del despacho',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Ley 594 de 2000 General de Archivos; TRD SJD',
-                detalleProcedimiento: 'Constatar la transferencia formal de expedientes y resoluciones de despacho a Gestión Documental.',
-                posiblesEvidencias: [
-                  'Paz y salvo firmado por Gestión Documental y Archivo.',
-                ],
-              },
-              {
-                id: 'dl4_5',
-                label: 'Paz y Salvo Talento Humano: Devolución carné directivo y firmas consolidadas',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Procedimiento 2311420-PR-074 SJD',
-                detalleProcedimiento: 'Devolución de credenciales institucionales y consolidación de las 4 firmas en el Paz y Salvo General.',
-                posiblesEvidencias: [
-                  'Formato consolidado de Paz y Salvo General con las cuatro firmas institucionales.',
+                  'Certificado o paz y salvo electrónico expedido por el sistema SIGA Trámites',
                 ],
               },
             ],
@@ -3504,46 +3377,27 @@ export function generarEtapasParaCaso(
             id: 'd_prac_3',
             numero: 3,
             titulo: 'Paz y Salvo Formativo',
-            subtitulo: 'Devolución de carné, equipo TIC y entrega de asuntos al tutor',
+            subtitulo: 'Circuito institucional gestionado en SIGA Trámites',
             icono: 'checkbox-outline',
-            estado: 'in_progress',
+            estado: 'completed',
             tiempoEstimadoDias: 1,
-            responsable: 'Tutor / TIC / TH',
-            normaGeneral: 'Procedimiento PR-137 SJD; Política de Seguridad TIC',
-            plazoLegal: 'Último día de labores formativas',
-            procedimientoDetallado: 'Entrega formal de expedientes y asuntos asignados al tutor o dependencia receptora, devolución física del carné de practicante, equipo de cómputo y desactivación de accesos.',
+            responsable: 'Tutor / SIGA Trámites / TH',
+            normaGeneral: 'Procedimiento Institucional PR-137 SJD; Sistema SIGA Trámites',
+            plazoLegal: 'Trámite digital autónomo en SIGA Trámites',
+            procedimientoDetallado: 'El trámite y validación del paz y salvo formativo se realiza de manera centralizada en el aplicativo institucional SIGA Trámites (no aplica gestión en esta plataforma).',
             requisitos: [
               {
                 id: 'dpj3_1',
-                label: 'Devolución de equipo de cómputo, accesorios y cierre de buzón institucional',
+                label: 'Paz y Salvo Electrónico',
                 cumplido: true,
-                obligatorio: true,
-                norma: 'Política de Seguridad de la Información SJD',
-                detalleProcedimiento: 'Hacer entrega del equipo de cómputo portátil y accesorios en el área de TIC y suspender buzón de correo electrónico.',
+                noAplica: true,
+                obligatorio: false,
+                norma: 'Procedimiento Institucional PR-137 / PR-074 SJD • Sistema SIGA Trámites',
+                textoNormativo: 'El paz y salvo de la judicatura o práctica formativa se tramita electrónicamente en el sistema institucional SIGA Trámites.',
+                detalleProcedimiento: 'No aplica gestión en esta plataforma. Se realiza en otro sistema (SIGA Trámites).',
+                observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
                 posiblesEvidencias: [
-                  'Constancia de recepción de equipo suscrita por TIC.',
-                ],
-              },
-              {
-                id: 'dpj3_2',
-                label: 'Entrega y empalme de expedientes y asuntos jurídicos asignados al tutor',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Procedimiento Institucional 2311420-PR-137 SJD',
-                detalleProcedimiento: 'Suscribir acta de entrega de temas jurídicos y proyectos de respuesta con el tutor institucional.',
-                posiblesEvidencias: [
-                  'Acta de entrega y empalme de asuntos suscrita entre el judicante y el tutor.',
-                ],
-              },
-              {
-                id: 'dpj3_3',
-                label: 'Devolución física del carné de practicante y firma de Paz y Salvo Formativo',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Procedimiento Institucional 2311420-PR-137 SJD',
-                detalleProcedimiento: 'Entregar el carné físico institucional en Talento Humano y consolidar firmas en el Paz y Salvo Formativo.',
-                posiblesEvidencias: [
-                  'Formato institucional de Paz y Salvo Formativo con firmas del tutor, TIC y Talento Humano.',
+                  'Certificado o paz y salvo formativo electrónico expedido por el sistema SIGA Trámites',
                 ],
               },
             ],
@@ -3679,19 +3533,32 @@ export function generarEtapasParaCaso(
   return [];
 }
 export function limpiarEtapasParaNuevoTramite(etapas: EtapaFlujo[]): EtapaFlujo[] {
-  return etapas.map((etapa, idx) => ({
-    ...etapa,
-    estado: idx === 0 ? 'in_progress' : 'pending',
-    observacionesFase: undefined,
-    requisitos: etapa.requisitos.map((req) => ({
-      ...req,
-      cumplido: false,
-      fecha_cumplimiento: undefined,
-      observaciones: undefined,
-      radicadoSoporte: undefined,
-      usuarioRegistro: undefined,
-    })),
-  }));
+  return etapas.map((etapa, idx) => {
+    const todosNoAplica = etapa.requisitos.length > 0 && etapa.requisitos.every((r) => r.noAplica);
+    return {
+      ...etapa,
+      estado: todosNoAplica ? 'completed' : idx === 0 ? 'in_progress' : 'pending',
+      observacionesFase: undefined,
+      requisitos: etapa.requisitos.map((req) => {
+        if (req.noAplica) {
+          return {
+            ...req,
+            cumplido: true,
+            noAplica: true,
+            observaciones: req.observaciones || 'No aplica se realiza en otro sistema (SIGA Tramites)',
+          };
+        }
+        return {
+          ...req,
+          cumplido: false,
+          fecha_cumplimiento: undefined,
+          observaciones: undefined,
+          radicadoSoporte: undefined,
+          usuarioRegistro: undefined,
+        };
+      }),
+    };
+  });
 }
 
 export function sincronizarEtapasCaso(
@@ -3764,6 +3631,19 @@ export function sincronizarEtapasCaso(
         };
       }
 
+      // Reconciliación especial para Paz y Salvo Electrónico en desvinculaciones (SIGA Trámites)
+      if (reqM.label === 'Paz y Salvo Electrónico' || reqM.id.includes('paz_salvo_electronico')) {
+        return {
+          ...reqM,
+          cumplido: true,
+          noAplica: true,
+          obligatorio: false,
+          observaciones: 'No aplica se realiza en otro sistema (SIGA Tramites)',
+          fecha_cumplimiento: reqG?.fecha_cumplimiento || new Date().toISOString().split('T')[0],
+          usuarioRegistro: reqG?.usuarioRegistro || 'SIGA Trámites / TH',
+        };
+      }
+
       // Reconciliación para Requisito 4 de la Fase 6 (Renuncia al cargo anterior en Ascenso)
       if (reqM.id === 'vc7_4') {
         const noAplicaFinal = !esAsc;
@@ -3811,7 +3691,9 @@ export function sincronizarEtapasCaso(
     const algunCumplido = requisitosSincronizados.some((r) => r.cumplido);
 
     let estadoFinal: EstadoEtapa = etapaG.estado || etapaM.estado;
-    if (todosObligatoriosCumplidos && requisitosSincronizados.length > 0) {
+    if (requisitosSincronizados.length > 0 && requisitosSincronizados.every((r) => r.noAplica)) {
+      estadoFinal = 'completed';
+    } else if (todosObligatoriosCumplidos && requisitosSincronizados.length > 0) {
       estadoFinal = 'completed';
     } else if (algunCumplido) {
       estadoFinal = 'in_progress';
@@ -8136,7 +8018,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   color: tabActiva === 'ingresos' ? THEME.emerald800 : THEME.slate600,
                 }}
               >
-                Ingresos / Vinculaciones
+                Vinculaciones / Ascensos
               </Text>
               <View
                 style={{
@@ -9552,19 +9434,24 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         ) : null;
                       })()}
 
-                      {/* Cabecera Principal del Caso: Organizada, Limpia y No Sobrecargada */}
+                      {/* Cabecera Principal del Caso: Header fondo oscuro, letra clara, botones uniformes con paleta muted */}
                       <View
                         style={{
+                          backgroundColor: '#1E293B',
+                          borderRadius: 12,
+                          padding: 16,
                           flexDirection: 'column',
                           gap: 12,
-                          paddingTop: 6,
-                          paddingBottom: 16,
-                          paddingHorizontal: 4,
-                          borderBottomWidth: 1.5,
-                          borderBottomColor: THEME.slate200,
+                          borderWidth: 1,
+                          borderColor: '#334155',
+                          shadowColor: '#0F172A',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.15,
+                          shadowRadius: 4,
+                          elevation: 3,
                         }}
                       >
-                        {/* Fila 1: Nombre del Servidor + Badge Editable de Tipo de Vinculación + Botones de Acción Tono Medio */}
+                        {/* Fila 1: Nombre del Servidor + Cédula + Badge Editable de Tipo de Vinculación + Botones de Acción Uniformes */}
                         <View
                           style={{
                             flexDirection: 'row',
@@ -9574,11 +9461,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             gap: 10,
                           }}
                         >
-                          {/* Izquierda: Nombre y Badge de Régimen / Modalidad */}
+                          {/* Izquierda: Nombre, Cédula y Badge de Régimen / Modalidad */}
                           <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                             <Text
                               style={{
-                                color: THEME.slate900,
+                                color: '#FFFFFF',
                                 fontSize: 19,
                                 fontWeight: '800',
                                 letterSpacing: -0.3,
@@ -9586,6 +9473,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             >
                               {casoActivo.servidor_nombre}
                             </Text>
+
+                            {/* Cédula junto al nombre */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4.5,
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.16)',
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Ionicons name="card-outline" size={13} color="#94A3B8" />
+                              <Text style={{ color: '#F1F5F9', fontSize: 12, fontWeight: '600' }}>
+                                Cédula: {casoActivo.servidor_cedula}
+                              </Text>
+                            </View>
 
                             {/* Badge Interactivo de Vinculación y Modalidad con Botón de Edición */}
                             {(() => {
@@ -9600,28 +9507,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     gap: 6,
                                     paddingHorizontal: 10,
                                     paddingVertical: 5,
-                                    borderRadius: 8,
-                                    backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : infoM.colorBg,
-                                    borderWidth: 1.2,
-                                    borderColor: hovered ? THEME.marca600 : infoM.colorBorde,
+                                    borderRadius: 6,
+                                    backgroundColor: pressed ? '#47539A' : hovered ? '#47539A' : '#5C6AC4',
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(255, 255, 255, 0.22)',
                                     cursor: 'pointer',
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 1 },
-                                    shadowOpacity: 0.06,
-                                    shadowRadius: 2,
-                                    elevation: 1,
                                   })}
                                 >
                                   <Ionicons
                                     name={(infoM.icono as any) || (esVinculacion ? 'person-add-outline' : 'person-remove-outline')}
-                                    size={13.5}
-                                    color={infoM.colorTexto}
+                                    size={13}
+                                    color="#FFFFFF"
                                   />
                                   <Text
                                     style={{
-                                      color: infoM.colorTexto,
+                                      color: '#FFFFFF',
                                       fontSize: 11,
-                                      fontWeight: '800',
+                                      fontWeight: '700',
                                       letterSpacing: 0.3,
                                     }}
                                   >
@@ -9632,16 +9534,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       flexDirection: 'row',
                                       alignItems: 'center',
                                       gap: 2,
-                                      backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                                      backgroundColor: 'rgba(255, 255, 255, 0.22)',
                                       paddingHorizontal: 5,
                                       paddingVertical: 1.5,
                                       borderRadius: 4,
-                                      borderWidth: 0.5,
-                                      borderColor: infoM.colorBorde,
                                     }}
                                   >
-                                    <Ionicons name="pencil" size={10} color={infoM.colorTexto} />
-                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: infoM.colorTexto }}>
+                                    <Ionicons name="pencil" size={10} color="#FFFFFF" />
+                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#FFFFFF' }}>
                                       Cambiar
                                     </Text>
                                   </View>
@@ -9650,7 +9550,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             })()}
                           </View>
 
-                          {/* Derecha: Botones de Acción Más Pequeños y Colores Tono Medio */}
+                          {/* Derecha: Botones de Acción Uniformes con Paleta Muted */}
                           <View
                             style={{
                               flexDirection: 'row',
@@ -9659,40 +9559,37 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               gap: 8,
                             }}
                           >
-                            {/* 1. Consultar SECOP II: Azul Medio Profesional */}
-                            <Pressable
-                              onPress={() =>
-                                abrirConsultaSecopParaCandidato(
-                                  casoActivo.servidor_nombre,
-                                  casoActivo.servidor_cedula,
-                                  casoActivo.id
-                                )
-                              }
-                              style={({ pressed, hovered }: any) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: pressed ? '#1D4ED8' : hovered ? '#1E40AF' : '#2563EB',
-                                paddingHorizontal: 12,
-                                paddingVertical: 6.5,
-                                borderRadius: 7,
-                                borderWidth: 1,
-                                borderColor: 'rgba(191, 219, 254, 0.45)',
-                                cursor: 'pointer',
-                                shadowColor: '#1E3A8A',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.12,
-                                shadowRadius: 2,
-                                elevation: 1,
-                              })}
-                            >
-                              <Ionicons name="search" size={13.5} color="#DBEAFE" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
-                                Consultar SECOP II
-                              </Text>
-                            </Pressable>
+                            {/* 1. Consultar SECOP II: blue-muted (#526ed3) */}
+                            {casoActivo.tipo_proceso === 'VINCULACION' && (
+                              <Pressable
+                                onPress={() =>
+                                  abrirConsultaSecopParaCandidato(
+                                    casoActivo.servidor_nombre,
+                                    casoActivo.servidor_cedula,
+                                    casoActivo.id
+                                  )
+                                }
+                                style={({ pressed, hovered }: any) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  backgroundColor: pressed ? '#3B51A3' : hovered ? '#3B51A3' : '#526ED3',
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 6.5,
+                                  borderRadius: 6,
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                                  cursor: 'pointer',
+                                })}
+                              >
+                                <Ionicons name="search" size={13.5} color="#FFFFFF" />
+                                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
+                                  Consultar SECOP II
+                                </Text>
+                              </Pressable>
+                            )}
 
-                            {/* 2. Validación FT-318 IA: Verde Esmeralda Tono Medio */}
+                            {/* 2. Validación FT-318 IA: success-muted (#4d8e7b) */}
                             {casoActivo.tipo_proceso === 'VINCULACION' && (() => {
                               const valCoincidente = buscarValidacionCoincidenteCaso(casoActivo);
                               return (
@@ -9702,64 +9599,50 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: 6,
-                                    backgroundColor: pressed
-                                      ? '#047857'
-                                      : hovered
-                                      ? '#065F46'
-                                      : (valCoincidente ? '#059669' : '#0D9488'),
+                                    backgroundColor: pressed ? '#3A6B5C' : hovered ? '#3A6B5C' : '#4D8E7B',
                                     paddingHorizontal: 12,
                                     paddingVertical: 6.5,
-                                    borderRadius: 7,
+                                    borderRadius: 6,
                                     borderWidth: 1,
-                                    borderColor: 'rgba(167, 243, 208, 0.5)',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
                                     cursor: 'pointer',
-                                    shadowColor: '#064E3B',
-                                    shadowOffset: { width: 0, height: 1 },
-                                    shadowOpacity: 0.12,
-                                    shadowRadius: 2,
-                                    elevation: 1,
                                   })}
                                 >
                                   <Ionicons
                                     name={valCoincidente ? 'open-outline' : 'sparkles'}
                                     size={13.5}
-                                    color="#A7F3D0"
+                                    color="#FFFFFF"
                                   />
-                                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
                                     {valCoincidente ? `Validación FT-318 IA (${valCoincidente.resultado_final || 'Abrir'})` : 'Validación FT-318 IA'}
                                   </Text>
                                 </Pressable>
                               );
                             })()}
 
-                            {/* 3. Formatos Oficiales: Gris Pizarra Tono Medio */}
+                            {/* 3. Formatos Oficiales: slate-muted (#64748b) */}
                             <Pressable
                               onPress={() => setModalFormatosVisible(true)}
                               style={({ pressed, hovered }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 6,
-                                backgroundColor: pressed ? '#334155' : hovered ? '#475569' : '#64748B',
+                                backgroundColor: pressed ? '#4B5563' : hovered ? '#4B5563' : '#64748B',
                                 paddingHorizontal: 12,
                                 paddingVertical: 6.5,
-                                borderRadius: 7,
+                                borderRadius: 6,
                                 borderWidth: 1,
-                                borderColor: 'rgba(226, 232, 240, 0.35)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
                                 cursor: 'pointer',
-                                shadowColor: '#0F172A',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 2,
-                                elevation: 1,
                               })}
                             >
-                              <Ionicons name="folder-open-outline" size={13.5} color="#E2E8F0" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                              <Ionicons name="folder-open-outline" size={13.5} color="#FFFFFF" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
                                 Formatos Oficiales
                               </Text>
                             </Pressable>
 
-                            {/* 4. Evaluación Retiro (Forms): Ciruela / Violeta Medio para Desvinculación */}
+                            {/* 4. Evaluación Retiro (Forms): purple-muted (#7c59d3) */}
                             {casoActivo.tipo_proceso === 'DESVINCULACION' && (
                               <Pressable
                                 onPress={handleAbrirEvaluacionRetiroGoogleForms}
@@ -9767,17 +9650,17 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   gap: 6,
-                                  backgroundColor: pressed ? '#7E22CE' : hovered ? '#9333EA' : '#A21CAF',
+                                  backgroundColor: pressed ? '#5F44A3' : hovered ? '#5F44A3' : '#7C59D3',
                                   paddingHorizontal: 12,
                                   paddingVertical: 6.5,
-                                  borderRadius: 7,
+                                  borderRadius: 6,
                                   borderWidth: 1,
-                                  borderColor: 'rgba(245, 208, 254, 0.45)',
+                                  borderColor: 'rgba(255, 255, 255, 0.2)',
                                   cursor: 'pointer',
                                 })}
                               >
-                                <Ionicons name="clipboard-outline" size={13.5} color="#F5D0FE" />
-                                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                                <Ionicons name="clipboard-outline" size={13.5} color="#FFFFFF" />
+                                <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
                                   Evaluación Retiro (Forms)
                                 </Text>
                               </Pressable>
@@ -9785,7 +9668,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         </View>
 
-                        {/* Fila 2: Franja Horizontal de Información del Servidor y Cargo */}
+                        {/* Fila 2: Franja de Información del Cargo, Dependencia y Manual de Funciones */}
                         <View
                           style={{
                             flexDirection: 'row',
@@ -9794,26 +9677,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             gap: 8,
                           }}
                         >
-                          {/* Cédula */}
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 5,
-                              backgroundColor: THEME.slate50,
-                              borderWidth: 1,
-                              borderColor: THEME.slate200,
-                              paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 7,
-                            }}
-                          >
-                            <Ionicons name="card-outline" size={13} color={THEME.slate500} />
-                            <Text style={{ color: THEME.slate700, fontSize: 11.5, fontWeight: '600' }}>
-                              Cédula: {casoActivo.servidor_cedula}
-                            </Text>
-                          </View>
-
                           {/* Cargo */}
                           <Pressable
                             onPress={() => abrirFichaCargo(casoActivo)}
@@ -9821,20 +9684,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 5,
-                              backgroundColor: pressed ? '#E2E8F0' : hovered ? '#F1F5F9' : THEME.slate50,
+                              backgroundColor: pressed ? 'rgba(255, 255, 255, 0.16)' : hovered ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.08)',
                               borderWidth: 1,
-                              borderColor: hovered ? THEME.marca600 : THEME.slate200,
+                              borderColor: 'rgba(255, 255, 255, 0.16)',
                               paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 7,
+                              paddingVertical: 5.5,
+                              borderRadius: 6,
                               cursor: 'pointer',
                             })}
                           >
-                            <Ionicons name="briefcase-outline" size={13} color={THEME.marca700} />
-                            <Text style={{ color: THEME.slate900, fontSize: 11.5, fontWeight: '700' }}>
+                            <Ionicons name="briefcase-outline" size={13} color="#93C5FD" />
+                            <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '600' }}>
                               {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
                             </Text>
-                            <Ionicons name="open-outline" size={12} color={THEME.marca700} />
+                            <Ionicons name="open-outline" size={12} color="#93C5FD" />
                           </Pressable>
 
                           {/* Dependencia */}
@@ -9843,28 +9706,35 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 5,
-                              backgroundColor: THEME.slate50,
+                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
                               borderWidth: 1,
-                              borderColor: THEME.slate200,
+                              borderColor: 'rgba(255, 255, 255, 0.16)',
                               paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 7,
+                              paddingVertical: 5.5,
+                              borderRadius: 6,
                             }}
                           >
-                            <Ionicons name="business-outline" size={13} color={THEME.slate500} />
-                            <Text style={{ color: THEME.slate600, fontSize: 11.5, fontWeight: '500' }}>
+                            <Ionicons name="business-outline" size={13} color="#94A3B8" />
+                            <Text style={{ color: '#CBD5E1', fontSize: 11.5, fontWeight: '500' }}>
                               {casoActivo.dependencia}
                             </Text>
                           </View>
 
-                          {/* Botón Manual de Funciones */}
+                          {/* Botón Manual de Funciones: orange-muted (#d37d40) */}
                           <BotonManualFunciones
                             id_sideap={(casoActivo as any).id_sideap}
                             cargo={casoActivo.cargo}
                             codigo={casoActivo.codigo}
                             grado={casoActivo.grado}
-                            variante="chip"
+                            variante="header"
                             etiqueta="Manual de Funciones"
+                            estiloContenedor={{
+                              backgroundColor: '#D37D40',
+                              borderColor: 'rgba(255, 255, 255, 0.22)',
+                              paddingHorizontal: 10,
+                              paddingVertical: 5.5,
+                              borderRadius: 6,
+                            }}
                           />
                         </View>
 
@@ -9876,68 +9746,68 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               alignItems: 'center',
                               flexWrap: 'wrap',
                               gap: 8,
-                              backgroundColor: '#F8FAFC',
+                              backgroundColor: 'rgba(255, 255, 255, 0.05)',
                               borderWidth: 1,
-                              borderColor: '#E2E8F0',
+                              borderColor: 'rgba(255, 255, 255, 0.12)',
                               paddingHorizontal: 10,
                               paddingVertical: 6,
                               borderRadius: 8,
                             }}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
-                              <Ionicons name="ribbon-outline" size={13.5} color="#2563EB" />
-                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase' }}>
+                              <Ionicons name="ribbon-outline" size={13.5} color="#93C5FD" />
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#93C5FD', textTransform: 'uppercase' }}>
                                 Concurso CNSC:
                               </Text>
                             </View>
 
-                            {/* Chip OPEC SIMO */}
+                            {/* Chip OPEC SIMO: teal-muted (#4f9d94) */}
                             <Pressable
                               onPress={abrirModalEditarOpecCaso}
                               style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 4,
-                                backgroundColor: pressed ? '#DCFCE7' : hovered ? '#F0FDF4' : '#FFFFFF',
+                                backgroundColor: pressed ? '#3D7A73' : hovered ? '#3D7A73' : '#4F9D94',
                                 borderWidth: 1,
-                                borderColor: hovered ? '#16A34A' : '#86EFAC',
-                                paddingHorizontal: 8,
-                                paddingVertical: 3.5,
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                paddingHorizontal: 9,
+                                paddingVertical: 4.5,
                                 borderRadius: 6,
                                 cursor: 'pointer',
                               })}
                             >
-                              <Ionicons name="barcode-outline" size={13} color="#15803D" />
-                              <Text style={{ color: '#166534', fontSize: 11, fontWeight: '700' }}>
+                              <Ionicons name="barcode-outline" size={13} color="#FFFFFF" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
                                 OPEC: {opecValorActual}
                               </Text>
-                              <Ionicons name="pencil-outline" size={11} color="#15803D" style={{ opacity: 0.7 }} />
+                              <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
                             </Pressable>
 
-                            {/* Chip Convocatoria CNSC */}
+                            {/* Chip Convocatoria CNSC: indigo-muted (#5c6ac4) */}
                             <Pressable
                               onPress={abrirModalEditarOpecCaso}
                               style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 gap: 4,
-                                backgroundColor: pressed ? '#EEF2FF' : hovered ? '#F5F3FF' : '#FFFFFF',
+                                backgroundColor: pressed ? '#47539A' : hovered ? '#47539A' : '#5C6AC4',
                                 borderWidth: 1,
-                                borderColor: hovered ? '#4F46E5' : '#C7D2FE',
-                                paddingHorizontal: 8,
-                                paddingVertical: 3.5,
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                paddingHorizontal: 9,
+                                paddingVertical: 4.5,
                                 borderRadius: 6,
                                 cursor: 'pointer',
                               })}
                             >
-                              <Ionicons name="trophy-outline" size={12.5} color="#4338CA" />
-                              <Text style={{ color: '#3730A3', fontSize: 11, fontWeight: '700' }}>
+                              <Ionicons name="trophy-outline" size={12.5} color="#FFFFFF" />
+                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
                                 {convocatoriaValorActual}
                               </Text>
-                              <Ionicons name="pencil-outline" size={11} color="#4338CA" style={{ opacity: 0.7 }} />
+                              <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
                             </Pressable>
 
-                            {/* Subtipo: Concurso Abierto vs Concurso Ascenso */}
+                            {/* Subtipo: Concurso Abierto vs Concurso Ascenso: blue-muted (#526ed3) */}
                             {(() => {
                               const esAscenso = casoActivo.subtipo_concurso === 'ASCENSO' || casoActivo.modalidad === 'ASCENSO';
                               return (
@@ -9947,27 +9817,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: 4,
-                                    backgroundColor: pressed ? '#E0E7FF' : hovered ? '#EEF2FF' : '#FFFFFF',
+                                    backgroundColor: pressed ? '#3B51A3' : hovered ? '#3B51A3' : '#526ED3',
                                     borderWidth: 1,
-                                    borderColor: hovered ? '#2563EB' : '#93C5FD',
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 3.5,
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    paddingHorizontal: 9,
+                                    paddingVertical: 4.5,
                                     borderRadius: 6,
                                     cursor: 'pointer',
                                   })}
                                 >
-                                  <Ionicons name={esAscenso ? 'trending-up' : 'person'} size={12.5} color={esAscenso ? '#4338CA' : '#1D4ED8'} />
-                                  <Text style={{ color: esAscenso ? '#3730A3' : '#1E40AF', fontSize: 11, fontWeight: '700' }}>
+                                  <Ionicons name={esAscenso ? 'trending-up' : 'person'} size={12.5} color="#FFFFFF" />
+                                  <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
                                     {esAscenso ? 'Modalidad: Ascenso' : 'Modalidad: Abierto'}
                                   </Text>
-                                  <Ionicons name="swap-horizontal" size={11} color={esAscenso ? '#4338CA' : '#1D4ED8'} style={{ opacity: 0.7 }} />
+                                  <Ionicons name="swap-horizontal" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
                                 </Pressable>
                               );
                             })()}
                           </View>
                         )}
                       </View>
-
 
                       {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
                       {(() => {
@@ -10100,16 +9969,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         );
                       })()}
 
-                      {/* BOX CONTENEDOR DE FASES: Visualización clara, organizada y responsiva */}
+                      {/* BOX CONTENEDOR DE FASES: Fondo oscuro, letra clara, colores muted */}
                       {(() => {
                         const fasesTotales = casoActivo.etapas.length;
                         const fasesCompletadas = casoActivo.etapas.filter((e) => e.estado === 'completed').length;
                         const porcentajeFases = Math.round((fasesCompletadas / (fasesTotales || 1)) * 100);
 
-                        // Breakpoints para diseño:
-                        // - Pantalla muy pequeña (< 520px): Scroll horizontal
-                        // - Pantalla mediana/pequeña (520px a 1180px): 2 filas equilibradas para ver todas las fases sin scroll
-                        // - Pantalla grande (>= 1180px): 1 fila completa continua
                         const esMuyPequena = width < 520;
                         const esMediana = width >= 520 && width < 1180;
 
@@ -10127,10 +9992,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           const reqsTotales = etapa.requisitos?.length || 0;
                           const reqsCumplidos = etapa.requisitos?.filter((r: any) => r.cumplido || r.noAplica)?.length || 0;
 
-                          const colorBg = esCompletada ? '#ecfdf5' : esEnProgreso ? '#fffbeb' : '#f8fafc';
-                          const colorBorde = esCompletada ? '#a7f3d0' : esEnProgreso ? '#f59e0b' : THEME.slate200;
-                          const colorIcono = esCompletada ? '#059669' : esEnProgreso ? '#d97706' : THEME.slate400;
-                          const colorTexto = esCompletada ? '#065f46' : esEnProgreso ? '#92400e' : THEME.slate700;
+                          // Paleta muted en entorno oscuro:
+                          // - Completada: success-muted (#4d8e7b)
+                          // - En Progreso: orange-muted (#d37d40)
+                          // - Pendiente: dark/slate (#334155 / rgba)
+                          const colorBg = esCompletada ? '#23463C' : esEnProgreso ? '#4A2B16' : 'rgba(255, 255, 255, 0.04)';
+                          const colorBgHover = esCompletada ? '#2D5448' : esEnProgreso ? '#61391D' : 'rgba(255, 255, 255, 0.08)';
+                          const colorBorde = esCompletada ? '#4D8E7B' : esEnProgreso ? '#D37D40' : '#334155';
+                          const colorIcono = esCompletada ? '#4D8E7B' : esEnProgreso ? '#FDBA74' : '#64748B';
+                          const colorTexto = esCompletada ? '#FFFFFF' : esEnProgreso ? '#FFFFFF' : '#CBD5E1';
 
                           return (
                             <Pressable
@@ -10139,7 +10009,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               style={({ hovered, pressed }: any) => ({
                                 flex: flexUno ? 1 : undefined,
                                 minWidth: esMuyPequena ? 165 : undefined,
-                                backgroundColor: pressed ? '#e2e8f0' : hovered ? '#f1f5f9' : colorBg,
+                                backgroundColor: pressed ? '#1E293B' : hovered ? colorBgHover : colorBg,
                                 borderRadius: 8,
                                 paddingHorizontal: 10,
                                 paddingVertical: 8,
@@ -10149,7 +10019,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 gap: 4,
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: esEnProgreso ? 0.08 : 0.03,
+                                shadowOpacity: esEnProgreso ? 0.2 : 0.08,
                                 shadowRadius: 2,
                                 elevation: esEnProgreso ? 2 : 1,
                                 cursor: 'pointer',
@@ -10172,7 +10042,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Text
                                     style={{
                                       fontSize: 11,
-                                      fontWeight: '800',
+                                      fontWeight: '700',
                                       color: colorTexto,
                                       letterSpacing: 0.2,
                                     }}
@@ -10184,19 +10054,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 {/* Badge de Requisitos */}
                                 <View
                                   style={{
-                                    backgroundColor: esCompletada ? '#dcfce7' : esEnProgreso ? '#fef3c7' : '#f1f5f9',
-                                    paddingHorizontal: 5,
+                                    backgroundColor: esCompletada ? '#4D8E7B' : esEnProgreso ? '#D37D40' : 'rgba(255, 255, 255, 0.08)',
+                                    paddingHorizontal: 5.5,
                                     paddingVertical: 1,
                                     borderRadius: 4,
                                     borderWidth: 1,
-                                    borderColor: esCompletada ? '#bbf7d0' : esEnProgreso ? '#fde68a' : '#e2e8f0',
+                                    borderColor: esCompletada ? '#62AB95' : esEnProgreso ? '#F09658' : 'rgba(255, 255, 255, 0.15)',
                                   }}
                                 >
                                   <Text
                                     style={{
                                       fontSize: 9.5,
                                       fontWeight: '700',
-                                      color: esCompletada ? '#15803d' : esEnProgreso ? '#b45309' : '#64748b',
+                                      color: '#FFFFFF',
                                     }}
                                   >
                                     {esCompletada ? '100%' : (reqsCumplidos + '/' + reqsTotales)}
@@ -10209,8 +10079,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 numberOfLines={1}
                                 style={{
                                   fontSize: 11,
-                                  fontWeight: esEnProgreso || esCompletada ? '700' : '500',
-                                  color: colorTexto,
+                                  fontWeight: esEnProgreso || esCompletada ? '600' : '400',
+                                  color: esCompletada ? '#E2E8F0' : esEnProgreso ? '#FFFFFF' : '#94A3B8',
                                 }}
                               >
                                 {etapa.titulo}
@@ -10222,20 +10092,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         return (
                           <View
                             style={{
-                              backgroundColor: THEME.white,
+                              backgroundColor: '#1E293B',
                               borderRadius: 12,
                               borderWidth: 1,
-                              borderColor: THEME.slate200,
-                              padding: 12,
-                              gap: 10,
+                              borderColor: '#334155',
+                              padding: 14,
+                              gap: 12,
                               shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1.5 },
-                              shadowOpacity: 0.05,
-                              shadowRadius: 3,
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.15,
+                              shadowRadius: 4,
                               elevation: 2,
                             }}
                           >
-                            {/* Cabecera del Box de Fases */}
+                            {/* Cabecera del Box de Fases: Fondo oscuro y letra clara */}
                             <View
                               style={{
                                 flexDirection: 'row',
@@ -10243,33 +10113,33 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 justifyContent: 'space-between',
                                 flexWrap: 'wrap',
                                 gap: 6,
-                                paddingBottom: 6,
+                                paddingBottom: 8,
                                 borderBottomWidth: 1,
-                                borderBottomColor: THEME.slate100,
+                                borderBottomColor: '#334155',
                               }}
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                <Ionicons name="git-network-outline" size={15} color={THEME.marca700} />
-                                <Text style={{ fontSize: 12, fontWeight: '800', color: THEME.slate800 }}>
+                                <Ionicons name="git-network-outline" size={16} color="#818CF8" />
+                                <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>
                                   Ruta y Secuencia de Fases
                                 </Text>
                                 <View
                                   style={{
-                                    backgroundColor: THEME.marca50,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 1.5,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2,
                                     borderRadius: 10,
                                     borderWidth: 1,
-                                    borderColor: THEME.marca100,
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
                                   }}
                                 >
-                                  <Text style={{ fontSize: 10, fontWeight: '700', color: THEME.marca800 }}>
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#67E8F9' }}>
                                     {fasesCompletadas}/{fasesTotales} Fases Concluidas ({porcentajeFases}%)
                                   </Text>
                                 </View>
                               </View>
 
-                              <Text style={{ fontSize: 10.5, color: THEME.slate400, fontWeight: '500' }}>
+                              <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '500' }}>
                                 Haga clic en una fase para abrirla
                               </Text>
                             </View>
@@ -13373,12 +13243,50 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                   gap: 14,
                 }}
               >
-                <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '700' }}>
-                  Circuito Integral de Paz y Salvo Electrónico (Procedimiento PR-074)
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <Text style={{ color: THEME.slate900, fontSize: 16, fontWeight: '700' }}>
+                    Circuito Integral de Paz y Salvo Electrónico (SIGA Trámites)
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor: '#EEF2FF',
+                      borderColor: '#C7D2FE',
+                      borderWidth: 1,
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#4338CA' }}>
+                      Se realiza en SIGA Trámites (No aplica gestión manual)
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Banner Oficial SIGA Trámites */}
+                <View
+                  style={{
+                    backgroundColor: '#F0FDF4',
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#BBF7D0',
+                    padding: 14,
+                    gap: 6,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="checkmark-circle" size={18} color="#15803D" />
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#166534' }}>
+                      Trámite Centralizado en el Sistema Oficial SIGA Trámites
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: '#14532D', lineHeight: 18 }}>
+                    El circuito de paz y salvo institucional (TIC, Almacén, Archivo y Talento Humano) se tramita directamente en el sistema <Text style={{ fontWeight: '700' }}>SIGA Trámites</Text>. En este módulo queda marcado automáticamente como <Text style={{ fontWeight: '700' }}>No Aplica (se realiza en otro sistema - SIGA Trámites)</Text> para evitar reprocesos y garantizar la interoperabilidad distrital.
+                  </Text>
+                </View>
+
                 <Text style={{ color: THEME.slate600, fontSize: 12.5, lineHeight: 18 }}>
-                  La desvinculación formal requiere la validación simultánea de las 4 áreas
-                  responsables antes de la liquidación definitiva de prestaciones sociales:
+                  Componentes gestionados de forma autónoma en el sistema SIGA Trámites:
                 </Text>
 
                 <View style={{ gap: 10 }}>

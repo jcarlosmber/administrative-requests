@@ -1720,11 +1720,114 @@ Secretaría Jurídica Distrital
         registros_actualizados: resPerno.actualizados + (resPlanta?.actualizados || 0),
         registros_retirados_o_sin_plaza: resPerno.retiradosOSinPlaza,
         advertencias: resPerno.advertencias.slice(0, 10),
-        total_advertencias: resPerno.advertencias.length
+        total_advertencias: resPerno.advertencias.length,
+        novedades_vinculacion: resPerno.novedades_vinculacion || [],
+        novedades_desvinculacion: resPerno.novedades_desvinculacion || [],
+        resumen_novedades: resPerno.resumen_novedades || {},
       });
     } catch (error) {
       console.error('Error procesando archivo de planta perno:', error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // 5.1 Endpoint para consultar Novedades de Personal (Vinculaciones / Desvinculaciones) con filtro de meses
+  router.get('/novedades-perno', async (req, res) => {
+    try {
+      await ensureTables();
+      const mesesFiltro = parseInt(req.query.meses || '6', 10) || 6;
+      const limiteDias = mesesFiltro * 30.5;
+      const hoyMs = Date.now();
+      const msPorDia = 86400000;
+
+      const qResult = await pool.query(`
+        SELECT 
+          cedula,
+          nombre_completo,
+          primer_apellido,
+          segundo_apellido,
+          nombres,
+          cargo,
+          cargo_cod,
+          grado,
+          dependencia,
+          dependencia_cod,
+          posicion_planta,
+          tipo_funcionario,
+          tipo_nombramiento,
+          acto_nombramiento,
+          numero_acto_nombramiento,
+          fecha_acto_nombramiento,
+          fecha_efectiva_nombramiento,
+          fecha_ingreso_entidad,
+          fecha_ingreso_distrito,
+          estado_funcionario,
+          fecha_retiro,
+          total_devengado,
+          asignacion_basica,
+          fondo_salud,
+          fondo_pension,
+          fondo_cesantias
+        FROM public.personal_perno_sjd
+        ORDER BY COALESCE(fecha_retiro, fecha_ingreso_entidad, fecha_efectiva_nombramiento, fecha_acto_nombramiento) DESC NULLS LAST
+      `);
+
+      const registros = qResult.rows || [];
+      const vinculaciones = [];
+      const desvinculaciones = [];
+
+      for (const p of registros) {
+        const esRetirado = p.estado_funcionario === 'R' || !!p.fecha_retiro;
+        const fechaIngresoRef = p.fecha_ingreso_entidad || p.fecha_efectiva_nombramiento || p.fecha_acto_nombramiento || p.fecha_ingreso_distrito;
+        const fechaRetiroRef = p.fecha_retiro || fechaIngresoRef;
+        const fechaRef = esRetirado ? fechaRetiroRef : fechaIngresoRef;
+
+        let dias = null;
+        let es6Meses = false;
+        let es12Meses = false;
+
+        if (fechaRef) {
+          const d = new Date(fechaRef);
+          if (!isNaN(d.getTime())) {
+            dias = Math.round((hoyMs - d.getTime()) / msPorDia);
+            es6Meses = dias >= -15 && dias <= 182;
+            es12Meses = dias >= -15 && dias <= 365;
+          }
+        }
+
+        const item = {
+          ...p,
+          tipo_proceso: esRetirado ? 'DESVINCULACION' : 'VINCULACION',
+          fecha_evento: fechaRef ? (fechaRef instanceof Date ? fechaRef.toISOString().split('T')[0] : String(fechaRef).split('T')[0]) : null,
+          dias_evento: dias,
+          es_ultimos_6_meses: es6Meses,
+          es_ultimos_12_meses: es12Meses,
+        };
+
+        if (esRetirado) {
+          desvinculaciones.push(item);
+        } else {
+          vinculaciones.push(item);
+        }
+      }
+
+      res.json({
+        success: true,
+        meses_filtro: mesesFiltro,
+        novedades_vinculacion: vinculaciones,
+        novedades_desvinculacion: desvinculaciones,
+        resumen_novedades: {
+          total_vinculaciones_6m: vinculaciones.filter((n) => n.es_ultimos_6_meses).length,
+          total_desvinculaciones_6m: desvinculaciones.filter((n) => n.es_ultimos_6_meses).length,
+          total_vinculaciones_12m: vinculaciones.filter((n) => n.es_ultimos_12_meses).length,
+          total_desvinculaciones_12m: desvinculaciones.filter((n) => n.es_ultimos_12_meses).length,
+          total_vinculaciones_todas: vinculaciones.length,
+          total_desvinculaciones_todas: desvinculaciones.length,
+        },
+      });
+    } catch (e) {
+      console.error('Error al obtener novedades perno:', e);
+      res.status(500).json({ success: false, error: e.message });
     }
   });
 

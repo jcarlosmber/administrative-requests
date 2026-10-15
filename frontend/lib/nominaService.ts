@@ -723,6 +723,16 @@ export const nominaService = {
     advertencias?: string[];
     total_advertencias?: number;
     error?: string;
+    novedades_vinculacion?: any[];
+    novedades_desvinculacion?: any[];
+    resumen_novedades?: {
+      total_vinculaciones_6m?: number;
+      total_desvinculaciones_6m?: number;
+      total_vinculaciones_12m?: number;
+      total_desvinculaciones_12m?: number;
+      total_vinculaciones_todas?: number;
+      total_desvinculaciones_todas?: number;
+    };
   }> {
     try {
       const formData = new FormData();
@@ -754,6 +764,59 @@ export const nominaService = {
       return {
         success: false,
         mensaje: `Error al procesar archivo en el servidor: ${e.message}`,
+      };
+    }
+  },
+
+  // Obtener novedades de personal detectadas en PERNO (últimos X meses)
+  async getNovedadesPerno(meses: number = 6): Promise<{
+    success: boolean;
+    meses_filtro: number;
+    novedades_vinculacion: any[];
+    novedades_desvinculacion: any[];
+    resumen_novedades: {
+      total_vinculaciones_6m: number;
+      total_desvinculaciones_6m: number;
+      total_vinculaciones_12m: number;
+      total_desvinculaciones_12m: number;
+      total_vinculaciones_todas: number;
+      total_desvinculaciones_todas: number;
+    };
+  }> {
+    try {
+      const res = await fetch(`${API_URL}/api/nomina/novedades-perno?meses=${meses}`);
+      if (!res.ok) {
+        return {
+          success: false,
+          meses_filtro: meses,
+          novedades_vinculacion: [],
+          novedades_desvinculacion: [],
+          resumen_novedades: {
+            total_vinculaciones_6m: 0,
+            total_desvinculaciones_6m: 0,
+            total_vinculaciones_12m: 0,
+            total_desvinculaciones_12m: 0,
+            total_vinculaciones_todas: 0,
+            total_desvinculaciones_todas: 0,
+          },
+        };
+      }
+      return await res.json();
+    } catch (e: any) {
+      console.warn('Error al obtener novedades perno:', e.message);
+      return {
+        success: false,
+        meses_filtro: meses,
+        novedades_vinculacion: [],
+        novedades_desvinculacion: [],
+        resumen_novedades: {
+          total_vinculaciones_6m: 0,
+          total_desvinculaciones_6m: 0,
+          total_vinculaciones_12m: 0,
+          total_desvinculaciones_12m: 0,
+          total_vinculaciones_todas: 0,
+          total_desvinculaciones_todas: 0,
+        },
       };
     }
   },

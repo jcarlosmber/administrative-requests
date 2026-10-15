@@ -24,6 +24,7 @@ import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
 import { ModalPerfilCargo } from '../../components/rrhh/ModalPerfilCargo';
+import ModalNovedadesPernoTramites from '../../components/rrhh/ModalNovedadesPernoTramites';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
 type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | null;
@@ -161,6 +162,10 @@ export default function NominaScreen() {
 
   // Modal de Gestión Manual de Perfil de Cargo
   const [modalPerfilCargoVisible, setModalPerfilCargoVisible] = useState(false);
+  // Modal de Detección de Novedades de PERNO (Cruce por Cédula últimos 6 meses para Vincular/Desvincular)
+  const [modalNovedadesPernoVisible, setModalNovedadesPernoVisible] = useState(false);
+  const [novedadesVinculacionDetectadas, setNovedadesVinculacionDetectadas] = useState<any[]>([]);
+  const [novedadesDesvinculacionDetectadas, setNovedadesDesvinculacionDetectadas] = useState<any[]>([]);
   const [cargoSeleccionadoParaPerfil, setCargoSeleccionadoParaPerfil] = useState<any>(null);
   const [idPlazaParaPerfil, setIdPlazaParaPerfil] = useState<number | null>(null);
   const [totalPlazasMismoCargo, setTotalPlazasMismoCargo] = useState(1);
@@ -2208,9 +2213,16 @@ export default function NominaScreen() {
       });
 
       if (resultado.success) {
+        if (resultado.novedades_vinculacion || resultado.novedades_desvinculacion) {
+          setNovedadesVinculacionDetectadas(resultado.novedades_vinculacion || []);
+          setNovedadesDesvinculacionDetectadas(resultado.novedades_desvinculacion || []);
+        }
+        // Abrir automáticamente el modal para revisar personas a vincular o desvincular (últimos 6 meses)
+        setModalNovedadesPernoVisible(true);
         mostrarModal(
           'Archivo Planta Perno Procesado',
-          resultado.mensaje || 'Se enriquecieron los datos de nómina, EPS, pensión y nombramientos.',
+          (resultado.mensaje || 'Se enriquecieron los datos de nómina, EPS, pensión y nombramientos.') +
+            ' Se detectaron novedades para revisión en el modal de Vinculaciones & Desvinculaciones.',
           resultado.advertencias && resultado.advertencias.length > 0 ? 'info' : 'success',
           resultado.advertencias || []
         );
@@ -5120,6 +5132,29 @@ export default function NominaScreen() {
                           </Text>
                         </View>
                       </Pressable>
+
+                      {/* Botón de Detección de Novedades (Últimos 6 meses) */}
+                      <Pressable
+                        onPress={() => setModalNovedadesPernoVisible(true)}
+                        style={({ pressed }) => ({
+                          backgroundColor: pressed ? '#ECFDF5' : '#F0FDF4',
+                          borderWidth: 1.5,
+                          borderColor: '#10B981',
+                          paddingVertical: 9,
+                          paddingHorizontal: 16,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginTop: 4,
+                          flexDirection: 'row',
+                          gap: 6,
+                        })}
+                      >
+                        <Ionicons name="sparkles" size={16} color="#047857" />
+                        <Text style={{ color: '#047857', fontSize: 12.5, fontWeight: '700' }}>
+                          Revisar Novedades para Vincular / Desvincular (Últimos 6 Meses)
+                        </Text>
+                      </Pressable>
                     </View>
                   </View>
                 </View>
@@ -7969,6 +8004,63 @@ export default function NominaScreen() {
           {/* ============================================================== */}
           {tabActiva === 'perno' && (
             <View style={{ gap: 20 }}>
+              {/* Barra de Acceso Rápido a Novedades de Vinculación / Desvinculación */}
+              <View
+                style={{
+                  backgroundColor: THEME.white,
+                  borderRadius: 12,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: THEME.slate200,
+                  flexDirection: isDesktop ? 'row' : 'column',
+                  alignItems: isDesktop ? 'center' : 'stretch',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: '#ECFDF5',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="git-compare" size={18} color="#047857" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13.5, fontWeight: '700', color: THEME.slate900 }}>
+                      Cruce Automático de Novedades PERNO con Trámites (Últimos 6 Meses)
+                    </Text>
+                    <Text style={{ fontSize: 11.5, color: THEME.slate500 }}>
+                      Detecta nuevas personas por vincular o desvincular cruzando por cédula con el módulo de Vinculaciones & Desvinculaciones.
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={() => setModalNovedadesPernoVisible(true)}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: pressed ? THEME.marca900 : THEME.marca800,
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 8,
+                    alignSelf: isDesktop ? 'auto' : 'flex-start',
+                  })}
+                >
+                  <Ionicons name="sparkles" size={15} color={THEME.white} />
+                  <Text style={{ color: THEME.white, fontSize: 12.5, fontWeight: '700' }}>
+                    Revisar Novedades (6 Meses)
+                  </Text>
+                </Pressable>
+              </View>
+
               {/* Tarjetas KPI de PERNO */}
               <View
                 style={{
@@ -11858,6 +11950,16 @@ export default function NominaScreen() {
           idPlaza={idPlazaParaPerfil}
           totalPlazasMismoCargo={totalPlazasMismoCargo}
           onGuardadoExitoso={handlePerfilCargoGuardado}
+        />
+
+        {/* Modal de Detección y Creación de Trámites desde PERNO (Cruce por Cédula últimos 6 meses) */}
+        <ModalNovedadesPernoTramites
+          visible={modalNovedadesPernoVisible}
+          onClose={() => setModalNovedadesPernoVisible(false)}
+          novedadesVinculacion={novedadesVinculacionDetectadas}
+          novedadesDesvinculacion={novedadesDesvinculacionDetectadas}
+          todoElPerno={todoElPerno}
+          plazas={plazasTotales.length > 0 ? plazasTotales : plazas}
         />
       </SafeAreaView>
     </View>

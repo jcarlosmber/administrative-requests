@@ -765,6 +765,12 @@ async function procesarExtraccionPerno(sheet, pool) {
   let actualizados = 0;
   let retiradosOSinPlaza = 0;
   const advertencias = [];
+  const novedades_vinculacion = [];
+  const novedades_desvinculacion = [];
+  const hoyMs = Date.now();
+  const msPorDia = 86400000;
+  const dias6Meses = 182;
+  const dias12Meses = 365;
 
   for (let r = rowHeader + 1; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
@@ -985,7 +991,91 @@ async function procesarExtraccionPerno(sheet, pool) {
     } else {
       retiradosOSinPlaza++;
     }
+
+    // Recolectar novedad para análisis de vinculaciones / desvinculaciones
+    const fechaIngresoRef = fechaIngresoEntidad || fechaEfectivaNomb || fechaActoNomb || fechaIngresoDistrito;
+    const calcularAntiguedad = (fechaStr) => {
+      if (!fechaStr) return { dias: null, es6Meses: false, es12Meses: false };
+      const d = new Date(fechaStr + 'T00:00:00');
+      if (isNaN(d.getTime())) return { dias: null, es6Meses: false, es12Meses: false };
+      const diffDias = Math.round((hoyMs - d.getTime()) / msPorDia);
+      return {
+        dias: diffDias,
+        es6Meses: diffDias >= -15 && diffDias <= dias6Meses,
+        es12Meses: diffDias >= -15 && diffDias <= dias12Meses,
+      };
+    };
+
+    const itemPersona = {
+      cedula,
+      nombre_completo: nomComp,
+      primer_apellido: ape1,
+      segundo_apellido: ape2,
+      nombres: nom,
+      cargo,
+      cargo_cod: cargoCod,
+      grado,
+      dependencia,
+      dependencia_cod: dependenciaCod,
+      posicion_planta: idPerno,
+      tipo_funcionario: tipoFuncionario,
+      tipo_nombramiento: tipoNomb,
+      acto_nombramiento: actoNomb,
+      numero_acto_nombramiento: numActo,
+      fecha_acto_nombramiento: fechaActoNomb,
+      fecha_efectiva_nombramiento: fechaEfectivaNomb,
+      fecha_ingreso_entidad: fechaIngresoEntidad,
+      fecha_ingreso_distrito: fechaIngresoDistrito,
+      estado_funcionario: esRetirado ? 'R' : 'A',
+      fecha_retiro: fechaRetiro,
+      total_devengado: totalDevengado,
+      asignacion_basica: asignacionBasica,
+      fondo_salud: fondoSalud,
+      fondo_pension: fondoPension,
+      fondo_cesantias: fondoCesantias,
+    };
+
+    if (esRetirado) {
+      const fechaRetiroRef = fechaRetiro || fechaIngresoRef;
+      const calcRetiro = calcularAntiguedad(fechaRetiroRef);
+      novedades_desvinculacion.push({
+        ...itemPersona,
+        tipo_proceso: 'DESVINCULACION',
+        fecha_evento: fechaRetiroRef,
+        dias_evento: calcRetiro.dias,
+        es_ultimos_6_meses: calcRetiro.es6Meses,
+        es_ultimos_12_meses: calcRetiro.es12Meses,
+      });
+    } else {
+      const calcIngreso = calcularAntiguedad(fechaIngresoRef);
+      novedades_vinculacion.push({
+        ...itemPersona,
+        tipo_proceso: 'VINCULACION',
+        fecha_evento: fechaIngresoRef,
+        dias_evento: calcIngreso.dias,
+        es_ultimos_6_meses: calcIngreso.es6Meses,
+        es_ultimos_12_meses: calcIngreso.es12Meses,
+      });
+    }
   }
+
+  // Ordenar por fecha de evento descendente (más recientes primero)
+  const ordenarDesc = (a, b) => {
+    if (!a.fecha_evento) return 1;
+    if (!b.fecha_evento) return -1;
+    return String(b.fecha_evento).localeCompare(String(a.fecha_evento));
+  };
+  novedades_vinculacion.sort(ordenarDesc);
+  novedades_desvinculacion.sort(ordenarDesc);
+
+  const resumen_novedades = {
+    total_vinculaciones_6m: novedades_vinculacion.filter((n) => n.es_ultimos_6_meses).length,
+    total_desvinculaciones_6m: novedades_desvinculacion.filter((n) => n.es_ultimos_6_meses).length,
+    total_vinculaciones_12m: novedades_vinculacion.filter((n) => n.es_ultimos_12_meses).length,
+    total_desvinculaciones_12m: novedades_desvinculacion.filter((n) => n.es_ultimos_12_meses).length,
+    total_vinculaciones_todas: novedades_vinculacion.length,
+    total_desvinculaciones_todas: novedades_desvinculacion.length,
+  };
 
   return {
     sheetName: sheet.name,
@@ -993,7 +1083,10 @@ async function procesarExtraccionPerno(sheet, pool) {
     procesados,
     actualizados,
     retiradosOSinPlaza,
-    advertencias
+    advertencias,
+    novedades_vinculacion,
+    novedades_desvinculacion,
+    resumen_novedades,
   };
 }
 
