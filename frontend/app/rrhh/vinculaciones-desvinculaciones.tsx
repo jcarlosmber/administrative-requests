@@ -12529,22 +12529,57 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         <View
                                           key={req.id}
                                           style={{
-                                            backgroundColor: '#FFFFFF',
-                                            borderRadius: 10,
-                                            borderWidth: esActivo && esPasoEnEjecucion ? 2 : 1,
-                                            borderColor: esActivo && esPasoEnEjecucion ? '#0072C6' : '#E2E8F0',
-                                            borderLeftWidth: esNoAplica ? 4 : esCumplido ? 4 : (esActivo && esPasoEnEjecucion ? 2 : 4),
-                                            borderLeftColor: esNoAplica ? '#64748B' : esCumplido ? '#10B981' : (esActivo && esPasoEnEjecucion ? '#0072C6' : '#3B82F6'),
+                                            backgroundColor: esNoAplica ? '#F8FAFC' : '#FFFFFF',
+                                            borderRadius: 12,
+                                            borderWidth: esNoAplica ? 1.5 : (esActivo && esPasoEnEjecucion ? 2 : 1),
+                                            borderColor: esNoAplica ? '#CBD5E1' : (esActivo && esPasoEnEjecucion ? '#0072C6' : '#E2E8F0'),
                                             padding: 14,
                                             gap: 10,
-                                            shadowColor: esActivo && esPasoEnEjecucion ? '#0072C6' : 'transparent',
-                                            shadowOffset: { width: 0, height: 2 },
-                                            shadowOpacity: esActivo && esPasoEnEjecucion ? 0.08 : 0,
-                                            shadowRadius: 6,
-                                            elevation: esActivo && esPasoEnEjecucion ? 2 : 0,
-                                            opacity: soloVisualizacion ? 0.78 : 1,
+                                            shadowColor: esActivo && esPasoEnEjecucion ? '#0072C6' : '#000000',
+                                            shadowOffset: { width: 0, height: 1.5 },
+                                            shadowOpacity: esActivo && esPasoEnEjecucion ? 0.08 : (esNoAplica ? 0 : 0.03),
+                                            shadowRadius: 4,
+                                            elevation: esActivo && esPasoEnEjecucion ? 2 : 1,
+                                            opacity: soloVisualizacion ? 0.78 : (esNoAplica ? 0.92 : 1),
                                           }}
                                         >
+                                          {/* 0. BANNER SUPERIOR INFORMATIVO SI ES NO APLICA */}
+                                          {esNoAplica && (
+                                            <View
+                                              style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                backgroundColor: '#E2E8F0',
+                                                borderRadius: 7,
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 5,
+                                                borderWidth: 1,
+                                                borderColor: '#CBD5E1',
+                                                gap: 8,
+                                              }}
+                                            >
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                                                <Ionicons name="ban" size={14} color="#475569" />
+                                                <Text style={{ fontSize: 11, fontWeight: '800', color: '#1E293B', letterSpacing: 0.3 }}>
+                                                  REQUISITO EXENTO / NO APLICA PARA ESTE TRÁMITE
+                                                </Text>
+                                              </View>
+                                              <View
+                                                style={{
+                                                  backgroundColor: '#475569',
+                                                  paddingHorizontal: 7,
+                                                  paddingVertical: 2,
+                                                  borderRadius: 4,
+                                                }}
+                                              >
+                                                <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                                                  NO EXIGIBLE
+                                                </Text>
+                                              </View>
+                                            </View>
+                                          )}
+
                                           {/* 1. BADGES SUPERIORES SI ES PASO ACTIVO */}
                                           {esActivo && esPasoEnEjecucion && (
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -12588,17 +12623,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 <Pressable
                                                   onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
                                                   style={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: 12,
+                                                    width: 26,
+                                                    height: 26,
+                                                    borderRadius: 13,
                                                     backgroundColor: '#E2E8F0',
+                                                    borderWidth: 1,
+                                                    borderColor: '#CBD5E1',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     marginTop: 1,
                                                     cursor: 'pointer',
                                                   }}
                                                 >
-                                                  <Ionicons name="remove-outline" size={14} color="#64748B" />
+                                                  <Ionicons name="ban-outline" size={15} color="#475569" />
                                                 </Pressable>
                                               ) : (
                                                 <Pressable
@@ -12625,15 +12662,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     style={{
                                                       fontSize: esPasoEnEjecucion ? 14.5 : 13.5,
                                                       fontWeight: '800',
-                                                      color: esCumplido ? '#64748B' : '#0F172A',
+                                                      color: esNoAplica ? '#64748B' : esCumplido ? '#64748B' : '#0F172A',
                                                       textDecorationLine: esCumplido ? 'line-through' : 'none',
+                                                      fontStyle: esNoAplica ? 'italic' : 'normal',
                                                       lineHeight: 20,
                                                     }}
                                                   >
                                                     {req.label}
                                                   </Text>
                                                   {esNoAplica && (
-                                                    <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                                                    <View style={{ backgroundColor: '#475569', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
                                                       <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
                                                         NO APLICA
                                                       </Text>
@@ -12707,7 +12745,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           {estaReqDetalle && (
                                             <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, padding: 10, gap: 6 }}>
                                               {req.textoNormativo && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0072C6' }}>
+                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE' }}>
                                                   <Text style={{ fontSize: 10, fontWeight: '700', color: '#0072C6', marginBottom: 2 }}>
                                                     📜 Mandato Legal & Texto Normativo Incluido:
                                                   </Text>
@@ -12717,7 +12755,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 </View>
                                               )}
                                               {req.notaNormativa && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0284C7' }}>
+                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD' }}>
                                                   <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1', marginBottom: 2 }}>
                                                     💡 Resumen Jurídico Institucional:
                                                   </Text>
@@ -12727,7 +12765,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 </View>
                                               )}
                                               {req.detalleProcedimiento && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#10B981' }}>
+                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#BBF7D0' }}>
                                                   <Text style={{ fontSize: 10, fontWeight: '700', color: '#15803D', marginBottom: 2 }}>
                                                     📋 Instrucción Operativa para Talento Humano:
                                                   </Text>
@@ -12751,11 +12789,27 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </View>
                                           )}
 
-                                          {/* Nota en cursiva si es No Aplica */}
+                                          {/* Nota destacada si es No Aplica */}
                                           {esNoAplica && (
-                                            <Text style={{ fontSize: 11.5, color: '#64748B', fontStyle: 'italic', lineHeight: 16 }}>
-                                              ({req.observaciones || 'Marcado como No Aplica para este trámite'})
-                                            </Text>
+                                            <View
+                                              style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'flex-start',
+                                                gap: 8,
+                                                backgroundColor: '#E2E8F0',
+                                                borderRadius: 7,
+                                                paddingHorizontal: 12,
+                                                paddingVertical: 8,
+                                                borderWidth: 1,
+                                                borderColor: '#CBD5E1',
+                                              }}
+                                            >
+                                              <Ionicons name="information-circle-outline" size={16} color="#475569" style={{ marginTop: 1 }} />
+                                              <Text style={{ fontSize: 11.5, color: '#334155', flex: 1, lineHeight: 16 }}>
+                                                <Text style={{ fontWeight: '700' }}>Motivo de Exención: </Text>
+                                                {req.observaciones || 'Marcado como No Aplica para este trámite o cargo distrital. No genera bloqueo procedimental ni computa como pendiente para el avance de la fase.'}
+                                              </Text>
+                                            </View>
                                           )}
 
                                           {/* 4. FORMATOS INSTITUCIONALES ASOCIADOS AL REQUISITO (DESCARGA DIRECTA) */}
@@ -13302,21 +13356,21 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               <Pressable
                                                 onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
                                                 style={{
-                                                  backgroundColor: esNoAplica ? '#334155' : '#FFFFFF',
+                                                  backgroundColor: esNoAplica ? '#475569' : '#FFFFFF',
                                                   borderWidth: 1,
-                                                  borderColor: esNoAplica ? '#334155' : '#CBD5E1',
+                                                  borderColor: esNoAplica ? '#475569' : '#CBD5E1',
                                                   paddingHorizontal: 10,
                                                   paddingVertical: 6,
                                                   borderRadius: 6,
                                                   flexDirection: 'row',
                                                   alignItems: 'center',
-                                                  gap: 4,
+                                                  gap: 5,
                                                   cursor: 'pointer',
                                                 }}
                                               >
-                                                <Ionicons name="remove-circle-outline" size={13} color={esNoAplica ? '#FFFFFF' : '#64748B'} />
+                                                <Ionicons name={esNoAplica ? 'checkmark-circle-outline' : 'ban-outline'} size={13} color={esNoAplica ? '#FFFFFF' : '#64748B'} />
                                                 <Text style={{ fontSize: 11, fontWeight: '700', color: esNoAplica ? '#FFFFFF' : '#475569' }}>
-                                                  {esNoAplica ? 'Quitar No Aplica' : 'Marcar No Aplica'}
+                                                  {esNoAplica ? 'Quitar "No Aplica"' : 'Marcar No Aplica'}
                                                 </Text>
                                               </Pressable>
                                             </View>
@@ -17385,11 +17439,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         <View
                           style={{
                             backgroundColor: THEME.white,
-                            borderLeftWidth: 3,
-                            borderLeftColor: THEME.marca700,
+                            borderWidth: 1,
+                            borderColor: THEME.marca100,
                             paddingHorizontal: 8,
                             paddingVertical: 6,
-                            borderRadius: 4,
+                            borderRadius: 6,
                             marginTop: 5,
                           }}
                         >
@@ -20076,9 +20130,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       paddingVertical: req.noAplica ? 6 : 4,
                                       paddingHorizontal: req.noAplica ? 8 : 0,
                                       borderRadius: 6,
-                                      backgroundColor: req.noAplica ? '#e2e8f0' : 'transparent',
-                                      borderLeftWidth: req.noAplica ? 3 : 0,
-                                      borderLeftColor: '#475569',
+                                      backgroundColor: req.noAplica ? '#F1F5F9' : 'transparent',
+                                      borderWidth: req.noAplica ? 1 : 0,
+                                      borderColor: req.noAplica ? '#CBD5E1' : 'transparent',
                                       borderTopWidth: rIdx > 0 && !req.noAplica ? 1 : 0,
                                       borderTopColor: THEME.slate100,
                                     }}
