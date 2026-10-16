@@ -10446,20 +10446,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     </View>
                   )}
                   {casoActivo ? (
-                    <View
-                      style={{
-                        backgroundColor: THEME.white,
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: THEME.slate200,
-                        padding: 20,
-                        gap: 16,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.03,
-                        shadowRadius: 2,
-                      }}
-                    >
+                    <>
                       {/* Banner Superior Prominente de Estado del Trámite (Terminado vs En Trámite) */}
                       {(() => {
                         const etapasCompActivo = casoActivo.etapas.filter((e) => e.estado === 'completed').length;
@@ -11216,7 +11203,22 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         )}
                       </View>
 
-                      {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
+                      {/* Contenedor Blanco para el Resto del Expediente (Régimen y Fases/Requisitos) */}
+                      <View
+                        style={{
+                          backgroundColor: THEME.white,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: THEME.slate200,
+                          padding: 20,
+                          gap: 16,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.03,
+                          shadowRadius: 2,
+                        }}
+                      >
+                        {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
                       {(() => {
                         const infoModActivo = obtenerInfoModalidad(casoActivo.modalidad);
                         return (
@@ -13373,6 +13375,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         })}
                       </View>
                     </View>
+                    </>
                   ) : null}
                 </View>
               </View>
