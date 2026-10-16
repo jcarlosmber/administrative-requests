@@ -5,8 +5,9 @@ cd /opt/administrative-requests
 git fetch origin main
 git reset --hard origin/main
 
-echo "=== 2. Compilando frontend web con Expo ==="
+echo "=== 2. Instalando dependencias y compilando frontend web con Expo ==="
 cd /opt/administrative-requests/frontend
+npm install --prefer-offline --no-audit
 npx expo export -p web
 
 echo "=== 3. Desplegando en /var/www/administrative-requests ==="

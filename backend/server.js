@@ -796,11 +796,14 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
 
     if (action === 'pull_and_build') {
       console.log(`[GIT] Ejecutando git pull y build frontend solicitado por ${req.user.email}`);
+      const deploySync = process.platform === 'linux'
+        ? ' && if [ -d "/var/www/administrative-requests" ]; then echo \'.Secjur-2026**\' | sudo -S cp -r dist/* /var/www/administrative-requests/ && echo \'.Secjur-2026**\' | sudo -S chown -R nginx:nginx /var/www/administrative-requests/; fi'
+        : '';
       const cmd = process.platform === 'win32'
-        ? `git pull origin main && cd "${frontendDir}" && npx expo export`
-        : `git pull origin main && (cd "${frontendDir}" && npx expo export)`;
+        ? `git pull origin main && cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web`
+        : `git pull origin main && (cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web${deploySync})`;
 
-      exec(cmd, { cwd: projectRoot, timeout: 300000 }, (error, stdout, stderr) => {
+      exec(cmd, { cwd: projectRoot, timeout: 360000 }, (error, stdout, stderr) => {
         const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
         if (error) {
           console.error('[GIT] Error en git pull + build:', error);
@@ -823,11 +826,14 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
 
     if (action === 'build_front' || action === 'build') {
       console.log(`[BUILD] Ejecutando compilación del frontend solicitada por ${req.user.email}`);
+      const deploySync = process.platform === 'linux'
+        ? ' && if [ -d "/var/www/administrative-requests" ]; then echo \'.Secjur-2026**\' | sudo -S cp -r dist/* /var/www/administrative-requests/ && echo \'.Secjur-2026**\' | sudo -S chown -R nginx:nginx /var/www/administrative-requests/; fi'
+        : '';
       const cmd = process.platform === 'win32'
-        ? `cd "${frontendDir}" && npx expo export`
-        : `(cd "${frontendDir}" && npx expo export)`;
+        ? `cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web`
+        : `(cd "${frontendDir}" && npm install --prefer-offline --no-audit && npx expo export -p web${deploySync})`;
 
-      exec(cmd, { cwd: projectRoot, timeout: 300000 }, (error, stdout, stderr) => {
+      exec(cmd, { cwd: projectRoot, timeout: 360000 }, (error, stdout, stderr) => {
         const fullOutput = (stdout || '') + (stderr ? `\n${stderr}` : '');
         if (error) {
           console.error('[BUILD] Error en compilación de frontend:', error);
@@ -907,6 +913,9 @@ app.post('/api/admin/git', authenticateToken, async (req, res) => {
         'pm2 restart backend-solicitudes',
         'pm2 logs --lines 30 --nostream',
         'bash deploy_ingresos.sh',
+        'cd /opt/administrative-requests/frontend && npm install',
+        'cd frontend && npm install',
+        'npm --prefix frontend install',
         'git branch -a',
         'node -v',
         'npm run seed:teletrabajo',

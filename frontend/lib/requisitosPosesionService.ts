@@ -3,7 +3,26 @@
 // REQUISITOS PARA TOMAR POSESIÓN DEL CARGO - SECRETARÍA JURÍDICA DISTRITAL
 // ============================================================================
 
-import JSZip from 'jszip';
+async function obtenerInstanciaJSZip(): Promise<any> {
+  try {
+    const mod = await import('jszip');
+    return mod.default || mod;
+  } catch (err) {
+    if (typeof window !== 'undefined') {
+      if ((window as any).JSZip) return (window as any).JSZip;
+      // Fallback: cargar dinámicamente vía script CDN si no está en bundle local
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('No se pudo cargar el motor JSZip.'));
+        document.head.appendChild(s);
+      });
+      if ((window as any).JSZip) return (window as any).JSZip;
+    }
+    throw err;
+  }
+}
 
 export interface RequisitoPosesionFT095Item {
   numero: number;
@@ -688,7 +707,8 @@ export const requisitosPosesionService = {
    * 3. Bitácora ejecutiva de verificación institucional (.txt)
    */
   async descargarExpedienteZip(datos: DatosFormatoFT095Diligenciado): Promise<void> {
-    const zip = new JSZip();
+    const JSZipClass = await obtenerInstanciaJSZip();
+    const zip = new JSZipClass();
     const resumen = this.calcularResumen(datos);
     const seguroNombre = (datos.nombresApellidos || 'Servidor').replace(/[^a-zA-Z0-9]/g, '_');
     const seguroCedula = (datos.documentoIdentidad || '000').replace(/[^a-zA-Z0-9]/g, '_');
