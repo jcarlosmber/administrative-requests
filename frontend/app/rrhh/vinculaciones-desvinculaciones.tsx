@@ -10455,50 +10455,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
 
-                            {/* Chip OPEC SIMO: teal-muted (#4f9d94) */}
+                            {/* Chip Unificado OPEC + Convocatoria CNSC: teal-muted (#4F9D94) */}
                             <Pressable
                               onPress={abrirModalEditarOpecCaso}
                               style={({ hovered, pressed }: any) => ({
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                gap: 4,
+                                gap: 6,
                                 backgroundColor: pressed ? '#3D7A73' : hovered ? '#3D7A73' : '#4F9D94',
                                 borderWidth: 1,
                                 borderColor: 'rgba(255, 255, 255, 0.2)',
-                                paddingHorizontal: 9,
+                                paddingHorizontal: 10,
                                 paddingVertical: 4.5,
                                 borderRadius: 6,
                                 cursor: 'pointer',
                               })}
                             >
                               <Ionicons name="barcode-outline" size={13} color="#FFFFFF" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
+                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
                                 OPEC: {opecValorActual}
                               </Text>
-                              <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
-                            </Pressable>
-
-                            {/* Chip Convocatoria CNSC: Mismo color de OPEC teal-muted (#4f9d94) */}
-                            <Pressable
-                              onPress={abrirModalEditarOpecCaso}
-                              style={({ hovered, pressed }: any) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                backgroundColor: pressed ? '#3D7A73' : hovered ? '#3D7A73' : '#4F9D94',
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
-                                paddingHorizontal: 9,
-                                paddingVertical: 4.5,
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                              })}
-                            >
+                              <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 11, marginHorizontal: 1 }}>•</Text>
                               <Ionicons name="trophy-outline" size={12.5} color="#FFFFFF" />
                               <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
                                 {convocatoriaValorActual}
                               </Text>
-                              <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.8 }} />
+                              <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.85, marginLeft: 2 }} />
                             </Pressable>
                           </View>
                         )}
