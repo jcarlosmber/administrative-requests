@@ -10957,27 +10957,29 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   >
                                     {casoActivo.cargo}
                                   </Text>
-                                  <View
-                                    style={{
-                                      paddingHorizontal: 6,
-                                      paddingVertical: 2,
-                                      borderRadius: 4,
-                                      backgroundColor: '#1E293B',
-                                      borderWidth: 1,
-                                      borderColor: '#334155',
-                                    }}
-                                  >
-                                    <Text
+                                  {Boolean(casoActivo.codigo && casoActivo.codigo !== '—' && !casoActivo.cargo?.toLowerCase().includes('cód')) && (
+                                    <View
                                       style={{
-                                        color: '#06B6D4',
-                                        fontSize: 11,
-                                        fontWeight: '700',
-                                        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                        paddingHorizontal: 6,
+                                        paddingVertical: 2,
+                                        borderRadius: 4,
+                                        backgroundColor: '#1E293B',
+                                        borderWidth: 1,
+                                        borderColor: '#334155',
                                       }}
                                     >
-                                      Cód: {casoActivo.codigo || '—'} • Gr: {casoActivo.grado || '—'}
-                                    </Text>
-                                  </View>
+                                      <Text
+                                        style={{
+                                          color: '#06B6D4',
+                                          fontSize: 11,
+                                          fontWeight: '700',
+                                          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                        }}
+                                      >
+                                        Cód: {casoActivo.codigo} • Gr: {casoActivo.grado || '—'}
+                                      </Text>
+                                    </View>
+                                  )}
                                 </View>
                               </View>
                             </View>
@@ -11080,7 +11082,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                             </View>
 
-                            {/* Chip Unificado OPEC + Convocatoria (Derecha) */}
+                            {/* Chip Unificado OPEC + Convocatoria (Derecha) - Solo en Concurso de Carrera o Ascenso */}
+                            {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO') && (
                             <Pressable
                               onPress={abrirModalEditarOpecCaso}
                               style={({ hovered, pressed }: any) => ({
@@ -11121,6 +11124,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               </Text>
                               <Ionicons name="pencil-outline" size={11} color="#06B6D4" style={{ marginLeft: 2 }} />
                             </Pressable>
+                            )}
                           </View>
                         </View>
                       </View>
@@ -13365,7 +13369,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                               </View>
 
-                                              {/* Tarjeta de Datos del Elegible y OPEC institucional */}
+                                              {/* Tarjeta de Verificación SIMO según la Modalidad */}
+                                               {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO') ? (
                                               <View
                                                 style={{
                                                   backgroundColor: '#FFFFFF',
@@ -13424,6 +13429,41 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   </Text>
                                                 </Pressable>
                                               </View>
+                                               ) : (
+                                                 <View
+                                                   style={{
+                                                     backgroundColor: '#F8FAFC',
+                                                     borderWidth: 1,
+                                                     borderColor: '#CBD5E1',
+                                                     borderRadius: 8,
+                                                     padding: 10,
+                                                     flexDirection: 'row',
+                                                     alignItems: 'center',
+                                                     justifyContent: 'space-between',
+                                                     gap: 10,
+                                                   }}
+                                                 >
+                                                   <View style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: '#E0F2FE', alignItems: 'center', justifyContent: 'center' }}>
+                                                     <Ionicons name="document-text-outline" size={20} color="#0284C7" />
+                                                   </View>
+                                                   <View style={{ flex: 1, gap: 2 }}>
+                                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                                         Constancia de Inexistencia de Lista de Elegibles en SIMO
+                                                       </Text>
+                                                       <View style={{ backgroundColor: '#E0F2FE', borderWidth: 1, borderColor: '#BAE6FD', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                                         <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#0369A1' }}>PROVISIÓN TRANSITORIA HABILITADA</Text>
+                                                       </View>
+                                                     </View>
+                                                     <Text style={{ fontSize: 11, color: '#475569' }}>
+                                                       Postulado/a: <Text style={{ fontWeight: '700', color: '#0F172A' }}>{casoActivo.servidor_nombre}</Text> (C.C. {casoActivo.servidor_cedula}) • Cargo: <Text style={{ fontWeight: '700', color: '#0F172A' }}>{casoActivo.cargo}</Text>
+                                                     </Text>
+                                                     <Text style={{ fontSize: 10.5, color: '#64748B' }}>
+                                                       Certificación que acredita que no existen listas de elegibles vigentes ni personal con derecho de encargo preferente (Arts. 24 y 25 Ley 909 de 2004).
+                                                     </Text>
+                                                   </View>
+                                                 </View>
+                                               )}
 
                                               {/* Botones de acción operativos sin falsa API */}
                                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
