@@ -10489,14 +10489,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       {/* Botones de Acción por FUERA del Box de Cabecera (Inmediatamente Debajo) */}
                       <View
                         style={{
-                          flexDirection: 'row',
+                          flexDirection: isTablet ? 'row' : 'column',
                           alignItems: 'center',
-                          flexWrap: 'wrap',
                           gap: 9,
                           paddingVertical: 2,
+                          width: '100%',
                         }}
                       >
-                        {/* 1. Consultar SECOP II */}
+                        {/* 1. Consultar SECOP II (25% ancho) */}
                         {casoActivo.tipo_proceso === 'VINCULACION' && (
                           <Pressable
                             onPress={() =>
@@ -10507,12 +10507,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               )
                             }
                             style={({ pressed, hovered }: any) => ({
+                              flex: isTablet ? 1 : undefined,
+                              width: isTablet ? undefined : '100%',
                               flexDirection: 'row',
                               alignItems: 'center',
+                              justifyContent: 'center',
                               gap: 6,
                               backgroundColor: pressed ? '#3B51A3' : hovered ? '#4159B5' : '#526ED3',
-                              paddingHorizontal: 13,
-                              paddingVertical: 7,
+                              paddingHorizontal: 6,
+                              paddingVertical: 8,
                               borderRadius: 7,
                               borderWidth: 1,
                               borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -10525,25 +10528,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             })}
                           >
                             <Ionicons name="search" size={13.5} color="#FFFFFF" />
-                            <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                            <Text
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                            >
                               Consultar SECOP II
                             </Text>
                           </Pressable>
                         )}
 
-                        {/* 2. Validación FT-318 IA */}
+                        {/* 2. Validación FT-318 IA (25% ancho) */}
                         {casoActivo.tipo_proceso === 'VINCULACION' && (() => {
                           const valCoincidente = buscarValidacionCoincidenteCaso(casoActivo);
                           return (
                             <Pressable
                               onPress={() => abrirOIniciarValidacionFT318(casoActivo)}
                               style={({ pressed, hovered }: any) => ({
+                                flex: isTablet ? 1 : undefined,
+                                width: isTablet ? undefined : '100%',
                                 flexDirection: 'row',
                                 alignItems: 'center',
+                                justifyContent: 'center',
                                 gap: 6,
                                 backgroundColor: pressed ? '#3A6B5C' : hovered ? '#427A6A' : '#4D8E7B',
-                                paddingHorizontal: 13,
-                                paddingVertical: 7,
+                                paddingHorizontal: 6,
+                                paddingVertical: 8,
                                 borderRadius: 7,
                                 borderWidth: 1,
                                 borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -10560,23 +10570,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 size={13.5}
                                 color="#FFFFFF"
                               />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                              <Text
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                              >
                                 {valCoincidente ? `Validación FT-318 IA (${valCoincidente.resultado_final || 'Abrir'})` : 'Validación FT-318 IA'}
                               </Text>
                             </Pressable>
                           );
                         })()}
 
-                        {/* 3. Formatos Oficiales */}
+                        {/* 3. Formatos Oficiales (25% ancho) */}
                         <Pressable
                           onPress={() => setModalFormatosVisible(true)}
                           style={({ pressed, hovered }: any) => ({
+                            flex: isTablet ? 1 : undefined,
+                            width: isTablet ? undefined : '100%',
                             flexDirection: 'row',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: 6,
                             backgroundColor: pressed ? '#4B5563' : hovered ? '#525E6F' : '#64748B',
-                            paddingHorizontal: 13,
-                            paddingVertical: 7,
+                            paddingHorizontal: 6,
+                            paddingVertical: 8,
                             borderRadius: 7,
                             borderWidth: 1,
                             borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -10589,21 +10606,28 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           })}
                         >
                           <Ionicons name="folder-open-outline" size={13.5} color="#FFFFFF" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                          <Text
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                            style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                          >
                             Formatos Oficiales
                           </Text>
                         </Pressable>
 
-                        {/* 4. Auto-Importar de PERNO (Novedades Financieras y de Nómina) */}
+                        {/* 4. Auto-Importar de PERNO (25% ancho) */}
                         <Pressable
                           onPress={() => autoImportarDesdePerno(casoActivo)}
                           style={({ pressed, hovered }: any) => ({
+                            flex: isTablet ? 1 : undefined,
+                            width: isTablet ? undefined : '100%',
                             flexDirection: 'row',
                             alignItems: 'center',
+                            justifyContent: 'center',
                             gap: 6,
                             backgroundColor: pressed ? '#0F766E' : hovered ? '#115E59' : '#0D9488',
-                            paddingHorizontal: 13,
-                            paddingVertical: 7,
+                            paddingHorizontal: 6,
+                            paddingVertical: 8,
                             borderRadius: 7,
                             borderWidth: 1,
                             borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -10616,7 +10640,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           })}
                         >
                           <Ionicons name="flash-outline" size={13.5} color="#FFFFFF" />
-                          <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                          <Text
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
+                            style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                          >
                             Auto-Importar de PERNO
                           </Text>
                         </Pressable>
@@ -10626,12 +10654,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           <Pressable
                             onPress={handleAbrirEvaluacionRetiroGoogleForms}
                             style={({ pressed, hovered }: any) => ({
+                              flex: isTablet ? 1 : undefined,
+                              width: isTablet ? undefined : '100%',
                               flexDirection: 'row',
                               alignItems: 'center',
+                              justifyContent: 'center',
                               gap: 6,
                               backgroundColor: pressed ? '#5F44A3' : hovered ? '#6C4DBA' : '#7C59D3',
-                              paddingHorizontal: 13,
-                              paddingVertical: 7,
+                              paddingHorizontal: 6,
+                              paddingVertical: 8,
                               borderRadius: 7,
                               borderWidth: 1,
                               borderColor: 'rgba(255, 255, 255, 0.25)',
@@ -10644,7 +10675,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             })}
                           >
                             <Ionicons name="clipboard-outline" size={13.5} color="#FFFFFF" />
-                            <Text style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700' }}>
+                            <Text
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                            >
                               Evaluación Retiro (Forms)
                             </Text>
                           </Pressable>
