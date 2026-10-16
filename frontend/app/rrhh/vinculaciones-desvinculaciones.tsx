@@ -6924,6 +6924,339 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   };
 
+  // Obtención de directrices normativas en tarjetas ejecutivas para cada fase
+  const obtenerDirectricesNormativasFase = (etapa: EtapaFlujo, caso: CasoFlujoFuncionario) => {
+    const presetKey = etapa.id;
+    const presets: Record<string, { subtitulo: string; directrices: Array<{ titulo: string; descripcion: string }> }> = {
+      // 1. CARRERA ADMINISTRATIVA
+      v_carr_1: {
+        subtitulo: 'Marco normativo obligatorio expedido por la CNSC para provisión por lista de elegibles',
+        directrices: [
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 31, Numeral 1. Reglas de provisión definitiva con prevalencia estricta de lista de elegibles del respectivo empleo ofertado.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.3.1 y 2.2.6.2. Orden riguroso de prelación institucional para nombramientos en periodo de prueba.',
+          },
+          {
+            titulo: 'CIRCULAR CONJUNTA CNSC 011',
+            descripcion: 'Protocolo obligatorio para el uso de listas en posiciones homólogas y criterios unificados de firmeza en SIMO 4.0.',
+          },
+        ],
+      },
+      v_carr_2: {
+        subtitulo: 'Autorización vinculante de uso de lista y verificación por Comisión de Personal',
+        directrices: [
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículos 16 y 31 Numeral 4. Competencias de la Comisión de Personal y trámite de solicitud formal ante la CNSC.',
+          },
+          {
+            titulo: 'DECRETO LEY 760 DE 2005',
+            descripcion: 'Artículo 14. Procedimiento de firmeza de lista y término preclusivo de exclusiones preclusivas.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.6.21. Aprobación y verificación de la modalidad de cobro (Con o Sin Cobro CNSC).',
+          },
+        ],
+      },
+      v_carr_4: {
+        subtitulo: 'Expedición del acto administrativo de nombramiento en periodo de prueba y términos de aceptación',
+        directrices: [
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículos 2.2.5.1.4 y 2.2.6.24. Verificación técnica de requisitos FT-318 y nombramiento por 6 meses.',
+          },
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 31. Obligatoriedad del nombramiento en periodo de prueba en estricto orden de lista.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículos 2.2.5.1.6 y 2.2.5.1.7. Término de 10 días hábiles de aceptación y prórroga hasta 90 días.',
+          },
+        ],
+      },
+      v_carr_5: {
+        subtitulo: 'Requisitos habilitantes de posesión, control preventivo de inhabilidades y juramento de ley',
+        directrices: [
+          {
+            titulo: 'CONSTITUCIÓN POLÍTICA',
+            descripcion: 'Artículos 122 y 128. Juramento previo a la posesión y régimen estricto de inhabilidades e incompatibilidades.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.1.8. Verificación de los 32 requisitos de posesión formalizados en el formato FT-095.',
+          },
+          {
+            titulo: 'LEY 2013 DE 2019',
+            descripcion: 'Artículos 2 y 3. Publicación obligatoria de bienes y rentas y conflicto de intereses en SIDEAP.',
+          },
+        ],
+      },
+      v_carr_6: {
+        subtitulo: 'Alta en nómina distrital, afiliación a seguridad social y reporte obligatorio de posesión en SIMO',
+        directrices: [
+          {
+            titulo: 'LEY 100 DE 1993',
+            descripcion: 'Afiliación patronal a ARL Positiva, EPS, Fondo de Cesantías y Caja de Compensación desde el ingreso.',
+          },
+          {
+            titulo: 'CIRCULAR CNSC 011',
+            descripcion: 'Numeral 6. Reporte de posesión y retiro de la posición en el Banco Nacional de Listas de Elegibles.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.6.25. Inducción institucional y concertación de compromisos del periodo de prueba (FT-106).',
+          },
+        ],
+      },
+      v_carr_7: {
+        subtitulo: 'Evaluación del desempeño laboral (EDL) y consolidación en el Registro Público de Carrera',
+        directrices: [
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 31 Numeral 5. Cómputo de 6 meses y consolidación de derechos de carrera administrativa.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.6.25 y ss. Calificación definitiva dentro de los 10 días hábiles posteriores al vencimiento.',
+          },
+          {
+            titulo: 'ACUERDO CNSC EDL',
+            descripcion: 'Cargue oficial de calificación sobresaliente o satisfactoria y solicitud de actualización en RPCA.',
+          },
+        ],
+      },
+
+      // 2. PROVISIONALIDAD
+      v_prov_1: {
+        subtitulo: 'Constatación de vacancia definitiva o temporal y certificación de inexistencia de lista de elegibles',
+        directrices: [
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 25. Carácter estrictamente transitorio y excepcional de la provisión en provisionalidad.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.3.3. Certificación de ausencia de listas en el Banco Nacional de Elegibles (SIMO 4.0).',
+          },
+          {
+            titulo: 'CIRCULAR CNSC 011',
+            descripcion: 'Constancia obligatoria expedida por Talento Humano sobre inexistencia de elegibles para la vacante.',
+          },
+        ],
+      },
+      v_prov_2: {
+        subtitulo: 'Verificación del derecho preferente a encargo de servidores con derechos de carrera',
+        directrices: [
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 24. Derecho preferente a encargo para servidores de carrera con evaluación sobresaliente.',
+          },
+          {
+            titulo: 'LEY 1960 DE 2019',
+            descripcion: 'Artículo 1. Eliminación de las restricciones de grado y prevalencia de mérito institucional.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.3.1. Declaratoria formal de encargo desierto como requisito para provisionalidad.',
+          },
+        ],
+      },
+      v_prov_3: {
+        subtitulo: 'Validación técnica FT-318, CDP presupuestal y acto de nombramiento motivado',
+        directrices: [
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículos 2.2.5.1.4 y 2.2.5.1.5. Verificación formal de requisitos de estudio y experiencia (FT-318).',
+          },
+          {
+            titulo: 'RESOLUCIÓN 020 DE 2019',
+            descripcion: 'Manual Específico de Funciones y Competencias Laborales de la Secretaría Jurídica Distrital.',
+          },
+          {
+            titulo: 'CPACA (LEY 1437/2011)',
+            descripcion: 'Artículo 65. Notificación formal del nombramiento provisional y comunicación oficial al designado.',
+          },
+        ],
+      },
+      v_prov_4: {
+        subtitulo: 'Requisitos de posesión, control preventivo de inhabilidades y formalización de acta',
+        directrices: [
+          {
+            titulo: 'CONSTITUCIÓN POLÍTICA',
+            descripcion: 'Artículos 122 y 128. Juramento constitucional previo al ejercicio y prohibición de doble asignación.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.1.8. Constatación del circuito documental FT-095 (antecedentes, títulos y declaraciones).',
+          },
+          {
+            titulo: 'LEY 2013 DE 2019',
+            descripcion: 'Artículos 2 y 3. Registro formal de bienes y rentas y conflicto de intereses en SIDEAP.',
+          },
+        ],
+      },
+      v_prov_5: {
+        subtitulo: 'Alta en nómina distrital PERNO y afiliación integral a seguridad social',
+        directrices: [
+          {
+            titulo: 'LEY 100 DE 1993',
+            descripcion: 'Afiliación inmediata a EPS, Pensión, Cesantías y ARL Positiva antes del inicio de labores.',
+          },
+          {
+            titulo: 'DECRETO DISTRITAL 101/2004',
+            descripcion: 'Inclusión en nómina activa de la Secretaría Jurídica Distrital y creación de hoja de vida en PERNO.',
+          },
+          {
+            titulo: 'DIRECTIVA DISTRITAL 001/2018',
+            descripcion: 'Actualización en el Sistema de Información Distrital del Empleo y la Administración Pública (SIDEAP).',
+          },
+        ],
+      },
+
+      // 3. LIBRE NOMBRAMIENTO Y REMOCIÓN
+      v_libre_1: {
+        subtitulo: 'Designación directiva, verificación de idoneidad y prueba SEVCOM DASCD',
+        directrices: [
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 5. Naturaleza directiva de confianza y libre nombramiento del nominador distrital.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.1.4. Verificación rigurosa de requisitos y competencias del empleo directivo.',
+          },
+          {
+            titulo: 'DIRECTIVA DASCD',
+            descripcion: 'Aplicación y reporte de la prueba de competencias laborales directivas en plataforma SEVCOM.',
+          },
+        ],
+      },
+      v_libre_2: {
+        subtitulo: 'Publicación previa de hoja de vida por 5 días en portal web distrital',
+        directrices: [
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.13.2.3. Publicación de la hoja de vida por 5 días para conocimiento de la ciudadanía.',
+          },
+          {
+            titulo: 'ACUERDO DISTRITAL 782/2020',
+            descripcion: 'Garantía de transparencia ciudadana y control social en la provisión del nivel directivo.',
+          },
+          {
+            titulo: 'LEY 2424 DE 2024',
+            descripcion: 'Observancia de los criterios de paridad de género y alternancia en cargos de máximo nivel directivo.',
+          },
+        ],
+      },
+      v_libre_3: {
+        subtitulo: 'Expedición de decreto o resolución de nombramiento y notificación formal',
+        directrices: [
+          {
+            titulo: 'ESTATUTO BOGOTÁ (DEC. 1421)',
+            descripcion: 'Facultad nominadora del Alcalde Mayor o Secretario Jurídico para provisión del empleo directivo.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.1.4 y ss. Expedición del acto administrativo con soporte presupuestal CDP individual.',
+          },
+          {
+            titulo: 'CPACA (LEY 1437/2011)',
+            descripcion: 'Comunicación formal del acto administrativo con término legal de 10 días para aceptación.',
+          },
+        ],
+      },
+
+      // 4. JUDICATURA / PASANTÍAS
+      v_judi_1: {
+        subtitulo: 'Validación académica, convenio interinstitucional y disponibilidad presupuestal (CDP)',
+        directrices: [
+          {
+            titulo: 'LEY 552 DE 1999',
+            descripcion: 'Marco legal de la judicatura como requisito alternativo para optar por el título de abogado.',
+          },
+          {
+            titulo: 'ACUERDO CSJ 2017',
+            descripcion: 'Reglamento para la prestación del servicio formativo ad honorem o remunerado en entidades públicas.',
+          },
+          {
+            titulo: 'ESTATUTO PRESUPUESTAL',
+            descripcion: 'Expedición de CDP y CRP para amparar el auxilio económico de transporte y sostenimiento.',
+          },
+        ],
+      },
+
+      // 5. DESVINCULACIONES
+      d_renun_1: {
+        subtitulo: 'Manifestación formal de dimisión voluntaria y verificación de no afectación del servicio',
+        directrices: [
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.11.1.1. Escrito inequívoco de renuncia voluntaria al empleo público suscrito por el servidor.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.11.1.2. Término legal perentorio de treinta (30) días calendario para aceptar la renuncia.',
+          },
+          {
+            titulo: 'LEY 909 DE 2004',
+            descripcion: 'Artículo 41 literal b. Causal taxativa y legal del retiro definitivo del servicio por renuncia regularmente aceptada.',
+          },
+        ],
+      },
+      d_prov_1: {
+        subtitulo: 'Desvinculación condicionada por provisión de la plaza mediante lista de elegibles de concurso',
+        directrices: [
+          {
+            titulo: 'SENTENCIA SU-917 DE 2010',
+            descripcion: 'Deber ineludible de motivación expresa y fáctica del acto administrativo de retiro del empleado provisional.',
+          },
+          {
+            titulo: 'DECRETO 1083 DE 2015',
+            descripcion: 'Artículo 2.2.5.3.4. Pérdida de fuerza ejecutoria y cesación del nombramiento provisional al nombrarse el elegible.',
+          },
+          {
+            titulo: 'CIRCULAR CONJUNTA CNSC-DAFP',
+            descripcion: 'Verificación previa y rigurosa de garantías de protección laboral reforzada (Retén Social).',
+          },
+        ],
+      },
+    };
+
+    if (presets[presetKey]) {
+      return presets[presetKey];
+    }
+
+    // Fallback dinámico genérico
+    const splitNormas = (etapa.normaGeneral || '').split(/;|•/).map((s) => s.trim()).filter(Boolean);
+    const n1 = splitNormas[0] || (etapa.requisitos[0]?.norma) || 'MARCO NORMATIVO VIGENTE';
+    const n2 = splitNormas[1] || (etapa.plazoLegal ? 'TÉRMINOS Y PLAZO LEGAL' : 'DECRETO 1083 DE 2015');
+    const n3 = splitNormas[2] || (etapa.procedimientoDetallado ? 'PROCEDIMIENTO INSTITUCIONAL' : 'CIRCULAR CNSC 011');
+
+    return {
+      subtitulo: etapa.subtitulo || 'Marco normativo y directrices aplicables a esta fase del procedimiento',
+      directrices: [
+        {
+          titulo: n1.length > 32 ? n1.substring(0, 32).toUpperCase() : n1.toUpperCase(),
+          descripcion: etapa.requisitos[0]?.textoNormativo || etapa.normaGeneral || 'Disposiciones normativas que sustentan las actuaciones formales de esta fase.',
+        },
+        {
+          titulo: n2.length > 32 ? n2.substring(0, 32).toUpperCase() : n2.toUpperCase(),
+          descripcion: etapa.plazoLegal || 'Orden y prelación de términos de ley de estricto cumplimiento para la entidad nominadora.',
+        },
+        {
+          titulo: n3.length > 32 ? n3.substring(0, 32).toUpperCase() : n3.toUpperCase(),
+          descripcion: etapa.procedimientoDetallado || 'Protocolo institucional obligatorio y directrices aplicables al expediente administrativo.',
+        },
+      ],
+    };
+  };
+
   // Alternar cumplimiento de requisito y recalcular estado
   // ==========================================================================
   // ESTADOS PARA EXPANSION DE FASES, DESPLEGABLES NORMATIVOS Y MODALES DE OBSERVACIONES
@@ -11293,102 +11626,176 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               {/* CONTENIDO DESPLEGABLE DE LA FASE */}
                               {estaFaseExpandida && (
                                 <View style={{ padding: 14, gap: 12 }}>
-                                  {/* DESPLEGABLE DE FUNDAMENTO NORMATIVO Y GUÍA PROCEDIMENTAL */}
-                                  <View
-                                    style={{
-                                      backgroundColor: THEME.slate50,
-                                      borderRadius: 8,
-                                      borderWidth: 1,
-                                      borderColor: THEME.slate200,
-                                      overflow: 'hidden',
-                                    }}
-                                  >
-                                    <Pressable
-                                      onPress={() => toggleNormaFase(etapa.id)}
-                                      style={{
-                                        flexDirection: 'row',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        paddingHorizontal: 12,
-                                        paddingVertical: 9,
-                                        backgroundColor: estaNormaFaseExpandida ? THEME.marca50 : THEME.slate100,
-                                      }}
-                                    >
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                        <Ionicons name="scale-outline" size={15} color={THEME.marca700} />
-                                        <Text style={{ fontSize: 11.5, fontWeight: '700', color: THEME.marca900 }}>
-                                          Fundamentación Normativa y Guía del Procedimiento Legal
-                                        </Text>
-                                      </View>
-                                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                        <Text style={{ fontSize: 10.5, color: THEME.marca700, fontWeight: '600' }}>
-                                          {estaNormaFaseExpandida ? 'Ocultar' : 'Ver detalle'}
-                                        </Text>
-                                        <Ionicons
-                                          name={estaNormaFaseExpandida ? 'chevron-up' : 'chevron-down'}
-                                          size={13}
-                                          color={THEME.marca700}
-                                        />
-                                      </View>
-                                    </Pressable>
+                                  {/* SOPORTE NORMATIVO Y GUÍA DEL PROCEDIMIENTO LEGAL VIGENTE (DISEÑO SOLICITADO 3 TARJETAS) */}
+                                  {(() => {
+                                    const infoNormativa = obtenerDirectricesNormativasFase(etapa, casoActivo);
 
-                                    {estaNormaFaseExpandida && (
-                                      <View style={{ padding: 12, gap: 8, backgroundColor: THEME.white }}>
-                                        {etapa.normaGeneral && (
-                                          <View style={{ flexDirection: 'row', gap: 6 }}>
-                                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
-                                              ⚖️ Marco Normativo:
-                                            </Text>
-                                            <Text style={{ fontSize: 11, color: THEME.slate700, flex: 1 }}>
-                                              {etapa.normaGeneral}
-                                            </Text>
+                                    return (
+                                      <View
+                                        style={{
+                                          backgroundColor: '#F8FAFC',
+                                          borderRadius: 12,
+                                          borderWidth: 1,
+                                          borderColor: '#E2E8F0',
+                                          padding: 16,
+                                          gap: 14,
+                                        }}
+                                      >
+                                        {/* Cabecera del Panel */}
+                                        <View
+                                          style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: 12,
+                                            flexWrap: 'wrap',
+                                          }}
+                                        >
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
+                                            <Ionicons name="book-outline" size={22} color="#0284C7" />
+                                            <View style={{ flex: 1 }}>
+                                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#0F172A' }}>
+                                                Soporte Normativo y Guía del Procedimiento Legal Vigente
+                                              </Text>
+                                              <Text style={{ fontSize: 11.5, color: '#475569', marginTop: 1 }}>
+                                                {infoNormativa.subtitulo}
+                                              </Text>
+                                            </View>
                                           </View>
-                                        )}
 
-                                        {etapa.plazoLegal && (
-                                          <View style={{ flexDirection: 'row', gap: 6 }}>
-                                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800 }}>
-                                              ⏱️ Plazo / Términos de Ley:
+                                          <Pressable
+                                            onPress={() => toggleNormaFase(etapa.id)}
+                                            style={({ pressed }) => ({
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              gap: 4,
+                                              opacity: pressed ? 0.7 : 1,
+                                              cursor: 'pointer',
+                                            })}
+                                          >
+                                            <Text style={{ fontSize: 12, color: '#0284C7', fontWeight: '600' }}>
+                                              {estaNormaFaseExpandida ? 'Ocultar directrices' : 'Ver directrices completas'}
                                             </Text>
-                                            <Text style={{ fontSize: 11, color: THEME.slate700, flex: 1 }}>
-                                              {etapa.plazoLegal}
-                                            </Text>
-                                          </View>
-                                        )}
+                                            <Ionicons
+                                              name={estaNormaFaseExpandida ? 'chevron-up' : 'chevron-down'}
+                                              size={14}
+                                              color="#0284C7"
+                                            />
+                                          </Pressable>
+                                        </View>
 
-                                        {etapa.procedimientoDetallado && (
-                                          <View style={{ marginTop: 2 }}>
-                                            <Text style={{ fontSize: 11, fontWeight: '700', color: THEME.slate800, marginBottom: 2 }}>
-                                              📋 Procedimiento Institucional:
-                                            </Text>
-                                            <Text style={{ fontSize: 11, color: THEME.slate600, lineHeight: 16 }}>
-                                              {etapa.procedimientoDetallado}
-                                            </Text>
-                                          </View>
-                                        )}
+                                        {/* Grid de las 3 Tarjetas Normativas Blancas */}
+                                        <View
+                                          style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'stretch',
+                                            gap: 12,
+                                            flexWrap: 'wrap',
+                                          }}
+                                        >
+                                          {infoNormativa.directrices.map((dir, idx) => (
+                                            <View
+                                              key={idx}
+                                              style={{
+                                                flex: 1,
+                                                minWidth: 210,
+                                                backgroundColor: '#FFFFFF',
+                                                borderRadius: 8,
+                                                borderWidth: 1,
+                                                borderColor: '#E2E8F0',
+                                                padding: 14,
+                                                gap: 6,
+                                                shadowColor: '#000',
+                                                shadowOffset: { width: 0, height: 1 },
+                                                shadowOpacity: 0.03,
+                                                shadowRadius: 2,
+                                                elevation: 1,
+                                              }}
+                                            >
+                                              <Text
+                                                style={{
+                                                  fontSize: 11.5,
+                                                  fontWeight: '800',
+                                                  color: '#0284C7',
+                                                  letterSpacing: 0.3,
+                                                  textTransform: 'uppercase',
+                                                }}
+                                              >
+                                                {dir.titulo}
+                                              </Text>
+                                              <Text
+                                                style={{
+                                                  fontSize: 11,
+                                                  lineHeight: 16,
+                                                  color: '#334155',
+                                                  fontWeight: '400',
+                                                }}
+                                              >
+                                                {dir.descripcion}
+                                              </Text>
+                                            </View>
+                                          ))}
+                                        </View>
 
-                                        {etapa.observacionesFase && (
+                                        {/* Directrices Completas Expandibles (Procedimiento detallado, Plazos legales y Observaciones) */}
+                                        {estaNormaFaseExpandida && (
                                           <View
                                             style={{
-                                              backgroundColor: THEME.amberBg,
-                                              padding: 8,
-                                              borderRadius: 6,
+                                              backgroundColor: '#FFFFFF',
+                                              borderRadius: 8,
                                               borderWidth: 1,
-                                              borderColor: THEME.amberRing,
-                                              marginTop: 4,
+                                              borderColor: '#E2E8F0',
+                                              padding: 14,
+                                              gap: 10,
+                                              marginTop: 2,
                                             }}
                                           >
-                                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: THEME.amberText }}>
-                                              💬 Observaciones registradas para esta fase:
-                                            </Text>
-                                            <Text style={{ fontSize: 11, color: THEME.amberText, marginTop: 2 }}>
-                                              {etapa.observacionesFase}
-                                            </Text>
+                                            {etapa.plazoLegal && (
+                                              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
+                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0F172A' }}>
+                                                  ⏱️ Plazo y Términos de Ley:
+                                                </Text>
+                                                <Text style={{ fontSize: 11.5, color: '#334155', flex: 1, lineHeight: 16 }}>
+                                                  {etapa.plazoLegal}
+                                                </Text>
+                                              </View>
+                                            )}
+
+                                            {etapa.procedimientoDetallado && (
+                                              <View style={{ gap: 3 }}>
+                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0F172A' }}>
+                                                  📋 Procedimiento Institucional Detallado:
+                                                </Text>
+                                                <Text style={{ fontSize: 11.5, color: '#475569', lineHeight: 17 }}>
+                                                  {etapa.procedimientoDetallado}
+                                                </Text>
+                                              </View>
+                                            )}
+
+                                            {etapa.observacionesFase && (
+                                              <View
+                                                style={{
+                                                  backgroundColor: '#FFFBEB',
+                                                  padding: 10,
+                                                  borderRadius: 6,
+                                                  borderWidth: 1,
+                                                  borderColor: '#FDE68A',
+                                                  marginTop: 4,
+                                                }}
+                                              >
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#B45309' }}>
+                                                  💬 Observaciones registradas para esta fase:
+                                                </Text>
+                                                <Text style={{ fontSize: 11.5, color: '#92400E', marginTop: 2 }}>
+                                                  {etapa.observacionesFase}
+                                                </Text>
+                                              </View>
+                                            )}
                                           </View>
                                         )}
                                       </View>
-                                    )}
-                                  </View>
+                                    );
+                                  })()}
 
                                   {/* TARJETA ESPECIAL: CÁLCULO DE PERÍODO DE PRUEBA Y TÉRMINOS LEGALES DE CALIFICACIÓN EDL (EXCLUSIVO PARA CARRERA ADMINISTRATIVA Y ASCENSO - NO APLICA A PROVISIONALIDAD) */}
                                   {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO') && etapa.id === 'v_carr_7' && (() => {
