@@ -11633,12 +11633,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     return (
                                       <View
                                         style={{
-                                          backgroundColor: '#F8FAFC',
+                                          backgroundColor: '#F0F7FF',
                                           borderRadius: 12,
                                           borderWidth: 1,
-                                          borderColor: '#E2E8F0',
-                                          padding: 16,
-                                          gap: 14,
+                                          borderColor: '#D4E6FA',
+                                          paddingHorizontal: 20,
+                                          paddingVertical: 18,
+                                          gap: 15,
                                         }}
                                       >
                                         {/* Cabecera del Panel */}
@@ -11652,12 +11653,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           }}
                                         >
                                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
-                                            <Ionicons name="book-outline" size={22} color="#0284C7" />
+                                            <Ionicons name="book-outline" size={22} color="#0072C6" />
                                             <View style={{ flex: 1 }}>
-                                              <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#0F172A' }}>
+                                              <Text
+                                                style={{
+                                                  fontSize: 14,
+                                                  fontWeight: '800',
+                                                  color: '#0A2540',
+                                                  letterSpacing: -0.2,
+                                                }}
+                                              >
                                                 Soporte Normativo y Guía del Procedimiento Legal Vigente
                                               </Text>
-                                              <Text style={{ fontSize: 11.5, color: '#475569', marginTop: 1 }}>
+                                              <Text
+                                                style={{
+                                                  fontSize: 12,
+                                                  color: '#47617D',
+                                                  marginTop: 2.5,
+                                                  fontWeight: '400',
+                                                }}
+                                              >
                                                 {infoNormativa.subtitulo}
                                               </Text>
                                             </View>
@@ -11673,13 +11688,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               cursor: 'pointer',
                                             })}
                                           >
-                                            <Text style={{ fontSize: 12, color: '#0284C7', fontWeight: '600' }}>
+                                            <Text style={{ fontSize: 12.5, color: '#0072C6', fontWeight: '600' }}>
                                               {estaNormaFaseExpandida ? 'Ocultar directrices' : 'Ver directrices completas'}
                                             </Text>
                                             <Ionicons
                                               name={estaNormaFaseExpandida ? 'chevron-up' : 'chevron-down'}
-                                              size={14}
-                                              color="#0284C7"
+                                              size={13.5}
+                                              color="#0072C6"
                                             />
                                           </Pressable>
                                         </View>
@@ -11689,7 +11704,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           style={{
                                             flexDirection: 'row',
                                             alignItems: 'stretch',
-                                            gap: 12,
+                                            gap: 14,
                                             flexWrap: 'wrap',
                                           }}
                                         >
@@ -11702,10 +11717,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 backgroundColor: '#FFFFFF',
                                                 borderRadius: 8,
                                                 borderWidth: 1,
-                                                borderColor: '#E2E8F0',
-                                                padding: 14,
+                                                borderColor: '#DCE8F6',
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 15,
                                                 gap: 6,
-                                                shadowColor: '#000',
+                                                shadowColor: '#004085',
                                                 shadowOffset: { width: 0, height: 1 },
                                                 shadowOpacity: 0.03,
                                                 shadowRadius: 2,
@@ -11714,19 +11730,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             >
                                               <Text
                                                 style={{
-                                                  fontSize: 11.5,
+                                                  fontSize: 12,
                                                   fontWeight: '800',
-                                                  color: '#0284C7',
-                                                  letterSpacing: 0.3,
+                                                  color: '#0072C6',
+                                                  letterSpacing: 0.5,
                                                   textTransform: 'uppercase',
+                                                  marginBottom: 3,
                                                 }}
                                               >
                                                 {dir.titulo}
                                               </Text>
                                               <Text
                                                 style={{
-                                                  fontSize: 11,
-                                                  lineHeight: 16,
+                                                  fontSize: 11.5,
+                                                  lineHeight: 17.5,
                                                   color: '#334155',
                                                   fontWeight: '400',
                                                 }}
