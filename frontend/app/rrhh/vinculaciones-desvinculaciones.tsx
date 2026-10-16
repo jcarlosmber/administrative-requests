@@ -60,7 +60,7 @@ const THEME = {
   marcaHover: 'rgba(238, 244, 251, 0.75)',
 
   // Escala de grises Slate
-  slate50: '#F8FAFC',
+  slate50: '#F1F5F9',
   slate100: '#F1F5F9',
   slate200: '#E2E8F0',
   slate300: '#CBD5E1',
@@ -5653,7 +5653,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             <View
               style={{
                 width: '100%',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: '#F1F5F9',
                 borderRadius: 8,
                 padding: 10,
                 borderWidth: 1,
@@ -6036,7 +6036,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     flexDirection: 'row',
                     flexWrap: 'wrap',
                     gap: 12,
-                    backgroundColor: '#F8FAFC',
+                    backgroundColor: '#F1F5F9',
                     padding: 10,
                     borderRadius: 8,
                   }}
@@ -9411,7 +9411,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     <View
                       style={{
                         width: 56,
-                        backgroundColor: '#F8FAFC',
+                        backgroundColor: '#F1F5F9',
                         borderRadius: 12,
                         borderWidth: 1,
                         borderColor: THEME.slate200,
@@ -9951,7 +9951,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             return {
                               etiqueta: 'Planta',
                               colorTexto: '#475569',
-                              colorBg: '#f8fafc',
+                              colorBg: '#f1f5f9',
                               colorBorde: '#e2e8f0',
                             };
                         }
@@ -9988,7 +9988,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               backgroundColor: pressed
                                 ? (esTerminado ? '#BBF7D0' : '#DBEAFE')
                                 : hovered
-                                ? (esTerminado ? '#DCFCE7' : (esActivo ? '#EFF6FF' : '#F8FAFC'))
+                                ? (esTerminado ? '#DCFCE7' : (esActivo ? '#EFF6FF' : '#F1F5F9'))
                                 : bgCard,
                               borderRadius: 12,
                               padding: 12,
@@ -10220,7 +10220,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 alignItems: 'center',
                                 backgroundColor: esTerminado
                                   ? 'rgba(255, 255, 255, 0.65)'
-                                  : '#F8FAFC',
+                                  : '#F1F5F9',
                                 borderWidth: 1,
                                 borderColor: esTerminado ? '#BBF7D0' : 'rgba(226, 232, 240, 0.8)',
                                 borderRadius: 8,
@@ -10308,7 +10308,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           flexDirection: 'row',
                           alignItems: 'center',
                           gap: 6,
-                          backgroundColor: hovered ? '#EFF6FF' : '#F8FAFC',
+                          backgroundColor: hovered ? '#EFF6FF' : '#F1F5F9',
                           borderWidth: 1,
                           borderColor: hovered ? '#2563EB' : '#BFDBFE',
                           paddingHorizontal: 11,
@@ -10991,7 +10991,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             alignItems: 'center',
                             justifyContent: 'center',
                             gap: 8,
-                            backgroundColor: pressed ? '#F1F5F9' : hovered ? '#F8FAFC' : '#FFFFFF',
+                            backgroundColor: pressed ? '#F1F5F9' : hovered ? '#F1F5F9' : '#FFFFFF',
                             paddingHorizontal: 16,
                             paddingVertical: 11,
                             borderRadius: 12,
@@ -11508,7 +11508,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         {/* =============================================================== */}
                         <View
                           style={{
-                            backgroundColor: '#F8FAFC',
+                            backgroundColor: '#F1F5F9',
                             padding: 12,
                             borderRadius: 10,
                             borderWidth: 1,
@@ -12084,7 +12084,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     return (
                                       <View
                                         style={{
-                                          backgroundColor: '#F8FAFC',
+                                          backgroundColor: '#F1F5F9',
                                           borderRadius: 10,
                                           borderWidth: 1.5,
                                           borderColor: '#94A3B8',
@@ -12226,7 +12226,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   ? '#FEF2F2'
                                                   : infoTerminos.estadoSemaforo === 'CALIFICACION_EN_TERMINO'
                                                   ? '#FFFBEB'
-                                                  : '#F8FAFC',
+                                                  : '#F1F5F9',
                                               borderWidth: 1,
                                               borderColor:
                                                 infoTerminos.estadoSemaforo === 'CALIFICACION_VENCIDA'
@@ -12608,7 +12608,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                           {/* Panel expandible de directriz jurídica, mandato y procedimiento */}
                                           {estaReqDetalle && (
-                                            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, padding: 10, gap: 6 }}>
+                                            <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, padding: 10, gap: 6 }}>
                                               {req.textoNormativo && (
                                                 <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0072C6' }}>
                                                   <Text style={{ fontSize: 10, fontWeight: '700', color: '#0072C6', marginBottom: 2 }}>
@@ -12663,7 +12663,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                           {/* 4. FORMATOS INSTITUCIONALES ASOCIADOS AL REQUISITO (DESCARGA DIRECTA) */}
                                           {formatosSugeridos.length > 0 && (
-                                            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 6, padding: 8, gap: 5 }}>
+                                            <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 6, padding: 8, gap: 5 }}>
                                               <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
                                                 📄 Formatos Oficiales Aplicables:
                                               </Text>
@@ -12943,7 +12943,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                           {/* CASO D: SECOP II (DATOS.GOV.CO) */}
                                           {esSecop && (
-                                            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, gap: 6 }}>
+                                            <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, gap: 6 }}>
                                               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                                   <Ionicons name="shield-checkmark-outline" size={15} color="#0F568C" />
@@ -13039,7 +13039,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             const reqVc24 = casoActivo.etapas.flatMap((e) => e.requisitos || []).find((r) => r.id === 'vc2_4');
                                             const esConCobroFase2 = reqVc24 ? reqVc24.tipoCobroUsoLista === 'con_cobro' : !req.noAplica;
                                             return (
-                                              <View style={{ backgroundColor: esConCobroFase2 ? '#FFFBEB' : '#F8FAFC', borderWidth: 1.2, borderColor: esConCobroFase2 ? '#FCD34D' : '#CBD5E1', borderRadius: 8, padding: 10, gap: 6 }}>
+                                              <View style={{ backgroundColor: esConCobroFase2 ? '#FFFBEB' : '#F1F5F9', borderWidth: 1.2, borderColor: esConCobroFase2 ? '#FCD34D' : '#CBD5E1', borderRadius: 8, padding: 10, gap: 6 }}>
                                                 <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobroFase2 ? '#92400E' : '#475569' }}>
                                                   {esConCobroFase2 ? '📜 Resolución de Ordenación del Gasto y Pago CNSC (Habilitado):' : '⚪ Requisito Deshabilitado (No Aplica - Trámite sin cobro)'}
                                                 </Text>
@@ -13053,7 +13053,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           })()}
 
                                           {/* 6. OBSERVACIONES Y RADICADO DIRECTAMENTE EN EL BOX (EDITABLE INLINE) */}
-                                          <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, padding: 10, gap: 6 }}>
+                                          <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, padding: 10, gap: 6 }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                                               <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>
                                                 ✏️ Observaciones Técnicas & Radicado de Soporte:
@@ -13110,7 +13110,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 <View
                                                   key={doc.id}
                                                   style={{
-                                                    backgroundColor: '#F8FAFC',
+                                                    backgroundColor: '#F1F5F9',
                                                     borderWidth: 1,
                                                     borderColor: '#E2E8F0',
                                                     borderRadius: 6,
@@ -14578,7 +14578,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <View
                   style={{
                     marginTop: 10,
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: '#f1f5f9',
                     borderRadius: 10,
                     borderWidth: 1,
                     borderColor: '#cbd5e1',
@@ -17280,7 +17280,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 return (
                   <View
                     style={{
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: '#f1f5f9',
                       borderRadius: 10,
                       borderWidth: 1,
                       borderColor: '#e2e8f0',
@@ -17505,7 +17505,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     irAValidacionIngresosNueva(casoActivo);
                                   }}
                                   style={{
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: '#f1f5f9',
                                     borderWidth: 1,
                                     borderColor: '#cbd5e1',
                                     paddingHorizontal: 10,
@@ -17638,7 +17638,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 placeholder="Filtrar por nombre, cédula o cargo..."
                                 placeholderTextColor="#94a3b8"
                                 style={{
-                                  backgroundColor: '#f8fafc',
+                                  backgroundColor: '#f1f5f9',
                                   borderWidth: 1,
                                   borderColor: '#e2e8f0',
                                   borderRadius: 6,
@@ -18012,7 +18012,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         <View
                           key={doc.id}
                           style={{
-                            backgroundColor: '#f8fafc',
+                            backgroundColor: '#f1f5f9',
                             borderRadius: 6,
                             borderWidth: 1,
                             borderColor: '#e2e8f0',
@@ -18102,7 +18102,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                       padding: 14,
                       alignItems: 'center',
                       gap: 4,
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: '#f1f5f9',
                     }}
                   >
                     <Ionicons name="document-attach-outline" size={24} color="#94a3b8" />
@@ -18721,7 +18721,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           flexDirection: 'row',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          backgroundColor: esMiCargo ? '#F0FDF4' : '#F8FAFC',
+                          backgroundColor: esMiCargo ? '#F0FDF4' : '#F1F5F9',
                           paddingHorizontal: 12,
                           paddingVertical: 8,
                           borderRadius: 8,
@@ -18797,7 +18797,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             {/* Footer del Modal */}
             <View
               style={{
-                backgroundColor: '#F8FAFC',
+                backgroundColor: '#F1F5F9',
                 borderTopWidth: 1,
                 borderTopColor: '#E2E8F0',
                 paddingHorizontal: 16,
@@ -21018,7 +21018,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 autoCapitalize="none"
                 autoCorrect={false}
                 style={{
-                  backgroundColor: '#F8FAFC',
+                  backgroundColor: '#F1F5F9',
                   borderWidth: 1.5,
                   borderColor:
                     palabraConfirmacionEliminar.trim().toLowerCase() === 'eliminar'
@@ -21262,7 +21262,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     placeholder="Ej: Profesional Universitario Código 219 Grado 15"
                     placeholderTextColor={THEME.slate400}
                     style={{
-                      backgroundColor: '#F8FAFC',
+                      backgroundColor: '#F1F5F9',
                       borderWidth: 1,
                       borderColor: '#C7D2FE',
                       borderRadius: 8,
@@ -21500,7 +21500,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
             <ScrollView style={{ padding: 20 }} contentContainerStyle={{ gap: 14 }}>
               <View
                 style={{
-                  backgroundColor: '#F8FAFC',
+                  backgroundColor: '#F1F5F9',
                   borderRadius: 8,
                   padding: 12,
                   borderWidth: 1,
@@ -21571,7 +21571,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                     style={({ hovered }: any) => ({
                       padding: 12,
                       borderRadius: 10,
-                      backgroundColor: seleccionada ? op.bgColor : (hovered ? '#F8FAFC' : THEME.white),
+                      backgroundColor: seleccionada ? op.bgColor : (hovered ? '#F1F5F9' : THEME.white),
                       borderWidth: seleccionada ? 2 : 1,
                       borderColor: seleccionada ? op.color : (hovered ? THEME.slate300 : '#E2E8F0'),
                       cursor: 'pointer',
@@ -21633,7 +21633,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               gap: 6,
                               padding: 8,
                               borderRadius: 6,
-                              backgroundColor: subtipoConcursoModal === 'ABIERTO' ? '#EFF6FF' : '#F8FAFC',
+                              backgroundColor: subtipoConcursoModal === 'ABIERTO' ? '#EFF6FF' : '#F1F5F9',
                               borderWidth: 1,
                               borderColor: subtipoConcursoModal === 'ABIERTO' ? '#2563EB' : '#E2E8F0',
                               cursor: 'pointer',
@@ -21658,7 +21658,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               gap: 6,
                               padding: 8,
                               borderRadius: 6,
-                              backgroundColor: subtipoConcursoModal === 'ASCENSO' ? '#EEF2FF' : '#F8FAFC',
+                              backgroundColor: subtipoConcursoModal === 'ASCENSO' ? '#EEF2FF' : '#F1F5F9',
                               borderWidth: 1,
                               borderColor: subtipoConcursoModal === 'ASCENSO' ? '#4F46E5' : '#E2E8F0',
                               cursor: 'pointer',
