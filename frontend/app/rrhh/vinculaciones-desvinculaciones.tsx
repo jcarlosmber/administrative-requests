@@ -8982,7 +8982,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               {/* Layout de Contenido Principal: Dos Columnas */}
               <View style={{ flexDirection: isDesktop ? 'row' : 'column', gap: 18 }}>
                 {/* Columna Izquierda: Tarjetas de Trámites con Filtros Avanzados y Modo Colapsable */}
-                <View style={{ width: isDesktop ? (sidebarContraido ? 56 : 370) : '100%', gap: 10 }}>
+                <View style={{ width: isDesktop ? (sidebarContraido ? 56 : 315) : '100%', gap: 10 }}>
                   {isDesktop && sidebarContraido ? (
                     <View
                       style={{
@@ -9558,15 +9558,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 : pressed
                                 ? '#f8fafc'
                                 : THEME.white,
-                              borderRadius: 16,
-                              padding: 16,
+                              borderRadius: 12,
+                              paddingHorizontal: 12,
+                              paddingVertical: 10,
                               borderWidth: esActivo ? 2 : 1,
                               borderColor: esActivo ? colorBordeActivo : '#e2e8f0',
                               shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 2 },
-                              shadowOpacity: esActivo ? 0.08 : 0.04,
-                              shadowRadius: 6,
-                              elevation: esActivo ? 3 : 1,
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: esActivo ? 0.08 : 0.03,
+                              shadowRadius: 4,
+                              elevation: esActivo ? 2 : 1,
                               overflow: 'hidden',
                               position: 'relative',
                             })}
@@ -9577,7 +9578,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                paddingBottom: 12,
+                                paddingBottom: 8,
                                 borderBottomWidth: 1,
                                 borderBottomColor: '#f1f5f9',
                               }}
@@ -9588,9 +9589,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 6,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 2.5,
+                                    gap: 5,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2,
                                     borderRadius: 9999,
                                     backgroundColor: esTerminado ? 'rgb(29, 85, 78)' : '#b45309',
                                     borderWidth: 1,
@@ -9608,7 +9609,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Text
                                     style={{
                                       color: '#ffffff',
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: '600',
                                     }}
                                   >
@@ -9620,15 +9621,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 <View
                                   style={{
                                     backgroundColor: esVinculacion ? 'rgb(6, 95, 70)' : 'rgb(139, 64, 73)',
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2.5,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
                                     borderRadius: 4,
                                   }}
                                 >
                                   <Text
                                     style={{
                                       color: '#ffffff',
-                                      fontSize: 10,
+                                      fontSize: 9.5,
                                       fontWeight: '700',
                                       letterSpacing: 0.2,
                                     }}
@@ -9646,13 +9647,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     borderWidth: 1,
                                     borderColor: 'rgba(226, 232, 240, 0.8)',
                                     borderRadius: 4,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2.5,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
                                   }}
                                 >
                                   <Text
                                     style={{
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: '700',
                                       color: '#64748b',
                                       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
@@ -9669,32 +9670,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     abrirModalEliminarCaso(c);
                                   }}
                                   style={({ pressed, hovered }: any) => ({
-                                    padding: 4,
+                                    padding: 3,
                                     borderRadius: 4,
                                     backgroundColor: pressed ? '#fee2e2' : hovered ? '#fef2f2' : 'transparent',
                                     cursor: 'pointer',
                                   })}
                                 >
-                                  <Ionicons name="trash-outline" size={14} color="#ef4444" />
+                                  <Ionicons name="trash-outline" size={13.5} color="#ef4444" />
                                 </Pressable>
                               </View>
                             </View>
 
-                            {/* Main Info: Identity with Avatar/Monogram Indicator & Type */}
-                            <View style={{ paddingTop: 12, paddingBottom: 6 }}>
+                            {/* Main Info: Identidad con Avatar, Nombre, Dependencia debajo y Modalidad */}
+                            <View style={{ paddingTop: 8, paddingBottom: 2 }}>
                               <View
                                 style={{
                                   flexDirection: 'row',
                                   alignItems: 'center',
                                   justifyContent: 'space-between',
-                                  gap: 10,
+                                  gap: 8,
                                 }}
                               >
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 10,
+                                    gap: 8,
                                     flex: 1,
                                     minWidth: 0,
                                   }}
@@ -9702,9 +9703,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   {/* Avatar Monograma: Verde si terminado, Amarillo si en trámite */}
                                   <View
                                     style={{
-                                      width: 32,
-                                      height: 32,
-                                      borderRadius: 16,
+                                      width: 30,
+                                      height: 30,
+                                      borderRadius: 15,
                                       backgroundColor: esTerminado ? '#d1fae5' : '#fef3c7',
                                       borderWidth: 2,
                                       borderColor: esTerminado ? '#a7f3d0' : '#fde68a',
@@ -9715,7 +9716,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   >
                                     <Text
                                       style={{
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: '700',
                                         color: esTerminado ? '#065f46' : '#b45309',
                                       }}
@@ -9724,18 +9725,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     </Text>
                                   </View>
 
-                                  {/* Nombre */}
-                                  <Text
-                                    numberOfLines={1}
-                                    style={{
-                                      fontSize: 13.5,
-                                      fontWeight: '700',
-                                      color: esActivo ? colorNombreActivo : '#0f172a',
-                                      flex: 1,
-                                    }}
-                                  >
-                                    {c.servidor_nombre}
-                                  </Text>
+                                  {/* Nombre y Dependencia Debajo */}
+                                  <View style={{ flex: 1, minWidth: 0 }}>
+                                    <Text
+                                      numberOfLines={1}
+                                      style={{
+                                        fontSize: 12.5,
+                                        fontWeight: '700',
+                                        color: esActivo ? colorNombreActivo : '#0f172a',
+                                      }}
+                                    >
+                                      {c.servidor_nombre}
+                                    </Text>
+                                    <Text
+                                      numberOfLines={1}
+                                      style={{
+                                        fontSize: 10,
+                                        fontWeight: '500',
+                                        color: esActivo ? 'rgba(255, 255, 255, 0.9)' : '#64748b',
+                                        marginTop: 1.5,
+                                      }}
+                                    >
+                                      {c.dependencia || 'Secretaría Jurídica Distrital'}
+                                    </Text>
+                                  </View>
                                 </View>
 
                                 {/* Badge de Régimen con colores distintivos por modalidad */}
@@ -9745,14 +9758,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     borderWidth: 1,
                                     borderColor: estiloModalidad.colorBorde,
                                     borderRadius: 4,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2.5,
+                                    paddingHorizontal: 7,
+                                    paddingVertical: 2,
                                     flexShrink: 0,
                                   }}
                                 >
                                   <Text
                                     style={{
-                                      fontSize: 10,
+                                      fontSize: 9.5,
                                       fontWeight: '700',
                                       color: estiloModalidad.colorTexto,
                                     }}
@@ -9762,12 +9775,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 </View>
                               </View>
 
-                              {/* Metadata Group: Colores de banner si la tarjeta está seleccionada (esActivo), o diseño limpio neutro si no está seleccionada */}
+                              {/* Metadata Group: Identificación y Cargo */}
                               <View
                                 style={{
-                                  marginTop: 10,
-                                  padding: 11,
-                                  borderRadius: 12,
+                                  marginTop: 7,
+                                  paddingHorizontal: 9,
+                                  paddingVertical: 6,
+                                  borderRadius: 8,
                                   backgroundColor: esActivo
                                     ? (esTerminado ? 'rgb(29, 85, 78)' : '#b45309')
                                     : 'rgba(248, 250, 252, 0.85)',
@@ -9775,16 +9789,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   borderColor: esActivo
                                     ? (esTerminado ? 'rgba(94, 234, 212, 0.4)' : 'rgba(254, 240, 138, 0.45)')
                                     : '#f1f5f9',
-                                  gap: 8,
-                                  ...(esActivo
-                                    ? {
-                                        shadowColor: '#000',
-                                        shadowOffset: { width: 0, height: 1 },
-                                        shadowOpacity: 0.1,
-                                        shadowRadius: 3,
-                                        elevation: 2,
-                                      }
-                                    : {}),
                                 }}
                               >
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -9795,19 +9799,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           ? (esTerminado ? '#99f6e4' : '#fef08a')
                                           : '#94a3b8',
                                         fontWeight: '700',
-                                        fontSize: 9.5,
+                                        fontSize: 9,
                                         textTransform: 'uppercase',
-                                        letterSpacing: 0.5,
+                                        letterSpacing: 0.4,
                                       }}
                                     >
                                       Identificación
                                     </Text>
                                     <Text
                                       style={{
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: '700',
                                         color: esActivo ? '#ffffff' : '#1e293b',
-                                        marginTop: 2,
+                                        marginTop: 1.5,
                                       }}
                                     >
                                       {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
@@ -9817,11 +9821,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <View
                                     style={{
                                       width: 1,
-                                      height: 26,
+                                      height: 22,
                                       backgroundColor: esActivo
                                         ? 'rgba(255, 255, 255, 0.25)'
                                         : 'rgba(226, 232, 240, 0.7)',
-                                      marginHorizontal: 10,
+                                      marginHorizontal: 8,
                                     }}
                                   />
 
@@ -9832,9 +9836,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           ? (esTerminado ? '#99f6e4' : '#fef08a')
                                           : '#94a3b8',
                                         fontWeight: '700',
-                                        fontSize: 9.5,
+                                        fontSize: 9,
                                         textTransform: 'uppercase',
-                                        letterSpacing: 0.5,
+                                        letterSpacing: 0.4,
                                       }}
                                     >
                                       Cargo
@@ -9842,193 +9846,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     <Text
                                       numberOfLines={1}
                                       style={{
-                                        fontSize: 11.5,
+                                        fontSize: 11,
                                         fontWeight: esActivo ? '700' : '600',
                                         color: esActivo ? '#ffffff' : '#1e293b',
-                                        marginTop: 2,
+                                        marginTop: 1.5,
                                       }}
                                     >
                                       {c.cargo || 'No asignado'}
                                     </Text>
                                   </View>
                                 </View>
-
-                                <View
-                                  style={{
-                                    paddingTop: 8,
-                                    borderTopWidth: 1,
-                                    borderTopColor: esActivo
-                                      ? 'rgba(255, 255, 255, 0.2)'
-                                      : 'rgba(226, 232, 240, 0.7)',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                  }}
-                                >
-                                  <Text
-                                    style={{
-                                      color: esActivo
-                                        ? (esTerminado ? '#99f6e4' : '#fef08a')
-                                        : '#94a3b8',
-                                      fontWeight: '700',
-                                      fontSize: 9.5,
-                                      textTransform: 'uppercase',
-                                      letterSpacing: 0.5,
-                                    }}
-                                  >
-                                    Dependencia
-                                  </Text>
-                                  <Text
-                                    numberOfLines={1}
-                                    style={{
-                                      fontSize: 10.5,
-                                      fontWeight: esActivo ? '600' : '500',
-                                      color: esActivo ? 'rgba(255, 255, 255, 0.95)' : '#334155',
-                                      flex: 1,
-                                      textAlign: 'right',
-                                      marginLeft: 8,
-                                    }}
-                                  >
-                                    {c.dependencia || 'Secretaría Jurídica Distrital'}
-                                  </Text>
-                                </View>
-                              </View>
-                            </View>
-
-                            {/* Refined Progress Indicator: Verde si terminado, Amarillo/Ámbar si en trámite */}
-                            <View style={{ marginTop: 6, marginBottom: 4 }}>
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  marginBottom: 5,
-                                }}
-                              >
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                  <Ionicons
-                                    name={esTerminado ? 'checkmark-circle' : 'time'}
-                                    size={13}
-                                    color={esTerminado ? '#059669' : '#d97706'}
-                                  />
-                                  <Text
-                                    style={{
-                                      fontSize: 11,
-                                      fontWeight: '500',
-                                      color: esTerminado ? '#065f46' : '#b45309',
-                                    }}
-                                  >
-                                    {esTerminado
-                                      ? 'Expediente Completado'
-                                      : `Fases: ${etapasCompletadas} de ${totalEtapas} concluidas`}
-                                  </Text>
-                                </View>
-                                <Text
-                                  style={{
-                                    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-                                    fontSize: 10.5,
-                                    fontWeight: '700',
-                                    color: esTerminado ? '#065f46' : '#b45309',
-                                  }}
-                                >
-                                  {porcentaje}%
-                                </Text>
-                              </View>
-                              <View
-                                style={{
-                                  width: '100%',
-                                  height: 6,
-                                  borderRadius: 3,
-                                  backgroundColor: '#f1f5f9',
-                                  overflow: 'hidden',
-                                }}
-                              >
-                                <View
-                                  style={{
-                                    height: 6,
-                                    borderRadius: 3,
-                                    width: `${Math.max(porcentaje, 4)}%`,
-                                    backgroundColor: esTerminado ? '#059669' : '#f59e0b',
-                                  }}
-                                />
-                              </View>
-                            </View>
-
-                            {/* Legal Document Footer: Verde si terminado, Amarillo/Ámbar si en trámite */}
-                            <View
-                              style={{
-                                marginTop: 10,
-                                paddingTop: 10,
-                                borderTopWidth: 1,
-                                borderTopColor: '#f1f5f9',
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: 6,
-                              }}
-                            >
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 7,
-                                  flex: 1,
-                                  minWidth: 0,
-                                }}
-                              >
-                                <View
-                                  style={{
-                                    width: 28,
-                                    height: 28,
-                                    borderRadius: 8,
-                                    backgroundColor: esTerminado ? '#ecfdf5' : '#fffbeb',
-                                    borderWidth: 1,
-                                    borderColor: esTerminado ? '#a7f3d0' : '#fde68a',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  <Ionicons
-                                    name="document-text-outline"
-                                    size={14}
-                                    color={esTerminado ? '#059669' : '#d97706'}
-                                  />
-                                </View>
-                                <Text
-                                  numberOfLines={1}
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: '600',
-                                    color: '#0f172a',
-                                    flex: 1,
-                                  }}
-                                >
-                                  {c.acto_administrativo ||
-                                    (esTerminado
-                                      ? 'Resolución oficial expedida'
-                                      : 'Acto administrativo pendiente')}
-                                </Text>
-                              </View>
-
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 3.5,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <Ionicons name="calendar-outline" size={11.5} color="#94a3b8" />
-                                <Text
-                                  style={{
-                                    fontSize: 10,
-                                    color: '#94a3b8',
-                                    fontWeight: '500',
-                                  }}
-                                >
-                                  {c.fecha_efectiva ? `Publicada: ${c.fecha_efectiva}` : 'Pendiente'}
-                                </Text>
                               </View>
                             </View>
                           </Pressable>
