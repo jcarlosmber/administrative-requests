@@ -9967,18 +9967,39 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         const iniciales = obtenerInicialesServidor(c.servidor_nombre);
                         const estiloModalidad = obtenerEstilosModalidad(c.modalidad, c.subtipo_concurso);
 
-                        // Paleta visual según estado:
-                        // EN TRÁMITE: Blanco con toques cobalt-blue y gris slate
-                        // TERMINADO: Fondo de color distintivo menta/esmeralda (#F0FDF4 / #DCFCE7) con acentos verde esmeralda
-                        const bgCard = esTerminado
-                          ? (esActivo ? '#DCFCE7' : '#F0FDF4')
-                          : (esActivo ? '#EFF6FF' : '#FFFFFF');
-
-                        const borderColorCard = esTerminado
-                          ? (esActivo ? '#059669' : '#A7F3D0')
-                          : (esActivo ? '#2563EB' : '#E2E8F0');
-
-                        const shadowColorCard = esTerminado ? '#059669' : (esActivo ? '#2563EB' : '#000000');
+                        // Configuración de estilos según:
+                        // 1. TERMINADO (tonos verdes)
+                        // 2. EN TRÁMITE ACTIVO (borde cobalto-blue, avatar cobalto, microgrid con recuadro)
+                        // 3. EN TRÁMITE INACTIVO (borde slate suave, avatar slate, microgrid limpio sin fondo)
+                        const estiloCard = esTerminado
+                          ? {
+                              bg: esActivo ? '#DCFCE7' : '#F0FDF4',
+                              bgPressed: '#BBF7D0',
+                              bgHover: esActivo ? '#DCFCE7' : '#E6F9ED',
+                              border: esActivo ? '#059669' : '#A7F3D0',
+                              borderWidth: esActivo ? 2 : 1,
+                              shadowColor: '#059669',
+                              shadowOpacity: esActivo ? 0.16 : 0.04,
+                            }
+                          : esActivo
+                          ? {
+                              bg: '#FFFFFF',
+                              bgPressed: '#DBEAFE',
+                              bgHover: '#EFF6FF',
+                              border: '#2563EB',
+                              borderWidth: 2,
+                              shadowColor: '#2563EB',
+                              shadowOpacity: 0.14,
+                            }
+                          : {
+                              bg: '#FFFFFF',
+                              bgPressed: '#F1F5F9',
+                              bgHover: '#F8FAFC',
+                              border: '#E2E8F0',
+                              borderWidth: 1,
+                              shadowColor: '#000000',
+                              shadowOpacity: 0.03,
+                            };
 
                         return (
                           <Pressable
@@ -9986,21 +10007,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             onPress={() => seleccionarCaso(c.id)}
                             style={({ pressed, hovered }: any) => ({
                               backgroundColor: pressed
-                                ? (esTerminado ? '#BBF7D0' : '#DBEAFE')
+                                ? estiloCard.bgPressed
                                 : hovered
-                                ? (esTerminado ? '#DCFCE7' : (esActivo ? '#EFF6FF' : '#F1F5F9'))
-                                : bgCard,
+                                ? estiloCard.bgHover
+                                : estiloCard.bg,
                               borderRadius: 12,
                               padding: 12,
-                              borderWidth: esActivo ? 2 : 1,
-                              borderColor: borderColorCard,
-                              shadowColor: shadowColorCard,
+                              borderWidth: estiloCard.borderWidth,
+                              borderColor: hovered && !esActivo
+                                ? (esTerminado ? '#059669' : '#93C5FD')
+                                : estiloCard.border,
+                              shadowColor: estiloCard.shadowColor,
                               shadowOffset: { width: 0, height: 1.5 },
-                              shadowOpacity: esActivo ? 0.12 : 0.04,
+                              shadowOpacity: estiloCard.shadowOpacity,
                               shadowRadius: 4,
-                              elevation: esActivo ? 2 : 1,
+                              elevation: esActivo ? 3 : 1,
                               flexDirection: 'column',
-                              gap: 9,
+                              gap: 10,
                               cursor: 'pointer',
                               position: 'relative',
                             })}
@@ -10015,18 +10038,22 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               }}
                             >
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-                                {/* Badge Estado: En Trámite o Terminado */}
+                                {/* Badge Estado */}
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: 5,
                                     paddingHorizontal: 8,
-                                    paddingVertical: 2.5,
+                                    paddingVertical: 2,
                                     borderRadius: 9999,
-                                    backgroundColor: esTerminado ? '#D1FAE5' : '#DBEAFE',
+                                    backgroundColor: esTerminado
+                                      ? (esActivo ? '#D1FAE5' : '#ECFDF5')
+                                      : (esActivo ? '#DBEAFE' : '#F1F5F9'),
                                     borderWidth: 1,
-                                    borderColor: esTerminado ? '#A7F3D0' : '#BFDBFE',
+                                    borderColor: esTerminado
+                                      ? (esActivo ? '#A7F3D0' : '#D1FAE5')
+                                      : (esActivo ? '#BFDBFE' : '#E2E8F0'),
                                   }}
                                 >
                                   <View
@@ -10040,30 +10067,38 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Text
                                     style={{
                                       fontSize: 10.5,
-                                      fontWeight: '700',
-                                      color: esTerminado ? '#065F46' : '#1D4ED8',
+                                      fontWeight: esActivo ? '700' : '600',
+                                      color: esTerminado
+                                        ? (esActivo ? '#065F46' : '#047857')
+                                        : (esActivo ? '#1D4ED8' : '#334155'),
                                     }}
                                   >
                                     {esTerminado ? 'Terminado' : 'En Trámite'}
                                   </Text>
                                 </View>
 
-                                {/* Badge Tipo de Proceso (Navy o Esmeralda oscuro) */}
+                                {/* Badge Tipo de Proceso */}
                                 <View
                                   style={{
-                                    backgroundColor: esTerminado ? '#064E3B' : '#0F172A',
+                                    backgroundColor: esTerminado
+                                      ? (esActivo ? '#064E3B' : '#ECFDF5')
+                                      : (esActivo ? '#0F172A' : '#F1F5F9'),
+                                    borderWidth: esTerminado ? (esActivo ? 0 : 1) : (esActivo ? 0 : 1),
+                                    borderColor: esTerminado ? '#D1FAE5' : '#E2E8F0',
                                     paddingHorizontal: 7,
-                                    paddingVertical: 2.5,
+                                    paddingVertical: 2,
                                     borderRadius: 4,
                                   }}
                                 >
                                   <Text
                                     style={{
                                       fontSize: 9.5,
-                                      fontWeight: '700',
+                                      fontWeight: esActivo ? '700' : '600',
                                       textTransform: 'uppercase',
                                       letterSpacing: 0.3,
-                                      color: '#FFFFFF',
+                                      color: esTerminado
+                                        ? (esActivo ? '#FFFFFF' : '#064E3B')
+                                        : (esActivo ? '#FFFFFF' : '#1E293B'),
                                     }}
                                   >
                                     {esVinculacion ? 'Vinculación' : 'Desvinculación'}
@@ -10073,9 +10108,11 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 {/* Badge Código / Radicado */}
                                 <View
                                   style={{
-                                    backgroundColor: esTerminado ? 'rgba(255, 255, 255, 0.7)' : '#F1F5F9',
+                                    backgroundColor: esTerminado
+                                      ? (esActivo ? '#ECFDF5' : 'rgba(255, 255, 255, 0.7)')
+                                      : (esActivo ? '#F1F5F9' : '#F8FAFC'),
                                     borderWidth: 1,
-                                    borderColor: esTerminado ? '#A7F3D0' : '#E2E8F0',
+                                    borderColor: esTerminado ? '#D1FAE5' : '#E2E8F0',
                                     paddingHorizontal: 6,
                                     paddingVertical: 2,
                                     borderRadius: 4,
@@ -10086,7 +10123,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       fontSize: 10,
                                       fontWeight: '600',
                                       fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                                      color: esTerminado ? '#065F46' : '#334155',
+                                      color: esTerminado
+                                        ? (esActivo ? '#065F46' : '#047857')
+                                        : (esActivo ? '#334155' : '#475569'),
                                     }}
                                   >
                                     {c.id}
@@ -10106,7 +10145,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   backgroundColor: pressed
                                     ? '#FEE2E2'
                                     : hovered
-                                    ? '#FEE2E2'
+                                    ? (esTerminado ? '#DCFCE7' : esActivo ? '#EFF6FF' : '#F1F5F9')
                                     : 'transparent',
                                   cursor: 'pointer',
                                 })}
@@ -10115,7 +10154,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 <Ionicons
                                   name="trash-outline"
                                   size={16}
-                                  color={esTerminado ? '#047857' : '#94A3B8'}
+                                  color={esTerminado ? '#059669' : (esActivo ? '#94A3B8' : '#94A3B8')}
                                 />
                               </Pressable>
                             </View>
@@ -10136,17 +10175,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     width: 36,
                                     height: 36,
                                     borderRadius: 18,
-                                    backgroundColor: esTerminado ? '#059669' : '#1D4ED8',
-                                    borderWidth: 2,
+                                    backgroundColor: esTerminado
+                                      ? (esActivo ? '#059669' : '#DCFCE7')
+                                      : (esActivo ? '#1D4ED8' : '#F1F5F9'),
+                                    borderWidth: esActivo ? 2 : 1,
                                     borderColor: esTerminado
-                                      ? 'rgba(52, 211, 153, 0.45)'
-                                      : 'rgba(6, 182, 212, 0.35)',
+                                      ? (esActivo ? 'rgba(52, 211, 153, 0.45)' : '#A7F3D0')
+                                      : (esActivo ? 'rgba(6, 182, 212, 0.35)' : '#E2E8F0'),
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     flexShrink: 0,
-                                    shadowColor: esTerminado ? '#059669' : '#1D4ED8',
+                                    shadowColor: esActivo ? (esTerminado ? '#059669' : '#1D4ED8') : '#000',
                                     shadowOffset: { width: 0, height: 1 },
-                                    shadowOpacity: 0.15,
+                                    shadowOpacity: esActivo ? 0.15 : 0.03,
                                     shadowRadius: 2,
                                     elevation: 1,
                                   }}
@@ -10154,8 +10195,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <Text
                                     style={{
                                       fontSize: 12.5,
-                                      fontWeight: '700',
-                                      color: '#FFFFFF',
+                                      fontWeight: esActivo ? '700' : '600',
+                                      color: esTerminado
+                                        ? (esActivo ? '#FFFFFF' : '#065F46')
+                                        : (esActivo ? '#FFFFFF' : '#334155'),
                                     }}
                                   >
                                     {iniciales}
@@ -10168,8 +10211,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     numberOfLines={1}
                                     style={{
                                       fontSize: 13,
-                                      fontWeight: '700',
-                                      color: esTerminado ? '#064E3B' : '#0F172A',
+                                      fontWeight: esActivo ? '700' : '600',
+                                      color: esTerminado
+                                        ? (esActivo ? '#064E3B' : '#065F46')
+                                        : '#0F172A',
                                       lineHeight: 17,
                                     }}
                                   >
@@ -10180,7 +10225,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     style={{
                                       fontSize: 11,
                                       fontWeight: '500',
-                                      color: esTerminado ? '#047857' : '#64748B',
+                                      color: esTerminado
+                                        ? '#047857'
+                                        : (esActivo ? '#475569' : '#64748B'),
                                       marginTop: 1,
                                     }}
                                   >
@@ -10192,9 +10239,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               {/* Badge Modalidad */}
                               <View
                                 style={{
-                                  backgroundColor: esTerminado ? '#D1FAE5' : '#DBEAFE',
+                                  backgroundColor: esTerminado
+                                    ? (esActivo ? '#D1FAE5' : '#ECFDF5')
+                                    : (esActivo ? '#DBEAFE' : (c.modalidad?.includes?.('LIBRE') ? '#DBEAFE' : '#F1F5F9')),
                                   borderWidth: 1,
-                                  borderColor: esTerminado ? '#A7F3D0' : '#BFDBFE',
+                                  borderColor: esTerminado
+                                    ? (esActivo ? '#A7F3D0' : '#D1FAE5')
+                                    : (esActivo ? '#BFDBFE' : (c.modalidad?.includes?.('LIBRE') ? '#BFDBFE' : '#E2E8F0')),
                                   borderRadius: 4,
                                   paddingHorizontal: 8,
                                   paddingVertical: 3,
@@ -10204,8 +10255,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 <Text
                                   style={{
                                     fontSize: 10.5,
-                                    fontWeight: '700',
-                                    color: esTerminado ? '#065F46' : '#1D4ED8',
+                                    fontWeight: esActivo ? '700' : '600',
+                                    color: esTerminado
+                                      ? (esActivo ? '#065F46' : '#047857')
+                                      : (esActivo ? '#1D4ED8' : (c.modalidad?.includes?.('LIBRE') ? '#1D4ED8' : '#334155')),
                                   }}
                                 >
                                   {estiloModalidad.etiqueta}
@@ -10214,82 +10267,144 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             </View>
 
                             {/* Fila 3: Micro-grid de Datos (Identificación & Cargo / Grado) */}
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                backgroundColor: esTerminado
-                                  ? 'rgba(255, 255, 255, 0.65)'
-                                  : '#F1F5F9',
-                                borderWidth: 1,
-                                borderColor: esTerminado ? '#BBF7D0' : 'rgba(226, 232, 240, 0.8)',
-                                borderRadius: 8,
-                                paddingVertical: 6,
-                                paddingHorizontal: 10,
-                                gap: 10,
-                              }}
-                            >
-                              {/* Columna Identificación */}
-                              <View style={{ flex: 1, minWidth: 0 }}>
-                                <Text
-                                  style={{
-                                    fontSize: 9.5,
-                                    fontWeight: '600',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 0.3,
-                                    color: esTerminado ? '#047857' : '#64748B',
-                                  }}
-                                >
-                                  Identificación
-                                </Text>
-                                <Text
-                                  numberOfLines={1}
-                                  style={{
-                                    fontSize: 11.5,
-                                    fontWeight: '700',
-                                    color: esTerminado ? '#064E3B' : '#0F172A',
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
-                                </Text>
-                              </View>
-
-                              {/* Divisor vertical */}
+                            {esActivo || esTerminado ? (
+                              /* Recuadro para Activo o Terminado */
                               <View
                                 style={{
-                                  width: 1,
-                                  height: 24,
-                                  backgroundColor: esTerminado ? '#BBF7D0' : '#E2E8F0',
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  backgroundColor: esTerminado
+                                    ? (esActivo ? 'rgba(255, 255, 255, 0.75)' : 'rgba(255, 255, 255, 0.6)')
+                                    : '#F8FAFC',
+                                  borderWidth: 1,
+                                  borderColor: esTerminado
+                                    ? (esActivo ? '#BBF7D0' : '#D1FAE5')
+                                    : 'rgba(226, 232, 240, 0.8)',
+                                  borderRadius: 8,
+                                  paddingVertical: 6,
+                                  paddingHorizontal: 10,
+                                  gap: 10,
                                 }}
-                              />
+                              >
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.3,
+                                      color: esTerminado ? '#047857' : '#64748B',
+                                    }}
+                                  >
+                                    Identificación
+                                  </Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 11.5,
+                                      fontWeight: '700',
+                                      color: esTerminado ? '#064E3B' : '#0F172A',
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
+                                  </Text>
+                                </View>
 
-                              {/* Columna Cargo & Grado */}
-                              <View style={{ flex: 1.3, minWidth: 0 }}>
-                                <Text
+                                <View
                                   style={{
-                                    fontSize: 9.5,
-                                    fontWeight: '600',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: 0.3,
-                                    color: esTerminado ? '#047857' : '#64748B',
+                                    width: 1,
+                                    height: 24,
+                                    backgroundColor: esTerminado ? '#BBF7D0' : '#E2E8F0',
                                   }}
-                                >
-                                  Cargo & Grado
-                                </Text>
-                                <Text
-                                  numberOfLines={1}
-                                  style={{
-                                    fontSize: 11.5,
-                                    fontWeight: '700',
-                                    color: esTerminado ? '#064E3B' : '#0F172A',
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {`${c.cargo || 'JEFE DE OFICINA'}${c.grado ? ` (Gr. ${c.grado})` : ''}`}
-                                </Text>
+                                />
+
+                                <View style={{ flex: 1.3, minWidth: 0 }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.3,
+                                      color: esTerminado ? '#047857' : '#64748B',
+                                    }}
+                                  >
+                                    Cargo & Grado
+                                  </Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 11.5,
+                                      fontWeight: '700',
+                                      color: esTerminado ? '#064E3B' : '#0F172A',
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {`${c.cargo || 'JEFE DE OFICINA'}${c.grado ? ` (Gr. ${c.grado})` : ''}`}
+                                  </Text>
+                                </View>
                               </View>
-                            </View>
+                            ) : (
+                              /* Micro-grid limpio y ligero para Inactivos (como en ítems 2, 3, 4) */
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  paddingTop: 4,
+                                  gap: 12,
+                                }}
+                              >
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.3,
+                                      color: '#64748B',
+                                    }}
+                                  >
+                                    Identificación
+                                  </Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 11.5,
+                                      fontWeight: '500',
+                                      color: '#1E293B',
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
+                                  </Text>
+                                </View>
+
+                                <View style={{ flex: 1.3, minWidth: 0 }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 9.5,
+                                      fontWeight: '600',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.3,
+                                      color: '#64748B',
+                                    }}
+                                  >
+                                    Cargo & Grado
+                                  </Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 11.5,
+                                      fontWeight: '500',
+                                      color: '#1E293B',
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {`${c.cargo || 'JEFE DE OFICINA'}${c.grado ? ` (Gr. ${c.grado})` : ''}`}
+                                  </Text>
+                                </View>
+                              </View>
+                            )}
                           </Pressable>
                         );});
                     })()
