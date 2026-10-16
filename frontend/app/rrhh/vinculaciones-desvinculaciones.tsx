@@ -10811,52 +10811,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   elevation: 2,
                                 }}
                               />
-
-                              {/* 3. Chip Unificado OPEC + Convocatoria */}
-                              <Pressable
-                                onPress={abrirModalEditarOpecCaso}
-                                style={({ hovered, pressed }: any) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 5,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 6,
-                                  borderRadius: 8,
-                                  backgroundColor: pressed ? '#334155' : hovered ? '#334155' : 'rgba(30, 41, 59, 0.9)',
-                                  borderWidth: 1,
-                                  borderColor: 'rgba(51, 65, 85, 0.8)',
-                                  cursor: 'pointer',
-                                  shadowColor: '#000',
-                                  shadowOffset: { width: 0, height: 1 },
-                                  shadowOpacity: 0.1,
-                                  shadowRadius: 2,
-                                  elevation: 1,
-                                })}
-                              >
-                                <Ionicons name="document-text-outline" size={14} color="#06B6D4" />
-                                <Text style={{ fontSize: 11, color: '#CBD5E1', fontWeight: '500' }}>
-                                  OPEC:
-                                </Text>
-                                <Text
-                                  style={{
-                                    fontSize: 11,
-                                    color: '#FFFFFF',
-                                    fontWeight: '700',
-                                    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                                  }}
-                                >
-                                  {opecValorActual || casoActivo.concurso_opec || '203205'}
-                                </Text>
-                                <Text style={{ color: '#64748B', fontSize: 11, marginHorizontal: 1 }}>•</Text>
-                                <Text style={{ fontSize: 11, color: '#CBD5E1', fontWeight: '500' }}>
-                                  {convocatoriaValorActual || casoActivo.concurso_convocatoria || 'Distrito Capital 6 - CNSC'}
-                                </Text>
-                                <Ionicons name="pencil-outline" size={11} color="#06B6D4" style={{ marginLeft: 2 }} />
-                              </Pressable>
                             </View>
                           </View>
 
-                          {/* Borde inferior con Dependencia */}
+                          {/* Borde inferior con Dependencia a la izquierda y Chip OPEC a la derecha */}
                           <View
                             style={{
                               borderTopWidth: 1,
@@ -10869,7 +10827,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               flexWrap: 'wrap',
                             }}
                           >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            {/* Dependencia (Izquierda) */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 200 }}>
                               <Ionicons name="business-outline" size={16} color="#06B6D4" />
                               <Text
                                 style={{
@@ -10883,6 +10842,48 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 {casoActivo.dependencia}
                               </Text>
                             </View>
+
+                            {/* Chip Unificado OPEC + Convocatoria (Derecha) */}
+                            <Pressable
+                              onPress={abrirModalEditarOpecCaso}
+                              style={({ hovered, pressed }: any) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 5,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 8,
+                                backgroundColor: pressed ? '#334155' : hovered ? '#334155' : 'rgba(30, 41, 59, 0.9)',
+                                borderWidth: 1,
+                                borderColor: 'rgba(51, 65, 85, 0.8)',
+                                cursor: 'pointer',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 2,
+                                elevation: 1,
+                              })}
+                            >
+                              <Ionicons name="document-text-outline" size={14} color="#06B6D4" />
+                              <Text style={{ fontSize: 11, color: '#CBD5E1', fontWeight: '500' }}>
+                                OPEC:
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: '#FFFFFF',
+                                  fontWeight: '700',
+                                  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                }}
+                              >
+                                {opecValorActual || casoActivo.concurso_opec || '203205'}
+                              </Text>
+                              <Text style={{ color: '#64748B', fontSize: 11, marginHorizontal: 1 }}>•</Text>
+                              <Text style={{ fontSize: 11, color: '#CBD5E1', fontWeight: '500' }}>
+                                {convocatoriaValorActual || casoActivo.concurso_convocatoria || 'Distrito Capital 6 - CNSC'}
+                              </Text>
+                              <Ionicons name="pencil-outline" size={11} color="#06B6D4" style={{ marginLeft: 2 }} />
+                            </Pressable>
                           </View>
                         </View>
                       </View>
