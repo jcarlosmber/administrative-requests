@@ -6519,6 +6519,50 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   };
 
+  // Estados para Modal de Control de Términos Normativos, Fechas y SLA
+  const [modalTerminoNormativoVisible, setModalTerminoNormativoVisible] = useState(false);
+  const [terminoNormativoData, setTerminoNormativoData] = useState<{
+    etapaTitulo: string;
+    etapaSubtitulo?: string;
+    responsable?: string;
+    plazoMostrar: string;
+    badgeMostrar: string;
+    norma: string;
+    diasSla: number;
+    diasTranscurridos: number;
+    diasRestantes: number;
+    fechaInicio: string;
+    procedimiento?: string;
+  } | null>(null);
+
+  const abrirModalTerminoNormativo = (
+    etapa: EtapaFlujo,
+    info: {
+      plazoMostrar?: string | null;
+      badgeMostrar?: string | null;
+      norma?: string | null;
+      diasSla: number;
+      diasTranscurridos: number;
+      diasRestantes: number;
+      fechaInicio: string;
+    }
+  ) => {
+    setTerminoNormativoData({
+      etapaTitulo: etapa.titulo,
+      etapaSubtitulo: etapa.subtitulo,
+      responsable: etapa.responsable,
+      plazoMostrar: info.plazoMostrar || 'Verificación previa y reporte obligatorio en SIMO',
+      badgeMostrar: info.badgeMostrar || 'En Términos Legales',
+      norma: info.norma || 'Ley 909 de 2004, Arts. 24 y 25',
+      diasSla: info.diasSla,
+      diasTranscurridos: info.diasTranscurridos,
+      diasRestantes: info.diasRestantes,
+      fechaInicio: info.fechaInicio,
+      procedimiento: etapa.procedimientoDetallado,
+    });
+    setModalTerminoNormativoVisible(true);
+  };
+
   // Estados y funciones para Modal de Cambio de Puesto en Lista de Elegibles y Causal
   const [modalCambiarPuestoVisible, setModalCambiarPuestoVisible] = useState(false);
   const [puestoNuevoInput, setPuestoNuevoInput] = useState('1');
@@ -11832,7 +11876,18 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 const textoBadgeMostrar = badgeEstado || `SLA Fase: ${diasSla} días hábiles`;
 
                                 return (
-                                  <View
+                                  <Pressable
+                                    onPress={() =>
+                                      abrirModalTerminoNormativo(etapa, {
+                                        plazoMostrar: textoPlazoMostrar,
+                                        badgeMostrar: textoBadgeMostrar,
+                                        norma: normaReal,
+                                        diasSla,
+                                        diasTranscurridos,
+                                        diasRestantes: diasRestantesFase,
+                                        fechaInicio: casoActivo.fecha_inicio_tramite || '2026-10-14',
+                                      })
+                                    }
                                     style={{
                                       flexDirection: isTablet ? 'row' : 'column',
                                       justifyContent: 'space-between',
@@ -11844,6 +11899,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       paddingHorizontal: 12,
                                       paddingVertical: 8,
                                       borderRadius: 8,
+                                      cursor: 'pointer',
                                     }}
                                   >
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
@@ -11885,13 +11941,31 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       </View>
                                     </View>
 
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                       <Ionicons name="hammer-outline" size={13} color="#B45309" />
                                       <Text style={{ fontSize: 11, fontWeight: '600', color: '#92400E' }}>
                                         {normaReal}
                                       </Text>
+                                      <View
+                                        style={{
+                                          backgroundColor: '#FDE68A',
+                                          borderWidth: 1,
+                                          borderColor: '#F59E0B',
+                                          paddingHorizontal: 6,
+                                          paddingVertical: 1.5,
+                                          borderRadius: 4,
+                                          flexDirection: 'row',
+                                          alignItems: 'center',
+                                          gap: 2,
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#78350F' }}>
+                                          Ver Fechas & Norma
+                                        </Text>
+                                        <Ionicons name="open-outline" size={10} color="#78350F" />
+                                      </View>
                                     </View>
-                                  </View>
+                                  </Pressable>
                                 );
                               })()}
 
@@ -11918,42 +11992,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       Fase {etapa.numero}: {etapa.titulo}
                                     </Text>
 
-                                    {esEnProgreso && (
-                                      <View
-                                        style={{
-                                          backgroundColor: '#E0F2FE',
-                                          borderWidth: 1,
-                                          borderColor: '#7DD3FC',
-                                          paddingHorizontal: 7,
-                                          paddingVertical: 2,
-                                          borderRadius: 9999,
-                                        }}
-                                      >
-                                        <Text
-                                          style={{
-                                            fontSize: 10,
-                                            fontWeight: '700',
-                                            textTransform: 'uppercase',
-                                            color: '#0284C7',
-                                            letterSpacing: 0.3,
-                                          }}
-                                        >
-                                          Auditoría Activa
-                                        </Text>
-                                      </View>
-                                    )}
-
-                                    {/* Badge de Estado */}
+                                    {/* Badge de Estado con UI de Auditoría Activa (Píldora en Azul o Negro) */}
                                     <View
                                       style={{
                                         backgroundColor: esCompletada
-                                          ? '#DBEAFE'
+                                          ? '#F8FAFC'
                                           : esEnProgreso
-                                          ? '#BAE6FD'
-                                          : '#E2E8F0',
-                                        paddingHorizontal: 8,
+                                          ? '#EFF6FF'
+                                          : '#F8FAFC',
+                                        borderWidth: 1,
+                                        borderColor: esCompletada
+                                          ? '#0F172A'
+                                          : esEnProgreso
+                                          ? '#93C5FD'
+                                          : '#CBD5E1',
+                                        paddingHorizontal: 9,
                                         paddingVertical: 2.5,
-                                        borderRadius: 4,
+                                        borderRadius: 9999,
                                       }}
                                     >
                                       <Text
@@ -11964,8 +12019,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           color: esCompletada
                                             ? '#0F172A'
                                             : esEnProgreso
-                                            ? '#1D4ED8'
+                                            ? '#0072C6'
                                             : '#64748B',
+                                          letterSpacing: 0.3,
                                         }}
                                       >
                                         {esCompletada ? 'Completado' : esEnProgreso ? 'En Progreso' : 'Pendiente'}
@@ -21721,6 +21777,278 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
                 <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF' }}>
                   Eliminar Definitivamente
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE CONTROL DE TÉRMINO NORMATIVO, FECHAS Y SLA */}
+      <Modal
+        visible={modalTerminoNormativoVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalTerminoNormativoVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 580,
+              maxHeight: '90%',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          >
+            {/* Header del Modal */}
+            <View
+              style={{
+                backgroundColor: '#78350F',
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Ionicons name="timer-outline" size={24} color="#FDE68A" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
+                    Términos Normativos, Fechas y SLA
+                  </Text>
+                  <Text style={{ color: '#FEF3C7', fontSize: 11, marginTop: 1 }}>
+                    Auditoría de plazos legales y control preclusivo de la fase
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setModalTerminoNormativoVisible(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <Ionicons name="close" size={18} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            {/* Contenido con Scroll */}
+            <ScrollView style={{ padding: 20, maxHeight: 520 }}>
+              {/* Tarjeta de Fase y Responsable */}
+              <View
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  borderWidth: 1,
+                  borderColor: '#FCD34D',
+                  borderRadius: 10,
+                  padding: 14,
+                  marginBottom: 16,
+                  gap: 4,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#92400E', textTransform: 'uppercase' }}>
+                  Fase Procedimental Auditada
+                </Text>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#78350F' }}>
+                  {terminoNormativoData?.etapaTitulo}
+                </Text>
+                {terminoNormativoData?.etapaSubtitulo && (
+                  <Text style={{ fontSize: 11.5, color: '#92400E' }}>
+                    {terminoNormativoData.etapaSubtitulo}
+                  </Text>
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <Ionicons name="person-circle-outline" size={14} color="#78350F" />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#78350F' }}>
+                    Responsable Institucional: {terminoNormativoData?.responsable || 'Profesional Universitario Talento Humano'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Grid de Cronometría Legal y Fechas */}
+              <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A', marginBottom: 8 }}>
+                Cronograma y Cómputo de Términos
+              </Text>
+              <View style={{ gap: 8, marginBottom: 16 }}>
+                <View
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    borderRadius: 8,
+                    padding: 12,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ gap: 2 }}>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>Fecha de Inicio del Trámite</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                      {terminoNormativoData?.fechaInicio || 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0072C6' }}>
+                      Radicación Inicial
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    borderRadius: 8,
+                    padding: 12,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ gap: 2 }}>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>SLA / Plazo Legal Asignado a la Fase</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#78350F' }}>
+                      {terminoNormativoData?.diasSla} días hábiles ({terminoNormativoData?.plazoMostrar})
+                    </Text>
+                  </View>
+                  <View style={{ backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FCD34D', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#78350F' }}>
+                      {terminoNormativoData?.badgeMostrar}
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    borderRadius: 8,
+                    padding: 12,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ gap: 2 }}>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>Días Hábiles Transcurridos</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                      {terminoNormativoData?.diasTranscurridos} día(s) transcurrido(s)
+                    </Text>
+                  </View>
+                  <View style={{ gap: 2, alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>Margen Restante</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#15803D' }}>
+                      {terminoNormativoData?.diasRestantes} día(s) hábil(es)
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Fundamento Normativo */}
+              <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A', marginBottom: 8 }}>
+                Fundamento Jurídico & Marco Normativo
+              </Text>
+              <View
+                style={{
+                  backgroundColor: '#EFF6FF',
+                  borderWidth: 1,
+                  borderColor: '#BFDBFE',
+                  borderRadius: 10,
+                  padding: 14,
+                  marginBottom: 16,
+                  gap: 8,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="hammer-outline" size={16} color="#0072C6" />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                    {terminoNormativoData?.norma}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 11.5, color: '#334155', lineHeight: 17 }}>
+                  {terminoNormativoData?.procedimiento ||
+                    'Procedimiento reglado para verificación en el Banco Nacional de Listas de Elegibles y reporte en SIMO de la Comisión Nacional del Servicio Civil.'}
+                </Text>
+                <View style={{ borderTopWidth: 1, borderTopColor: '#DBEAFE', paddingTop: 8, marginTop: 4 }}>
+                  <Text style={{ fontSize: 10.5, color: '#64748B' }}>
+                    Normas concordantes: Decreto 1083 de 2015 • Criterios unificados CNSC • CPACA Art. 67 y 74 • Código General Disciplinario Ley 1952 de 2019.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Control de Inobservancia y Preclusión */}
+              <View
+                style={{
+                  backgroundColor: '#FFFBEB',
+                  borderWidth: 1,
+                  borderColor: '#FDE68A',
+                  borderRadius: 8,
+                  padding: 12,
+                  flexDirection: 'row',
+                  gap: 8,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <Ionicons name="alert-circle-outline" size={16} color="#B45309" style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#92400E' }}>
+                    Efecto Preclusivo de Términos
+                  </Text>
+                  <Text style={{ fontSize: 10.5, color: '#B45309', marginTop: 2 }}>
+                    Los términos legales señalados para la provisión de empleos son perentorios e improrrogables salvo solicitud justificada en los casos expresamente contemplados por el Decreto 1083 de 2015.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Footer de Acciones */}
+            <View
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderTopWidth: 1,
+                borderTopColor: '#E2E8F0',
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Pressable
+                onPress={() => setModalTerminoNormativoVisible(false)}
+                style={{
+                  paddingHorizontal: 18,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  backgroundColor: '#78350F',
+                  cursor: 'pointer',
+                }}
+              >
+                <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF' }}>
+                  Entendido / Cerrar
                 </Text>
               </Pressable>
             </View>
