@@ -8290,6 +8290,54 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     toggleRequisitoDirecto(casoId, etapaId, requisitoId);
   };
 
+  const toggleNoAplicaDirecto = (casoId: string, etapaId: string, requisitoId: string) => {
+    setCasos((prevCasos) =>
+      prevCasos.map((caso) => {
+        if (caso.id !== casoId) return caso;
+
+        const nuevasEtapas = caso.etapas.map((etapa) => {
+          if (etapa.id !== etapaId) return etapa;
+
+          const nuevosRequisitos = etapa.requisitos.map((req) => {
+            if (req.id !== requisitoId) return req;
+            const nuevoNoAplica = !req.noAplica;
+            return {
+              ...req,
+              noAplica: nuevoNoAplica,
+              cumplido: nuevoNoAplica ? true : false,
+              observaciones: nuevoNoAplica
+                ? (req.observaciones || 'Marcado como No Aplica para este trámite')
+                : undefined,
+            };
+          });
+
+          const todosCumplidos = nuevosRequisitos
+            .filter((r) => r.obligatorio && !r.noAplica)
+            .every((r) => r.cumplido);
+          const algunCumplido = nuevosRequisitos.some((r) => r.cumplido);
+
+          let nuevoEstado: EstadoEtapa = 'pending';
+          if (todosCumplidos) {
+            nuevoEstado = 'completed';
+          } else if (algunCumplido) {
+            nuevoEstado = 'in_progress';
+          }
+
+          return {
+            ...etapa,
+            requisitos: nuevosRequisitos,
+            estado: nuevoEstado,
+          };
+        });
+
+        return {
+          ...caso,
+          etapas: nuevasEtapas,
+        };
+      })
+    );
+  };
+
   const toggleRequisitoDirecto = (casoId: string, etapaId: string, requisitoId: string) => {
     setCasos((prevCasos) =>
       prevCasos.map((caso) => {
@@ -12158,12 +12206,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   <View style={{ gap: 8 }}>
                                     {etapa.requisitos.map((req, rIdx) => {
                                       const estaReqDetalle = reqDetalleExpandido[req.id] ?? false;
-                                      const estaSecopExpandido = secopResumenExpandido[req.id] ?? false;
-
                                       const respReq = req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH';
                                       const esDeMiCargo = filtroCargoResponsable === 'TODOS' || respReq === filtroCargoResponsable;
 
-                                      // Si se configuró ocultar otros cargos
                                       if (!esDeMiCargo && modoVisualizacionCargo === 'solo_mi_cargo') {
                                         return null;
                                       }
@@ -12172,150 +12217,97 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       const primerPendiente = etapa.requisitos.find((r) => !r.cumplido && !r.noAplica);
                                       const esPasoEnEjecucion = !req.cumplido && !req.noAplica && (req.id === primerPendiente?.id || primerPendiente === undefined);
 
-                                      // CASO 1: NO APLICA (Caja con borde izquierdo pizarra gris)
-                                      if (req.noAplica) {
-                                        return (
-                                          <View
-                                            key={req.id}
-                                            style={{
-                                              backgroundColor: '#FFFFFF',
-                                              borderRadius: 10,
-                                              borderWidth: 1,
-                                              borderColor: '#E2E8F0',
-                                              borderLeftWidth: 4,
-                                              borderLeftColor: '#64748B',
-                                              padding: 12,
-                                              gap: 8,
-                                              opacity: soloVisualizacion ? 0.78 : 1,
-                                            }}
-                                          >
-                                            {/* Fila 1: Icono circular menos, Título, Badge NO APLICA y Responsable */}
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
-                                                <View
-                                                  style={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    borderRadius: 12,
-                                                    backgroundColor: '#E2E8F0',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                  }}
-                                                >
-                                                  <Ionicons name="remove-outline" size={14} color="#64748B" />
-                                                </View>
-                                                <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#0F172A', flexShrink: 1 }}>
-                                                  {req.label}
+                                      // Detección de tipos específicos del requisito
+                                      const reqId = req.id || '';
+                                      const reqCodigo = req.codigoFormato || '';
+                                      const reqLabel = (req.label || '').toLowerCase();
+
+                                      const esSimo = reqId.includes('vc1_2') || reqId.includes('simo') || reqId.includes('bnle') || reqLabel.includes('banco nacional de listas') || reqLabel.includes('bnle') || (reqLabel.includes('simo') && reqLabel.includes('elegibles'));
+                                      const esFT318 = reqId.includes('ft318') || reqCodigo.includes('FT-318') || reqLabel.includes('ft-318') || reqLabel.includes('validación técnica') || req.tipoAccionEspecial === 'INGRESOS_IA';
+                                      const esFT095 = reqId.includes('ft095') || reqCodigo.includes('FT-095') || reqLabel.includes('ft-095') || reqLabel.includes('tomar posesión') || req.tipoAccionEspecial === 'FT095';
+                                      const esSecop = req.tipoAccionEspecial === 'SECOP' || reqId.includes('secop') || reqLabel.includes('secop');
+                                      const esEvaluacionRetiro = reqLabel.includes('evaluación de retiro') || reqLabel.includes('encuesta de retiro') || (reqLabel.includes('retiro') && reqId.includes('4_3'));
+                                      const esCobro = reqId === 'vc2_4' || (req.tipoCobroUsoLista !== undefined && reqId !== 'vc6_pago_cnsc');
+                                      const esPagoCnsc = reqId === 'vc6_pago_cnsc' || req.tipoAccionEspecial === 'PAGO_CNSC';
+
+                                      // Formatos sugeridos específicos para este requisito
+                                      const formatosSugeridos = LISTA_FORMATOS_OFICIALES.filter((f) => {
+                                        if (f.requisitosAsociados && f.requisitosAsociados.includes(reqId)) return true;
+                                        if (reqCodigo && f.codigo.includes(reqCodigo)) return true;
+                                        if (reqLabel.includes('confidencialidad') && f.id === 'FT-268') return true;
+                                        if (reqLabel.includes('retiro') && (f.id === 'FT-219' || f.id === 'FT-436')) return true;
+                                        if (reqLabel.includes('posesión') && f.id === 'FT-127') return true;
+                                        if (reqLabel.includes('entrenamiento') && f.id === 'FT-106') return true;
+                                        if (reqLabel.includes('antecedentes') && f.id === 'FT-027') return true;
+                                        if (reqLabel.includes('títulos') && f.id === 'FT-319') return true;
+                                        if (reqLabel.includes('entrega de cargo') && (f.id === 'FT-436' || f.id === 'ACTA-LEY-951')) return true;
+                                        return false;
+                                      });
+
+                                      // Si es FT-318, resolver la validación del aspirante
+                                      const cedulaCaso = casoActivo?.servidor_cedula?.trim() || '';
+                                      const nombreCaso = casoActivo?.servidor_nombre?.trim().toLowerCase() || '';
+                                      const valVinculadaDirecta = req.idValidacionIngresos
+                                        ? validacionesIngresos.find((v) => v.id === req.idValidacionIngresos)
+                                        : null;
+                                      const valPorCandidato = !valVinculadaDirecta
+                                        ? validacionesIngresos.find((v) => {
+                                            if (cedulaCaso && v.candidato_documento && String(v.candidato_documento).trim() === cedulaCaso) return true;
+                                            if (nombreCaso && v.candidato_nombre && v.candidato_nombre.toLowerCase().trim() === nombreCaso) return true;
+                                            return false;
+                                          })
+                                        : null;
+                                      const valActiva = valVinculadaDirecta || valPorCandidato;
+
+                                      // Estilos de contenedor según estado
+                                      const esCumplido = req.cumplido && !req.noAplica;
+                                      const esNoAplica = req.noAplica;
+                                      const esActivo = !esCumplido && !esNoAplica;
+
+                                      return (
+                                        <View
+                                          key={req.id}
+                                          style={{
+                                            backgroundColor: '#FFFFFF',
+                                            borderRadius: 10,
+                                            borderWidth: esActivo && esPasoEnEjecucion ? 2 : 1,
+                                            borderColor: esActivo && esPasoEnEjecucion ? '#0072C6' : '#E2E8F0',
+                                            borderLeftWidth: esNoAplica ? 4 : esCumplido ? 4 : (esActivo && esPasoEnEjecucion ? 2 : 4),
+                                            borderLeftColor: esNoAplica ? '#64748B' : esCumplido ? '#10B981' : (esActivo && esPasoEnEjecucion ? '#0072C6' : '#3B82F6'),
+                                            padding: 14,
+                                            gap: 10,
+                                            shadowColor: esActivo && esPasoEnEjecucion ? '#0072C6' : 'transparent',
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: esActivo && esPasoEnEjecucion ? 0.08 : 0,
+                                            shadowRadius: 6,
+                                            elevation: esActivo && esPasoEnEjecucion ? 2 : 0,
+                                            opacity: soloVisualizacion ? 0.78 : 1,
+                                          }}
+                                        >
+                                          {/* 1. BADGES SUPERIORES SI ES PASO ACTIVO */}
+                                          {esActivo && esPasoEnEjecucion && (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                              <View style={{ backgroundColor: '#0F568C', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
+                                                <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>
+                                                  PASO EN EJECUCIÓN
                                                 </Text>
-                                                <View
-                                                  style={{
-                                                    backgroundColor: '#0F172A',
-                                                    paddingHorizontal: 7,
-                                                    paddingVertical: 2,
-                                                    borderRadius: 4,
-                                                  }}
-                                                >
-                                                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                                                    NO APLICA
+                                              </View>
+                                              {req.obligatorio !== false && (
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                                                  <Ionicons name="alert-circle" size={13} color="#DC2626" />
+                                                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#DC2626' }}>
+                                                    ! Requisito Previo Obligatorio
                                                   </Text>
                                                 </View>
-                                              </View>
-
-                                              {/* Badge de Responsable a la derecha */}
-                                              <View
-                                                style={{
-                                                  backgroundColor: '#F1F5F9',
-                                                  borderWidth: 1,
-                                                  borderColor: '#E2E8F0',
-                                                  paddingHorizontal: 10,
-                                                  paddingVertical: 4,
-                                                  borderRadius: 6,
-                                                  flexDirection: 'row',
-                                                  alignItems: 'center',
-                                                  gap: 5,
-                                                  alignSelf: 'flex-start',
-                                                }}
-                                              >
-                                                <Ionicons name="person-outline" size={12} color="#475569" />
-                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
-                                                  {respReq}
-                                                </Text>
-                                              </View>
+                                              )}
                                             </View>
+                                          )}
 
-                                            {/* Fila 2: Pill de Norma */}
-                                            <View
-                                              style={{
-                                                backgroundColor: '#F1F5F9',
-                                                borderWidth: 1,
-                                                borderColor: '#E2E8F0',
-                                                paddingHorizontal: 8,
-                                                paddingVertical: 3,
-                                                borderRadius: 6,
-                                                alignSelf: 'flex-start',
-                                              }}
-                                            >
-                                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
-                                                ⚖️ {req.norma || 'Decreto 1083 de 2015, Art. 2.2.6.2 • Criterio Unificado CNSC'}
-                                              </Text>
-                                            </View>
-
-                                            {/* Fila 3: Nota explicativa en cursiva */}
-                                            <Text style={{ fontSize: 11.5, color: '#64748B', fontStyle: 'italic', lineHeight: 16 }}>
-                                              ({req.observaciones || 'Vacante cuenta con lista directa del empleo específico; no requiere equivalencia funcional'})
-                                            </Text>
-
-                                            {/* Fila 4: Footer de Evidencias */}
-                                            <View
-                                              style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                paddingTop: 4,
-                                                borderTopWidth: 1,
-                                                borderTopColor: '#F1F5F9',
-                                              }}
-                                            >
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                                <Ionicons name="document-text-outline" size={13} color="#64748B" />
-                                                <Text style={{ fontSize: 11, color: '#64748B' }}>
-                                                  Documentos y Evidencias de Soporte: {req.documentosAdjuntos && req.documentosAdjuntos.length > 0 ? `${req.documentosAdjuntos.length} archivo(s)` : 'Sin archivos adjuntos'}
-                                                </Text>
-                                              </View>
-                                              <Pressable
-                                                onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
-                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
-                                              >
-                                                <Ionicons name="add-circle-outline" size={13} color="#475569" />
-                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#475569' }}>
-                                                  + 📁 Adjuntar Justificación
-                                                </Text>
-                                              </Pressable>
-                                            </View>
-                                          </View>
-                                        );
-                                      }
-
-                                      // CASO 2: CUMPLIDO (Caja con borde izquierdo verde esmeralda y check cuadrado)
-                                      if (req.cumplido) {
-                                        return (
-                                          <View
-                                            key={req.id}
-                                            style={{
-                                              backgroundColor: '#FFFFFF',
-                                              borderRadius: 10,
-                                              borderWidth: 1,
-                                              borderColor: '#E2E8F0',
-                                              borderLeftWidth: 4,
-                                              borderLeftColor: '#10B981',
-                                              padding: 12,
-                                              gap: 8,
-                                              opacity: soloVisualizacion ? 0.78 : 1,
-                                            }}
-                                          >
-                                            {/* Fila 1: Cuadrado verde check, Título tachado y Responsable */}
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                                          {/* 2. FILA DE TÍTULO, ÍCONO DE ESTADO Y RESPONSABLE */}
+                                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 9, flex: 1 }}>
+                                              {/* Ícono de estado según cumplido / no aplica / activo */}
+                                              {esCumplido ? (
                                                 <Pressable
                                                   onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
                                                   style={{
@@ -12325,378 +12317,76 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     backgroundColor: '#DCFCE7',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
+                                                    marginTop: 1,
                                                     cursor: 'pointer',
                                                   }}
                                                 >
                                                   <Ionicons name="checkmark-sharp" size={16} color="#15803D" />
                                                 </Pressable>
+                                              ) : esNoAplica ? (
+                                                <Pressable
+                                                  onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
+                                                  style={{
+                                                    width: 24,
+                                                    height: 24,
+                                                    borderRadius: 12,
+                                                    backgroundColor: '#E2E8F0',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    marginTop: 1,
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="remove-outline" size={14} color="#64748B" />
+                                                </Pressable>
+                                              ) : (
                                                 <Pressable
                                                   onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
-                                                  style={{ flex: 1, cursor: 'pointer' }}
+                                                  style={{
+                                                    width: 28,
+                                                    height: 28,
+                                                    borderRadius: 14,
+                                                    backgroundColor: esPasoEnEjecucion ? '#E0F2FE' : '#F1F5F9',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    marginTop: 1,
+                                                    cursor: 'pointer',
+                                                  }}
                                                 >
+                                                  <Ionicons name={esPasoEnEjecucion ? 'sync-outline' : 'ellipse-outline'} size={15} color={esPasoEnEjecucion ? '#0072C6' : '#64748B'} />
+                                                </Pressable>
+                                              )}
+
+                                              {/* Texto del título */}
+                                              <View style={{ flex: 1, gap: 3 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                   <Text
                                                     style={{
-                                                      fontSize: 14,
-                                                      fontWeight: '700',
-                                                      color: '#64748B',
-                                                      textDecorationLine: 'line-through',
-                                                      lineHeight: 19,
+                                                      fontSize: esPasoEnEjecucion ? 14.5 : 13.5,
+                                                      fontWeight: '800',
+                                                      color: esCumplido ? '#64748B' : '#0F172A',
+                                                      textDecorationLine: esCumplido ? 'line-through' : 'none',
+                                                      lineHeight: 20,
                                                     }}
                                                   >
                                                     {req.label}
                                                   </Text>
-                                                </Pressable>
-                                              </View>
-
-                                              {/* Badge de Responsable a la derecha */}
-                                              <View
-                                                style={{
-                                                  backgroundColor: '#F1F5F9',
-                                                  borderWidth: 1,
-                                                  borderColor: '#E2E8F0',
-                                                  paddingHorizontal: 10,
-                                                  paddingVertical: 4,
-                                                  borderRadius: 6,
-                                                  flexDirection: 'row',
-                                                  alignItems: 'center',
-                                                  gap: 5,
-                                                  alignSelf: 'flex-start',
-                                                }}
-                                              >
-                                                <Ionicons name="person-outline" size={12} color="#475569" />
-                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
-                                                  {respReq}
-                                                </Text>
-                                              </View>
-                                            </View>
-
-                                            {/* Fila 2: Pill de Norma + Botón Más info y norma */}
-                                            <View
-                                              style={{
-                                                backgroundColor: '#F0F9FF',
-                                                borderWidth: 1,
-                                                borderColor: '#BAE6FD',
-                                                borderRadius: 6,
-                                                paddingHorizontal: 10,
-                                                paddingVertical: 5,
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                gap: 8,
-                                              }}
-                                            >
-                                              <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#0369A1', flex: 1 }} numberOfLines={1}>
-                                                ⚖️ {req.norma || 'Ley 909 de 2004, Art. 31, Num. 1 • Decreto 1083 de 2015, Art. 2.2.5.3.1'}
-                                              </Text>
-                                              <Pressable
-                                                onPress={() => toggleDetalleReq(req.id)}
-                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
-                                              >
-                                                <Ionicons name="information-circle-outline" size={13} color="#0284C7" />
-                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7' }}>
-                                                  {estaReqDetalle ? 'Ocultar info' : 'Más info y norma'}
-                                                </Text>
-                                              </Pressable>
-                                            </View>
-
-                                            {/* Desplegable inline de información y norma sin modal */}
-                                            {estaReqDetalle && (
-                                              <View
-                                                style={{
-                                                  backgroundColor: '#F8FAFC',
-                                                  borderWidth: 1,
-                                                  borderColor: '#BAE6FD',
-                                                  borderRadius: 6,
-                                                  padding: 10,
-                                                  gap: 6,
-                                                }}
-                                              >
-                                                {req.notaNormativa && (
-                                                  <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0284C7' }}>
-                                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1', marginBottom: 2 }}>
-                                                      💡 Resumen Jurídico Institucional:
-                                                    </Text>
-                                                    <Text style={{ fontSize: 11, color: '#334155', lineHeight: 15 }}>
-                                                      {req.notaNormativa}
-                                                    </Text>
-                                                  </View>
-                                                )}
-                                                {req.detalleProcedimiento && (
-                                                  <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#10B981' }}>
-                                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#15803D', marginBottom: 2 }}>
-                                                      📋 Procedimiento Oficial de Cumplimiento:
-                                                    </Text>
-                                                    <Text style={{ fontSize: 11, color: '#334155', lineHeight: 15 }}>
-                                                      {req.detalleProcedimiento}
-                                                    </Text>
-                                                  </View>
-                                                )}
-                                                {/* Editor inline directo de observación */}
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderWidth: 1, borderColor: '#CBD5E1', gap: 6 }}>
-                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0F172A' }}>
-                                                    ✏️ Observaciones Técnicas y Radicado Directo:
-                                                  </Text>
-                                                  <TextInput
-                                                    placeholder="Escriba aquí las observaciones o justificación técnica..."
-                                                    value={reqObsEditInline[req.id] !== undefined ? reqObsEditInline[req.id] : (req.observaciones || '')}
-                                                    onChangeText={(txt) => setReqObsEditInline((prev) => ({ ...prev, [req.id]: txt }))}
-                                                    style={{
-                                                      backgroundColor: '#F8FAFC',
-                                                      borderWidth: 1,
-                                                      borderColor: '#CBD5E1',
-                                                      borderRadius: 4,
-                                                      padding: 6,
-                                                      fontSize: 11,
-                                                      color: '#0F172A',
-                                                    }}
-                                                  />
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                    <TextInput
-                                                      placeholder="Radicado de soporte (ej. 2026-EE-0492)..."
-                                                      value={reqRadicadoEditInline[req.id] !== undefined ? reqRadicadoEditInline[req.id] : (req.radicadoSoporte || '')}
-                                                      onChangeText={(txt) => setReqRadicadoEditInline((prev) => ({ ...prev, [req.id]: txt }))}
-                                                      style={{
-                                                        backgroundColor: '#F8FAFC',
-                                                        borderWidth: 1,
-                                                        borderColor: '#CBD5E1',
-                                                        borderRadius: 4,
-                                                        padding: 5,
-                                                        fontSize: 10.5,
-                                                        color: '#0F172A',
-                                                        flex: 1,
-                                                        marginRight: 8,
-                                                      }}
-                                                    />
-                                                    <Pressable
-                                                      onPress={() => handleGuardarObsInline(casoActivo.id, etapa.id, req.id)}
-                                                      style={{
-                                                        backgroundColor: '#0F568C',
-                                                        paddingHorizontal: 10,
-                                                        paddingVertical: 5,
-                                                        borderRadius: 4,
-                                                        cursor: 'pointer',
-                                                      }}
-                                                    >
-                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                                        {reqGuardadoFeedback[req.id] ? '✓ Guardado' : 'Guardar en Box'}
+                                                  {esNoAplica && (
+                                                    <View style={{ backgroundColor: '#0F172A', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                                                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                                                        NO APLICA
                                                       </Text>
-                                                    </Pressable>
-                                                  </View>
+                                                    </View>
+                                                  )}
+                                                  {req.codigoFormato && (
+                                                    <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
+                                                        📄 {req.codigoFormato}
+                                                      </Text>
+                                                    </View>
+                                                  )}
                                                 </View>
                                               </View>
-                                            )}
-
-                                            {/* Fila 3: Archivo de Soporte Adjunto */}
-                                            {req.documentosAdjuntos && req.documentosAdjuntos.length > 0 ? (
-                                              req.documentosAdjuntos.map((doc) => (
-                                                <View
-                                                  key={doc.id}
-                                                  style={{
-                                                    backgroundColor: '#F8FAFC',
-                                                    borderWidth: 1,
-                                                    borderColor: '#E2E8F0',
-                                                    borderRadius: 6,
-                                                    paddingHorizontal: 12,
-                                                    paddingVertical: 8,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    gap: 8,
-                                                  }}
-                                                >
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                                    <Ionicons name="attach-outline" size={14} color="#0284C7" />
-                                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#0284C7', flexShrink: 1 }} numberOfLines={1}>
-                                                      {doc.nombre}
-                                                    </Text>
-                                                    <Text style={{ fontSize: 11, color: '#64748B' }}>
-                                                      ({formatearTamanoArchivo(doc.size) || '1.2 MB'} • Firmado digitalmente)
-                                                    </Text>
-                                                  </View>
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                    <Pressable
-                                                      onPress={() => handleAbrirArchivoAdjunto(doc)}
-                                                      style={{
-                                                        backgroundColor: '#FFFFFF',
-                                                        borderWidth: 1,
-                                                        borderColor: '#CBD5E1',
-                                                        borderRadius: 6,
-                                                        paddingHorizontal: 10,
-                                                        paddingVertical: 4,
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center',
-                                                        gap: 4,
-                                                        cursor: 'pointer',
-                                                      }}
-                                                    >
-                                                      <Ionicons name="eye-outline" size={12} color="#334155" />
-                                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>Ver</Text>
-                                                    </Pressable>
-                                                    <Pressable
-                                                      onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
-                                                      style={{
-                                                        backgroundColor: '#FFFFFF',
-                                                        borderWidth: 1,
-                                                        borderColor: '#CBD5E1',
-                                                        borderRadius: 6,
-                                                        paddingHorizontal: 10,
-                                                        paddingVertical: 4,
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center',
-                                                        gap: 4,
-                                                        cursor: 'pointer',
-                                                      }}
-                                                    >
-                                                      <Ionicons name="cloud-upload-outline" size={12} color="#334155" />
-                                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>+ Adjuntar</Text>
-                                                    </Pressable>
-                                                  </View>
-                                                </View>
-                                              ))
-                                            ) : (
-                                              <View
-                                                style={{
-                                                  backgroundColor: '#F8FAFC',
-                                                  borderWidth: 1,
-                                                  borderColor: '#E2E8F0',
-                                                  borderRadius: 6,
-                                                  paddingHorizontal: 12,
-                                                  paddingVertical: 8,
-                                                  flexDirection: 'row',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'space-between',
-                                                  gap: 8,
-                                                }}
-                                              >
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                                  <Ionicons name="attach-outline" size={14} color="#0284C7" />
-                                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#0284C7' }}>
-                                                    {req.radicadoSoporte ? `Soporte_${req.radicadoSoporte}.pdf` : 'Certificado_Vacancia_OPEC_firmado.pdf'}
-                                                  </Text>
-                                                  <Text style={{ fontSize: 11, color: '#64748B' }}>
-                                                    (1.2 MB • Firmado digitalmente)
-                                                  </Text>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                  <Pressable
-                                                    onPress={() => {
-                                                      setModalVisorDoc({
-                                                        visible: true,
-                                                        titulo: req.label,
-                                                        nombreArchivo: req.radicadoSoporte ? `Soporte_${req.radicadoSoporte}.pdf` : 'Certificado_Vacancia_OPEC_firmado.pdf',
-                                                        url: null,
-                                                      });
-                                                    }}
-                                                    style={{
-                                                      backgroundColor: '#FFFFFF',
-                                                      borderWidth: 1,
-                                                      borderColor: '#CBD5E1',
-                                                      borderRadius: 6,
-                                                      paddingHorizontal: 10,
-                                                      paddingVertical: 4,
-                                                      flexDirection: 'row',
-                                                      alignItems: 'center',
-                                                      gap: 4,
-                                                      cursor: 'pointer',
-                                                    }}
-                                                  >
-                                                    <Ionicons name="eye-outline" size={12} color="#334155" />
-                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>Ver</Text>
-                                                  </Pressable>
-                                                  <Pressable
-                                                    onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
-                                                    style={{
-                                                      backgroundColor: '#FFFFFF',
-                                                      borderWidth: 1,
-                                                      borderColor: '#CBD5E1',
-                                                      borderRadius: 6,
-                                                      paddingHorizontal: 10,
-                                                      paddingVertical: 4,
-                                                      flexDirection: 'row',
-                                                      alignItems: 'center',
-                                                      gap: 4,
-                                                      cursor: 'pointer',
-                                                    }}
-                                                  >
-                                                    <Ionicons name="cloud-upload-outline" size={12} color="#334155" />
-                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>+ Adjuntar</Text>
-                                                  </Pressable>
-                                                </View>
-                                              </View>
-                                            )}
-                                          </View>
-                                        );
-                                      }
-
-                                      // CASO 3: PASO EN EJECUCIÓN O PENDIENTE (Caja con borde azul de 2px, PASO EN EJECUCIÓN, datos en vivo en el box)
-                                      return (
-                                        <View
-                                          key={req.id}
-                                          style={{
-                                            backgroundColor: '#FFFFFF',
-                                            borderRadius: 10,
-                                            borderWidth: esPasoEnEjecucion ? 2 : 1.5,
-                                            borderColor: esPasoEnEjecucion ? '#0072C6' : '#93C5FD',
-                                            padding: 14,
-                                            gap: 10,
-                                            shadowColor: '#0072C6',
-                                            shadowOffset: { width: 0, height: 2 },
-                                            shadowOpacity: esPasoEnEjecucion ? 0.09 : 0.04,
-                                            shadowRadius: 6,
-                                            elevation: esPasoEnEjecucion ? 2 : 1,
-                                            opacity: soloVisualizacion ? 0.78 : 1,
-                                          }}
-                                        >
-                                          {/* Fila 1: Badges Superiores */}
-                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                            <View
-                                              style={{
-                                                backgroundColor: esPasoEnEjecucion ? '#0F568C' : '#334155',
-                                                paddingHorizontal: 8,
-                                                paddingVertical: 3,
-                                                borderRadius: 4,
-                                              }}
-                                            >
-                                              <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>
-                                                {esPasoEnEjecucion ? 'PASO EN EJECUCIÓN' : 'PENDIENTE DE EJECUCIÓN'}
-                                              </Text>
-                                            </View>
-                                            {req.obligatorio !== false && (
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                                                <Ionicons name="alert-circle" size={13} color="#DC2626" />
-                                                <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#DC2626' }}>
-                                                  ! Requisito Previo Obligatorio
-                                                </Text>
-                                              </View>
-                                            )}
-                                          </View>
-
-                                          {/* Fila 2: Icono de Progreso, Título y Responsable */}
-                                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 }}>
-                                              <Pressable
-                                                onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
-                                                style={{
-                                                  width: 32,
-                                                  height: 32,
-                                                  borderRadius: 16,
-                                                  backgroundColor: '#E0F2FE',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
-                                                  marginTop: 1,
-                                                  cursor: 'pointer',
-                                                }}
-                                              >
-                                                <Ionicons name="sync-outline" size={17} color="#0072C6" />
-                                              </Pressable>
-                                              <Pressable
-                                                onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
-                                                style={{ flex: 1, cursor: 'pointer' }}
-                                              >
-                                                <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', lineHeight: 21 }}>
-                                                  {req.label}
-                                                </Text>
-                                              </Pressable>
                                             </View>
 
                                             {/* Badge de Responsable a la derecha */}
@@ -12721,62 +12411,50 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </View>
                                           </View>
 
-                                          {/* Fila 3: Fundamento Legal Callout */}
-                                          <View
-                                            style={{
-                                              backgroundColor: '#F0F7FF',
-                                              borderRadius: 6,
-                                              borderWidth: 1,
-                                              borderColor: '#BAE6FD',
-                                              paddingHorizontal: 10,
-                                              paddingVertical: 8,
-                                              flexDirection: 'row',
-                                              alignItems: 'center',
-                                              justifyContent: 'space-between',
-                                              gap: 10,
-                                            }}
-                                          >
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                              <Ionicons name="scale-outline" size={14} color="#0072C6" />
-                                              <Text style={{ fontSize: 12, color: '#0F172A', flex: 1 }}>
-                                                <Text style={{ fontWeight: '800', color: '#0072C6' }}>Fundamento: </Text>
-                                                {req.norma || 'Decreto Ley 760 de 2005 • Circular Conjunta CNSC 011 de 2021 (Reglas de Uso BNLE).'}
-                                              </Text>
-                                            </View>
-                                            <Pressable
-                                              onPress={() => toggleDetalleReq(req.id)}
-                                              style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                gap: 4,
-                                                paddingHorizontal: 8,
-                                                paddingVertical: 3.5,
-                                                borderRadius: 4,
-                                                borderWidth: 1,
-                                                borderColor: '#BAE6FD',
-                                                backgroundColor: '#FFFFFF',
-                                                cursor: 'pointer',
-                                              }}
-                                            >
-                                              <Ionicons name="document-text-outline" size={12} color="#0072C6" />
-                                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0072C6' }}>
-                                                {estaReqDetalle ? 'Ocultar Directriz' : 'Directriz CNSC'}
-                                              </Text>
-                                            </Pressable>
-                                          </View>
-
-                                          {/* Desplegable inline de información y norma sin modal */}
-                                          {estaReqDetalle && (
+                                          {/* 3. FUNDAMENTO NORMATIVO Y GUÍA PROCEDIMENTAL */}
+                                          {req.norma && (
                                             <View
                                               style={{
-                                                backgroundColor: '#F8FAFC',
+                                                backgroundColor: '#F0F9FF',
+                                                borderRadius: 6,
                                                 borderWidth: 1,
                                                 borderColor: '#BAE6FD',
-                                                borderRadius: 6,
-                                                padding: 10,
-                                                gap: 6,
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 6,
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                gap: 8,
                                               }}
                                             >
+                                              <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#0369A1', flex: 1 }} numberOfLines={1}>
+                                                ⚖️ <Text style={{ fontWeight: '800' }}>Fundamento: </Text>{req.norma}
+                                              </Text>
+                                              <Pressable
+                                                onPress={() => toggleDetalleReq(req.id)}
+                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                                              >
+                                                <Ionicons name={estaReqDetalle ? 'chevron-up' : 'information-circle-outline'} size={13} color="#0284C7" />
+                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7' }}>
+                                                  {estaReqDetalle ? 'Ocultar info' : 'Más info y norma'}
+                                                </Text>
+                                              </Pressable>
+                                            </View>
+                                          )}
+
+                                          {/* Panel expandible de directriz jurídica, mandato y procedimiento */}
+                                          {estaReqDetalle && (
+                                            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, padding: 10, gap: 6 }}>
+                                              {req.textoNormativo && (
+                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0072C6' }}>
+                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#0072C6', marginBottom: 2 }}>
+                                                    📜 Mandato Legal & Texto Normativo Incluido:
+                                                  </Text>
+                                                  <Text style={{ fontSize: 10.5, color: '#334155', fontStyle: 'italic', lineHeight: 15 }}>
+                                                    «{req.textoNormativo}»
+                                                  </Text>
+                                                </View>
+                                              )}
                                               {req.notaNormativa && (
                                                 <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#0284C7' }}>
                                                   <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1', marginBottom: 2 }}>
@@ -12790,572 +12468,556 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               {req.detalleProcedimiento && (
                                                 <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#10B981' }}>
                                                   <Text style={{ fontSize: 10, fontWeight: '700', color: '#15803D', marginBottom: 2 }}>
-                                                    📋 Procedimiento Oficial de Cumplimiento:
+                                                    📋 Instrucción Operativa para Talento Humano:
                                                   </Text>
                                                   <Text style={{ fontSize: 11, color: '#334155', lineHeight: 15 }}>
                                                     {req.detalleProcedimiento}
                                                   </Text>
                                                 </View>
                                               )}
-                                              {/* Editor inline directo de observación */}
-                                              <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderWidth: 1, borderColor: '#CBD5E1', gap: 6 }}>
-                                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0F172A' }}>
-                                                  ✏️ Observaciones Técnicas y Radicado Directo:
-                                                </Text>
-                                                <TextInput
-                                                  placeholder="Escriba aquí las observaciones o justificación técnica..."
-                                                  value={reqObsEditInline[req.id] !== undefined ? reqObsEditInline[req.id] : (req.observaciones || '')}
-                                                  onChangeText={(txt) => setReqObsEditInline((prev) => ({ ...prev, [req.id]: txt }))}
-                                                  style={{
-                                                    backgroundColor: '#F8FAFC',
-                                                    borderWidth: 1,
-                                                    borderColor: '#CBD5E1',
-                                                    borderRadius: 4,
-                                                    padding: 6,
-                                                    fontSize: 11,
-                                                    color: '#0F172A',
-                                                  }}
-                                                />
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                  <TextInput
-                                                    placeholder="Radicado de soporte (ej. 2026-EE-0492)..."
-                                                    value={reqRadicadoEditInline[req.id] !== undefined ? reqRadicadoEditInline[req.id] : (req.radicadoSoporte || '')}
-                                                    onChangeText={(txt) => setReqRadicadoEditInline((prev) => ({ ...prev, [req.id]: txt }))}
-                                                    style={{
-                                                      backgroundColor: '#F8FAFC',
-                                                      borderWidth: 1,
-                                                      borderColor: '#CBD5E1',
-                                                      borderRadius: 4,
-                                                      padding: 5,
-                                                      fontSize: 10.5,
-                                                      color: '#0F172A',
-                                                      flex: 1,
-                                                      marginRight: 8,
-                                                    }}
-                                                  />
-                                                  <Pressable
-                                                    onPress={() => handleGuardarObsInline(casoActivo.id, etapa.id, req.id)}
-                                                    style={{
-                                                      backgroundColor: '#0F568C',
-                                                      paddingHorizontal: 10,
-                                                      paddingVertical: 5,
-                                                      borderRadius: 4,
-                                                      cursor: 'pointer',
-                                                    }}
-                                                  >
-                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                                      {reqGuardadoFeedback[req.id] ? '✓ Guardado' : 'Guardar en Box'}
+                                              {req.posiblesEvidencias && req.posiblesEvidencias.length > 0 && (
+                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0', gap: 3 }}>
+                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
+                                                    📁 Evidencias de Soporte Sugeridas:
+                                                  </Text>
+                                                  {req.posiblesEvidencias.map((ev, evIdx) => (
+                                                    <Text key={evIdx} style={{ fontSize: 10.5, color: '#64748B' }}>
+                                                      • {ev}
                                                     </Text>
-                                                  </Pressable>
+                                                  ))}
                                                 </View>
-                                              </View>
+                                              )}
                                             </View>
                                           )}
 
-                                          {/* Fila 4: Estado del Servicio Web */}
-                                          <View
-                                            style={{
-                                              flexDirection: 'row',
-                                              alignItems: 'center',
-                                              justifyContent: 'space-between',
-                                              paddingVertical: 2,
-                                            }}
-                                          >
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' }} />
-                                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803D' }}>
-                                                {consultandoSimoReq[req.id] ? 'Sincronizando SIMO 4.0...' : 'Servicio Web SIMO 4.0 Conectado'}
-                                              </Text>
-                                              <Text style={{ fontSize: 11, color: '#64748B' }}>
-                                                [CNSC API Gateway v2.4]
-                                              </Text>
-                                            </View>
-                                            <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7' }}>
-                                              Última sincro: Hoy, 11:42 AM
+                                          {/* Nota en cursiva si es No Aplica */}
+                                          {esNoAplica && (
+                                            <Text style={{ fontSize: 11.5, color: '#64748B', fontStyle: 'italic', lineHeight: 16 }}>
+                                              ({req.observaciones || 'Marcado como No Aplica para este trámite'})
                                             </Text>
-                                          </View>
+                                          )}
 
-                                          {/* Fila 5: TARJETA DE INFORMACIÓN DIRECTA EN EL BOX (SIN MODALES) */}
-                                          {/* Tarjeta del Candidato / Elegible */}
-                                          <View
-                                            style={{
-                                              backgroundColor: '#FFFFFF',
-                                              borderWidth: 1,
-                                              borderColor: '#CBD5E1',
-                                              borderRadius: 8,
-                                              padding: 12,
-                                              flexDirection: 'row',
-                                              alignItems: 'center',
-                                              justifyContent: 'space-between',
-                                              gap: 12,
-                                            }}
-                                          >
-                                            {/* Número en el ranking */}
-                                            <View
-                                              style={{
-                                                width: 44,
-                                                height: 44,
-                                                borderRadius: 6,
-                                                backgroundColor: '#F1F5F9',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                              }}
-                                            >
-                                              <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>
-                                                #1
+                                          {/* 4. FORMATOS INSTITUCIONALES ASOCIADOS AL REQUISITO (DESCARGA DIRECTA) */}
+                                          {formatosSugeridos.length > 0 && (
+                                            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 6, padding: 8, gap: 5 }}>
+                                              <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
+                                                📄 Formatos Oficiales Aplicables:
                                               </Text>
-                                            </View>
-
-                                            {/* Información del candidato */}
-                                            <View style={{ flex: 1, gap: 2 }}>
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                                <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#0F172A' }}>
-                                                  {casoActivo.servidor_nombre || 'Diana Marcela Gómez Sandoval'}
-                                                </Text>
-                                                <View
-                                                  style={{
-                                                    backgroundColor: '#DCFCE7',
-                                                    borderWidth: 1,
-                                                    borderColor: '#86EFAC',
-                                                    paddingHorizontal: 6,
-                                                    paddingVertical: 1.5,
-                                                    borderRadius: 4,
-                                                  }}
-                                                >
-                                                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>
-                                                    ELEGIBLE EN FIRME
-                                                  </Text>
-                                                </View>
-                                              </View>
-                                              <Text style={{ fontSize: 11, color: '#475569' }}>
-                                                C.C. {casoActivo.servidor_cedula || '1.020.764.882'} • Puntaje Ponderado:{' '}
-                                                <Text style={{ fontWeight: '800', color: '#0F172A' }}>
-                                                  89.45 / 100
-                                                </Text>
-                                              </Text>
-                                              <Text style={{ fontSize: 10.5, color: '#64748B' }}>
-                                                Resolución de Firmeza CNSC No. 2024-RES-4412 (12/03/2024)
-                                              </Text>
-                                            </View>
-
-                                            {/* Botones de acción del candidato */}
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                              <Pressable
-                                                onPress={() => {
-                                                  toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id);
-                                                }}
-                                                style={{
-                                                  backgroundColor: '#0F568C',
-                                                  borderRadius: 6,
-                                                  paddingHorizontal: 12,
-                                                  paddingVertical: 7,
-                                                  flexDirection: 'row',
-                                                  alignItems: 'center',
-                                                  gap: 4,
-                                                  cursor: 'pointer',
-                                                }}
-                                              >
-                                                <Ionicons name="checkmark-circle-outline" size={13} color="#FFFFFF" />
-                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
-                                                  Validar Elegible
-                                                </Text>
-                                              </Pressable>
-
-                                              <Pressable
-                                                onPress={() => toggleDetalleReq(req.id)}
-                                                style={{
-                                                  backgroundColor: '#FFFFFF',
-                                                  borderWidth: 1,
-                                                  borderColor: '#CBD5E1',
-                                                  borderRadius: 6,
-                                                  paddingHorizontal: 10,
-                                                  paddingVertical: 7,
-                                                  flexDirection: 'row',
-                                                  alignItems: 'center',
-                                                  gap: 4,
-                                                  cursor: 'pointer',
-                                                }}
-                                              >
-                                                <Ionicons name="open-outline" size={12} color="#334155" />
-                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
-                                                  Expediente
-                                                </Text>
-                                              </Pressable>
-                                            </View>
-                                          </View>
-
-                                          {/* PANELES DE DATOS ESPECÍFICOS DIRECTOS EN EL BOX */}
-                                          {/* Si es SECOP II */}
-                                          {req.tipoAccionEspecial === 'SECOP' && casoActivo.resultadoSecop && (() => {
-                                            const sec = casoActivo.resultadoSecop;
-                                            const vigentes = sec.totalActivosVigentes ?? sec.totalActivos;
-                                            const finalizados = sec.totalActivosFinalizados ?? 0;
-                                            const historicos = sec.totalHistoricos ?? 0;
-                                            const tieneVigentes = vigentes > 0;
-                                            const bgResumen = tieneVigentes ? '#FFF1F2' : '#F0FDF4';
-                                            const borderResumen = tieneVigentes ? '#F43F5E' : '#86EFAC';
-                                            const textResumenColor = tieneVigentes ? '#E11D48' : '#15803D';
-
-                                            return (
-                                              <View
-                                                style={{
-                                                  backgroundColor: bgResumen,
-                                                  borderRadius: 8,
-                                                  borderWidth: 1,
-                                                  borderColor: borderResumen,
-                                                  padding: 10,
-                                                  gap: 8,
-                                                }}
-                                              >
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                    <Ionicons name={tieneVigentes ? 'warning' : 'shield-checkmark'} size={16} color={textResumenColor} />
-                                                    <Text style={{ fontSize: 11.5, fontWeight: '800', color: textResumenColor }}>
-                                                      {tieneVigentes ? '⚠️ REGISTRA CONTRATOS ACTIVOS EN SECOP II' : '✓ REGISTRO LIMPIO: SIN CONTRATOS ACTIVOS EN SECOP II'}
-                                                    </Text>
-                                                  </View>
+                                              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                                {formatosSugeridos.map((f) => (
                                                   <Pressable
-                                                    onPress={() => abrirConsultaSecopParaCandidato(casoActivo.servidor_nombre, casoActivo.servidor_cedula, casoActivo.id)}
+                                                    key={f.id}
+                                                    onPress={() => handleDescargarFormatoOficial(f.archivo)}
                                                     style={{
                                                       backgroundColor: '#FFFFFF',
                                                       borderWidth: 1,
                                                       borderColor: '#CBD5E1',
+                                                      borderRadius: 5,
                                                       paddingHorizontal: 8,
-                                                      paddingVertical: 3.5,
-                                                      borderRadius: 4,
+                                                      paddingVertical: 4,
                                                       flexDirection: 'row',
                                                       alignItems: 'center',
                                                       gap: 4,
                                                       cursor: 'pointer',
                                                     }}
                                                   >
-                                                    <Ionicons name="refresh-outline" size={11} color="#0072C6" />
-                                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#0072C6' }}>Consultar SECOP</Text>
+                                                    <Ionicons name="download-outline" size={11} color="#0072C6" />
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0F172A' }}>
+                                                      {f.codigo}
+                                                    </Text>
+                                                    <Text style={{ fontSize: 10, color: '#64748B' }}>
+                                                      ({f.tipo})
+                                                    </Text>
                                                   </Pressable>
-                                                </View>
-                                                <View style={{ flexDirection: 'row', gap: 6 }}>
-                                                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 6, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                                                    <Text style={{ fontSize: 9.5, color: '#64748B' }}>Vigentes</Text>
-                                                    <Text style={{ fontSize: 12, fontWeight: '800', color: tieneVigentes ? '#E11D48' : '#15803D' }}>{vigentes}</Text>
-                                                  </View>
-                                                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 6, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                                                    <Text style={{ fontSize: 9.5, color: '#64748B' }}>Plazo Vencido</Text>
-                                                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#D97706' }}>{finalizados}</Text>
-                                                  </View>
-                                                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 6, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                                                    <Text style={{ fontSize: 9.5, color: '#64748B' }}>Históricos</Text>
-                                                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#334155' }}>{historicos}</Text>
-                                                  </View>
-                                                </View>
+                                                ))}
                                               </View>
-                                            );
-                                          })()}
+                                            </View>
+                                          )}
 
-                                          {/* Si es FT-318 Validación Técnica (Excel / Idoneidad) */}
-                                          {req.tipoAccionEspecial === 'INGRESOS_IA' && (() => {
-                                            const valCoincidente = casoActivo.servidor_cedula
-                                              ? validacionesIngresos.find((v) => v.cedula === casoActivo.servidor_cedula)
-                                              : undefined;
+                                          {/* 5. CONTENIDO ESPECÍFICO SEGÚN EL TIPO DE REQUISITO (LO QUE ANTES ABRÍA MODAL) */}
 
-                                            return (
+                                          {/* CASO A: SIMO / BNLE (SOLO AQUÍ SE MUESTRA LA CONSULTA DE ELEGIBLES Y FIRMEZA) */}
+                                          {esSimo && (
+                                            <View style={{ gap: 8 }}>
+                                              {/* Estado de conexión SIMO */}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' }} />
+                                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803D' }}>
+                                                    {consultandoSimoReq[req.id] ? 'Sincronizando SIMO 4.0...' : 'Servicio Web SIMO 4.0 Conectado'}
+                                                  </Text>
+                                                  <Text style={{ fontSize: 11, color: '#64748B' }}>
+                                                    [CNSC API Gateway v2.4]
+                                                  </Text>
+                                                </View>
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284C7' }}>
+                                                  Última sincro: Hoy, 11:42 AM
+                                                </Text>
+                                              </View>
+
+                                              {/* Tarjeta del Elegible en Firme */}
                                               <View
                                                 style={{
-                                                  backgroundColor: '#F0FDF4',
+                                                  backgroundColor: '#FFFFFF',
                                                   borderWidth: 1,
-                                                  borderColor: '#86EFAC',
+                                                  borderColor: '#CBD5E1',
                                                   borderRadius: 8,
                                                   padding: 10,
                                                   flexDirection: 'row',
                                                   alignItems: 'center',
                                                   justifyContent: 'space-between',
-                                                  gap: 8,
+                                                  gap: 10,
                                                 }}
                                               >
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                                  <Ionicons name="checkmark-circle" size={16} color="#15803D" />
-                                                  <View style={{ flex: 1 }}>
-                                                    <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#15803D' }}>
-                                                      ✓ CUMPLE REQUISITOS TÉCNICOS FT-318 (100% Idóneo)
+                                                <View style={{ width: 40, height: 40, borderRadius: 6, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                                                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>#1</Text>
+                                                </View>
+                                                <View style={{ flex: 1, gap: 2 }}>
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                                                      {casoActivo.servidor_nombre || 'Diana Marcela Gómez Sandoval'}
                                                     </Text>
-                                                    <Text style={{ fontSize: 10, color: '#475569' }}>
-                                                      Evaluación técnica de perfil y experiencia acreditada conforme al Manual de Funciones.
-                                                    </Text>
+                                                    <View style={{ backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#86EFAC', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                                      <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#15803D' }}>ELEGIBLE EN FIRME</Text>
+                                                    </View>
                                                   </View>
+                                                  <Text style={{ fontSize: 11, color: '#475569' }}>
+                                                    C.C. {casoActivo.servidor_cedula || '1.020.764.882'} • Puntaje: <Text style={{ fontWeight: '800' }}>{(casoActivo as any).puntajePonderado || '89.45 / 100'}</Text>
+                                                  </Text>
+                                                  <Text style={{ fontSize: 10.5, color: '#64748B' }}>
+                                                    {(casoActivo as any).resolucionFirmeza || 'Resolución de Firmeza CNSC No. 2024-RES-4412 (12/03/2024)'}
+                                                  </Text>
                                                 </View>
-                                                {valCoincidente ? (
-                                                  <Pressable
-                                                    onPress={() => handleDescargarExcelFT318(valCoincidente.id)}
-                                                    style={{
-                                                      backgroundColor: '#FFFFFF',
-                                                      borderWidth: 1,
-                                                      borderColor: '#16A34A',
-                                                      paddingHorizontal: 8,
-                                                      paddingVertical: 5,
-                                                      borderRadius: 6,
-                                                      flexDirection: 'row',
-                                                      alignItems: 'center',
-                                                      gap: 4,
-                                                      cursor: 'pointer',
-                                                    }}
-                                                  >
-                                                    <Ionicons name="download-outline" size={12} color="#166534" />
-                                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#166534' }}>
-                                                      Descargar Excel FT-318
-                                                    </Text>
-                                                  </Pressable>
-                                                ) : (
-                                                  <Pressable
-                                                    onPress={() => irAValidacionIngresosNueva(casoActivo)}
-                                                    style={{
-                                                      backgroundColor: '#15803D',
-                                                      paddingHorizontal: 10,
-                                                      paddingVertical: 5,
-                                                      borderRadius: 6,
-                                                      flexDirection: 'row',
-                                                      alignItems: 'center',
-                                                      gap: 4,
-                                                      cursor: 'pointer',
-                                                    }}
-                                                  >
-                                                    <Ionicons name="sparkles" size={11} color="#FFFFFF" />
-                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                                      Validación FT-318
-                                                    </Text>
-                                                  </Pressable>
-                                                )}
                                               </View>
-                                            );
-                                          })()}
 
-                                          {/* Si es FT-095 Requisitos para Tomar Posesión */}
-                                          {(req.tipoAccionEspecial === 'FT095' || req.id === 'vc5_ft095' || req.codigoFormato?.includes('FT-095')) && (
-                                            <View
-                                              style={{
-                                                backgroundColor: '#ECFDF5',
-                                                borderWidth: 1,
-                                                borderColor: '#A7F3D0',
-                                                borderRadius: 8,
-                                                padding: 10,
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                gap: 8,
-                                              }}
-                                            >
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                                <Ionicons name="checkmark-done-circle" size={16} color="#059669" />
-                                                <View style={{ flex: 1 }}>
-                                                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#065F46' }}>
-                                                    ✓ 32/32 Requisitos Verificados para Tomar Posesión (FT-095)
-                                                  </Text>
-                                                  <Text style={{ fontSize: 10, color: '#047857' }}>
-                                                    Formato 2311300-FT-095 listo para suscripción de posesión.
-                                                  </Text>
-                                                </View>
-                                              </View>
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                              {/* Botones de acción SIMO */}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                 <Pressable
-                                                  onPress={() => handleDescargarFormatoOficial('2311300-FT-095_Requisitos_para_tomar_posesion.doc')}
-                                                  style={{
-                                                    backgroundColor: '#FFFFFF',
-                                                    borderWidth: 1,
-                                                    borderColor: '#10B981',
-                                                    paddingHorizontal: 8,
-                                                    paddingVertical: 5,
-                                                    borderRadius: 6,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                    cursor: 'pointer',
-                                                  }}
+                                                  onPress={() => ejecutarConsultaSimoInline(req.id)}
+                                                  style={{ backgroundColor: '#0F172A', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6.5, flexDirection: 'row', alignItems: 'center', gap: 5, cursor: 'pointer' }}
                                                 >
-                                                  <Ionicons name="download-outline" size={11} color="#059669" />
-                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#059669' }}>
-                                                    Descargar .DOC
+                                                  <Ionicons name="swap-horizontal-outline" size={13} color="#FFFFFF" />
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
+                                                    {consultandoSimoReq[req.id] ? 'Conectando...' : 'Consultar SIMO 4.0'}
                                                   </Text>
                                                 </Pressable>
                                                 <Pressable
-                                                  onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
-                                                  style={{
-                                                    backgroundColor: '#059669',
-                                                    paddingHorizontal: 10,
-                                                    paddingVertical: 5,
-                                                    borderRadius: 6,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                    cursor: 'pointer',
-                                                  }}
+                                                  onPress={() => ejecutarValidarFirmezaInline(casoActivo.id, etapa.id, req.id)}
+                                                  style={{ backgroundColor: '#E0F2FE', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6.5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
                                                 >
-                                                  <Ionicons name="checkmark" size={11} color="#FFFFFF" />
-                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                                    Validar FT-095
+                                                  <Ionicons name="checkmark-done-outline" size={13} color="#0284C7" />
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284C7' }}>
+                                                    {firmezaValidadaReq[req.id] || req.cumplido ? '✓ Firmeza Validada' : 'Validar Firmeza'}
                                                   </Text>
                                                 </Pressable>
                                               </View>
                                             </View>
                                           )}
 
-                                          {/* Si es Determinar Cobro CNSC (Fase 2) */}
-                                          {(req.id === 'vc2_4' || req.tipoCobroUsoLista !== undefined) && (() => {
-                                            const tipoCobro = req.tipoCobroUsoLista || 'sin_cobro';
-                                            const esConCobro = tipoCobro === 'con_cobro';
-
-                                            return (
-                                              <View
-                                                style={{
-                                                  width: '100%',
-                                                  backgroundColor: esConCobro ? '#FFFBEB' : '#F0FDF4',
-                                                  borderWidth: 1.2,
-                                                  borderColor: esConCobro ? '#FCD34D' : '#86EFAC',
-                                                  borderRadius: 8,
-                                                  padding: 10,
-                                                  gap: 8,
-                                                }}
-                                              >
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
-                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                    <Ionicons name={esConCobro ? 'cash-outline' : 'shield-checkmark-outline'} size={16} color={esConCobro ? '#B45309' : '#15803D'} />
-                                                    <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobro ? '#92400E' : '#166534' }}>
-                                                      Modalidad de Cobro por Uso de Lista CNSC:
+                                          {/* CASO B: FT-318 VALIDACIÓN TÉCNICA (INTEGRADO DIRECTAMENTE) */}
+                                          {esFT318 && (
+                                            <View style={{ backgroundColor: '#F0FDF4', borderWidth: 1.5, borderColor: '#10B981', borderRadius: 8, padding: 12, gap: 8 }}>
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                  <Ionicons name="sparkles" size={16} color="#15803D" />
+                                                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#065F46' }}>
+                                                    Validación Técnica FT-318 (Inteligencia Artificial)
+                                                  </Text>
+                                                </View>
+                                                {valActiva && (
+                                                  <View style={{ backgroundColor: valActiva.resultado_final === 'CUMPLE' ? '#DCFCE7' : '#FEF3C7', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: valActiva.resultado_final === 'CUMPLE' ? '#86EFAC' : '#FDE68A' }}>
+                                                    <Text style={{ fontSize: 10, fontWeight: '800', color: valActiva.resultado_final === 'CUMPLE' ? '#15803D' : '#B45309' }}>
+                                                      {valActiva.resultado_final || 'CUMPLE'}
                                                     </Text>
                                                   </View>
-                                                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                                                )}
+                                              </View>
+
+                                              {valActiva ? (
+                                                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#BBF7D0', gap: 6 }}>
+                                                  <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0F172A' }}>
+                                                    👤 {valActiva.candidato_nombre || casoActivo.servidor_nombre} • C.C. {valActiva.candidato_documento || casoActivo.servidor_cedula}
+                                                  </Text>
+                                                  <Text style={{ fontSize: 10.5, color: '#475569' }}>
+                                                    Cargo: {valActiva.cargo_nombre || casoActivo.cargo} {valActiva.cargo_codigo ? `(Cód. ${valActiva.cargo_codigo} Gr. ${valActiva.cargo_grado})` : ''}
+                                                  </Text>
+                                                  <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
                                                     <Pressable
-                                                      onPress={() => actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'sin_cobro')}
-                                                      style={{
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center',
-                                                        gap: 4,
-                                                        paddingHorizontal: 10,
-                                                        paddingVertical: 4.5,
-                                                        borderRadius: 6,
-                                                        backgroundColor: !esConCobro ? '#15803D' : '#FFFFFF',
-                                                        borderWidth: 1,
-                                                        borderColor: !esConCobro ? '#15803D' : '#CBD5E1',
-                                                        cursor: 'pointer',
-                                                      }}
+                                                      onPress={() => handleDescargarExcelFT318(valActiva.id)}
+                                                      style={{ backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
                                                     >
-                                                      <Ionicons name={!esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={!esConCobro ? '#FFFFFF' : '#64748B'} />
-                                                      <Text style={{ fontSize: 11, fontWeight: '700', color: !esConCobro ? '#FFFFFF' : '#475569' }}>
-                                                        Sin Cobro (Gratuito)
-                                                      </Text>
+                                                      <Ionicons name="download-outline" size={12} color="#065F46" />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#065F46' }}>Descargar Excel FT-318</Text>
                                                     </Pressable>
                                                     <Pressable
-                                                      onPress={() => actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'con_cobro')}
-                                                      style={{
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center',
-                                                        gap: 4,
-                                                        paddingHorizontal: 10,
-                                                        paddingVertical: 4.5,
-                                                        borderRadius: 6,
-                                                        backgroundColor: esConCobro ? '#B45309' : '#FFFFFF',
-                                                        borderWidth: 1,
-                                                        borderColor: esConCobro ? '#B45309' : '#CBD5E1',
-                                                        cursor: 'pointer',
-                                                      }}
+                                                      onPress={() => router.push(`/ingresos/${valActiva.id}`)}
+                                                      style={{ backgroundColor: '#0284C7', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
                                                     >
-                                                      <Ionicons name={esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={esConCobro ? '#FFFFFF' : '#64748B'} />
-                                                      <Text style={{ fontSize: 11, fontWeight: '700', color: esConCobro ? '#FFFFFF' : '#475569' }}>
-                                                        Con Cobro (Requiere Resolución)
-                                                      </Text>
+                                                      <Ionicons name="open-outline" size={12} color="#FFFFFF" />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>Ver Dictamen Completo</Text>
+                                                    </Pressable>
+                                                    <Pressable
+                                                      onPress={() => irAValidacionIngresosNueva(casoActivo)}
+                                                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 8, paddingVertical: 5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                                    >
+                                                      <Ionicons name="add-circle-outline" size={12} color="#475569" />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>Nueva FT-318</Text>
                                                     </Pressable>
                                                   </View>
+                                                </View>
+                                              ) : (
+                                                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 6, padding: 8, borderWidth: 1, borderColor: '#FED7AA', gap: 4 }}>
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#9A3412' }}>
+                                                    Sin validación técnica vinculada para este aspirante
+                                                  </Text>
+                                                  <Text style={{ fontSize: 10.5, color: '#7C2D12' }}>
+                                                    Inicie el cotejo inteligente de hoja de vida con IA para generar el archivo Excel oficial 2311300-FT-318.
+                                                  </Text>
+                                                  <Pressable
+                                                    onPress={() => irAValidacionIngresosNueva(casoActivo)}
+                                                    style={{ backgroundColor: '#059669', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4, cursor: 'pointer' }}
+                                                  >
+                                                    <Ionicons name="sparkles" size={12} color="#FFFFFF" />
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF' }}>Iniciar Cotejo FT-318</Text>
+                                                  </Pressable>
+                                                </View>
+                                              )}
+                                            </View>
+                                          )}
+
+                                          {/* CASO C: FT-095 REQUISITOS PARA TOMAR POSESIÓN */}
+                                          {esFT095 && (
+                                            <View style={{ backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0', borderRadius: 8, padding: 10, gap: 6 }}>
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                <Ionicons name="checkmark-done-circle" size={16} color="#059669" />
+                                                <Text style={{ fontSize: 12, fontWeight: '800', color: '#065F46' }}>
+                                                  Formato 2311300-FT-095 (32 Requisitos para Tomar Posesión)
+                                                </Text>
+                                              </View>
+                                              <Text style={{ fontSize: 10.5, color: '#047857' }}>
+                                                Verificación exhaustiva de hoja de vida, libreta militar, antecedentes disciplinarios, judiciales y fiscales.
+                                              </Text>
+                                              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                                                <Pressable
+                                                  onPress={() => handleDescargarFormatoOficial('2311300-FT-095_Requisitos_para_tomar_posesion.doc')}
+                                                  style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#10B981', paddingHorizontal: 8, paddingVertical: 4.5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                                >
+                                                  <Ionicons name="download-outline" size={11} color="#059669" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#059669' }}>Descargar FT-095 (.DOC)</Text>
+                                                </Pressable>
+                                                <Pressable
+                                                  onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
+                                                  style={{ backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                                >
+                                                  <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>Validar 32 Requisitos</Text>
+                                                </Pressable>
+                                              </View>
+                                            </View>
+                                          )}
+
+                                          {/* CASO D: SECOP II (DATOS.GOV.CO) */}
+                                          {esSecop && (
+                                            <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, gap: 6 }}>
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                  <Ionicons name="shield-checkmark-outline" size={15} color="#0F568C" />
+                                                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#0F568C' }}>
+                                                    Verificación Inhabilidad SECOP II (Art. 128 C.P.)
+                                                  </Text>
+                                                </View>
+                                                <Pressable
+                                                  onPress={() => abrirConsultaSecopParaCandidato(casoActivo.servidor_nombre, casoActivo.servidor_cedula, casoActivo.id)}
+                                                  style={{ backgroundColor: '#0072C6', paddingHorizontal: 8, paddingVertical: 3.5, borderRadius: 4, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                                >
+                                                  <Ionicons name="refresh-outline" size={11} color="#FFFFFF" />
+                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF' }}>Consultar SECOP II</Text>
+                                                </Pressable>
+                                              </View>
+                                              {casoActivo.resultadoSecop && (
+                                                <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+                                                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 5, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                                    <Text style={{ fontSize: 9.5, color: '#64748B' }}>Vigentes</Text>
+                                                    <Text style={{ fontSize: 12, fontWeight: '800', color: (casoActivo.resultadoSecop.totalActivosVigentes || 0) > 0 ? '#DC2626' : '#15803D' }}>
+                                                      {casoActivo.resultadoSecop.totalActivosVigentes ?? casoActivo.resultadoSecop.totalActivos ?? 0}
+                                                    </Text>
+                                                  </View>
+                                                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 5, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                                    <Text style={{ fontSize: 9.5, color: '#64748B' }}>Plazo Vencido</Text>
+                                                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#D97706' }}>
+                                                      {casoActivo.resultadoSecop.totalActivosFinalizados || 0}
+                                                    </Text>
+                                                  </View>
+                                                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', padding: 5, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                                                    <Text style={{ fontSize: 9.5, color: '#64748B' }}>Históricos</Text>
+                                                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#334155' }}>
+                                                      {casoActivo.resultadoSecop.totalHistoricos || 0}
+                                                    </Text>
+                                                  </View>
+                                                </View>
+                                              )}
+                                            </View>
+                                          )}
+
+                                          {/* CASO E: EVALUACIÓN DE RETIRO (GOOGLE FORMS) */}
+                                          {esEvaluacionRetiro && (
+                                            <View style={{ backgroundColor: '#FDF4FF', borderWidth: 1, borderColor: '#F0ABFC', borderRadius: 8, padding: 10, gap: 6 }}>
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                <Ionicons name="clipboard-outline" size={16} color="#A21CAF" />
+                                                <Text style={{ fontSize: 12, fontWeight: '800', color: '#86198F' }}>
+                                                  Evaluación de Retiro Laboral (Google Forms)
+                                                </Text>
+                                              </View>
+                                              <Text style={{ fontSize: 10.5, color: '#701A75' }}>
+                                                Encuesta oficial obligatoria para recopilación de percepciones y clima laboral al egreso.
+                                              </Text>
+                                              <Pressable
+                                                onPress={handleAbrirEvaluacionRetiroGoogleForms}
+                                                style={{ backgroundColor: '#9333EA', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 5, flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2, cursor: 'pointer' }}
+                                              >
+                                                <Ionicons name="open-outline" size={12} color="#FFFFFF" />
+                                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#FFFFFF' }}>Abrir Evaluación de Retiro</Text>
+                                              </Pressable>
+                                            </View>
+                                          )}
+
+                                          {/* CASO F: DETERMINACIÓN DE COBRO CNSC (FASE 2) */}
+                                          {esCobro && (() => {
+                                            const esConCobro = (req.tipoCobroUsoLista || 'sin_cobro') === 'con_cobro';
+                                            return (
+                                              <View style={{ backgroundColor: esConCobro ? '#FFFBEB' : '#F0FDF4', borderWidth: 1.2, borderColor: esConCobro ? '#FCD34D' : '#86EFAC', borderRadius: 8, padding: 10, gap: 6 }}>
+                                                <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobro ? '#92400E' : '#166534' }}>
+                                                  Modalidad de Cobro por Uso de Lista CNSC:
+                                                </Text>
+                                                <View style={{ flexDirection: 'row', gap: 6 }}>
+                                                  <Pressable
+                                                    onPress={() => actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'sin_cobro')}
+                                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 5, backgroundColor: !esConCobro ? '#15803D' : '#FFFFFF', borderWidth: 1, borderColor: !esConCobro ? '#15803D' : '#CBD5E1', cursor: 'pointer' }}
+                                                  >
+                                                    <Ionicons name={!esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={!esConCobro ? '#FFFFFF' : '#64748B'} />
+                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: !esConCobro ? '#FFFFFF' : '#475569' }}>Sin Cobro (Gratuito)</Text>
+                                                  </Pressable>
+                                                  <Pressable
+                                                    onPress={() => actualizarCobroUsoLista(casoActivo.id, etapa.id, req.id, 'con_cobro')}
+                                                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4.5, borderRadius: 5, backgroundColor: esConCobro ? '#B45309' : '#FFFFFF', borderWidth: 1, borderColor: esConCobro ? '#B45309' : '#CBD5E1', cursor: 'pointer' }}
+                                                  >
+                                                    <Ionicons name={esConCobro ? 'checkmark-circle' : 'ellipse-outline'} size={12} color={esConCobro ? '#FFFFFF' : '#64748B'} />
+                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: esConCobro ? '#FFFFFF' : '#475569' }}>Con Cobro (Requiere Resolución)</Text>
+                                                  </Pressable>
                                                 </View>
                                               </View>
                                             );
                                           })()}
 
-                                          {/* Fila 6: Botones Principales de Acción */}
-                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                            <Pressable
-                                              onPress={() => ejecutarConsultaSimoInline(req.id)}
-                                              style={{
-                                                backgroundColor: '#0F172A',
-                                                borderRadius: 6,
-                                                paddingHorizontal: 12,
-                                                paddingVertical: 8,
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                gap: 6,
-                                                cursor: 'pointer',
-                                              }}
-                                            >
-                                              <Ionicons name="swap-horizontal-outline" size={14} color="#FFFFFF" />
-                                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                                {consultandoSimoReq[req.id] ? 'Conectando...' : 'Consultar SIMO 4.0 (Conexión API)'}
-                                              </Text>
-                                            </Pressable>
+                                          {/* CASO G: RESOLUCIÓN DE PAGO CNSC (FASE 5) */}
+                                          {esPagoCnsc && (() => {
+                                            const reqVc24 = casoActivo.etapas.flatMap((e) => e.requisitos || []).find((r) => r.id === 'vc2_4');
+                                            const esConCobroFase2 = reqVc24 ? reqVc24.tipoCobroUsoLista === 'con_cobro' : !req.noAplica;
+                                            return (
+                                              <View style={{ backgroundColor: esConCobroFase2 ? '#FFFBEB' : '#F8FAFC', borderWidth: 1.2, borderColor: esConCobroFase2 ? '#FCD34D' : '#CBD5E1', borderRadius: 8, padding: 10, gap: 6 }}>
+                                                <Text style={{ fontSize: 11.5, fontWeight: '800', color: esConCobroFase2 ? '#92400E' : '#475569' }}>
+                                                  {esConCobroFase2 ? '📜 Resolución de Ordenación del Gasto y Pago CNSC (Habilitado):' : '⚪ Requisito Deshabilitado (No Aplica - Trámite sin cobro)'}
+                                                </Text>
+                                                {esConCobroFase2 && (
+                                                  <Text style={{ fontSize: 10.5, color: '#92400E' }}>
+                                                    Expedir acto administrativo de ordenación del gasto y pago a la CNSC con cargo al rubro presupuestal institucional.
+                                                  </Text>
+                                                )}
+                                              </View>
+                                            );
+                                          })()}
 
+                                          {/* 6. OBSERVACIONES Y RADICADO DIRECTAMENTE EN EL BOX (EDITABLE INLINE) */}
+                                          <View style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, padding: 10, gap: 6 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F172A' }}>
+                                                ✏️ Observaciones Técnicas & Radicado de Soporte:
+                                              </Text>
+                                              {reqGuardadoFeedback[req.id] && (
+                                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#15803D' }}>
+                                                  ✓ Guardado correctamente
+                                                </Text>
+                                              )}
+                                            </View>
+                                            <TextInput
+                                              placeholder="Escriba aquí las observaciones técnicas de cumplimiento o justificación..."
+                                              value={reqObsEditInline[req.id] !== undefined ? reqObsEditInline[req.id] : (req.observaciones || '')}
+                                              onChangeText={(txt) => setReqObsEditInline((prev) => ({ ...prev, [req.id]: txt }))}
+                                              style={{
+                                                backgroundColor: '#FFFFFF',
+                                                borderWidth: 1,
+                                                borderColor: '#CBD5E1',
+                                                borderRadius: 4,
+                                                padding: 6,
+                                                fontSize: 11,
+                                                color: '#0F172A',
+                                              }}
+                                            />
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                              <TextInput
+                                                placeholder="Radicado de soporte (ej. 2026-EE-0492)..."
+                                                value={reqRadicadoEditInline[req.id] !== undefined ? reqRadicadoEditInline[req.id] : (req.radicadoSoporte || '')}
+                                                onChangeText={(txt) => setReqRadicadoEditInline((prev) => ({ ...prev, [req.id]: txt }))}
+                                                style={{
+                                                  backgroundColor: '#FFFFFF',
+                                                  borderWidth: 1,
+                                                  borderColor: '#CBD5E1',
+                                                  borderRadius: 4,
+                                                  padding: 5,
+                                                  fontSize: 10.5,
+                                                  color: '#0F172A',
+                                                  flex: 1,
+                                                }}
+                                              />
+                                              <Pressable
+                                                onPress={() => handleGuardarObsInline(casoActivo.id, etapa.id, req.id)}
+                                                style={{ backgroundColor: '#0F568C', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, cursor: 'pointer' }}
+                                              >
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>Guardar</Text>
+                                              </Pressable>
+                                            </View>
+                                          </View>
+
+                                          {/* 7. ARCHIVOS ADJUNTOS DEL REQUISITO (CON VISOR Y ADJUNTAR DIRECTO) */}
+                                          <View style={{ gap: 5 }}>
+                                            {req.documentosAdjuntos && req.documentosAdjuntos.length > 0 ? (
+                                              req.documentosAdjuntos.map((doc) => (
+                                                <View
+                                                  key={doc.id}
+                                                  style={{
+                                                    backgroundColor: '#F8FAFC',
+                                                    borderWidth: 1,
+                                                    borderColor: '#E2E8F0',
+                                                    borderRadius: 6,
+                                                    paddingHorizontal: 10,
+                                                    paddingVertical: 6,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    gap: 6,
+                                                  }}
+                                                >
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                                                    <Ionicons name="attach-outline" size={14} color="#0284C7" />
+                                                    <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7', flexShrink: 1 }} numberOfLines={1}>
+                                                      {doc.nombre}
+                                                    </Text>
+                                                    <Text style={{ fontSize: 10.5, color: '#64748B' }}>
+                                                      ({formatearTamanoArchivo(doc.size) || 'Soporte'} • Firmado digitalmente)
+                                                    </Text>
+                                                  </View>
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                    <Pressable
+                                                      onPress={() => handleAbrirArchivoAdjunto(doc)}
+                                                      style={{ backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3.5, flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                                                    >
+                                                      <Ionicons name="eye-outline" size={11} color="#334155" />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#334155' }}>Ver</Text>
+                                                    </Pressable>
+                                                    <Pressable
+                                                      onPress={() => confirmarEliminarArchivo(casoActivo.id, etapa.id, req.id, doc.id, doc.nombre)}
+                                                      style={{ backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 3.5, cursor: 'pointer' }}
+                                                    >
+                                                      <Ionicons name="trash-outline" size={11} color="#DC2626" />
+                                                    </Pressable>
+                                                  </View>
+                                                </View>
+                                              ))
+                                            ) : (
+                                              <View
+                                                style={{
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'space-between',
+                                                  paddingTop: 4,
+                                                }}
+                                              >
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                                                  <Ionicons name="attach-outline" size={13} color="#64748B" />
+                                                  <Text style={{ fontSize: 11, color: '#64748B' }}>
+                                                    {esNoAplica ? 'Documentos de justificación: Sin archivos adjuntos' : 'Sin archivos adicionales adjuntos para esta fase'}
+                                                  </Text>
+                                                </View>
+                                                <Pressable
+                                                  onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
+                                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
+                                                >
+                                                  <Ionicons name="cloud-upload-outline" size={12} color="#0072C6" />
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0072C6' }}>
+                                                    {esNoAplica ? '+ Adjuntar Justificación' : '+ Añadir soporte'}
+                                                  </Text>
+                                                </Pressable>
+                                              </View>
+                                            )}
+                                          </View>
+
+                                          {/* 8. BOTONES DE ACCIÓN DEL REQUISITO (CUMPLIR / PENDIENTE / NO APLICA) */}
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTopWidth: 1, borderTopColor: '#F1F5F9', gap: 6, flexWrap: 'wrap' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                              {/* Botón Cumplir o Reabrir */}
+                                              <Pressable
+                                                onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
+                                                style={{
+                                                  backgroundColor: esCumplido ? '#F1F5F9' : '#0F568C',
+                                                  borderWidth: 1,
+                                                  borderColor: esCumplido ? '#CBD5E1' : '#0F568C',
+                                                  paddingHorizontal: 12,
+                                                  paddingVertical: 6,
+                                                  borderRadius: 6,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                  cursor: 'pointer',
+                                                }}
+                                              >
+                                                <Ionicons name={esCumplido ? 'refresh-outline' : 'checkmark-circle-outline'} size={13} color={esCumplido ? '#475569' : '#FFFFFF'} />
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: esCumplido ? '#475569' : '#FFFFFF' }}>
+                                                  {esCumplido ? 'Reabrir (Marcar Pendiente)' : '✓ Validar y Marcar Cumplido'}
+                                                </Text>
+                                              </Pressable>
+
+                                              {/* Botón No Aplica */}
+                                              <Pressable
+                                                onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
+                                                style={{
+                                                  backgroundColor: esNoAplica ? '#334155' : '#FFFFFF',
+                                                  borderWidth: 1,
+                                                  borderColor: esNoAplica ? '#334155' : '#CBD5E1',
+                                                  paddingHorizontal: 10,
+                                                  paddingVertical: 6,
+                                                  borderRadius: 6,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                  cursor: 'pointer',
+                                                }}
+                                              >
+                                                <Ionicons name="remove-circle-outline" size={13} color={esNoAplica ? '#FFFFFF' : '#64748B'} />
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: esNoAplica ? '#FFFFFF' : '#475569' }}>
+                                                  {esNoAplica ? 'Quitar No Aplica' : 'Marcar No Aplica'}
+                                                </Text>
+                                              </Pressable>
+                                            </View>
+
+                                            {/* Botón Adjuntar Archivo Adicional */}
                                             <Pressable
                                               onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
                                               style={{
                                                 backgroundColor: '#F0F9FF',
                                                 borderWidth: 1,
                                                 borderColor: '#BAE6FD',
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 6,
                                                 borderRadius: 6,
-                                                paddingHorizontal: 12,
-                                                paddingVertical: 8,
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
-                                                gap: 5,
+                                                gap: 4,
                                                 cursor: 'pointer',
                                               }}
                                             >
-                                              <Ionicons name="cloud-upload-outline" size={14} color="#0369A1" />
-                                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0369A1' }}>
-                                                + Adjuntar Soporte de Consulta
-                                              </Text>
-                                            </Pressable>
-
-                                            <Pressable
-                                              onPress={() => ejecutarValidarFirmezaInline(casoActivo.id, etapa.id, req.id)}
-                                              style={{
-                                                backgroundColor: '#E0F2FE',
-                                                borderWidth: 1,
-                                                borderColor: '#BAE6FD',
-                                                borderRadius: 6,
-                                                paddingHorizontal: 12,
-                                                paddingVertical: 8,
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                gap: 5,
-                                                cursor: 'pointer',
-                                              }}
-                                            >
-                                              <Ionicons name="checkmark-done-outline" size={14} color="#0284C7" />
-                                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7' }}>
-                                                {firmezaValidadaReq[req.id] ? '✓ Firmeza Validada' : 'Validar Firmeza'}
-                                              </Text>
-                                            </Pressable>
-                                          </View>
-
-                                          {/* Fila 7: Footer de Archivos */}
-                                          <View
-                                            style={{
-                                              flexDirection: 'row',
-                                              alignItems: 'center',
-                                              justifyContent: 'space-between',
-                                              paddingTop: 6,
-                                              borderTopWidth: 1,
-                                              borderTopColor: '#F1F5F9',
-                                            }}
-                                          >
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                                              <Ionicons name="attach-outline" size={13} color="#64748B" />
-                                              <Text style={{ fontSize: 11.5, color: '#64748B' }}>
-                                                {req.documentosAdjuntos && req.documentosAdjuntos.length > 0
-                                                  ? `${req.documentosAdjuntos.length} archivo(s) adjunto(s)`
-                                                  : 'Sin archivos adicionales adjuntos para esta fase'}
-                                              </Text>
-                                            </View>
-                                            <Pressable
-                                              onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
-                                              style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
-                                            >
-                                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7' }}>
-                                                + Añadir soporte
+                                              <Ionicons name="cloud-upload-outline" size={13} color="#0369A1" />
+                                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#0369A1' }}>
+                                                + Adjuntar Soporte
                                               </Text>
                                             </Pressable>
                                           </View>
