@@ -7324,11 +7324,13 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     }, 2500);
   };
 
-  const ejecutarConsultaSimoInline = (reqId: string) => {
-    setConsultandoSimoReq((prev) => ({ ...prev, [reqId]: true }));
-    setTimeout(() => {
-      setConsultandoSimoReq((prev) => ({ ...prev, [reqId]: false }));
-    }, 900);
+  const handleAbrirPortalSimo = () => {
+    const url = 'https://simo.cnsc.gov.co/';
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
   };
 
   const ejecutarValidarFirmezaInline = (casoId: string, etapaId: string, reqId: string) => {
@@ -12536,26 +12538,45 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                           {/* 5. CONTENIDO ESPECÍFICO SEGÚN EL TIPO DE REQUISITO (LO QUE ANTES ABRÍA MODAL) */}
 
-                                          {/* CASO A: SIMO / BNLE (SOLO AQUÍ SE MUESTRA LA CONSULTA DE ELEGIBLES Y FIRMEZA) */}
+                                          {/* CASO A: SIMO / BNLE (VERIFICACIÓN EN PORTAL OFICIAL CNSC Y CARGUE DE EVIDENCIA) */}
                                           {esSimo && (
                                             <View style={{ gap: 8 }}>
-                                              {/* Estado de conexión SIMO */}
-                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                              {/* Acceso oficial al portal SIMO */}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' }} />
-                                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#15803D' }}>
-                                                    {consultandoSimoReq[req.id] ? 'Sincronizando SIMO 4.0...' : 'Servicio Web SIMO 4.0 Conectado'}
+                                                  <Ionicons name="globe-outline" size={15} color="#0072C6" />
+                                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }}>
+                                                    Portal Web Oficial SIMO - CNSC
                                                   </Text>
-                                                  <Text style={{ fontSize: 11, color: '#64748B' }}>
-                                                    [CNSC API Gateway v2.4]
-                                                  </Text>
+                                                  <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
+                                                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
+                                                      simo.cnsc.gov.co
+                                                    </Text>
+                                                  </View>
                                                 </View>
-                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284C7' }}>
-                                                  Última sincro: Hoy, 11:42 AM
-                                                </Text>
+                                                <Pressable
+                                                  onPress={handleAbrirPortalSimo}
+                                                  style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    backgroundColor: '#EFF6FF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#BFDBFE',
+                                                    paddingHorizontal: 8,
+                                                    paddingVertical: 3.5,
+                                                    borderRadius: 5,
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="open-outline" size={11} color="#0072C6" />
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0072C6' }}>
+                                                    Abrir SIMO en Navegador
+                                                  </Text>
+                                                </Pressable>
                                               </View>
 
-                                              {/* Tarjeta del Elegible en Firme */}
+                                              {/* Tarjeta de Datos del Elegible y OPEC institucional */}
                                               <View
                                                 style={{
                                                   backgroundColor: '#FFFFFF',
@@ -12575,39 +12596,81 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 <View style={{ flex: 1, gap: 2 }}>
                                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                     <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
-                                                      {casoActivo.servidor_nombre || 'Diana Marcela Gómez Sandoval'}
+                                                      {casoActivo.servidor_nombre || 'Elegible en Lista'}
                                                     </Text>
                                                     <View style={{ backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#86EFAC', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
                                                       <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#15803D' }}>ELEGIBLE EN FIRME</Text>
                                                     </View>
                                                   </View>
                                                   <Text style={{ fontSize: 11, color: '#475569' }}>
-                                                    C.C. {casoActivo.servidor_cedula || '1.020.764.882'} • Puntaje: <Text style={{ fontWeight: '800' }}>{(casoActivo as any).puntajePonderado || '89.45 / 100'}</Text>
+                                                    C.C. {casoActivo.servidor_cedula || 'N/A'} • OPEC: <Text style={{ fontWeight: '800' }}>{casoActivo.concurso_opec || '203205'}</Text> • Convocatoria: {casoActivo.concurso_convocatoria || 'Distrito Capital 6'}
                                                   </Text>
                                                   <Text style={{ fontSize: 10.5, color: '#64748B' }}>
-                                                    {(casoActivo as any).resolucionFirmeza || 'Resolución de Firmeza CNSC No. 2024-RES-4412 (12/03/2024)'}
+                                                    {(casoActivo as any).resolucionFirmeza || 'Resolución de Firmeza CNSC en Banco Nacional de Listas de Elegibles'}
                                                   </Text>
                                                 </View>
                                               </View>
 
-                                              {/* Botones de acción SIMO */}
+                                              {/* Botones de acción operativos sin falsa API */}
                                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                                 <Pressable
-                                                  onPress={() => ejecutarConsultaSimoInline(req.id)}
-                                                  style={{ backgroundColor: '#0F172A', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6.5, flexDirection: 'row', alignItems: 'center', gap: 5, cursor: 'pointer' }}
+                                                  onPress={handleAbrirPortalSimo}
+                                                  style={{
+                                                    backgroundColor: '#0F172A',
+                                                    borderRadius: 6,
+                                                    paddingHorizontal: 10,
+                                                    paddingVertical: 6.5,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 5,
+                                                    cursor: 'pointer',
+                                                  }}
                                                 >
-                                                  <Ionicons name="swap-horizontal-outline" size={13} color="#FFFFFF" />
+                                                  <Ionicons name="globe-outline" size={13} color="#FFFFFF" />
                                                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
-                                                    {consultandoSimoReq[req.id] ? 'Conectando...' : 'Consultar SIMO 4.0'}
+                                                    Ir a SIMO (simo.cnsc.gov.co)
                                                   </Text>
                                                 </Pressable>
+
+                                                <Pressable
+                                                  onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
+                                                  style={{
+                                                    backgroundColor: '#F0F9FF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#BAE6FD',
+                                                    borderRadius: 6,
+                                                    paddingHorizontal: 10,
+                                                    paddingVertical: 6.5,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="cloud-upload-outline" size={13} color="#0369A1" />
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0369A1' }}>
+                                                    + Adjuntar Soporte / Captura SIMO
+                                                  </Text>
+                                                </Pressable>
+
                                                 <Pressable
                                                   onPress={() => ejecutarValidarFirmezaInline(casoActivo.id, etapa.id, req.id)}
-                                                  style={{ backgroundColor: '#E0F2FE', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6.5, flexDirection: 'row', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                                  style={{
+                                                    backgroundColor: '#E0F2FE',
+                                                    borderWidth: 1,
+                                                    borderColor: '#BAE6FD',
+                                                    borderRadius: 6,
+                                                    paddingHorizontal: 10,
+                                                    paddingVertical: 6.5,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    cursor: 'pointer',
+                                                  }}
                                                 >
                                                   <Ionicons name="checkmark-done-outline" size={13} color="#0284C7" />
                                                   <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284C7' }}>
-                                                    {firmezaValidadaReq[req.id] || req.cumplido ? '✓ Firmeza Validada' : 'Validar Firmeza'}
+                                                    {firmezaValidadaReq[req.id] || req.cumplido ? '✓ Firmeza Verificada' : 'Validar Firmeza de Lista'}
                                                   </Text>
                                                 </Pressable>
                                               </View>
