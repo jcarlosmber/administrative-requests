@@ -96,6 +96,8 @@ export interface PlazaNomina {
   encargo_nombre?: string | null;
   es_encargo?: boolean;
   tipo_vinculacion?: string;
+  tipo_vinculacion_entidad?: string | null;
+  tipo_vinculacion_cargo?: string | null;
   situacion_administrativa?: string;
   opec?: string;
   // Campos de Escalera de Encargo (Columnas Q y R: ID-E y N)
@@ -275,6 +277,23 @@ export function coincideCodigoGrado(
   return codMatch || graMatch || compMatch;
 }
 
+// Helper para comprobar coincidencia flexible de Nivel Jerárquico (manejando acentos, variantes 'TECNICO', 'TÉCNICO OPERATIVO', etc.)
+export function coincideNivel(nivelItem?: string | null, nivelFiltro?: string | null): boolean {
+  if (!nivelFiltro || nivelFiltro === 'TODOS') return true;
+  const fNorm = (nivelFiltro || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const iNorm = (nivelItem || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (!iNorm) return false;
+
+  if (fNorm.includes('TECNIC')) {
+    return iNorm.includes('TECNIC') && !iNorm.includes('DIRECTIV');
+  }
+  if (fNorm.includes('DIRECTIV')) return iNorm.includes('DIRECTIV');
+  if (fNorm.includes('ASESOR')) return iNorm.includes('ASESOR');
+  if (fNorm.includes('PROFESIONAL')) return iNorm.includes('PROFESIONAL');
+  if (fNorm.includes('ASISTENCIAL')) return iNorm.includes('ASISTENCIAL');
+  return iNorm === fNorm || iNorm.startsWith(fNorm);
+}
+
 // Función pura de filtrado defensivo aplicable a cualquier colección de plazas
 export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPlazasNomina): PlazaNomina[] {
   if (!filtros) return plazas;
@@ -304,11 +323,7 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
   }
 
   if (filtros.nivel && filtros.nivel !== 'TODOS') {
-    const nivFiltro = filtros.nivel.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    result = result.filter((p) => {
-      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      return pNiv === nivFiltro;
-    });
+    result = result.filter((p) => coincideNivel(p.nivel, filtros.nivel));
   }
 
   if (filtros.estado && filtros.estado !== 'TODOS') {
@@ -445,6 +460,8 @@ export const nominaService = {
               es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
               opec: p.opec || m?.opec || null,
               situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+              tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
+              tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
               manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
               resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
             };

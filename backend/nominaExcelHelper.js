@@ -454,6 +454,8 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
     let cedulaActual = cleanDoc(getVal(row.getCell(colMap.cedula_actual || 4)));
     let nombreActual = cleanText(getVal(row.getCell(colMap.nombre_actual || 5)) || '').toUpperCase();
     let tipoVinculacion = cleanText(getVal(row.getCell(colMap.tipo_vinculacion || 6)) || '').toUpperCase();
+    let tipoVinculacionEntidad = tipoVinculacion;
+    let tipoVinculacionCargo = cleanText(getVal(row.getCell(colMap.tipo_vinculacion_cargo || 7)) || '').toUpperCase() || tipoVinculacion;
 
     let situacionAdmin = cleanText(getVal(row.getCell(colMap.situacion_admin || 12)) || '').toUpperCase();
     let situacionTitular = cleanText(getVal(row.getCell(colMap.situacion_titular || 13)) || '').toUpperCase();
@@ -605,7 +607,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         requisitos, asignacion_basica, estado_cargo,
         titular_cedula, titular_nombre, situacion_titular,
         encargo_cedula, encargo_nombre, es_encargo,
-        tipo_vinculacion, situacion_administrativa, opec,
+        tipo_vinculacion, tipo_vinculacion_entidad, tipo_vinculacion_cargo, situacion_administrativa, opec,
         id_escalera, peldano_escalera,
         fondo_salud, fondo_pension, fondo_cesantias, telefono, direccion, sexo,
         manual_funciones, resolucion_manual, total_devengado,
@@ -647,6 +649,8 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         encargo_nombre = EXCLUDED.encargo_nombre,
         es_encargo = EXCLUDED.es_encargo,
         tipo_vinculacion = EXCLUDED.tipo_vinculacion,
+        tipo_vinculacion_entidad = EXCLUDED.tipo_vinculacion_entidad,
+        tipo_vinculacion_cargo = EXCLUDED.tipo_vinculacion_cargo,
         situacion_administrativa = EXCLUDED.situacion_administrativa,
         opec = EXCLUDED.opec,
         id_escalera = EXCLUDED.id_escalera,
@@ -677,7 +681,9 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       sexoFinal,
       manualFuncionesRaw || null,
       manualFuncionesRaw || null,
-      devengadoPlanta || personaMatch?.totalDevengado || null
+      devengadoPlanta || personaMatch?.totalDevengado || null,
+      tipoVinculacionEntidad,
+      tipoVinculacionCargo
     ]);
 
     procesados++;

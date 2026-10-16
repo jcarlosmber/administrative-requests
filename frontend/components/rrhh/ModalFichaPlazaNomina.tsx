@@ -321,6 +321,8 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
 
     return {
       ...plazaActiva,
+      tipo_vinculacion_entidad: plazaActiva.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null,
+      tipo_vinculacion_cargo: plazaActiva.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null,
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
@@ -1024,6 +1026,20 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                             {cleanLabel(plazaActiva.situacion_titular, 'En comisión o encargo en otro empleo')}
                           </Text>
                         </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaEnriquecida?.tipo_vinculacion_entidad || plazaActiva.tipo_vinculacion_entidad || '---'}
+                          </Text>
+                        </View>
+
+                        <View>
+                          <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                          <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                            {plazaEnriquecida?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || '---'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -1086,6 +1102,20 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                             F. Nac: {plazaEnriquecida.fecha_nacimiento_activa}
                           </Text>
                         ) : null}
+                      </View>
+
+                      <View>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                          {plazaEnriquecida?.tipo_vinculacion_entidad || plazaActiva.tipo_vinculacion_entidad || '---'}
+                        </Text>
+                      </View>
+
+                      <View>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                          {plazaEnriquecida?.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion_cargo || plazaActiva.tipo_vinculacion || '---'}
+                        </Text>
                       </View>
 
                       <View>

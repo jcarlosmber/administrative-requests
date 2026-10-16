@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as DocumentPicker from 'expo-document-picker';
-import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno, coincideCodigoGrado, aplicarFiltrosPlazas } from '../../lib/nominaService';
+import { nominaService, PlazaNomina, EstadisticasNomina, PersonaPerno, coincideCodigoGrado, aplicarFiltrosPlazas, coincideNivel } from '../../lib/nominaService';
 import mockPlazasData from '../../lib/plantaMockData.json';
 import mockPernoData from '../../lib/pernoMockData.json';
 import { DataTable, ColumnConfig } from '../../components/DataTable';
@@ -384,6 +384,8 @@ export default function NominaScreen() {
           es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
           opec: p.opec || m?.opec || null,
           situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+          tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
+          tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
           manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
           resolucion_manual: p.resolucion_manual || m?.resolucion_manual || m?.manual_funciones || null,
           sexo: (() => {
@@ -831,8 +833,7 @@ export default function NominaScreen() {
       res = res.filter((p) => (p.tipo_vinculacion || '').toUpperCase().trim() === filtroVinculacionReporte);
     }
     if (filtroNivelReporte !== 'TODOS') {
-      const nq = filtroNivelReporte.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      res = res.filter((p) => (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === nq);
+      res = res.filter((p) => coincideNivel(p.nivel, filtroNivelReporte));
     }
     if (filtroDependenciaReporte !== 'TODAS') {
       const depQ = filtroDependenciaReporte.trim().toLowerCase();
@@ -1062,7 +1063,7 @@ export default function NominaScreen() {
           const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
           const pct = ((cant / totalBase) * 100).toFixed(1);
           const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
-            (p) => (p.nivel || '').toUpperCase().includes(nivel.substring(0, 5))
+            (p) => coincideNivel(p.nivel, nivel)
           );
           const prov = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
           const vac = plazasDelNivel.length - prov;
@@ -1231,9 +1232,7 @@ export default function NominaScreen() {
       }
     }
     if (nivelSeleccionado !== 'TODOS') {
-      const nivFiltro = nivelSeleccionado.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-      if (pNiv !== nivFiltro) return false;
+      if (!coincideNivel(p.nivel, nivelSeleccionado)) return false;
     }
     if (estadoSeleccionado !== 'TODOS') {
       if ((p.estado_cargo || '').toUpperCase() !== estadoSeleccionado.toUpperCase()) return false;
@@ -1292,9 +1291,7 @@ export default function NominaScreen() {
       if (!depC.includes(depQ)) return false;
     }
     if (filtroNivelReporte !== 'TODOS') {
-      const nivFiltro = filtroNivelReporte.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const pNiv = (p.nivel || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      if (pNiv !== nivFiltro) return false;
+      if (!coincideNivel(p.nivel, filtroNivelReporte)) return false;
     }
     if (filtroEstadoCargoReporte !== 'TODOS') {
       if ((p.estado_cargo || '').toUpperCase() !== filtroEstadoCargoReporte.toUpperCase()) return false;
@@ -1789,6 +1786,8 @@ export default function NominaScreen() {
 
     return {
       ...plazaModal,
+      tipo_vinculacion_entidad: plazaModal.tipo_vinculacion_entidad || (mockMatch as any)?.tipo_vinculacion_entidad || null,
+      tipo_vinculacion_cargo: plazaModal.tipo_vinculacion_cargo || (mockMatch as any)?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || (mockMatch as any)?.tipo_vinculacion || null,
       proposito: propositoTexto,
       funciones: funcionesArray,
       requisitos: requisitosTexto,
@@ -3881,7 +3880,7 @@ export default function NominaScreen() {
                               color: activo ? THEME.marca700 : THEME.slate600,
                             }}
                           >
-                            {niv}
+                            {niv === 'TECNICO' ? 'TÉCNICO' : niv}
                           </Text>
                         </Pressable>
                       );
@@ -5971,7 +5970,7 @@ export default function NominaScreen() {
                             }}
                           >
                             <Text style={{ fontSize: 11, fontWeight: sel ? '700' : '500', color: sel ? THEME.white : THEME.slate700 }}>
-                              {nv}
+                              {nv === 'TECNICO' ? 'TÉCNICO' : nv}
                             </Text>
                           </Pressable>
                         );
@@ -6298,7 +6297,7 @@ export default function NominaScreen() {
                         const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
                         const porcentaje = Math.round((cant / totalBase) * 100);
                         const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
-                          (p) => (p.nivel || '').toUpperCase().includes(nivel.substring(0, 5))
+                          (p) => coincideNivel(p.nivel, nivel)
                         );
                         const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
                         const vacantesNivel = plazasDelNivel.length - provistasNivel;
@@ -6373,7 +6372,7 @@ export default function NominaScreen() {
                         const totalBase = metricasReportes.totalPlazas || (plazas.length > 0 ? plazas.length : 170);
                         const pct = ((cant / totalBase) * 100).toFixed(1);
                         const plazasDelNivel = (plazas.length > 0 ? plazas : todasLasPlazas).filter(
-                          (p) => (p.nivel || '').toUpperCase().includes(nivel.substring(0, 5))
+                          (p) => coincideNivel(p.nivel, nivel)
                         );
                         const provistasNivel = plazasDelNivel.filter((p) => p.estado_cargo === 'OCUPADO' && !p.titular_nombre?.includes('VACANTE')).length;
                         const vacantesNivel = plazasDelNivel.length - provistasNivel;
@@ -9683,6 +9682,20 @@ export default function NominaScreen() {
                           </View>
 
                           <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal.tipo_vinculacion_entidad || '---'}
+                            </Text>
+                          </View>
+
+                          <View>
+                            <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                            <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
+                              {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion_cargo || plazaModal.tipo_vinculacion || '---'}
+                            </Text>
+                          </View>
+
+                          <View>
                             <Text style={{ fontSize: 11, color: THEME.slate500 }}>Condición</Text>
                             <Text style={{ fontSize: 12.5, fontWeight: '600', color: THEME.slate800, marginTop: 1 }}>
                               Plaza en encargo activo
@@ -9739,10 +9752,17 @@ export default function NominaScreen() {
                         ) : null}
                       </View>
 
-                      <View style={{ flex: 1, minWidth: 140 }}>
-                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación</Text>
+                      <View style={{ flex: 1, minWidth: 150 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación a la Entidad</Text>
                         <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
-                          {plazaModal?.tipo_vinculacion || '---'}
+                          {plazaModalEnriquecida?.tipo_vinculacion_entidad || plazaModal?.tipo_vinculacion_entidad || '---'}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 150 }}>
+                        <Text style={{ fontSize: 11, color: THEME.slate500 }}>Tipo de Vinculación al Cargo/ SIDEAP</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: THEME.slate800, marginTop: 2 }}>
+                          {plazaModalEnriquecida?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion_cargo || plazaModal?.tipo_vinculacion || '---'}
                         </Text>
                       </View>
 

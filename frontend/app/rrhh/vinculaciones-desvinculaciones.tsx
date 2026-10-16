@@ -804,7 +804,6 @@ export const CARGO_RESPONSABLE_MAP: Record<string, string> = {
   "vp3_secop": "Profesional Universitario TH",
   "vp3_2": "Auxiliar Administrativo TH",
   "vp3_3": "Profesional Universitario TH",
-  "vp4_cdp": "Profesional Especializado TH / Presupuesto",
   "vp4_1": "Profesional Universitario TH",
   "vp4_2": "Secretario(a) Jurídico(a) Distrital (Nominador)",
   "vp4_3": "Técnico Operativo (Notificaciones)",
@@ -1074,19 +1073,6 @@ function generarEtapasParaCasoInterno(
                   'Certificado institucional 2311300-FT-318 en Excel oficial firmado con concepto favorable CUMPLE',
                   'Dictamen técnico de verificación de cumplimiento asistido por IA',
                   'Certificaciones laborales y actas de grado cotejadas frente al manual de funciones',
-                ],
-              },
-              {
-                id: 'vc4_cdp',
-                label: 'Solicitud y expedición de CDP Individual de nómina (Gestión Financiera - Presupuesto)',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Estatuto Orgánico de Presupuesto Distrital (Decreto 714 de 1996) • Procedimiento 2311300-PR-145 V1',
-                textoNormativo: 'Para la provisión de cada vacante, Talento Humano solicita a Gestión Financiera (Presupuesto) la expedición del Certificado de Disponibilidad Presupuestal (CDP) individual que ampara la asignación salarial y prestacional en la vigencia fiscal.',
-                detalleProcedimiento: 'Radicar solicitud formal a Presupuesto/Financiera para la expedición del CDP individual antes de la expedición del nombramiento y la posesión.',
-                posiblesEvidencias: [
-                  'Certificado de Disponibilidad Presupuestal (CDP) individual expedido por Presupuesto.',
-                  'Memorando de solicitud de CDP radicado ante Gestión Financiera.',
                 ],
               },
               {
@@ -1630,19 +1616,6 @@ function generarEtapasParaCasoInterno(
             procedimientoDetallado: 'Emisión del decreto o resolución de nombramiento ordinario debidamente motivado, numerado y notificado formalmente.',
             requisitos: [
               {
-                id: 'vl4_cdp',
-                label: 'Solicitud y expedición de CDP Individual de nómina (Gestión Financiera - Presupuesto)',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Estatuto Orgánico de Presupuesto Distrital (Decreto 714 de 1996) • Procedimiento 2311300-PR-145 V1',
-                textoNormativo: 'Para la provisión de cada vacante de Libre Nombramiento, Talento Humano solicita a Gestión Financiera (Presupuesto) la expedición del Certificado de Disponibilidad Presupuestal (CDP) individual que ampara el cargo en la vigencia.',
-                detalleProcedimiento: 'Radicar solicitud formal a Presupuesto/Financiera para la expedición del CDP individual antes de proferir el acto de nombramiento ordinario.',
-                posiblesEvidencias: [
-                  'Certificado de Disponibilidad Presupuestal (CDP) individual expedido por Presupuesto.',
-                  'Memorando de solicitud de CDP radicado ante Gestión Financiera.',
-                ],
-              },
-              {
                 id: 'vl4_1',
                 label: 'Proyección y firma de Resolución de Nombramiento Ordinario',
                 cumplido: false,
@@ -2008,19 +1981,6 @@ function generarEtapasParaCasoInterno(
             plazoLegal: '10 días hábiles para aceptación',
             procedimientoDetallado: 'Expedición del acto administrativo con mención expresa de la condición provisional del nombramiento y de la vacancia que lo origina.',
             requisitos: [
-              {
-                id: 'vp4_cdp',
-                label: 'Solicitud y expedición de CDP Individual de nómina (Gestión Financiera - Presupuesto)',
-                cumplido: false,
-                obligatorio: true,
-                norma: 'Estatuto Orgánico de Presupuesto Distrital (Decreto 714 de 1996) • Procedimiento 2311300-PR-145 V1',
-                textoNormativo: 'Para proveer la vacante provisional, Talento Humano solicita a Gestión Financiera (Presupuesto) la expedición del Certificado de Disponibilidad Presupuestal (CDP) individual que ampara el empleo en la vigencia fiscal.',
-                detalleProcedimiento: 'Radicar solicitud formal a Presupuesto/Financiera requiriendo el CDP individual antes de la expedición del acto administrativo de nombramiento provisional.',
-                posiblesEvidencias: [
-                  'Certificado de Disponibilidad Presupuestal (CDP) individual expedido por Presupuesto.',
-                  'Memorando de solicitud de CDP radicado ante Gestión Financiera.',
-                ],
-              },
               {
                 id: 'vp4_1',
                 label: 'Elaboración de Resolución de Nombramiento Provisional',
@@ -12643,7 +12603,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                   )}
 
                                   {/* LISTA DE REQUISITOS DE LA FASE */}
-                                  <View style={{ gap: 8 }}>
+                                  <View style={{ gap: 14 }}>
                                     {etapa.requisitos.map((req, rIdx) => {
                                       const estaReqDetalle = reqDetalleExpandido[req.id] ?? false;
                                       const respReq = req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH';
@@ -12712,25 +12672,42 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           <View
                                             key={req.id}
                                             style={{
-                                              backgroundColor: '#F8FAFC',
-                                              borderRadius: 10,
-                                              borderWidth: 1,
-                                              borderColor: '#CBD5E1',
-                                              paddingHorizontal: 12,
-                                              paddingVertical: 9,
+                                              backgroundColor: '#F1F5F9',
+                                              borderRadius: 12,
+                                              borderWidth: 1.5,
+                                              borderColor: '#94A3B8',
+                                              paddingHorizontal: 14,
+                                              paddingVertical: 10,
                                               flexDirection: isTablet ? 'row' : 'column',
                                               alignItems: isTablet ? 'center' : 'flex-start',
                                               justifyContent: 'space-between',
                                               gap: 10,
                                               shadowColor: '#000000',
-                                              shadowOffset: { width: 0, height: 1 },
-                                              shadowOpacity: 0.02,
-                                              shadowRadius: 2,
+                                              shadowOffset: { width: 0, height: 2 },
+                                              shadowOpacity: 0.04,
+                                              shadowRadius: 4,
                                               elevation: 1,
-                                              opacity: soloVisualizacion ? 0.78 : 0.92,
+                                              opacity: soloVisualizacion ? 0.78 : 0.88,
                                             }}
                                           >
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                              {/* Chip secuencial de actividad */}
+                                              <View
+                                                style={{
+                                                  backgroundColor: '#E2E8F0',
+                                                  borderWidth: 1,
+                                                  borderColor: '#CBD5E1',
+                                                  paddingHorizontal: 7,
+                                                  paddingVertical: 2,
+                                                  borderRadius: 5,
+                                                  flexShrink: 0,
+                                                }}
+                                              >
+                                                <Text style={{ fontSize: 10, fontWeight: '800', color: '#475569' }}>
+                                                  #{rIdx + 1}
+                                                </Text>
+                                              </View>
+
                                               {/* Ícono de estado No Aplica */}
                                               <Pressable
                                                 onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
@@ -12738,16 +12715,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   width: 26,
                                                   height: 26,
                                                   borderRadius: 13,
-                                                  backgroundColor: '#E2E8F0',
+                                                  backgroundColor: '#475569',
                                                   borderWidth: 1,
-                                                  borderColor: '#CBD5E1',
+                                                  borderColor: '#334155',
                                                   alignItems: 'center',
                                                   justifyContent: 'center',
                                                   cursor: 'pointer',
                                                   flexShrink: 0,
                                                 }}
                                               >
-                                                <Ionicons name="ban-outline" size={14} color="#64748B" />
+                                                <Ionicons name="ban" size={13} color="#FFFFFF" />
                                               </Pressable>
 
                                               {/* Título y motivo de exención */}
@@ -12757,8 +12734,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     style={{
                                                       fontSize: 13,
                                                       fontWeight: '700',
-                                                      color: '#64748B',
-                                                      textDecorationLine: 'line-through',
+                                                      color: '#475569',
+                                                      textDecorationLine: 'none',
                                                       fontStyle: 'italic',
                                                     }}
                                                     numberOfLines={1}
@@ -12779,28 +12756,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     </Text>
                                                   </View>
 
-                                                  <View
-                                                    style={{
-                                                      backgroundColor: '#E2E8F0',
-                                                      paddingHorizontal: 6,
-                                                      paddingVertical: 1.5,
-                                                      borderRadius: 4,
-                                                    }}
-                                                  >
-                                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#475569' }}>
-                                                      Exento
-                                                    </Text>
-                                                  </View>
-
                                                   {req.codigoFormato && (
                                                     <View
                                                       style={{
-                                                        backgroundColor: '#F1F5F9',
+                                                        backgroundColor: '#F8FAFC',
                                                         paddingHorizontal: 5,
                                                         paddingVertical: 1,
                                                         borderRadius: 4,
                                                         borderWidth: 1,
-                                                        borderColor: '#E2E8F0',
+                                                        borderColor: '#CBD5E1',
                                                       }}
                                                     >
                                                       <Text style={{ fontSize: 9.5, fontWeight: '600', color: '#64748B' }}>
@@ -12868,18 +12832,30 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         <View
                                           key={req.id}
                                           style={{
-                                            backgroundColor: esNoAplica ? '#F8FAFC' : '#FFFFFF',
+                                            backgroundColor: esCumplido
+                                              ? '#F0FDF4'
+                                              : esNoAplica
+                                              ? '#F1F5F9'
+                                              : esPasoEnEjecucion
+                                              ? '#F0F9FF'
+                                              : '#FFFFFF',
                                             borderRadius: 12,
-                                            borderWidth: esNoAplica ? 1.5 : (esActivo && esPasoEnEjecucion ? 2 : 1),
-                                            borderColor: esNoAplica ? '#CBD5E1' : (esActivo && esPasoEnEjecucion ? '#0072C6' : '#E2E8F0'),
-                                            padding: 14,
-                                            gap: 10,
-                                            shadowColor: esActivo && esPasoEnEjecucion ? '#0072C6' : '#000000',
-                                            shadowOffset: { width: 0, height: 1.5 },
-                                            shadowOpacity: esActivo && esPasoEnEjecucion ? 0.08 : (esNoAplica ? 0 : 0.03),
-                                            shadowRadius: 4,
-                                            elevation: esActivo && esPasoEnEjecucion ? 2 : 1,
-                                            opacity: soloVisualizacion ? 0.78 : (esNoAplica ? 0.92 : 1),
+                                            borderWidth: esPasoEnEjecucion ? 2 : 1.5,
+                                            borderColor: esCumplido
+                                              ? '#86EFAC'
+                                              : esNoAplica
+                                              ? '#94A3B8'
+                                              : esPasoEnEjecucion
+                                              ? '#0284C7'
+                                              : '#CBD5E1',
+                                                                                        padding: 16,
+                                            gap: 12,
+                                            shadowColor: esPasoEnEjecucion ? '#0284C7' : '#000000',
+                                            shadowOffset: { width: 0, height: esPasoEnEjecucion ? 3 : 2 },
+                                            shadowOpacity: esPasoEnEjecucion ? 0.12 : 0.05,
+                                            shadowRadius: esPasoEnEjecucion ? 6 : 4,
+                                            elevation: esPasoEnEjecucion ? 3 : 2,
+                                            opacity: soloVisualizacion ? 0.78 : (esNoAplica ? 0.88 : 1),
                                           }}
                                         >
                                           {/* 0. BANNER SUPERIOR INFORMATIVO SI ES NO APLICA (MODO EXPANDIDO) */}
@@ -12944,9 +12920,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                           {/* 1. BADGES SUPERIORES SI ES PASO ACTIVO */}
                                           {esActivo && esPasoEnEjecucion && (
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                              <View style={{ backgroundColor: '#0F568C', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
+                                              <View style={{ backgroundColor: '#0284C7', paddingHorizontal: 9, paddingVertical: 3.5, borderRadius: 5 }}>
                                                 <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 }}>
-                                                  PASO EN EJECUCIÓN
+                                                  ⚡ PASO EN EJECUCIÓN
                                                 </Text>
                                               </View>
                                               {req.obligatorio !== false && (
@@ -12962,7 +12938,49 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                           {/* 2. FILA DE TÍTULO, ÍCONO DE ESTADO Y RESPONSABLE */}
                                           <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 9, flex: 1 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 }}>
+                                              {/* Chip secuencial de actividad para distinguir claramente el límite del ítem */}
+                                              <View
+                                                style={{
+                                                  backgroundColor: esCumplido
+                                                    ? '#DCFCE7'
+                                                    : esNoAplica
+                                                    ? '#E2E8F0'
+                                                    : esPasoEnEjecucion
+                                                    ? '#BAE6FD'
+                                                    : '#F1F5F9',
+                                                  borderWidth: 1,
+                                                  borderColor: esCumplido
+                                                    ? '#86EFAC'
+                                                    : esNoAplica
+                                                    ? '#CBD5E1'
+                                                    : esPasoEnEjecucion
+                                                    ? '#7DD3FC'
+                                                    : '#E2E8F0',
+                                                  paddingHorizontal: 7,
+                                                  paddingVertical: 3,
+                                                  borderRadius: 5,
+                                                  marginTop: 1,
+                                                  flexShrink: 0,
+                                                }}
+                                              >
+                                                <Text
+                                                  style={{
+                                                    fontSize: 10.5,
+                                                    fontWeight: '800',
+                                                    color: esCumplido
+                                                      ? '#15803D'
+                                                      : esNoAplica
+                                                      ? '#475569'
+                                                      : esPasoEnEjecucion
+                                                      ? '#0369A1'
+                                                      : '#64748B',
+                                                  }}
+                                                >
+                                                  #{rIdx + 1}
+                                                </Text>
+                                              </View>
+
                                               {/* Ícono de estado según cumplido / no aplica / activo */}
                                               {esCumplido ? (
                                                 <Pressable
@@ -12970,15 +12988,19 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   style={{
                                                     width: 26,
                                                     height: 26,
-                                                    borderRadius: 6,
-                                                    backgroundColor: '#DCFCE7',
+                                                    borderRadius: 13,
+                                                    backgroundColor: '#16A34A',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     marginTop: 1,
                                                     cursor: 'pointer',
+                                                    shadowColor: '#16A34A',
+                                                    shadowOffset: { width: 0, height: 1 },
+                                                    shadowOpacity: 0.2,
+                                                    shadowRadius: 2,
                                                   }}
                                                 >
-                                                  <Ionicons name="checkmark-sharp" size={16} color="#15803D" />
+                                                  <Ionicons name="checkmark-sharp" size={16} color="#FFFFFF" />
                                                 </Pressable>
                                               ) : esNoAplica ? (
                                                 <Pressable
@@ -12987,16 +13009,16 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     width: 26,
                                                     height: 26,
                                                     borderRadius: 13,
-                                                    backgroundColor: '#E2E8F0',
+                                                    backgroundColor: '#475569',
                                                     borderWidth: 1,
-                                                    borderColor: '#CBD5E1',
+                                                    borderColor: '#334155',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     marginTop: 1,
                                                     cursor: 'pointer',
                                                   }}
                                                 >
-                                                  <Ionicons name="ban-outline" size={15} color="#475569" />
+                                                  <Ionicons name="ban" size={13} color="#FFFFFF" />
                                                 </Pressable>
                                               ) : (
                                                 <Pressable
@@ -13006,8 +13028,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     height: 26,
                                                     borderRadius: 6,
                                                     borderWidth: 1.5,
-                                                    borderColor: esPasoEnEjecucion ? '#0072C6' : '#CBD5E1',
-                                                    backgroundColor: esPasoEnEjecucion ? '#EFF6FF' : '#FFFFFF',
+                                                    borderColor: esPasoEnEjecucion ? '#0284C7' : '#94A3B8',
+                                                    backgroundColor: esPasoEnEjecucion ? '#E0F2FE' : '#FFFFFF',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     marginTop: 1,
@@ -13015,9 +13037,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   }}
                                                 >
                                                   <Ionicons
-                                                    name={esPasoEnEjecucion ? 'checkbox-outline' : 'square-outline'}
-                                                    size={16}
-                                                    color={esPasoEnEjecucion ? '#0072C6' : '#94A3B8'}
+                                                    name={esPasoEnEjecucion ? 'play-outline' : 'square-outline'}
+                                                    size={15}
+                                                    color={esPasoEnEjecucion ? '#0284C7' : '#94A3B8'}
                                                   />
                                                 </Pressable>
                                               )}
@@ -13029,18 +13051,54 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     style={{
                                                       fontSize: esPasoEnEjecucion ? 14.5 : 13.5,
                                                       fontWeight: '800',
-                                                      color: esNoAplica ? '#64748B' : esCumplido ? '#64748B' : '#0F172A',
-                                                      textDecorationLine: esCumplido ? 'line-through' : 'none',
+                                                      color: esNoAplica ? '#64748B' : esCumplido ? '#15803D' : esPasoEnEjecucion ? '#0C4A6E' : '#0F172A',
+                                                      textDecorationLine: 'none',
                                                       fontStyle: esNoAplica ? 'italic' : 'normal',
                                                       lineHeight: 20,
                                                     }}
                                                   >
                                                     {req.label}
                                                   </Text>
+                                                  {esCumplido && !esNoAplica && (
+                                                    <View
+                                                      style={{
+                                                        backgroundColor: '#DCFCE7',
+                                                        borderColor: '#86EFAC',
+                                                        borderWidth: 1,
+                                                        paddingHorizontal: 8,
+                                                        paddingVertical: 2,
+                                                        borderRadius: 5,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 3.5,
+                                                      }}
+                                                    >
+                                                      <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#15803D', letterSpacing: 0.2 }}>
+                                                        COMPLETADO
+                                                      </Text>
+                                                    </View>
+                                                  )}
                                                   {esNoAplica && (
                                                     <View style={{ backgroundColor: '#475569', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
                                                       <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
                                                         NO APLICA
+                                                      </Text>
+                                                    </View>
+                                                  )}
+                                                  {!esCumplido && !esNoAplica && !esPasoEnEjecucion && (
+                                                    <View
+                                                      style={{
+                                                        backgroundColor: '#F1F5F9',
+                                                        borderColor: '#CBD5E1',
+                                                        borderWidth: 1,
+                                                        paddingHorizontal: 6,
+                                                        paddingVertical: 1.5,
+                                                        borderRadius: 4,
+                                                      }}
+                                                    >
+                                                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748B', letterSpacing: 0.2 }}>
+                                                        PENDIENTE
                                                       </Text>
                                                     </View>
                                                   )}
@@ -13070,8 +13128,8 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 alignSelf: 'flex-start',
                                               }}
                                             >
-                                              <Ionicons name="person-outline" size={12} color="#475569" />
-                                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#334155' }}>
+                                              <Ionicons name="briefcase-outline" size={12} color="#0F568C" />
+                                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#0F568C' }}>
                                                 {respReq}
                                               </Text>
                                             </View>
@@ -21649,6 +21707,257 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         onClose={() => setFichaPlazaModal(null)}
         plaza={fichaPlazaModal}
       />
+
+      {/* =================================================================== */}
+      {/* MODAL INSTITUCIONAL: CONFIRMAR ELIMINACIÓN DE DOCUMENTO ADJUNTO    */}
+      {/* =================================================================== */}
+      <Modal
+        visible={Boolean(modalEliminarDoc?.visible)}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalEliminarDoc(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 450,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              padding: 20,
+              gap: 16,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            {/* Cabecera */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: '#FEE2E2',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="trash" size={22} color="#DC2626" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A' }}>
+                  Eliminar Anexo de Soporte
+                </Text>
+                <Text style={{ fontSize: 12, color: '#64748B' }}>
+                  Confirmación de retiro del expediente
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setModalEliminarDoc(null)}
+                style={{ padding: 6, borderRadius: 6, backgroundColor: '#F1F5F9' }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
+              </Pressable>
+            </View>
+
+            {/* Contenido / Detalle del archivo */}
+            <View
+              style={{
+                backgroundColor: '#F8FAFC',
+                padding: 14,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 8,
+              }}
+            >
+              <Text style={{ fontSize: 13, color: '#334155', lineHeight: 18 }}>
+                ¿Está seguro de que desea eliminar este documento anexo? Esta acción lo retirará del requisito correspondiente.
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  backgroundColor: '#FFFFFF',
+                  padding: 10,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                }}
+              >
+                <Ionicons name="document-text" size={18} color="#DC2626" />
+                <Text
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: '700',
+                    color: '#0F172A',
+                    flex: 1,
+                  }}
+                  numberOfLines={2}
+                >
+                  {modalEliminarDoc?.nombreDoc || 'Documento adjunto'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Botones de acción */}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+              <Pressable
+                onPress={() => setModalEliminarDoc(null)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 9,
+                  borderRadius: 8,
+                  backgroundColor: '#F1F5F9',
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                }}
+              >
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#475569' }}>
+                  Cancelar
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={ejecutarEliminacionArchivo}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 16,
+                  paddingVertical: 9,
+                  borderRadius: 8,
+                  backgroundColor: '#DC2626',
+                }}
+              >
+                <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
+                <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF' }}>
+                  Eliminar Anexo
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =================================================================== */}
+      {/* MODAL INSTITUCIONAL: NOTIFICACIÓN / MENSAJES DE DOCUMENTOS          */}
+      {/* =================================================================== */}
+      <Modal
+        visible={Boolean(modalMensajeDoc?.visible)}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalMensajeDoc(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              padding: 20,
+              gap: 14,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 12,
+              elevation: 6,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor:
+                    modalMensajeDoc?.tipo === 'error'
+                      ? '#FEE2E2'
+                      : modalMensajeDoc?.tipo === 'exito'
+                      ? '#DCFCE7'
+                      : '#DBEAFE',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons
+                  name={
+                    modalMensajeDoc?.tipo === 'error'
+                      ? 'alert-circle'
+                      : modalMensajeDoc?.tipo === 'exito'
+                      ? 'checkmark-circle'
+                      : 'information-circle'
+                  }
+                  size={22}
+                  color={
+                    modalMensajeDoc?.tipo === 'error'
+                      ? '#DC2626'
+                      : modalMensajeDoc?.tipo === 'exito'
+                      ? '#16A34A'
+                      : '#2563EB'
+                  }
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A' }}>
+                  {modalMensajeDoc?.titulo || 'Notificación'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setModalMensajeDoc(null)}
+                style={{ padding: 6, borderRadius: 6, backgroundColor: '#F1F5F9' }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
+              </Pressable>
+            </View>
+
+            <Text style={{ fontSize: 12.5, color: '#334155', lineHeight: 18 }}>
+              {modalMensajeDoc?.mensaje}
+            </Text>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 4 }}>
+              <Pressable
+                onPress={() => setModalMensajeDoc(null)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  backgroundColor: '#1E293B',
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
+                  Entendido
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* MODAL INSTITUCIONAL: CONFIRMACIÓN DE ELIMINACIÓN DE TRÁMITE DE PERSONAL */}
       <Modal

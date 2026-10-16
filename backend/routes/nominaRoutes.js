@@ -296,6 +296,8 @@ module.exports = function (pool) {
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS es_encargo BOOLEAN DEFAULT FALSE;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS opec TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS tipo_vinculacion TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS tipo_vinculacion_entidad TEXT;
+        ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS tipo_vinculacion_cargo TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS situacion_administrativa TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS encargo_cedula TEXT;
         ALTER TABLE public.planta_personal_sjd ADD COLUMN IF NOT EXISTS encargo_nombre TEXT;
@@ -476,12 +478,25 @@ module.exports = function (pool) {
       }
 
       if (nivel && nivel !== 'TODOS') {
-        params.push(nivel.trim());
-        const idx = params.length;
-        query += ` AND (
-          UPPER(nivel) = UPPER($${idx}) OR 
-          REPLACE(REPLACE(UPPER(nivel), 'É', 'E'), 'Í', 'I') = UPPER($${idx})
-        )`;
+        const nivNorm = String(nivel).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (nivNorm.includes('TECNIC')) {
+          query += ` AND (UPPER(nivel) ILIKE '%TECNIC%' OR UPPER(nivel) ILIKE '%TÉCNIC%') AND UPPER(nivel) NOT ILIKE '%DIRECTIV%'`;
+        } else if (nivNorm.includes('DIRECTIV')) {
+          query += ` AND UPPER(nivel) ILIKE '%DIRECTIV%'`;
+        } else if (nivNorm.includes('ASESOR')) {
+          query += ` AND UPPER(nivel) ILIKE '%ASESOR%'`;
+        } else if (nivNorm.includes('PROFESIONAL')) {
+          query += ` AND UPPER(nivel) ILIKE '%PROFESIONAL%'`;
+        } else if (nivNorm.includes('ASISTENCIAL')) {
+          query += ` AND UPPER(nivel) ILIKE '%ASISTENCIAL%'`;
+        } else {
+          params.push(nivel.trim());
+          const idx = params.length;
+          query += ` AND (
+            UPPER(nivel) = UPPER($${idx}) OR 
+            REPLACE(REPLACE(UPPER(nivel), 'É', 'E'), 'Í', 'I') = UPPER($${idx})
+          )`;
+        }
       }
 
       if (estado && estado !== 'TODOS') {
@@ -2137,7 +2152,7 @@ Secretaría Jurídica Distrital
               id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
               dependencia_cargo, dependencia_funcional, proposito, funciones,
               requisitos, asignacion_basica, estado_cargo, titular_cedula,
-              titular_nombre, tipo_vinculacion, situacion_administrativa,
+              titular_nombre, tipo_vinculacion, tipo_vinculacion_entidad, tipo_vinculacion_cargo, situacion_administrativa,
               situacion_titular, encargo_cedula, encargo_nombre, es_encargo,
               opec, id_escalera, peldano_escalera, manual_funciones, resolucion_manual, edad, sexo, updated_at
             ) VALUES (
@@ -2159,6 +2174,8 @@ Secretaría Jurídica Distrital
               titular_cedula = EXCLUDED.titular_cedula,
               titular_nombre = EXCLUDED.titular_nombre,
               tipo_vinculacion = EXCLUDED.tipo_vinculacion,
+              tipo_vinculacion_entidad = EXCLUDED.tipo_vinculacion_entidad,
+              tipo_vinculacion_cargo = EXCLUDED.tipo_vinculacion_cargo,
               situacion_administrativa = EXCLUDED.situacion_administrativa,
               situacion_titular = EXCLUDED.situacion_titular,
               encargo_cedula = EXCLUDED.encargo_cedula,
@@ -2176,7 +2193,7 @@ Secretaría Jurídica Distrital
             idPlaza, parseInt(getVal(row.getCell(2)), 10) || null, parseInt(getVal(row.getCell(3)), 10) || null,
             nivel, cargoNom, codigo, grado, depCargo, depFuncional, proposito,
             JSON.stringify(parseFunctions(funcionesRaw)), requisitos, asignacion,
-            estadoCargo, titularCedula, titularNombre, tipoVinculacion, situacionAdmin,
+            estadoCargo, titularCedula, titularNombre, tipoVinculacion, vincEntidad, (cleanText(getVal(row.getCell(7))) || tipoVinculacion), situacionAdmin,
             situacionTitular || (titularNombre === 'VACANTE DEFINITIVA' ? 'VACANTE DEFINITIVA' : 'EN PROPIEDAD'),
             encargoCedula, encargoNombre, esEncargo,
             opec, idEscalera, peldanoEscalera,
