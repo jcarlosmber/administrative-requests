@@ -11705,69 +11705,112 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                 }}
                               >
                               {/* CABECERA DE LA FASE (INTERACTIVA PARA DESPLEGAR) */}
-                              {/* Banner SLA si está en progreso */}
-                              {esEnProgreso && (
-                                <View
-                                  style={{
-                                    flexDirection: isTablet ? 'row' : 'column',
-                                    justifyContent: 'space-between',
-                                    alignItems: isTablet ? 'center' : 'flex-start',
-                                    gap: 8,
-                                    backgroundColor: '#FEF3C7',
-                                    borderWidth: 1,
-                                    borderColor: '#FCD34D',
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 8,
-                                    borderRadius: 8,
-                                  }}
-                                >
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                    <Ionicons name="timer" size={18} color="#D97706" />
-                                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#78350F' }}>
-                                      Plazo de Vencimiento / Término Preclusivo:
-                                    </Text>
-                                    <Text
-                                      style={{
-                                        fontSize: 12,
-                                        fontWeight: '800',
-                                        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                                        color: '#78350F',
-                                      }}
-                                    >
-                                      Término Legal en Curso (5 días hábiles)
-                                    </Text>
-                                    <View
-                                      style={{
-                                        backgroundColor: 'rgba(253, 230, 138, 0.9)',
-                                        borderWidth: 1,
-                                        borderColor: '#FCD34D',
-                                        paddingHorizontal: 8,
-                                        paddingVertical: 2,
-                                        borderRadius: 9999,
-                                      }}
-                                    >
+                              {/* Banner SLA si está en progreso con TÉRMINOS Y NORMAS REALES DE LA FASE */}
+                              {esEnProgreso && (() => {
+                                // 1. Plazo legal o SLA real específico de esta fase
+                                const plazoLegalReal = etapa.plazoLegal || (etapa.tiempoEstimadoDias ? `SLA Estimado: ${etapa.tiempoEstimadoDias} días hábiles` : null);
+
+                                // 2. Extraer la norma legal principal de esta fase
+                                const normaReal = etapa.normaGeneral
+                                  ? etapa.normaGeneral.split(';')[0].split('•')[0].trim()
+                                  : (etapa.requisitos.find((r) => r.norma)?.norma?.split('•')[0]?.trim() || 'Régimen Distrital SJD');
+
+                                // Si la fase no tiene plazo legal ni tiempo estimado ni fechas de caso, no se muestra banner falso
+                                if (!plazoLegalReal && !casoActivo.fecha_limite_posesion && !casoActivo.fecha_limite_aceptacion) {
+                                  return null;
+                                }
+
+                                // 3. Determinar fechas específicas si aplican a la fase activa
+                                const tituloLower = (etapa.titulo || '').toLowerCase();
+                                let fechaLimiteTexto = '';
+                                let badgeEstado = '';
+
+                                if ((tituloLower.includes('nombramiento') || etapa.id.includes('v_carr_4') || etapa.id.includes('v_carr_3')) && casoActivo.fecha_limite_aceptacion) {
+                                  fechaLimiteTexto = `Vence Aceptación: ${casoActivo.fecha_limite_aceptacion}`;
+                                  badgeEstado = 'Término de Aceptación';
+                                } else if ((tituloLower.includes('posesión') || etapa.id.includes('v_carr_5')) && casoActivo.fecha_limite_posesion) {
+                                  fechaLimiteTexto = `Vence Posesión: ${casoActivo.fecha_limite_posesion}`;
+                                  badgeEstado = 'Término Legal de Posesión';
+                                } else if (casoActivo.fecha_posesion_periodo_prueba && (tituloLower.includes('periodo de prueba') || etapa.id.includes('v_carr_6'))) {
+                                  const infoPP = calcularTerminosPeriodoPrueba(casoActivo.fecha_posesion_periodo_prueba);
+                                  if (infoPP) {
+                                    fechaLimiteTexto = `Vence Periodo: ${infoPP.fechaFinPeriodoPrueba}`;
+                                    badgeEstado = infoPP.periodoPruebaTerminado
+                                      ? 'Período Concluido'
+                                      : `${infoPP.diasCalendarioRestantesPeriodo} días restantes`;
+                                  }
+                                }
+
+                                const diasSla = etapa.tiempoEstimadoDias || 5;
+                                const diasTranscurridos = calcularDiasHabilesTranscurridos(casoActivo.fecha_inicio_tramite);
+                                const diasRestantesFase = Math.max(1, diasSla - (diasTranscurridos % diasSla));
+
+                                const textoPlazoMostrar = fechaLimiteTexto || plazoLegalReal;
+                                const textoBadgeMostrar = badgeEstado || `SLA Fase: ${diasSla} días hábiles`;
+
+                                return (
+                                  <View
+                                    style={{
+                                      flexDirection: isTablet ? 'row' : 'column',
+                                      justifyContent: 'space-between',
+                                      alignItems: isTablet ? 'center' : 'flex-start',
+                                      gap: 8,
+                                      backgroundColor: '#FEF3C7',
+                                      borderWidth: 1,
+                                      borderColor: '#FCD34D',
+                                      paddingHorizontal: 12,
+                                      paddingVertical: 8,
+                                      borderRadius: 8,
+                                    }}
+                                  >
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
+                                      <Ionicons name="timer-outline" size={18} color="#D97706" />
+                                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#78350F' }}>
+                                        Término Normativo / Plazo:
+                                      </Text>
                                       <Text
                                         style={{
-                                          fontSize: 10,
+                                          fontSize: 12,
                                           fontWeight: '800',
-                                          textTransform: 'uppercase',
+                                          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
                                           color: '#78350F',
-                                          letterSpacing: 0.3,
                                         }}
                                       >
-                                        Día 3 de 5 hábiles restantes
+                                        {textoPlazoMostrar}
+                                      </Text>
+                                      <View
+                                        style={{
+                                          backgroundColor: 'rgba(253, 230, 138, 0.9)',
+                                          borderWidth: 1,
+                                          borderColor: '#FCD34D',
+                                          paddingHorizontal: 8,
+                                          paddingVertical: 2,
+                                          borderRadius: 9999,
+                                        }}
+                                      >
+                                        <Text
+                                          style={{
+                                            fontSize: 10,
+                                            fontWeight: '800',
+                                            textTransform: 'uppercase',
+                                            color: '#78350F',
+                                            letterSpacing: 0.3,
+                                          }}
+                                        >
+                                          {textoBadgeMostrar}
+                                        </Text>
+                                      </View>
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                                      <Ionicons name="hammer-outline" size={13} color="#B45309" />
+                                      <Text style={{ fontSize: 11, fontWeight: '600', color: '#92400E' }}>
+                                        {normaReal}
                                       </Text>
                                     </View>
                                   </View>
-
-                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                    <Ionicons name="hammer-outline" size={13} color="#B45309" />
-                                    <Text style={{ fontSize: 11, fontWeight: '600', color: '#92400E' }}>
-                                      Art. 16 Dec. 760/2005
-                                    </Text>
-                                  </View>
-                                </View>
-                              )}
+                                );
+                              })()}
 
                               {/* Cabecera interactiva de la Fase */}
                               <Pressable
