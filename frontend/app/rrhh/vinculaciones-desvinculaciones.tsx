@@ -9967,59 +9967,66 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         const iniciales = obtenerInicialesServidor(c.servidor_nombre);
                         const estiloModalidad = obtenerEstilosModalidad(c.modalidad, c.subtipo_concurso);
 
-                        // Paleta visual: Amarillo/Ámbar si es en trámite, Verde si es terminado
-                        const colorBordeActivo = esTerminado ? 'rgb(29, 85, 78)' : '#f59e0b';
-                        const colorBgActivo = esTerminado ? '#f0fdf4' : '#fffbeb';
-                        const colorNombreActivo = esTerminado ? '#065f46' : '#b45309';
+                        // Paleta visual según estado:
+                        // EN TRÁMITE: Blanco con toques cobalt-blue y gris slate
+                        // TERMINADO: Fondo de color distintivo menta/esmeralda (#F0FDF4 / #DCFCE7) con acentos verde esmeralda
+                        const bgCard = esTerminado
+                          ? (esActivo ? '#DCFCE7' : '#F0FDF4')
+                          : (esActivo ? '#EFF6FF' : '#FFFFFF');
+
+                        const borderColorCard = esTerminado
+                          ? (esActivo ? '#059669' : '#A7F3D0')
+                          : (esActivo ? '#2563EB' : '#E2E8F0');
+
+                        const shadowColorCard = esTerminado ? '#059669' : (esActivo ? '#2563EB' : '#000000');
 
                         return (
                           <Pressable
                             key={c.id}
                             onPress={() => seleccionarCaso(c.id)}
-                            style={({ pressed }) => ({
-                              backgroundColor: esActivo
-                                ? colorBgActivo
-                                : pressed
-                                ? '#f8fafc'
-                                : THEME.white,
+                            style={({ pressed, hovered }: any) => ({
+                              backgroundColor: pressed
+                                ? (esTerminado ? '#BBF7D0' : '#DBEAFE')
+                                : hovered
+                                ? (esTerminado ? '#DCFCE7' : (esActivo ? '#EFF6FF' : '#F8FAFC'))
+                                : bgCard,
                               borderRadius: 12,
-                              paddingHorizontal: 12,
-                              paddingVertical: 10,
+                              padding: 12,
                               borderWidth: esActivo ? 2 : 1,
-                              borderColor: esActivo ? colorBordeActivo : '#e2e8f0',
-                              shadowColor: '#000',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: esActivo ? 0.08 : 0.03,
+                              borderColor: borderColorCard,
+                              shadowColor: shadowColorCard,
+                              shadowOffset: { width: 0, height: 1.5 },
+                              shadowOpacity: esActivo ? 0.12 : 0.04,
                               shadowRadius: 4,
                               elevation: esActivo ? 2 : 1,
-                              overflow: 'hidden',
+                              flexDirection: 'column',
+                              gap: 9,
+                              cursor: 'pointer',
                               position: 'relative',
                             })}
                           >
-                            {/* Header: Status Chip & Radicado */}
+                            {/* Fila 1: Badges superiores (Estado, Tipo Proceso, Radicado) & Botón Eliminar */}
                             <View
                               style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                                paddingBottom: 8,
-                                borderBottomWidth: 1,
-                                borderBottomColor: '#f1f5f9',
+                                gap: 6,
                               }}
                             >
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                {/* Status Chip: Verde si terminado, Amarillo/Ámbar si en trámite */}
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+                                {/* Badge Estado: En Trámite o Terminado */}
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     gap: 5,
                                     paddingHorizontal: 8,
-                                    paddingVertical: 2,
+                                    paddingVertical: 2.5,
                                     borderRadius: 9999,
-                                    backgroundColor: esTerminado ? 'rgb(29, 85, 78)' : '#b45309',
+                                    backgroundColor: esTerminado ? '#D1FAE5' : '#DBEAFE',
                                     borderWidth: 1,
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderColor: esTerminado ? '#A7F3D0' : '#BFDBFE',
                                   }}
                                 >
                                   <View
@@ -10027,264 +10034,264 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       width: 6,
                                       height: 6,
                                       borderRadius: 3,
-                                      backgroundColor: esTerminado ? '#5eead4' : '#fef08a',
+                                      backgroundColor: esTerminado ? '#059669' : '#2563EB',
                                     }}
                                   />
                                   <Text
                                     style={{
-                                      color: '#ffffff',
                                       fontSize: 10.5,
-                                      fontWeight: '600',
+                                      fontWeight: '700',
+                                      color: esTerminado ? '#065F46' : '#1D4ED8',
                                     }}
                                   >
                                     {esTerminado ? 'Terminado' : 'En Trámite'}
                                   </Text>
                                 </View>
 
-                                {/* Tipo Proceso Chip */}
+                                {/* Badge Tipo de Proceso (Navy o Esmeralda oscuro) */}
                                 <View
                                   style={{
-                                    backgroundColor: esVinculacion ? 'rgb(6, 95, 70)' : 'rgb(139, 64, 73)',
+                                    backgroundColor: esTerminado ? '#064E3B' : '#0F172A',
                                     paddingHorizontal: 7,
-                                    paddingVertical: 2,
+                                    paddingVertical: 2.5,
                                     borderRadius: 4,
                                   }}
                                 >
                                   <Text
                                     style={{
-                                      color: '#ffffff',
                                       fontSize: 9.5,
                                       fontWeight: '700',
-                                      letterSpacing: 0.2,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.3,
+                                      color: '#FFFFFF',
                                     }}
                                   >
-                                    {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'}
+                                    {esVinculacion ? 'Vinculación' : 'Desvinculación'}
                                   </Text>
                                 </View>
-                              </View>
 
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                {/* Radicado Chip */}
+                                {/* Badge Código / Radicado */}
                                 <View
                                   style={{
-                                    backgroundColor: '#f8fafc',
+                                    backgroundColor: esTerminado ? 'rgba(255, 255, 255, 0.7)' : '#F1F5F9',
                                     borderWidth: 1,
-                                    borderColor: 'rgba(226, 232, 240, 0.8)',
-                                    borderRadius: 4,
-                                    paddingHorizontal: 7,
+                                    borderColor: esTerminado ? '#A7F3D0' : '#E2E8F0',
+                                    paddingHorizontal: 6,
                                     paddingVertical: 2,
+                                    borderRadius: 4,
                                   }}
                                 >
                                   <Text
                                     style={{
-                                      fontSize: 10.5,
-                                      fontWeight: '700',
-                                      color: '#64748b',
-                                      fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                                      fontSize: 10,
+                                      fontWeight: '600',
+                                      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                      color: esTerminado ? '#065F46' : '#334155',
                                     }}
                                   >
                                     {c.id}
                                   </Text>
                                 </View>
-
-                                {/* Botón Eliminar Trámite */}
-                                <Pressable
-                                  onPress={(e: any) => {
-                                    e?.stopPropagation?.();
-                                    abrirModalEliminarCaso(c);
-                                  }}
-                                  style={({ pressed, hovered }: any) => ({
-                                    padding: 3,
-                                    borderRadius: 4,
-                                    backgroundColor: pressed ? '#fee2e2' : hovered ? '#fef2f2' : 'transparent',
-                                    cursor: 'pointer',
-                                  })}
-                                >
-                                  <Ionicons name="trash-outline" size={13.5} color="#ef4444" />
-                                </Pressable>
                               </View>
+
+                              {/* Botón Eliminar trámite */}
+                              <Pressable
+                                onPress={(e: any) => {
+                                  e?.stopPropagation?.();
+                                  abrirModalEliminarCaso(c);
+                                }}
+                                style={({ pressed, hovered }: any) => ({
+                                  padding: 4,
+                                  borderRadius: 4,
+                                  backgroundColor: pressed
+                                    ? '#FEE2E2'
+                                    : hovered
+                                    ? '#FEE2E2'
+                                    : 'transparent',
+                                  cursor: 'pointer',
+                                })}
+                                accessibilityLabel="Eliminar trámite"
+                              >
+                                <Ionicons
+                                  name="trash-outline"
+                                  size={16}
+                                  color={esTerminado ? '#047857' : '#94A3B8'}
+                                />
+                              </Pressable>
                             </View>
 
-                            {/* Main Info: Identidad con Avatar, Nombre, Dependencia debajo y Modalidad */}
-                            <View style={{ paddingTop: 8, paddingBottom: 2 }}>
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  gap: 8,
-                                }}
-                              >
+                            {/* Fila 2: Avatar Monograma, Nombre & Dependencia, Badge Modalidad */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 8,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+                                {/* Avatar Circular */}
                                 <View
                                   style={{
-                                    flexDirection: 'row',
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: 18,
+                                    backgroundColor: esTerminado ? '#059669' : '#1D4ED8',
+                                    borderWidth: 2,
+                                    borderColor: esTerminado
+                                      ? 'rgba(52, 211, 153, 0.45)'
+                                      : 'rgba(6, 182, 212, 0.35)',
                                     alignItems: 'center',
-                                    gap: 8,
-                                    flex: 1,
-                                    minWidth: 0,
-                                  }}
-                                >
-                                  {/* Avatar Monograma: Verde si terminado, Amarillo si en trámite */}
-                                  <View
-                                    style={{
-                                      width: 30,
-                                      height: 30,
-                                      borderRadius: 15,
-                                      backgroundColor: esTerminado ? '#d1fae5' : '#fef3c7',
-                                      borderWidth: 2,
-                                      borderColor: esTerminado ? '#a7f3d0' : '#fde68a',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    <Text
-                                      style={{
-                                        fontSize: 11,
-                                        fontWeight: '700',
-                                        color: esTerminado ? '#065f46' : '#b45309',
-                                      }}
-                                    >
-                                      {iniciales}
-                                    </Text>
-                                  </View>
-
-                                  {/* Nombre y Dependencia Debajo */}
-                                  <View style={{ flex: 1, minWidth: 0 }}>
-                                    <Text
-                                      numberOfLines={1}
-                                      style={{
-                                        fontSize: 12.5,
-                                        fontWeight: '700',
-                                        color: esActivo ? colorNombreActivo : '#0f172a',
-                                      }}
-                                    >
-                                      {c.servidor_nombre}
-                                    </Text>
-                                    <Text
-                                      numberOfLines={1}
-                                      style={{
-                                        fontSize: 10,
-                                        fontWeight: '500',
-                                        color: esActivo ? 'rgba(255, 255, 255, 0.9)' : '#64748b',
-                                        marginTop: 1.5,
-                                      }}
-                                    >
-                                      {c.dependencia || 'Secretaría Jurídica Distrital'}
-                                    </Text>
-                                  </View>
-                                </View>
-
-                                {/* Badge de Régimen con colores distintivos por modalidad */}
-                                <View
-                                  style={{
-                                    backgroundColor: estiloModalidad.colorBg,
-                                    borderWidth: 1,
-                                    borderColor: estiloModalidad.colorBorde,
-                                    borderRadius: 4,
-                                    paddingHorizontal: 7,
-                                    paddingVertical: 2,
+                                    justifyContent: 'center',
                                     flexShrink: 0,
+                                    shadowColor: esTerminado ? '#059669' : '#1D4ED8',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: 0.15,
+                                    shadowRadius: 2,
+                                    elevation: 1,
                                   }}
                                 >
                                   <Text
                                     style={{
-                                      fontSize: 9.5,
+                                      fontSize: 12.5,
                                       fontWeight: '700',
-                                      color: estiloModalidad.colorTexto,
+                                      color: '#FFFFFF',
                                     }}
                                   >
-                                    {estiloModalidad.etiqueta}
+                                    {iniciales}
+                                  </Text>
+                                </View>
+
+                                {/* Nombre & Dependencia */}
+                                <View style={{ flex: 1, minWidth: 0 }}>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 13,
+                                      fontWeight: '700',
+                                      color: esTerminado ? '#064E3B' : '#0F172A',
+                                      lineHeight: 17,
+                                    }}
+                                  >
+                                    {c.servidor_nombre}
+                                  </Text>
+                                  <Text
+                                    numberOfLines={1}
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: '500',
+                                      color: esTerminado ? '#047857' : '#64748B',
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {c.dependencia || 'Secretaría Jurídica Distrital'}
                                   </Text>
                                 </View>
                               </View>
 
-                              {/* Metadata Group: Identificación y Cargo */}
+                              {/* Badge Modalidad */}
                               <View
                                 style={{
-                                  marginTop: 7,
-                                  paddingHorizontal: 9,
-                                  paddingVertical: 6,
-                                  borderRadius: 8,
-                                  backgroundColor: esActivo
-                                    ? (esTerminado ? 'rgb(29, 85, 78)' : '#b45309')
-                                    : 'rgba(248, 250, 252, 0.85)',
+                                  backgroundColor: esTerminado ? '#D1FAE5' : '#DBEAFE',
                                   borderWidth: 1,
-                                  borderColor: esActivo
-                                    ? (esTerminado ? 'rgba(94, 234, 212, 0.4)' : 'rgba(254, 240, 138, 0.45)')
-                                    : '#f1f5f9',
+                                  borderColor: esTerminado ? '#A7F3D0' : '#BFDBFE',
+                                  borderRadius: 4,
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  flexShrink: 0,
                                 }}
                               >
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                  <View style={{ flex: 1 }}>
-                                    <Text
-                                      style={{
-                                        color: esActivo
-                                          ? (esTerminado ? '#99f6e4' : '#fef08a')
-                                          : '#94a3b8',
-                                        fontWeight: '700',
-                                        fontSize: 9,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 0.4,
-                                      }}
-                                    >
-                                      Identificación
-                                    </Text>
-                                    <Text
-                                      style={{
-                                        fontSize: 11,
-                                        fontWeight: '700',
-                                        color: esActivo ? '#ffffff' : '#1e293b',
-                                        marginTop: 1.5,
-                                      }}
-                                    >
-                                      {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
-                                    </Text>
-                                  </View>
+                                <Text
+                                  style={{
+                                    fontSize: 10.5,
+                                    fontWeight: '700',
+                                    color: esTerminado ? '#065F46' : '#1D4ED8',
+                                  }}
+                                >
+                                  {estiloModalidad.etiqueta}
+                                </Text>
+                              </View>
+                            </View>
 
-                                  <View
-                                    style={{
-                                      width: 1,
-                                      height: 22,
-                                      backgroundColor: esActivo
-                                        ? 'rgba(255, 255, 255, 0.25)'
-                                        : 'rgba(226, 232, 240, 0.7)',
-                                      marginHorizontal: 8,
-                                    }}
-                                  />
+                            {/* Fila 3: Micro-grid de Datos (Identificación & Cargo / Grado) */}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: esTerminado
+                                  ? 'rgba(255, 255, 255, 0.65)'
+                                  : '#F8FAFC',
+                                borderWidth: 1,
+                                borderColor: esTerminado ? '#BBF7D0' : 'rgba(226, 232, 240, 0.8)',
+                                borderRadius: 8,
+                                paddingVertical: 6,
+                                paddingHorizontal: 10,
+                                gap: 10,
+                              }}
+                            >
+                              {/* Columna Identificación */}
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text
+                                  style={{
+                                    fontSize: 9.5,
+                                    fontWeight: '600',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.3,
+                                    color: esTerminado ? '#047857' : '#64748B',
+                                  }}
+                                >
+                                  Identificación
+                                </Text>
+                                <Text
+                                  numberOfLines={1}
+                                  style={{
+                                    fontSize: 11.5,
+                                    fontWeight: '700',
+                                    color: esTerminado ? '#064E3B' : '#0F172A',
+                                    marginTop: 1,
+                                  }}
+                                >
+                                  {c.servidor_cedula ? `C.C. ${c.servidor_cedula}` : 'Sin cédula'}
+                                </Text>
+                              </View>
 
-                                  <View style={{ flex: 1.2 }}>
-                                    <Text
-                                      style={{
-                                        color: esActivo
-                                          ? (esTerminado ? '#99f6e4' : '#fef08a')
-                                          : '#94a3b8',
-                                        fontWeight: '700',
-                                        fontSize: 9,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: 0.4,
-                                      }}
-                                    >
-                                      Cargo
-                                    </Text>
-                                    <Text
-                                      numberOfLines={1}
-                                      style={{
-                                        fontSize: 11,
-                                        fontWeight: esActivo ? '700' : '600',
-                                        color: esActivo ? '#ffffff' : '#1e293b',
-                                        marginTop: 1.5,
-                                      }}
-                                    >
-                                      {c.cargo || 'No asignado'}
-                                    </Text>
-                                  </View>
-                                </View>
+                              {/* Divisor vertical */}
+                              <View
+                                style={{
+                                  width: 1,
+                                  height: 24,
+                                  backgroundColor: esTerminado ? '#BBF7D0' : '#E2E8F0',
+                                }}
+                              />
+
+                              {/* Columna Cargo & Grado */}
+                              <View style={{ flex: 1.3, minWidth: 0 }}>
+                                <Text
+                                  style={{
+                                    fontSize: 9.5,
+                                    fontWeight: '600',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.3,
+                                    color: esTerminado ? '#047857' : '#64748B',
+                                  }}
+                                >
+                                  Cargo & Grado
+                                </Text>
+                                <Text
+                                  numberOfLines={1}
+                                  style={{
+                                    fontSize: 11.5,
+                                    fontWeight: '700',
+                                    color: esTerminado ? '#064E3B' : '#0F172A',
+                                    marginTop: 1,
+                                  }}
+                                >
+                                  {`${c.cargo || 'JEFE DE OFICINA'}${c.grado ? ` (Gr. ${c.grado})` : ''}`}
+                                </Text>
                               </View>
                             </View>
                           </Pressable>
-                        );
-                      });
+                        );});
                     })()
                   )}
                     </>
