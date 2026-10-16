@@ -7287,6 +7287,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   });
   const [fasesNormaExpandida, setFasesNormaExpandida] = useState<Record<string, boolean>>({});
   const [reqDetalleExpandido, setReqDetalleExpandido] = useState<Record<string, boolean>>({});
+  const [reqNoAplicaExpandido, setReqNoAplicaExpandido] = useState<Record<string, boolean>>({});
   const [reqObsEditInline, setReqObsEditInline] = useState<Record<string, string>>({});
   const [reqRadicadoEditInline, setReqRadicadoEditInline] = useState<Record<string, string>>({});
   const [reqGuardadoFeedback, setReqGuardadoFeedback] = useState<Record<string, boolean>>({});
@@ -7943,6 +7944,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
   const toggleDetalleReq = (reqId: string) => {
     setReqDetalleExpandido((prev) => ({ ...prev, [reqId]: !prev[reqId] }));
+  };
+
+  const toggleNoAplicaExpandido = (reqId: string) => {
+    setReqNoAplicaExpandido((prev) => ({ ...prev, [reqId]: !prev[reqId] }));
   };
 
   const expandirTodasLasFases = (expandir: boolean) => {
@@ -12524,6 +12529,165 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       const esCumplido = req.cumplido && !req.noAplica;
                                       const esNoAplica = req.noAplica;
                                       const esActivo = !esCumplido && !esNoAplica;
+                                      const estaNoAplicaExpandido = reqNoAplicaExpandido[req.id] ?? false;
+
+                                      {/* VERSIÓN CONTRAÍDA PARA REQUISITOS QUE NO APLICAN */}
+                                      if (esNoAplica && !estaNoAplicaExpandido) {
+                                        return (
+                                          <View
+                                            key={req.id}
+                                            style={{
+                                              backgroundColor: '#F8FAFC',
+                                              borderRadius: 10,
+                                              borderWidth: 1,
+                                              borderColor: '#CBD5E1',
+                                              paddingHorizontal: 12,
+                                              paddingVertical: 9,
+                                              flexDirection: isTablet ? 'row' : 'column',
+                                              alignItems: isTablet ? 'center' : 'flex-start',
+                                              justifyContent: 'space-between',
+                                              gap: 10,
+                                              shadowColor: '#000000',
+                                              shadowOffset: { width: 0, height: 1 },
+                                              shadowOpacity: 0.02,
+                                              shadowRadius: 2,
+                                              elevation: 1,
+                                              opacity: soloVisualizacion ? 0.78 : 0.92,
+                                            }}
+                                          >
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                              {/* Ícono de estado No Aplica */}
+                                              <Pressable
+                                                onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
+                                                style={{
+                                                  width: 26,
+                                                  height: 26,
+                                                  borderRadius: 13,
+                                                  backgroundColor: '#E2E8F0',
+                                                  borderWidth: 1,
+                                                  borderColor: '#CBD5E1',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'center',
+                                                  cursor: 'pointer',
+                                                  flexShrink: 0,
+                                                }}
+                                              >
+                                                <Ionicons name="ban-outline" size={14} color="#64748B" />
+                                              </Pressable>
+
+                                              {/* Título y motivo de exención */}
+                                              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                  <Text
+                                                    style={{
+                                                      fontSize: 13,
+                                                      fontWeight: '700',
+                                                      color: '#64748B',
+                                                      textDecorationLine: 'line-through',
+                                                      fontStyle: 'italic',
+                                                    }}
+                                                    numberOfLines={1}
+                                                  >
+                                                    {req.label}
+                                                  </Text>
+
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: '#475569',
+                                                      paddingHorizontal: 6,
+                                                      paddingVertical: 1.5,
+                                                      borderRadius: 4,
+                                                    }}
+                                                  >
+                                                    <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                                                      NO APLICA
+                                                    </Text>
+                                                  </View>
+
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: '#E2E8F0',
+                                                      paddingHorizontal: 6,
+                                                      paddingVertical: 1.5,
+                                                      borderRadius: 4,
+                                                    }}
+                                                  >
+                                                    <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#475569' }}>
+                                                      Exento
+                                                    </Text>
+                                                  </View>
+
+                                                  {req.codigoFormato && (
+                                                    <View
+                                                      style={{
+                                                        backgroundColor: '#F1F5F9',
+                                                        paddingHorizontal: 5,
+                                                        paddingVertical: 1,
+                                                        borderRadius: 4,
+                                                        borderWidth: 1,
+                                                        borderColor: '#E2E8F0',
+                                                      }}
+                                                    >
+                                                      <Text style={{ fontSize: 9.5, fontWeight: '600', color: '#64748B' }}>
+                                                        📄 {req.codigoFormato}
+                                                      </Text>
+                                                    </View>
+                                                  )}
+                                                </View>
+
+                                                <Text style={{ fontSize: 11, color: '#64748B' }} numberOfLines={1}>
+                                                  ⚖️ Exención: <Text style={{ fontStyle: 'italic' }}>{req.observaciones || 'No exigible para este perfil / trámite'}</Text> • Resp: {respReq}
+                                                </Text>
+                                              </View>
+                                            </View>
+
+                                            {/* Botones de acción del modo contraído */}
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: isTablet ? 'center' : 'flex-end', flexShrink: 0 }}>
+                                              <Pressable
+                                                onPress={() => toggleNoAplicaDirecto(casoActivo.id, etapa.id, req.id)}
+                                                style={{
+                                                  backgroundColor: '#FFFFFF',
+                                                  borderWidth: 1,
+                                                  borderColor: '#CBD5E1',
+                                                  paddingHorizontal: 8,
+                                                  paddingVertical: 4.5,
+                                                  borderRadius: 6,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                  cursor: 'pointer',
+                                                }}
+                                              >
+                                                <Ionicons name="refresh-outline" size={12} color="#475569" />
+                                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
+                                                  Quitar No Aplica
+                                                </Text>
+                                              </Pressable>
+
+                                              <Pressable
+                                                onPress={() => toggleNoAplicaExpandido(req.id)}
+                                                style={{
+                                                  backgroundColor: '#EFF6FF',
+                                                  borderWidth: 1,
+                                                  borderColor: '#BFDBFE',
+                                                  paddingHorizontal: 8,
+                                                  paddingVertical: 4.5,
+                                                  borderRadius: 6,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                  cursor: 'pointer',
+                                                }}
+                                              >
+                                                <Ionicons name="chevron-down" size={12} color="#2563EB" />
+                                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#2563EB' }}>
+                                                  Detalles
+                                                </Text>
+                                              </Pressable>
+                                            </View>
+                                          </View>
+                                        );
+                                      }
 
                                       return (
                                         <View
@@ -12543,7 +12707,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             opacity: soloVisualizacion ? 0.78 : (esNoAplica ? 0.92 : 1),
                                           }}
                                         >
-                                          {/* 0. BANNER SUPERIOR INFORMATIVO SI ES NO APLICA */}
+                                          {/* 0. BANNER SUPERIOR INFORMATIVO SI ES NO APLICA (MODO EXPANDIDO) */}
                                           {esNoAplica && (
                                             <View
                                               style={{
@@ -12565,17 +12729,39 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   REQUISITO EXENTO / NO APLICA PARA ESTE TRÁMITE
                                                 </Text>
                                               </View>
-                                              <View
-                                                style={{
-                                                  backgroundColor: '#475569',
-                                                  paddingHorizontal: 7,
-                                                  paddingVertical: 2,
-                                                  borderRadius: 4,
-                                                }}
-                                              >
-                                                <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                                                  NO EXIGIBLE
-                                                </Text>
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                <View
+                                                  style={{
+                                                    backgroundColor: '#475569',
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                  }}
+                                                >
+                                                  <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
+                                                    NO EXIGIBLE
+                                                  </Text>
+                                                </View>
+                                                <Pressable
+                                                  onPress={() => toggleNoAplicaExpandido(req.id)}
+                                                  style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 3,
+                                                    backgroundColor: '#FFFFFF',
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                    borderWidth: 1,
+                                                    borderColor: '#CBD5E1',
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="chevron-up" size={12} color="#475569" />
+                                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#475569' }}>
+                                                    Contraer
+                                                  </Text>
+                                                </Pressable>
                                               </View>
                                             </View>
                                           )}
