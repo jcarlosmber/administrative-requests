@@ -12710,84 +12710,195 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             </View>
                                           </View>
 
-                                          {/* 3. FUNDAMENTO NORMATIVO Y GUÍA PROCEDIMENTAL */}
-                                          {req.norma && (
-                                            <View
-                                              style={{
-                                                backgroundColor: '#F0F9FF',
-                                                borderRadius: 6,
-                                                borderWidth: 1,
-                                                borderColor: '#BAE6FD',
-                                                paddingHorizontal: 10,
-                                                paddingVertical: 6,
+                                          {/* 3. SOPORTE NORMATIVO Y GUÍA PROCEDIMENTAL (ESTILO AUDITORÍA EXPANDIBLE) */}
+                                          <View
+                                            style={{
+                                              backgroundColor: 'rgba(239, 246, 255, 0.7)',
+                                              borderWidth: 1,
+                                              borderColor: '#BFDBFE',
+                                              borderRadius: 12,
+                                              overflow: 'hidden',
+                                              shadowColor: '#2563EB',
+                                              shadowOffset: { width: 0, height: 1 },
+                                              shadowOpacity: 0.04,
+                                              shadowRadius: 3,
+                                              elevation: 1,
+                                            }}
+                                          >
+                                            {/* Cabecera / Resumen desplegable */}
+                                            <Pressable
+                                              onPress={() => toggleDetalleReq(req.id)}
+                                              style={({ pressed, hovered }: any) => ({
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
                                                 justifyContent: 'space-between',
+                                                paddingHorizontal: 12,
+                                                paddingVertical: 9,
+                                                backgroundColor: pressed
+                                                  ? '#DBEAFE'
+                                                  : hovered
+                                                  ? '#E0F2FE'
+                                                  : 'rgba(219, 234, 254, 0.65)',
+                                                cursor: 'pointer',
                                                 gap: 8,
-                                              }}
+                                              })}
                                             >
-                                              <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#0369A1', flex: 1 }} numberOfLines={1}>
-                                                ⚖️ <Text style={{ fontWeight: '800' }}>Fundamento: </Text>{req.norma}
-                                              </Text>
-                                              <Pressable
-                                                onPress={() => toggleDetalleReq(req.id)}
-                                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
-                                              >
-                                                <Ionicons name={estaReqDetalle ? 'chevron-up' : 'information-circle-outline'} size={13} color="#0284C7" />
-                                                <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#0284C7' }}>
-                                                  {estaReqDetalle ? 'Ocultar info' : 'Más info y norma'}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' }}>
+                                                <Ionicons name="hammer-outline" size={17} color="#2563EB" />
+                                                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#1E40AF' }}>
+                                                  Soporte Normativo y Guía del Procedimiento Legal Vigente
                                                 </Text>
-                                              </Pressable>
-                                            </View>
-                                          )}
+                                                <View
+                                                  style={{
+                                                    backgroundColor: '#FFFFFF',
+                                                    paddingHorizontal: 8,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 9999,
+                                                    borderWidth: 1,
+                                                    borderColor: '#BFDBFE',
+                                                  }}
+                                                >
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#2563EB' }} numberOfLines={1}>
+                                                    {req.norma || 'Ley 909 / D. 1083 / SJD PR-137'}
+                                                  </Text>
+                                                </View>
+                                              </View>
 
-                                          {/* Panel expandible de directriz jurídica, mandato y procedimiento */}
-                                          {estaReqDetalle && (
-                                            <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#BAE6FD', borderRadius: 6, padding: 10, gap: 6 }}>
-                                              {req.textoNormativo && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#BFDBFE' }}>
-                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#0072C6', marginBottom: 2 }}>
-                                                    📜 Mandato Legal & Texto Normativo Incluido:
-                                                  </Text>
-                                                  <Text style={{ fontSize: 10.5, color: '#334155', fontStyle: 'italic', lineHeight: 15 }}>
-                                                    «{req.textoNormativo}»
-                                                  </Text>
+                                              <Ionicons
+                                                name={estaReqDetalle ? 'chevron-up' : 'chevron-down'}
+                                                size={18}
+                                                color="#64748B"
+                                              />
+                                            </Pressable>
+
+                                            {/* Cuerpo desplegable con Directrices, Marco Regulador y Advertencias */}
+                                            {estaReqDetalle && (
+                                              <View
+                                                style={{
+                                                  padding: 12,
+                                                  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                                                  borderTopWidth: 1,
+                                                  borderTopColor: '#BFDBFE',
+                                                  gap: 10,
+                                                }}
+                                              >
+                                                <View style={{ flexDirection: isTablet ? 'row' : 'column', gap: 12 }}>
+                                                  {/* Columna 1: Marco Regulador y Deberes */}
+                                                  <View style={{ flex: 1, gap: 4 }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#2563EB' }} />
+                                                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }}>
+                                                        Marco Regulador y Deberes:
+                                                      </Text>
+                                                    </View>
+                                                    {req.textoNormativo ? (
+                                                      <Text style={{ fontSize: 11.5, color: '#334155', fontStyle: 'italic', lineHeight: 16 }}>
+                                                        «{req.textoNormativo}»
+                                                      </Text>
+                                                    ) : null}
+                                                    {req.notaNormativa ? (
+                                                      <Text style={{ fontSize: 11.5, color: '#475569', lineHeight: 16 }}>
+                                                        {req.notaNormativa}
+                                                      </Text>
+                                                    ) : !req.textoNormativo ? (
+                                                      <Text style={{ fontSize: 11.5, color: '#475569', lineHeight: 16 }}>
+                                                        De conformidad con la Ley 909 de 2004, el Decreto 1083 de 2015 y la reglamentación distrital, este requisito exige la estricta observancia procedimental y soporte legal documental.
+                                                      </Text>
+                                                    ) : null}
+                                                  </View>
+
+                                                  {/* Columna 2: Instrucción Operativa y Advertencias */}
+                                                  <View style={{ flex: 1, gap: 4 }}>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#06B6D4' }} />
+                                                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A' }}>
+                                                        Términos y Directrices Operativas:
+                                                      </Text>
+                                                    </View>
+                                                    {req.detalleProcedimiento ? (
+                                                      <Text style={{ fontSize: 11.5, color: '#475569', lineHeight: 16 }}>
+                                                        {req.detalleProcedimiento}
+                                                      </Text>
+                                                    ) : (
+                                                      <Text style={{ fontSize: 11.5, color: '#475569', lineHeight: 16 }}>
+                                                        La verificación formal exige comprobación rigurosa de antecedentes, idoneidad o actos administrativos preclusivos. El incumplimiento o vencimiento genera responsabilidades procedimentales y disciplinarias directas.
+                                                      </Text>
+                                                    )}
+                                                  </View>
                                                 </View>
-                                              )}
-                                              {req.notaNormativa && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#BAE6FD' }}>
-                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#0369A1', marginBottom: 2 }}>
-                                                    💡 Resumen Jurídico Institucional:
+
+                                                {/* Normas concordantes */}
+                                                <View
+                                                  style={{
+                                                    borderTopWidth: 1,
+                                                    borderTopColor: '#DBEAFE',
+                                                    paddingTop: 8,
+                                                    flexDirection: 'row',
+                                                    flexWrap: 'wrap',
+                                                    alignItems: 'center',
+                                                    gap: 6,
+                                                  }}
+                                                >
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#334155' }}>
+                                                    Normas concordantes:
                                                   </Text>
-                                                  <Text style={{ fontSize: 11, color: '#334155', lineHeight: 15 }}>
-                                                    {req.notaNormativa}
-                                                  </Text>
-                                                </View>
-                                              )}
-                                              {req.detalleProcedimiento && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#BBF7D0' }}>
-                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#15803D', marginBottom: 2 }}>
-                                                    📋 Instrucción Operativa para Talento Humano:
-                                                  </Text>
-                                                  <Text style={{ fontSize: 11, color: '#334155', lineHeight: 15 }}>
-                                                    {req.detalleProcedimiento}
-                                                  </Text>
-                                                </View>
-                                              )}
-                                              {req.posiblesEvidencias && req.posiblesEvidencias.length > 0 && (
-                                                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 4, borderWidth: 1, borderColor: '#E2E8F0', gap: 3 }}>
-                                                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>
-                                                    📁 Evidencias de Soporte Sugeridas:
-                                                  </Text>
-                                                  {req.posiblesEvidencias.map((ev, evIdx) => (
-                                                    <Text key={evIdx} style={{ fontSize: 10.5, color: '#64748B' }}>
-                                                      • {ev}
+                                                  {req.norma ? (
+                                                    <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                      <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155', fontWeight: '600' }}>
+                                                        {req.norma}
+                                                      </Text>
+                                                    </View>
+                                                  ) : null}
+                                                  <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                    <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155', fontWeight: '600' }}>
+                                                      Circ. Conjunta CNSC-DAFP
                                                     </Text>
-                                                  ))}
+                                                  </View>
+                                                  <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                    <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155', fontWeight: '600' }}>
+                                                      Acuerdo Distrital 04 de 2023
+                                                    </Text>
+                                                  </View>
+                                                  <View style={{ backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                    <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#334155', fontWeight: '600' }}>
+                                                      Procedimiento PR-137 SJD
+                                                    </Text>
+                                                  </View>
+                                                  {req.codigoFormato ? (
+                                                    <View style={{ backgroundColor: '#E0F2FE', borderWidth: 1, borderColor: '#BAE6FD', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                                      <Text style={{ fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', color: '#0369A1', fontWeight: '700' }}>
+                                                        Formato {req.codigoFormato}
+                                                      </Text>
+                                                    </View>
+                                                  ) : null}
                                                 </View>
-                                              )}
-                                            </View>
-                                          )}
+
+                                                {/* Evidencias de Soporte Sugeridas si existen */}
+                                                {req.posiblesEvidencias && req.posiblesEvidencias.length > 0 && (
+                                                  <View
+                                                    style={{
+                                                      backgroundColor: '#FFFFFF',
+                                                      padding: 8,
+                                                      borderRadius: 6,
+                                                      borderWidth: 1,
+                                                      borderColor: '#E2E8F0',
+                                                      gap: 3,
+                                                      marginTop: 2,
+                                                    }}
+                                                  >
+                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
+                                                      📁 Evidencias de Soporte Sugeridas:
+                                                    </Text>
+                                                    {req.posiblesEvidencias.map((ev, evIdx) => (
+                                                      <Text key={evIdx} style={{ fontSize: 10.5, color: '#64748B' }}>
+                                                        • {ev}
+                                                      </Text>
+                                                    ))}
+                                                  </View>
+                                                )}
+                                              </View>
+                                            )}
+                                          </View>
 
                                           {/* Nota destacada si es No Aplica */}
                                           {esNoAplica && (
