@@ -13293,32 +13293,53 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 📄 Formatos Oficiales Aplicables:
                                               </Text>
                                               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                                                {formatosSugeridos.map((f) => (
-                                                  <Pressable
-                                                    key={f.id}
-                                                    onPress={() => handleDescargarFormatoOficial(f.archivo)}
-                                                    style={{
-                                                      backgroundColor: '#FFFFFF',
-                                                      borderWidth: 1,
-                                                      borderColor: '#CBD5E1',
-                                                      borderRadius: 5,
-                                                      paddingHorizontal: 8,
-                                                      paddingVertical: 4,
-                                                      flexDirection: 'row',
-                                                      alignItems: 'center',
-                                                      gap: 4,
-                                                      cursor: 'pointer',
-                                                    }}
-                                                  >
-                                                    <Ionicons name="download-outline" size={11} color="#0072C6" />
-                                                    <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0F172A' }}>
-                                                      {f.codigo}
-                                                    </Text>
-                                                    <Text style={{ fontSize: 10, color: '#64748B' }}>
-                                                      ({f.tipo})
-                                                    </Text>
-                                                  </Pressable>
-                                                ))}
+                                                {formatosSugeridos.map((f) => {
+                                                  const nombreCorto =
+                                                    f.id === 'FT-319' ? 'Verificación de Títulos' :
+                                                    f.id === 'FT-127' ? 'Acta de Posesión' :
+                                                    f.id === 'FT-318' ? 'Validación Requisitos' :
+                                                    f.id === 'FT-095' ? 'Lista Chequeo Posesión' :
+                                                    f.id === 'FT-268' ? 'Confidencialidad' :
+                                                    f.id === 'FT-027' ? 'Declaración No Deudor' :
+                                                    f.id === 'FT-106' ? 'Entrenamiento Puesto' :
+                                                    f.id === 'GUI-POSESION-01' ? 'Guía Posesión' :
+                                                    f.id === 'FT-219' ? 'Evaluación Retiro' :
+                                                    f.id === 'FT-436' ? 'Entrega de Cargo' :
+                                                    f.id === 'ACTA-LEY-951' ? 'Acta de Gestión' :
+                                                    f.nombre.split('(')[0].trim();
+
+                                                  return (
+                                                    <Pressable
+                                                      key={f.id}
+                                                      onPress={() => handleDescargarFormatoOficial(f.archivo)}
+                                                      style={{
+                                                        backgroundColor: '#FFFFFF',
+                                                        borderWidth: 1,
+                                                        borderColor: '#CBD5E1',
+                                                        borderRadius: 6,
+                                                        paddingHorizontal: 8,
+                                                        paddingVertical: 4.5,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 5,
+                                                        cursor: 'pointer',
+                                                      }}
+                                                    >
+                                                      <Ionicons name="download-outline" size={11} color="#0072C6" />
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#0F172A' }}>
+                                                        {f.codigo}
+                                                      </Text>
+                                                      <Text style={{ fontSize: 10.5, fontWeight: '600', color: '#334155' }}>
+                                                        - {nombreCorto}
+                                                      </Text>
+                                                      <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                                                        <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748B' }}>
+                                                          {f.tipo}
+                                                        </Text>
+                                                      </View>
+                                                    </Pressable>
+                                                  );
+                                                })}
                                               </View>
                                             </View>
                                           )}
