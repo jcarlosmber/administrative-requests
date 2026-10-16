@@ -31,6 +31,10 @@ import { ingresosService } from '../../lib/ingresosService';
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import { CASOS_2026_RAW } from '../../lib/casos2026Data';
 import { ModalRequisitosPosesionFT095 } from '../../components/rrhh/ModalRequisitosPosesionFT095';
+import {
+  requisitosPosesionService,
+  DatosFormatoFT095Diligenciado,
+} from '../../lib/requisitosPosesionService';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
 import ModalFichaPlazaNomina from '../../components/rrhh/ModalFichaPlazaNomina';
 import PdfViewerModal from '../../components/PdfViewerModal';
@@ -753,6 +757,7 @@ export interface CasoFlujoFuncionario {
     resumenNormativo?: ResumenNormativoSecop;
     resumenFinanciero?: ResumenFinancieroSecop;
   };
+  datosFT095?: DatosFormatoFT095Diligenciado;
 }
 
 // ============================================================================
@@ -7124,6 +7129,144 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       return actualizados;
     });
   };
+  // ============================================================================
+  // ESTADOS PARA FILTRO POR CARGO RESPONSABLE Y CONFIGURACIÓN "NO APLICA"
+  // ============================================================================
+  const [filtroCargoResponsable, setFiltroCargoResponsable] = useState<string>('TODOS');
+  const [modoVisualizacionCargo, setModoVisualizacionCargo] = useState<'solo_mi_cargo' | 'visualizar_otros'>('visualizar_otros');
+  const [modalNoAplicaPorCargoVisible, setModalNoAplicaPorCargoVisible] = useState(false);
+  const [cargoSeleccionadoParaAccion, setCargoSeleccionadoParaAccion] = useState<string>('Profesional Universitario TH');
+
+  // Cargos únicos presentes en el trámite activo
+  const cargosUnicosDelCaso = useMemo(() => {
+    if (!casoActivo) return [];
+    const setCargos = new Set<string>();
+    casoActivo.etapas.forEach((et) => {
+      et.requisitos.forEach((rq) => {
+        const c = rq.cargoResponsable || CARGO_RESPONSABLE_MAP[rq.id] || et.responsable || 'Profesional Universitario TH';
+        if (c) setCargos.add(c);
+      });
+    });
+    return Array.from(setCargos).sort();
+  }, [casoActivo]);
+
+  // Estadísticas de requisitos por cargo en el trámite activo
+  const estadisticasCargosCaso = useMemo(() => {
+    if (!casoActivo) return {};
+    const map: Record<string, { total: number; noAplica: number; cumplidos: number }> = {};
+    casoActivo.etapas.forEach((et) => {
+      et.requisitos.forEach((rq) => {
+        const c = rq.cargoResponsable || CARGO_RESPONSABLE_MAP[rq.id] || et.responsable || 'Profesional Universitario TH';
+        if (!map[c]) map[c] = { total: 0, noAplica: 0, cumplidos: 0 };
+        map[c].total++;
+        if (rq.noAplica) map[c].noAplica++;
+        if (rq.cumplido) map[c].cumplidos++;
+      });
+    });
+    return map;
+  }, [casoActivo]);
+
+  // Función para aplicar o revertir masivamente "No Aplica" según el cargo
+  const aplicarNoAplicaPorCargo = (
+    casoId: string,
+    accion: 'marcar_otros_como_no_aplica' | 'marcar_cargo_como_no_aplica' | 'revertir_cargo_a_aplica' | 'revertir_todo',
+    cargoReferencia?: string
+  ) => {
+    setCasos((prevCasos) => {
+      let totalModificados = 0;
+      const actualizados = prevCasos.map((caso) => {
+        if (caso.id !== casoId) return caso;
+
+        const nuevasEtapas = caso.etapas.map((etapa) => {
+          const nuevosRequisitos = etapa.requisitos.map((req) => {
+            const respReq = req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH';
+
+            if (accion === 'marcar_otros_como_no_aplica') {
+              if (respReq !== cargoReferencia) {
+                totalModificados++;
+                return {
+                  ...req,
+                  noAplica: true,
+                  cumplido: true,
+                  fecha_cumplimiento: req.fecha_cumplimiento || new Date().toISOString().split('T')[0],
+                  usuarioRegistro: 'Talento Humano SJD',
+                  observaciones: req.observaciones || 'No aplica: actividad de otro cargo (' + respReq + ') durante pruebas de ' + cargoReferencia,
+                };
+              }
+            } else if (accion === 'marcar_cargo_como_no_aplica') {
+              if (respReq === cargoReferencia) {
+                totalModificados++;
+                return {
+                  ...req,
+                  noAplica: true,
+                  cumplido: true,
+                  fecha_cumplimiento: req.fecha_cumplimiento || new Date().toISOString().split('T')[0],
+                  usuarioRegistro: 'Talento Humano SJD',
+                  observaciones: req.observaciones || 'No aplica para las funciones de: ' + cargoReferencia,
+                };
+              }
+            } else if (accion === 'revertir_cargo_a_aplica') {
+              if (respReq === cargoReferencia) {
+                totalModificados++;
+                return {
+                  ...req,
+                  noAplica: false,
+                  cumplido: false,
+                  fecha_cumplimiento: undefined,
+                  observaciones: undefined,
+                };
+              }
+            } else if (accion === 'revertir_todo') {
+              const esEstructuralmenteNoAplica = req.label === 'Paz y Salvo Electrónico' || req.id.includes('paz_salvo_electronico');
+              if (!esEstructuralmenteNoAplica) {
+                totalModificados++;
+                return {
+                  ...req,
+                  noAplica: false,
+                  cumplido: false,
+                  fecha_cumplimiento: undefined,
+                  observaciones: undefined,
+                };
+              }
+            }
+            return req;
+          });
+
+          const todosCumplidos = nuevosRequisitos
+            .filter((r) => r.obligatorio && !r.noAplica)
+            .every((r) => r.cumplido);
+          const algunCumplido = nuevosRequisitos.some((r) => r.cumplido);
+
+          let nuevoEstado: EstadoEtapa = 'pending';
+          if (todosCumplidos) {
+            nuevoEstado = 'completed';
+          } else if (algunCumplido) {
+            nuevoEstado = 'in_progress';
+          }
+
+          return { ...etapa, requisitos: nuevosRequisitos, estado: nuevoEstado };
+        });
+
+        return { ...caso, etapas: nuevasEtapas };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      setModalMensajeDoc({
+        visible: true,
+        titulo: 'Configuración de "No Aplica" Aplicada',
+        mensaje: 'Se actualizaron con éxito los requisitos del caso (' + totalModificados + ' modificados).',
+        tipo: 'exito',
+      });
+
+      return actualizados;
+    });
+  };
+
   const [modalExpedienteVisible, setModalExpedienteVisible] = useState(false);
   const [modalMensajeDoc, setModalMensajeDoc] = useState<{
     visible: boolean;
@@ -7456,6 +7599,26 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     req: RequisitoEtapa,
     intentaCerrar: boolean = false
   ) => {
+    // Si es el Formato 2311300-FT-095 (Requisitos para Tomar Posesión), unificamos abriendo directamente el Verificador Completo FT-095
+    const reqId = (req.id || '').toLowerCase();
+    const reqCodigo = (req.codigoFormato || '').toUpperCase();
+    const reqLabel = (req.label || '').toLowerCase();
+    const esFT095 =
+      reqId === 'vc5_ft095' ||
+      reqCodigo.includes('FT-095') ||
+      req.tipoAccionEspecial === 'FT095' ||
+      reqLabel.includes('ft-095') ||
+      reqLabel.includes('requisitos para tomar posesión') ||
+      reqLabel.includes('tomar posesión');
+
+    if (esFT095) {
+      if (casoId) {
+        setCasoSeleccionadoId(casoId);
+      }
+      setModalFT095Visible(true);
+      return;
+    }
+
     setModalReqContext({
       casoId,
       etapaId: etapa.id,
@@ -7476,6 +7639,66 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     setMostrarSelectorValidacionFT318(false);
     setBusquedaValidacionFT318('');
     setModalObsReqVisible(true);
+  };
+
+  // Guardar y sincronizar la evaluación del Formato 2311300-FT-095 en el caso
+  const guardarDatosFT095Caso = (datosNuevos: DatosFormatoFT095Diligenciado) => {
+    if (!casoActivo) return;
+    const resumen = requisitosPosesionService.calcularResumen(datosNuevos);
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== casoActivo.id) return c;
+
+        const nuevasEtapas = c.etapas.map((etapa) => {
+          const nuevosReqs = etapa.requisitos.map((r) => {
+            const rId = (r.id || '').toLowerCase();
+            const rCodigo = (r.codigoFormato || '').toUpperCase();
+            const rLabel = (r.label || '').toLowerCase();
+            const esFT095 =
+              rId === 'vc5_ft095' ||
+              rCodigo.includes('FT-095') ||
+              r.tipoAccionEspecial === 'FT095' ||
+              rLabel.includes('ft-095') ||
+              rLabel.includes('requisitos para tomar posesión') ||
+              rLabel.includes('tomar posesión');
+
+            if (esFT095) {
+              return {
+                ...r,
+                cumplido: resumen.esApto,
+                fecha_cumplimiento: resumen.esApto
+                  ? (datosNuevos.fechaVerificacion || new Date().toISOString().split('T')[0])
+                  : r.fecha_cumplimiento,
+                observaciones: `Verificación FT-095: ${resumen.cumplidos}/32 cumplidos (${resumen.porcentaje}%). ${resumen.esApto ? 'APTO PARA POSESIÓN' : 'DOCUMENTACIÓN EN TRÁMITE'}.`,
+              };
+            }
+            return r;
+          });
+          return { ...etapa, requisitos: nuevosReqs };
+        });
+
+        return {
+          ...c,
+          datosFT095: datosNuevos,
+          etapas: nuevasEtapas,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+
+    mostrarModal(
+      'Verificación FT-095 Guardada',
+      `Evaluación del Formato 2311300-FT-095 guardada. Resumen: ${resumen.cumplidos} de ${resumen.aplicables} requisitos cumplidos (${resumen.porcentaje}%). ${resumen.esApto ? 'El servidor está APTO PARA POSESIÓN.' : 'Requisitos pendientes en trámite.'}`,
+      resumen.esApto ? 'success' : 'info'
+    );
   };
 
   // Vinculación dinámica de una Validación Técnica de Ingresos FT-318 a un requisito del caso
@@ -10850,6 +11073,182 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
                         </View>
 
+                        {/* =============================================================== */}
+                        {/* BARRA DE FILTRADO Y CONFIGURACIÓN POR CARGO RESPONSABLE           */}
+                        {/* =============================================================== */}
+                        <View
+                          style={{
+                            backgroundColor: '#F8FAFC',
+                            padding: 12,
+                            borderRadius: 10,
+                            borderWidth: 1,
+                            borderColor: '#E2E8F0',
+                            gap: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                            {/* Filtro de Cargo con scroll horizontal */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 260 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="filter" size={15} color="#1E40AF" />
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }}>
+                                  Filtrar Cargo:
+                                </Text>
+                              </View>
+
+                              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center', paddingVertical: 2 }}>
+                                <Pressable
+                                  onPress={() => setFiltroCargoResponsable('TODOS')}
+                                  style={{
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 4.5,
+                                    borderRadius: 6,
+                                    backgroundColor: filtroCargoResponsable === 'TODOS' ? '#1E40AF' : '#FFFFFF',
+                                    borderWidth: 1,
+                                    borderColor: filtroCargoResponsable === 'TODOS' ? '#1E40AF' : '#CBD5E1',
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 11, fontWeight: '700', color: filtroCargoResponsable === 'TODOS' ? '#FFFFFF' : '#475569' }}>
+                                    Todos los Cargos ({casoActivo.etapas.reduce((acc, e) => acc + e.requisitos.length, 0)})
+                                  </Text>
+                                </Pressable>
+                                {cargosUnicosDelCaso.map((cargo) => {
+                                  const stats = estadisticasCargosCaso[cargo];
+                                  const totalCargo = stats?.total || 0;
+                                  const esSeleccionado = filtroCargoResponsable === cargo;
+                                  return (
+                                    <Pressable
+                                      key={cargo}
+                                      onPress={() => setFiltroCargoResponsable(cargo)}
+                                      style={{
+                                        paddingHorizontal: 10,
+                                        paddingVertical: 4.5,
+                                        borderRadius: 6,
+                                        backgroundColor: esSeleccionado ? '#1E40AF' : '#FFFFFF',
+                                        borderWidth: 1,
+                                        borderColor: esSeleccionado ? '#1E40AF' : '#CBD5E1',
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 5,
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 11, fontWeight: '700', color: esSeleccionado ? '#FFFFFF' : '#334155' }}>
+                                        {cargo}
+                                      </Text>
+                                      <View
+                                        style={{
+                                          backgroundColor: esSeleccionado ? 'rgba(255,255,255,0.25)' : '#F1F5F9',
+                                          paddingHorizontal: 5,
+                                          paddingVertical: 1,
+                                          borderRadius: 4,
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: esSeleccionado ? '#FFFFFF' : '#64748B' }}>
+                                          {totalCargo}
+                                        </Text>
+                                      </View>
+                                    </Pressable>
+                                  );
+                                })}
+                              </ScrollView>
+                            </View>
+
+                            {/* Botón para Configurar "No Aplica" Masivo por Cargo */}
+                            <Pressable
+                              onPress={() => {
+                                if (filtroCargoResponsable !== 'TODOS') {
+                                  setCargoSeleccionadoParaAccion(filtroCargoResponsable);
+                                }
+                                setModalNoAplicaPorCargoVisible(true);
+                              }}
+                              style={({ pressed }) => ({
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 6,
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                                backgroundColor: pressed ? '#DDD6FE' : '#EDE9FE',
+                                borderWidth: 1,
+                                borderColor: '#C4B5FD',
+                              })}
+                            >
+                              <Ionicons name="options-outline" size={15} color="#6D28D9" />
+                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#6D28D9' }}>
+                                ⚙️ Configurar "No Aplica" por Cargo
+                              </Text>
+                            </Pressable>
+                          </View>
+
+                          {/* Opciones cuando se filtra por un cargo específico */}
+                          {filtroCargoResponsable !== 'TODOS' && (
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                borderTopWidth: 1,
+                                borderTopColor: '#E2E8F0',
+                                paddingTop: 8,
+                                flexWrap: 'wrap',
+                                gap: 6,
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Ionicons name="information-circle-outline" size={16} color="#2563EB" />
+                                <Text style={{ fontSize: 11.5, color: '#334155' }}>
+                                  Viendo actividades de: <Text style={{ fontWeight: '800', color: '#1E40AF' }}>{filtroCargoResponsable}</Text>
+                                </Text>
+                              </View>
+
+                              {/* Toggle: Ocultar otros cargos vs Solo Visualización */}
+                              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: '#64748B' }}>
+                                  Actividades de otros cargos:
+                                </Text>
+                                <Pressable
+                                  onPress={() => setModoVisualizacionCargo('visualizar_otros')}
+                                  style={{
+                                    paddingHorizontal: 9,
+                                    paddingVertical: 3.5,
+                                    borderRadius: 5,
+                                    backgroundColor: modoVisualizacionCargo === 'visualizar_otros' ? '#DBEAFE' : '#F1F5F9',
+                                    borderWidth: 1,
+                                    borderColor: modoVisualizacionCargo === 'visualizar_otros' ? '#93C5FD' : '#E2E8F0',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                  }}
+                                >
+                                  <Ionicons name="eye-outline" size={12} color={modoVisualizacionCargo === 'visualizar_otros' ? '#1D4ED8' : '#64748B'} />
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: modoVisualizacionCargo === 'visualizar_otros' ? '#1D4ED8' : '#64748B' }}>
+                                    Solo Visualización
+                                  </Text>
+                                </Pressable>
+                                <Pressable
+                                  onPress={() => setModoVisualizacionCargo('solo_mi_cargo')}
+                                  style={{
+                                    paddingHorizontal: 9,
+                                    paddingVertical: 3.5,
+                                    borderRadius: 5,
+                                    backgroundColor: modoVisualizacionCargo === 'solo_mi_cargo' ? '#DBEAFE' : '#F1F5F9',
+                                    borderWidth: 1,
+                                    borderColor: modoVisualizacionCargo === 'solo_mi_cargo' ? '#93C5FD' : '#E2E8F0',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                  }}
+                                >
+                                  <Ionicons name="eye-off-outline" size={12} color={modoVisualizacionCargo === 'solo_mi_cargo' ? '#1D4ED8' : '#64748B'} />
+                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: modoVisualizacionCargo === 'solo_mi_cargo' ? '#1D4ED8' : '#64748B' }}>
+                                    Ocultar de la lista
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+
                         {/* Acordeón de cada Fase */}
                         {casoActivo.etapas.map((etapa) => {
                           const estaFaseExpandida = fasesExpandidas[etapa.id] ?? false;
@@ -11452,20 +11851,46 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       const estaReqDetalle = reqDetalleExpandido[req.id] ?? false;
                                       const estaSecopExpandido = secopResumenExpandido[req.id] ?? false;
 
+                                      const respReq = req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH';
+                                      const esDeMiCargo = filtroCargoResponsable === 'TODOS' || respReq === filtroCargoResponsable;
+
+                                      // Si se configuró ocultar otros cargos
+                                      if (!esDeMiCargo && modoVisualizacionCargo === 'solo_mi_cargo') {
+                                        return null;
+                                      }
+
+                                      const soloVisualizacion = !esDeMiCargo && modoVisualizacionCargo === 'visualizar_otros';
+
                                       return (
                                         <View
                                           key={req.id}
                                           style={{
-                                            backgroundColor: req.noAplica ? '#f8fafc' : THEME.white,
+                                            backgroundColor: req.noAplica
+                                              ? '#F1F5F9'
+                                              : req.cumplido
+                                              ? '#F0FDF4'
+                                              : '#FFFFFF',
                                             borderRadius: 8,
-                                            borderWidth: 1,
-                                            borderColor: req.noAplica ? '#e2e8f0' : req.cumplido ? THEME.emeraldRing : THEME.slate200,
+                                            borderWidth: 1.5,
+                                            borderColor: req.noAplica
+                                              ? '#94A3B8'
+                                              : req.cumplido
+                                              ? '#86EFAC'
+                                              : '#BFDBFE',
+                                            borderLeftWidth: 5,
+                                            borderLeftColor: req.noAplica
+                                              ? '#64748B'
+                                              : req.cumplido
+                                              ? '#16A34A'
+                                              : '#2563EB',
                                             padding: 10,
                                             gap: 8,
+                                            opacity: soloVisualizacion ? 0.78 : 1,
                                           }}
                                         >
-                                          {/* Fila Principal del Requisito */}
-                                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                                          {/* Fila Principal del Requisito con Responsable al Lado Derecho */}
+                                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 }}>
                                             {/* Checkbox Interactivo que abre el Modal para registrar observaciones al cerrar */}
                                             <Pressable
                                               onPress={() => toggleRequisito(casoActivo.id, etapa.id, req.id)}
@@ -11512,7 +11937,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   >
                                                     <Ionicons name="remove-circle" size={13} color="#ffffff" />
                                                     <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#ffffff', letterSpacing: 0.3 }}>
-                                                      NO APLICA (USO DE LISTA)
+                                                      NO APLICA
                                                     </Text>
                                                   </View>
                                                 )}
@@ -11587,32 +12012,49 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     </View>
                                                   );
                                                 })()}
-                                              </Pressable>
+                                                </Pressable>
+                                              </View>
+                                            </View>
 
+                                            {/* RESPONSABLE OFICIAL DE LA ACTIVIDAD AL LADO DERECHO */}
+                                            {respReq && (
+                                              <View
+                                                style={{
+                                                  backgroundColor: esDeMiCargo ? '#EFF6FF' : '#F1F5F9',
+                                                  borderColor: esDeMiCargo ? '#93C5FD' : '#CBD5E1',
+                                                  borderWidth: 1,
+                                                  paddingHorizontal: 8,
+                                                  paddingVertical: 3.5,
+                                                  borderRadius: 6,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                  alignSelf: 'flex-start',
+                                                  maxWidth: 220,
+                                                }}
+                                              >
+                                                <Ionicons
+                                                  name="person-circle-outline"
+                                                  size={14}
+                                                  color={esDeMiCargo ? '#1D4ED8' : '#64748B'}
+                                                />
+                                                <Text
+                                                  style={{
+                                                    fontSize: 11,
+                                                    fontWeight: '700',
+                                                    color: esDeMiCargo ? '#1E40AF' : '#475569',
+                                                    flexShrink: 1,
+                                                  }}
+                                                >
+                                                  {respReq}
+                                                </Text>
+                                              </View>
+                                            )}
+                                          </View>
+                                          {/* Contenido adicional del requisito */}
+                                          <View style={{ paddingLeft: 30, gap: 6 }}>
                                               {/* Badges y Acciones Rápidas */}
                                               <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                                                {/* Cargo / Rol Responsable Oficial */}
-                                                {(req.cargoResponsable || etapa.responsable) && (
-                                                  <View
-                                                    style={{
-                                                      backgroundColor: '#EFF6FF',
-                                                      borderColor: '#BFDBFE',
-                                                      borderWidth: 1,
-                                                      paddingHorizontal: 7,
-                                                      paddingVertical: 2,
-                                                      borderRadius: 4,
-                                                      flexDirection: 'row',
-                                                      alignItems: 'center',
-                                                      gap: 4,
-                                                    }}
-                                                  >
-                                                    <Ionicons name="person-circle-outline" size={13} color="#1D4ED8" />
-                                                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>
-                                                      {req.cargoResponsable || etapa.responsable}
-                                                    </Text>
-                                                  </View>
-                                                )}
-
                                                 {/* Código Formato */}
                                                 {req.codigoFormato && (
                                                   <View
@@ -12646,7 +13088,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               ) : null}
                                             </View>
                                           </View>
-                                        </View>
                                       );
                                     })}
                                   </View>
@@ -17894,6 +18335,338 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       </Modal>
 
       {/* =================================================================== */}
+      {/* MODAL DE CONFIGURACIÓN MASIVA DE "NO APLICA" POR CARGO               */}
+      {/* =================================================================== */}
+      <Modal
+        visible={modalNoAplicaPorCargoVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalNoAplicaPorCargoVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              width: '100%',
+              maxWidth: 620,
+              maxHeight: '90%',
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 15,
+              elevation: 10,
+            }}
+          >
+            {/* Header del Modal */}
+            <View
+              style={{
+                backgroundColor: '#1E40AF',
+                paddingHorizontal: 18,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    padding: 8,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Ionicons name="options" size={20} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#FFFFFF' }}>
+                    Configurar "No Aplica" por Cargo
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#DBEAFE', marginTop: 1 }}>
+                    Habilita o exceptúa actividades masivamente según las funciones de tu cargo
+                  </Text>
+                </View>
+              </View>
+
+              <Pressable
+                onPress={() => setModalNoAplicaPorCargoVisible(false)}
+                style={{
+                  padding: 4,
+                  borderRadius: 6,
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                }}
+              >
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            {/* Cuerpo del Modal con Scroll */}
+            <ScrollView style={{ padding: 18 }} contentContainerStyle={{ gap: 16 }}>
+              {/* Sección 1: Selección de Mi Cargo */}
+              <View
+                style={{
+                  backgroundColor: '#EFF6FF',
+                  borderColor: '#BFDBFE',
+                  borderWidth: 1,
+                  borderRadius: 10,
+                  padding: 14,
+                  gap: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="person-circle" size={18} color="#1D4ED8" />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#1E40AF' }}>
+                    1. Selecciona tu Cargo Oficial de Prueba
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 11, color: '#334155', lineHeight: 16 }}>
+                  Elige el cargo con el que estás trabajando. El sistema te permite marcar en un solo clic como <Text style={{ fontWeight: '700' }}>"No Aplica"</Text> todas las actividades que corresponden a otros cargos.
+                </Text>
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
+                  {cargosUnicosDelCaso.map((cargo) => {
+                    const esSeleccionado = cargoSeleccionadoParaAccion === cargo;
+                    return (
+                      <Pressable
+                        key={cargo}
+                        onPress={() => setCargoSeleccionadoParaAccion(cargo)}
+                        style={{
+                          paddingHorizontal: 11,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          backgroundColor: esSeleccionado ? '#1D4ED8' : '#FFFFFF',
+                          borderWidth: 1.5,
+                          borderColor: esSeleccionado ? '#1D4ED8' : '#CBD5E1',
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: esSeleccionado ? '#FFFFFF' : '#334155' }}>
+                          {cargo}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Sección 2: Acción Rápida Principal */}
+              <View
+                style={{
+                  backgroundColor: '#FAF5FF',
+                  borderColor: '#E9D5FF',
+                  borderWidth: 1,
+                  borderRadius: 10,
+                  padding: 14,
+                  gap: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="flash" size={17} color="#7E22CE" />
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#6B21A8' }}>
+                    2. Acción Masiva Rápida
+                  </Text>
+                </View>
+
+                {casoActivo && (
+                  <Pressable
+                    onPress={() => {
+                      aplicarNoAplicaPorCargo(
+                        casoActivo.id,
+                        'marcar_otros_como_no_aplica',
+                        cargoSeleccionadoParaAccion
+                      );
+                      setFiltroCargoResponsable(cargoSeleccionadoParaAccion);
+                      setModalNoAplicaPorCargoVisible(false);
+                    }}
+                    style={({ pressed }) => ({
+                      backgroundColor: pressed ? '#6B21A8' : '#7E22CE',
+                      paddingVertical: 10,
+                      paddingHorizontal: 14,
+                      borderRadius: 8,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 3,
+                      elevation: 2,
+                    })}
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 12.5, fontWeight: '800', textAlign: 'center' }}>
+                      ⚡ Marcar como "No Aplica" todo lo que NO sea de mi cargo
+                    </Text>
+                  </Pressable>
+                )}
+
+                <Text style={{ fontSize: 10.5, color: '#6B21A8', fontStyle: 'italic', textAlign: 'center' }}>
+                  Solo quedarán pendientes las actividades de: <Text style={{ fontWeight: '800' }}>{cargoSeleccionadoParaAccion}</Text>
+                </Text>
+              </View>
+
+              {/* Sección 3: Control Detallado por Cargo */}
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>
+                    3. Detalle y Control Individual por Cargo
+                  </Text>
+                  {casoActivo && (
+                    <Pressable
+                      onPress={() => {
+                        aplicarNoAplicaPorCargo(casoActivo.id, 'revertir_todo');
+                        setModalNoAplicaPorCargoVisible(false);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3.5,
+                        borderRadius: 5,
+                        backgroundColor: '#F1F5F9',
+                        borderWidth: 1,
+                        borderColor: '#CBD5E1',
+                      }}
+                    >
+                      <Ionicons name="refresh" size={12} color="#475569" />
+                      <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
+                        Restaurar todo a Aplica
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                <View style={{ gap: 6 }}>
+                  {cargosUnicosDelCaso.map((cargo) => {
+                    const stats = estadisticasCargosCaso[cargo];
+                    const total = stats?.total || 0;
+                    const noAplica = stats?.noAplica || 0;
+                    const todosNoAplica = total > 0 && noAplica === total;
+                    const esMiCargo = cargo === cargoSeleccionadoParaAccion;
+
+                    return (
+                      <View
+                        key={cargo}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          backgroundColor: esMiCargo ? '#F0FDF4' : '#F8FAFC',
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: esMiCargo ? '#86EFAC' : '#E2E8F0',
+                          gap: 10,
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: '#1E293B' }}>
+                              {cargo}
+                            </Text>
+                            {esMiCargo && (
+                              <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                                <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#166534' }}>MI CARGO</Text>
+                              </View>
+                            )}
+                          </View>
+                          <Text style={{ fontSize: 10.5, color: '#64748B', marginTop: 2 }}>
+                            {total} actividad{total > 1 ? 'es' : ''} • <Text style={{ fontWeight: '700', color: noAplica > 0 ? '#475569' : '#16A34A' }}>{noAplica} en No Aplica</Text>
+                          </Text>
+                        </View>
+
+                        {casoActivo && (
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            {!todosNoAplica ? (
+                              <Pressable
+                                onPress={() => {
+                                  aplicarNoAplicaPorCargo(casoActivo.id, 'marcar_cargo_como_no_aplica', cargo);
+                                }}
+                                style={{
+                                  paddingHorizontal: 9,
+                                  paddingVertical: 5,
+                                  borderRadius: 5,
+                                  backgroundColor: '#F1F5F9',
+                                  borderWidth: 1,
+                                  borderColor: '#CBD5E1',
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
+                                  Poner No Aplica
+                                </Text>
+                              </Pressable>
+                            ) : (
+                              <Pressable
+                                onPress={() => {
+                                  aplicarNoAplicaPorCargo(casoActivo.id, 'revertir_cargo_a_aplica', cargo);
+                                }}
+                                style={{
+                                  paddingHorizontal: 9,
+                                  paddingVertical: 5,
+                                  borderRadius: 5,
+                                  backgroundColor: '#EFF6FF',
+                                  borderWidth: 1,
+                                  borderColor: '#93C5FD',
+                                }}
+                              >
+                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1D4ED8' }}>
+                                  Revertir a Aplica
+                                </Text>
+                              </Pressable>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Footer del Modal */}
+            <View
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderTopWidth: 1,
+                borderTopColor: '#E2E8F0',
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                gap: 8,
+              }}
+            >
+              <Pressable
+                onPress={() => setModalNoAplicaPorCargoVisible(false)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  backgroundColor: '#1E293B',
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
+                  Cerrar
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* =================================================================== */}
       {/* MODAL DE OBSERVACIONES A NIVEL DE FASE                              */}
       {/* =================================================================== */}
       <Modal
@@ -18998,7 +19771,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             }}
                                           >
                                             <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#64748b' }}>
-                                              NO APLICA (USO DE LISTA)
+                                              NO APLICA
                                             </Text>
                                           </View>
                                         )}
@@ -20474,6 +21247,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           fechaPosesionInicial={casoActivo.fecha_posesion_periodo_prueba || casoActivo.fecha_efectiva || ''}
           onGuardarFechaPosesion={guardarFechaPosesionCaso}
           onDescargarPlantillaBase={handleDescargarFormatoOficial}
+          datosGuardados={casoActivo.datosFT095}
+          onGuardarFT095={guardarDatosFT095Caso}
+          validacionCoincidente={buscarValidacionCoincidenteCaso(casoActivo)}
         />
       )}
 

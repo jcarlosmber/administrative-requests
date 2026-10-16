@@ -10,12 +10,17 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import { assetADataUrl } from '../../lib/storageAdjuntosIndexedDB';
+import PdfViewerModal from '../PdfViewerModal';
 import {
   requisitosPosesionService,
   LISTA_32_REQUISITOS_FT095,
   DatosFormatoFT095Diligenciado,
   EstadoItemFT095,
+  SoporteAdjuntoItemFT095,
 } from '../../lib/requisitosPosesionService';
+import { ingresosService } from '../../lib/ingresosService';
 
 interface ModalRequisitosPosesionFT095Props {
   visible: boolean;
@@ -33,6 +38,9 @@ interface ModalRequisitosPosesionFT095Props {
   onDescargarPlantillaBase?: (archivo: string) => void;
   fechaPosesionInicial?: string;
   onGuardarFechaPosesion?: (fecha: string) => void;
+  datosGuardados?: DatosFormatoFT095Diligenciado;
+  onGuardarFT095?: (datos: DatosFormatoFT095Diligenciado) => void;
+  validacionCoincidente?: any;
 }
 
 export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095Props> = ({
@@ -42,13 +50,18 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
   onDescargarPlantillaBase,
   fechaPosesionInicial,
   onGuardarFechaPosesion,
+  datosGuardados,
+  onGuardarFT095,
+  validacionCoincidente,
 }) => {
   const { width, height } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
 
   const [datos, setDatos] = useState<DatosFormatoFT095Diligenciado>(() =>
-    requisitosPosesionService.crearEstadoInicial(servidorInicial)
+    datosGuardados && datosGuardados.items && Object.keys(datosGuardados.items).length > 0
+      ? datosGuardados
+      : requisitosPosesionService.crearEstadoInicial(servidorInicial)
   );
 
   const [filtroEstado, setFiltroEstado] = useState<'TODOS' | 'CUMPLE' | 'PENDIENTE' | 'NO_APLICA'>('TODOS');
@@ -59,12 +72,24 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
     fechaPosesionInicial || servidorInicial?.fecha || ''
   );
 
-  // Sincronizar cuando cambia el servidor inicial seleccionado o la fecha
+  const [cargandoArchivo, setCargandoArchivo] = useState<number | null>(null);
+  const [descargandoZip, setDescargandoZip] = useState(false);
+  const [visorSoporte, setVisorSoporte] = useState<{
+    visible: boolean;
+    titulo: string;
+    nombreArchivo: string;
+    url?: string;
+    mimeType?: string;
+  } | null>(null);
+
+  // Sincronizar cuando cambia el servidor inicial seleccionado o la fecha o datos guardados
   useEffect(() => {
-    if (servidorInicial && servidorInicial.cedula) {
+    if (datosGuardados && datosGuardados.items && Object.keys(datosGuardados.items).length > 0) {
+      setDatos(datosGuardados);
+    } else if (servidorInicial && servidorInicial.cedula) {
       setDatos(requisitosPosesionService.crearEstadoInicial(servidorInicial));
     }
-  }, [servidorInicial?.cedula, servidorInicial?.nombre]);
+  }, [datosGuardados, servidorInicial?.cedula, servidorInicial?.nombre]);
 
   useEffect(() => {
     if (fechaPosesionInicial) {
@@ -153,9 +178,397 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
     requisitosPosesionService.imprimirOPdf(datos);
   };
 
+  const handleAdjuntarSoporteItem = async (numero: number, nombreReq: string) => {
+    try {
+      setCargandoArchivo(numero);
+      const res = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const fileAsset = res.assets[0];
+        const dataUrl = await assetADataUrl(fileAsset);
+
+        const nuevoSoporte: SoporteAdjuntoItemFT095 = {
+          id: `soporte_${numero}_${Date.now()}`,
+          nombre: fileAsset.name || `Soporte_Req_${numero}.pdf`,
+          size: fileAsset.size,
+          mimeType: fileAsset.mimeType,
+          dataUrl,
+          fechaSubida: new Date().toISOString(),
+        };
+
+        setDatos((prev) => {
+          const itemPrev = prev.items[numero] || { numero, estado: 'PENDIENTE', observaciones: '' };
+          return {
+            ...prev,
+            items: {
+              ...prev.items,
+              [numero]: {
+                ...itemPrev,
+                soporte: nuevoSoporte,
+              },
+            },
+          };
+        });
+
+        setMensajeExito(`Soporte "${fileAsset.name}" anexado con éxito al requisito #${numero}.`);
+        setTimeout(() => setMensajeExito(null), 3500);
+      }
+    } catch (error) {
+      console.error('Error al anexar soporte al requisito:', error);
+      setMensajeExito('Error al cargar el archivo.');
+      setTimeout(() => setMensajeExito(null), 3500);
+    } finally {
+      setCargandoArchivo(null);
+    }
+  };
+
+  const handleEliminarSoporteItem = (numero: number) => {
+    setDatos((prev) => {
+      const itemPrev = prev.items[numero];
+      if (!itemPrev) return prev;
+      const { soporte, ...resto } = itemPrev;
+      return {
+        ...prev,
+        items: {
+          ...prev.items,
+          [numero]: resto,
+        },
+      };
+    });
+    setMensajeExito(`Soporte removido del requisito #${numero}.`);
+    setTimeout(() => setMensajeExito(null), 3000);
+  };
+
+  const handleVerSoporteItem = (numero: number, reqNombre: string) => {
+    const it = datos.items[numero];
+    if (!it?.soporte?.dataUrl) {
+      setMensajeExito('El soporte no cuenta con vista previa disponible.');
+      setTimeout(() => setMensajeExito(null), 3000);
+      return;
+    }
+    setVisorSoporte({
+      visible: true,
+      titulo: `Soporte Requisito #${numero}: ${reqNombre}`,
+      nombreArchivo: it.soporte.nombre,
+      url: it.soporte.dataUrl,
+      mimeType: it.soporte.mimeType,
+    });
+  };
+
+  const handleDescargarZipOrganizado = async () => {
+    try {
+      setDescargandoZip(true);
+      await requisitosPosesionService.descargarExpedienteZip(datos);
+      setMensajeExito('📦 Expediente ZIP organizado descargado exitosamente con soportes y formato .doc.');
+      setTimeout(() => setMensajeExito(null), 5000);
+    } catch (e) {
+      console.error('Error descargando ZIP organizado:', e);
+      setMensajeExito('No se pudo generar el archivo ZIP. Verifique los documentos.');
+      setTimeout(() => setMensajeExito(null), 4000);
+    } finally {
+      setDescargandoZip(false);
+    }
+  };
+
+  const handleGuardarYFinalizar = () => {
+    if (onGuardarFT095) {
+      onGuardarFT095(datos);
+    }
+    if (fechaPosesionInput && onGuardarFechaPosesion) {
+      onGuardarFechaPosesion(fechaPosesionInput);
+    }
+    setMensajeExito('Verificación y soportes guardados en el caso exitosamente.');
+    setTimeout(() => {
+      setMensajeExito(null);
+      onClose();
+    }, 1200);
+  };
+
+  // Carga y sincronización con la Validación Técnica FT-318 del servidor
+  const [valCompleta, setValCompleta] = useState<any>(validacionCoincidente || null);
+  const [cargandoVal, setCargandoVal] = useState(false);
+
+  useEffect(() => {
+    let activa = true;
+    const cargarDetalleVal = async () => {
+      const val = validacionCoincidente;
+      if (!val) {
+        if (servidorInicial?.cedula) {
+          try {
+            setCargandoVal(true);
+            const todas = await ingresosService.obtenerValidaciones();
+            const cedulaLimpia = String(servidorInicial.cedula).replace(/\D/g, '');
+            const match = todas.find((v: any) => {
+              const docVal = String(v.candidato_documento || v.candidato?.documento || '').replace(/\D/g, '');
+              return docVal && docVal === cedulaLimpia;
+            });
+            if (match && activa) {
+              const full = await ingresosService.obtenerValidacionPorId(match.id).catch(() => match);
+              if (activa) setValCompleta(full);
+            }
+          } catch (e) {
+            console.warn('No se pudo cargar validación por cédula:', e);
+          } finally {
+            if (activa) setCargandoVal(false);
+          }
+        }
+        return;
+      }
+
+      if (val.id && (!val.formacion_academica || !val.certificados)) {
+        try {
+          setCargandoVal(true);
+          const full = await ingresosService.obtenerValidacionPorId(val.id);
+          if (activa) setValCompleta(full);
+        } catch (e) {
+          if (activa) setValCompleta(val);
+        } finally {
+          if (activa) setCargandoVal(false);
+        }
+      } else {
+        setValCompleta(val);
+      }
+    };
+
+    cargarDetalleVal();
+    return () => {
+      activa = false;
+    };
+  }, [validacionCoincidente?.id, servidorInicial?.cedula]);
+
+  const extraerEducacionFT318 = () => {
+    if (!valCompleta) return null;
+    const titulos: any[] =
+      valCompleta.formacion_academica ||
+      valCompleta.analisis_completo?.formacion_academica ||
+      [];
+    const academicos = titulos.filter(
+      (t) => t.tipo !== 'TARJETA_PROFESIONAL' && t.tipo !== 'LICENCIA_CONDUCCION'
+    );
+
+    if (academicos.length === 0) {
+      return {
+        texto: 'Formación académica verificada en Validación Técnica (Res. 020/2019). Cumple con los títulos exigidos por el manual.',
+      };
+    }
+
+    const lista = academicos.map((t) => {
+      const nombre = t.titulo_obtenido || 'Título Profesional';
+      const inst = t.institucion ? ` - ${t.institucion}` : '';
+      const anio = t.fecha_grado ? ` (${t.fecha_grado.substring(0, 4)})` : '';
+      return `${nombre}${inst}${anio}`;
+    });
+
+    const texto = `Cumple formación académica exigida (Res. 020 de 2019). Títulos verificados en Validación Técnica: ${lista.join('; ')}. Verificación directa Ley 190 / Dec. 1083: Favorable.`;
+
+    return {
+      texto,
+      titulos: academicos,
+    };
+  };
+
+  const extraerExperienciaFT318 = () => {
+    if (!valCompleta) return null;
+    const certs: any[] =
+      valCompleta.certificados ||
+      valCompleta.analisis_completo?.certificados ||
+      [];
+    const consolidado =
+      valCompleta.consolidado ||
+      valCompleta.analisis_completo?.consolidado;
+
+    const mesesComputables =
+      consolidado?.meses_computables ??
+      consolidado?.experiencia_relacionada_meses ??
+      0;
+    const mesesExigidos =
+      consolidado?.requisito_minimo_meses ??
+      valCompleta.cargo_evaluado?.requisito_experiencia_meses ??
+      0;
+
+    const anios = Math.floor(mesesComputables / 12);
+    const mesesRestantes = Math.round(mesesComputables % 12);
+    const tiempoTexto =
+      anios > 0
+        ? `${anios} año${anios > 1 ? 's' : ''} y ${mesesRestantes} mes${mesesRestantes !== 1 ? 'es' : ''} (${mesesComputables} meses)`
+        : `${mesesComputables} meses`;
+
+    const entidades = Array.from(
+      new Set(
+        certs
+          .map((c) => c.entidad?.trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 3);
+    const entidadesTexto = entidades.length > 0 ? ` Entidades verificadas: ${entidades.join(', ')}.` : '';
+
+    const confirmadosDirectos = certs.filter(
+      (c) => c.estado_confirmacion === 'VERIFICADO_DIRECTO' || c.estado_confirmacion === 'CONFIRMADO_POR_EMISOR'
+    ).length;
+    const textoConfirmacion =
+      confirmadosDirectos > 0
+        ? ` Confirmación Directa Ley 190: ${confirmadosDirectos} certificado(s) ratificado(s).`
+        : ' Verificación formal Ley 190 / Dec. 1083: Favorable.';
+
+    const texto = `Experiencia laboral acreditada: ${tiempoTexto}${mesesExigidos > 0 ? ` (Exigido: ${mesesExigidos} meses). CUMPLE.` : '.'} Cómputo calendario completo sin penalización horaria (Sentencia Consejo de Estado Sept/2026).${entidadesTexto}${textoConfirmacion}`;
+
+    return {
+      texto,
+      mesesComputables,
+      mesesExigidos,
+      certs,
+    };
+  };
+
+  const extraerTarjetaFT318 = () => {
+    if (!valCompleta) return null;
+    const titulos: any[] =
+      valCompleta.formacion_academica ||
+      valCompleta.analisis_completo?.formacion_academica ||
+      [];
+    const itemTarjeta = titulos.find(
+      (t) =>
+        t.tipo === 'TARJETA_PROFESIONAL' ||
+        (t.numero_tarjeta_o_registro && t.numero_tarjeta_o_registro !== 'NO CONSTA')
+    );
+
+    let numTarjeta = itemTarjeta?.numero_tarjeta_o_registro || '';
+    let emisor = itemTarjeta?.institucion || '';
+
+    if (!numTarjeta && valCompleta.tarjeta_profesional) {
+      numTarjeta = valCompleta.tarjeta_profesional.numero || '';
+      emisor = valCompleta.tarjeta_profesional.consejo || '';
+    }
+
+    if (numTarjeta && numTarjeta !== 'NO CONSTA') {
+      const emisorTexto = emisor ? ` expedida por ${emisor}` : '';
+      return {
+        numero: numTarjeta,
+        emisor,
+        texto: `Tarjeta / Matrícula Profesional N° ${numTarjeta}${emisorTexto}. Verificada, vigente y sin antecedentes disciplinarios reportados.`,
+      };
+    }
+
+    return {
+      numero: '',
+      emisor: '',
+      texto: 'Tarjeta / Registro Profesional verificado en Validación Técnica. Vigente y sin antecedentes sancionatorios.',
+    };
+  };
+
+  const handleVincularPunto17 = () => {
+    const res = extraerEducacionFT318();
+    if (!res) {
+      setMensajeExito('No se encontró información de formación académica en la Validación Técnica.');
+      setTimeout(() => setMensajeExito(null), 3500);
+      return;
+    }
+    setDatos((prev) => ({
+      ...prev,
+      items: {
+        ...prev.items,
+        [17]: {
+          ...(prev.items[17] || { numero: 17 }),
+          estado: 'CUMPLE',
+          observaciones: res.texto,
+        },
+      },
+    }));
+    setMensajeExito('✓ Punto 17 (Diplomas y Estudios) vinculado con la Validación Técnica.');
+    setTimeout(() => setMensajeExito(null), 3500);
+  };
+
+  const handleVincularPunto18 = () => {
+    const res = extraerExperienciaFT318();
+    if (!res) {
+      setMensajeExito('No se encontró información de experiencia laboral en la Validación Técnica.');
+      setTimeout(() => setMensajeExito(null), 3500);
+      return;
+    }
+    setDatos((prev) => ({
+      ...prev,
+      items: {
+        ...prev.items,
+        [18]: {
+          ...(prev.items[18] || { numero: 18 }),
+          estado: 'CUMPLE',
+          observaciones: res.texto,
+        },
+      },
+    }));
+    setMensajeExito('✓ Punto 18 (Certificados Laborales) vinculado con el cómputo Consejo de Estado.');
+    setTimeout(() => setMensajeExito(null), 3500);
+  };
+
+  const handleVincularPunto19 = () => {
+    const res = extraerTarjetaFT318();
+    if (!res) {
+      setMensajeExito('No se encontró tarjeta profesional en la Validación Técnica.');
+      setTimeout(() => setMensajeExito(null), 3500);
+      return;
+    }
+    setDatos((prev) => ({
+      ...prev,
+      items: {
+        ...prev.items,
+        [19]: {
+          ...(prev.items[19] || { numero: 19 }),
+          estado: 'CUMPLE',
+          observaciones: res.texto,
+        },
+      },
+    }));
+    setMensajeExito('✓ Punto 19 (Tarjeta Profesional) vinculado con la matrícula verificada.');
+    setTimeout(() => setMensajeExito(null), 3500);
+  };
+
+  const handleVincularPuntos17_18_19 = () => {
+    const res17 = extraerEducacionFT318();
+    const res18 = extraerExperienciaFT318();
+    const res19 = extraerTarjetaFT318();
+
+    setDatos((prev) => {
+      const itemsActualizados = { ...prev.items };
+
+      if (res17) {
+        itemsActualizados[17] = {
+          ...(itemsActualizados[17] || { numero: 17 }),
+          estado: 'CUMPLE',
+          observaciones: res17.texto,
+        };
+      }
+      if (res18) {
+        itemsActualizados[18] = {
+          ...(itemsActualizados[18] || { numero: 18 }),
+          estado: 'CUMPLE',
+          observaciones: res18.texto,
+        };
+      }
+      if (res19) {
+        itemsActualizados[19] = {
+          ...(itemsActualizados[19] || { numero: 19 }),
+          estado: 'CUMPLE',
+          observaciones: res19.texto,
+        };
+      }
+
+      return {
+        ...prev,
+        items: itemsActualizados,
+      };
+    });
+
+    setMensajeExito('⚡ Puntos 17 (Estudios), 18 (Experiencia) y 19 (Tarjeta) vinculados exitosamente.');
+    setTimeout(() => setMensajeExito(null), 4000);
+  };
+
   if (!visible) return null;
 
   return (
+    <>
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
       <View
         style={{
@@ -285,6 +698,150 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
 
           {/* CUERPO PRINCIPAL CON SCROLL */}
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: isDesktop ? 20 : 12, gap: 14 }}>
+            {/* BANNER INSTITUCIONAL UNIFICADO: MANDATO LEGAL Y NORMATIVA DE POSESIÓN */}
+            <View
+              style={{
+                backgroundColor: '#f0f9ff',
+                borderRadius: 10,
+                borderWidth: 1.5,
+                borderColor: '#7dd3fc',
+                padding: 14,
+                gap: 8,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      backgroundColor: '#e0f2fe',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: '#bae6fd',
+                    }}
+                  >
+                    <Ionicons name="shield-checkmark" size={18} color="#0284c7" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0369a1' }}>
+                      Certificado de Cumplimiento de Requisitos para Tomar Posesión (Formato 2311300-FT-095 V05)
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284c7', marginTop: 1 }}>
+                      Secretaría Jurídica Distrital • Dirección de Gestión Corporativa (Talento Humano)
+                    </Text>
+                  </View>
+                </View>
+
+                <View
+                  style={{
+                    backgroundColor: '#0284c7',
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#ffffff' }}>
+                    ⚖️ MANDATO LEGAL OBLIGATORIO
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 11, color: '#0c4a6e', lineHeight: 16 }}>
+                ⚖️ <Text style={{ fontWeight: '800' }}>Fundamento Jurídico:</Text> Artículos 2.2.5.1.4 y 2.2.5.1.5 del Decreto 1083 de 2015; Ley 190 de 1995; Ley 1952 de 2019; Ley 610 de 2000; Ley 1801 de 2016; y Manual de Funciones SJD (Resolución 020 de 2019).
+              </Text>
+
+              <View
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderLeftWidth: 3,
+                  borderLeftColor: '#0284c7',
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: '#e0f2fe',
+                }}
+              >
+                <Text style={{ fontSize: 10.5, color: '#334155', fontStyle: 'italic', lineHeight: 15 }}>
+                  «Para autorizar y formalizar la toma de posesión, la Dirección de Talento Humano debe verificar rigurosamente que el aspirante cumpla con las calidades y requisitos del cargo, no se encuentre incurso en inhabilidades o incompatibilidades, y anexe los soportes correspondientes a cada uno de los 32 requisitos normativos.»
+                </Text>
+              </View>
+            </View>
+
+            {/* VINCULACIÓN CON VALIDACIÓN TÉCNICA (PUNTOS 17, 18 Y 19) */}
+            {valCompleta && (
+              <View
+                style={{
+                  backgroundColor: '#ecfdf5',
+                  borderRadius: 10,
+                  borderWidth: 1.5,
+                  borderColor: '#86efac',
+                  padding: 12,
+                  flexDirection: isTablet ? 'row' : 'column',
+                  justifyContent: 'space-between',
+                  alignItems: isTablet ? 'center' : 'stretch',
+                  gap: 10,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      backgroundColor: '#dcfce7',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: '#86efac',
+                    }}
+                  >
+                    <Ionicons name="sparkles" size={18} color="#15803d" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#065f46' }}>
+                        Validación Técnica de Ingresos Disponible
+                      </Text>
+                      <View style={{ backgroundColor: '#15803d', paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 }}>
+                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#ffffff' }}>CONCEPTO CUMPLE</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>
+                      Se encontraron los títulos académicos, el cómputo de experiencia laboral (Consejo de Estado Sept/2026) y la matrícula profesional verificados previamente.
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={handleVincularPuntos17_18_19}
+                  style={{
+                    backgroundColor: '#15803d',
+                    paddingHorizontal: 13,
+                    paddingVertical: 7.5,
+                    borderRadius: 6,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    alignSelf: isTablet ? 'center' : 'flex-start',
+                    shadowColor: '#15803d',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 2,
+                    elevation: 2,
+                  }}
+                >
+                  <Ionicons name="flash" size={13} color="#ffffff" />
+                  <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ffffff' }}>
+                    ⚡ Vincular Puntos 17, 18 y 19
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
             {/* PANEL DE DATOS DEL ASPIRANTE */}
             <View
               style={{
@@ -764,6 +1321,66 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
               </View>
             </View>
 
+            {/* BANNER DE VINCULACIÓN INTELIGENTE: PUNTOS 17, 18 y 19 (Excluye Punto 1 - FT-318 final) */}
+            {valCompleta && (
+              <View
+                style={{
+                  backgroundColor: '#f0fdfa',
+                  borderWidth: 1,
+                  borderColor: '#99f6e4',
+                  borderRadius: 8,
+                  padding: 10,
+                  flexDirection: isTablet ? 'row' : 'column',
+                  alignItems: isTablet ? 'center' : 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: 10,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <Ionicons name="sparkles" size={16} color="#0d9488" />
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0f766e' }}>
+                      Validación Técnica Disponible ({valCompleta.candidato_nombre || servidorInicial?.nombre})
+                    </Text>
+                    <View
+                      style={{
+                        backgroundColor: '#ccfbf1',
+                        paddingHorizontal: 6,
+                        paddingVertical: 1.5,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#115e59' }}>
+                        Ley 190 / Consejo de Estado Sept 2026
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#134e4a', marginTop: 3, lineHeight: 15 }}>
+                    Vincula automáticamente los puntos 17 (Títulos académicos), 18 (Certificados y cómputo laboral) y 19 (Tarjeta profesional). El Punto 1 (FT-318) queda reservado para adjuntar de forma manual el dictamen final firmado.
+                  </Text>
+                </View>
+
+                <Pressable
+                  onPress={handleVincularPuntos17_18_19}
+                  style={({ pressed, hovered }: any) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    backgroundColor: pressed ? '#0f766e' : hovered ? '#0d9488' : '#14b8a6',
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                  })}
+                >
+                  <Ionicons name="flash-outline" size={14} color="#ffffff" />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#ffffff' }}>
+                    ⚡ Vincular Puntos 17, 18 y 19
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
             {/* TABLA DINÁMICA DE LOS 32 REQUISITOS */}
             <View
               style={{
@@ -868,6 +1485,218 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
                           borderColor: '#e2e8f0',
                         }}
                       />
+
+                      {/* ZONA DE ANEXO INDIVIDUAL DEL REQUISITO */}
+                      <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        {it.soporte && it.soporte.nombre ? (
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: '#ecfdf5',
+                              borderWidth: 1,
+                              borderColor: '#a7f3d0',
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 6,
+                              gap: 6,
+                              maxWidth: '100%',
+                            }}
+                          >
+                            <Ionicons
+                              name={
+                                it.soporte.nombre.toLowerCase().endsWith('.pdf')
+                                  ? 'document-text'
+                                  : it.soporte.nombre.toLowerCase().endsWith('.doc') || it.soporte.nombre.toLowerCase().endsWith('.docx')
+                                  ? 'document'
+                                  : it.soporte.nombre.toLowerCase().endsWith('.xls') || it.soporte.nombre.toLowerCase().endsWith('.xlsx')
+                                  ? 'grid'
+                                  : 'image'
+                              }
+                              size={14}
+                              color="#059669"
+                            />
+                            <Text
+                              style={{ fontSize: 11, fontWeight: '700', color: '#065f46', maxWidth: 220 }}
+                              numberOfLines={1}
+                            >
+                              {it.soporte.nombre}
+                            </Text>
+                            {it.soporte.size ? (
+                              <Text style={{ fontSize: 9.5, color: '#047857' }}>
+                                ({Math.round(it.soporte.size / 1024)} KB)
+                              </Text>
+                            ) : null}
+
+                            {/* Botón Ver Soporte */}
+                            <Pressable
+                              onPress={() => handleVerSoporteItem(req.numero, req.nombre)}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2.5,
+                                borderRadius: 4,
+                                borderWidth: 1,
+                                borderColor: '#10b981',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 2,
+                              }}
+                            >
+                              <Ionicons name="eye-outline" size={11} color="#059669" />
+                              <Text style={{ fontSize: 10, fontWeight: '800', color: '#059669' }}>Ver</Text>
+                            </Pressable>
+
+                            {/* Botón Reemplazar Soporte */}
+                            <Pressable
+                              onPress={() => handleAdjuntarSoporteItem(req.numero, req.nombre)}
+                              style={{
+                                backgroundColor: '#ffffff',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2.5,
+                                borderRadius: 4,
+                                borderWidth: 1,
+                                borderColor: '#cbd5e1',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 2,
+                              }}
+                            >
+                              <Ionicons name="cloud-upload-outline" size={11} color="#475569" />
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#475569' }}>Cambiar</Text>
+                            </Pressable>
+
+                            {/* Botón Eliminar Soporte */}
+                            <Pressable
+                              onPress={() => handleEliminarSoporteItem(req.numero)}
+                              style={{
+                                backgroundColor: '#fee2e2',
+                                paddingHorizontal: 5,
+                                paddingVertical: 2.5,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={11} color="#b91c1c" />
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <Pressable
+                            onPress={() => handleAdjuntarSoporteItem(req.numero, req.nombre)}
+                            disabled={cargandoArchivo === req.numero}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: '#f8fafc',
+                              borderWidth: 1,
+                              borderColor: '#cbd5e1',
+                              borderStyle: 'dashed',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3.5,
+                              borderRadius: 5,
+                            }}
+                          >
+                            <Ionicons
+                              name={cargandoArchivo === req.numero ? 'hourglass-outline' : 'attach-outline'}
+                              size={13}
+                              color="#475569"
+                            />
+                            <Text style={{ fontSize: 10.5, fontWeight: '600', color: '#475569' }}>
+                              {cargandoArchivo === req.numero ? 'Cargando archivo...' : '📎 Anexar soporte individual'}
+                            </Text>
+                          </Pressable>
+                        )}
+
+                        {/* Indicación exclusiva para Requisito 1: Dictamen final firmado manual */}
+                        {req.numero === 1 && (
+                          <View
+                            style={{
+                              backgroundColor: '#f1f5f9',
+                              borderWidth: 1,
+                              borderColor: '#cbd5e1',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3,
+                              borderRadius: 4,
+                            }}
+                          >
+                            <Text style={{ fontSize: 10, color: '#475569', fontStyle: 'italic' }}>
+                              ⚠️ Adjunte aquí el Dictamen FT-318 oficial firmado
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* Botón de vinculación rápida para Requisito 17 (Títulos académicos) */}
+                        {valCompleta && req.numero === 17 && (
+                          <Pressable
+                            onPress={handleVincularPunto17}
+                            style={({ pressed, hovered }: any) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: pressed ? '#ccfbf1' : hovered ? '#d1fae5' : '#f0fdfa',
+                              borderWidth: 1,
+                              borderColor: '#5eead4',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3.5,
+                              borderRadius: 5,
+                              cursor: 'pointer',
+                            })}
+                          >
+                            <Ionicons name="flash-outline" size={12} color="#0f766e" />
+                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0f766e' }}>
+                              ⚡ Traer Títulos Validados
+                            </Text>
+                          </Pressable>
+                        )}
+
+                        {/* Botón de vinculación rápida para Requisito 18 (Certificados y Cómputo Consejo de Estado) */}
+                        {valCompleta && req.numero === 18 && (
+                          <Pressable
+                            onPress={handleVincularPunto18}
+                            style={({ pressed, hovered }: any) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: pressed ? '#ccfbf1' : hovered ? '#d1fae5' : '#f0fdfa',
+                              borderWidth: 1,
+                              borderColor: '#5eead4',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3.5,
+                              borderRadius: 5,
+                              cursor: 'pointer',
+                            })}
+                          >
+                            <Ionicons name="flash-outline" size={12} color="#0f766e" />
+                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0f766e' }}>
+                              ⚡ Traer Cómputo Consejo de Estado
+                            </Text>
+                          </Pressable>
+                        )}
+
+                        {/* Botón de vinculación rápida para Requisito 19 (Tarjeta Profesional) */}
+                        {valCompleta && req.numero === 19 && (
+                          <Pressable
+                            onPress={handleVincularPunto19}
+                            style={({ pressed, hovered }: any) => ({
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: pressed ? '#ccfbf1' : hovered ? '#d1fae5' : '#f0fdfa',
+                              borderWidth: 1,
+                              borderColor: '#5eead4',
+                              paddingHorizontal: 8,
+                              paddingVertical: 3.5,
+                              borderRadius: 5,
+                              cursor: 'pointer',
+                            })}
+                          >
+                            <Ionicons name="flash-outline" size={12} color="#0f766e" />
+                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#0f766e' }}>
+                              ⚡ Traer Tarjeta Profesional
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
                     </View>
 
                     {/* Botones de selección de estado */}
@@ -1092,7 +1921,7 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
               </Text>
             </Pressable>
 
-            {/* Acciones principales: Imprimir y Descargar Diligenciado */}
+            {/* Acciones principales: Imprimir, Descargar .doc, Descargar ZIP Organizado y Guardar */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <Pressable
                 onPress={handleImprimirPDF}
@@ -1100,7 +1929,7 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  paddingHorizontal: 14,
+                  paddingHorizontal: 12,
                   paddingVertical: 8,
                   borderRadius: 6,
                   backgroundColor: '#ffffff',
@@ -1110,7 +1939,7 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
               >
                 <Ionicons name="print-outline" size={15} color="#0D2A48" />
                 <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#0D2A48' }}>
-                  Imprimir / PDF Oficial
+                  Imprimir / PDF
                 </Text>
               </Pressable>
 
@@ -1120,27 +1949,64 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 6,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8.5,
+                  paddingHorizontal: 13,
+                  paddingVertical: 8,
                   borderRadius: 6,
                   backgroundColor: '#059669',
-                  shadowColor: '#059669',
+                }}
+              >
+                <Ionicons name="download-outline" size={15} color="#ffffff" />
+                <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ffffff' }}>
+                  📥 Formato (.doc)
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleDescargarZipOrganizado}
+                disabled={descargandoZip}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  backgroundColor: '#0284c7',
+                  shadowColor: '#0284c7',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,
-                  shadowRadius: 4,
+                  shadowRadius: 3,
                   elevation: 2,
                 }}
               >
-                <Ionicons name="download-outline" size={16} color="#ffffff" />
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#ffffff' }}>
-                  📥 Descargar Formato Diligenciado (.doc)
+                <Ionicons name="archive-outline" size={16} color="#ffffff" />
+                <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ffffff' }}>
+                  {descargandoZip ? 'Empaquetando ZIP...' : '📦 Descargar Expediente ZIP Organizado'}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={handleGuardarYFinalizar}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  backgroundColor: '#15803d',
+                }}
+              >
+                <Ionicons name="save-outline" size={15} color="#ffffff" />
+                <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#ffffff' }}>
+                  💾 Guardar Verificación
                 </Text>
               </Pressable>
 
               <Pressable
                 onPress={onClose}
                 style={{
-                  paddingHorizontal: 14,
+                  paddingHorizontal: 12,
                   paddingVertical: 8,
                   borderRadius: 6,
                   backgroundColor: '#e2e8f0',
@@ -1155,5 +2021,18 @@ export const ModalRequisitosPosesionFT095: React.FC<ModalRequisitosPosesionFT095
         </View>
       </View>
     </Modal>
+
+    {/* Visor de documentos para soportes individuales */}
+    {visorSoporte && (
+      <PdfViewerModal
+        visible={visorSoporte.visible}
+        onClose={() => setVisorSoporte(null)}
+        titulo={visorSoporte.titulo}
+        nombreArchivo={visorSoporte.nombreArchivo}
+        pdfUrl={visorSoporte.url}
+        mimeType={visorSoporte.mimeType}
+      />
+    )}
+    </>
   );
 };

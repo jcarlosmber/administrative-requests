@@ -3,6 +3,8 @@
 // REQUISITOS PARA TOMAR POSESIÓN DEL CARGO - SECRETARÍA JURÍDICA DISTRITAL
 // ============================================================================
 
+import JSZip from 'jszip';
+
 export interface RequisitoPosesionFT095Item {
   numero: number;
   nombre: string;
@@ -24,7 +26,7 @@ export const LISTA_32_REQUISITOS_FT095: RequisitoPosesionFT095Item[] = [
   {
     numero: 1,
     nombre: 'CERTIFICADO DE CUMPLIMIENTO DE REQUISITOS PARA TOMAR POSESIÓN FORMATO 2311300-FT-318',
-    normaODetalle: 'Manual de Funciones Res. 020 de 2019 • Generado en Validación Técnica de Ingresos',
+    normaODetalle: 'Manual de Funciones Res. 020 de 2019 • Documento oficial final firmado y formalizado por Talento Humano',
     categoria: 'FORMATOS_INSTITUCIONALES',
     aplicaLnr: true,
     aplicaCarrera: true,
@@ -313,10 +315,20 @@ export const LISTA_32_REQUISITOS_FT095: RequisitoPosesionFT095Item[] = [
 
 export type EstadoItemFT095 = 'CUMPLE' | 'PENDIENTE' | 'NO_APLICA';
 
+export interface SoporteAdjuntoItemFT095 {
+  id?: string;
+  nombre: string;
+  size?: number;
+  mimeType?: string;
+  dataUrl?: string;
+  fechaSubida?: string;
+}
+
 export interface EvaluacionItemFT095 {
   numero: number;
   estado: EstadoItemFT095;
   observaciones?: string;
+  soporte?: SoporteAdjuntoItemFT095;
 }
 
 export interface DatosFormatoFT095Diligenciado {
@@ -346,6 +358,7 @@ export interface DatosFormatoFT095Diligenciado {
 export const requisitosPosesionService = {
   /**
    * Inicializa la estructura del formato FT-095 con valores por defecto a partir de los datos del funcionario.
+   * Por defecto, todos los requisitos aplicables inician en estado 'PENDIENTE'.
    */
   crearEstadoInicial(
     datosServidor: {
@@ -363,7 +376,7 @@ export const requisitosPosesionService = {
     const items: Record<number, EvaluacionItemFT095> = {};
 
     LISTA_32_REQUISITOS_FT095.forEach((req) => {
-      let estadoDefault: EstadoItemFT095 = 'CUMPLE';
+      let estadoDefault: EstadoItemFT095 = 'PENDIENTE';
       if ((req.numero === 31 || req.numero === 32) && !esLnr) {
         estadoDefault = 'NO_APLICA';
       }
@@ -461,6 +474,9 @@ export const requisitosPosesionService = {
       const checkNA = esNoAplica ? '<b>X</b>' : '&nbsp;';
 
       const obsTexto = it.observaciones || '';
+      const soporteTexto = it.soporte?.nombre
+        ? `<div style="font-size: 7.5pt; color: #047857; font-weight: bold; margin-top: 3px;">📎 Soporte: ${it.soporte.nombre}</div>`
+        : '';
 
       return `
         <tr style="font-size: 8.5pt;">
@@ -472,7 +488,7 @@ export const requisitosPosesionService = {
           <td style="border: 1px solid #333333; text-align: center; padding: 4px; font-size: 10pt; width: 5%; background-color: ${esCumple ? '#ecfdf5' : '#ffffff'};">${checkCumple}</td>
           <td style="border: 1px solid #333333; text-align: center; padding: 4px; font-size: 10pt; width: 5%; background-color: ${esPendiente ? '#fffbeb' : '#ffffff'};">${checkNoCumple}</td>
           <td style="border: 1px solid #333333; text-align: center; padding: 4px; font-size: 10pt; width: 5%; background-color: ${esNoAplica ? '#f1f5f9' : '#ffffff'};">${checkNA}</td>
-          <td style="border: 1px solid #333333; padding: 4px; width: 15%; font-size: 8pt; color: #334155;">${obsTexto || '-'}</td>
+          <td style="border: 1px solid #333333; padding: 4px; width: 15%; font-size: 8pt; color: #334155;">${obsTexto || '-'}${soporteTexto}</td>
         </tr>
       `;
     }).join('');
@@ -663,5 +679,112 @@ export const requisitosPosesionService = {
         win.print();
       }, 500);
     }
+  },
+
+  /**
+   * Genera y descarga un archivo .ZIP organizado con:
+   * 1. Formato oficial 2311300-FT-095 V05 diligenciado (.doc)
+   * 2. Carpeta con todas las evidencias y soportes anexados a cada requisito individual
+   * 3. Bitácora ejecutiva de verificación institucional (.txt)
+   */
+  async descargarExpedienteZip(datos: DatosFormatoFT095Diligenciado): Promise<void> {
+    const zip = new JSZip();
+    const resumen = this.calcularResumen(datos);
+    const seguroNombre = (datos.nombresApellidos || 'Servidor').replace(/[^a-zA-Z0-9]/g, '_');
+    const seguroCedula = (datos.documentoIdentidad || '000').replace(/[^a-zA-Z0-9]/g, '_');
+
+    // 1. Archivo Word Oficial Diligenciado
+    const html = this.generarDocumentoDocHTML(datos);
+    zip.file(`2311300-FT-095_Requisitos_Posesion_${seguroNombre}.doc`, '\ufeff' + html);
+
+    // 2. Carpeta de Soportes y Evidencias Adjuntas
+    const folderSoportes = zip.folder('Soportes_Evidencias_FT095');
+
+    // 3. Bitácora y resumen técnico institucional
+    let bitacora = `================================================================================\r\n`;
+    bitacora += `EXPEDIENTE INSTITUCIONAL DE POSESIÓN - FORMATO 2311300-FT-095 V05\r\n`;
+    bitacora += `SECRETARÍA JURÍDICA DISTRITAL - DIRECCIÓN DE GESTIÓN CORPORATIVA\r\n`;
+    bitacora += `================================================================================\r\n\r\n`;
+    bitacora += `DATOS DEL ASPIRANTE / SERVIDOR PÚBLICO:\r\n`;
+    bitacora += `- Servidor: ${datos.nombresApellidos}\r\n`;
+    bitacora += `- Documento de Identidad: ${datos.documentoIdentidad}\r\n`;
+    bitacora += `- Nombre Identitario (Trans): ${datos.nombreIdentitario || 'No registra'}\r\n`;
+    bitacora += `- Cargo: ${datos.cargo} (Código ${datos.codigo} - Grado ${datos.grado})\r\n`;
+    bitacora += `- Dependencia: ${datos.dependencia}\r\n`;
+    bitacora += `- Tipo de Vinculación: ${datos.tipoVinculacion}\r\n`;
+    bitacora += `- Fecha de Verificación: ${datos.fechaVerificacion}\r\n\r\n`;
+    bitacora += `RESUMEN DE VERIFICACIÓN:\r\n`;
+    bitacora += `- Requisitos Cumplidos: ${resumen.cumplidos} de ${resumen.aplicables} aplicables (${resumen.porcentaje}%)\r\n`;
+    bitacora += `- Requisitos Pendientes: ${resumen.pendientes}\r\n`;
+    bitacora += `- No Aplica: ${resumen.noAplica}\r\n`;
+    bitacora += `- Concepto Final: ${resumen.esApto ? '✅ APTO PARA TOMAR POSESIÓN' : '⏳ DOCUMENTACIÓN EN TRÁMITE / PENDIENTE'}\r\n\r\n`;
+    bitacora += `DETALLE DE LOS 32 REQUISITOS:\r\n`;
+    bitacora += `--------------------------------------------------------------------------------\r\n`;
+
+    let totalSoportesAnexados = 0;
+
+    for (const req of LISTA_32_REQUISITOS_FT095) {
+      const it = datos.items[req.numero] || { numero: req.numero, estado: 'PENDIENTE', observaciones: '' };
+      const numPad = String(req.numero).padStart(2, '0');
+      bitacora += `[${it.estado}] #${numPad} - ${req.nombre}\r\n`;
+      if (req.normaODetalle) {
+        bitacora += `    Norma/Procedimiento: ${req.normaODetalle}\r\n`;
+      }
+      if (it.observaciones) {
+        bitacora += `    Observaciones: ${it.observaciones}\r\n`;
+      }
+
+      if (it.soporte && it.soporte.nombre) {
+        totalSoportesAnexados++;
+        bitacora += `    Soporte Anexo: ${it.soporte.nombre} (${it.soporte.size ? Math.round(it.soporte.size / 1024) + ' KB' : 'Adjunto'})\r\n`;
+
+        if (folderSoportes) {
+          const extension = it.soporte.nombre.split('.').pop() || 'pdf';
+          const nombreLimpio = req.nombre
+            .substring(0, 35)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .replace(/_+/g, '_');
+          const nombreArchivoEnZip = `Req_${numPad}_${nombreLimpio}.${extension}`;
+
+          try {
+            if (it.soporte.dataUrl && it.soporte.dataUrl.includes('base64,')) {
+              const b64 = it.soporte.dataUrl.split('base64,')[1];
+              folderSoportes.file(nombreArchivoEnZip, b64, { base64: true });
+            } else if (it.soporte.dataUrl && (it.soporte.dataUrl.startsWith('http') || it.soporte.dataUrl.startsWith('blob:'))) {
+              const resp = await fetch(it.soporte.dataUrl);
+              const blob = await resp.blob();
+              folderSoportes.file(nombreArchivoEnZip, blob);
+            }
+          } catch (err) {
+            console.warn(`No se pudo empaquetar soporte del requisito ${req.numero}:`, err);
+          }
+        }
+      } else {
+        bitacora += `    Soporte Anexo: [Sin documento adjunto]\r\n`;
+      }
+      bitacora += `\r\n`;
+    }
+
+    bitacora += `================================================================================\r\n`;
+    bitacora += `TOTAL SOPORTES ADJUNTOS EN ESTE EXPEDIENTE: ${totalSoportesAnexados}\r\n`;
+    bitacora += `OBSERVACIONES GENERALES:\r\n${datos.observacionesGenerales || 'Sin observaciones adicionales registradas.'}\r\n\r\n`;
+    bitacora += `RESPONSABLES DE VERIFICACIÓN:\r\n`;
+    bitacora += `- Encargado de Vinculaciones: ${datos.verificadorVinculaciones.nombre} (${datos.verificadorVinculaciones.cargo})\r\n`;
+    bitacora += `- Encargado de Archivo Hojas de Vida: ${datos.verificadorArchivoHojasVida.nombre} (${datos.verificadorArchivoHojasVida.cargo})\r\n`;
+
+    zip.file('Bitacora_Verificacion_FT095.txt', bitacora);
+
+    // Generar y descargar el archivo ZIP comprimido
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Expediente_Posesion_FT095_${seguroNombre}_${seguroCedula}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   },
 };
