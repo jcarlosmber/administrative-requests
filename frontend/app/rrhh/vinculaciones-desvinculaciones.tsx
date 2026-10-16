@@ -10880,17 +10880,17 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         </View>
                       </View>
 
-                      {/* Botones de Acción por FUERA del Box de Cabecera (Inmediatamente Debajo) */}
+                      {/* Botones de Acción: Grid 4 Columnas (SECOP II, FT-318 IA, Formatos Oficiales, Auto-Importar PERNO) */}
                       <View
                         style={{
-                          flexDirection: isTablet ? 'row' : 'column',
-                          alignItems: 'center',
-                          gap: 9,
-                          paddingVertical: 2,
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: 10,
+                          paddingVertical: 4,
                           width: '100%',
                         }}
                       >
-                        {/* 1. Consultar SECOP II (25% ancho) */}
+                        {/* 1. Consultar SECOP II: bg-cobalt-blue */}
                         {casoActivo.tipo_proceso === 'VINCULACION' && (
                           <Pressable
                             onPress={() =>
@@ -10902,37 +10902,36 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             }
                             style={({ pressed, hovered }: any) => ({
                               flex: isTablet ? 1 : undefined,
-                              width: isTablet ? undefined : '100%',
+                              width: isTablet ? undefined : '48%',
+                              minWidth: isTablet ? 140 : 130,
                               flexDirection: 'row',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 6,
-                              backgroundColor: pressed ? '#3B51A3' : hovered ? '#4159B5' : '#526ED3',
-                              paddingHorizontal: 6,
-                              paddingVertical: 8,
-                              borderRadius: 7,
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.25)',
+                              gap: 8,
+                              backgroundColor: pressed ? '#1D4ED8' : hovered ? '#1D4ED8' : '#2563EB',
+                              paddingHorizontal: 16,
+                              paddingVertical: 11,
+                              borderRadius: 12,
                               cursor: 'pointer',
-                              shadowColor: '#1E3A8A',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.1,
-                              shadowRadius: 2,
-                              elevation: 1,
+                              shadowColor: '#2563EB',
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.22,
+                              shadowRadius: 6,
+                              elevation: 2,
                             })}
                           >
-                            <Ionicons name="search" size={13.5} color="#FFFFFF" />
+                            <Ionicons name="globe-outline" size={18} color="#FFFFFF" />
                             <Text
                               numberOfLines={1}
                               ellipsizeMode="tail"
-                              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                              style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
                             >
                               Consultar SECOP II
                             </Text>
                           </Pressable>
                         )}
 
-                        {/* 2. Validación FT-318 IA (25% ancho) */}
+                        {/* 2. Validación FT-318 IA: bg-sky-accent */}
                         {casoActivo.tipo_proceso === 'VINCULACION' && (() => {
                           const valCoincidente = buscarValidacionCoincidenteCaso(casoActivo);
                           return (
@@ -10940,108 +10939,123 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                               onPress={() => abrirOIniciarValidacionFT318(casoActivo)}
                               style={({ pressed, hovered }: any) => ({
                                 flex: isTablet ? 1 : undefined,
-                                width: isTablet ? undefined : '100%',
+                                width: isTablet ? undefined : '48%',
+                                minWidth: isTablet ? 140 : 130,
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: 6,
-                                backgroundColor: pressed ? '#3A6B5C' : hovered ? '#427A6A' : '#4D8E7B',
-                                paddingHorizontal: 6,
-                                paddingVertical: 8,
-                                borderRadius: 7,
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.25)',
+                                gap: 8,
+                                backgroundColor: pressed ? '#0284C7' : hovered ? '#0284C7' : '#0EA5E9',
+                                paddingHorizontal: 16,
+                                paddingVertical: 11,
+                                borderRadius: 12,
                                 cursor: 'pointer',
-                                shadowColor: '#064E3B',
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 2,
-                                elevation: 1,
+                                shadowColor: '#0EA5E9',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.22,
+                                shadowRadius: 6,
+                                elevation: 2,
                               })}
                             >
                               <Ionicons
-                                name={valCoincidente ? 'open-outline' : 'sparkles'}
-                                size={13.5}
+                                name={valCoincidente ? 'open-outline' : 'bulb-outline'}
+                                size={18}
                                 color="#FFFFFF"
                               />
                               <Text
                                 numberOfLines={1}
                                 ellipsizeMode="tail"
-                                style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                                style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
                               >
-                                {valCoincidente ? `Validación FT-318 IA (${valCoincidente.resultado_final || 'Abrir'})` : 'Validación FT-318 IA'}
+                                {valCoincidente ? 'FT-318 IA (' + (valCoincidente.resultado_final || 'Abrir') + ')' : 'Validación FT-318 IA'}
                               </Text>
                             </Pressable>
                           );
                         })()}
 
-                        {/* 3. Formatos Oficiales (25% ancho) */}
+                        {/* 3. Formatos Oficiales: bg-white text-slate-700 border-slate-200 */}
                         <Pressable
                           onPress={() => setModalFormatosVisible(true)}
                           style={({ pressed, hovered }: any) => ({
                             flex: isTablet ? 1 : undefined,
-                            width: isTablet ? undefined : '100%',
+                            width: isTablet ? undefined : '48%',
+                            minWidth: isTablet ? 140 : 130,
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: 6,
-                            backgroundColor: pressed ? '#4B5563' : hovered ? '#525E6F' : '#64748B',
-                            paddingHorizontal: 6,
-                            paddingVertical: 8,
-                            borderRadius: 7,
+                            gap: 8,
+                            backgroundColor: pressed ? '#F1F5F9' : hovered ? '#F8FAFC' : '#FFFFFF',
+                            paddingHorizontal: 16,
+                            paddingVertical: 11,
+                            borderRadius: 12,
                             borderWidth: 1,
-                            borderColor: 'rgba(255, 255, 255, 0.25)',
+                            borderColor: '#E2E8F0',
                             cursor: 'pointer',
-                            shadowColor: '#0F172A',
+                            shadowColor: '#000',
                             shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 2,
+                            shadowOpacity: 0.05,
+                            shadowRadius: 3,
                             elevation: 1,
                           })}
                         >
-                          <Ionicons name="folder-open-outline" size={13.5} color="#FFFFFF" />
-                          <Text
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                            style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
-                          >
-                            Formatos Oficiales
-                          </Text>
+                          {({ hovered }: any) => (
+                            <>
+                              <Ionicons
+                                name="folder-open-outline"
+                                size={18}
+                                color={hovered ? '#2563EB' : '#64748B'}
+                              />
+                              <Text
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                style={{
+                                  color: hovered ? '#2563EB' : '#334155',
+                                  fontSize: 13,
+                                  fontWeight: '600',
+                                }}
+                              >
+                                Formatos Oficiales
+                              </Text>
+                            </>
+                          )}
                         </Pressable>
 
-                        {/* 4. Auto-Importar de PERNO (25% ancho) */}
-                        <Pressable
-                          onPress={() => autoImportarDesdePerno(casoActivo)}
-                          style={({ pressed, hovered }: any) => ({
-                            flex: isTablet ? 1 : undefined,
-                            width: isTablet ? undefined : '100%',
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 6,
-                            backgroundColor: pressed ? '#0F766E' : hovered ? '#115E59' : '#0D9488',
-                            paddingHorizontal: 6,
-                            paddingVertical: 8,
-                            borderRadius: 7,
-                            borderWidth: 1,
-                            borderColor: 'rgba(255, 255, 255, 0.25)',
-                            cursor: 'pointer',
-                            shadowColor: '#134E4A',
-                            shadowOffset: { width: 0, height: 1 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 2,
-                            elevation: 1,
-                          })}
-                        >
-                          <Ionicons name="flash-outline" size={13.5} color="#FFFFFF" />
-                          <Text
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                            style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                        {/* 4. Auto-Importar PERNO: bg-white text-cobalt-blue border-border-accent */}
+                        {casoActivo.tipo_proceso === 'VINCULACION' && (
+                          <Pressable
+                            onPress={() => autoImportarDesdePerno(casoActivo)}
+                            style={({ pressed, hovered }: any) => ({
+                              flex: isTablet ? 1 : undefined,
+                              width: isTablet ? undefined : '48%',
+                              minWidth: isTablet ? 140 : 130,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 8,
+                              backgroundColor: pressed ? '#EFF6FF' : hovered ? '#EFF6FF' : '#FFFFFF',
+                              paddingHorizontal: 16,
+                              paddingVertical: 11,
+                              borderRadius: 12,
+                              borderWidth: 1,
+                              borderColor: '#93C5FD',
+                              cursor: 'pointer',
+                              shadowColor: '#2563EB',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.08,
+                              shadowRadius: 4,
+                              elevation: 1,
+                            })}
                           >
-                            Auto-Importar de PERNO
-                          </Text>
-                        </Pressable>
+                            <Ionicons name="flash" size={18} color="#0EA5E9" />
+                            <Text
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                              style={{ color: '#2563EB', fontSize: 13, fontWeight: '600' }}
+                            >
+                              Auto-Importar PERNO
+                            </Text>
+                          </Pressable>
+                        )}
 
                         {/* 5. Evaluación Retiro (Forms) para Desvinculación */}
                         {casoActivo.tipo_proceso === 'DESVINCULACION' && (
@@ -11050,36 +11064,34 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                             style={({ pressed, hovered }: any) => ({
                               flex: isTablet ? 1 : undefined,
                               width: isTablet ? undefined : '100%',
+                              minWidth: 140,
                               flexDirection: 'row',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 6,
+                              gap: 8,
                               backgroundColor: pressed ? '#5F44A3' : hovered ? '#6C4DBA' : '#7C59D3',
-                              paddingHorizontal: 6,
-                              paddingVertical: 8,
-                              borderRadius: 7,
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.25)',
+                              paddingHorizontal: 16,
+                              paddingVertical: 11,
+                              borderRadius: 12,
                               cursor: 'pointer',
                               shadowColor: '#581C87',
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.1,
-                              shadowRadius: 2,
-                              elevation: 1,
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.22,
+                              shadowRadius: 6,
+                              elevation: 2,
                             })}
                           >
-                            <Ionicons name="clipboard-outline" size={13.5} color="#FFFFFF" />
+                            <Ionicons name="clipboard-outline" size={18} color="#FFFFFF" />
                             <Text
                               numberOfLines={1}
                               ellipsizeMode="tail"
-                              style={{ color: '#FFFFFF', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}
+                              style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}
                             >
                               Evaluación Retiro (Forms)
                             </Text>
                           </Pressable>
                         )}
                       </View>
-
 
                       {/* Banner Informativo del Régimen y sus Fases (Ancho Completo y Estructurado) */}
                       {(() => {
