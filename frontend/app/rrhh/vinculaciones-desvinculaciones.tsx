@@ -6519,6 +6519,89 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     );
   };
 
+  // Estados y funciones para Modal de Cambio de Puesto en Lista de Elegibles y Causal
+  const [modalCambiarPuestoVisible, setModalCambiarPuestoVisible] = useState(false);
+  const [puestoNuevoInput, setPuestoNuevoInput] = useState('1');
+  const [causalPuestoInput, setCausalPuestoInput] = useState<'MOVILIDAD' | 'LISTA_EQUIVALENTE' | 'DESISTIMIENTO' | 'EXCLUSION' | 'OTRO'>('MOVILIDAD');
+  const [radicadoPuestoInput, setRadicadoPuestoInput] = useState('');
+  const [justificacionPuestoInput, setJustificacionPuestoInput] = useState('');
+  const [nombreNuevoElegibleInput, setNombreNuevoElegibleInput] = useState('');
+  const [cedulaNuevoElegibleInput, setCedulaNuevoElegibleInput] = useState('');
+
+  const abrirModalCambioPuesto = (caso: CasoFlujoFuncionario) => {
+    setPuestoNuevoInput(String(caso.concurso_posicion_lista || 1));
+    if (caso.concurso_mecanismo === 'MOVILIDAD_EMPLEO_EQUIVALENTE') {
+      setCausalPuestoInput('LISTA_EQUIVALENTE');
+    } else if (caso.concurso_mecanismo === 'MOVILIDAD_MISMO_EMPLEO') {
+      setCausalPuestoInput('MOVILIDAD');
+    } else {
+      setCausalPuestoInput('MOVILIDAD');
+    }
+    setRadicadoPuestoInput(caso.concurso_resolucion_lista || '');
+    setJustificacionPuestoInput(caso.motivo_incidente_lista || '');
+    setNombreNuevoElegibleInput(caso.servidor_nombre || '');
+    setCedulaNuevoElegibleInput(caso.servidor_cedula || '');
+    setModalCambiarPuestoVisible(true);
+  };
+
+  const guardarCambioPuesto = () => {
+    if (!casoActivo) return;
+    const numPuesto = parseInt(puestoNuevoInput, 10) || 1;
+    let mecanMapeado: MecanismoMeritoConcurso = 'LISTA_DIRECTA_OPEC';
+    let causalLabel = 'Movilidad';
+
+    if (causalPuestoInput === 'MOVILIDAD') {
+      mecanMapeado = 'MOVILIDAD_MISMO_EMPLEO';
+      causalLabel = 'Movilidad (Mismo Empleo)';
+    } else if (causalPuestoInput === 'LISTA_EQUIVALENTE') {
+      mecanMapeado = 'MOVILIDAD_EMPLEO_EQUIVALENTE';
+      causalLabel = 'Lista de Elegibles Cargo Equivalente';
+    } else if (causalPuestoInput === 'DESISTIMIENTO') {
+      mecanMapeado = 'LISTA_DIRECTA_OPEC';
+      causalLabel = 'Desistimiento / No Aceptación de Elegible Previo';
+    } else if (causalPuestoInput === 'EXCLUSION') {
+      mecanMapeado = 'LISTA_DIRECTA_OPEC';
+      causalLabel = 'Exclusión de Lista de Elegibles (Comisión de Personal / CNSC)';
+    } else {
+      mecanMapeado = 'LISTA_DIRECTA_OPEC';
+      causalLabel = 'Otro motivo justificado';
+    }
+
+    const textoMotivoCompleto = justificacionPuestoInput.trim()
+      ? `${causalLabel}: ${justificacionPuestoInput.trim()}`
+      : causalLabel;
+
+    setCasos((prevCasos) => {
+      const actualizados = prevCasos.map((c) => {
+        if (c.id !== casoActivo.id) return c;
+        return {
+          ...c,
+          concurso_posicion_lista: numPuesto,
+          concurso_mecanismo: mecanMapeado,
+          motivo_incidente_lista: textoMotivoCompleto,
+          concurso_resolucion_lista: radicadoPuestoInput.trim() || c.concurso_resolucion_lista,
+          servidor_nombre: nombreNuevoElegibleInput.trim() || c.servidor_nombre,
+          servidor_cedula: cedulaNuevoElegibleInput.trim() || c.servidor_cedula,
+        };
+      });
+
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
+        } catch (e) {}
+      }
+
+      return actualizados;
+    });
+
+    setModalCambiarPuestoVisible(false);
+    mostrarModal(
+      'Puesto en Lista Actualizado',
+      `El elegible ha sido asignado al puesto #${numPuesto} bajo la figura de "${causalLabel}".`,
+      'success'
+    );
+  };
+
   const [modalEditarOpecCasoVisible, setModalEditarOpecCasoVisible] = useState(false);
   const [inputOpecCaso, setInputOpecCaso] = useState('');
   const [inputConvocatoriaCaso, setInputConvocatoriaCaso] = useState('');
@@ -12870,17 +12953,23 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                 <Pressable
                                                   onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
                                                   style={{
-                                                    width: 28,
-                                                    height: 28,
-                                                    borderRadius: 14,
-                                                    backgroundColor: esPasoEnEjecucion ? '#E0F2FE' : '#F1F5F9',
+                                                    width: 26,
+                                                    height: 26,
+                                                    borderRadius: 6,
+                                                    borderWidth: 1.5,
+                                                    borderColor: esPasoEnEjecucion ? '#0072C6' : '#CBD5E1',
+                                                    backgroundColor: esPasoEnEjecucion ? '#EFF6FF' : '#FFFFFF',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     marginTop: 1,
                                                     cursor: 'pointer',
                                                   }}
                                                 >
-                                                  <Ionicons name={esPasoEnEjecucion ? 'sync-outline' : 'ellipse-outline'} size={15} color={esPasoEnEjecucion ? '#0072C6' : '#64748B'} />
+                                                  <Ionicons
+                                                    name={esPasoEnEjecucion ? 'checkbox-outline' : 'square-outline'}
+                                                    size={16}
+                                                    color={esPasoEnEjecucion ? '#0072C6' : '#94A3B8'}
+                                                  />
                                                 </Pressable>
                                               )}
 
@@ -13207,26 +13296,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     </Text>
                                                   </View>
                                                 </View>
-                                                <Pressable
-                                                  onPress={handleAbrirPortalSimo}
-                                                  style={{
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                    backgroundColor: '#EFF6FF',
-                                                    borderWidth: 1,
-                                                    borderColor: '#BFDBFE',
-                                                    paddingHorizontal: 8,
-                                                    paddingVertical: 3.5,
-                                                    borderRadius: 5,
-                                                    cursor: 'pointer',
-                                                  }}
-                                                >
-                                                  <Ionicons name="open-outline" size={11} color="#0072C6" />
-                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0072C6' }}>
-                                                    Abrir SIMO en Navegador
-                                                  </Text>
-                                                </Pressable>
+
                                               </View>
 
                                               {/* Tarjeta de Datos del Elegible y OPEC institucional */}
@@ -13259,9 +13329,34 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     C.C. {casoActivo.servidor_cedula || 'N/A'} • OPEC: <Text style={{ fontWeight: '800' }}>{casoActivo.concurso_opec || '203205'}</Text> • Convocatoria: {casoActivo.concurso_convocatoria || 'Distrito Capital 6'}
                                                   </Text>
                                                   <Text style={{ fontSize: 10.5, color: '#64748B' }}>
-                                                    {(casoActivo as any).resolucionFirmeza || 'Resolución de Firmeza CNSC en Banco Nacional de Listas de Elegibles'}
+                                                    {(casoActivo as any).resolucionFirmeza || casoActivo.concurso_resolucion_lista || 'Resolución de Firmeza CNSC en Banco Nacional de Listas de Elegibles'}
                                                   </Text>
+                                                  {casoActivo.motivo_incidente_lista && (
+                                                    <Text style={{ fontSize: 10.5, color: '#B45309', fontWeight: '700' }}>
+                                                      Causal de provisión / orden: {casoActivo.motivo_incidente_lista}
+                                                    </Text>
+                                                  )}
                                                 </View>
+                                                <Pressable
+                                                  onPress={() => abrirModalCambioPuesto(casoActivo)}
+                                                  style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 5,
+                                                    backgroundColor: '#EFF6FF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#93C5FD',
+                                                    paddingHorizontal: 10,
+                                                    paddingVertical: 6,
+                                                    borderRadius: 6,
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="swap-horizontal" size={14} color="#0072C6" />
+                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0072C6' }}>
+                                                    Cambiar Puesto / Causal
+                                                  </Text>
+                                                </Pressable>
                                               </View>
 
                                               {/* Botones de acción operativos sin falsa API */}
@@ -13306,26 +13401,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                   </Text>
                                                 </Pressable>
 
-                                                <Pressable
-                                                  onPress={() => ejecutarValidarFirmezaInline(casoActivo.id, etapa.id, req.id)}
-                                                  style={{
-                                                    backgroundColor: '#E0F2FE',
-                                                    borderWidth: 1,
-                                                    borderColor: '#BAE6FD',
-                                                    borderRadius: 6,
-                                                    paddingHorizontal: 10,
-                                                    paddingVertical: 6.5,
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 4,
-                                                    cursor: 'pointer',
-                                                  }}
-                                                >
-                                                  <Ionicons name="checkmark-done-outline" size={13} color="#0284C7" />
-                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284C7' }}>
-                                                    {firmezaValidadaReq[req.id] || req.cumplido ? '✓ Firmeza Verificada' : 'Validar Firmeza de Lista'}
-                                                  </Text>
-                                                </Pressable>
+
                                               </View>
                                             </View>
                                           )}
@@ -13654,15 +13730,6 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     {esNoAplica ? 'Documentos de justificación: Sin archivos adjuntos' : 'Sin archivos adicionales adjuntos para esta fase'}
                                                   </Text>
                                                 </View>
-                                                <Pressable
-                                                  onPress={() => handleAdjuntarArchivoRequisito(casoActivo.id, etapa.id, req.id)}
-                                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3, cursor: 'pointer' }}
-                                                >
-                                                  <Ionicons name="cloud-upload-outline" size={12} color="#0072C6" />
-                                                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0072C6' }}>
-                                                    {esNoAplica ? '+ Adjuntar Justificación' : '+ Añadir soporte'}
-                                                  </Text>
-                                                </Pressable>
                                               </View>
                                             )}
                                           </View>
@@ -21654,6 +21721,518 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                 <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
                 <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF' }}>
                   Eliminar Definitivamente
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL PARA CAMBIAR PUESTO EN LISTA DE ELEGIBLES Y CAUSAL */}
+      <Modal
+        visible={modalCambiarPuestoVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalCambiarPuestoVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 580,
+              maxHeight: '92%',
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.25,
+              shadowRadius: 20,
+              elevation: 10,
+            }}
+          >
+            {/* Header del Modal */}
+            <View
+              style={{
+                backgroundColor: '#0F172A',
+                paddingHorizontal: 20,
+                paddingVertical: 16,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <Ionicons name="swap-horizontal" size={22} color="#93C5FD" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '800' }}>
+                    Cambiar Puesto en Lista de Elegibles
+                  </Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 1 }}>
+                    Ajuste de orden de mérito y causal jurídica de provisión (CNSC)
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => setModalCambiarPuestoVisible(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <Ionicons name="close" size={18} color="#FFFFFF" />
+              </Pressable>
+            </View>
+
+            {/* Cuerpo del Modal */}
+            <ScrollView style={{ padding: 20, maxHeight: 520 }}>
+              {/* Tarjeta de Resumen del Caso */}
+              <View
+                style={{
+                  backgroundColor: '#F8FAFC',
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 16,
+                  gap: 4,
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#0369A1' }}>
+                    TRÁMITE ACTUAL SELECCIONADO
+                  </Text>
+                  <View style={{ backgroundColor: '#E0F2FE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#0369A1' }}>
+                      Puesto Actual: #{casoActivo?.concurso_posicion_lista || 1}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                  {casoActivo?.cargo} • {casoActivo?.dependencia}
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>
+                  OPEC: {casoActivo?.concurso_opec || '203205'} • Convocatoria: {casoActivo?.concurso_convocatoria || 'Distrito Capital 6'}
+                </Text>
+              </View>
+
+              {/* 1. Nuevo Puesto en Lista */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>
+                  Nuevo Puesto en Lista de Elegibles:
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>
+                  Posición del elegible en firme en el Banco Nacional de Listas de Elegibles de la CNSC.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 40,
+                      backgroundColor: '#EFF6FF',
+                      borderWidth: 1,
+                      borderColor: '#93C5FD',
+                      borderRadius: 8,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#0072C6' }}>#</Text>
+                  </View>
+                  <TextInput
+                    value={puestoNuevoInput}
+                    onChangeText={setPuestoNuevoInput}
+                    placeholder="1"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#FFFFFF',
+                      borderWidth: 1,
+                      borderColor: '#CBD5E1',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      fontSize: 14,
+                      fontWeight: '800',
+                      color: '#0F172A',
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* 2. Pregunta: Causal / Mecanismo de Provisión o Modificación */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>
+                  ¿Por qué motivo se cambia el puesto / provisión?
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>
+                  Seleccione la causal o figura legal aplicable al orden de elegibilidad:
+                </Text>
+
+                <View style={{ gap: 8 }}>
+                  {/* Opción 1: Movilidad */}
+                  <Pressable
+                    onPress={() => setCausalPuestoInput('MOVILIDAD')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: causalPuestoInput === 'MOVILIDAD' ? '#0072C6' : '#E2E8F0',
+                      backgroundColor: causalPuestoInput === 'MOVILIDAD' ? '#EFF6FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        borderWidth: 2,
+                        borderColor: causalPuestoInput === 'MOVILIDAD' ? '#0072C6' : '#94A3B8',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      {causalPuestoInput === 'MOVILIDAD' && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0072C6' }} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>
+                        Movilidad de Personal / Mismo Empleo
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                        Derecho de carrera administrativa, reubicación o provisión preferente en el mismo empleo.
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {/* Opción 2: Lista de Elegibles Cargo Equivalente */}
+                  <Pressable
+                    onPress={() => setCausalPuestoInput('LISTA_EQUIVALENTE')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: causalPuestoInput === 'LISTA_EQUIVALENTE' ? '#0072C6' : '#E2E8F0',
+                      backgroundColor: causalPuestoInput === 'LISTA_EQUIVALENTE' ? '#EFF6FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        borderWidth: 2,
+                        borderColor: causalPuestoInput === 'LISTA_EQUIVALENTE' ? '#0072C6' : '#94A3B8',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      {causalPuestoInput === 'LISTA_EQUIVALENTE' && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0072C6' }} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>
+                        Lista de Elegibles - Cargo Equivalente
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                        Uso de lista de elegibles de empleo equivalente según Decreto 1083 de 2015 (Art. 2.2.5.3.2) y criterios de la CNSC.
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {/* Opción 3: Desistimiento o No Aceptación */}
+                  <Pressable
+                    onPress={() => setCausalPuestoInput('DESISTIMIENTO')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: causalPuestoInput === 'DESISTIMIENTO' ? '#0072C6' : '#E2E8F0',
+                      backgroundColor: causalPuestoInput === 'DESISTIMIENTO' ? '#EFF6FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        borderWidth: 2,
+                        borderColor: causalPuestoInput === 'DESISTIMIENTO' ? '#0072C6' : '#94A3B8',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      {causalPuestoInput === 'DESISTIMIENTO' && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0072C6' }} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>
+                        Desistimiento / No Aceptación del Elegible Previo
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                        El elegible anterior no aceptó el nombramiento dentro del término de 10 días o renunció expresamente; procede el siguiente en orden.
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {/* Opción 4: Exclusión */}
+                  <Pressable
+                    onPress={() => setCausalPuestoInput('EXCLUSION')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: causalPuestoInput === 'EXCLUSION' ? '#0072C6' : '#E2E8F0',
+                      backgroundColor: causalPuestoInput === 'EXCLUSION' ? '#EFF6FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        borderWidth: 2,
+                        borderColor: causalPuestoInput === 'EXCLUSION' ? '#0072C6' : '#94A3B8',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      {causalPuestoInput === 'EXCLUSION' && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0072C6' }} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>
+                        Exclusión de Lista de Elegibles (Comisión de Personal / CNSC)
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                        Exclusión motivada por no acreditar requisitos mínimos o haberse comprobado inexactitud en documentos aportados.
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {/* Opción 5: Otro */}
+                  <Pressable
+                    onPress={() => setCausalPuestoInput('OTRO')}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: causalPuestoInput === 'OTRO' ? '#0072C6' : '#E2E8F0',
+                      backgroundColor: causalPuestoInput === 'OTRO' ? '#EFF6FF' : '#FFFFFF',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        borderWidth: 2,
+                        borderColor: causalPuestoInput === 'OTRO' ? '#0072C6' : '#94A3B8',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 2,
+                      }}
+                    >
+                      {causalPuestoInput === 'OTRO' && (
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0072C6' }} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>
+                        Otro Motivo Justificado
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                        Situación administrativa o jurídica particular soportada con acto administrativo.
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* 3. Nombre y Cédula del Elegible */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>
+                  Nombre Completo del Elegible:
+                </Text>
+                <TextInput
+                  value={nombreNuevoElegibleInput}
+                  onChangeText={setNombreNuevoElegibleInput}
+                  placeholder="Ej: MARIA PAULA ROCHA VEGA"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    color: '#0F172A',
+                    marginBottom: 10,
+                  }}
+                />
+
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>
+                  Número de Cédula de Ciudadanía:
+                </Text>
+                <TextInput
+                  value={cedulaNuevoElegibleInput}
+                  onChangeText={setCedulaNuevoElegibleInput}
+                  placeholder="Ej: 1007538666"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    color: '#0F172A',
+                  }}
+                />
+              </View>
+
+              {/* 4. Radicado o Acto Administrativo */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>
+                  Radicado / Acto Administrativo / Oficio CNSC:
+                </Text>
+                <TextInput
+                  value={radicadoPuestoInput}
+                  onChangeText={setRadicadoPuestoInput}
+                  placeholder="Ej: 2026-EE-0492 o Resolución CNSC 8492 de 2026"
+                  placeholderTextColor="#94A3B8"
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    color: '#0F172A',
+                  }}
+                />
+              </View>
+
+              {/* 5. Observaciones Técnicas / Justificación */}
+              <View style={{ marginBottom: 16 }}>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>
+                  Justificación Técnica / Observaciones:
+                </Text>
+                <TextInput
+                  value={justificacionPuestoInput}
+                  onChangeText={setJustificacionPuestoInput}
+                  placeholder="Indique las razones procedimentales y normativas del cambio de puesto o causal..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={3}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    fontSize: 13,
+                    color: '#0F172A',
+                    minHeight: 70,
+                    textAlignVertical: 'top',
+                  }}
+                />
+              </View>
+            </ScrollView>
+
+            {/* Footer de Acciones */}
+            <View
+              style={{
+                backgroundColor: '#F8FAFC',
+                borderTopWidth: 1,
+                borderTopColor: '#E2E8F0',
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                gap: 10,
+              }}
+            >
+              <Pressable
+                onPress={() => setModalCambiarPuestoVisible(false)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: '#CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  cursor: 'pointer',
+                }}
+              >
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#475569' }}>
+                  Cancelar
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={guardarCambioPuesto}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  backgroundColor: '#0072C6',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                <Ionicons name="save-outline" size={15} color="#FFFFFF" />
+                <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#FFFFFF' }}>
+                  Guardar y Actualizar Puesto
                 </Text>
               </Pressable>
             </View>
