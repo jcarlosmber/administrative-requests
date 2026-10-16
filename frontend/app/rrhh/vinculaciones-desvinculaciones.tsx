@@ -10434,307 +10434,450 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         ) : null;
                       })()}
 
-                      {/* Cabecera Principal del Caso: Header fondo oscuro, letra clara */}
+                      {/* Cabecera Principal del Caso: Dark Dossier Card con Glow Layers */}
                       <View
                         style={{
-                          backgroundColor: '#1E293B',
-                          borderRadius: 12,
-                          padding: 16,
+                          backgroundColor: '#0F172A',
+                          borderRadius: 16,
+                          padding: 20,
                           flexDirection: 'column',
-                          gap: 12,
+                          gap: 14,
                           borderWidth: 1,
-                          borderColor: '#334155',
-                          shadowColor: '#0F172A',
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.15,
-                          shadowRadius: 4,
-                          elevation: 3,
+                          borderColor: '#1E293B',
+                          shadowColor: '#000000',
+                          shadowOffset: { width: 0, height: 10 },
+                          shadowOpacity: 0.35,
+                          shadowRadius: 15,
+                          elevation: 8,
+                          position: 'relative',
+                          overflow: 'hidden',
                         }}
                       >
-                        {/* Fila 1: Nombre del Servidor + Cédula + Badge Editable de Tipo de Vinculación */}
+                        {/* Glow Layers Decorativas */}
                         <View
                           style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
+                            position: 'absolute',
+                            top: -64,
+                            right: -64,
+                            width: 240,
+                            height: 240,
+                            borderRadius: 120,
+                            backgroundColor: 'rgba(37, 99, 235, 0.18)',
+                            pointerEvents: 'none',
+                          }}
+                        />
+                        <View
+                          style={{
+                            position: 'absolute',
+                            bottom: -64,
+                            left: -64,
+                            width: 240,
+                            height: 240,
+                            borderRadius: 120,
+                            backgroundColor: 'rgba(6, 182, 212, 0.12)',
+                            pointerEvents: 'none',
+                          }}
+                        />
+
+                        {/* Fila 1: Título & Cédula */}
+                        <View
+                          style={{
+                            flexDirection: isTablet ? 'row' : 'column',
+                            alignItems: isTablet ? 'center' : 'flex-start',
+                            justifyContent: 'space-between',
                             gap: 10,
+                            zIndex: 10,
                           }}
                         >
-                          <Text
-                            style={{
-                              color: '#FFFFFF',
-                              fontSize: 19,
-                              fontWeight: '800',
-                              letterSpacing: -0.3,
-                            }}
-                          >
-                            {casoActivo.servidor_nombre}
-                          </Text>
+                          <View style={{ flexDirection: 'column' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <View
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: 4,
+                                  backgroundColor: '#06B6D4',
+                                }}
+                              />
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: '800',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: 0.8,
+                                  color: '#06B6D4',
+                                }}
+                              >
+                                {casoActivo.tipo_proceso === 'VINCULACION'
+                                  ? 'Expediente de Vinculación Activo'
+                                  : 'Expediente de Desvinculación Activo'}
+                              </Text>
+                            </View>
+                            <Text
+                              style={{
+                                color: '#FFFFFF',
+                                fontSize: 22,
+                                fontWeight: '900',
+                                letterSpacing: -0.4,
+                                marginTop: 3,
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {casoActivo.servidor_nombre}
+                            </Text>
+                          </View>
 
-                          {/* Cédula junto al nombre */}
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              gap: 4.5,
-                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                              gap: 6,
+                              backgroundColor: 'rgba(30, 41, 59, 0.9)',
                               borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.16)',
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 6,
+                              borderColor: '#334155',
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                              alignSelf: isTablet ? 'center' : 'flex-start',
+                              shadowColor: '#000',
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.1,
+                              shadowRadius: 2,
+                              elevation: 1,
                             }}
                           >
-                            <Ionicons name="card-outline" size={13} color="#94A3B8" />
-                            <Text style={{ color: '#F1F5F9', fontSize: 12, fontWeight: '600' }}>
+                            <Ionicons name="card-outline" size={16} color="#06B6D4" />
+                            <Text
+                              style={{
+                                color: '#E2E8F0',
+                                fontSize: 12.5,
+                                fontWeight: '600',
+                                fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                              }}
+                            >
                               Cédula: {casoActivo.servidor_cedula}
                             </Text>
                           </View>
+                        </View>
 
-                          {/* Badge Interactivo de Vinculación y Modalidad con Botón de Edición */}
-                          {(() => {
-                            const infoM = obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso);
-                            const esVinculacion = casoActivo.tipo_proceso === 'VINCULACION';
-                            return (
-                              <Pressable
-                                onPress={abrirModalCambiarModalidad}
-                                style={({ hovered, pressed }: any) => ({
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  paddingHorizontal: 10,
-                                  paddingVertical: 5,
-                                  borderRadius: 6,
-                                  backgroundColor: pressed ? '#47539A' : hovered ? '#47539A' : '#5C6AC4',
-                                  borderWidth: 1,
-                                  borderColor: 'rgba(255, 255, 255, 0.22)',
-                                  cursor: 'pointer',
-                                })}
-                              >
-                                <Ionicons
-                                  name={(infoM.icono as any) || (esVinculacion ? 'person-add-outline' : 'person-remove-outline')}
-                                  size={13}
-                                  color="#FFFFFF"
-                                />
-                                <Text
-                                  style={{
-                                    color: '#FFFFFF',
-                                    fontSize: 11,
-                                    fontWeight: '700',
-                                    letterSpacing: 0.3,
-                                  }}
-                                >
-                                  {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'} • {infoM.badgeTexto}
-                                </Text>
+                        {/* Fila 2: Modalidad Badge & Eliminar */}
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            zIndex: 10,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            {(() => {
+                              const infoM = obtenerInfoModalidad(casoActivo.modalidad, casoActivo.tipo_proceso);
+                              const esVinculacion = casoActivo.tipo_proceso === 'VINCULACION';
+                              return (
                                 <View
                                   style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 2,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-                                    paddingHorizontal: 5,
-                                    paddingVertical: 1.5,
-                                    borderRadius: 4,
+                                    gap: 6,
+                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                    borderWidth: 1,
+                                    borderColor: 'rgba(6, 182, 212, 0.35)',
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 8,
                                   }}
                                 >
-                                  <Ionicons name="pencil" size={10} color="#FFFFFF" />
-                                  <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#FFFFFF' }}>
-                                    Cambiar
+                                  <Ionicons name="checkmark-circle" size={16} color="#06B6D4" />
+                                  <Text
+                                    style={{
+                                      color: '#FFFFFF',
+                                      fontSize: 11.5,
+                                      fontWeight: '800',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: 0.6,
+                                    }}
+                                  >
+                                    {esVinculacion ? 'VINCULACIÓN' : 'DESVINCULACIÓN'} • {infoM.badgeTexto}
                                   </Text>
+                                  <Pressable
+                                    onPress={abrirModalCambiarModalidad}
+                                    style={({ hovered, pressed }: any) => ({
+                                      marginLeft: 6,
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 2.5,
+                                      borderRadius: 4,
+                                      backgroundColor: pressed ? '#334155' : hovered ? '#334155' : '#1E293B',
+                                      borderWidth: 1,
+                                      borderColor: '#334155',
+                                      flexDirection: 'row',
+                                      alignItems: 'center',
+                                      gap: 3,
+                                      cursor: 'pointer',
+                                    })}
+                                  >
+                                    <Ionicons name="pencil" size={11} color="#06B6D4" />
+                                    <Text style={{ color: '#06B6D4', fontSize: 10.5, fontWeight: '700' }}>
+                                      Cambiar
+                                    </Text>
+                                  </Pressable>
                                 </View>
-                              </Pressable>
-                            );
-                          })()}
+                              );
+                            })()}
+                          </View>
 
-                          {/* Botón Eliminar Trámite de Personal */}
                           <Pressable
                             onPress={() => abrirModalEliminarCaso(casoActivo)}
                             style={({ hovered, pressed }: any) => ({
                               flexDirection: 'row',
                               alignItems: 'center',
                               gap: 5,
-                              paddingHorizontal: 10,
-                              paddingVertical: 5,
-                              borderRadius: 6,
-                              backgroundColor: pressed ? '#7F1D1D' : hovered ? '#991B1B' : 'rgba(239, 68, 68, 0.16)',
+                              paddingHorizontal: 12,
+                              paddingVertical: 6,
+                              borderRadius: 8,
+                              backgroundColor: pressed ? '#7F1D1D' : hovered ? '#991B1B' : 'rgba(30, 41, 59, 0.9)',
                               borderWidth: 1,
-                              borderColor: 'rgba(239, 68, 68, 0.45)',
+                              borderColor: '#334155',
                               cursor: 'pointer',
-                              marginLeft: 'auto',
                             })}
                           >
-                            <Ionicons name="trash-outline" size={13} color="#FCA5A5" />
-                            <Text style={{ color: '#FCA5A5', fontSize: 11, fontWeight: '700' }}>
+                            <Ionicons name="trash-outline" size={15} color="#94A3B8" />
+                            <Text style={{ color: '#CBD5E1', fontSize: 11.5, fontWeight: '700' }}>
                               Eliminar Trámite
                             </Text>
                           </Pressable>
                         </View>
 
-                        {/* Fila 2: Box Organizado de Cargo, Dependencia y Manual de Funciones */}
+                        {/* Fila 3: Tarjeta de Posición & Dependencia */}
                         <View
                           style={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                            borderRadius: 8,
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
                             borderWidth: 1,
-                            borderColor: 'rgba(255, 255, 255, 0.14)',
-                            padding: 10,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            flexWrap: 'wrap',
-                            gap: 10,
+                            borderColor: 'rgba(51, 65, 85, 0.8)',
+                            borderRadius: 12,
+                            padding: 14,
+                            gap: 12,
+                            zIndex: 10,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.12,
+                            shadowRadius: 3,
+                            elevation: 1,
                           }}
                         >
-                          {/* Lado izquierdo: Cargo y Dependencia */}
                           <View
                             style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
+                              flexDirection: isTablet ? 'row' : 'column',
+                              alignItems: isTablet ? 'center' : 'flex-start',
+                              justifyContent: 'space-between',
                               gap: 10,
-                              flex: 1,
-                              minWidth: 260,
                             }}
                           >
-                            {/* Cargo con link a Ficha del Cargo + ID SIDEAP */}
-                            <Pressable
-                              onPress={() => abrirFichaCargo(casoActivo)}
-                              style={({ hovered, pressed }: any) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: pressed
-                                  ? 'rgba(255, 255, 255, 0.16)'
-                                  : hovered
-                                  ? 'rgba(255, 255, 255, 0.12)'
-                                  : 'rgba(255, 255, 255, 0.08)',
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.18)',
-                                paddingHorizontal: 10,
-                                paddingVertical: 5.5,
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                              })}
-                            >
-                              <Ionicons name="briefcase-outline" size={13.5} color="#93C5FD" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
-                                {formatearTextoCargo(casoActivo.cargo, casoActivo.codigo, casoActivo.grado)}
-                              </Text>
-                              {!!sideapIdActual && (
-                                <View
+                            {/* Lado Izquierdo: Icono y Denominación del Cargo */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
+                              <View
+                                style={{
+                                  width: 38,
+                                  height: 38,
+                                  borderRadius: 8,
+                                  backgroundColor: '#1E293B',
+                                  borderWidth: 1,
+                                  borderColor: '#334155',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Ionicons name="briefcase" size={19} color="#06B6D4" />
+                              </View>
+                              <View style={{ flexDirection: 'column' }}>
+                                <Text
                                   style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 3.5,
-                                    backgroundColor: 'rgba(14, 165, 233, 0.25)',
-                                    borderWidth: 1,
-                                    borderColor: '#38BDF8',
-                                    paddingHorizontal: 6,
-                                    paddingVertical: 1.5,
-                                    borderRadius: 4,
-                                    marginLeft: 2,
+                                    fontSize: 10,
+                                    fontWeight: '700',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: 0.8,
+                                    color: '#94A3B8',
                                   }}
                                 >
-                                  <Ionicons name="finger-print-outline" size={11} color="#BAE6FD" />
-                                  <Text style={{ color: '#E0F2FE', fontSize: 10.5, fontWeight: '800' }}>
-                                    ID SIDEAP: {sideapIdActual}
+                                  Denominación del Cargo
+                                </Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 1 }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 15,
+                                      fontWeight: '800',
+                                      color: '#FFFFFF',
+                                      letterSpacing: -0.2,
+                                    }}
+                                  >
+                                    {casoActivo.cargo}
                                   </Text>
+                                  <View
+                                    style={{
+                                      paddingHorizontal: 6,
+                                      paddingVertical: 2,
+                                      borderRadius: 4,
+                                      backgroundColor: '#1E293B',
+                                      borderWidth: 1,
+                                      borderColor: '#334155',
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: '#06B6D4',
+                                        fontSize: 11,
+                                        fontWeight: '700',
+                                        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                      }}
+                                    >
+                                      Cód: {casoActivo.codigo || '—'} • Gr: {casoActivo.grado || '—'}
+                                    </Text>
+                                  </View>
                                 </View>
-                              )}
-                              <Ionicons name="open-outline" size={12} color="#93C5FD" style={{ marginLeft: 2 }} />
-                            </Pressable>
+                              </View>
+                            </View>
 
-                            {/* Dependencia institucional */}
+                            {/* Lado Derecho: Acciones (SIDEAP, Manual de Funciones, OPEC) */}
                             <View
                               style={{
                                 flexDirection: 'row',
+                                flexWrap: 'wrap',
                                 alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.12)',
-                                paddingHorizontal: 10,
-                                paddingVertical: 5.5,
-                                borderRadius: 6,
+                                gap: 8,
+                                alignSelf: isTablet ? 'center' : 'flex-start',
                               }}
                             >
-                              <Ionicons name="business-outline" size={13} color="#94A3B8" />
-                              <Text style={{ color: '#CBD5E1', fontSize: 11.5, fontWeight: '500' }}>
+                              {/* 1. Botón SIDEAP */}
+                              <Pressable
+                                onPress={() => abrirFichaCargo(casoActivo)}
+                                style={({ hovered, pressed }: any) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 6,
+                                  borderRadius: 8,
+                                  backgroundColor: pressed ? '#334155' : hovered ? '#334155' : '#1E293B',
+                                  borderWidth: 1,
+                                  borderColor: '#334155',
+                                  cursor: 'pointer',
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 1 },
+                                  shadowOpacity: 0.1,
+                                  shadowRadius: 2,
+                                  elevation: 1,
+                                })}
+                              >
+                                <Ionicons name="hardware-chip-outline" size={14} color="#06B6D4" />
+                                <Text
+                                  style={{
+                                    color: '#06B6D4',
+                                    fontSize: 11,
+                                    fontWeight: '700',
+                                    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                  }}
+                                >
+                                  ID SIDEAP: {sideapIdActual || (casoActivo as any).id_sideap || '5048'}
+                                </Text>
+                                <Ionicons name="open-outline" size={12} color="#06B6D4" />
+                              </Pressable>
+
+                              {/* 2. Botón Manual de Funciones (Cobalt Blue) */}
+                              <BotonManualFunciones
+                                id_sideap={sideapIdActual || (casoActivo as any).id_sideap}
+                                cargo={casoActivo.cargo}
+                                codigo={casoActivo.codigo}
+                                grado={casoActivo.grado}
+                                variante="header"
+                                etiqueta="Manual de Funciones"
+                                estiloContenedor={{
+                                  backgroundColor: '#2563EB',
+                                  borderColor: 'rgba(59, 130, 246, 0.4)',
+                                  paddingHorizontal: 11,
+                                  paddingVertical: 6,
+                                  borderRadius: 8,
+                                  shadowColor: '#2563EB',
+                                  shadowOffset: { width: 0, height: 2 },
+                                  shadowOpacity: 0.25,
+                                  shadowRadius: 4,
+                                  elevation: 2,
+                                }}
+                              />
+
+                              {/* 3. Chip Unificado OPEC + Convocatoria */}
+                              <Pressable
+                                onPress={abrirModalEditarOpecCaso}
+                                style={({ hovered, pressed }: any) => ({
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 6,
+                                  borderRadius: 8,
+                                  backgroundColor: pressed ? '#334155' : hovered ? '#334155' : 'rgba(30, 41, 59, 0.9)',
+                                  borderWidth: 1,
+                                  borderColor: 'rgba(51, 65, 85, 0.8)',
+                                  cursor: 'pointer',
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 1 },
+                                  shadowOpacity: 0.1,
+                                  shadowRadius: 2,
+                                  elevation: 1,
+                                })}
+                              >
+                                <Ionicons name="document-text-outline" size={14} color="#06B6D4" />
+                                <Text style={{ fontSize: 11, color: '#CBD5E1', fontWeight: '500' }}>
+                                  OPEC:
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: '#FFFFFF',
+                                    fontWeight: '700',
+                                    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                                  }}
+                                >
+                                  {opecValorActual || casoActivo.concurso_opec || '203205'}
+                                </Text>
+                                <Text style={{ color: '#64748B', fontSize: 11, marginHorizontal: 1 }}>•</Text>
+                                <Text style={{ fontSize: 11, color: '#CBD5E1', fontWeight: '500' }}>
+                                  {convocatoriaValorActual || casoActivo.concurso_convocatoria || 'Distrito Capital 6 - CNSC'}
+                                </Text>
+                                <Ionicons name="pencil-outline" size={11} color="#06B6D4" style={{ marginLeft: 2 }} />
+                              </Pressable>
+                            </View>
+                          </View>
+
+                          {/* Borde inferior con Dependencia */}
+                          <View
+                            style={{
+                              borderTopWidth: 1,
+                              borderTopColor: '#1E293B',
+                              paddingTop: 8,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: 8,
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <Ionicons name="business-outline" size={16} color="#06B6D4" />
+                              <Text
+                                style={{
+                                  fontSize: 11.5,
+                                  fontWeight: '800',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: 0.5,
+                                  color: '#FFFFFF',
+                                }}
+                              >
                                 {casoActivo.dependencia}
                               </Text>
                             </View>
                           </View>
-
-                          {/* Lado derecho: Botón del Manual de Funciones PDF */}
-                          <BotonManualFunciones
-                            id_sideap={sideapIdActual || (casoActivo as any).id_sideap}
-                            cargo={casoActivo.cargo}
-                            codigo={casoActivo.codigo}
-                            grado={casoActivo.grado}
-                            variante="header"
-                            etiqueta="Manual de Funciones"
-                            estiloContenedor={{
-                              backgroundColor: '#D37D40',
-                              borderColor: 'rgba(255, 255, 255, 0.22)',
-                              paddingHorizontal: 11,
-                              paddingVertical: 5.5,
-                              borderRadius: 6,
-                            }}
-                          />
                         </View>
-
-                        {/* Fila 3: Parámetros CNSC / OPEC (SOLO para Carrera Administrativa / Concurso) */}
-                        {(casoActivo.modalidad === 'CARRERA_ADMINISTRATIVA' || casoActivo.modalidad === 'ASCENSO' || !!casoActivo.concurso_opec) && (
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              flexWrap: 'wrap',
-                              gap: 8,
-                              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                              borderWidth: 1,
-                              borderColor: 'rgba(255, 255, 255, 0.12)',
-                              paddingHorizontal: 10,
-                              paddingVertical: 6,
-                              borderRadius: 8,
-                            }}
-                          >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 2 }}>
-                              <Ionicons name="ribbon-outline" size={13.5} color="#93C5FD" />
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#93C5FD', textTransform: 'uppercase' }}>
-                                Concurso CNSC:
-                              </Text>
-                            </View>
-
-                            {/* Chip Unificado OPEC + Convocatoria CNSC: teal-muted (#4F9D94) */}
-                            <Pressable
-                              onPress={abrirModalEditarOpecCaso}
-                              style={({ hovered, pressed }: any) => ({
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                backgroundColor: pressed ? '#3D7A73' : hovered ? '#3D7A73' : '#4F9D94',
-                                borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
-                                paddingHorizontal: 10,
-                                paddingVertical: 4.5,
-                                borderRadius: 6,
-                                cursor: 'pointer',
-                              })}
-                            >
-                              <Ionicons name="barcode-outline" size={13} color="#FFFFFF" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
-                                OPEC: {opecValorActual}
-                              </Text>
-                              <Text style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: 11, marginHorizontal: 1 }}>•</Text>
-                              <Ionicons name="trophy-outline" size={12.5} color="#FFFFFF" />
-                              <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600' }}>
-                                {convocatoriaValorActual}
-                              </Text>
-                              <Ionicons name="pencil-outline" size={11} color="#FFFFFF" style={{ opacity: 0.85, marginLeft: 2 }} />
-                            </Pressable>
-                          </View>
-                        )}
                       </View>
 
                       {/* Botones de Acción por FUERA del Box de Cabecera (Inmediatamente Debajo) */}
