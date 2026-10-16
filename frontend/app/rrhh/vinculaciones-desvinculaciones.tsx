@@ -9966,6 +9966,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                         const esTerminado = porcentaje === 100 || c.etapas.every((e) => e.estado === 'completed');
                         const iniciales = obtenerInicialesServidor(c.servidor_nombre);
                         const estiloModalidad = obtenerEstilosModalidad(c.modalidad, c.subtipo_concurso);
+                        const etapaEnCurso = c.etapas.find((e) => e.estado === 'in_progress') || c.etapas.find((e) => e.estado !== 'completed');
+                        const numeroFaseActual = etapaEnCurso ? (etapaEnCurso.numero ?? (c.etapas.indexOf(etapaEnCurso) + 1)) : totalEtapas;
+                        const etiquetaFase = esTerminado ? 'Terminado' : `Fase ${numeroFaseActual} de ${totalEtapas}`;
 
                         // Configuración de estilos según:
                         // 1. TERMINADO (tonos verdes)
@@ -10073,7 +10076,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                         : (esActivo ? '#1D4ED8' : '#334155'),
                                     }}
                                   >
-                                    {esTerminado ? 'Terminado' : 'En Trámite'}
+                                    {etiquetaFase}
                                   </Text>
                                 </View>
 
