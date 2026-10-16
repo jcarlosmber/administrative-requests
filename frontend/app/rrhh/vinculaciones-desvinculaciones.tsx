@@ -11529,31 +11529,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           </View>
 
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 6,
-                                paddingHorizontal: 10,
-                                paddingVertical: 4.5,
-                                borderRadius: 9999,
-                                backgroundColor: '#ECFDF5',
-                                borderWidth: 1,
-                                borderColor: '#A7F3D0',
-                              }}
-                            >
-                              <View
-                                style={{
-                                  width: 6,
-                                  height: 6,
-                                  borderRadius: 3,
-                                  backgroundColor: '#10B981',
-                                }}
-                              />
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>
-                                SLA Global en Norma
-                              </Text>
-                            </View>
+                            
 
                             {(() => {
                               const etapasTot = casoActivo.etapas.length;
@@ -11727,8 +11703,20 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                           const estaFaseExpandida = fasesExpandidas[etapa.id] ?? false;
                           const estaNormaFaseExpandida = fasesNormaExpandida[etapa.id] ?? false;
 
-                          const totalReq = etapa.requisitos.length;
-                          const cumplidosReq = etapa.requisitos.filter((r) => r.cumplido).length;
+                          // Filtrar requisitos según el cargo seleccionado
+                          const reqsVisiblesEtapa = etapa.requisitos.filter((r) => {
+                            if (filtroCargoResponsable === 'TODOS') return true;
+                            const resp = r.cargoResponsable || CARGO_RESPONSABLE_MAP[r.id] || etapa.responsable || 'Profesional Universitario TH';
+                            return resp.trim().toLowerCase() === filtroCargoResponsable.trim().toLowerCase();
+                          });
+
+                          // Si se está filtrando por un cargo específico y la fase no tiene tareas para ese cargo, se oculta
+                          if (filtroCargoResponsable !== 'TODOS' && reqsVisiblesEtapa.length === 0) {
+                            return null;
+                          }
+
+                          const totalReq = reqsVisiblesEtapa.length;
+                          const cumplidosReq = reqsVisiblesEtapa.filter((r) => r.cumplido).length;
                           const porcentajeCumplido = totalReq > 0 ? Math.round((cumplidosReq / totalReq) * 100) : 0;
 
                           const esCompletada = etapa.estado === 'completed';
@@ -12655,13 +12643,14 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                     {etapa.requisitos.map((req, rIdx) => {
                                       const estaReqDetalle = reqDetalleExpandido[req.id] ?? false;
                                       const respReq = req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH';
-                                      const esDeMiCargo = filtroCargoResponsable === 'TODOS' || respReq === filtroCargoResponsable;
+                                      const esDeMiCargo = filtroCargoResponsable === 'TODOS' || respReq.trim().toLowerCase() === filtroCargoResponsable.trim().toLowerCase();
 
-                                      if (!esDeMiCargo && modoVisualizacionCargo === 'solo_mi_cargo') {
+                                      // Si se seleccionó un cargo específico, sólo se muestran sus requisitos
+                                      if (!esDeMiCargo) {
                                         return null;
                                       }
 
-                                      const soloVisualizacion = !esDeMiCargo && modoVisualizacionCargo === 'visualizar_otros';
+                                      const soloVisualizacion = false;
                                       const primerPendiente = etapa.requisitos.find((r) => !r.cumplido && !r.noAplica);
                                       const esPasoEnEjecucion = !req.cumplido && !req.noAplica && (req.id === primerPendiente?.id || primerPendiente === undefined);
 
