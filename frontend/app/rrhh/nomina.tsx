@@ -24,6 +24,7 @@ import { PremiumTable, ColumnConfig as PremiumColumnConfig } from '../../compone
 import { useMarcoRRHH } from '../../components/rrhh/MarcoRRHH';
 import AsistentePeticionesOPEC from '../../components/rrhh/AsistentePeticionesOPEC';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
+import BotonDescargaFuncionesTxt from '../../components/BotonDescargaFuncionesTxt';
 import { ModalPerfilCargo } from '../../components/rrhh/ModalPerfilCargo';
 import ModalNovedadesPernoTramites from '../../components/rrhh/ModalNovedadesPernoTramites';
 
@@ -10968,20 +10969,52 @@ export default function NominaScreen() {
                     </Text>
                   </View>
 
+                  {/* Descarga Oficial de Funciones en formato .txt UTF-8 */}
+                  <BotonDescargaFuncionesTxt
+                    funciones={plazaModalEnriquecida?.funciones}
+                    cargo={plazaModal?.cargo}
+                    codigo={plazaModal?.codigo}
+                    grado={plazaModal?.grado}
+                    id_sideap={plazaModal?.id_sideap}
+                    id_plaza={plazaModal?.id_plaza}
+                    variante="card"
+                    etiqueta="Descargar .txt UTF-8 (SIDEAP / SIMO)"
+                  />
+
                   {/* Funciones Esenciales Asignadas */}
                   <View style={{ marginBottom: 16 }}>
-                    <Text
+                    <View
                       style={{
-                        fontSize: 13,
-                        fontWeight: '800',
-                        color: THEME.marca700,
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.5,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
                         marginBottom: 12,
+                        flexWrap: 'wrap',
+                        gap: 8,
                       }}
                     >
-                      Funciones Esenciales del Cargo ({plazaModalEnriquecida?.funciones?.length || 0} registradas)
-                    </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '800',
+                          color: THEME.marca700,
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        Funciones Esenciales del Cargo ({plazaModalEnriquecida?.funciones?.length || 0} registradas)
+                      </Text>
+                      <BotonDescargaFuncionesTxt
+                        funciones={plazaModalEnriquecida?.funciones}
+                        cargo={plazaModal?.cargo}
+                        codigo={plazaModal?.codigo}
+                        grado={plazaModal?.grado}
+                        id_sideap={plazaModal?.id_sideap}
+                        id_plaza={plazaModal?.id_plaza}
+                        variante="compacto"
+                        etiqueta="Descargar .txt"
+                      />
+                    </View>
 
                     {(!plazaModalEnriquecida?.funciones || plazaModalEnriquecida.funciones.length === 0) ? (
                       <View
@@ -12579,13 +12612,25 @@ export default function NominaScreen() {
                                   <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.marca900 }}>
                                     Manual de Funciones Esenciales del Cargo
                                   </Text>
-                                  {(pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual) ? (
-                                    <View style={{ backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E' }}>
-                                        Manual: {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual}
-                                      </Text>
-                                    </View>
-                                  ) : null}
+                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    {(pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual) ? (
+                                      <View style={{ backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E' }}>
+                                          Manual: {pernoModalEnriquecida.plaza_manual_funciones || pernoModalEnriquecida.plaza_resolucion_manual}
+                                        </Text>
+                                      </View>
+                                    ) : null}
+                                    <BotonDescargaFuncionesTxt
+                                      funciones={pernoModalEnriquecida.plaza_funciones}
+                                      cargo={pernoModalEnriquecida.plaza_cargo || pernoModalEnriquecida.cargo}
+                                      codigo={pernoModalEnriquecida.plaza_codigo || pernoModalEnriquecida.cargo_cod}
+                                      grado={pernoModalEnriquecida.plaza_grado || pernoModalEnriquecida.grado}
+                                      id_sideap={pernoModalEnriquecida.plaza_id_sideap}
+                                      id_plaza={pernoModalEnriquecida.plaza_id_plaza}
+                                      variante="compacto"
+                                      etiqueta="Descargar .txt"
+                                    />
+                                  </View>
                                 </View>
                                 <View style={{ gap: 8 }}>
                                   {(Array.isArray(pernoModalEnriquecida.plaza_funciones)

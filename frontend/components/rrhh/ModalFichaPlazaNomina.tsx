@@ -11,6 +11,7 @@ import { PlazaNomina, PersonaPerno } from '../../lib/nominaService';
 import mockPlazasData from '../../lib/plantaMockData.json';
 import mockPernoData from '../../lib/pernoMockData.json';
 import BotonManualFunciones from '../BotonManualFunciones';
+import BotonDescargaFuncionesTxt from '../BotonDescargaFuncionesTxt';
 import { ModalPerfilCargo } from './ModalPerfilCargo';
 
 const THEME = {
@@ -1443,6 +1444,18 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                   </Text>
                 </View>
 
+                {/* Descarga Oficial de Funciones en formato .txt UTF-8 */}
+                <BotonDescargaFuncionesTxt
+                  funciones={plazaEnriquecida?.funciones}
+                  cargo={plazaActiva?.cargo}
+                  codigo={plazaActiva?.codigo}
+                  grado={plazaActiva?.grado}
+                  id_sideap={plazaActiva?.id_sideap}
+                  id_plaza={plazaActiva?.id_plaza}
+                  variante="card"
+                  etiqueta="Descargar .txt UTF-8 (SIDEAP / SIMO)"
+                />
+
                 {/* Lista de Funciones Esenciales */}
                 <View
                   style={{
@@ -1454,16 +1467,23 @@ export const ModalFichaPlazaNomina: React.FC<ModalFichaPlazaNominaProps> = ({
                     marginBottom: 16,
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <Ionicons name="list-outline" size={17} color={THEME.marca700} />
                       <Text style={{ fontSize: 13, fontWeight: '700', color: THEME.slate900, textTransform: 'uppercase' }}>
                         Descripción de Funciones Esenciales
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: THEME.slate500 }}>
-                      Fuente: Planta Oficial y Resoluciones SJD
-                    </Text>
+                    <BotonDescargaFuncionesTxt
+                      funciones={plazaEnriquecida?.funciones}
+                      cargo={plazaActiva?.cargo}
+                      codigo={plazaActiva?.codigo}
+                      grado={plazaActiva?.grado}
+                      id_sideap={plazaActiva?.id_sideap}
+                      id_plaza={plazaActiva?.id_plaza}
+                      variante="compacto"
+                      etiqueta="Descargar .txt"
+                    />
                   </View>
 
                   <View style={{ gap: 10 }}>

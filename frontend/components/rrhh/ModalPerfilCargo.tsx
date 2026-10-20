@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BotonManualFunciones from '../BotonManualFunciones';
+import BotonDescargaFuncionesTxt from '../BotonDescargaFuncionesTxt';
 import {
   nominaService,
   PerfilCargoItem,
@@ -657,6 +658,17 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                   </View>
                 </View>
 
+                {/* Descarga Oficial de Funciones en formato .txt UTF-8 */}
+                <BotonDescargaFuncionesTxt
+                  funciones={funciones}
+                  cargo={cargo}
+                  codigo={codigo}
+                  grado={grado}
+                  id_sideap={idSideap}
+                  variante="card"
+                  etiqueta="Descargar .txt UTF-8 (SIDEAP / SIMO)"
+                />
+
                 {/* Añadir nueva función */}
                 <View
                   style={{
@@ -1195,8 +1207,17 @@ export const ModalPerfilCargo: React.FC<ModalPerfilCargoProps> = ({
                     variante="boton"
                     etiqueta="Abrir Manual de Funciones en PDF"
                   />
+                  <BotonDescargaFuncionesTxt
+                    funciones={funciones}
+                    cargo={cargo}
+                    codigo={codigo}
+                    grado={grado}
+                    id_sideap={idSideap}
+                    variante="boton"
+                    etiqueta="Descargar Funciones .txt (UTF-8)"
+                  />
                   <Text style={{ fontSize: 11.5, color: '#64748B', textAlign: 'center' }}>
-                    Los documentos en PDF se indexan automáticamente a partir del ID SIDEAP del empleo.
+                    Los documentos en PDF y archivos .txt se indexan automáticamente a partir del ID SIDEAP y denominación del empleo.
                   </Text>
                 </View>
               </View>

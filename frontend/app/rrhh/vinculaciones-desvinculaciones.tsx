@@ -24051,6 +24051,15 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
       </Modal>
 
           {/* Modal de Detección y Creación de Trámites desde PERNO (Cruce por Cédula últimos 6 meses) */}
+      {/* Modal Ficha Integral de la Plaza / Cargo */}
+      {fichaPlazaModal && (
+        <ModalFichaPlazaNomina
+          visible={!!fichaPlazaModal}
+          onClose={() => setFichaPlazaModal(null)}
+          plaza={fichaPlazaModal}
+        />
+      )}
+
       <ModalNovedadesPernoTramites
         visible={modalNovedadesPernoVisible}
         onClose={() => setModalNovedadesPernoVisible(false)}
