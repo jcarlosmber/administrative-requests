@@ -328,16 +328,13 @@ Cada fase y cada requisito cuenta con su desglose de cinco (5) niveles:
   *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.5.1.5 • Manual Específico de Funciones y Competencias Laborales.  
   *💡 Alcance*: Estudio riguroso y certificación formal previa a la resolución de nombramiento mediante el archivo oficial de Excel 2311300-FT-318 generado desde el módulo de **Validación Técnica de Ingresos**, acreditando el cumplimiento de calidades académicas y experiencia laboral requerida en la OPEC.  
   *📁 Posibles Evidencias*: Archivo oficial 2311300-FT-318 en Excel descargado del módulo de Validación Técnica de Ingresos con concepto CUMPLE; Dictamen técnico con IA; Títulos y certificaciones laborales cotejadas.
-* **Requisito 3.3 (`vc4_1`)**: *Elaboración de Resolución de Nombramiento en Periodo de Prueba* (Formato `2311520-FT-130`).  
-  *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24.  
-  *📁 Posibles Evidencias*: Proyecto de resolución en formato FT-130 con visto bueno jurídico; Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva. Incluye la fijación de la entrega formal de cargo y bienes.
-* **Requisito 3.4 (`vc4_2`)**: *Firma por Secretario Jurídico Distrital y numeración oficial*.  
-  *⚖️ Norma*: Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá.  
-  *📁 Posibles Evidencias*: Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial.
-* **Requisito 3.5 (`vc4_3`)**: *Comunicación al candidato (10 días hábiles para manifestar aceptación)* (Formato `2311520-FT-019`).  
+* **Requisito 3.3 (`vc4_1`)**: *Elaboración de Resolución de Nombramiento en Periodo de Prueba, firma por Secretario Jurídico Distrital y numeración oficial* (Formato `2311520-FT-130`).  
+  *⚖️ Norma*: Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24 • Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá.  
+  *📁 Posibles Evidencias*: Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial; Proyecto de resolución en formato FT-130 con visto bueno jurídico; Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva.
+* **Requisito 3.4 (`vc4_3`)**: *Comunicación al candidato (10 días hábiles para manifestar aceptación)* (Formato `2311520-FT-019`).  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.6.  
   *📁 Posibles Evidencias*: Oficio de notificación electrónica certificada en formato FT-019; Acuse de recibo del correo institucional; Memorial de aceptación expresa suscrito por el elegible dentro del término legal.
-* **Requisito 3.6 (`vc4_4`)**: *Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)*.  
+* **Requisito 3.5 (`vc4_4`)**: *Gestión de prórroga para posesión (hasta 90 días si aplica por fuerza mayor)*.  
   *⚖️ Norma*: Decreto 1083 de 2015, Art. 2.2.5.1.7.  
   *📁 Posibles Evidencias*: Solicitud motivada del elegible con soportes de fuerza mayor o residencia en otra ciudad; Acto administrativo o comunicación formal del nominador autorizando la prórroga de posesión.
 

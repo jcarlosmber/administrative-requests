@@ -227,6 +227,7 @@ export interface FiltrosPlazasNomina {
   situacion_titular?: string;
   id_perno?: string;
   solo_encargo?: boolean;
+  opec?: string;
 }
 
 // Helper para comprobar coincidencia flexible de Código y Grado (normalizando ceros a la izquierda y soportando múltiples selecciones con comas o arrays)
@@ -316,6 +317,7 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
         (p.id_plaza && p.id_plaza.toString().includes(q)) ||
         (p.id_sideap && p.id_sideap.toString().includes(q)) ||
         (p.id_perno && p.id_perno.toString().includes(q)) ||
+        (p.opec && p.opec.toString().toLowerCase().includes(q)) ||
         (p.situacion_administrativa && p.situacion_administrativa.toLowerCase().includes(q)) ||
         (p.situacion_titular && p.situacion_titular.toLowerCase().includes(q)) ||
         (p.tipo_vinculacion && p.tipo_vinculacion.toLowerCase().includes(q))
@@ -412,6 +414,19 @@ export function aplicarFiltrosPlazas(plazas: PlazaNomina[], filtros?: FiltrosPla
     result = result.filter((p) => p.id_perno != null && p.id_perno.toString() === pernoQuery);
   }
 
+  if (filtros.opec && filtros.opec.trim() && filtros.opec !== 'TODOS' && filtros.opec !== 'TODAS') {
+    const opecsList = filtros.opec
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    if (opecsList.length > 0) {
+      result = result.filter((p) => {
+        const opecP = (p.opec || '').toString().toLowerCase().trim();
+        return opecsList.some((of) => opecP === of || opecP.includes(of));
+      });
+    }
+  }
+
   if (filtros.solo_encargo) {
     result = result.filter(
       (p) => p.es_encargo === true || (p.encargo_cedula && p.encargo_cedula.toString().trim() !== '')
@@ -436,6 +451,7 @@ export const nominaService = {
       if (filtros?.situacion && filtros.situacion !== 'TODAS') searchParams.append('situacion', filtros.situacion);
       if (filtros?.situacion_titular && filtros.situacion_titular !== 'TODAS') searchParams.append('situacion_titular', filtros.situacion_titular);
       if (filtros?.id_perno && filtros.id_perno !== 'TODOS') searchParams.append('id_perno', filtros.id_perno);
+      if (filtros?.opec && filtros.opec !== 'TODOS' && filtros.opec !== 'TODAS') searchParams.append('opec', filtros.opec);
       if (filtros?.solo_encargo) searchParams.append('solo_encargo', 'true');
 
       const url = `${API_URL}/api/nomina/plazas?${searchParams.toString()}`;
@@ -451,15 +467,19 @@ export const nominaService = {
           const listPerno = (mockPernoData as unknown as PersonaPerno[]) || [];
           const plazasProcesadas = data.plazas.map((p: PlazaNomina) => {
             const m = (mockPlazasData as any[]).find((mock) => mock.id_plaza === p.id_plaza);
+            const esVacDef = 
+              (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+              (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA';
+
             let plazaActual: PlazaNomina = {
               ...p,
-              id_escalera: p.id_escalera || m?.id_escalera || null,
-              peldano_escalera: p.peldano_escalera || m?.peldano_escalera || null,
-              encargo_cedula: p.encargo_cedula || m?.encargo_cedula || null,
-              encargo_nombre: p.encargo_nombre || m?.encargo_nombre || null,
-              es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
+              id_escalera: esVacDef ? null : (p.id_escalera || m?.id_escalera || null),
+              peldano_escalera: esVacDef ? null : (p.peldano_escalera || m?.peldano_escalera || null),
+              encargo_cedula: esVacDef ? null : (p.encargo_cedula || m?.encargo_cedula || null),
+              encargo_nombre: esVacDef ? null : (p.encargo_nombre || m?.encargo_nombre || null),
+              es_encargo: esVacDef ? false : (p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo),
               opec: p.opec || m?.opec || null,
-              situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+              situacion_titular: esVacDef ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
               tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
               tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
               manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,

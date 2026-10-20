@@ -27,7 +27,7 @@ import { ModalPerfilCargo } from '../../components/rrhh/ModalPerfilCargo';
 import ModalNovedadesPernoTramites from '../../components/rrhh/ModalNovedadesPernoTramites';
 
 // Tipos de modal selector idénticos a /ingresos/nueva
-type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | null;
+type PickerTipo = 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | 'opec' | null;
 
 // Sistema de diseño institucional Navy + Slate
 const THEME = {
@@ -141,6 +141,7 @@ export default function NominaScreen() {
   const [filtroSideap, setFiltroSideap] = useState('');
   const [filtroPerno, setFiltroPerno] = useState('');
   const [filtroEscalera, setFiltroEscalera] = useState('');
+  const [filtroOpec, setFiltroOpec] = useState('');
 
   const [nivelSeleccionado, setNivelSeleccionado] = useState('TODOS');
   const [estadoSeleccionado, setEstadoSeleccionado] = useState('TODOS');
@@ -313,6 +314,7 @@ export default function NominaScreen() {
           situacion: filtroSituacion !== '' ? filtroSituacion : undefined,
           situacion_titular: filtroSituacionTitular !== '' ? filtroSituacionTitular : undefined,
           id_perno: filtroPerno !== '' ? filtroPerno : undefined,
+          opec: filtroOpec !== '' ? filtroOpec : undefined,
           solo_encargo: soloEncargo,
         }),
         nominaService.getEstadisticas(),
@@ -360,7 +362,16 @@ export default function NominaScreen() {
         let titularCedulaFinal = p.titular_cedula || m?.titular_cedula || null;
         let estadoCargoFinal = p.estado_cargo || m?.estado_cargo || 'OCUPADO';
 
-        if (titularEstaRetirado) {
+        const esVacanteDefinitiva = 
+          (String(p.estado_cargo || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+          (String(p.titular_nombre || '')).toUpperCase() === 'VACANTE DEFINITIVA' ||
+          (String(p.situacion_titular || '')).toUpperCase() === 'VACANTE DEFINITIVA';
+
+        if (esVacanteDefinitiva) {
+          titularNombreFinal = 'VACANTE DEFINITIVA';
+          titularCedulaFinal = null;
+          estadoCargoFinal = 'VACANTE DEFINITIVA';
+        } else if (titularEstaRetirado) {
           if (funcionarioActivo) {
             titularNombreFinal = funcionarioActivo.nombre_completo || `${funcionarioActivo.nombres} ${funcionarioActivo.primer_apellido}`;
             titularCedulaFinal = funcionarioActivo.cedula;
@@ -377,13 +388,13 @@ export default function NominaScreen() {
           titular_nombre: titularNombreFinal,
           titular_cedula: titularCedulaFinal,
           estado_cargo: estadoCargoFinal,
-          id_escalera: p.id_escalera || m?.id_escalera || null,
-          peldano_escalera: p.peldano_escalera || m?.peldano_escalera || null,
-          encargo_cedula: p.encargo_cedula || m?.encargo_cedula || null,
-          encargo_nombre: p.encargo_nombre || m?.encargo_nombre || null,
-          es_encargo: p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo,
+          id_escalera: esVacanteDefinitiva ? null : (p.id_escalera || m?.id_escalera || null),
+          peldano_escalera: esVacanteDefinitiva ? null : (p.peldano_escalera || m?.peldano_escalera || null),
+          encargo_cedula: esVacanteDefinitiva ? null : (p.encargo_cedula || m?.encargo_cedula || null),
+          encargo_nombre: esVacanteDefinitiva ? null : (p.encargo_nombre || m?.encargo_nombre || null),
+          es_encargo: esVacanteDefinitiva ? false : (p.es_encargo !== undefined ? p.es_encargo : m?.es_encargo),
           opec: p.opec || m?.opec || null,
-          situacion_titular: p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD',
+          situacion_titular: esVacanteDefinitiva ? 'VACANTE DEFINITIVA' : (p.situacion_titular || m?.situacion_titular || 'EN PROPIEDAD'),
           tipo_vinculacion_entidad: p.tipo_vinculacion_entidad || m?.tipo_vinculacion_entidad || null,
           tipo_vinculacion_cargo: p.tipo_vinculacion_cargo || m?.tipo_vinculacion_cargo || p.tipo_vinculacion || m?.tipo_vinculacion || null,
           manual_funciones: p.manual_funciones || m?.manual_funciones || m?.resolucion_manual || null,
@@ -415,6 +426,7 @@ export default function NominaScreen() {
         situacion_titular: filtroSituacionTitular,
         id_sieap: filtroSideap,
         id_perno: filtroPerno,
+        opec: filtroOpec,
         solo_encargo: soloEncargo,
       });
       setPlazas(listadoFiltrado);
@@ -1212,7 +1224,7 @@ export default function NominaScreen() {
   // Helpers de comprobación en cascada para el Censo y para Reportes
   const coincideCriteriosCenso = (
     p: PlazaNomina,
-    omitir: 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | 'ninguno' = 'ninguno'
+    omitir: 'cargo' | 'codigoGrado' | 'dependencia' | 'situacion' | 'situacionTitular' | 'sideap' | 'perno' | 'opec' | 'ninguno' = 'ninguno'
   ) => {
     if (omitir !== 'cargo' && filtroCargo) {
       const cargosFiltro = filtroCargo.split(',').map((c) => c.trim().toLowerCase()).filter(Boolean);
@@ -1273,6 +1285,13 @@ export default function NominaScreen() {
     }
     if (omitir !== 'perno' && filtroPerno) {
       if (String(p.id_perno) !== String(filtroPerno).trim()) return false;
+    }
+    if (omitir !== 'opec' && filtroOpec) {
+      const opecsFiltro = filtroOpec.split(',').map((o) => o.trim().toLowerCase()).filter(Boolean);
+      if (opecsFiltro.length > 0) {
+        const opecP = (p.opec || '').toString().toLowerCase().trim();
+        if (!opecsFiltro.some((of) => opecP === of || opecP.includes(of))) return false;
+      }
     }
     if (soloEncargo && !p.es_encargo) return false;
     return true;
@@ -1554,6 +1573,43 @@ export default function NominaScreen() {
     estadoSeleccionado,
     filtroSituacion,
     filtroSideap,
+    soloEncargo,
+  ]);
+
+  // 7. Lista de Códigos OPEC disponibles (en cascada)
+  const listaOpec = useMemo(() => {
+    const opecMap = new Map<string, { opec: string; count: number; cargos: Set<string> }>();
+    todasLasPlazas
+      .filter((p) => p.opec != null && String(p.opec).trim() !== '' && coincideCriteriosCenso(p, 'opec'))
+      .forEach((p) => {
+        const opVal = String(p.opec).trim();
+        if (!opecMap.has(opVal)) {
+          opecMap.set(opVal, { opec: opVal, count: 0, cargos: new Set() });
+        }
+        const entry = opecMap.get(opVal)!;
+        entry.count++;
+        if (p.cargo) entry.cargos.add(p.cargo);
+      });
+
+    return Array.from(opecMap.values())
+      .map((item) => ({
+        valor: item.opec,
+        etiquetaPrincipal: `OPEC: ${item.opec}`,
+        etiquetaSecundaria: `${item.count} plaza(s) • ${Array.from(item.cargos).slice(0, 2).join(', ')}${item.cargos.size > 2 ? '...' : ''}`,
+        badge: `${item.count} PLAZAS`,
+      }))
+      .sort((a, b) => a.valor.localeCompare(b.valor));
+  }, [
+    todasLasPlazas,
+    filtroCargo,
+    filtroCodigoGrado,
+    filtroDependencia,
+    nivelSeleccionado,
+    estadoSeleccionado,
+    filtroSituacion,
+    filtroSituacionTitular,
+    filtroSideap,
+    filtroPerno,
     soloEncargo,
   ]);
 
@@ -1858,7 +1914,8 @@ export default function NominaScreen() {
     pickerTipo === 'cargo' ||
     pickerTipo === 'dependencia' ||
     pickerTipo === 'situacion' ||
-    pickerTipo === 'situacionTitular';
+    pickerTipo === 'situacionTitular' ||
+    pickerTipo === 'opec';
 
   const abrirPicker = (tipo: PickerTipo, origen: 'censo' | 'reporte' = 'censo') => {
     setPickerTipo(tipo);
@@ -2069,6 +2126,7 @@ export default function NominaScreen() {
   const limpiarFiltros = () => {
     setBusqueda('');
     setFiltroCargo('');
+    setFiltroOpec('');
     setFiltroCodigoGrado('');
     setFiltroDependencia('');
     setFiltroSituacion('');
@@ -2477,6 +2535,36 @@ export default function NominaScreen() {
       sortable: true,
       getSortValue: (p) => p.nivel || '',
       render: (p) => renderBadgeNivel(p.nivel),
+    },
+    {
+      id: 'opec',
+      label: 'OPEC',
+      width: '8%',
+      minWidth: 85,
+      sortable: true,
+      getSortValue: (p) => p.opec || '',
+      render: (p) => (
+        <View style={{ alignItems: 'flex-start', paddingRight: 6 }}>
+          {p.opec ? (
+            <View
+              style={{
+                backgroundColor: '#EEF2FF',
+                borderColor: '#C7D2FE',
+                borderWidth: 1,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#3730A3' }}>
+                {p.opec}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ fontSize: 11, color: THEME.slate400 }}>---</Text>
+          )}
+        </View>
+      ),
     },
     {
       id: 'dependencia',
@@ -3380,7 +3468,7 @@ export default function NominaScreen() {
                     <TextInput
                       value={busqueda}
                       onChangeText={setBusqueda}
-                      placeholder="Buscar por cédula, nombre del titular o encargado, cargo..."
+                      placeholder="Buscar por cédula, nombre del titular o encargado, cargo, OPEC..."
                       placeholderTextColor={THEME.slate400}
                       style={{
                         flex: 1,
@@ -3839,8 +3927,51 @@ export default function NominaScreen() {
                       <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
                     </View>
                   </Pressable>
+                  {/* 7. Modal: Código OPEC */}
+                  <Pressable
+                    onPress={() => abrirPicker('opec')}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      minWidth: isTablet ? 140 : '100%',
+                      backgroundColor: filtroOpec ? THEME.marca50 : pressed ? THEME.slate100 : THEME.white,
+                      borderWidth: 1,
+                      borderColor: filtroOpec ? THEME.marca600 : THEME.slate200,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                    })}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <Text style={{ fontSize: 9.5, fontWeight: '700', color: filtroOpec ? THEME.marca700 : THEME.slate400, textTransform: 'uppercase' }}>
+                        Código OPEC
+                      </Text>
+                      {filtroOpec ? (
+                        <Pressable
+                          hitSlop={8}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setFiltroOpec('');
+                          }}
+                        >
+                          <Ionicons name="close-circle" size={14} color={THEME.marca700} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, paddingRight: 4 }}>
+                        <Ionicons name="pricetag-outline" size={14} color={filtroOpec ? THEME.marca700 : THEME.slate400} />
+                        <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: filtroOpec ? '600' : '400', color: filtroOpec ? THEME.marca900 : THEME.slate600 }}>
+                          {filtroOpec
+                            ? filtroOpec.includes(',')
+                              ? `${filtroOpec.split(',').length} OPEC seleccionadas`
+                              : `OPEC: ${filtroOpec}`
+                            : 'Todas las OPEC'}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-down" size={13} color={THEME.slate400} />
+                    </View>
+                  </Pressable>
                 </View>
-
                 {/* Fila 3: Chips de Niveles y Estados */}
                 <View
                   style={{

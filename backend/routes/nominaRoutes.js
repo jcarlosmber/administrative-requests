@@ -449,6 +449,7 @@ module.exports = function (pool) {
         situacion_titular,
         id_perno,
         solo_encargo,
+        opec,
       } = req.query;
 
       let query = 'SELECT * FROM public.planta_personal_sjd WHERE 1=1';
@@ -470,7 +471,8 @@ module.exports = function (pool) {
           (COALESCE(codigo, '') || '-' || COALESCE(grado, '')) ILIKE $${idx} OR
           id_plaza::text ILIKE $${idx} OR
           id_sideap::text ILIKE $${idx} OR
-          id_perno::text ILIKE $${idx} OR
+                    id_perno::text ILIKE $${idx} OR
+          opec::text ILIKE $${idx} OR
           situacion_administrativa ILIKE $${idx} OR
           situacion_titular ILIKE $${idx} OR
           tipo_vinculacion ILIKE $${idx}
@@ -657,6 +659,22 @@ module.exports = function (pool) {
         if (!isNaN(pernoNum)) {
           params.push(pernoNum);
           query += ` AND id_perno = $${params.length}`;
+        }
+      }
+
+      // Filtro por OPEC
+      if (opec && opec.trim() && opec !== 'TODOS' && opec !== 'TODAS') {
+        const rawOpecs = opec.includes(',')
+          ? opec.split(',').map((s) => s.trim()).filter(Boolean)
+          : [opec.trim()];
+        if (rawOpecs.length > 0) {
+          const opecClauses = [];
+          for (const item of rawOpecs) {
+            params.push(`%${item}%`);
+            const idx = params.length;
+            opecClauses.push(`opec::text ILIKE $${idx}`);
+          }
+          query += ` AND (${opecClauses.join(' OR ')})`;
         }
       }
 

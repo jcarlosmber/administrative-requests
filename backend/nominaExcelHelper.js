@@ -533,17 +533,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       }
     }
 
-    if (idPlaza === 84 || titularCedula === '91526810' || normTitular.includes('DANIEL YIDID')) {
-      estadoCargo = 'VACANTE TEMPORAL';
-      if (!situacionTitular || situacionTitular.includes('ENCARGO')) {
-        situacionTitular = 'EN ENCARGO / PERÍODO DE PRUEBA EN OTRA ENTIDAD';
-      }
-      esEncargo = true;
-      if (!encargoNombre && !actualEsVacante) {
-        encargoNombre = nombreActual;
-        encargoCedula = cedulaActual;
-      }
-    } else if (idPlaza === 82 || (actualEsVacante && titularEsVacante)) {
+    if (idPlaza === 82 || (actualEsVacante && titularEsVacante)) {
       estadoCargo = 'VACANTE DEFINITIVA';
       titularNombre = 'VACANTE DEFINITIVA';
       titularCedula = null;
@@ -600,6 +590,9 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
 
     const sexoFinal = sexoPlanta || personaMatch?.sexo || null;
 
+    const fechaIngresoEntidad = colMap.fecha_ingreso_entidad ? cleanDate(getVal(row.getCell(colMap.fecha_ingreso_entidad))) : null;
+    const fechaIngresoDistrito = colMap.fecha_ingreso_distrito ? cleanDate(getVal(row.getCell(colMap.fecha_ingreso_distrito))) : null;
+
     await pool.query(`
       INSERT INTO public.planta_personal_sjd (
         id_plaza, id_sideap, id_perno, nivel, cargo, codigo, grado,
@@ -611,6 +604,7 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         id_escalera, peldano_escalera,
         fondo_salud, fondo_pension, fondo_cesantias, telefono, direccion, sexo,
         manual_funciones, resolucion_manual, total_devengado,
+        fecha_ingreso_entidad, fecha_ingreso_distrito,
         updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7,
@@ -618,10 +612,11 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         $12, $13, $14,
         $15, $16, $17,
         $18, $19, $20,
-        $21, $22, $23,
-        $24, $25,
-        $26, $27, $28, $29, $30, $31,
-        $32, $33, $34,
+        $21, $22, $23, $24, $25,
+        $26, $27,
+        $28, $29, $30, $31, $32, $33,
+        $34, $35, $36,
+        $37, $38,
         NOW()
       )
       ON CONFLICT (id_plaza) DO UPDATE SET
@@ -631,15 +626,15 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         cargo = EXCLUDED.cargo,
         codigo = EXCLUDED.codigo,
         grado = EXCLUDED.grado,
-        dependencia_cargo = COALESCE(NULLIF(public.planta_personal_sjd.dependencia_cargo, ''), EXCLUDED.dependencia_cargo),
-        dependencia_funcional = COALESCE(NULLIF(public.planta_personal_sjd.dependencia_funcional, ''), EXCLUDED.dependencia_funcional),
-        proposito = COALESCE(public.planta_personal_sjd.proposito, NULLIF(EXCLUDED.proposito, '')),
+        dependencia_cargo = COALESCE(NULLIF(EXCLUDED.dependencia_cargo, ''), public.planta_personal_sjd.dependencia_cargo),
+        dependencia_funcional = COALESCE(NULLIF(EXCLUDED.dependencia_funcional, ''), public.planta_personal_sjd.dependencia_funcional),
+        proposito = COALESCE(NULLIF(EXCLUDED.proposito, ''), public.planta_personal_sjd.proposito),
         funciones = CASE 
-          WHEN public.planta_personal_sjd.funciones IS NOT NULL AND jsonb_array_length(CASE WHEN jsonb_typeof(public.planta_personal_sjd.funciones) = 'array' THEN public.planta_personal_sjd.funciones ELSE '[]'::jsonb END) > 0 
-          THEN public.planta_personal_sjd.funciones 
-          ELSE EXCLUDED.funciones 
+          WHEN EXCLUDED.funciones IS NOT NULL AND jsonb_array_length(CASE WHEN jsonb_typeof(EXCLUDED.funciones) = 'array' THEN EXCLUDED.funciones ELSE '[]'::jsonb END) > 0 
+          THEN EXCLUDED.funciones 
+          ELSE public.planta_personal_sjd.funciones 
         END,
-        requisitos = COALESCE(public.planta_personal_sjd.requisitos, NULLIF(EXCLUDED.requisitos, '')),
+        requisitos = COALESCE(NULLIF(EXCLUDED.requisitos, ''), public.planta_personal_sjd.requisitos),
         asignacion_basica = EXCLUDED.asignacion_basica,
         estado_cargo = EXCLUDED.estado_cargo,
         titular_cedula = EXCLUDED.titular_cedula,
@@ -661,18 +656,40 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
         telefono = COALESCE(EXCLUDED.telefono, public.planta_personal_sjd.telefono),
         direccion = COALESCE(EXCLUDED.direccion, public.planta_personal_sjd.direccion),
         sexo = COALESCE(NULLIF(EXCLUDED.sexo, ''), public.planta_personal_sjd.sexo),
-        manual_funciones = COALESCE(public.planta_personal_sjd.manual_funciones, NULLIF(EXCLUDED.manual_funciones, '')),
-        resolucion_manual = COALESCE(public.planta_personal_sjd.resolucion_manual, NULLIF(EXCLUDED.resolucion_manual, '')),
+        manual_funciones = COALESCE(NULLIF(EXCLUDED.manual_funciones, ''), public.planta_personal_sjd.manual_funciones),
+        resolucion_manual = COALESCE(NULLIF(EXCLUDED.resolucion_manual, ''), public.planta_personal_sjd.resolucion_manual),
         total_devengado = COALESCE(EXCLUDED.total_devengado, public.planta_personal_sjd.total_devengado),
+        fecha_ingreso_entidad = COALESCE(EXCLUDED.fecha_ingreso_entidad, public.planta_personal_sjd.fecha_ingreso_entidad),
+        fecha_ingreso_distrito = COALESCE(EXCLUDED.fecha_ingreso_distrito, public.planta_personal_sjd.fecha_ingreso_distrito),
         updated_at = NOW();
     `, [
-      idPlaza, idSideap, idPerno, nivel, cargoNom, codigo, grado,
-      depCargo, depFuncional, proposito, JSON.stringify(funcionesArr),
-      requisitos, asignacion, estadoCargo,
-      titularCedula, titularNombre, situacionTitular,
-      encargoCedula, encargoNombre, esEncargo,
-      tipoVinculacion, situacionAdmin, opec,
-      idEscalera, peldanoEscalera,
+      idPlaza,
+      idSideap,
+      idPerno,
+      nivel,
+      cargoNom,
+      codigo,
+      grado,
+      depCargo,
+      depFuncional,
+      proposito,
+      JSON.stringify(funcionesArr),
+      requisitos,
+      asignacion,
+      estadoCargo,
+      titularCedula,
+      titularNombre,
+      situacionTitular,
+      encargoCedula,
+      encargoNombre,
+      esEncargo,
+      tipoVinculacion,
+      tipoVinculacionEntidad,
+      tipoVinculacionCargo,
+      situacionAdmin,
+      opec,
+      idEscalera,
+      peldanoEscalera,
       personaMatch?.fondoSalud || null,
       personaMatch?.fondoPension || null,
       personaMatch?.fondoCesantias || null,
@@ -682,8 +699,8 @@ async function procesarExtraccionPlanta(sheet, workbook, pool) {
       manualFuncionesRaw || null,
       manualFuncionesRaw || null,
       devengadoPlanta || personaMatch?.totalDevengado || null,
-      tipoVinculacionEntidad,
-      tipoVinculacionCargo
+      fechaIngresoEntidad || personaMatch?.fechaIngresoEntidad || null,
+      fechaIngresoDistrito || personaMatch?.fechaIngresoDistrito || null
     ]);
 
     procesados++;

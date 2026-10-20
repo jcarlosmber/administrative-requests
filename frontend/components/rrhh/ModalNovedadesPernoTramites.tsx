@@ -18,9 +18,13 @@ import {
   CasoFlujoFuncionario,
 } from '../../app/rrhh/vinculaciones-desvinculaciones';
 
-// Constantes de persistencia compartidas con vinculaciones-desvinculaciones.tsx
-const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v7';
-const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v5';
+import {
+  guardarCasosEnStorage,
+  guardarCasoActivoEnStorage,
+  obtenerCasosDeStorage,
+  STORAGE_KEY_CASOS,
+  STORAGE_KEY_CASO_ACTIVO,
+} from '../../lib/storageCasosRRHH';
 
 // Paleta institucional armoniosa
 const THEME = {
@@ -131,22 +135,18 @@ export default function ModalNovedadesPernoTramites({
   const [casosMap, setCasosMap] = useState<{ [cedulaProcesoKey: string]: CasoFlujoFuncionario }>({});
   const [totalCasosActuales, setTotalCasosActuales] = useState<CasoFlujoFuncionario[]>([]);
 
-  // Función para sincronizar casos desde localStorage
+  // Función para sincronizar casos desde storage seguro
   const refrescarCasosDesdeStorage = () => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY_CASOS);
-      if (raw) {
-        const parsed: CasoFlujoFuncionario[] = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setTotalCasosActuales(parsed);
-          const map: { [k: string]: CasoFlujoFuncionario } = {};
-          parsed.forEach((c) => {
-            const key = `${String(c.servidor_cedula).trim()}_${c.tipo_proceso}`;
-            map[key] = c;
-          });
-          setCasosMap(map);
-        }
+      const parsed = obtenerCasosDeStorage();
+      if (parsed && Array.isArray(parsed)) {
+        setTotalCasosActuales(parsed);
+        const map: { [k: string]: CasoFlujoFuncionario } = {};
+        parsed.forEach((c) => {
+          const key = `${String(c.servidor_cedula).trim()}_${c.tipo_proceso}`;
+          map[key] = c;
+        });
+        setCasosMap(map);
       }
     } catch (e) {
       console.warn('Error leyendo casos en ModalNovedadesPernoTramites:', e);
@@ -386,10 +386,12 @@ export default function ModalNovedadesPernoTramites({
       const nuevosCasos = [nuevoCaso, ...totalCasosActuales];
       setTotalCasosActuales(nuevosCasos);
 
-      // Guardar en localStorage
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(nuevosCasos));
-        window.localStorage.setItem(STORAGE_KEY_CASO_ACTIVO, nuevoId);
+      // Guardar en storage seguro con tolerancia a cuota y backup en IndexedDB
+      try {
+        guardarCasosEnStorage(nuevosCasos);
+        guardarCasoActivoEnStorage(nuevoId);
+      } catch (storageErr) {
+        console.warn('Advertencia al guardar en storage secundario:', storageErr);
       }
 
       // Actualizar el mapa de casos
@@ -479,8 +481,11 @@ export default function ModalNovedadesPernoTramites({
       setTotalCasosActuales(casosAcumulados);
       setCasosMap((prev) => ({ ...prev, ...nuevosParaMap }));
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosAcumulados));
+      // Guardar en storage seguro con tolerancia a cuota y backup en IndexedDB
+      try {
+        guardarCasosEnStorage(casosAcumulados);
+      } catch (storageErr) {
+        console.warn('Advertencia al guardar lote en storage secundario:', storageErr);
       }
 
       setToastInfo({
@@ -503,8 +508,8 @@ export default function ModalNovedadesPernoTramites({
 
   // Navegar al módulo de Vinculaciones & Desvinculaciones
   const handleIrAVinculaciones = (casoId?: string) => {
-    if (typeof window !== 'undefined' && window.localStorage && casoId) {
-      window.localStorage.setItem(STORAGE_KEY_CASO_ACTIVO, casoId);
+    if (casoId) {
+      guardarCasoActivoEnStorage(casoId);
     }
     onClose();
     router.push('/rrhh/vinculaciones-desvinculaciones');

@@ -37,6 +37,7 @@ import {
 } from '../../lib/requisitosPosesionService';
 import BotonManualFunciones from '../../components/BotonManualFunciones';
 import ModalFichaPlazaNomina from '../../components/rrhh/ModalFichaPlazaNomina';
+import ModalNovedadesPernoTramites from '../../components/rrhh/ModalNovedadesPernoTramites';
 import PdfViewerModal from '../../components/PdfViewerModal';
 import {
   assetADataUrl,
@@ -45,6 +46,13 @@ import {
   abrirODescargarArchivoAdjunto,
   resolverUrlArchivoAdjunto,
 } from '../../lib/storageAdjuntosIndexedDB';
+import {
+  guardarCasosEnStorage,
+  guardarCasoActivoEnStorage,
+  obtenerCasosDeStorage,
+  STORAGE_KEY_CASOS,
+  STORAGE_KEY_CASO_ACTIVO,
+} from '../../lib/storageCasosRRHH';
 
 // ============================================================================
 // SISTEMA DE DISEÑO INSTITUCIONAL NAVY + SLATE (IDÉNTICO A NÓMINA)
@@ -774,8 +782,8 @@ export const CARGO_RESPONSABLE_MAP: Record<string, string> = {
   "vc2_4": "Profesional Especializado TH / Gestión Financiera",
   "vc3_1": "Profesional Universitario TH",
   "vc3_2": "Profesional Universitario TH",
-  "vc4_1": "Profesional Especializado TH / Presupuesto",
-  "vc4_2": "Profesional Universitario TH",
+  "vc4_1": "Profesional Universitario TH / Secretario(a) Jurídico(a) Distrital (Nominador)",
+  "vc4_2": "Secretario(a) Jurídico(a) Distrital (Nominador)",
   "vc4_3": "Secretario(a) Jurídico(a) Distrital (Nominador)",
   "vc4_4": "Técnico Operativo (Notificaciones)",
   "vc4_5": "Servidor / Candidato Elegible",
@@ -1077,32 +1085,19 @@ function generarEtapasParaCasoInterno(
               },
               {
                 id: 'vc4_1',
-                label: 'Elaboración de Resolución de Nombramiento en Periodo de Prueba',
+                label: 'Elaboración de Resolución de Nombramiento en Periodo de Prueba, firma por Secretario Jurídico Distrital y numeración oficial',
                 cumplido: true,
                 obligatorio: true,
                 codigoFormato: '2311520-FT-130',
-                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24',
-                textoNormativo: 'El nombramiento en período de prueba se expedirá mediante acto administrativo motivado del nominador, determinando el plazo legal improrrogable de seis (6) meses y la convocatoria de concurso respectiva.',
-                detalleProcedimiento: 'Redactar el proyecto de resolución incluyendo antecedentes de la convocatoria, OPEC, puesto en lista y asignación salarial reglamentaria.',
-              
-              posiblesEvidencias: [
-                "Proyecto de resolución en formato FT-130 con visto bueno jurídico",
-          "Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva",
-              ],
-            },
-              {
-                id: 'vc4_2',
-                label: 'Firma por Secretario Jurídico Distrital y numeración oficial',
-                cumplido: true,
-                obligatorio: true,
-                norma: 'Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá',
-                textoNormativo: 'Todo acto administrativo de nombramiento debe ser suscrito por la autoridad nominadora competente, radicado, numerado y fechado oficialmente para que surta plenos efectos jurídicos.',
-                detalleProcedimiento: 'Someter a firma del Secretario Jurídico Distrital y posterior radicación y fechado en el sistema documental corporativo.',
-              
-              posiblesEvidencias: [
-                "Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial",
-              ],
-            },
+                norma: 'Decreto 1083 de 2015, Arts. 2.2.5.1.4 y 2.2.6.24 • Ley 1437 de 2011, Art. 65 • Estatuto Orgánico de Bogotá',
+                textoNormativo: 'El nombramiento en período de prueba se expedirá mediante acto administrativo motivado del nominador (6 meses y convocatoria respectiva), suscrito por el Secretario Jurídico Distrital, radicado, numerado y fechado oficialmente para que surta plenos efectos jurídicos.',
+                detalleProcedimiento: 'Redactar el proyecto de resolución (FT-130) con antecedentes de la OPEC y puesto en lista, someter a firma del Secretario Jurídico Distrital y realizar la posterior radicación, numeración y fechado oficial en el sistema documental corporativo.',
+                posiblesEvidencias: [
+                  "Resolución de nombramiento en periodo de prueba debidamente firmada por el Secretario Jurídico Distrital, numerada y fechada en el consecutivo oficial",
+                  "Proyecto de resolución en formato FT-130 con visto bueno jurídico",
+                  "Ficha de antecedentes con mención expresa del periodo de 6 meses y la convocatoria respectiva",
+                ],
+              },
               {
                 id: 'vc4_3',
                 label: 'Comunicación al candidato (10 días hábiles para manifestar aceptación)',
@@ -4445,34 +4440,26 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
   const [filtroCausalDesvinculacion, setFiltroCausalDesvinculacion] = useState<string>('TODAS');
   const [filtroDependenciaDesvinculacion, setFiltroDependenciaDesvinculacion] = useState<string>('TODAS');
 
-  // Claves de persistencia en almacenamiento local (Web / App)
-  const STORAGE_KEY_CASOS = 'rrhh_vinculaciones_casos_v7';
-  const STORAGE_KEY_CASO_ACTIVO = 'rrhh_vinculaciones_caso_activo_v5';
-
+  // Funciones de inicialización con persistencia segura y tolerancia a fallos
   const obtenerCasosIniciales = (): CasoFlujoFuncionario[] => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        const guardados = window.localStorage.getItem(STORAGE_KEY_CASOS);
-        if (guardados) {
-          const parsed = JSON.parse(guardados);
-          if (Array.isArray(parsed) && parsed.length >= CASOS_BASE.length) {
-            return parsed.map((c: CasoFlujoFuncionario) => {
-              const subtipo = c.subtipo_concurso || (c.modalidad === 'ASCENSO' ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined));
-              const conv = c.concurso_convocatoria
-                ? c.concurso_convocatoria.replace(/Distrito Capital 5/g, 'Distrito Capital 6')
-                : c.concurso_convocatoria;
-              return {
-                ...c,
-                concurso_convocatoria: conv,
-                subtipo_concurso: subtipo,
-                etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad, subtipo),
-              };
-            });
-          }
-        }
-      } catch (e) {
-        console.warn('Error leyendo trámites de localStorage:', e);
+    try {
+      const guardados = obtenerCasosDeStorage();
+      if (guardados && Array.isArray(guardados) && guardados.length >= CASOS_BASE.length) {
+        return guardados.map((c: CasoFlujoFuncionario) => {
+          const subtipo = c.subtipo_concurso || (c.modalidad === 'ASCENSO' ? 'ASCENSO' : (c.modalidad === 'CARRERA_ADMINISTRATIVA' ? 'ABIERTO' : undefined));
+          const conv = c.concurso_convocatoria
+            ? c.concurso_convocatoria.replace(/Distrito Capital 5/g, 'Distrito Capital 6')
+            : c.concurso_convocatoria;
+          return {
+            ...c,
+            concurso_convocatoria: conv,
+            subtipo_concurso: subtipo,
+            etapas: sincronizarEtapasCaso(c.etapas, c.tipo_proceso, c.modalidad, subtipo),
+          };
+        });
       }
+    } catch (e) {
+      console.warn('Error leyendo trámites de storage:', e);
     }
     return CASOS_BASE;
   };
@@ -4509,25 +4496,32 @@ export default function VinculacionesDesvinculacionesScreen({ tabInicial }: { ta
     );
   }, []);
 
-  // Guardar en localStorage de forma reactiva ante cualquier cambio en casos
+  // Guardar en storage seguro de forma reactiva ante cualquier cambio en casos (tolerante a cuota)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casos));
-      } catch (e) {
-        console.warn('Error guardando trámites en localStorage:', e);
-      }
-    }
+    guardarCasosEnStorage(casos);
   }, [casos]);
 
   // Guardar el ID del caso activo seleccionado para preservarlo tras recargar (F5)
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.localStorage && casoSeleccionadoId) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY_CASO_ACTIVO, casoSeleccionadoId);
-      } catch (e) {}
+    if (casoSeleccionadoId) {
+      guardarCasoActivoEnStorage(casoSeleccionadoId);
     }
   }, [casoSeleccionadoId]);
+
+  // Modal de Detección de Novedades de PERNO (Cruce por Cédula últimos 6 meses para Vincular/Desvincular)
+  const [modalNovedadesPernoVisible, setModalNovedadesPernoVisible] = useState(false);
+  const [todoElPerno, setTodoElPerno] = useState<PersonaPerno[]>((mockPernoData as unknown as PersonaPerno[]) || []);
+  const [todasLasPlazas, setTodasLasPlazas] = useState<PlazaNomina[]>((mockPlazasData as unknown as PlazaNomina[]) || []);
+
+  useEffect(() => {
+    nominaService.getPersonalPerno().then((data) => {
+      if (Array.isArray(data) && data.length > 0) setTodoElPerno(data);
+    }).catch(() => {});
+
+    nominaService.getPlazas().then((plazas) => {
+      if (Array.isArray(plazas) && plazas.length > 0) setTodasLasPlazas(plazas);
+    }).catch(() => {});
+  }, []);
 
   // Modal para registrar nuevo trámite
   const [modalRegistroVisible, setModalRegistroVisible] = useState(false);
@@ -6456,11 +6450,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
     setCasos((prevCasos) => {
       const actualizados = prevCasos.filter((c) => c.id !== idEliminado);
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -6589,12 +6579,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -6646,12 +6631,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -6795,11 +6775,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -6888,12 +6864,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -6922,12 +6893,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -6995,12 +6961,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -7375,6 +7336,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
   const [fasesNormaExpandida, setFasesNormaExpandida] = useState<Record<string, boolean>>({});
   const [reqDetalleExpandido, setReqDetalleExpandido] = useState<Record<string, boolean>>({});
   const [reqNoAplicaExpandido, setReqNoAplicaExpandido] = useState<Record<string, boolean>>({});
+  const [reqCompletadoExpandido, setReqCompletadoExpandido] = useState<Record<string, boolean>>({});
   const [reqObsEditInline, setReqObsEditInline] = useState<Record<string, string>>({});
   const [reqRadicadoEditInline, setReqRadicadoEditInline] = useState<Record<string, string>>({});
   const [reqGuardadoFeedback, setReqGuardadoFeedback] = useState<Record<string, boolean>>({});
@@ -7541,12 +7503,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         return { ...caso, etapas: nuevasEtapas };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
   };
@@ -7591,12 +7548,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         return { ...caso, etapas: nuevasEtapas };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
   };
@@ -7721,11 +7673,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         return { ...caso, etapas: nuevasEtapas };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
+      guardarCasosEnStorage(actualizados);
 
       setModalMensajeDoc({
         visible: true,
@@ -7818,10 +7766,12 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           console.warn('Error convirtiendo archivo a dataUrl:', e);
         }
 
+        // Si ya está guardado en IndexedDB, no guardamos dataUrl gigante en el objeto reactivo para evitar saturar memoria y storage
+        const esDataUrlGigante = typeof dataUrl === 'string' && dataUrl.startsWith('data:') && dataUrl.length > 30000;
         nuevosDocs.push({
           id: docId,
           nombre: asset.name,
-          uri: dataUrl && dataUrl.length < 500000 ? dataUrl : asset.uri,
+          uri: esDataUrlGigante ? '' : (dataUrl || asset.uri || ''),
           size: asset.size,
           mimeType: asset.mimeType,
           fechaSubida: new Date().toISOString(),
@@ -7829,7 +7779,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         });
       }
 
-      // Actualizar casos en memoria y sincronizar con localStorage de inmediato
+      // Actualizar casos en memoria y sincronizar con storage seguro de inmediato
       let casosActualizados: CasoFlujoFuncionario[] = [];
       setCasos((prevCasos) => {
         casosActualizados = prevCasos.map((c) => {
@@ -7849,13 +7799,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           return { ...c, etapas: nuevasEtapas };
         });
 
-        if (typeof window !== 'undefined' && window.localStorage) {
-          try {
-            window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosActualizados));
-          } catch (e) {
-            console.warn('Error en localStorage.setItem directo:', e);
-          }
-        }
+        guardarCasosEnStorage(casosActualizados);
 
         return casosActualizados;
       });
@@ -7938,12 +7882,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         return { ...c, etapas: nuevasEtapas };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosActualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(casosActualizados);
       return casosActualizados;
     });
 
@@ -8035,6 +7974,10 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
   const toggleNoAplicaExpandido = (reqId: string) => {
     setReqNoAplicaExpandido((prev) => ({ ...prev, [reqId]: !prev[reqId] }));
+  };
+
+  const toggleCompletadoExpandido = (reqId: string) => {
+    setReqCompletadoExpandido((prev) => ({ ...prev, [reqId]: !prev[reqId] }));
   };
 
   const expandirTodasLasFases = (expandir: boolean) => {
@@ -8160,12 +8103,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-        } catch (e) {}
-      }
-
+      guardarCasosEnStorage(actualizados);
       return actualizados;
     });
 
@@ -8216,11 +8154,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           return { ...caso, etapas: nuevasEtapas };
         });
 
-        if (typeof window !== 'undefined' && window.localStorage) {
-          try {
-            window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(actualizados));
-          } catch (e) {}
-        }
+        guardarCasosEnStorage(actualizados);
         return actualizados;
       });
     }
@@ -8329,13 +8263,7 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
         };
       });
 
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(casosActualizados));
-        } catch (e) {
-          console.warn('Error guardando en localStorage:', e);
-        }
-      }
+      guardarCasosEnStorage(casosActualizados);
 
       return casosActualizados;
     });
@@ -8529,15 +8457,9 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
     setCasos(nuevosCasos);
     setCasoSeleccionadoId(nuevoId);
 
-    // Guardado inmediato en localStorage para blindar contra F5 o recargas instantáneas
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem(STORAGE_KEY_CASOS, JSON.stringify(nuevosCasos));
-        window.localStorage.setItem(STORAGE_KEY_CASO_ACTIVO, nuevoId);
-      } catch (e) {
-        console.warn('Error al guardar de inmediato en localStorage:', e);
-      }
-    }
+    // Guardado inmediato en storage seguro para blindar contra F5 o recargas instantáneas
+    guardarCasosEnStorage(nuevosCasos);
+    guardarCasoActivoEnStorage(nuevoId);
 
     if (nuevoTipoProceso === 'VINCULACION') {
       setTabActiva('ingresos');
@@ -8886,8 +8808,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
               </View>
             </View>
 
-            {/* Lado derecho: Acciones rápidas (Guía de Fases y Nuevo Trámite) */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        {/* Lado derecho: Acciones rápidas (Guía de Fases, Novedades PERNO y Nuevo Trámite) */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {/* Botón de Novedades PERNO (Últimos 6 Meses) */}
+              <Pressable
+                onPress={() => setModalNovedadesPernoVisible(true)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  paddingHorizontal: 13,
+                  paddingVertical: 7,
+                  borderRadius: 8,
+                  backgroundColor: pressed ? '#047857' : '#059669',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.25)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 2,
+                })}
+              >
+                <Ionicons name="sparkles" size={15} color={THEME.white} />
+                <Text style={{ color: THEME.white, fontSize: 12, fontWeight: '700' }}>
+                  Revisar Novedades para Vincular / Desvincular (Últimos 6 Meses)
+                </Text>
+              </Pressable>
               {tabActiva === 'ingresos' && (
                 <Pressable
                   onPress={() => setModalGuiaModalidadesVisible(true)}
@@ -12604,6 +12550,70 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
 
                                   {/* LISTA DE REQUISITOS DE LA FASE */}
                                   <View style={{ gap: 14 }}>
+                                    {/* Control compacto de requisitos completados de la fase */}
+                                    {(() => {
+                                      const reqsCumplidosEtapa = etapa.requisitos.filter((r) => r.cumplido && !r.noAplica);
+                                      if (reqsCumplidosEtapa.length === 0) return null;
+                                      const algunoExpandido = reqsCumplidosEtapa.some((r) => Boolean(reqCompletadoExpandido[r.id]));
+                                      return (
+                                        <View
+                                          style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            backgroundColor: '#F0FDF4',
+                                            borderRadius: 8,
+                                            borderWidth: 1,
+                                            borderColor: '#BBF7D0',
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 7,
+                                            marginBottom: 2,
+                                            gap: 8,
+                                            flexWrap: 'wrap',
+                                          }}
+                                        >
+                                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                            <Ionicons name="checkmark-done-circle" size={16} color="#16A34A" />
+                                            <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#166534' }}>
+                                              {reqsCumplidosEtapa.length} requisito{reqsCumplidosEtapa.length > 1 ? 's' : ''} completado{reqsCumplidosEtapa.length > 1 ? 's' : ''} en versión comprimida
+                                            </Text>
+                                          </View>
+                                          <Pressable
+                                            onPress={() => {
+                                              const nuevoEstado = !algunoExpandido;
+                                              setReqCompletadoExpandido((prev) => {
+                                                const next = { ...prev };
+                                                reqsCumplidosEtapa.forEach((r) => {
+                                                  next[r.id] = nuevoEstado;
+                                                });
+                                                return next;
+                                              });
+                                            }}
+                                            style={{
+                                              flexDirection: 'row',
+                                              alignItems: 'center',
+                                              gap: 4,
+                                              backgroundColor: '#FFFFFF',
+                                              borderWidth: 1,
+                                              borderColor: '#86EFAC',
+                                              paddingHorizontal: 9,
+                                              paddingVertical: 4,
+                                              borderRadius: 5,
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            <Ionicons
+                                              name={algunoExpandido ? 'chevron-up-circle-outline' : 'chevron-down-circle-outline'}
+                                              size={13}
+                                              color="#15803D"
+                                            />
+                                            <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#15803D' }}>
+                                              {algunoExpandido ? 'Contraer completados' : 'Expandir todos los completados'}
+                                            </Text>
+                                          </Pressable>
+                                        </View>
+                                      );
+                                    })()}
                                     {etapa.requisitos.map((req, rIdx) => {
                                       const estaReqDetalle = reqDetalleExpandido[req.id] ?? false;
                                       const respReq = req.cargoResponsable || CARGO_RESPONSABLE_MAP[req.id] || etapa.responsable || 'Profesional Universitario TH';
@@ -12665,6 +12675,299 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                       const esNoAplica = req.noAplica;
                                       const esActivo = !esCumplido && !esNoAplica;
                                       const estaNoAplicaExpandido = reqNoAplicaExpandido[req.id] ?? false;
+                                      const estaCompletadoExpandido = reqCompletadoExpandido[req.id] ?? false;
+
+                                      {/* VERSIÓN CONTRAÍDA / COMPRIMIDA PARA REQUISITOS COMPLETADOS */}
+                                      if (esCumplido && !estaCompletadoExpandido) {
+                                        const cantDocs = req.documentosAdjuntos?.length || 0;
+                                        const tieneDocumentos = cantDocs > 0;
+                                        const tieneRadicado = Boolean(req.radicadoSoporte && String(req.radicadoSoporte).trim() !== '');
+                                        const tieneFecha = Boolean(req.fecha_cumplimiento && String(req.fecha_cumplimiento).trim() !== '');
+                                        const tieneObservaciones = Boolean(req.observaciones && String(req.observaciones).trim() !== '');
+
+                                        return (
+                                          <View
+                                            key={req.id}
+                                            style={{
+                                              backgroundColor: '#F8FDF9',
+                                              borderRadius: 10,
+                                              borderWidth: 1.5,
+                                              borderColor: '#86EFAC',
+                                              paddingHorizontal: 14,
+                                              paddingVertical: 10,
+                                              gap: 8,
+                                              shadowColor: '#16A34A',
+                                              shadowOffset: { width: 0, height: 1 },
+                                              shadowOpacity: 0.05,
+                                              shadowRadius: 3,
+                                              elevation: 1,
+                                              opacity: soloVisualizacion ? 0.78 : 1,
+                                            }}
+                                          >
+                                            {/* Fila Principal: Numeración, Checkbox, Título, Badges y Acciones */}
+                                            <View
+                                              style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'flex-start',
+                                                justifyContent: 'space-between',
+                                                gap: 10,
+                                              }}
+                                            >
+                                              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1, minWidth: 0 }}>
+                                                {/* Chip secuencial de actividad */}
+                                                <View
+                                                  style={{
+                                                    backgroundColor: '#DCFCE7',
+                                                    borderWidth: 1,
+                                                    borderColor: '#86EFAC',
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2.5,
+                                                    borderRadius: 5,
+                                                    flexShrink: 0,
+                                                    marginTop: 1,
+                                                  }}
+                                                >
+                                                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#15803D' }}>
+                                                    #{rIdx + 1}
+                                                  </Text>
+                                                </View>
+
+                                                {/* Ícono de estado Completado (interactivo para alternar) */}
+                                                <Pressable
+                                                  onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
+                                                  style={{
+                                                    width: 24,
+                                                    height: 24,
+                                                    borderRadius: 12,
+                                                    backgroundColor: '#16A34A',
+                                                    borderWidth: 1,
+                                                    borderColor: '#15803D',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    flexShrink: 0,
+                                                    marginTop: 1,
+                                                    shadowColor: '#16A34A',
+                                                    shadowOffset: { width: 0, height: 1 },
+                                                    shadowOpacity: 0.25,
+                                                    shadowRadius: 2,
+                                                    elevation: 2,
+                                                  }}
+                                                >
+                                                  <Ionicons name="checkmark-sharp" size={14} color="#FFFFFF" />
+                                                </Pressable>
+
+                                                {/* Título y Badges principales */}
+                                                <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                                                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                    <Text
+                                                      style={{
+                                                        fontSize: 13,
+                                                        fontWeight: '700',
+                                                        color: '#14532D',
+                                                        lineHeight: 18,
+                                                      }}
+                                                    >
+                                                      {req.label}
+                                                    </Text>
+
+                                                    <View
+                                                      style={{
+                                                        backgroundColor: '#DCFCE7',
+                                                        borderColor: '#86EFAC',
+                                                        borderWidth: 1,
+                                                        paddingHorizontal: 6,
+                                                        paddingVertical: 1.5,
+                                                        borderRadius: 4,
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 3,
+                                                      }}
+                                                    >
+                                                      <Ionicons name="checkmark-circle" size={11} color="#16A34A" />
+                                                      <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#15803D', letterSpacing: 0.3 }}>
+                                                        COMPLETADO
+                                                      </Text>
+                                                    </View>
+
+                                                    {req.codigoFormato && (
+                                                      <View
+                                                        style={{
+                                                          backgroundColor: '#FFFFFF',
+                                                          paddingHorizontal: 5,
+                                                          paddingVertical: 1,
+                                                          borderRadius: 4,
+                                                          borderWidth: 1,
+                                                          borderColor: '#BBF7D0',
+                                                        }}
+                                                      >
+                                                        <Text style={{ fontSize: 9.5, fontWeight: '600', color: '#166534' }}>
+                                                          📄 {req.codigoFormato}
+                                                        </Text>
+                                                      </View>
+                                                    )}
+                                                  </View>
+                                                </View>
+                                              </View>
+
+                                              {/* Botones de acción del modo contraído */}
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                                <Pressable
+                                                  onPress={() => toggleRequisitoDirecto(casoActivo.id, etapa.id, req.id)}
+                                                  style={{
+                                                    backgroundColor: '#FFFFFF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#CBD5E1',
+                                                    paddingHorizontal: 8,
+                                                    paddingVertical: 4.5,
+                                                    borderRadius: 6,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="refresh-outline" size={12} color="#64748B" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#475569' }}>
+                                                    Desmarcar
+                                                  </Text>
+                                                </Pressable>
+
+                                                <Pressable
+                                                  onPress={() => toggleCompletadoExpandido(req.id)}
+                                                  style={{
+                                                    backgroundColor: '#ECFDF5',
+                                                    borderWidth: 1,
+                                                    borderColor: '#86EFAC',
+                                                    paddingHorizontal: 9,
+                                                    paddingVertical: 4.5,
+                                                    borderRadius: 6,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                    cursor: 'pointer',
+                                                  }}
+                                                >
+                                                  <Ionicons name="chevron-down" size={13} color="#047857" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#047857' }}>
+                                                    Ver detalles
+                                                  </Text>
+                                                </Pressable>
+                                              </View>
+                                            </View>
+
+                                            {/* Fila Secundaria: Lo Importante (Radicado, Fecha, Soportes, Observaciones, Responsable) */}
+                                            <View
+                                              style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                flexWrap: 'wrap',
+                                                paddingTop: 6,
+                                                borderTopWidth: 1,
+                                                borderTopColor: '#ECFDF5',
+                                              }}
+                                            >
+                                              {tieneRadicado && (
+                                                <View
+                                                  style={{
+                                                    backgroundColor: '#FFFFFF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#BBF7D0',
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                  }}
+                                                >
+                                                  <Ionicons name="barcode-outline" size={11} color="#15803D" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#166534' }}>
+                                                    Rad: {req.radicadoSoporte}
+                                                  </Text>
+                                                </View>
+                                              )}
+
+                                              {tieneFecha && (
+                                                <View
+                                                  style={{
+                                                    backgroundColor: '#FFFFFF',
+                                                    borderWidth: 1,
+                                                    borderColor: '#BBF7D0',
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                  }}
+                                                >
+                                                  <Ionicons name="calendar-outline" size={11} color="#16A34A" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '600', color: '#166534' }}>
+                                                    {req.fecha_cumplimiento}
+                                                  </Text>
+                                                </View>
+                                              )}
+
+                                              {tieneDocumentos && (
+                                                <View
+                                                  style={{
+                                                    backgroundColor: '#EFF6FF',
+                                                    borderColor: '#BFDBFE',
+                                                    borderWidth: 1,
+                                                    paddingHorizontal: 7,
+                                                    paddingVertical: 2,
+                                                    borderRadius: 4,
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 4,
+                                                  }}
+                                                >
+                                                  <Ionicons name="attach" size={11} color="#2563EB" />
+                                                  <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#1E40AF' }}>
+                                                    {cantDocs} soporte{cantDocs > 1 ? 's' : ''}
+                                                  </Text>
+                                                </View>
+                                              )}
+
+                                              <View
+                                                style={{
+                                                  backgroundColor: '#F1F5F9',
+                                                  borderWidth: 1,
+                                                  borderColor: '#E2E8F0',
+                                                  paddingHorizontal: 7,
+                                                  paddingVertical: 2,
+                                                  borderRadius: 4,
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                }}
+                                              >
+                                                <Ionicons name="person-circle-outline" size={11} color="#64748B" />
+                                                <Text style={{ fontSize: 10, fontWeight: '600', color: '#475569' }}>
+                                                  Resp: {respReq}
+                                                </Text>
+                                              </View>
+
+                                              {tieneObservaciones && (
+                                                <Text
+                                                  style={{
+                                                    fontSize: 10.5,
+                                                    color: '#15803D',
+                                                    fontStyle: 'italic',
+                                                    flex: 1,
+                                                    minWidth: 160,
+                                                  }}
+                                                  numberOfLines={1}
+                                                >
+                                                  💬 "{req.observaciones}"
+                                                </Text>
+                                              )}
+                                            </View>
+                                          </View>
+                                        );
+                                      }
 
                                       {/* VERSIÓN CONTRAÍDA PARA REQUISITOS QUE NO APLICAN */}
                                       if (esNoAplica && !estaNoAplicaExpandido) {
@@ -12858,6 +13161,52 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                             opacity: soloVisualizacion ? 0.78 : (esNoAplica ? 0.88 : 1),
                                           }}
                                         >
+                                          {/* 0. BANNER SUPERIOR INFORMATIVO SI ES COMPLETADO (MODO EXPANDIDO) */}
+                                          {esCumplido && estaCompletadoExpandido && (
+                                            <View
+                                              style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                backgroundColor: '#DCFCE7',
+                                                borderRadius: 7,
+                                                paddingHorizontal: 12,
+                                                paddingVertical: 6.5,
+                                                borderWidth: 1,
+                                                borderColor: '#86EFAC',
+                                                gap: 8,
+                                                flexWrap: 'wrap',
+                                              }}
+                                            >
+                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 200 }}>
+                                                <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+                                                <Text style={{ fontSize: 11, fontWeight: '800', color: '#14532D', letterSpacing: 0.3 }}>
+                                                  REQUISITO COMPLETADO • MODO EXPANDIDO
+                                                </Text>
+                                              </View>
+                                              <Pressable
+                                                onPress={() => toggleCompletadoExpandido(req.id)}
+                                                style={{
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 4,
+                                                  backgroundColor: '#FFFFFF',
+                                                  paddingHorizontal: 9,
+                                                  paddingVertical: 3.5,
+                                                  borderRadius: 5,
+                                                  borderWidth: 1,
+                                                  borderColor: '#86EFAC',
+                                                  cursor: 'pointer',
+                                                }}
+                                              >
+                                                <Ionicons name="chevron-up" size={13} color="#15803D" />
+                                                <Text style={{ fontSize: 10.5, fontWeight: '700', color: '#15803D' }}>
+                                                  Contraer versión comprimida
+                                                </Text>
+                                              </Pressable>
+                                            </View>
+                                          )}
+
                                           {/* 0. BANNER SUPERIOR INFORMATIVO SI ES NO APLICA (MODO EXPANDIDO) */}
                                           {esNoAplica && (
                                             <View
@@ -13060,23 +13409,45 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                                     {req.label}
                                                   </Text>
                                                   {esCumplido && !esNoAplica && (
-                                                    <View
-                                                      style={{
-                                                        backgroundColor: '#DCFCE7',
-                                                        borderColor: '#86EFAC',
-                                                        borderWidth: 1,
-                                                        paddingHorizontal: 8,
-                                                        paddingVertical: 2,
-                                                        borderRadius: 5,
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center',
-                                                        gap: 3.5,
-                                                      }}
-                                                    >
-                                                      <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
-                                                      <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#15803D', letterSpacing: 0.2 }}>
-                                                        COMPLETADO
-                                                      </Text>
+                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                      <View
+                                                        style={{
+                                                          backgroundColor: '#DCFCE7',
+                                                          borderColor: '#86EFAC',
+                                                          borderWidth: 1,
+                                                          paddingHorizontal: 8,
+                                                          paddingVertical: 2,
+                                                          borderRadius: 5,
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 3.5,
+                                                        }}
+                                                      >
+                                                        <Ionicons name="checkmark-circle" size={13} color="#16A34A" />
+                                                        <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#15803D', letterSpacing: 0.2 }}>
+                                                          COMPLETADO
+                                                        </Text>
+                                                      </View>
+                                                      <Pressable
+                                                        onPress={() => toggleCompletadoExpandido(req.id)}
+                                                        style={{
+                                                          flexDirection: 'row',
+                                                          alignItems: 'center',
+                                                          gap: 3,
+                                                          backgroundColor: '#FFFFFF',
+                                                          paddingHorizontal: 7,
+                                                          paddingVertical: 2,
+                                                          borderRadius: 4,
+                                                          borderWidth: 1,
+                                                          borderColor: '#86EFAC',
+                                                          cursor: 'pointer',
+                                                        }}
+                                                      >
+                                                        <Ionicons name="chevron-up" size={12} color="#15803D" />
+                                                        <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#15803D' }}>
+                                                          Contraer
+                                                        </Text>
+                                                      </Pressable>
                                                     </View>
                                                   )}
                                                   {esNoAplica && (
@@ -13968,6 +14339,32 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
                                               </Text>
                                             </Pressable>
                                           </View>
+
+                                          {/* Botón inferior para contraer requisito completado */}
+                                          {esCumplido && estaCompletadoExpandido && (
+                                            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingTop: 10, borderTopWidth: 1, borderTopColor: '#BBF7D0' }}>
+                                              <Pressable
+                                                onPress={() => toggleCompletadoExpandido(req.id)}
+                                                style={({ pressed }) => ({
+                                                  flexDirection: 'row',
+                                                  alignItems: 'center',
+                                                  gap: 5,
+                                                  backgroundColor: pressed ? '#DCFCE7' : '#ECFDF5',
+                                                  borderWidth: 1,
+                                                  borderColor: '#86EFAC',
+                                                  paddingHorizontal: 12,
+                                                  paddingVertical: 6,
+                                                  borderRadius: 6,
+                                                  cursor: 'pointer',
+                                                })}
+                                              >
+                                                <Ionicons name="chevron-up" size={14} color="#047857" />
+                                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>
+                                                  Contraer versión comprimida
+                                                </Text>
+                                              </Pressable>
+                                            </View>
+                                          )}
                                         </View>
                                       );
                                     })}
@@ -23574,6 +23971,25 @@ ${res.resumenNormativo?.orientacionTalentoHumano || 'Verifique la cesión, suspe
           </View>
         </View>
       </Modal>
+
+          {/* Modal de Detección y Creación de Trámites desde PERNO (Cruce por Cédula últimos 6 meses) */}
+      <ModalNovedadesPernoTramites
+        visible={modalNovedadesPernoVisible}
+        onClose={() => setModalNovedadesPernoVisible(false)}
+        todoElPerno={todoElPerno}
+        plazas={todasLasPlazas}
+        onTramiteCreado={(nuevoCaso: any) => {
+          setCasos((prevCasos) => {
+            const existe = prevCasos.some((c) => c.id === nuevoCaso.id);
+            if (existe) {
+              return prevCasos.map((c) => (c.id === nuevoCaso.id ? nuevoCaso : c));
+            }
+            return [nuevoCaso, ...prevCasos];
+          });
+          setCasoSeleccionadoId(nuevoCaso.id);
+          setTabActiva(nuevoCaso.tipo_proceso === 'DESVINCULACION' ? 'desvinculaciones' : 'ingresos');
+        }}
+      />
 
     </View>
   );
